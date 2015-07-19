@@ -61,15 +61,15 @@ a {
 
 @media screen and (min-width: 64em) {
   .page-header {
-    padding: 5rem 6rem; } }
+    padding: 2rem 6rem 0; } }
 
 @media screen and (min-width: 42em) and (max-width: 64em) {
   .page-header {
-    padding: 3rem 4rem; } }
+    padding: 2rem 4rem 0; } }
 
 @media screen and (max-width: 42em) {
   .page-header {
-    padding: 2rem 1rem; } }
+    padding: 1rem 1rem 0; } }
 
 .project-name {
   margin-top: 0;
@@ -103,6 +103,22 @@ a {
 @media screen and (max-width: 42em) {
   .project-tagline {
     font-size: 1rem; } }
+
+#navigation {
+  padding-top: 0;
+  padding-bottom: 0;
+  text-align: left;
+}
+
+#navigation li {
+  padding-bottom: 0.5rem;
+  padding-right: 2rem;
+  display: inline-block;
+}
+
+#navigation li a {
+  color: #fff;
+}
 
 .main-content :first-child {
   margin-top: 0; }
