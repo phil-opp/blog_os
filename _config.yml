@@ -1,0 +1,35 @@
+# Permalinks
+#
+# Use of `relative_permalinks` ensures post links from the index work properly.
+permalink:           pretty
+relative_permalinks: true
+
+# Setup
+title:               phil-opp
+full_title:          Philipp Oppermann's blog
+tagline:             "rust, kernels, and more"
+paginate:            10
+baseurl:             ""
+
+# Assets
+#
+# We specify the directory for Jekyll so we can use @imports.
+sass:
+  sass_dir:          _sass
+  style:            :compressed
+
+# About/contact
+author:
+  name:              Philipp Oppermann
+  email:             contact@phil-opp.com
+
+# Custom vars
+version:             1.0.0
+github:
+  repo:              https://github.com/phil-opp/phil-opp.github.io
+
+# Navigation
+navigation_pages:
+  Archive: '/archive'
+
+contact: '/contact'

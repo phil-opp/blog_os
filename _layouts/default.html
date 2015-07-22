@@ -1,58 +1,36 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="UTF-8">
-    <title>Philipp Oppermann&#39;s Blog</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="/stylesheets/normalize.css" media="screen">
-    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type="text/css" href="/stylesheets/stylesheet.css" media="screen">
-    <link rel="stylesheet" type="text/css" href="/stylesheets/github-light.css" media="screen">
-  </head>
+<html lang="en">
+
+  {% include head.html %}
+
   <body>
-    <section class="page-header">
-      <h1 class="project-name">Philipp Oppermann&#39;s Blog</h1>
-      <h2 class="project-tagline">a blog about ?</h2>
-      <ul class="main-content" id="navigation">
-        <li><a href="/">Home</a></li>
-        <li><a href="http://phil-opp.com/#contact">Contact</a></li>
-      </ul>
-    </section>
 
-    <section class="main-content">
-      {{ content }}
+    <div class="container content">
+      <header class="masthead">
+        <h3 class="masthead-title">
+          <a href="{{ site.baseurl }}/" title="Home">{{ site.full_title }}</a>
+          <!--<small>{{ site.tagline }}</small>-->
+          <span class="navigation">
+          {% for page in site.navigation_pages %}
+            <small><a href="{{ page[1] }}">{{ page[0] }}</a></small>
+          {% endfor %}</span>
+        </h3>
+      </header>
 
-      <!-- Google Adsense -->
-      <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-      <!-- test -->
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-9223557686918365"
-           data-ad-slot="4091024932"
-           data-ad-format="auto"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-      <!-- Google Adsense end -->
+      <main>
+        {{ content }}
+      </main>
 
-      <footer class="site-footer">
-          <span class="site-footer-credits">Theme: <a href="https://github.com/jasonlong/cayman-theme">Cayman</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      {% include google_adsense.html %}
+
+      <footer class="footer">
+        <small>
+          &copy; <time datetime="{{ site.time | date_to_xmlschema }}">{{ site.time | date: '%Y' }}</time>. All rights reserved. <a href="{{ site.contact }}">Contact</a>
+        </small>
       </footer>
+    </div>
 
-    </section>
-
-    <!-- Google Analytics -->
-    <script type="text/javascript">
-      var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
-      document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
-    </script>
-    <script type="text/javascript">
-      try {
-        var pageTracker = _gat._getTracker("UA-65296949-1");
-      pageTracker._trackPageview();
-      } catch(err) {}
-    </script>
-    <!-- Google Analytics end -->
+    {% include google_analytics.html %}
 
   </body>
 </html>
