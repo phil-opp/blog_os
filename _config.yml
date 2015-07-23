@@ -11,6 +11,10 @@ tagline:             "rust, kernels, and more"
 paginate:            10
 baseurl:             ""
 
+markdown: redcarpet
+redcarpet:
+  extensions: ["no_intra_emphasis", "fenced_code_blocks", "autolink", "tables", "with_toc_data", "superscript", "footnotes"]
+
 # Assets
 #
 # We specify the directory for Jekyll so we can use @imports.
@@ -33,3 +37,4 @@ navigation_pages:
   Archive: '/archive'
 
 contact: '/contact'
+
