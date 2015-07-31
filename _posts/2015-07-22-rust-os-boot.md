@@ -43,7 +43,7 @@ If you don't know x86 assembly, here is some quick guide:
 - `dd` stands for `define double` (32bit) and `dw` stands for `define word` (16bit)
 - the additional `0x100000000` in the checksum calculation is a small hack[^fn-checksum_hack] to avoid a compiler warning
 
-We can already _assemble_ this file (which I called `multiboot_header.asm`) using `nasm`. As it produces a flat binary by default, the resulting file just contains our 24 bytes (in little endian if you work on a x86 machine):
+We can already _assemble_ this file (which I called `multiboot_header.asm`) using `nasm`. It produces a flat binary by default, so the resulting file just contains our 24 bytes (in little endian if you work on a x86 machine):
 
 ```
 > nasm multiboot_header.asm
@@ -57,20 +57,20 @@ We can already _assemble_ this file (which I called `multiboot_header.asm`) usin
 To boot our kernel, we must add some code that the bootloader can call. Let's create a file named `boot.asm`:
 
 ```nasm
-global _start
+global start
 
 BITS 32
 section .text
-_start:
-  mov dword [0xb8000], 0x2f4b2f4f
-  hlt
+start:
+    mov dword [0xb8000], 0x2f4b2f4f
+    hlt
 ```
 There are some new assembly lines:
 
-- `global` exports a label (makes it public). As `_start` will be the entry point of our kernel, it needs to be public.
+- `global` exports a label (makes it public). As `start` will be the entry point of our kernel, it needs to be public.
 - `BITS 32` specifies that the following lines are 32-bit instructions. We don't need it in our multiboot header file, as it doesn't contain any runnable code.
 - the `.text` section is the default section for executable code
-- the `mov dword` instruction moves the 32bit constant `0x2f4f2f4b` to the memory at address `b8000` (it should write `ok` to the screen)
+- the `mov dword` instruction moves the 32bit constant `0x2f4f2f4b` to the memory at address `b8000` (it writes `OK` to the screen, an explanation follows in the [next post])
 - `hlt` is the halt instruction and causes the CPU to stop
 
 Through assembling, viewing and disassembling it we can see the CPU [Opcodes] in action:
@@ -87,47 +87,48 @@ Through assembling, viewing and disassembling it we can see the CPU [Opcodes] in
 ```
 
 ## Building the Executable
-Now we create an [ELF] executable from these two files. We therefore need the object files of the two assembly files and a custom linker script (`linker.ld`):
+Now we create an [ELF] executable from these two files. We therefore need the object files of the two assembly files and a custom [linker script], that we call `linker.ld`:
 
 ```
-ENTRY(_start)
+ENTRY(start)
 
 SECTIONS {
-  . = 2M + SIZEOF_HEADERS;
+    . = 1M;
 
-  .boot :
-  {
-    /* ensure that the multiboot header is at the beginning */
-    *(.multiboot_header)
-  }
+    .boot :
+    {
+        /* ensure that the multiboot header is at the beginning */
+        *(.multiboot_header)
+    }
 
-  .text :
-  {
-    *(.text)
-  }
+    .text :
+    {
+        *(.text)
+    }
 }
 ```
 The important things are:
 
-- `_start` is the entry point, the bootloader will jump to it after loading the kernel
+- `start` is the entry point, the bootloader will jump to it after loading the kernel
+- `. = 1M;` sets the load address of the first section to 1 MiB, which is a conventional place to load a kernel
 - the executable will have two sections: `.boot` at the beginning and `.text` afterwards
 - the `.text` output section contains all input sections named `.text`
 - sections named `.multiboot_header` are added to the first output section (`.boot`) to ensure they are at the beginning of the executable
 
-So let's create the ELF object files and link them using our new linker script. We can use `objdump` to print the sections of the generated executable.
+So let's create the ELF object files and link them using our new linker script. It's important to pass the `-n` flag because otherwise the linker may page align the sections in the executable. If that happens, GRUB isn't able to find the Multiboot header because the `.boot` section isn't at the beginning anymore. We can use `objdump` to print the sections of the generated executable and verify that the `.boot` section has a low file offset.
 
 ```
 > nasm -f elf64 multiboot_header.asm
 > nasm -f elf64 boot.asm
-> ld -o kernel.bin -T linker.ld multiboot_header.o boot.o
+> ld -n -o kernel.bin -T linker.ld multiboot_header.o boot.o
 > objdump -h kernel.bin
 kernel.bin:     file format elf64-x86-64
 
 Sections:
 Idx Name          Size      VMA               LMA               File off  Algn
-  0 .boot         00000018  0000000000200078  0000000000200078  00000078  2**0
+  0 .boot         00000018  0000000000100000  0000000000100000  00000080  2**0
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-  1 .text         0000000b  0000000000200090  0000000000200090  00000090  2**4
+  1 .text         0000000b  0000000000100020  0000000000100020  000000a0  2**4
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
 ```
 
@@ -142,15 +143,15 @@ isofiles
     └── kernel.bin
 
 ```
-The `grub.cfg` specifies the file name of our kernel and that it's Multiboot 2 compliant. It looks like this:
+The `grub.cfg` specifies the file name of our kernel and it's Multiboot 2 compliance. It looks like this:
 
 ```
 set timeout=0
 set default=0
 
 menuentry "my os" {
-   multiboot2 /boot/kernel.bin
-   boot
+    multiboot2 /boot/kernel.bin
+    boot
 }
 ```
 Now we can create a bootable image using the command:
@@ -172,3 +173,7 @@ qemu-system-x86_64 -hda os.iso
 [multiboot 2]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
 [Opcodes]: https://en.wikipedia.org/wiki/Opcode
 [ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+[linker script]: https://sourceware.org/binutils/docs/ld/Scripts.html
+[QEMU]: https://en.wikipedia.org/wiki/QEMU
+
+[next post]: #TODO
