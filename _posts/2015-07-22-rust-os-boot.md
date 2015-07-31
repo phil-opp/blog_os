@@ -1,8 +1,26 @@
 ---
 layout: post
-title: '[DRAFT] Rust OS Part 1: Booting'
+title: '[DRAFT] A minimal x86 kernel in small steps'
 related_posts: null
 ---
+This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and write `OK` to the screen. In the following blog posts we will extend it using the [Rust] programming language.
+
+I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions or other issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
+
+[Rust]: http://www.rust-lang.org/
+[create an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
+[source code]: #TODO
+
+## Overview
+When you turn on a computer, it loads the BIOS. First it runs self test and initialization routines of the hardware. Then it looks for bootable devices. If it finds one, the control is transferred to its _bootloader_, which is a small portion of executable code stored at the device's beginning. The bootloader has to determine the location of the kernel image on the device and load it into memory. It also needs to switch the CPU to the so-called [Protected Mode] because CPUs start in the very limited [Real Mode] by default (to be compatible to programs from 1978).
+
+We won't write a bootloader because that would be a complex project on its own (if you really want to do it, check out [_Rolling Your Own Bootloader_]). Instead we will use one of the [many well-tested bootloaders][bootloader comparison] out there. But which one?
+
+[Real Mode]: http://wiki.osdev.org/Real_Mode
+[Protected Mode]: https://en.wikipedia.org/wiki/Protected_mode
+[bootloader comparison]: https://en.wikipedia.org/wiki/Comparison_of_boot_loaders
+[_Rolling Your Own Bootloader_]: http://wiki.osdev.org/Rolling_Your_Own_Bootloader
+
 ## Multiboot
 Fortunately there is a bootloader standard: the [Multiboot Specification][multiboot].  So our kernel just needs to indicate that it supports Multiboot and every Multiboot-compliant bootloader can boot it. We will use the Multiboot 2 specification ([PDF][Multiboot 2]) together with the well-known [GRUB 2] bootloader.
 
