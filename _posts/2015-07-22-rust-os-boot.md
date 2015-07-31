@@ -17,9 +17,10 @@ checksum      | u32             | -(magic + architecture + header length)
 tags          | variable        |
 end tag       | (u16, u16, u32) | (0, 0, 8)
 
-Converted to x86 assembly it looks like this (Intel syntax):
+Converted to a x86 assembly file it looks like this (Intel syntax):
 
 ```nasm
+section .multiboot_header
 header_start:
     dd 0xe85250d6                ; magic number (multiboot 2)
     dd 0                         ; architecture 0 (protected mode i386)
@@ -35,18 +36,18 @@ header_start:
     dd 8    ; size
 header_end:
 ```
-
 If you don't know x86 assembly, here is some quick guide:
 
+- the header will be written to a section named `.multiboot_header` (we need this later)
 - `header_start` and `header_end` are _labels_ that mark a memory location. We use them to calculate the header length easily
 - `dd` stands for `define double` (32bit) and `dw` stands for `define word` (16bit)
 - the additional `0x100000000` in the checksum calculation is a small hack[^fn-checksum_hack] to avoid a compiler warning
 
-We can already compile it using `nasm`. As it produces a flat binary by default, the resulting file contains just our 24 bytes (in little endian if you work on a x86 machine):
+We can already _assemble_ this file (which I called `multiboot_header.asm`) using `nasm`. As it produces a flat binary by default, the resulting file just contains our 24 bytes (in little endian if you work on a x86 machine):
 
 ```
-> nasm boot.asm
-> hexdump -x boot
+> nasm multiboot_header.asm
+> hexdump -x multiboot_header
 0000000    50d6    e852    0000    0000    0018    0000    af12    17ad
 0000010    0000    0000    0008    0000
 0000018
