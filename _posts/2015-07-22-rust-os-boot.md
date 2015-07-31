@@ -161,10 +161,22 @@ grub-mkrescue -o os.iso isofiles
 ```
 
 ## Booting
+Now it's time to boot our OS. We will use [QEMU]:
 
 ```
 qemu-system-x86_64 -hda os.iso
 ```
+![qemu output]({{ site.url }}/images/qemu-ok.png)
+
+Notice the green `OK` in the upper left corner. It works! Let's summarize what happens:
+
+1. the BIOS loads the bootloader (GRUB) from the virtual hard drive (the ISO)
+2. the bootloader reads the kernel executable and finds the Multiboot header
+3. it copies the `.boot` and `.text` section to memory (at addresses `0x100000` and `0x100020`)
+4. it jumps to the entry point
+5. our kernel writes the green `OK` and stops the CPU
+
+You can test it on real hardware, too. Just burn the ISO to a disk or USB stick and boot from it.
 
 [^fn-checksum_hack]: The formula from the table, `-(magic + architecture + header length)`, creates a negative value that doesn't fit into 32bit. By subtracting from `0x100000000` instead, we keep the value positive without changing its truncated value. Without the additional sign bit(s) the result fits into 32bit and the compiler is happy.
 
