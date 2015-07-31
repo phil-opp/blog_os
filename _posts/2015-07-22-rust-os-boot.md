@@ -3,7 +3,7 @@ layout: post
 title: '[DRAFT] A minimal x86 kernel in small steps'
 related_posts: null
 ---
-This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and write `OK` to the screen. In the following blog posts we will extend it using the [Rust] programming language.
+This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and write `OK` to the screen. The following blog posts we will extend it using the [Rust] programming language.
 
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions or other issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
@@ -12,7 +12,7 @@ I tried to explain everything in detail and to keep the code as simple as possib
 [source code]: #TODO
 
 ## Overview
-When you turn on a computer, it loads the BIOS. First it runs self test and initialization routines of the hardware. Then it looks for bootable devices. If it finds one, the control is transferred to its _bootloader_, which is a small portion of executable code stored at the device's beginning. The bootloader has to determine the location of the kernel image on the device and load it into memory. It also needs to switch the CPU to the so-called [Protected Mode] because CPUs start in the very limited [Real Mode] by default (to be compatible to programs from 1978).
+When you turn on a computer, it loads the BIOS. It first runs self test and initialization routines of the hardware. Then it looks for bootable devices. If it finds one, the control is transferred to its _bootloader_, which is a small portion of executable code stored at the device's beginning. The bootloader has to determine the location of the kernel image on the device and load it into memory. It also needs to switch the CPU to the so-called [Protected Mode] because x86 CPUs start in the very limited [Real Mode] by default (to be compatible to programs from 1978).
 
 We won't write a bootloader because that would be a complex project on its own (if you really want to do it, check out [_Rolling Your Own Bootloader_]). Instead we will use one of the [many well-tested bootloaders][bootloader comparison] out there. But which one?
 
@@ -57,8 +57,8 @@ header_end:
 If you don't know x86 assembly, here is some quick guide:
 
 - the header will be written to a section named `.multiboot_header` (we need this later)
-- `header_start` and `header_end` are _labels_ that mark a memory location. We use them to calculate the header length easily
-- `dd` stands for `define double` (32bit) and `dw` stands for `define word` (16bit)
+- `header_start` and `header_end` are _labels_ that mark a memory location, we use them to calculate the header length easily
+- `dd` stands for `define double` (32bit) and `dw` stands for `define word` (16bit). They just output the specified 32bit/16bit constant.
 - the additional `0x100000000` in the checksum calculation is a small hack[^fn-checksum_hack] to avoid a compiler warning
 
 We can already _assemble_ this file (which I called `multiboot_header.asm`) using `nasm`. It produces a flat binary by default, so the resulting file just contains our 24 bytes (in little endian if you work on a x86 machine):
@@ -74,7 +74,7 @@ We can already _assemble_ this file (which I called `multiboot_header.asm`) usin
 [multiboot]: https://en.wikipedia.org/wiki/Multiboot_Specification
 [multiboot 2]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
 [grub 2]: http://wiki.osdev.org/GRUB_2
-[^fn-checksum_hack]: The formula from the table, `-(magic + architecture + header length)`, creates a negative value that doesn't fit into 32bit. By subtracting from `0x100000000` instead, we keep the value positive without changing its truncated value. Without the additional sign bit(s) the result fits into 32bit and the compiler is happy.
+[^fn-checksum_hack]: The formula from the table, `-(magic + architecture + header length)`, creates a negative value that doesn't fit into 32bit. By subtracting from `0x100000000` (= 2^(32)) instead, we keep the value positive without changing its truncated value. Without the additional sign bit(s) the result fits into 32bit and the compiler is happy :).
 
 ## The Boot Code
 To boot our kernel, we must add some code that the bootloader can call. Let's create a file named `boot.asm`:
@@ -91,7 +91,7 @@ start:
 There are some new commands:
 
 - `global` exports a label (makes it public). As `start` will be the entry point of our kernel, it needs to be public.
-- `BITS 32` specifies that the following lines are 32-bit instructions. We don't need it in our multiboot header file, as it doesn't contain any runnable code.
+- `BITS 32` specifies that the following lines are 32-bit instructions. It's needed because the CPU is still in [Protected mode] when GRUB starts our kernel. When we switch to [Long mode] in the [next post] we can use `BITS 64` (64-bit instructions).
 - the `.text` section is the default section for executable code
 - the `mov dword` instruction moves the 32bit constant `0x2f4f2f4b` to the memory at address `b8000` (it writes `OK` to the screen, an explanation follows in the [next post])
 - `hlt` is the halt instruction and causes the CPU to stop
@@ -135,12 +135,12 @@ SECTIONS {
 Let's translate it:
 
 - `start` is the entry point, the bootloader will jump to it after loading the kernel
-- `. = 1M;` sets the load address of the first section to 1 MiB, which is a conventional place to load a kernel
+- `. = 1M;` sets the load address of the first section to 1 MiB, which is a conventional place to load a kernel[^Linker 1M]
 - the executable will have two sections: `.boot` at the beginning and `.text` afterwards
 - the `.text` output section contains all input sections named `.text`
 - Sections named `.multiboot_header` are added to the first output section (`.boot`) to ensure they are at the beginning of the executable. This is necessary because GRUB expects to find the Multiboot header very early in the file.
 
-So let's create the ELF object files and link them using our new linker script. It's important to pass the `-n` flag because otherwise the linker may page align the sections in the executable. If that happens, GRUB isn't able to find the Multiboot header because the `.boot` section isn't at the beginning anymore. We can use `objdump` to print the sections of the generated executable and verify that the `.boot` section has a low file offset.
+So let's create the ELF object files and link them using our new linker script. It's important to pass the `-n` flag to the linker because otherwise it may page align the sections in the executable. If that happens, GRUB isn't able to find the Multiboot header because the `.boot` section isn't at the beginning anymore. We can use `objdump` to print the sections of the generated executable and verify that the `.boot` section has a low file offset.
 
 ```
 > nasm -f elf64 multiboot_header.asm
@@ -159,6 +159,7 @@ Idx Name          Size      VMA               LMA               File off  Algn
 
 [ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 [linker script]: https://sourceware.org/binutils/docs/ld/Scripts.html
+[^Linker 1M]: We don't want to load the kernel to e.g. `0x0` because there are many special memory areas below the 1MB mark (for example the so-called VGA buffer at `0xb8000`, that we use to write `OK` to the screen).
 
 ## Creating the ISO
 The last step is to create a bootable ISO image with GRUB. We need to create the following directory structure and copy the `kernel.bin` to the right place:
@@ -201,7 +202,7 @@ Notice the green `OK` in the upper left corner. Let's summarize what happens:
 1. the BIOS loads the bootloader (GRUB) from the virtual hard drive (the ISO)
 2. the bootloader reads the kernel executable and finds the Multiboot header
 3. it copies the `.boot` and `.text` sections to memory (to addresses `0x100000` and `0x100020`)
-4. it jumps to the entry point (`0x100020`, obtain it through `objdump -f`)
+4. it jumps to the entry point (`0x100020`, you can obtain it through `objdump -f`)
 5. our kernel writes the green `OK` and stops the CPU
 
 You can test it on real hardware, too. Just burn the ISO to a disk or USB stick and boot from it.
@@ -210,7 +211,7 @@ You can test it on real hardware, too. Just burn the ISO to a disk or USB stick 
 
 ## Build Automation
 
-Right now we need to execute 4 commands in the right order everytime we change a file. That's bad. So let's automate the build using a [Makefile][Makefile tutorial]. But first we should create some clean directory structure for our source files:
+Right now we need to execute 4 commands in the right order everytime we change a file. That's bad. So let's automate the build using a [Makefile][Makefile tutorial]. But first we should create some clean directory structure for our source files to separate the architecture specific files:
 
 ```
 …
@@ -223,7 +224,7 @@ Right now we need to execute 4 commands in the right order everytime we change a
             ├── linker.ld
             └── grub.cfg
 ```
-The Makefile looks like this (but with tabs instead of spaces):
+The Makefile looks like this (but indented with tabs instead of spaces):
 
 ```Makefile
 arch ?= x86_64
@@ -268,9 +269,9 @@ Some comments (see the [Makefile tutorial] if you don't know `make`):
 - the `$<` and `$@` in the assembly target are [automatic variables]
 - the Makefile has rudimentary multi-architecture support, e.g. `make arch=mips iso` tries to create an ISO for MIPS (it will fail of course as we don't support MIPS yet).
 
-Now we can invoke `make` and all updated assembly files are compiled and linked. The `make iso` command also creates the ISO image and `make run` will additionally start QEMU. Isn't that beautiful? ;)
+Now we can invoke `make` and all updated assembly files are compiled and linked. The `make iso` command also creates the ISO image and `make run` will additionally start QEMU. Nice :)
 
-In the [next post] we will enable some CPU features and switch to [Long Mode].
+In the [next post] we will create a page table and do some CPU configuration to switch to [Long Mode].
 
 [Long Mode]: https://en.wikipedia.org/wiki/Long_mode
 [Makefile tutorial]: http://mrbook.org/blog/tutorials/make/
