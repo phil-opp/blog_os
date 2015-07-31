@@ -53,12 +53,122 @@ We can already _assemble_ this file (which I called `multiboot_header.asm`) usin
 0000018
 ```
 
+## The Boot Code //TODO rename
+To boot our kernel, we must add some code that the bootloader can call. Let's create a file named `boot.asm`:
+
+```nasm
+global _start
+
+BITS 32
+section .text
+_start:
+  mov dword [0xb8000], 0x2f4b2f4f
+  hlt
+```
+There are some new assembly lines:
+
+- `global` exports a label (makes it public). As `_start` will be the entry point of our kernel, it needs to be public.
+- `BITS 32` specifies that the following lines are 32-bit instructions. We don't need it in our multiboot header file, as it doesn't contain any runnable code.
+- the `.text` section is the default section for executable code
+- the `mov dword` instruction moves the 32bit constant `0x2f4f2f4b` to the memory at address `b8000` (it should write `ok` to the screen)
+- `hlt` is the halt instruction and causes the CPU to stop
+
+Through assembling, viewing and disassembling it we can see the CPU [Opcodes] in action:
+
+```
+> nasm boot.asm
+> hexdump -x boot
+0000000    05c7    8000    000b    2f4b    2f4f    00f4
+000000b
+> ndisasm -b 32 boot
+00000000  C70500800B004B2F  mov dword [dword 0xb8000],0x2f4b2f4f
+         -4F2F
+0000000A  F4                hlt
+```
+
+## Building the Executable
+Now we create an [ELF] executable from these two files. We therefore need the object files of the two assembly files and a custom linker script (`linker.ld`):
+
+```
+ENTRY(_start)
+
+SECTIONS {
+  . = 2M + SIZEOF_HEADERS;
+
+  .boot :
+  {
+    /* ensure that the multiboot header is at the beginning */
+    *(.multiboot_header)
+  }
+
+  .text :
+  {
+    *(.text)
+  }
+}
+```
+The important things are:
+
+- `_start` is the entry point, the bootloader will jump to it after loading the kernel
+- the executable will have two sections: `.boot` at the beginning and `.text` afterwards
+- the `.text` output section contains all input sections named `.text`
+- sections named `.multiboot_header` are added to the first output section (`.boot`) to ensure they are at the beginning of the executable
+
+So let's create the ELF object files and link them using our new linker script. We can use `objdump` to print the sections of the generated executable.
+
+```
+> nasm -f elf64 multiboot_header.asm
+> nasm -f elf64 boot.asm
+> ld -o kernel.bin -T linker.ld multiboot_header.o boot.o
+> objdump -h kernel.bin
+kernel.bin:     file format elf64-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .boot         00000018  0000000000200078  0000000000200078  00000078  2**0
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  1 .text         0000000b  0000000000200090  0000000000200090  00000090  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+```
+
+## Creating the ISO
+The last step is to create a bootable ISO image with GRUB. We need to create the following directory structure and copy the `kernel.bin` to the right place:
+
+```
+isofiles
+└── boot
+    ├── grub
+    │   └── grub.cfg
+    └── kernel.bin
+
+```
+The `grub.cfg` specifies the file name of our kernel and that it's Multiboot 2 compliant. It looks like this:
+
+```
+set timeout=0
+set default=0
+
+menuentry "my os" {
+   multiboot2 /boot/kernel.bin
+   boot
+}
+```
+Now we can create a bootable image using the command:
+
+```
+grub-mkrescue -o os.iso isofiles
+```
 
 ## Booting
 
+```
+qemu-system-x86_64 -hda os.iso
+```
 
 [^fn-checksum_hack]: The formula from the table, `-(magic + architecture + header length)`, creates a negative value that doesn't fit into 32bit. By subtracting from `0x100000000` instead, we keep the value positive without changing its truncated value. Without the additional sign bit(s) the result fits into 32bit and the compiler is happy.
 
 [multiboot]: https://en.wikipedia.org/wiki/Multiboot_Specification
 [grub 2]: http://wiki.osdev.org/GRUB_2
 [multiboot 2]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
+[Opcodes]: https://en.wikipedia.org/wiki/Opcode
+[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
