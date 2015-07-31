@@ -4,7 +4,7 @@ title: '[DRAFT] Rust OS Part 1: Booting'
 related_posts: null
 ---
 ## Multiboot
-Fortunately there is a bootloader standard: the [Multiboot Specification][multiboot].  So our kernel just needs to indicate that it supports Multiboot and every Multiboot-compliant bootloader can boot it. We will use the [GRUB 2] bootloader together with the Multiboot 2 specification ([PDF][Multiboot 2]).
+Fortunately there is a bootloader standard: the [Multiboot Specification][multiboot].  So our kernel just needs to indicate that it supports Multiboot and every Multiboot-compliant bootloader can boot it. We will use the Multiboot 2 specification ([PDF][Multiboot 2]) together with the well-known [GRUB 2] bootloader.
 
 To indicate our Multiboot 2 support to the bootloader, our kernel must contain a _Multiboot Header_, which has the following format:
 
@@ -53,7 +53,12 @@ We can already _assemble_ this file (which I called `multiboot_header.asm`) usin
 0000018
 ```
 
-## The Boot Code //TODO rename
+[multiboot]: https://en.wikipedia.org/wiki/Multiboot_Specification
+[multiboot 2]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
+[grub 2]: http://wiki.osdev.org/GRUB_2
+[^fn-checksum_hack]: The formula from the table, `-(magic + architecture + header length)`, creates a negative value that doesn't fit into 32bit. By subtracting from `0x100000000` instead, we keep the value positive without changing its truncated value. Without the additional sign bit(s) the result fits into 32bit and the compiler is happy.
+
+## The Boot Code
 To boot our kernel, we must add some code that the bootloader can call. Let's create a file named `boot.asm`:
 
 ```nasm
@@ -65,7 +70,7 @@ start:
     mov dword [0xb8000], 0x2f4b2f4f
     hlt
 ```
-There are some new assembly lines:
+There are some new commands:
 
 - `global` exports a label (makes it public). As `start` will be the entry point of our kernel, it needs to be public.
 - `BITS 32` specifies that the following lines are 32-bit instructions. We don't need it in our multiboot header file, as it doesn't contain any runnable code.
@@ -85,6 +90,8 @@ Through assembling, viewing and disassembling it we can see the CPU [Opcodes] in
          -4F2F
 0000000A  F4                hlt
 ```
+
+[Opcodes]: https://en.wikipedia.org/wiki/Opcode
 
 ## Building the Executable
 Now we create an [ELF] executable from these two files. We therefore need the object files of the two assembly files and a custom [linker script], that we call `linker.ld`:
@@ -107,13 +114,13 @@ SECTIONS {
     }
 }
 ```
-The important things are:
+Let's translate it:
 
 - `start` is the entry point, the bootloader will jump to it after loading the kernel
 - `. = 1M;` sets the load address of the first section to 1 MiB, which is a conventional place to load a kernel
 - the executable will have two sections: `.boot` at the beginning and `.text` afterwards
 - the `.text` output section contains all input sections named `.text`
-- sections named `.multiboot_header` are added to the first output section (`.boot`) to ensure they are at the beginning of the executable
+- Sections named `.multiboot_header` are added to the first output section (`.boot`) to ensure they are at the beginning of the executable. This is necessary because GRUB expects to find the Multiboot header very early in the file.
 
 So let's create the ELF object files and link them using our new linker script. It's important to pass the `-n` flag because otherwise the linker may page align the sections in the executable. If that happens, GRUB isn't able to find the Multiboot header because the `.boot` section isn't at the beginning anymore. We can use `objdump` to print the sections of the generated executable and verify that the `.boot` section has a low file offset.
 
@@ -131,6 +138,9 @@ Idx Name          Size      VMA               LMA               File off  Algn
   1 .text         0000000b  0000000000100020  0000000000100020  000000a0  2**4
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
 ```
+
+[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+[linker script]: https://sourceware.org/binutils/docs/ld/Scripts.html
 
 ## Creating the ISO
 The last step is to create a bootable ISO image with GRUB. We need to create the following directory structure and copy the `kernel.bin` to the right place:
@@ -168,24 +178,16 @@ qemu-system-x86_64 -hda os.iso
 ```
 ![qemu output]({{ site.url }}/images/qemu-ok.png)
 
-Notice the green `OK` in the upper left corner. It works! Let's summarize what happens:
+Notice the green `OK` in the upper left corner. Let's summarize what happens:
 
 1. the BIOS loads the bootloader (GRUB) from the virtual hard drive (the ISO)
 2. the bootloader reads the kernel executable and finds the Multiboot header
-3. it copies the `.boot` and `.text` section to memory (at addresses `0x100000` and `0x100020`)
-4. it jumps to the entry point
+3. it copies the `.boot` and `.text` sections to memory (to addresses `0x100000` and `0x100020`)
+4. it jumps to the entry point (`0x100020`, obtain it through `objdump -f`)
 5. our kernel writes the green `OK` and stops the CPU
 
 You can test it on real hardware, too. Just burn the ISO to a disk or USB stick and boot from it.
 
-[^fn-checksum_hack]: The formula from the table, `-(magic + architecture + header length)`, creates a negative value that doesn't fit into 32bit. By subtracting from `0x100000000` instead, we keep the value positive without changing its truncated value. Without the additional sign bit(s) the result fits into 32bit and the compiler is happy.
-
-[multiboot]: https://en.wikipedia.org/wiki/Multiboot_Specification
-[grub 2]: http://wiki.osdev.org/GRUB_2
-[multiboot 2]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
-[Opcodes]: https://en.wikipedia.org/wiki/Opcode
-[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
-[linker script]: https://sourceware.org/binutils/docs/ld/Scripts.html
 [QEMU]: https://en.wikipedia.org/wiki/QEMU
 
 [next post]: #TODO
