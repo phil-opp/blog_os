@@ -208,4 +208,72 @@ You can test it on real hardware, too. Just burn the ISO to a disk or USB stick 
 
 [QEMU]: https://en.wikipedia.org/wiki/QEMU
 
+## Build Automation
+
+Right now we need to execute 4 commands in the right order everytime we change a file. That's bad. So let's automate the build using a [Makefile][Makefile tutorial]. But first we should create some clean directory structure for our source files:
+
+```
+…
+├── Makefile
+└── src
+    └── arch
+        └── x86_64
+            ├── multiboot_header.asm
+            ├── boot.asm
+            ├── linker.ld
+            └── grub.cfg
+```
+The Makefile looks like this (but with tabs instead of spaces):
+
+```Makefile
+arch ?= x86_64
+kernel := build/kernel-$(arch).bin
+iso := build/os-$(arch).iso
+
+linker_script := src/arch/$(arch)/linker.ld
+grub_cfg := src/arch/$(arch)/grub.cfg
+assembly_source_files := $(wildcard src/arch/$(arch)/*.asm)
+assembly_object_files := $(patsubst src/arch/$(arch)/%.asm, \
+    build/arch/$(arch)/%.o, $(assembly_source_files))
+
+.PHONY: all clean run iso
+
+all: $(kernel)
+
+clean:
+    @rm -r build
+
+run: $(iso)
+    @qemu-system-x86_64 -hda $(iso)
+
+iso: $(iso)
+
+$(iso): $(kernel)
+    @mkdir -p build/isofiles/boot/grub
+    @cp $(kernel) build/isofiles/boot/
+    @cp $(grub_cfg) build/isofiles/boot/grub
+    @grub-mkrescue -o $(iso) build/isofiles 2> /dev/null
+
+$(kernel): $(assembly_object_files) $(linker_script)
+    @ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files)
+
+# compile assembly files
+build/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
+    @mkdir -p $(shell dirname $@)
+    @nasm -felf64 $< -o $@
+```
+Some comments (see the [Makefile tutorial] if you don't know `make`):
+- the `$(wildcard src/arch/$(arch)/*.asm)` chooses all assembly files in the src/arch/$(arch)` directory, so you don't have to update the Makefile when you add a file
+- the `patsubst` operation for `assembly_object_files` just translates `src/arch/$(arch)/XYZ.asm` to `build/arch/$(arch)/XYZ.o`
+- the `$<` and `$@` in the assembly target are [automatic variables]
+- the Makefile has rudimentary multi-architecture support, e.g. `make arch=mips iso` tries to create an ISO for MIPS (it will fail of course as we don't support MIPS yet).
+
+Now we can invoke `make` and all updated assembly files are compiled and linked. The `make iso` command also creates the ISO image and `make run` will additionally start QEMU. Isn't that beautiful? ;)
+
+In the [next post] we will enable some CPU features and switch to [Long Mode].
+
+[Long Mode]: https://en.wikipedia.org/wiki/Long_mode
+[Makefile tutorial]: http://mrbook.org/blog/tutorials/make/
+[automatic variables]: https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
+
 [next post]: #TODO
