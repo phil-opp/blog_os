@@ -82,8 +82,8 @@ To boot our kernel, we must add some code that the bootloader can call. Let's cr
 ```nasm
 global start
 
-BITS 32
 section .text
+bits 32
 start:
     mov dword [0xb8000], 0x2f4b2f4f
     hlt
@@ -91,8 +91,8 @@ start:
 There are some new commands:
 
 - `global` exports a label (makes it public). As `start` will be the entry point of our kernel, it needs to be public.
-- `BITS 32` specifies that the following lines are 32-bit instructions. It's needed because the CPU is still in [Protected mode] when GRUB starts our kernel. When we switch to [Long mode] in the [next post] we can use `BITS 64` (64-bit instructions).
 - the `.text` section is the default section for executable code
+- `bits 32` specifies that the following lines are 32-bit instructions. It's needed because the CPU is still in [Protected mode] when GRUB starts our kernel. When we switch to [Long mode] in the [next post] we can use `bits 64` (64-bit instructions).
 - the `mov dword` instruction moves the 32bit constant `0x2f4f2f4b` to the memory at address `b8000` (it writes `OK` to the screen, an explanation follows in the [next post])
 - `hlt` is the halt instruction and causes the CPU to stop
 
