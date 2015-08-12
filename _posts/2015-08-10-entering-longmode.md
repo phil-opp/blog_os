@@ -182,7 +182,7 @@ Bit(s)                | Name | Meaning
 
 [^hardware_lookup]: In the x86 architecture, the page tables are _hardware walked_, so the CPU will look at the table on its own when it needs a translation. Other architectures, for example MIPS, just throw an exception and let the OS translate the virtual address.
 
-[^virtual_physical_translation_source]: Image source: https://commons.wikimedia.org/wiki/File:X86_Paging_64bit.svg, with modified font size, page table naming, and removed sign extended bits. The modified file is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.
+[^virtual_physical_translation_source]: Image source: [Wikipedia](https://commons.wikimedia.org/wiki/File:X86_Paging_64bit.svg), with modified font size, page table naming, and removed sign extended bits. The modified file is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.
 
 ### Setup Identity Paging
 When we switch to Long Mode, paging will be activated automatically. The CPU will then try to read the instruction at the following address, but this address is now a virtual address. So we need to do _identity mapping_, i.e. map a physical address to the same virtual address.
