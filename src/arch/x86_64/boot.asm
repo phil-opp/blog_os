@@ -26,6 +26,9 @@ start:
     call setup_page_tables
     call enable_paging
 
+    ; load the 64-bit GDT
+    lgdt [gdt64.pointer]
+
     ; print `OK` to screen
     mov dword [0xb8000], 0x2f4b2f4f
     hlt
@@ -126,3 +129,14 @@ p3_table:
 stack_bottom:
     resb 64
 stack_top:
+
+section .rodata
+gdt64:
+    dq 0 ; zero entry
+.code: equ $ - gdt64 ; new
+    dq (1<<44) | (1<<47) | (1<<41) | (1<<43) | (1<<53) ; code segment
+.data: equ $ - gdt64 ; new
+    dq (1<<44) | (1<<47) | (1<<41) ; data segment
+.pointer:
+    dw $ - gdt64 - 1
+    dq gdt64
