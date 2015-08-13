@@ -23,9 +23,22 @@ start:
     call check_cpuid
     call check_long_mode
 
+    call setup_page_tables
+
     ; print `OK` to screen
     mov dword [0xb8000], 0x2f4b2f4f
     hlt
+
+setup_page_tables:
+    ; map first P4 entry to P3 table
+    mov eax, p3_table
+    or eax, 0b11 ; present + writable
+    mov [p4_table], eax
+
+    ; map first P3 entry to a huge page that starts at address 0
+    mov dword [p3_table], 0b10000011 ; present + writable + huge
+
+    ret
 
 ; Prints `ERR: ` and the given error code to screen and hangs.
 ; parameter: error code (in ascii) in al
@@ -80,6 +93,11 @@ check_long_mode:
     jmp error
 
 section .bss
+align 4096
+p4_table:
+    resb 4096
+p3_table:
+    resb 4096
 stack_bottom:
     resb 64
 stack_top:
