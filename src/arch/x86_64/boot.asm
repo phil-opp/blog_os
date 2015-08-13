@@ -13,6 +13,7 @@
 ; limitations under the License.
 
 global start
+extern long_mode_start
 
 section .text
 bits 32
@@ -29,9 +30,13 @@ start:
     ; load the 64-bit GDT
     lgdt [gdt64.pointer]
 
-    ; print `OK` to screen
-    mov dword [0xb8000], 0x2f4b2f4f
-    hlt
+    ; update selectors
+    mov ax, gdt64.data
+    mov ss, ax
+    mov ds, ax
+    mov es, ax
+
+    jmp gdt64.code:long_mode_start
 
 setup_page_tables:
     ; map first P4 entry to P3 table
