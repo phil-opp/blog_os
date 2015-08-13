@@ -3,7 +3,7 @@ layout: post
 title: '[DRAFT] Entering Long Mode in small steps'
 related_posts: null
 ---
-In the [last post] we created a minimal multiboot kernel. It just writes `OK` and hangs. Let's extend it! The goal is to call 64-bit [Rust] code. But the CPU is currently in [Protected Mode] and allows only 32bit instructions and up to 4GiB memory. So we need to setup _Paging_ and switch to the 64-bit [Long Mode] first.
+In the [last post] we created a minimal multiboot kernel. It just prints `OK` and hangs. Let's extend it! The goal is to call 64-bit [Rust] code. But the CPU is currently in [Protected Mode] and allows only 32bit instructions and up to 4GiB memory. So we need to setup _Paging_ and switch to the 64-bit [Long Mode] first.
 
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions or other issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
@@ -20,6 +20,7 @@ To avoid bugs and strange errors on old CPUs we should test if the processor sup
 
 ```nasm
 ...
+; Prints `ERR: ` and the given error code to screen and hangs.
 ; parameter: error code (in ascii) in al
 error:
     mov dword [0xb8000], 0x4f524f45
@@ -36,7 +37,7 @@ Now we will add some check _functions_. A function is just a normal label with a
 ...
 section .bss
 stack_bottom:
-resb 64
+    resb 64
 stack_top:
 ```
 A stack doesn't need to be initialized with data because we will `pop` only if we `pushed` before. By using the [.bss] section and the `resb` (reserve byte) command, we just declare the length of the uninitialized data (64 byte) and avoid saving needless bytes in the executable. When loading the executable, GRUB will create the section and the stack in memory. To use it, we update the stack pointer right after `start`:
@@ -48,6 +49,8 @@ section .text
 bits 32
 start:
     mov esp, stack_top
+
+    ; print `OK` to screen
     ...
 ```
 We use `stack_top` because the stack grows downwards: A `push eax` subtracts 4 from `esp` and does a `mov [esp], eax` afterwards (`eax` is a general purpose register). Now we have a valid stack pointer and are able to call functions.
@@ -124,9 +127,12 @@ section .text
 bits 32
 _start:
     mov esp, stack_top
+
     call check_multiboot
     call check_cpuid
     call check_long_mode
+
+    ; print `OK` to screen
     ...
 ```
 
@@ -195,11 +201,11 @@ The `huge page` bit is now very useful to us. It creates a 2MiB (when used in P2
 section .bss
 align 4096
 p4_table:
-resb 4096
+    resb 4096
 p3_table:
-resb 4096
+    resb 4096
 stack_bottom:
-resb 64
+    resb 64
 stack_top:
 ```
 The `resb` command reserves the specified amount of bytes without initializing them, so the 8KiB don't need to be saved in the executable. The `align 4096` ensures that the page tables are page aligned. When GRUB creates the `.bss` section in memory, it will initialize it to `0`. So our `p4_table` is already valid (it contains 512 non-present entries) but not very useful. Let's link its first entry to the `p3_table` and map the first P3 entry to a huge page:
@@ -259,13 +265,15 @@ Let's call our new functions in `start`:
 ...
 start:
     mov esp, stack_top
+
     call check_multiboot
     call check_cpuid
     call check_long_mode
+
     call setup_page_tables ; new
     call enable_paging     ; new
 
-    ; write OK
+    ; print `OK` to screen
     mov dword [0xb8000], 0x2f4b2f4f
     hlt
 ...
@@ -336,7 +344,7 @@ start:
     ; load the 64-bit GDT
     lgdt [gdt64.pointer]
 
-    ; write OK
+    ; print `OK` to screen
     ...
 ```
 When you still see the green `OK`, everything went fine and the new GDT is loaded. I don't want to frustrate you, but we still can't execute 64-bit code… The selector registers like the code selector `cs`, the data selector `ds`, the stack selector `ss`, and the extra selector `es` still have the values from the old GDT. To update them, we need to load them with the GDT index (in bytes) of the desired segment. In our case the code segment starts at byte 8 of the GDT and the data segment at byte 16. Let's try it:
@@ -351,7 +359,7 @@ When you still see the green `OK`, everything went fine and the new GDT is loade
     mov ds, ax
     mov es, ax
 
-    ; write OK
+    ; print `OK` to screen
     ...
 ```
 It should still work. The segment selectors are only 16-bits large, so we use the ax subregister. Notice that we didn't update the code selector `cs`. We will do that later. First we should replace this hardcoded `16` by adding some labels to our GDT:
@@ -364,6 +372,8 @@ gdt64:
     dq (1<<44) | (1<<47) | (1<<41) | (1<<43) | (1<<53) ; code segment
 .data: equ $ - gdt64 ; new
     dq (1<<44) | (1<<47) | (1<<41) ; data segment
+.pointer:
+    ...
 ```
 Now we can use `gdt64.data` instead of 16 and `gdt64.code` instead of 8. These labels will still work if we modify the GDT. So let's do the last step and enter the true 64-bit mode (finally)! We just need to load `cs` with `gdt64.code`. But we can't do it through `mov`. The only way to reload the code selector is a _far jump_ or a _far return_. These instructions work like a normal jump/return but change the code selector. We will use a far jump to a long mode label:
 
@@ -381,9 +391,10 @@ Now we can use `gdt64.data` instead of 16 and `gdt64.code` instead of 8. These l
 
 bits 64
 long_mode_start:
-    ; write OKAY
+    ; print `OKAY` to screen
     mov rax, 0x2f592f412f4b2f4f
     mov qword [0xb8000], rax
+    hlt
 
 bits 32
 ...

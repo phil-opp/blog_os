@@ -3,13 +3,13 @@ layout: post
 title: '[DRAFT] A minimal x86 kernel in small steps'
 related_posts: null
 ---
-This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and write `OK` to the screen. The following blog posts we will extend it using the [Rust] programming language.
+This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and print `OK` to the screen. The following blog posts we will extend it using the [Rust] programming language.
 
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions or other issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
 [Rust]: http://www.rust-lang.org/
 [create an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
-[source code]: https://github.com/phil-opp/blogOS/tree/multiboot_bootstrap
+[source code]: https://github.com/phil-opp/blogOS/tree/multiboot_bootstrap/src/arch/x86_64
 
 ## Overview
 When you turn on a computer, it loads the BIOS. It first runs self test and initialization routines of the hardware. Then it looks for bootable devices. If it finds one, the control is transferred to its _bootloader_, which is a small portion of executable code stored at the device's beginning. The bootloader has to determine the location of the kernel image on the device and load it into memory. It also needs to switch the CPU to the so-called [Protected Mode] because x86 CPUs start in the very limited [Real Mode] by default (to be compatible to programs from 1978).
@@ -85,6 +85,7 @@ global start
 section .text
 bits 32
 start:
+    ; print `OK` to screen
     mov dword [0xb8000], 0x2f4b2f4f
     hlt
 ```
@@ -93,7 +94,7 @@ There are some new commands:
 - `global` exports a label (makes it public). As `start` will be the entry point of our kernel, it needs to be public.
 - the `.text` section is the default section for executable code
 - `bits 32` specifies that the following lines are 32-bit instructions. It's needed because the CPU is still in [Protected mode] when GRUB starts our kernel. When we switch to [Long mode] in the [next post] we can use `bits 64` (64-bit instructions).
-- the `mov dword` instruction moves the 32bit constant `0x2f4f2f4b` to the memory at address `b8000` (it writes `OK` to the screen, an explanation follows in the [next post])
+- the `mov dword` instruction moves the 32bit constant `0x2f4f2f4b` to the memory at address `b8000` (it prints `OK` to the screen, an explanation follows in the next posts)
 - `hlt` is the halt instruction and causes the CPU to stop
 
 Through assembling, viewing and disassembling it we can see the CPU [Opcodes] in action:
@@ -159,7 +160,7 @@ Idx Name          Size      VMA               LMA               File off  Algn
 
 [ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 [linker script]: https://sourceware.org/binutils/docs/ld/Scripts.html
-[^Linker 1M]: We don't want to load the kernel to e.g. `0x0` because there are many special memory areas below the 1MB mark (for example the so-called VGA buffer at `0xb8000`, that we use to write `OK` to the screen).
+[^Linker 1M]: We don't want to load the kernel to e.g. `0x0` because there are many special memory areas below the 1MB mark (for example the so-called VGA buffer at `0xb8000`, that we use to print `OK` to the screen).
 
 ## Creating the ISO
 The last step is to create a bootable ISO image with GRUB. We need to create the following directory structure and copy the `kernel.bin` to the right place:
@@ -203,7 +204,7 @@ Notice the green `OK` in the upper left corner. Let's summarize what happens:
 2. the bootloader reads the kernel executable and finds the Multiboot header
 3. it copies the `.boot` and `.text` sections to memory (to addresses `0x100000` and `0x100020`)
 4. it jumps to the entry point (`0x100020`, you can obtain it through `objdump -f`)
-5. our kernel writes the green `OK` and stops the CPU
+5. our kernel prints the green `OK` and stops the CPU
 
 You can test it on real hardware, too. Just burn the ISO to a disk or USB stick and boot from it.
 
@@ -254,6 +255,7 @@ $(iso): $(kernel)
     @cp $(kernel) build/isofiles/boot/
     @cp $(grub_cfg) build/isofiles/boot/grub
     @grub-mkrescue -o $(iso) build/isofiles 2> /dev/null
+    @rm -r build/isofiles
 
 $(kernel): $(assembly_object_files) $(linker_script)
     @ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files)
@@ -270,7 +272,9 @@ Some comments (see the [Makefile tutorial] if you don't know `make`):
 - the `$<` and `$@` in the assembly target are [automatic variables]
 - the Makefile has rudimentary multi-architecture support, e.g. `make arch=mips iso` tries to create an ISO for MIPS (it will fail of course as we don't support MIPS yet).
 
-Now we can invoke `make` and all updated assembly files are compiled and linked. The `make iso` command also creates the ISO image and `make run` will additionally start QEMU. Nice :)
+Now we can invoke `make` and all updated assembly files are compiled and linked. The `make iso` command also creates the ISO image and `make run` will additionally start QEMU. Nice!
+
+## What's next?
 
 In the [next post] we will create a page table and do some CPU configuration to switch to [Long Mode].
 
