@@ -24,7 +24,7 @@ use core::fmt::Write;
 mod vga_buffer;
 
 #[no_mangle]
-pub extern fn rust_main() {
+pub extern fn rust_main(multiboot_address: usize) {
     // ATTENTION: we have a very small stack and no guard page
     use vga_buffer::{Writer, Color};
 
