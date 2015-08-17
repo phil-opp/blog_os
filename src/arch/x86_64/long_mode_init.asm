@@ -25,3 +25,13 @@ long_mode_start:
     mov rax, 0x2f592f412f4b2f4f
     mov qword [0xb8000], rax
     hlt
+
+; Prints `ERROR: ` and the given error code to screen and hangs.
+; parameter: error code (in ascii) in al
+error:
+    mov rbx, 0x4f4f4f524f524f45
+    mov [0xb8000], rbx
+    mov rbx, 0x4f204f204f3a4f52
+    mov [0xb8008], rbx
+    mov byte [0xb800e], al
+    hlt
