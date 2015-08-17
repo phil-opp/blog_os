@@ -8,3 +8,6 @@ crate-type = ["staticlib"]
 
 [dependencies]
 rlibc = "*"
+
+[dependencies.multiboot2]
+path = "../multiboot2"

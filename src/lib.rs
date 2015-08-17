@@ -17,6 +17,7 @@
 #![no_std]
 
 extern crate rlibc;
+extern crate multiboot2;
 
 use core::fmt::Write;
 
@@ -27,6 +28,9 @@ mod vga_buffer;
 pub extern fn rust_main(multiboot_address: usize) {
     // ATTENTION: we have a very small stack and no guard page
     use vga_buffer::{Writer, Color};
+
+    let multiboot = unsafe{multiboot2::load(multiboot_address)};
+
 
     vga_buffer::clear_screen();
     let mut writer = Writer::new(Color::Blue, Color::LightGreen);
