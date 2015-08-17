@@ -18,6 +18,8 @@
 
 extern crate rlibc;
 extern crate multiboot2;
+#[macro_use]
+extern crate bitflags;
 
 use core::fmt::Write;
 
