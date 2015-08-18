@@ -1,7 +1,6 @@
 ---
 layout: post
-title: '[DRAFT] A minimal x86 kernel in small steps'
-related_posts: null
+title: 'A minimal x86 kernel in small steps'
 ---
 This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and print `OK` to the screen. The following blog posts we will extend it using the [Rust] programming language.
 
