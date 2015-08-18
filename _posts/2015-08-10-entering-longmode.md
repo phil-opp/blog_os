@@ -1,13 +1,12 @@
 ---
 layout: post
 title: '[DRAFT] Entering Long Mode in small steps'
-related_posts: null
 ---
-In the [last post] we created a minimal multiboot kernel. It just prints `OK` and hangs. Let's extend it! The goal is to call 64-bit [Rust] code. But the CPU is currently in [Protected Mode] and allows only 32bit instructions and up to 4GiB memory. So we need to setup _Paging_ and switch to the 64-bit [Long Mode] first.
+In the [last post] we created a minimal multiboot kernel. It just prints `OK` and hangs. Let's extend it! The goal is to call 64-bit [Rust] code. But the CPU is currently in [Protected Mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to setup _Paging_ and switch to the 64-bit [Long Mode] first.
 
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions or other issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
-[last post]: #TODO
+[last post]: {% post_url 2015-08-18-multiboot-kernel %}
 [Rust]: http://www.rust-lang.org/
 [Real Mode]: http://wiki.osdev.org/Real_Mode
 [Protected Mode]: https://en.wikipedia.org/wiki/Protected_mode
@@ -31,7 +30,7 @@ error:
 ```
 At address `b8000` begins the so-called [VGA text buffer]. It's an array of screen characters that consists of a 8 byte color code and a 8 byte ASCII character. We used the color code `4f` which means white text on red background. `0x52` is an ASCII `R`, `0x45` is an `E`, `0x3a` is a `:`, and `0x20` is a space. The second space is overwritten by the given ASCII char, then the CPU is stopped.
 
-Now we will add some check _functions_. A function is just a normal label with an `ret` (return) instruction at the end. The `call` instruction can be used to call it. Unlike the `jmp` instruction that just jumps to a memory address, the `call` instruction will push a return address to the stack (and the `ret` will jump to this address). But wait, we don't have a stack yet. The [stack pointer] in the esp register could point to some important data. So let's create a stack (add this to the end of our boot.asm):
+Now we will add some check _functions_. A function is just a normal label with an `ret` (return) instruction at the end. The `call` instruction can be used to call it. Unlike the `jmp` instruction that just jumps to a memory address, the `call` instruction will push a return address to the stack (and the `ret` will jump to this address). But wait, we don't have a stack yet. The [stack pointer] in the esp register could point to some important data or even invalid memory. So we need to update it and point it to some valid stack memory. Let's create this memory by reserving some bytes at the end of our `boot.asm`:
 
 ```nasm
 ...
@@ -40,7 +39,7 @@ stack_bottom:
     resb 64
 stack_top:
 ```
-A stack doesn't need to be initialized with data because we will `pop` only if we `pushed` before. By using the [.bss] section and the `resb` (reserve byte) command, we just declare the length of the uninitialized data (64 byte) and avoid saving needless bytes in the executable. When loading the executable, GRUB will create the section and the stack in memory. To use it, we update the stack pointer right after `start`:
+A stack doesn't need to be initialized with data because we will `pop` only if we `pushed` before. By using the [.bss] section and the `resb` (reserve byte) command, we just declare the length of the uninitialized data (64 byte) and avoid storing these bytes in the executable. When loading the executable, GRUB will create the section and the stack in memory. To use this stack, we update the stack pointer register right after `start`:
 
 ```nasm
 global start
@@ -55,7 +54,7 @@ start:
 ```
 We use `stack_top` because the stack grows downwards: A `push eax` subtracts 4 from `esp` and does a `mov [esp], eax` afterwards (`eax` is a general purpose register). Now we have a valid stack pointer and are able to call functions.
 
-The following checks are just here for completeness. I won't explain the strange functions and you don't need to understand them. They will check for a feature and jump to `error` if it's not available. You can [skip this section](#paging) if you like.
+The following check functions are just here for completeness and I won't explain details. Basically they all work the same: They will check for a feature and jump to `error` if it's not available.
 
 [ASCII]: https://en.wikipedia.org/wiki/ASCII
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
@@ -63,7 +62,7 @@ The following checks are just here for completeness. I won't explain the strange
 [.bss]: https://en.wikipedia.org/wiki/.bss
 
 ### Multiboot check
-We rely on some Multiboot features in the next posts. So let's make sure the kernel was really loaded by a Multiboot compliant bootloader: according to the [specification] \(PDF), the `eax` register must contain the magic value `0x36d76289` after loading. The check functions looks like this:
+We rely on some Multiboot features in the next posts. So let's make sure the kernel was really loaded by a Multiboot compliant bootloader: according to the [specification] \(PDF), the `eax` register must contain the magic value `0x36d76289` after loading. Let's add a simple function that checks this:
 
 ```nasm
 check_multiboot:
@@ -74,7 +73,9 @@ check_multiboot:
     mov al, "0"
     jmp error
 ```
-We compare the value in `eax` with the magic value and jump to the label `no_multiboot` if they're not equal (`jne` – jump on non equal). Then we jump to the error function with the error code `0`.
+We compare the value in `eax` with the magic value and jump to the label `no_multiboot` if they're not equal (`jne` – “jump if not equal”). In `no_multiboot`, we jump to the error function with the error code `0`.
+
+[specification]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
 
 ### CPUID check
 [CPUID] is a CPU instruction that can be used to get various information about the CPU. But not every processor supports it. Let's steal a detection function from the [OSDev wiki][CPUID detection]:
@@ -100,7 +101,7 @@ check_cpuid:
 ```
 
 ### Long Mode check
-Now we can use CPUID to check whether Long Mode can be used. I'm gonna use code from [OSDev][Long Mode detection] again:
+Now we can use CPUID to check whether Long Mode can be used. I will use code from [OSDev][Long Mode detection] again:
 
 ```nasm
 check_long_mode:
@@ -118,6 +119,7 @@ check_long_mode:
     jmp error
 ```
 
+### Putting it together
 Now we just call these check functions right after start:
 
 ```nasm
@@ -135,6 +137,7 @@ _start:
     ; print `OK` to screen
     ...
 ```
+When the CPU doesn't support a needed feature, we get an error message with an unique error code. Now we can start the real work.
 
 [CPUID]: http://wiki.osdev.org/CPUID
 [CPUID detection]: http://wiki.osdev.org/Setting_Up_Long_Mode#Detection_of_CPUID
@@ -150,7 +153,7 @@ In Long Mode, x86 uses a page size of 4096 bytes and a 4 level page table that c
 - the Page-Directory Table (PD),
 - and the Page Table (PT).
 
-Somehow I don't like these names… I will call them P4, P3, P2, P1 from now on.
+As I don't like these names, I will call them P4, P3, P2, and P1 from now on.
 
 Each page table contains 512 entries and one entry is 8 bytes, so they fit exactly in one page (`512*8 = 4096`). To translate a virtual address to a physical address the CPU[^hardware_lookup] will do the following[^virtual_physical_translation_source]:
 
@@ -163,9 +166,9 @@ Each page table contains 512 entries and one entry is 8 bytes, so they fit exact
 5. Use the following 9 bits as an index into P1
 6. Use the last 12 bits as page offset (`2^12 = 4096 = page size`)
 
-But what happens to bits 48-63 of the 64-bit virtual address? Well, they can't be used. The "64-bit" Long Mode is in fact just a 48-bit mode. The bits 48-63 must be copies of bit 47, so each valid virtual address is still unique. For more information see [Wikipedia][wikipedia_48bit_mode].
+But what happens to bits 48-63 of the 64-bit virtual address? Well, they can't be used. The “64-bit” Long Mode is in fact just a 48-bit mode. The bits 48-63 must be copies of bit 47, so each valid virtual address is still unique. For more information see [Wikipedia][wikipedia_48bit_mode].
 
-An entry in the P4, P3, P2, and P1 tables consists of the page aligned 52-bit _physical_ address of the page/next page table and the following bits that can be ORed in:
+An entry in the P4, P3, P2, and P1 tables consists of the page aligned 52-bit _physical_ address of the page/next page table and the following bits that can be OR-ed in:
 
 Bit(s)                | Name | Meaning
 --------------------- | ------ | ----------------------------------
@@ -174,8 +177,8 @@ Bit(s)                | Name | Meaning
 2 | user accessible | if not set, only kernel mode code can access this page
 3 | write through caching | writes go directly to memory
 4 | disable cache | no cache is used for this page
-5 | accessed | the CPU sets this bit when a read/write to this page occurs
-6 | null | should be 0
+5 | accessed | the CPU sets this bit when this page is used
+6 | dirty | the CPU sets this bit when a write to this page occurs
 7 | huge page/null | must be 0 in P1 and P4, creates a 1GiB page in P3, creates a 2MiB page in P2
 8 | global | page isn't flushed from caches on address space switch (PGE bit of CR4 register must be set)
 9-11 | available | can be used freely by the OS
@@ -193,7 +196,7 @@ Bit(s)                | Name | Meaning
 ### Setup Identity Paging
 When we switch to Long Mode, paging will be activated automatically. The CPU will then try to read the instruction at the following address, but this address is now a virtual address. So we need to do _identity mapping_, i.e. map a physical address to the same virtual address.
 
-The `huge page` bit is now very useful to us. It creates a 2MiB (when used in P2) or even a 1GiB page (when used in P3). So we just need to create one P4 and one P3 table to identity map the first _gigabytes_ of our kernel. Let's add these tables at the beginning of the `.bss` section:
+The `huge page` bit is now very useful to us. It creates a 2MiB (when used in P2) or even a 1GiB page (when used in P3). So we just need to create one P4 and one P3 table to identity map the first _gigabytes_ of our kernel. Of course we will replace them with finer-grained tables later. But now that we're stuck with assembly, we choose the easiest way. Let's add these two tables at the beginning[^page_table_alignment] of the `.bss` section:
 
 ```nasm
 ...
@@ -224,15 +227,17 @@ setup_page_tables:
 ```
 We just set the present and writable bits (`0b11` is a binary number) in the aligned P3 table address and move it to the first 4 bytes of the P4 table. To complete the identity mapping, we then map the first P3 entry to a huge 1GiB page that starts at address 0. Now the first gigabyte of our kernel is accessible through the same physical and virtual addresses.
 
-### Enable Paging
-Now it's time to enable paging and enter Long Mode. We need to do the following:
+[^page_table_alignment]: Page tables need to be page-aligned as the bits 0-11 are used for flags. By putting these tables at the beginning of `.bss`, the linker can just page align the whole section and we don't have unused padding bytes in between.
 
-1. write the address of the P4 table to the CR3 register (see the [paging section](#paging))
+### Enable Paging
+To enable paging and enter Long Mode, we need to do the following:
+
+1. write the address of the P4 table to the CR3 register (the CPU will look there, see the [paging section](#paging))
 2. Long Mode is an extension of [Physical Address Extension], so we need to enable it first
 3. Set the Long Mode bit in the EFER register
 4. Enable Paging
 
-The assembly function looks like this (some boring bit setting in different registers):
+The assembly function looks like this (some boring bit moving to various registers):
 
 ```nasm
 enable_paging:
@@ -259,6 +264,8 @@ enable_paging:
 
     ret
 ```
+The `or eax, 1 << X` is a pattern to set bit `X` in the eax register (`<<` is a left shift). Through `rdmsr` and `wrmsr` it's possible to read/write to the so-called model specific registers at address `ecx`.
+
 Let's call our new functions in `start`:
 
 ```nasm
@@ -285,9 +292,12 @@ We are now in Long Mode, but still in some 32-bit compatibility submode. To actu
 [Physical Address Extension]: https://en.wikipedia.org/wiki/Physical_Address_Extension
 
 ## The Global Descriptor Table
-The Global Descriptor Table (GDT) was used for _Segmentation_ in ancient operating systems. I won't explain Segmentation but the [Three Easy Pieces] OS book has good [introduction][Segmentation] (PDF). Today almost everyone uses Paging instead as it has many advantages.
+After enabling Paging, we are now in Long Mode. So we can use 64-bit instructions now, right? Wrong. We are still in some 32-bit compatibility submode. To actually execute 64-bit code, we need to setup a new Global Descriptor Table.
+The Global Descriptor Table (GDT) was used for _Segmentation_ in ancient operating systems. I won't explain Segmentation but the [Three Easy Pieces] OS book has good [introduction][Segmentation] (PDF) again.
 
-On x86, a GDT is always required, even when you're not using Segmentation. GRUB has set up a valid GDT for us but now we need to switch to a long mode GDT. A GDT always starts with an 0-entry and contains a arbitrary number of segment entries afterwards. An entry has the following format:
+Today almost everyone uses Paging instead of Segmentation (and so do we). But on x86, a GDT is always required, even when you're not using Segmentation. GRUB has set up a valid 32-bit GDT for us but now we need to switch to a long mode GDT.
+
+A GDT always starts with an 0-entry and contains a arbitrary number of segment entries afterwards. An entry has the following format:
 
 Bit(s)                | Name | Meaning
 --------------------- | ------ | ----------------------------------
@@ -307,7 +317,7 @@ Bit(s)                | Name | Meaning
 55 | granularity | if it's set, the limit is the number of pages, else it's a byte number
 56-63 | base 24-31 | the last byte of the base address
 
-We need one code and one data segment. They have the following bits set: _descriptor type_, _present_, and _read/write_. The code segment has additionally the _executable_ and the _64-bit_ flag. It's not possible to use Segmentation in Long Mode and the base and limit fields must be 0. Translated to assembly it looks like this:
+We need one code and one data segment. They have the following bits set: _descriptor type_, _present_, and _read/write_. The code segment has additionally the _executable_ and the _64-bit_ flag. In Long mode, it's not possible to use Segmentation and the base and limit fields must be 0. Translated to assembly it looks like this:
 
 ```nasm
 section .rodata
@@ -324,7 +334,7 @@ We chose the `.rodata` section here because it's initialized read-only data. The
 [bit shift]: http://www.cs.umd.edu/class/sum2003/cmsc311/Notes/BitOp/bitshift.html
 
 ### Loading the GDT
-To load our new GDT, we have to tell the CPU its address and length. We do this by passing a memory location to the `lgdt` (load GDT) instruction. Let's add this pointer structure at the end of our GDT:
+To load our new GDT, we have to tell the CPU its address and length. We do this by passing the memory location of a special pointer structure to the `lgdt` (load GDT) instruction. Let's add this pointer structure at the end of our GDT:
 
 ```nasm
 gdt64:
@@ -347,7 +357,7 @@ start:
     ; print `OK` to screen
     ...
 ```
-When you still see the green `OK`, everything went fine and the new GDT is loaded. I don't want to frustrate you, but we still can't execute 64-bit code… The selector registers like the code selector `cs`, the data selector `ds`, the stack selector `ss`, and the extra selector `es` still have the values from the old GDT. To update them, we need to load them with the GDT index (in bytes) of the desired segment. In our case the code segment starts at byte 8 of the GDT and the data segment at byte 16. Let's try it:
+When you still see the green `OK`, everything went fine and the new GDT is loaded. But we still can't execute 64-bit code: The selector registers like the code selector `cs`, the data selector `ds`, the stack selector `ss`, and the extra selector `es` still have the values from the old GDT. To update them, we need to load them with the GDT offset (in bytes) of the desired segment. In our case the code segment starts at byte 8 of the GDT and the data segment at byte 16. Let's try it:
 
 ```nasm
     ...
@@ -362,7 +372,7 @@ When you still see the green `OK`, everything went fine and the new GDT is loade
     ; print `OK` to screen
     ...
 ```
-It should still work. The segment selectors are only 16-bits large, so we use the ax subregister. Notice that we didn't update the code selector `cs`. We will do that later. First we should replace this hardcoded `16` by adding some labels to our GDT:
+It should still work. The segment selectors are only 16-bits large, so we use the 16-bit ax subregister. Notice that we didn't update the code selector `cs`. We will do that later. First we should replace this hardcoded `16` by adding some labels to our GDT:
 
 ```nasm
 section .rodata
@@ -375,7 +385,11 @@ gdt64:
 .pointer:
     ...
 ```
-Now we can use `gdt64.data` instead of 16 and `gdt64.code` instead of 8. These labels will still work if we modify the GDT. So let's do the last step and enter the true 64-bit mode (finally)! We just need to load `cs` with `gdt64.code`. But we can't do it through `mov`. The only way to reload the code selector is a _far jump_ or a _far return_. These instructions work like a normal jump/return but change the code selector. We will use a far jump to a long mode label:
+We can't just use normal labels here, as we need the table offset. We calculate this offset using the current address `$` and set the labels to this value using [equ]. Now we can use `gdt64.data` instead of 16 and `gdt64.code` instead of 8 and these labels will still work if we modify the GDT.
+
+Now there is just one last step left to enter the true 64-bit mode: We need to load `cs` with `gdt64.code`. But we can't do it through `mov`. The only way to reload the code selector is a _far jump_ or a _far return_. These instructions work like a normal jump/return but change the code selector. We will use a far jump to a long mode label:
+
+[equ]: http://www.nasm.us/doc/nasmdoc3.html#section-3.2.4
 
 ```nasm
     ...
@@ -407,7 +421,7 @@ _Congratulations_! You have successfully wrestled through this CPU configuration
 - and we can write these 64-bit registers directly to memory using `mov qword` (quad word)
 
 ## Whats next?
-It's time to leave assembly behind[^leave_assembly_behind] and switch to some higher level language. We won't use any C or C++, not even a single line. Instead we will use the relatively new [Rust] language. It's a systems language without garbage collections but with guaranteed memory safety. Through a real type system and many abstractions it feels like a high-level language but can still be low-level enough for OS development.
+It's time to leave assembly behind[^leave_assembly_behind] and switch to some higher level language. We won't use any C or C++ (not even a single line). Instead we will use the relatively new [Rust] language. It's a systems language without garbage collections but with guaranteed memory safety. Through a real type system and many abstractions it feels like a high-level language but can still be low-level enough for OS development.
 
 [Rust]: https://www.rust-lang.org/
 
