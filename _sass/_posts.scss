@@ -59,3 +59,22 @@
     }
   }
 }
+
+.PageNavigation {
+  font-size: 0.9em;
+  display: table;
+  width: 100%;
+  overflow: hidden;
+}
+
+.PageNavigation a {
+  display: table-cell;
+}
+
+.PageNavigation .previous {
+  text-align: left;
+}
+
+.PageNavigation .next {
+  text-align: right;
+}
