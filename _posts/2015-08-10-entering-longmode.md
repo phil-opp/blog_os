@@ -285,11 +285,61 @@ start:
     hlt
 ...
 ```
-Now we can test it using `make run`. When the green OK is printed, we have successfully enabled paging!
+To test it we run `make run`. If the green OK is printed, we have successfully enabled paging!
 
-We are now in Long Mode, but still in some 32-bit compatibility submode. To actually execute 64-bit code, we need to setup a new Global Descriptor Table.
+### Debugging
+What would happen if we had a typo somewhere in the last steps? Let's try and add a small typo at the beginning of `setup_paging`:
+
+```nasm
+setup_page_tables:
+    ; map first P4 entry to P3 table
+    ;mov eax, p3_table ; correct
+    mov eax, p4_table ; wrong! TODO: fix
+	...
+```
+When we test it using `make run`, the OS will constantly reboot itself. Such a boot loop is most likely caused by some CPU exception. We can look at CPU interrupts/exceptions using QEMU:
+
+```
+> qemu-system-x86_64 -d int -no-reboot -hda build/os-x86_64.iso
+SMM: enter
+...
+SMM: after RSM
+...
+check_exception old: 0xffffffff new 0xe
+     0: v=0e e=0000 i=0 cpl=0 IP=0010:0000000000100090 pc=0000000000100090
+	 SP=0018:000000000010303c CR2=0000000000100090
+EAX=80010011 EBX=68747541 ECX=c0000080 EDX=00000000
+...
+check_exception old: 0xe new 0xd
+     1: v=08 e=0000 i=0 cpl=0 IP=0010:0000000000100090 pc=0000000000100090
+     SP=0018:000000000010303c env->regs[R_EAX]=0000000080010011
+...
+check_exception old: 0x8 new 0xd
+```
+The `-d int` logs CPU interrupts to the console and the `-no-reboot` flag closes QEMU instead of rebooting. But what does the cryptical output mean? I already removed most of it as we don't need it here. Let's break down the rest:
+
+- The first two blocks, `SMM: enter` and `SMM: after RSM` are created before our OS boots, so we just ignore them.
+- The next block, `check_exception old: 0xffffffff new 0xe` is the interesting one. It says: “a new CPU exception with number `0xe` occurred“.
+- The last two blocks indicate further exceptions. They were thrown because we didn't handle the previous exceptions.
+
+So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't handling an interrupt when the exception occurred. The register dump tells us that the current instruction was `0x100090` (in `IP`  (instruction pointer) or `pc` (program counter)). By looking at an [exception table] we learn that the number `0xe` indicates a [Page Fault] and that the `CR2` register contains the causing virtual address. In our case, it's `0x100090` too. So the fault occurred while loading the instruction at this address. Let's look at its content:
+
+```
+> objdump -D build/kernel-x86_64.bin | grep -B 14 "100090:"
+0000000000100061 <enable_paging>:
+  100061:	b8 00 10 10 00       	mov    $0x101000,%eax
+  ...
+  100088:	0d 00 00 01 00       	or     $0x10000,%eax
+  10008d:	0f 22 c0             	mov    %rax,%cr0
+  100090:	c3                   	retq
+```
+Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The `-B 14` option prints 14 lines of context before. We see that the `100090` line is the first line after `mov cr0, rax` which enables the paging. So after enabling paging, the CPU fails to read the next instruction. Therefore our paging setup must be wrong. This information is not really useful in our case (what else should cause the error?). But in other cases this technique can help to find very nasty bugs.
+
+Let's fix our code again and continue.
 
 [Physical Address Extension]: https://en.wikipedia.org/wiki/Physical_Address_Extension
+[exception table]: http://wiki.osdev.org/Exceptions
+[Page Fault]: http://wiki.osdev.org/Exceptions#Page_Fault
 
 ## The Global Descriptor Table
 After enabling Paging, we are now in Long Mode. So we can use 64-bit instructions now, right? Wrong. We are still in some 32-bit compatibility submode. To actually execute 64-bit code, we need to setup a new Global Descriptor Table.
