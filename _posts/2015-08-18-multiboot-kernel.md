@@ -96,7 +96,7 @@ There are some new commands:
 - the `mov dword` instruction moves the 32bit constant `0x2f4f2f4b` to the memory at address `b8000` (it prints `OK` to the screen, an explanation follows in the next posts)
 - `hlt` is the halt instruction and causes the CPU to stop
 
-Through assembling, viewing and disassembling it we can see the CPU [Opcodes] in action:
+Through assembling, viewing and disassembling we can see the CPU [Opcodes] in action:
 
 ```
 > nasm boot.asm
@@ -271,7 +271,7 @@ Some comments (see the [Makefile tutorial] if you don't know `make`):
 - the `$<` and `$@` in the assembly target are [automatic variables]
 - the Makefile has rudimentary multi-architecture support, e.g. `make arch=mips iso` tries to create an ISO for MIPS (it will fail of course as we don't support MIPS yet).
 
-Now we can invoke `make` and all updated assembly files are compiled and linked. The `make iso` command also creates the ISO image and `make run` will additionally start QEMU. Nice!
+Now we can invoke `make` and all updated assembly files are compiled and linked. The `make iso` command also creates the ISO image and `make run` will additionally start QEMU.
 
 ## What's next?
 
