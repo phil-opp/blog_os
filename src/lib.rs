@@ -15,6 +15,8 @@
 #![feature(no_std, lang_items)]
 #![no_std]
 
+extern crate rlibc;
+
 #[no_mangle]
 pub extern fn main() {
     // ATTENTION: we have a very small stack and no guard page
