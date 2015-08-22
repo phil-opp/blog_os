@@ -44,7 +44,7 @@ $(iso): $(kernel)
 	@rm -r build/isofiles
 
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
-	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
+	@ld -n --gc-sections -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
 
 cargo:
 	@cargo build
