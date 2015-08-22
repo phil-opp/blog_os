@@ -32,7 +32,7 @@ clean:
 	@rm -rf build
 
 run: $(iso)
-	@qemu-system-x86_64 -hda $(iso)
+	@qemu-system-x86_64 -s -hda $(iso)
 
 iso: $(iso)
 

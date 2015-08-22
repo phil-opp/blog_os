@@ -48,6 +48,11 @@ setup_page_tables:
     ; map first P3 entry to a huge page that starts at address 0
     mov dword [p3_table], 0b10000011 ; present + writable + huge
 
+    ; recursive map P4
+    mov eax, p4_table
+    or eax, 0b11 ; present + writable
+    mov [p4_table + 511 * 8], eax
+
     ret
 
 enable_paging:
@@ -133,7 +138,9 @@ p4_table:
 p3_table:
     resb 4096
 stack_bottom:
-    resb 64
+    ; TODO a >= 80 byte stack is enough. Theoretically we could use the memory
+    ; of the p3 table as a hack (it won't override the important first entry)
+    resb 4096
 stack_top:
 
 section .rodata

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(no_std, lang_items)]
-#![feature(core_str_ext, const_fn)]
+#![feature(no_std, lang_items, asm)]
+#![feature(core_str_ext, const_fn, range_inclusive)]
 #![no_std]
 
 extern crate rlibc;
@@ -26,15 +26,18 @@ use core::fmt::Write;
 #[macro_use]
 mod vga_buffer;
 
+mod memory;
+
 #[no_mangle]
 pub extern fn rust_main(multiboot_address: usize) {
     // ATTENTION: we have a very small stack and no guard page
     use vga_buffer::{Writer, Color};
 
-    let multiboot = unsafe{multiboot2::load(multiboot_address)};
-
-
     vga_buffer::clear_screen();
+    let multiboot = unsafe{multiboot2::load(multiboot_address)};
+    memory::init(multiboot);
+
+
     let mut writer = Writer::new(Color::Blue, Color::LightGreen);
     writer.write_byte(b'H');
     let _ = writer.write_str("ello! ");
