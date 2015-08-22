@@ -388,6 +388,8 @@ Now there is just one last step left to enter the true 64-bit mode: We need to l
 [equ]: http://www.nasm.us/doc/nasmdoc3.html#section-3.2.4
 
 ```nasm
+    global start
+    extern long_mode_start
     ...
     lgdt [gdt64.pointer]
 
@@ -398,7 +400,15 @@ Now there is just one last step left to enter the true 64-bit mode: We need to l
     mov es, ax
 
     jmp gdt64.code:long_mode_start
+```
+The actual `long_mode_start` label is defined as `extern`, so it's part of another file. The `jmp gdt64.code:long_mode_start` is the mentioned far jump.
 
+I put the 64-bit code into a new file to separate it from the 32-bit code, thereby we can't call the (now invalid) 32-bit code accidentally. The new file (I named it `long_mode_init.asm`) looks like this:
+
+```nasm
+global long_mode_start
+
+section .text
 bits 64
 long_mode_start:
     ; print `OKAY` to screen
@@ -411,8 +421,7 @@ bits 32
 ```
 _Congratulations_! You have successfully wrestled through this CPU configuration and compatibility mode mess :). You should see a green `OKAY` on the screen. If you still have energy, here are some notes on this last step:
 
-- the `jmp gdt64.code:long_mode_start` is the mentioned far jump
-- As the CPU expects 64-bit instructions now, we to switch to `bits 64` before `long_mode_start`. Don't forget to switch back to `bits 32` after it because our other functions are 32-bit functions.
+- As the CPU expects 64-bit instructions now, we use `bits 64`
 - We can now use the extended registers. Instead of the 32-bit `eax`, `ebx`, etc. we now have the 64-bit `rax`, `rbx`, …
 - and we can write these 64-bit registers directly to memory using `mov qword` (quad word)
 
