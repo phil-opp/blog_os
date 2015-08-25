@@ -156,9 +156,32 @@ What happened? Well, the linker removed unused sections. And since we don't use 
     KEEP(*(.multiboot))
 }
 ```
-No everything should work (the green `OKAY`) again.
+Now everything should work (the green `OKAY`) again. But there is another linking issue:
 
-Unfortunately there is one problem left that gets triggered by the following code:
+### no-landing-pads
+
+The following snippet still fails:
+
+```rust
+    ...
+    let test = (0..3).flat_map(|x| 0..x).zip(0..);
+```
+The error is a linker error again (hence the ugly error message):
+
+```
+target/debug/libblog_os.a(blog_os.0.o): In function `blog_os::iter::Iterator::zip<core::iter::FlatMap<core::ops::Range<i32>, core::ops::Range<i32>, closure>,core::ops::RangeFrom<i32>>':
+/home/.../src/libcore/iter.rs:223: undefined reference to `_Unwind_Resume'
+```
+So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:223` in libcore. This reference is inserted by the compiler, it's not really in the libcore [source][iter.rs:223]. The inserted code is a so-called _landing pad_ that is used for exception handling. The easiest way of fixing this problem is to disable the landing pad creation since we don't supports panics anyway right now. We can do this by passing a `-Z no-landing-pads` flag to rustc. To do this we replace the `cargo build` command in our Makefile:
+
+```make
+cargo:
+    @cargo rustc -- -Z no-landing-pads
+```
+Now we fixed all linking issues.
+
+## The final problem
+Unfortunately there is one last problem left that gets triggered by the following code:
 
 ```rust
 let mut a = 42;
@@ -253,7 +276,9 @@ setup_SSE:
     mov al, "a"
     jmp error
 ```
-Notice that we set/unset exactly the bits that can cause the `Invalid Opcode` exception. Now we can insert a `call setup_SSE` right before calling `main` and our Rust code will finally work. **TODO _Unwind_Resume**
+Notice that we set/unset exactly the bits that can cause the `Invalid Opcode` exception. We insert a `call setup_SSE` right before calling `main` and our Rust code will finally work.
+
+[32-bit error function]: #TODO
 
 ### “OS returned!”
 Now that we're editing assembly anyway, we should change the `OKAY` message to something more meaningful. My suggestion is a red `OS returned!`:
