@@ -2,11 +2,15 @@
 layout: default
 title: Home
 ---
+<div class="newest-post">
+<emph>Latest Post</emph>: {% for post in site.categories.rust-os limit:1 %}
+  <strong><a href="#{{ post.id }}">{{post.title}}</a></strong>
+{% endfor %}
+</div>
 
 <div class="posts">
-  {% for post in paginator.posts %}
-  <hr>
-  <article class="post">
+  {% for post in site.categories.rust-os reversed %}
+  <article class="post" id="{{ post.id }}">
     <h1 class="post-title">
       <a href="{{ site.baseurl }}{{ post.url }}">
         {{ post.title }}
@@ -21,18 +25,6 @@ title: Home
 	    {{ post.excerpt }}
     {% endif %}
   </article>
+  <hr>
   {% endfor %}
-</div>
-
-<div class="pagination">
-  {% if paginator.next_page %}
-    <a class="pagination-item older" href="{{ paginator.next_page_path | prepend: site.baseurl }}">Older</a>
-  {% else %}
-    <span class="pagination-item older">Older</span>
-  {% endif %}
-  {% if paginator.previous_page %}
-    <a class="pagination-item newer" href="{{ paginator.previous_page_path | prepend: site.baseurl }}">Newer</a>
-  {% else %}
-    <span class="pagination-item newer">Newer</span>
-  {% endif %}
 </div>
