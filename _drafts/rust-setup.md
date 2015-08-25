@@ -2,9 +2,20 @@
 layout: post
 title: 'Setup Rust in small steps'
 ---
+In the last posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to sweet Rust code. [Rust] is a beautiful high-level language that has no runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
+
+This blog post tries to setup Rust step-by-step and point out the different problems. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is in a [Github repository], too.
+
+[multiboot post]: {% post_url 2015-08-18-multiboot-kernel %}
+[long mode post]: #TODO
+[Rust]: https://www.rust-lang.org/
+[file an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
+[Github repository]: https://github.com/phil-opp/blogOS/tree/rust_setup
 
 ## Rust Setup
-multirust nighly
+We need a nightly compiler, as we need to use many unstable features. To manage Rust installations I highly recommend [multirust] by brson. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. After installing you can just run `multirust update nightly` to install or update to the latest Rust nightly.
+
+[multirust]: https://github.com/brson/multirust
 
 ## Creating a Rust project
 Normally you would call `cargo new` when you want to create a new project folder. We can't use it because our folder already exists so we will do it manually. Fortunately we just need to add a cargo configuration file named `Cargo.toml`:
