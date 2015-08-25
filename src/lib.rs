@@ -13,13 +13,28 @@
 // limitations under the License.
 
 #![feature(no_std, lang_items)]
+#![feature(core_slice_ext, core_str_ext, core_intrinsics)]
 #![no_std]
 
 extern crate rlibc;
 
+use core::intrinsics::offset;
+
 #[no_mangle]
 pub extern fn main() {
     // ATTENTION: we have a very small stack and no guard page
+    let x = ["Hello", " ", "World", "!"];
+    let screen_pointer = 0xb8000 as *const u16;
+
+    for (byte, i) in x.iter().flat_map(|s| s.bytes()).zip(0..) {
+        let c = 0x1f00 | (byte as u16);
+        unsafe {
+            let screen_char = offset(screen_pointer, i) as *mut u16;
+            *screen_char = c
+        }
+    }
+
+    loop{}
 }
 
 #[lang = "eh_personality"] extern fn eh_personality() {}
