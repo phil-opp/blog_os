@@ -310,9 +310,57 @@ call main
     mov [0xb8010], rax
     hlt
 ```
+Ok that's enough assembly for now, let's switch back to Rust and print the traditional `Hello World!`.
 
-[32-bit error function]: #TODO
+## Hello World!
+Of course we could just write some magic bytes to memory like we did in assembly. But I chose some code that highlight some of Rust's features:
 
-## Testing
-- it works now
-- provocate stack overflow -> increase stack
+```rust
+#![feature(no_std, lang_items)]
+#![feature(core_slice_ext, core_str_ext, core_intrinsics)]
+#![no_std]
+
+extern crate rlibc;
+
+use core::intrinsics::offset;
+
+#[no_mangle]
+pub extern fn main() {
+    // ATTENTION: we have a very small stack and no guard page
+    let x = ["Hello", " ", "World", "!"];
+    let screen_pointer = 0xb8000 as *const u16;
+
+    for (byte, i) in x.iter().flat_map(|s| s.bytes()).zip(0..) {
+        let c = 0x1f00 | (byte as u16);
+        unsafe {
+            let screen_char = offset(screen_pointer, i) as *mut u16;
+            *screen_char = c
+        }
+    }
+
+    loop{}
+}
+```
+Let's break it down:
+
+- the `core_*` features are needed because many functions from the core library are still unstable
+- `use` imports a function, in our case [offset] that can be used for C-like pointer arithmetic
+- Normally, Rust tries to avoid [stack overflows] through _guard pages_: The page below the stack isn't mapped and such a stack overflow triggers a page fault. But we can't unmap this page easily as we use just one big page, so we need to be very careful to not blow our small stack. Fortunately our stack is just above the page tables. A stack overflow would overwrite an important entry at some point and therefore provoke a page fault (that crashed our kernel).
+- `x` is an immutable array of [&str]
+- `screen_pointer` is a [raw pointer] to the VGA text buffer
+- We iterate over the elements of x, convert every `&str` to a byte iterator (`s.bytes()`) and join these iterators (through `flat_map`). Then we convert the byte iterator to a `(byte, index)` operator through the [zip method].
+- By casting the byte as `u16` and OR-ing the colors in (`0x1f` is white text on blue background), we convert it to a screen character.
+- Now we just need to write the `screen_char` to the right place in memory. Rust doesn't know the VGA buffer and can't guarantee that writing to it is safe (we could corrupt important data). So we need to tell Rust that we know what we're doing by using an [unsafe block].
+- `offset` is like pointer arithmetic in C: It calculates the address of the i-th `u16` (starting at `0xb8000`) and converts it to a pointer.
+- To be able to write to it, we must cast the `*const u16` to a `*mut u16`
+
+[offset]: https://doc.rust-lang.org/nightly/core/intrinsics/fn.offset.html
+[stack overflows]: https://en.wikipedia.org/wiki/Stack_overflow
+[&str]: https://doc.rust-lang.org/nightly/std/primitive.str.html
+[zip method]: https://doc.rust-lang.org/nightly/std/iter/trait.Iterator.html#method.zip
+[unsafe block]: https://doc.rust-lang.org/book/unsafe.html
+
+## What's next?
+Right now we write magic bits to memory every time we want to print something. It's time to end the hackery. In the [next post] we create a VGA buffer module that allows us to print strings in different colors.
+
+[next post]: #TODO
