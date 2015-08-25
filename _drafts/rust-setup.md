@@ -102,7 +102,7 @@ Let's play around with some Rust code:
 
 ```rust
 pub extern fn main() {
-    let x = ["Hello", "World", "!"];
+    let x = ["Hello", " ", "World", "!"];
 }
 ```
 When we test it using `make run`, it fails with `undefined reference to 'memcpy'`. This function is one of the basic functions of the C library (`libc`). Usually the `libc` crate is linked to every Rust program with the standard library but we opted out through `#![no_std]`. So we could try to fix this by adding the [libc crate] as `extern crate`. But `libc` is just a wrapper for the system `libc`, for example `glibc` on Linux, so this won't work for us. Instead we need to recreate the basic `libc` functions like `memcpy`, `memmove`, `memset`, and `memcmp` in Rust.
@@ -127,15 +127,26 @@ extern crate rlibc;
 pub extern fn main() {
 ...
 ```
-Now `make run` doesn't complain about `memcpy` anymore. Instead it will show a pile of `fmod` and `fmodf` errors. These functions are used for the modulo operation (`%`) on floating point numbers in [libcore]. The core library is added implicitly when using `#![no_std]` and provides basic standard library features like `Option` or `Iterator`. According to the documentation it is “dependency-free” but it actually has some dependencies, for example on `fmod` and `fmodf`.
+Now `make run` doesn't complain about `memcpy` anymore. Instead it will show a pile of new errors:
+
+```
+target/debug/libblog_os.a(core-35017696.0.o): In function `ops::f32.Rem::rem::hfcbbcbe5711a6e6emxm':
+core.0.rs:(.text._ZN3ops7f32.Rem3rem20hfcbbcbe5711a6e6emxmE+0x1): undefined reference to `fmodf'
+target/debug/libblog_os.a(core-35017696.0.o): In function `ops::f64.Rem::rem::hbf225030671c7a35Txm':
+core.0.rs:(.text._ZN3ops7f64.Rem3rem20hbf225030671c7a35TxmE+0x1): undefined reference to `fmod'
+...
+```
 
 [rlibc]: https://crates.io/crates/rlibc
 [rlibc source]: https://github.com/rust-lang/rlibc/blob/master/src/lib.rs
 [raw pointer]: https://doc.rust-lang.org/book/raw-pointers.html
 [crates.io]: https://crates.io
-[libcore]: https://doc.rust-lang.org/core/
 
 ### --gc-sections
+The new errors are linker errors about missing `fmod` and `fmodf` functions. These functions are used for the modulo operation (`%`) on floating point numbers in [libcore]. The core library is added implicitly when using `#![no_std]` and provides basic standard library features like `Option` or `Iterator`. According to the documentation it is “dependency-free” but it actually has some dependencies, for example on `fmod` and `fmodf`.
+
+[libcore]: https://doc.rust-lang.org/core/
+
 So how do we fix this problem? We don't use any floating point operations, so we could just provide our own implementations of `fmod` and `fmodf` that just do a `loop{}`. But there's a better way that doesn't fail silently when we use floats some day: We tell the linker to remove unused sections. That's generally a good idea as it reduces kernel size. And we don't have any references to `fmod` and `fmodf` anymore until we use floating point modulo. The magic linker flag is `--gc-sections` which stands for “garbage collect sections”. Let's add it to the `$(kernel)` target in our `Makefile`:
 
 ```make
@@ -189,6 +200,8 @@ a += 1;
 ```
 When we add that code to `main` and test it using `make run`, the OS will constantly reboot itself. Let's try to debug it.
 
+[iter.rs:223]: https://doc.rust-lang.org/nightly/src/core/iter.rs.html#223
+
 ### Debugging
 Such a boot loop is most likely caused by some [CPU exception][exception table]. When these exceptions aren't handled, a [Triple Fault] occurs and the processor resets itself. We can look at generated CPU interrupts/exceptions using QEMU:
 
@@ -236,7 +249,7 @@ The rough translation of this cryptic low-level code is: _If SSE isn't enabled_.
 [movaps]: http://www.c3se.chalmers.se/Common/VTUNE-9.1/doc/users_guide/mergedProjects/analyzer_ec/mergedProjects/reference_olh/mergedProjects/instructions/instruct32_hh/vc181.htm
 [SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
 
-## Enabling SSE
+### Enabling SSE
 To enable SSE we need to return to assembly. We need to add a function that checks if SSE is available and enables it then. Else we want to print an error message. But we can't use our existing `error` function because it uses (now invalid) 32-bit instructions. So we need a new one (in `long_mode_init.asm`):
 
 ```nasm
