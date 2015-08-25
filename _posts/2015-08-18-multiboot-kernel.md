@@ -281,4 +281,4 @@ In the [next post] we will create a page table and do some CPU configuration to 
 [Makefile tutorial]: http://mrbook.org/blog/tutorials/make/
 [automatic variables]: https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 
-[next post]: #TODO
+[next post]: {% post_url 2015-08-25-entering-longmode %}

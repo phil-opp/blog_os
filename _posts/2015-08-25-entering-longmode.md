@@ -1,6 +1,6 @@
 ---
 layout: post
-title: '[DRAFT] Entering Long Mode in small steps'
+title: 'Entering Long Mode in small steps'
 ---
 In the [last post] we created a minimal multiboot kernel. It just prints `OK` and hangs. Let's extend it! The goal is to call 64-bit [Rust] code. But the CPU is currently in [Protected Mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to setup _Paging_ and switch to the 64-bit [Long Mode] first.
 
