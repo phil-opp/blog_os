@@ -2,12 +2,12 @@
 layout: post
 title: 'Setup Rust in small steps'
 ---
-In the last posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to sweet Rust code. [Rust] is a beautiful high-level language that has no runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
+In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to sweet Rust code. [Rust] is a beautiful high-level language that has no runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
 
 This blog post tries to setup Rust step-by-step and point out the different problems. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is in a [Github repository], too.
 
-[multiboot post]: {% post_url 2015-08-18-multiboot-kernel %}
-[long mode post]: #TODO
+[multiboot post]: {{ site.url }}{{ page.previous.previous.url }}
+[long mode post]: {{ site.url }}{{ page.previous.url }}
 [Rust]: https://www.rust-lang.org/
 [file an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
 [Github repository]: https://github.com/phil-opp/blogOS/tree/rust_setup
@@ -363,4 +363,4 @@ Let's break it down:
 ## What's next?
 Right now we write magic bits to memory every time we want to print something. It's time to end the hackery. In the [next post] we create a VGA buffer module that allows us to print strings in different colors.
 
-[next post]: #TODO
+[next post]: #TODO {{ site.url }}{{ page.next.url }}

@@ -2,11 +2,11 @@
 layout: post
 title: 'Entering Long Mode in small steps'
 ---
-In the [last post] we created a minimal multiboot kernel. It just prints `OK` and hangs. Let's extend it! The goal is to call 64-bit [Rust] code. But the CPU is currently in [Protected Mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to setup _Paging_ and switch to the 64-bit [Long Mode] first.
+In the [previous post] we created a minimal multiboot kernel. It just prints `OK` and hangs. Let's extend it! The goal is to call 64-bit [Rust] code. But the CPU is currently in [Protected Mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to setup _Paging_ and switch to the 64-bit [Long Mode] first.
 
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions or other issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
-[last post]: {% post_url 2015-08-18-multiboot-kernel %}
+[previous post]: {{ site.url }}{{ page.previous.url }}
 [Rust]: http://www.rust-lang.org/
 [Real Mode]: http://wiki.osdev.org/Real_Mode
 [Protected Mode]: https://en.wikipedia.org/wiki/Protected_mode
@@ -426,8 +426,9 @@ _Congratulations_! You have successfully wrestled through this CPU configuration
 - and we can write these 64-bit registers directly to memory using `mov qword` (quad word)
 
 ## Whats next?
-It's time to leave assembly behind[^leave_assembly_behind] and switch to some higher level language. We won't use any C or C++ (not even a single line). Instead we will use the relatively new [Rust] language. It's a systems language without garbage collections but with guaranteed memory safety. Through a real type system and many abstractions it feels like a high-level language but can still be low-level enough for OS development.
+It's time to leave assembly behind[^leave_assembly_behind] and switch to some higher level language. We won't use any C or C++ (not even a single line). Instead we will use the relatively new [Rust] language. It's a systems language without garbage collections but with guaranteed memory safety. Through a real type system and many abstractions it feels like a high-level language but can still be low-level enough for OS development. The [next post] describes the Rust setup.
 
 [Rust]: https://www.rust-lang.org/
+[next post]: {{ site.url }}{{ page.next.url }}
 
 [^leave_assembly_behind]: Actually we will still need some assembly in the future, but I'll try to minimize it.
