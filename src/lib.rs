@@ -13,26 +13,29 @@
 // limitations under the License.
 
 #![feature(no_std, lang_items)]
-#![feature(core_slice_ext, core_str_ext, core_intrinsics)]
+#![feature(core_str_ext, const_fn)]
 #![no_std]
 
 extern crate rlibc;
 
-use core::intrinsics::offset;
+use core::fmt::Write;
+
+#[macro_use]
+mod vga_buffer;
 
 #[no_mangle]
 pub extern fn rust_main() {
     // ATTENTION: we have a very small stack and no guard page
-    let x = ["Hello", " ", "World", "!"];
-    let screen_pointer = 0xb8000 as *const u16;
+    use vga_buffer::{Writer, Color};
 
-    for (byte, i) in x.iter().flat_map(|s| s.bytes()).zip(0..) {
-        let c = 0x1f00 | (byte as u16);
-        unsafe {
-            let screen_char = offset(screen_pointer, i) as *mut u16;
-            *screen_char = c
-        }
-    }
+    vga_buffer::clear_screen();
+    let mut writer = Writer::new(Color::Blue, Color::LightGreen);
+    writer.write_byte(b'H');
+    let _ = writer.write_str("ello! ");
+    let _ = write!(writer, "The numbers are {} and {}", 42, 1.0/3.0);
+    println!("");
+    println!("{} {}", "line", 1);
+    print!("line {}", 2);
 
     loop{}
 }
