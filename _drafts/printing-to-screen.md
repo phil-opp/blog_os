@@ -185,7 +185,79 @@ Now you should see a `Hello! The numbers are 42 and 0.3333333333333333` in stran
 Right now, we just ignore newlines and characters that don't fit into the line anymore. Instead we want to move every character one line up (the top line gets deleted) and start at the beginning of the last line again. To do this, we add a `new_line` method to `Writer`:
 
 ```rust
+fn new_line(&mut self) {
+    for row in 0..(BUFFER_HEIGHT-1) {
+        Self::buffer().chars[row] = Self::buffer().chars[row + 1]
+    }
+    self.clear_row(BUFFER_HEIGHT-1);
+    self.column_position = 0;
+}
 ```
-Blablabla
+We just move each line to the line above. Notice that the range notation (`..`) is exclusive the upper bound.
 
-Now we just need to call in the 2 cases marked with `//TODO` and our writer supports newlines.
+The `clear_row` method looks like this:
+
+```rust
+fn clear_row(&mut self, row: usize) {
+    let blank = ScreenChar {
+        ascii_character: b' ',
+        color_code: self.color_code,
+    };
+    Self::buffer().chars[row] = [blank; BUFFER_WIDTH];
+}
+```
+Now we just need to call the `new_line()` method in the 2 cases marked with `//TODO` and our writer supports newlines.
+
+## A `println!` macro
+Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead we look at the source of the [`println!` macro] in the standard library:
+
+```
+macro_rules! println {
+    ($fmt:expr) => (print!(concat!($fmt, "\n")));
+    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+}
+```
+It just refers to the [`print!` macro] that is defined as:
+
+```
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
+}
+```
+It just calls the _print_ method in the `io` module of the current crate (`$crate`), which is `std`. The [`_print` function] is rather complicated, as it supports different `Stdout`s.
+
+To print to the VGA buffer, we just copy both macros and replace the `io` module with the `vga_buffer` buffer in the `print!` macro:
+
+```
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*)));
+}
+```
+Now we can write our own `_print` function:
+
+```rust
+pub fn _print(fmt: ::core::fmt::Arguments) {
+    use core::fmt::Write;
+    static mut WRITER: Writer = Writer::new(Color::LightGreen, Color::Black);
+    unsafe{WRITER.write_fmt(fmt)};
+}
+```
+The function needs to be public because every `print!(…)` is expanded to `::vga_buffer::_print(…)`. It uses a `static mut` to store a writer and calls the `write_fmt` method of the `core::fmt::Write` trait (hence the import). It's highly discouraged to use `static mut`s because they introduce all kinds of data races (that's why every access is unsafe). We use it here anyway, as we have only a single thread at the moment. But we already have another data race: We can create multiple `Writer`s, that write to the same memory at `0xb8000`. So as soon as we add multithreading, we need to revisit this module again and find better solutions.
+
+[macro syntax]: https://doc.rust-lang.org/nightly/book/macros.html
+[`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
+[`print!` macro]: https://doc.rust-lang.org/nightly/std/macro.print!.html
+
+## Clearing the screen
+We can now add a rather trivial last function:
+
+```
+pub fn clear_screen() {
+    for _ in 0..BUFFER_HEIGHT {
+        println!("");
+    }
+}
+```
+
+## What's next?
+Soon we will tackle virtual memory management and map the kernel sections correctly. This will cause many strange bugs and boot loops. To understand what's going on a real debugger is indispensable. In the [next post] we will setup [GDB] to work with QEMU.
