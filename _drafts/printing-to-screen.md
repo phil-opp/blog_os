@@ -97,12 +97,13 @@ impl Writer {
         match byte {
             NEWLINE => {}, // TODO
             byte => {
-                if self.column_position >= BUFFER_WIDTH {} //TODO
-                let buffer = unsafe{&mut *BUFFER};
+                if self.column_position >= BUFFER_WIDTH {
+                    //TODO
+                }
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position;
 
-                buffer.chars[row][col] = ScreenChar {
+                Self::buffer().chars[row][col] = ScreenChar {
                     ascii_character: byte,
                     color_code: self.color_code,
                 };
@@ -112,12 +113,22 @@ impl Writer {
     }
 }
 ```
-Let's break it down:
+Some Notes:
 
-- We take `&mut self` as we modify the column position.
-- The unsafe block is needed to convert the raw pointer to a reference because Rust doesn't know if the pointer is valid.
-- We write a new `ScreenChar` to the current field in the buffer and increase the column position.
+- We write a new `ScreenChar` to the current field in the buffer and increase the column position
+- We take `&mut self` as we modify the column position
+- `Self` refers to the `Writer` type
 
+The `buffer()` function just converts the raw pointer to a mutable reference. We need the `unsafe` block because Rust doesn't know if the pointer is valid. It looks like this:
+
+```rust
+impl Writer {
+    fn buffer() -> &'static mut Buffer {
+        const BUFFER: *mut Buffer = 0xb8000 as *mut _;
+        unsafe{&mut *BUFFER}
+    }
+}
+```
 Now we can test it in `main`:
 
 ```rust
@@ -142,12 +153,12 @@ pub fn write_str(&mut self, s: &str) {
 [byte character]: https://doc.rust-lang.org/reference.html#characters-and-strings
 [^utf8-problems]: This approach works well for strings that contain only ASCII characters. For other Unicode characters, however, we get weird symbols on the screen. But they can't be printed in the VGA text buffer anyway.
 
-### Support Formatting Macros
+## Support Formatting Macros
 It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` and looks quite similar to our `write_str` method. We just need to move it into an `impl ::core::fmt::Write for Writer` block and add a return type:
 
 ```rust
 impl ::core::fmt::Write for Writer {
-    pub fn write_str(&mut self, s: &str) -> ::core::fmt::Result {
+    fn write_str(&mut self, s: &str) -> ::core::fmt::Result {
         for byte in s.bytes() {
           self.write_byte(byte)
         }
@@ -155,7 +166,7 @@ impl ::core::fmt::Write for Writer {
     }
 }
 ```
-The `Ok(())` is just the `Ok` Result containing the `()` type.
+The `Ok(())` is just the `Ok` Result containing the `()` type. We can drop the `pub` because trait methods are always public.
 
 Now we can use Rust's built-in `write!`/`writeln!` formatting macros:
 
@@ -170,7 +181,7 @@ Now you should see a `Hello! The numbers are 42 and 0.3333333333333333` in stran
 
 [core::fmt::Write]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
-### Newlines
+## Newlines
 Right now, we just ignore newlines and characters that don't fit into the line anymore. Instead we want to move every character one line up (the top line gets deleted) and start at the beginning of the last line again. To do this, we add a `new_line` method to `Writer`:
 
 ```rust
