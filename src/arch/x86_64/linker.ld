@@ -19,17 +19,21 @@ ENTRY(start)
 SECTIONS {
   . = 1M;
 
-  .text : {
+  .text BLOCK(4k) : {
     /* ensure that the multiboot header is at the beginning */
     KEEP(*(.multiboot))
     *(.text .text.*)
   }
 
-  .rodata : {
+  .rodata BLOCK(4k) : {
     *(.rodata .rodata.*)
   }
 
-  .data.rel.ro : {
+  .data BLOCK(4k) : {
+    *(.data .data.*)
+  }
+
+  .data.rel.ro BLOCK(4k) : {
     *(.data.rel.ro.local*) *(.data.rel.ro .data.rel.ro.*)
   }
 
