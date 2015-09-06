@@ -14,8 +14,6 @@ pub fn init(multiboot: &Multiboot) {
     let mut c = unsafe{paging::Controller::new(allocator)};
 
     c.begin_new_table();
-    c.identity_map(Page{number: 0xb8}, true, false);
-
 
     for section in multiboot.elf_tag().unwrap().sections() {
         let in_memory = section.flags & 0x2 != 0;
@@ -32,7 +30,25 @@ pub fn init(multiboot: &Multiboot) {
             c.identity_map(page, writable, executable);
         }
     }
+
+    // identity map VGA text buffer
+    c.identity_map(Page{number: 0xb8}, true, false);
+
+    // identity map Multiboot structure
+    let multiboot_address = multiboot as *const _ as usize;
+    let start_page = Page::containing_address(multiboot_address);
+    let end_page = Page::containing_address(multiboot_address + multiboot.total_size as usize);
+    for page in range_inclusive(start_page.number, end_page.number).map(|n| Page{number: n}) {
+        c.identity_map(page, false, false);
+    }
+
     c.activate_new_table();
+
+    let maximal_memory = multiboot.memory_area_tag().unwrap().areas().map(
+        |area| area.base_addr + area.length).max().unwrap();
+    println!("maximal_memory: 0x{:x}", maximal_memory);
+
+    let core_map = allocator.allocate_frames((maximal_memory / paging::PAGE_SIZE) as usize);
 }
 
 struct VirtualAddress(*const u8);
@@ -50,8 +66,12 @@ impl FrameAllocator {
     }
 
     fn allocate_frame(&mut self) -> Option<Frame> {
+        self.allocate_frames(1)
+    }
+
+    fn allocate_frames(&mut self, number: usize) -> Option<Frame> {
         let page_number = self.next_free_frame;
-        self.next_free_frame += 1;
+        self.next_free_frame += number;
         Some(Frame {
             number: page_number
         })
