@@ -15,7 +15,7 @@ I tried to explain everything in detail and to keep the code as simple as possib
 [create an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
 [source code]: https://github.com/phil-opp/blogOS/tree/entering_longmode
 
-## Some Checks
+## Some Tests
 To avoid bugs and strange errors on old CPUs we should test if the processor supports every needed feature. Let's start by writing an error function, that displays `ERR: ` and a given [ASCII] character. We add it at the end of our boot.asm:
 
 ```nasm
@@ -31,7 +31,7 @@ error:
 ```
 At address `b8000` begins the so-called [VGA text buffer]. It's an array of screen characters that consists of a 8 byte color code and a 8 byte ASCII character. We used the color code `4f` which means white text on red background. `0x52` is an ASCII `R`, `0x45` is an `E`, `0x3a` is a `:`, and `0x20` is a space. The second space is overwritten by the given ASCII char, then the CPU is stopped.
 
-Now we will add some check _functions_. A function is just a normal label with an `ret` (return) instruction at the end. The `call` instruction can be used to call it. Unlike the `jmp` instruction that just jumps to a memory address, the `call` instruction will push a return address to the stack (and the `ret` will jump to this address). But wait, we don't have a stack yet. The [stack pointer] in the esp register could point to some important data or even invalid memory. So we need to update it and point it to some valid stack memory. Let's create this memory by reserving some bytes at the end of our `boot.asm`:
+Now we will add some test _functions_. A function is just a normal label with an `ret` (return) instruction at the end. The `call` instruction can be used to call it. Unlike the `jmp` instruction that just jumps to a memory address, the `call` instruction will push a return address to the stack (and the `ret` will jump to this address). But wait, we don't have a stack yet. The [stack pointer] in the esp register could point to some important data or even invalid memory. So we need to update it and point it to some valid stack memory. Let's create this memory by reserving some bytes at the end of our `boot.asm`:
 
 ```nasm
 ...
@@ -55,18 +55,18 @@ start:
 ```
 We use `stack_top` because the stack grows downwards: A `push eax` subtracts 4 from `esp` and does a `mov [esp], eax` afterwards (`eax` is a general purpose register). Now we have a valid stack pointer and are able to call functions.
 
-The following check functions are just here for completeness and I won't explain details. Basically they all work the same: They will check for a feature and jump to `error` if it's not available.
+The following test functions are just here for completeness and I won't explain details. Basically they all work the same: They will test a feature and jump to `error` if it's not available.
 
 [ASCII]: https://en.wikipedia.org/wiki/ASCII
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
 [stack pointer]: http://stackoverflow.com/a/1464052/866447
 [.bss]: https://en.wikipedia.org/wiki/.bss
 
-### Multiboot check
-We rely on some Multiboot features in the next posts. So let's make sure the kernel was really loaded by a Multiboot compliant bootloader: according to the [specification] \(PDF), the `eax` register must contain the magic value `0x36d76289` after loading. Let's add a simple function that checks this:
+### Multiboot test
+We rely on some Multiboot features in the next posts. So let's make sure the kernel was really loaded by a Multiboot compliant bootloader: according to the [specification] \(PDF), the `eax` register must contain the magic value `0x36d76289` after loading. Let's add a simple function that verifies that:
 
 ```nasm
-check_multiboot:
+test_multiboot:
     cmp eax, 0x36d76289
     jne .no_multiboot
     ret
@@ -78,11 +78,11 @@ We compare the value in `eax` with the magic value and jump to the label `no_mul
 
 [specification]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
 
-### CPUID check
+### CPUID test
 [CPUID] is a CPU instruction that can be used to get various information about the CPU. But not every processor supports it. Let's steal a detection function from the [OSDev wiki][CPUID detection]:
 
 ```nasm
-check_cpuid:
+test_cpuid:
     pushfd               ; Store the FLAGS-register.
     pop eax              ; Restore the A-register.
     mov ecx, eax         ; Set the C-register to the A-register.
@@ -101,11 +101,11 @@ check_cpuid:
     jmp error
 ```
 
-### Long Mode check
-Now we can use CPUID to check whether Long Mode can be used. I will use code from [OSDev][Long Mode detection] again:
+### Long Mode test
+Now we can use CPUID to detect whether Long Mode can be used. I will use code from [OSDev][Long Mode detection] again:
 
 ```nasm
-check_long_mode:
+test_long_mode:
     mov eax, 0x80000000    ; Set the A-register to 0x80000000.
     cpuid                  ; CPU identification.
     cmp eax, 0x80000001    ; Compare the A-register with 0x80000001.
@@ -121,7 +121,7 @@ check_long_mode:
 ```
 
 ### Putting it together
-Now we just call these check functions right after start:
+Now we just call these test functions right after start:
 
 ```nasm
 global _start
@@ -131,9 +131,9 @@ bits 32
 _start:
     mov esp, stack_top
 
-    call check_multiboot
-    call check_cpuid
-    call check_long_mode
+    call test_multiboot
+    call test_cpuid
+    call test_long_mode
 
     ; print `OK` to screen
     ...
@@ -274,9 +274,9 @@ Let's call our new functions in `start`:
 start:
     mov esp, stack_top
 
-    call check_multiboot
-    call check_cpuid
-    call check_long_mode
+    call test_multiboot
+    call test_cpuid
+    call test_long_mode
 
     call setup_page_tables ; new
     call enable_paging     ; new
