@@ -352,7 +352,7 @@ gdt64:
     dw $ - gdt64 - 1
     dq gdt64
 ```
-The first 2 bytes specify the (GDT length - 1). The `$` is a special symbol that is replaced with the current address (it's equal to `.pointer`). The following 8 bytes specify the GDT address. Labels that start with a point (like `.pointer`) are sub-labels of the last label without point. To access them, they must be prefixed with the parent label (like `gdt64.pointer`). Now we can load the GDT in start:
+The first 2 bytes specify the (GDT length - 1). The `$` is a special symbol that is replaced with the current address (it's equal to `.pointer`). The following 8 bytes specify the GDT address. Labels that start with a point (such as `.pointer`) are sub-labels of the last label without point. To access them, they must be prefixed with the parent label (e.g., `gdt64.pointer`). Now we can load the GDT in start:
 
 ```nasm
 start:
