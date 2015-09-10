@@ -1,9 +1,9 @@
 ---
 layout: post
-title: '[DRAFT] Setup Rust'
+title: 'Setup Rust'
 category: 'rust-os'
 ---
-In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to sweet Rust code. [Rust] is a beautiful high-level language that has no runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
+In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to sweet Rust code. [Rust] is a beautiful high-level language without runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
 
 This blog post tries to setup Rust step-by-step and point out the different problems. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is in a [Github repository], too.
 
@@ -11,15 +11,15 @@ This blog post tries to setup Rust step-by-step and point out the different prob
 [long mode post]: {{ site.url }}{{ page.previous.url }}
 [Rust]: https://www.rust-lang.org/
 [file an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
-[Github repository]: https://github.com/phil-opp/blogOS/tree/rust_setup
+[Github repository]: https://github.com/phil-opp/blogOS/tree/setup_rust
 
-## Rust Setup
-We need a nightly compiler, as we need to use many unstable features. To manage Rust installations I highly recommend [multirust] by brson. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. After installing you can just run `multirust update nightly` to install or update to the latest Rust nightly.
+## Installing Rust
+We need a nightly compiler, as we need to use many unstable features. To manage Rust installations I highly recommend brson's [multirust]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. After installing you can just run `multirust update nightly` to install or update to the latest Rust nightly.
 
 [multirust]: https://github.com/brson/multirust
 
 ## Creating a Rust project
-Normally you would call `cargo new` when you want to create a new project folder. We can't use it because our folder already exists so we will do it manually. Fortunately we just need to add a cargo configuration file named `Cargo.toml`:
+Normally you would call `cargo new` when you want to create a new project folder. We can't use it because our folder already exists, so we need to do it manually. Fortunately we only need to add a cargo configuration file named `Cargo.toml`:
 
 ```toml
 [package]
@@ -32,7 +32,7 @@ crate-type = ["staticlib"]
 ```
 The `package` section contains basic project metadata and is identical to the `Cargo.toml` created by `cargo new blog_os`. The `lib` section specifies that we want to build a static library, i.e. a library that contains all of its dependencies.
 
-Now we need to place our root source file in `src/lib.rs`:
+Now we place our root source file in `src/lib.rs`:
 
 ```rust
 #![feature(no_std, lang_items)]
@@ -63,7 +63,7 @@ Let's break it down:
 [unwinding]: https://doc.rust-lang.org/std/rt/unwind/
 
 ## Building Rust
-We can now build it using `cargo build`. It creates a static library at `target/debug/libblog_os.a` that we can link with our assembly kernel. Let's extend our `Makefile` to do that. We add a new `.PHONY` target `cargo` and modify the `$(kernel)` target to link the created static lib ([full file][github makefile]):
+We can now build it using `cargo build`. It creates a static library at `target/debug/libblog_os.a`, which can be linked with our assembly kernel. To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
 
 ```make
 # ...
@@ -75,7 +75,9 @@ $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
 cargo:
        @cargo build
 ```
-Now `cargo build` is executed on every `make`, even if no source file was changed. And the ISO is recreated on every `make iso`/`make run`, too. We could try to avoid this by adding dependencies on all rust source and cargo configuration files to the `cargo` target, but the ISO creation takes only half a second on my machine and most of the time we will have changed a Rust file when we run it. So we keep it simple for now and let cargo do the bookkeeping of changed files (it does it anyway).
+We added a new `cargo` target that just executes `cargo build` and modified the `$(kernel)` target to link the created static lib .
+
+But now `cargo build` is executed on every `make`, even if no source file was changed. And the ISO is recreated on every `make iso`/`make run`, too. We could try to avoid this by adding dependencies on all rust source and cargo configuration files to the `cargo` target, but the ISO creation takes only half a second on my machine and most of the time we will have changed a Rust file when we run `make`. So we keep it simple for now and let cargo do the bookkeeping of changed files (it does it anyway).
 
 [github makefile]: #TODO
 
@@ -94,24 +96,24 @@ long_mode_start:
     mov qword [0xb8000], rax
     hlt
 ```
-By defining `main` as `extern` we tell nasm that the function is defined in another file. The linker takes care of linking them together (_suprise_). So if we have a typo in the name or forget to mark the rust function as `pub extern`, we'll get a linker error.
+By defining `main` as `extern` we tell nasm that the function is defined in another file. As the linker takes care of linking them together, we'll get a linker error if we have a typo in the name or forget to mark the rust function as `pub extern`.
 
 When we've done everything right, we still see the green `OKAY` when executing `make run`. That means that we successfully called the Rust function and returned back to assembly.
 
 ## Testing
-Let's play around with some Rust code:
+Now we can try some Rust code:
 
 ```rust
 pub extern fn main() {
     let x = ["Hello", " ", "World", "!"];
 }
 ```
-When we test it using `make run`, it fails with `undefined reference to 'memcpy'`. This function is one of the basic functions of the C library (`libc`). Usually the `libc` crate is linked to every Rust program with the standard library but we opted out through `#![no_std]`. So we could try to fix this by adding the [libc crate] as `extern crate`. But `libc` is just a wrapper for the system `libc`, for example `glibc` on Linux, so this won't work for us. Instead we need to recreate the basic `libc` functions like `memcpy`, `memmove`, `memset`, and `memcmp` in Rust.
+When we test it using `make run`, it fails with `undefined reference to 'memcpy'`. This function is one of the basic functions of the C library (`libc`). Usually the `libc` crate is linked to every Rust program together with the standard library but we opted out through `#![no_std]`. We could try to fix this by adding the [libc crate] as `extern crate`. But `libc` is just a wrapper for the system `libc`, for example `glibc` on Linux, so this won't work for us. Instead we need to recreate the basic `libc` functions such as `memcpy`, `memmove`, `memset`, and `memcmp` in Rust.
 
 [libc crate]: https://doc.rust-lang.org/nightly/libc/index.html
 
 ### rlibc
-Fortunately there already is a crate that does just that: [rlibc]. When we look at its [source code][rlibc source] we see that it contains no magic, just some [raw pointer] operations in a while loop. So let's add `rlibc` to our crate. We need to add a [crates.io] dependency in our `Cargo.toml`:
+Fortunately there already is a crate for that: [rlibc]. When we look at its [source code][rlibc source] we see that it contains no magic, just some [raw pointer] operations in a while loop. To add it as a dependency we just need to add two lines to the `Cargo.toml`:
 
 ```toml
 ...
@@ -144,11 +146,11 @@ core.0.rs:(.text._ZN3ops7f64.Rem3rem20hbf225030671c7a35TxmE+0x1): undefined refe
 [crates.io]: https://crates.io
 
 ### --gc-sections
-The new errors are linker errors about missing `fmod` and `fmodf` functions. These functions are used for the modulo operation (`%`) on floating point numbers in [libcore]. The core library is added implicitly when using `#![no_std]` and provides basic standard library features like `Option` or `Iterator`. According to the documentation it is “dependency-free” but it actually has some dependencies, for example on `fmod` and `fmodf`.
+The new errors are linker errors about missing `fmod` and `fmodf` functions. These functions are used for the modulo operation (`%`) on floating point numbers in [libcore]. The core library is added implicitly when using `#![no_std]` and provides basic standard library features like `Option` or `Iterator`. According to the documentation it is “dependency-free”. But it actually has some dependencies, for example on `fmod` and `fmodf`.
 
 [libcore]: https://doc.rust-lang.org/core/
 
-So how do we fix this problem? We don't use any floating point operations, so we could just provide our own implementations of `fmod` and `fmodf` that just do a `loop{}`. But there's a better way that doesn't fail silently when we use floats some day: We tell the linker to remove unused sections. That's generally a good idea as it reduces kernel size. And we don't have any references to `fmod` and `fmodf` anymore until we use floating point modulo. The magic linker flag is `--gc-sections` which stands for “garbage collect sections”. Let's add it to the `$(kernel)` target in our `Makefile`:
+So how do we fix this problem? We don't use any floating point operations, so we could just provide our own implementations of `fmod` and `fmodf` that just do a `loop{}`. But there's a better way that doesn't fail silently when we use floats some day. We tell the linker to remove unused sections. That's generally a good idea as it reduces kernel size. And we don't have any references to `fmod` and `fmodf` anymore until we use floating point modulo. The magic linker flag is `--gc-sections`, which stands for “garbage collect sections”. Let's add it to the `$(kernel)` target in our `Makefile`:
 
 ```make
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
@@ -159,7 +161,7 @@ Now we can do a `make run` again and… it doesn't boot anymore:
 ```
 GRUB error: no multiboot header found.
 ```
-What happened? Well, the linker removed unused sections. And since we don't use the Multiboot section anywhere `ld` removes it, too. So we need to tell the linker that it should keep this section. We can do through the `KEEP` command in our `linker.ld`:
+What happened? Well, the linker removed unused sections. And since we don't use the Multiboot section anywhere `ld` removes it, too. So we need to tell the linker explicitely that it should keep this section. The `KEEP` command does exactly that, so we add it to the `linker.ld`:
 
 ```
 .boot :
@@ -168,7 +170,7 @@ What happened? Well, the linker removed unused sections. And since we don't use 
     KEEP(*(.multiboot))
 }
 ```
-Now everything should work (the green `OKAY`) again. But there is another linking issue:
+Now everything should work again (the green `OKAY`). But there is another linking issue, which is triggered by some other example code.
 
 ### no-landing-pads
 
@@ -232,16 +234,16 @@ Let me first explain the QEMU arguments: The `-d int` logs CPU interrupts to the
 - The next block, `check_exception old: 0xffffffff new 0x6` is the interesting one. It says: “a new CPU exception with number `0xe` occurred“.
 - The last blocks indicate further exceptions. They were thrown because we didn't handle the `0x6` exception, so we're going to ignore them, too.
 
-So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't handling an interrupt when the exception occurred. The register dump tells us that the current instruction was `0x100200` (in `IP`  (instruction pointer) or `pc` (program counter)). By looking at an [exception table] we learn that the number `0x6` indicates a [Invalid Opcode] fault. So the instruction at `0x100200` seems to be invalid. Let's look at it using `objdump`:
+So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't handling an interrupt when the exception occurred. The new exception has number `0x6`. By looking at an [exception table] we learn that `0x6` indicates a [Invalid Opcode] fault. So the lastly executed instruction was invalid. The register dump tells us that the current instruction was `0x100200` (through `IP`  (instruction pointer) or `pc` (program counter)). Therefore the instruction at `0x100200` seems to be invalid. We can look at it using `objdump`:
 
 ```
 > objdump -D build/kernel-x86_64.bin | grep "100200:"
 100200:	0f 28 05 49 01 00 00 	movaps 0x149(%rip),%xmm0 ...
 ```
-Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `100200` seems to be a valid [movaps] instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps] link: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`, so the exceptions occurs:
+Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x100200` seems to be a valid `movaps` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps documentation][movaps]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`, so the exception occurs
 > For an unmasked Streaming SIMD Extensions 2 instructions numeric exception (CR4.OSXMMEXCPT =0). If EM in CR0 is set. If OSFXSR in CR4 is 0. If CPUID feature flag SSE2 is 0.
 
-The rough translation of this cryptic low-level code is: _If SSE isn't enabled_. So apparently Rust uses SSE instructions by default and we didn't enable SSE before. Let's fix this:
+The rough translation of this cryptic definition is: _If SSE isn't enabled_. So apparently Rust uses SSE instructions by default and we didn't enable SSE before. So the fix for this bug is enabling SSE.
 
 [Physical Address Extension]: https://en.wikipedia.org/wiki/Physical_Address_Extension
 [exception table]: http://wiki.osdev.org/Exceptions
@@ -251,7 +253,7 @@ The rough translation of this cryptic low-level code is: _If SSE isn't enabled_.
 [SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
 
 ### Enabling SSE
-To enable SSE we need to return to assembly. We need to add a function that checks if SSE is available and enables it then. Else we want to print an error message. But we can't use our existing `error` function because it uses (now invalid) 32-bit instructions. So we need a new one (in `long_mode_init.asm`):
+To enable SSE, assembly code is needed again. We want to add a function that tests if SSE is available and enables it then. Else we want to print an error message. But we can't use our existing `error` function because it uses (now invalid) 32-bit instructions. So we need a new one (in `long_mode_init.asm`):
 
 ```nasm
 ; Prints `ERROR: ` and the given error code to screen and hangs.
@@ -265,7 +267,7 @@ error:
     hlt
     jmp error
 ```
-It's the nearly the same as the 32-bit code in the [last post][32-bit error function] (instead of `ERR:` we print `ERROR:` here). Now we can add a function that checks for SSE and enables it:
+It's the nearly the same as the 32-bit code in the [previous post][32-bit error function] (instead of `ERR:` we print `ERROR:` here). Now we can add a function that checks for SSE and enables it:
 
 ```nasm
 ; Check for SSE and enable it. If it's not supported throw error "a".
@@ -290,9 +292,12 @@ setup_SSE:
     mov al, "a"
     jmp error
 ```
-Notice that we set/unset exactly the bits that can cause the `Invalid Opcode` exception. We insert a `call setup_SSE` right before calling `main` and our Rust code will finally work.
+The code is from the great [OSDev Wiki][osdev sse] again. Notice that it sets/unsets exactly the bits that can cause the `Invalid Opcode` exception.
 
-[32-bit error function]: #TODO
+When we insert a `call setup_SSE` right before calling `main`, our Rust code will finally work.
+
+[32-bit error function]: {{ site.url }}{{ page.previous.url }}#some-tests
+[osdev sse]: http://wiki.osdev.org/SSE#Checking_for_SSE
 
 ### “OS returned!”
 Now that we're editing assembly anyway, we should change the `OKAY` message to something more meaningful. My suggestion is a red `OS returned!`:
@@ -314,7 +319,7 @@ call main
 Ok that's enough assembly for now, let's switch back to Rust and print the traditional `Hello World!`.
 
 ## Hello World!
-Of course we could just write some magic bytes to memory like we did in assembly. But I chose some code that highlight some of Rust's features:
+Of course we could just write some magic bytes to memory like we did in assembly. But I chose some code that highlights some of Rust's features:
 
 ```rust
 #![feature(no_std, lang_items)]
@@ -346,11 +351,11 @@ Let's break it down:
 
 - the `core_*` features are needed because many functions from the core library are still unstable
 - `use` imports a function, in our case [offset] that can be used for C-like pointer arithmetic
-- Normally, Rust tries to avoid [stack overflows] through _guard pages_: The page below the stack isn't mapped and such a stack overflow triggers a page fault. But we can't unmap this page easily as we use just one big page, so we need to be very careful to not blow our small stack. Fortunately our stack is just above the page tables. A stack overflow would overwrite an important entry at some point and therefore provoke a page fault (that crashed our kernel).
+- Normally, Rust tries to avoid [stack overflows] through _guard pages_: The page below the stack isn't mapped and such a stack overflow triggers a page fault. But we can't unmap this page as we use just one big page right now, so we need to be very careful to not blow our small stack. Fortunately our stack is just above the page tables. A stack overflow would overwrite an important entry at some point and thus provoke a page fault (that crashes our kernel).
 - `x` is an immutable array of [&str]
 - `screen_pointer` is a [raw pointer] to the VGA text buffer
-- We iterate over the elements of x, convert every `&str` to a byte iterator (`s.bytes()`) and join these iterators (through `flat_map`). Then we convert the byte iterator to a `(byte, index)` operator through the [zip method].
-- By casting the byte as `u16` and OR-ing the colors in (`0x1f` is white text on blue background), we convert it to a screen character.
+- We iterate over the elements of x, convert every `&str` to a byte iterator (`s.bytes()`), and join these iterators (through `flat_map`). Then we convert the byte iterator to a `(byte, index)` operator through the [zip method].
+- By casting the byte as `u16` and OR-ing the colors in (`0x1f` is white text on blue background), we convert it to a screen character for the VGA buffer.
 - Now we just need to write the `screen_char` to the right place in memory. Rust doesn't know the VGA buffer and can't guarantee that writing to it is safe (we could corrupt important data). So we need to tell Rust that we know what we're doing by using an [unsafe block].
 - `offset` is like pointer arithmetic in C: It calculates the address of the i-th `u16` (starting at `0xb8000`) and converts it to a pointer.
 - To be able to write to it, we must cast the `*const u16` to a `*mut u16`
@@ -362,6 +367,6 @@ Let's break it down:
 [unsafe block]: https://doc.rust-lang.org/book/unsafe.html
 
 ## What's next?
-Right now we write magic bits to memory every time we want to print something. It's time to end the hackery. In the [next post] we create a VGA buffer module that allows us to print strings in different colors.
+Until now we write magic bits to memory every time we want to print something. It's time to end this hackery. In the [next post] we create a VGA buffer module that allows us to print strings in different colors through a nice interface.
 
-[next post]: #TODO {{ site.url }}{{ page.next.url }}
+[next post]: {{ site.url }}{{ page.next.url }}
