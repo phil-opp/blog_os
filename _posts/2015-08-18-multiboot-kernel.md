@@ -270,7 +270,7 @@ Some comments (see the [Makefile tutorial] if you don't know `make`):
 - the `$(wildcard src/arch/$(arch)/*.asm)` chooses all assembly files in the src/arch/$(arch)` directory, so you don't have to update the Makefile when you add a file
 - the `patsubst` operation for `assembly_object_files` just translates `src/arch/$(arch)/XYZ.asm` to `build/arch/$(arch)/XYZ.o`
 - the `$<` and `$@` in the assembly target are [automatic variables]
-- the Makefile has rudimentary multi-architecture support, e.g. `make arch=mips iso` tries to create an ISO for MIPS (it will fail of course as we don't support MIPS yet).
+- the Makefile has rudimentary multi-architecture support, for example `make arch=mips iso` tries to create an ISO for MIPS (it will fail of course as we don't support MIPS yet).
 
 Now we can invoke `make` and all updated assembly files are compiled and linked. The `make iso` command also creates the ISO image and `make run` will additionally start QEMU.
 
