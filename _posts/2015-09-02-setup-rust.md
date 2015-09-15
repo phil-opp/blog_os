@@ -39,7 +39,7 @@ Now we place our root source file in `src/lib.rs`:
 #![no_std]
 
 #[no_mangle]
-pub extern fn main() {}
+pub extern fn rust_main() {}
 
 #[lang = "eh_personality"] extern fn eh_personality() {}
 #[lang = "panic_fmt"] extern fn panic_fmt() -> ! {loop{}}
@@ -50,7 +50,7 @@ Let's break it down:
 - The `features` attribute is used to allow the specified _feature-gated_ attributes in this crate. You can't do that in a stable/beta compiler, so this is one reason we need a Rust nighly.
 - The `no_std` attribute prevents the automatic linking of the standard library. We can't use `std` because it relies on operating system features like files, system calls, and various device drivers. Remember that currently the only “feature” of our OS is printing `OKAY` :).
 - A `#` without a `!` afterwards defines an attribute for the _following_ item (a function in our case).
-- The `no_mangle` attribute disables the automatic [name mangling] that Rust uses to get unique function names. We want to do a `call main` from our assembly code, so this function name must stay as it is.
+- The `no_mangle` attribute disables the automatic [name mangling] that Rust uses to get unique function names. We want to do a `call rust_main` from our assembly code, so this function name must stay as it is.
 - We mark our main function as `extern` to make it compatible to the standard C [calling convention].
 - The `lang` attribute defines a Rust [language item].
 - The `eh_personality` function is used for Rust's [unwinding] on `panic!`. We can leave it empty since we don't have any unwinding support in our OS yet.
@@ -88,15 +88,15 @@ Now we can call the main method in `long_mode_start`:
 bits 64
 long_mode_start:
     ; call the rust main
-    extern main     ; new
-    call main       ; new
+    extern rust_main     ; new
+    call rust_main       ; new
 
     ; print `OKAY` to screen
     mov rax, 0x2f592f412f4b2f4f
     mov qword [0xb8000], rax
     hlt
 ```
-By defining `main` as `extern` we tell nasm that the function is defined in another file. As the linker takes care of linking them together, we'll get a linker error if we have a typo in the name or forget to mark the rust function as `pub extern`.
+By defining `rust_main` as `extern` we tell nasm that the function is defined in another file. As the linker takes care of linking them together, we'll get a linker error if we have a typo in the name or forget to mark the rust function as `pub extern`.
 
 When we've done everything right, we still see the green `OKAY` when executing `make run`. That means that we successfully called the Rust function and returned back to assembly.
 
@@ -104,7 +104,7 @@ When we've done everything right, we still see the green `OKAY` when executing `
 Now we can try some Rust code:
 
 ```rust
-pub extern fn main() {
+pub extern fn rust_main() {
     let x = ["Hello", " ", "World", "!"];
 }
 ```
@@ -127,7 +127,7 @@ and an `extern crate` in our `src/lib.rs`:
 extern crate rlibc;
 
 #[no_mangle]
-pub extern fn main() {
+pub extern fn rust_main() {
 ...
 ```
 Now `make run` doesn't complain about `memcpy` anymore. Instead it will show a pile of new errors:
@@ -201,7 +201,7 @@ Unfortunately there is one last problem left that gets triggered by the followin
 let mut a = 42;
 a += 1;
 ```
-When we add that code to `main` and test it using `make run`, the OS will constantly reboot itself. Let's try to debug it.
+When we add that code to `rust_main` and test it using `make run`, the OS will constantly reboot itself. Let's try to debug it.
 
 [iter.rs:223]: https://doc.rust-lang.org/nightly/src/core/iter.rs.html#223
 
@@ -294,7 +294,7 @@ setup_SSE:
 ```
 The code is from the great [OSDev Wiki][osdev sse] again. Notice that it sets/unsets exactly the bits that can cause the `Invalid Opcode` exception.
 
-When we insert a `call setup_SSE` right before calling `main`, our Rust code will finally work.
+When we insert a `call setup_SSE` right before calling `rust_main`, our Rust code will finally work.
 
 [32-bit error function]: {{ site.url }}{{ page.previous.url }}#some-tests
 [osdev sse]: http://wiki.osdev.org/SSE#Checking_for_SSE
@@ -304,7 +304,7 @@ Now that we're editing assembly anyway, we should change the `OKAY` message to s
 
 ```nasm
 ...
-call main
+call rust_main
 
 .os_returned:
     ; rust main returned, print `OS returned!`
@@ -331,7 +331,7 @@ extern crate rlibc;
 use core::intrinsics::offset;
 
 #[no_mangle]
-pub extern fn main() {
+pub extern fn rust_main() {
     // ATTENTION: we have a very small stack and no guard page
     let x = ["Hello", " ", "World", "!"];
     let screen_pointer = 0xb8000 as *const u16;
