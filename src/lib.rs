@@ -21,7 +21,7 @@ extern crate rlibc;
 use core::intrinsics::offset;
 
 #[no_mangle]
-pub extern fn main() {
+pub extern fn rust_main() {
     // ATTENTION: we have a very small stack and no guard page
     let x = ["Hello", " ", "World", "!"];
     let screen_pointer = 0xb8000 as *const u16;
@@ -37,5 +37,10 @@ pub extern fn main() {
     loop{}
 }
 
-#[lang = "eh_personality"] extern fn eh_personality() {}
-#[lang = "panic_fmt"] extern fn panic_fmt() -> ! {loop{}}
+#[cfg(not(test))]
+#[lang = "eh_personality"]
+extern fn eh_personality() {}
+
+#[cfg(not(test))]
+#[lang = "panic_fmt"]
+extern fn panic_fmt() -> ! {loop{}}

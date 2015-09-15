@@ -13,7 +13,7 @@
 ; limitations under the License.
 
 global long_mode_start
-extern main
+extern rust_main
 
 section .text
 bits 64
@@ -21,7 +21,7 @@ long_mode_start:
     call setup_SSE
 
     ; call rust main
-    call main
+    call rust_main
 .os_returned:
     ; rust main returned, print `OS returned!`
     mov rax, 0x4f724f204f534f4f
