@@ -14,6 +14,7 @@ Bit(s) | Value
 8-11   | Foreground color
 12-14  | Background color
 15     | Blink
+
 The following colors are available:
 
 Number | Color      | Number + Bright Bit | Bright Color
@@ -26,7 +27,8 @@ Number | Color      | Number + Bright Bit | Bright Color
 0x5    | Magenta    | 0xd                 | Light Magenta
 0x6    | Brown      | 0xe                 | Yellow
 0x7    | Light Gray | 0xf                 | White
-Bit 4 is the _bright bit_, which is unavailable in background color as it's the blink bit. But it's possible to disable blinking through a [BIOS function][disable blinking] and use the full 16 colors as background.
+
+Bit 4 is the _bright bit_, which turns for example blue into light blue. It is unavailable in background color as the bit is used to enable blinking. However, it's possible to disable blinking through a [BIOS function][disable blinking]. Then the full 16 colors can be used as background.
 
 [disable blinking]: http://www.ctyme.com/intr/rb-0117.htm
 
@@ -42,7 +44,16 @@ pub enum Color {
     Yellow     = 14,
     White      = 15,
 }
+```
+We use a [C-like enum] here to explicitly specify the number for each color. Because of the `repr(u8)` attribute each enum variant is stored as an `u8`. Actually 4 bits would be sufficient, but Rust doesn't have an `u4` type.
 
+[C-like enum]: http://rustbyexample.com/custom_types/enum/c_like.html
+
+To represent a full color code that specifies foreground and background color, we create a [newtype] on top of `u8`:
+
+[newtype]: https://aturon.github.io/features/types/newtype.html
+
+```rust
 struct ColorCode(u8);
 
 impl ColorCode {
@@ -51,7 +62,11 @@ impl ColorCode {
     }
 }
 ```
-We use the `repr(u8)` attribute to represent each variant of `Color` as an `u8`. The `ColorCode` contains the full color byte, containing foreground and background color. The `new` function is a [const function] to allow it in static initializers. It's unstable so we need to add the `const_fn` feature in `src/lib.rs`. We ignore the blink bit here to keep the code short. Now we can represent a screen character and the text buffer:
+The `ColorCode` contains the full color byte, containing foreground and background color. Blinking is enabled implicitly by using a bright background color (soon we will disable blinking anyway). The `new` function is a [const function] to allow it in static initializers. As `const` functions are unstable we need to add the `const_fn` feature in `src/lib.rs`.
+
+[const function]: https://github.com/rust-lang/rfcs/blob/master/text/0911-const-fn.md
+
+Now we can add structures to represent a screen character and the text buffer:
 
 ```rust
 struct ScreenChar {
@@ -66,44 +81,42 @@ struct Buffer {
     chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 ```
-Now we can represent the actual screen writer:
+To ensure that `ScreenChar` is exactly 16-bits, one might be tempted to use the [repr(packed)] attribute. But Rust does not insert any padding around two `u8` values, so it's not needed here. And `repr(packed)` can cause [undefined behavior][repr(packed) issue] and that's always bad.
+
+[repr(packed)]: https://doc.rust-lang.org/nightly/nomicon/other-reprs.html#repr(packed)
+[repr(packed) issue]: https://github.com/rust-lang/rust/issues/27060
+
+To actually write to screen, we now create a writer type:
 
 ```rust
-pub struct Writer {
+pub struct Writer<'a> {
     column_position: usize,
     color_code: ColorCode,
-}
-
-impl Writer {
-    pub const fn new(foreground: Color, background: Color) -> Writer {
-        Writer {
-            column_position: 0,
-            color_code: ColorCode::new(foreground, background),
-        }
-    }
+    buffer: &'a mut Buffer,
 }
 ```
-It's `pub` because it's part of the public interface and `const` to allow it in static initializers. The plan is to write always to the last line and shift lines up when a line is full (or on `\n`). So we just need to store the current column position and the current `ColorCode`.
+The explicit lifetime tells Rust that the writer lives as long as the mutual buffer reference. Thus Rust ensures statically that the writer does not write to invalid memory.
 
-### Writing to screen
-Now we can create a `write_byte` function:
+The writer will always write to the last line and shift lines up when a line is full (or on `\n`). So the current row is always the last row and just the current column position needs to be stored. The current foreground and background colors are specified by `color_code`.
+
+### Printing Characters
+Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte:
 
 ```rust
 impl Writer {
     pub fn write_byte(&mut self, byte: u8) {
-        const NEWLINE: u8 = '\n' as u8;
-        const BUFFER: *mut Buffer = 0xb8000 as *mut _;
-
         match byte {
-            NEWLINE => {}, // TODO
+            b'\n' => {
+                self.new_line();
+            },
             byte => {
                 if self.column_position >= BUFFER_WIDTH {
-                    //TODO
+                    self.new_line();
                 }
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position;
 
-                Self::buffer().chars[row][col] = ScreenChar {
+                self.buffer.chars[row][col] = ScreenChar {
                     ascii_character: byte,
                     color_code: self.color_code,
                 };
@@ -111,37 +124,40 @@ impl Writer {
             }
         }
     }
+    fn new_line(&mut self) {}
 }
 ```
-Some Notes:
+If the byte is the [newline] byte `\n`, the writer does not print anything. Instead it calls a `new_line` method, which we'll implement later. Other bytes get printed to the screen in the second match case.
 
-- We write a new `ScreenChar` to the current field in the buffer and increase the column position
-- We take `&mut self` as we modify the column position
-- `Self` refers to the `Writer` type
+When printing a byte, the writer checks if the current line is full. In that case, a `new_line` call is required before to wrap the line. Since the writer always writes to the last line, `row` is just the last line's index. The writer uses the mutable reference stored in `buffer` to set the screen character at `row` and `col`. Then the column position is advanced by one.
 
-The `buffer()` function just converts the raw pointer to a mutable reference. We need the `unsafe` block because Rust doesn't know if the pointer is valid. It looks like this:
+[newline]: https://en.wikipedia.org/wiki/Newline
 
-```rust
-impl Writer {
-    fn buffer() -> &'static mut Buffer {
-        const BUFFER: *mut Buffer = 0xb8000 as *mut _;
-        unsafe{&mut *BUFFER}
-    }
-}
-```
-Now we can test it in `main`:
+To test it, we add can add a `test` function to the module:
 
 ```rust
-pub extern fn main() {
-    use vga_buffer::{Writer, Color};
-    ...
-    let mut writer = Writer::new(Color::Blue, Color::LightGreen);
+pub fn test() {
+    const BUFFER: *mut Buffer = 0xb8000 as *mut _;
+    let buffer = unsafe{&mut *BUFFER};
+
+    let writer = Writer {
+        column_position: 0,
+        color_code: ColorCode::new(Color::LightGreen, Color::Black),
+        buffer: buffer,
+    };
     writer.write_byte(b'H');
 }
 ```
-The `b'H'` is a [byte character] and represents the ASCII code point for `H`. It should be printed in the _lower_ left corner of the screen on `make run`.
+First, we create a mutable reference to the VGA text buffer at `0xb8000`. The `const` defines a raw pointer that we convert to a reference using the [`&mut *` pattern][references and raw pointers]. The `unsafe` block is needed because Rust doesn't know if the raw pointer is valid. Notice that creating a raw pointer is completely safe, only dereferencing it is `unsafe`. After creating the reference, we use it to create a new writer.
 
-To print whole strings, we can convert them to bytes[^utf8-problems] and print them one-by-one:
+Finally, we write the byte `b'H'`. The `b` in front specifies that it's a [byte character], which represents an ASCII code point. When we call `vga_buffer::test` in main, it's printed in the _lower_ left corner of the screen in light green.
+
+[references and raw pointers]: https://doc.rust-lang.org/book/raw-pointers.html#references-and-raw-pointers
+[byte character]: https://doc.rust-lang.org/reference.html#characters-and-strings
+
+### Printing Strings
+
+To print whole strings, we can convert them to bytes and print them one-by-one:
 
 ```rust
 pub fn write_str(&mut self, s: &str) {
@@ -150,8 +166,13 @@ pub fn write_str(&mut self, s: &str) {
     }
 }
 ```
-[byte character]: https://doc.rust-lang.org/reference.html#characters-and-strings
-[^utf8-problems]: This approach works well for strings that contain only ASCII characters. For other Unicode characters, however, we get weird symbols on the screen. But they can't be printed in the VGA text buffer anyway.
+You can try it yourself in the `test` function. When you try strings with some special characters like `ä` or `λ`, you'll notice that they cause weird symbols on screen. That's because they are represented by multiple bytes in [UTF-8]. By converting them to bytes, we of course get strange results. But since the VGA buffer doesn't support UTF-8, it's not possible to display these characters anyway. So let's just stick to ASCII strings for now.
+
+[UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
+
+## Providing an Interface
+
+## Synchronization
 
 ## Support Formatting Macros
 It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` and looks quite similar to our `write_str` method. We just need to move it into an `impl ::core::fmt::Write for Writer` block and add a return type:
