@@ -37,5 +37,10 @@ pub extern fn rust_main() {
     loop{}
 }
 
-#[lang = "eh_personality"] extern fn eh_personality() {}
-#[lang = "panic_fmt"] extern fn panic_fmt() -> ! {loop{}}
+#[cfg(not(test))]
+#[lang = "eh_personality"]
+extern fn eh_personality() {}
+
+#[cfg(not(test))]
+#[lang = "panic_fmt"]
+extern fn panic_fmt() -> ! {loop{}}
