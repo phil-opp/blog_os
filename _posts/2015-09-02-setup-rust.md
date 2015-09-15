@@ -79,7 +79,7 @@ We added a new `cargo` target that just executes `cargo build` and modified the 
 
 But now `cargo build` is executed on every `make`, even if no source file was changed. And the ISO is recreated on every `make iso`/`make run`, too. We could try to avoid this by adding dependencies on all rust source and cargo configuration files to the `cargo` target, but the ISO creation takes only half a second on my machine and most of the time we will have changed a Rust file when we run `make`. So we keep it simple for now and let cargo do the bookkeeping of changed files (it does it anyway).
 
-[github makefile]: #TODO
+[github makefile]: https://github.com/phil-opp/blogOS/blob/setup_rust/Makefile
 
 ## Calling Rust
 Now we can call the main method in `long_mode_start`:
@@ -247,7 +247,7 @@ The rough translation of this cryptic definition is: _If SSE isn't enabled_. So 
 
 [Physical Address Extension]: https://en.wikipedia.org/wiki/Physical_Address_Extension
 [exception table]: http://wiki.osdev.org/Exceptions
-[Triple Fault]: #TODO
+[Triple Fault]: http://wiki.osdev.org/Triple_Fault
 [Invalid Opcode]: http://wiki.osdev.org/Exceptions#Invalid_Opcode
 [movaps]: http://www.c3se.chalmers.se/Common/VTUNE-9.1/doc/users_guide/mergedProjects/analyzer_ec/mergedProjects/reference_olh/mergedProjects/instructions/instruct32_hh/vc181.htm
 [SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
