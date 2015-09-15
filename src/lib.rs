@@ -21,7 +21,7 @@ extern crate rlibc;
 use core::intrinsics::offset;
 
 #[no_mangle]
-pub extern fn main() {
+pub extern fn rust_main() {
     // ATTENTION: we have a very small stack and no guard page
     let x = ["Hello", " ", "World", "!"];
     let screen_pointer = 0xb8000 as *const u16;
