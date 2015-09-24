@@ -11,6 +11,18 @@ pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
     buffer: unsafe{Unique::new(0xb8000 as *mut _)},
 });
 
+macro_rules! println {
+    ($fmt:expr) => (print!(concat!($fmt, "\n")));
+    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+}
+
+macro_rules! print {
+    ($($arg:tt)*) => ({
+            use core::fmt::Write;
+            $crate::vga_buffer::WRITER.lock().write_fmt(format_args!($($arg)*)).unwrap();
+    });
+}
+
 #[allow(dead_code)]
 #[repr(u8)]
 pub enum Color {
