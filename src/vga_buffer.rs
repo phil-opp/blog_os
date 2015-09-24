@@ -1,4 +1,5 @@
 use core::ptr::Unique;
+use core::fmt;
 use spin::Mutex;
 
 const BUFFER_HEIGHT: usize = 25;
@@ -75,6 +76,15 @@ impl Writer {
             color_code: self.color_code,
         };
         self.buffer().chars[row] = [blank; BUFFER_WIDTH];
+    }
+}
+
+impl fmt::Write for Writer {
+    fn write_str(&mut self, s: &str) -> ::core::fmt::Result {
+        for byte in s.bytes() {
+          self.write_byte(byte)
+        }
+        Ok(())
     }
 }
 
