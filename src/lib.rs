@@ -13,9 +13,12 @@
 // limitations under the License.
 
 #![feature(no_std, lang_items)]
+#![feature(const_fn)]
 #![no_std]
 
 extern crate rlibc;
+
+mod vga_buffer;
 
 #[no_mangle]
 pub extern fn rust_main() {
