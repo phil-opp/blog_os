@@ -11,6 +11,7 @@ pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
     buffer: unsafe{Unique::new(0xb8000 as *mut _)},
 });
 
+#[allow(dead_code)]
 #[repr(u8)]
 pub enum Color {
     Black      = 0,
