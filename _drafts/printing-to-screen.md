@@ -33,7 +33,9 @@ Bit 4 is the _bright bit_, which turns for example blue into light blue. It is u
 [disable blinking]: http://www.ctyme.com/intr/rb-0117.htm
 
 ## Creating a Rust Module
-Let's create the Rust module `vga_buffer`. Therefor we create a file named `src/vga_buffer.rs` and add a `mod vga_buffer` line to `src/lib.rs`. Now we can create an enum for the colors ([full file](#TODO)):
+Now that we know how the VGA buffer works, we can create a Rust module to handle printing. To create a new module named `vga_buffer`, we just need to create a file named `src/vga_buffer.rs` and add a `mod vga_buffer` line to `src/lib.rs`.
+
+First, we represent the different colors using an enum ([full file](#TODO)):
 
 ```rust
 #[repr(u8)]
@@ -81,23 +83,23 @@ struct Buffer {
     chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 ```
-To ensure that `ScreenChar` is exactly 16-bits, one might be tempted to use the [repr(packed)] attribute. But Rust does not insert any padding around two `u8` values, so it's not needed here. And `repr(packed)` can cause [undefined behavior][repr(packed) issue] and that's always bad.
+To ensure that `ScreenChar` is exactly 16-bits, one might be tempted to use the [repr(packed)] attribute. But Rust does not insert any padding around two `u8` values, so it's not needed here. And using `repr(packed)` is generally discouraged because it can [cause undefined behavior][repr(packed) issue].
 
-[repr(packed)]: https://doc.rust-lang.org/nightly/nomicon/other-reprs.html#repr(packed)
+[repr(packed)]: https://doc.rust-lang.org/nightly/nomicon/other-reprs.html#reprpacked
 [repr(packed) issue]: https://github.com/rust-lang/rust/issues/27060
 
 To actually write to screen, we now create a writer type:
 
 ```rust
-pub struct Writer<'a> {
+pub struct Writer {
     column_position: usize,
     color_code: ColorCode,
-    buffer: &'a mut Buffer,
+    buffer: Unique<Buffer>,
 }
 ```
-The explicit lifetime tells Rust that the writer lives as long as the mutual buffer reference. Thus Rust ensures statically that the writer does not write to invalid memory.
+The writer will always write to the last line and shift lines up when a line is full (or on `\n`). So just the current column position needs to be stored. The current foreground and background colors are specified by `color_code`. To make it possible to create a `static` Writer later, the `buffer` field stores an `Unique<Buffer>` instead of a plain `*mut Buffer`. [Unique] is a wrapper that implements Send/Sync and is thus usable as a `static` (we want to add static Writer later).
 
-The writer will always write to the last line and shift lines up when a line is full (or on `\n`). So the current row is always the last row and just the current column position needs to be stored. The current foreground and background colors are specified by `color_code`.
+[Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
 
 ### Printing Characters
 Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte:
