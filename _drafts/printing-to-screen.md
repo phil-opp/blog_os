@@ -32,9 +32,10 @@ Bit 4 is the _bright bit_, which turns for example blue into light blue. It is u
 
 [disable blinking]: http://www.ctyme.com/intr/rb-0117.htm
 
-## Creating a Rust Module
+## A basic Rust Module
 Now that we know how the VGA buffer works, we can create a Rust module to handle printing. To create a new module named `vga_buffer`, we just need to create a file named `src/vga_buffer.rs` and add a `mod vga_buffer` line to `src/lib.rs`.
 
+### Colors
 First, we represent the different colors using an enum ([full file](#TODO)):
 
 ```rust
@@ -68,6 +69,7 @@ The `ColorCode` contains the full color byte, containing foreground and backgrou
 
 [const function]: https://github.com/rust-lang/rfcs/blob/master/text/0911-const-fn.md
 
+### The Text Buffer
 Now we can add structures to represent a screen character and the text buffer:
 
 ```rust
@@ -97,7 +99,7 @@ pub struct Writer {
     buffer: Unique<Buffer>,
 }
 ```
-The writer will always write to the last line and shift lines up when a line is full (or on `\n`). So just the current column position needs to be stored. The current foreground and background colors are specified by `color_code`. To make it possible to create a `static` Writer later, the `buffer` field stores an `Unique<Buffer>` instead of a plain `*mut Buffer`. [Unique] is a wrapper that implements Send/Sync and is thus usable as a `static` (we want to add static Writer later).
+The writer will always write to the last line and shift lines up when a line is full (or on `\n`). The `column_position` field keeps track of the current position in the last row. The current foreground and background colors are specified by `color_code` and a pointer to the VGA buffer is stored in `buffer`. To make it possible to create a `static` Writer later, the `buffer` field stores an `Unique<Buffer>` instead of a plain `*mut Buffer`. [Unique] is a wrapper that implements Send/Sync and is thus usable as a `static`.
 
 [Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
 
@@ -115,10 +117,11 @@ impl Writer {
                 if self.column_position >= BUFFER_WIDTH {
                     self.new_line();
                 }
+
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position;
 
-                self.buffer.chars[row][col] = ScreenChar {
+                self.buffer().chars[row][col] = ScreenChar {
                     ascii_character: byte,
                     color_code: self.color_code,
                 };
@@ -126,35 +129,40 @@ impl Writer {
             }
         }
     }
-    fn new_line(&mut self) {}
+
+    fn buffer(&mut self) -> &mut Buffer {
+        unsafe{ self.buffer.get_mut() }
+    }
+
+    fn new_line(&mut self) {/* TODO */}
 }
 ```
 If the byte is the [newline] byte `\n`, the writer does not print anything. Instead it calls a `new_line` method, which we'll implement later. Other bytes get printed to the screen in the second match case.
 
-When printing a byte, the writer checks if the current line is full. In that case, a `new_line` call is required before to wrap the line. Since the writer always writes to the last line, `row` is just the last line's index. The writer uses the mutable reference stored in `buffer` to set the screen character at `row` and `col`. Then the column position is advanced by one.
-
 [newline]: https://en.wikipedia.org/wiki/Newline
 
-To test it, we add can add a `test` function to the module:
+When printing a byte, the writer checks if the current line is full. In that case, a `new_line` call is required before to wrap the line. Then it writes a new `ScreenChar` to the buffer at the current position. Finally, the current column position is advanced.
+
+The `buffer()` auxiliary method converts the raw pointer in the `buffer` field into a safe mutable buffer reference. The unsafe block is needed because the [get_mut()] method of `Unique` is unsafe. But our `buffer()` method itself isn't marked as unsafe, so it must not introduce any unsafety (e.g. cause segfaults). To guarantee that, it's very important that the `buffer` field always points to a valid `Buffer`. It's like a contract that we must stand to every time we create a `Writer`. To ensure that it's not possible to create an invalid `Writer` from outside of the module, the struct must have at least one private field and public creation functions are not allowed either.
+
+[get_mut()]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html#method.get_mut
+
+### Try it out!
+To write some characters to the screen, you can create a temporary function:
 
 ```rust
-pub fn test() {
-    const BUFFER: *mut Buffer = 0xb8000 as *mut _;
-    let buffer = unsafe{&mut *BUFFER};
-
-    let writer = Writer {
+pub fn print_something() {
+    let mut writer = Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::LightGreen, Color::Black),
-        buffer: buffer,
-    };
+        buffer: Unique::new(0xb8000 as *mut _),
+    }
+
     writer.write_byte(b'H');
 }
 ```
-First, we create a mutable reference to the VGA text buffer at `0xb8000`. The `const` defines a raw pointer that we convert to a reference using the [`&mut *` pattern][references and raw pointers]. The `unsafe` block is needed because Rust doesn't know if the raw pointer is valid. Notice that creating a raw pointer is completely safe, only dereferencing it is `unsafe`. After creating the reference, we use it to create a new writer.
+It just creates a new Writer that points to the VGA buffer at `0xb8000`. Then it writes the byte `b'H'` to it. The `b` prefix creates a [byte character], which represents an ASCII code point. When we call `vga_buffer::print_something` in main, a `H` should be printed in the _lower_ left corner of the screen in light green.
 
-Finally, we write the byte `b'H'`. The `b` in front specifies that it's a [byte character], which represents an ASCII code point. When we call `vga_buffer::test` in main, it's printed in the _lower_ left corner of the screen in light green.
-
-[references and raw pointers]: https://doc.rust-lang.org/book/raw-pointers.html#references-and-raw-pointers
 [byte character]: https://doc.rust-lang.org/reference.html#characters-and-strings
 
 ### Printing Strings
@@ -168,16 +176,15 @@ pub fn write_str(&mut self, s: &str) {
     }
 }
 ```
-You can try it yourself in the `test` function. When you try strings with some special characters like `ä` or `λ`, you'll notice that they cause weird symbols on screen. That's because they are represented by multiple bytes in [UTF-8]. By converting them to bytes, we of course get strange results. But since the VGA buffer doesn't support UTF-8, it's not possible to display these characters anyway. So let's just stick to ASCII strings for now.
+You can try it yourself in the `print_something` function. When you print strings with some special characters like `ä` or `λ`, you'll notice that they cause weird symbols on screen. That's because they are represented by multiple bytes in [UTF-8]. By converting them to bytes, we of course get strange results. But since the VGA buffer doesn't support UTF-8, it's not possible to display these characters anyway. To ensure that a string contains only ASCII characters, you can prefix a `b` to create a [Byte String].
 
 [UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
+[Byte String]: https://doc.rust-lang.org/reference.html#characters-and-strings
 
-## Providing an Interface
-
-## Synchronization
+## Providing an Interface/Printing from outside/Synchronization/...
 
 ## Support Formatting Macros
-It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` and looks quite similar to our `write_str` method. We just need to move it into an `impl ::core::fmt::Write for Writer` block and add a return type:
+It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_str` method. To implement the trait, we just need to move it into an `impl ::core::fmt::Write for Writer` block and add a return type:
 
 ```rust
 impl ::core::fmt::Write for Writer {
@@ -189,7 +196,7 @@ impl ::core::fmt::Write for Writer {
     }
 }
 ```
-The `Ok(())` is just the `Ok` Result containing the `()` type. We can drop the `pub` because trait methods are always public.
+The `Ok(())` is just a `Ok` Result containing the `()` type. We can drop the `pub` because trait methods are always public.
 
 Now we can use Rust's built-in `write!`/`writeln!` formatting macros:
 
@@ -205,16 +212,19 @@ Now you should see a `Hello! The numbers are 42 and 0.3333333333333333` in stran
 [core::fmt::Write]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
 ## Newlines
-Right now, we just ignore newlines and characters that don't fit into the line anymore. Instead we want to move every character one line up (the top line gets deleted) and start at the beginning of the last line again. To do this, we add a `new_line` method to `Writer`:
+Right now, we just ignore newlines and characters that don't fit into the line anymore. Instead we want to move every character one line up (the top line gets deleted) and start at the beginning of the last line again. To do this, we add an implementation for the `new_line` method of `Writer`:
 
 ```rust
 fn new_line(&mut self) {
     for row in 0..(BUFFER_HEIGHT-1) {
-        Self::buffer().chars[row] = Self::buffer().chars[row + 1]
+        let buffer = self.buffer();
+        buffer.chars[row] = buffer.chars[row + 1]
     }
     self.clear_row(BUFFER_HEIGHT-1);
     self.column_position = 0;
 }
+
+fn clear_row(&mut self) {/* see below */}
 ```
 We just move each line to the line above. Notice that the range notation (`..`) is exclusive the upper bound.
 
@@ -226,13 +236,15 @@ fn clear_row(&mut self, row: usize) {
         ascii_character: b' ',
         color_code: self.color_code,
     };
-    Self::buffer().chars[row] = [blank; BUFFER_WIDTH];
+    self.buffer().chars[row] = [blank; BUFFER_WIDTH];
 }
 ```
-Now we just need to call the `new_line()` method in the 2 cases marked with `//TODO` and our writer supports newlines.
 
-## A `println!` macro
+## A println macro
 Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead we look at the source of the [`println!` macro] in the standard library:
+
+[macro syntax]: https://doc.rust-lang.org/nightly/book/macros.html
+[`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```
 macro_rules! println {
@@ -240,41 +252,32 @@ macro_rules! println {
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
 ```
-It just refers to the [`print!` macro] that is defined as:
+It just adds a `\n` and invokes the [`print!` macro], which is defined as:
+
+[`print!` macro]: https://doc.rust-lang.org/nightly/std/macro.print!.html
 
 ```
 macro_rules! print {
     ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
 }
 ```
-It just calls the _print_ method in the `io` module of the current crate (`$crate`), which is `std`. The [`_print` function] is rather complicated, as it supports different `Stdout`s.
+It calls the _print_ method in the `io` module of the current crate (`$crate`), which is `std`. The [`_print` function] in libstd is rather complicated, as it supports different `Stdout`s.
 
-To print to the VGA buffer, we just copy both macros and replace the `io` module with the `vga_buffer` buffer in the `print!` macro:
+[`_print` function]: https://doc.rust-lang.org/nightly/src/std/io/stdio.rs.html#578
+
+To print to the VGA buffer, we just copy both macros, but modify the `print!` macro:
 
 ```
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*)));
+    $crate::vga_buffer::WRITER.lock().write_fmt(format_args!($($arg)*)).unwrap();
 }
 ```
-Now we can write our own `_print` function:
-
-```rust
-pub fn _print(fmt: ::core::fmt::Arguments) {
-    use core::fmt::Write;
-    static mut WRITER: Writer = Writer::new(Color::LightGreen, Color::Black);
-    unsafe{WRITER.write_fmt(fmt)};
-}
-```
-The function needs to be public because every `print!(…)` is expanded to `::vga_buffer::_print(…)`. It uses a `static mut` to store a writer and calls the `write_fmt` method of the `core::fmt::Write` trait (hence the import). It's highly discouraged to use `static mut`s because they introduce all kinds of data races (that's why every access is unsafe). We use it here anyway, as we have only a single thread at the moment. But we already have another data race: We can create multiple `Writer`s, that write to the same memory at `0xb8000`. So as soon as we add multithreading, we need to revisit this module again and find better solutions.
-
-[macro syntax]: https://doc.rust-lang.org/nightly/book/macros.html
-[`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
-[`print!` macro]: https://doc.rust-lang.org/nightly/std/macro.print!.html
+Instead of a `_print` function, we call the `write_fmt` method of our static `Writer`. The additional `unwrap()` at the end panics if printing isn't successful. But since we always return `Ok` in `write_str`, that should not happen.
 
 ## Clearing the screen
 We can now add a rather trivial last function:
 
-```
+```rust
 pub fn clear_screen() {
     for _ in 0..BUFFER_HEIGHT {
         println!("");
