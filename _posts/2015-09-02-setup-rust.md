@@ -316,7 +316,7 @@ call rust_main
     mov [0xb8010], rax
     hlt
 ```
-Ok that's enough assembly for now, let's switch back to Rust and print the traditional `Hello World!`.
+Ok, that's enough assembly for now. Let's switch back to Rust.
 
 ## Hello World!
 Of course we could just write some magic bytes to memory like we did in assembly. But I chose some code that highlights some of Rust's features:
@@ -367,6 +367,6 @@ Let's break it down:
 [unsafe block]: https://doc.rust-lang.org/book/unsafe.html
 
 ## What's next?
-Until now we write magic bits to memory every time we want to print something. It's time to end this hackery. In the [next post] we create a VGA buffer module that allows us to print strings in different colors through a nice interface.
+Until now we write magic bits to some memory location when we want to print something to screen. In the [next post] we create a abstraction for the VGA text buffer that allows us to print strings in different colors and provides a simple interface.
 
 [next post]: {{ site.url }}{{ page.next.url }}
