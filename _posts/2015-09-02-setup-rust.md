@@ -319,52 +319,43 @@ call rust_main
 Ok, that's enough assembly for now. Let's switch back to Rust.
 
 ## Hello World!
-Of course we could just write some magic bytes to memory like we did in assembly. But I chose some code that highlights some of Rust's features:
+Finally, it's time for a `Hello World!` from Rust:
 
 ```rust
-#![feature(no_std, lang_items)]
-#![feature(core_slice_ext, core_str_ext, core_intrinsics)]
-#![no_std]
-
-extern crate rlibc;
-
-use core::intrinsics::offset;
-
-#[no_mangle]
 pub extern fn rust_main() {
     // ATTENTION: we have a very small stack and no guard page
-    let x = ["Hello", " ", "World", "!"];
-    let screen_pointer = 0xb8000 as *const u16;
 
-    for (byte, i) in x.iter().flat_map(|s| s.bytes()).zip(0..) {
-        let c = 0x1f00 | (byte as u16);
-        unsafe {
-            let screen_char = offset(screen_pointer, i) as *mut u16;
-            *screen_char = c
-        }
+    let hello = b"Hello World!";
+    let color_byte = 0x1f; // white foreground, blue background
+
+    let mut hello_colored = [color_byte; 24];
+    for (i, char_byte) in hello.into_iter().enumerate() {
+        hello_colored[i*2] = *char_byte;
     }
+
+    // write `Hello World!` to the center of the VGA text buffer
+    let buffer_ptr = (0xb8000 + 1988) as *mut _;
+    unsafe { *buffer_ptr = hello_colored };
 
     loop{}
 }
 ```
-Let's break it down:
+Some notes:
 
-- the `core_*` features are needed because many functions from the core library are still unstable
-- `use` imports a function, in our case [offset] that can be used for C-like pointer arithmetic
-- Normally, Rust tries to avoid [stack overflows] through _guard pages_: The page below the stack isn't mapped and such a stack overflow triggers a page fault. But we can't unmap this page as we use just one big page right now, so we need to be very careful to not blow our small stack. Fortunately our stack is just above the page tables. A stack overflow would overwrite an important entry at some point and thus provoke a page fault (that crashes our kernel).
-- `x` is an immutable array of [&str]
-- `screen_pointer` is a [raw pointer] to the VGA text buffer
-- We iterate over the elements of x, convert every `&str` to a byte iterator (`s.bytes()`), and join these iterators (through `flat_map`). Then we convert the byte iterator to a `(byte, index)` operator through the [zip method].
-- By casting the byte as `u16` and OR-ing the colors in (`0x1f` is white text on blue background), we convert it to a screen character for the VGA buffer.
-- Now we just need to write the `screen_char` to the right place in memory. Rust doesn't know the VGA buffer and can't guarantee that writing to it is safe (we could corrupt important data). So we need to tell Rust that we know what we're doing by using an [unsafe block].
-- `offset` is like pointer arithmetic in C: It calculates the address of the i-th `u16` (starting at `0xb8000`) and converts it to a pointer.
-- To be able to write to it, we must cast the `*const u16` to a `*mut u16`
+- The `b` prefix creates a [byte string], which is just an array of `u8`
+- [enumerate] is an `Iterator` method that adds the current index `i` to elements
+- `buffer_ptr` is a [raw pointer] that points to the center of the VGA text buffer
+- Rust doesn't know the VGA buffer and thus can't guarantee that writing to the `buffer_ptr` is safe (it could point to important data). So we need to tell Rust that we know what we are doing by using an [unsafe block].
 
-[offset]: https://doc.rust-lang.org/nightly/core/intrinsics/fn.offset.html
-[stack overflows]: https://en.wikipedia.org/wiki/Stack_overflow
-[&str]: https://doc.rust-lang.org/nightly/std/primitive.str.html
-[zip method]: https://doc.rust-lang.org/nightly/std/iter/trait.Iterator.html#method.zip
+[byte string]: https://doc.rust-lang.org/reference.html#characters-and-strings
+[enumerate]: https://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html#method.enumerate
 [unsafe block]: https://doc.rust-lang.org/book/unsafe.html
+
+### Stack Overflows
+Since we still use the small 64 byte [stack from the last post], we must be careful not to [overflow] it. Normally, Rust tries to avoid stack overflows through _guard pages_: The page below the stack isn't mapped and such a stack overflow triggers a page fault (instead of silently overwriting random memory). But we can't unmap the page below our stack right now since we currently use only a single big page. Fortunately the stack is located just above the page tables. So some important page table entry would probably get overwritten on stack overflow and then a page fault occurs, too.
+
+[stack from the last post]: {{ site.url }}{{ page.previous.url }}#creating-a-stack
+[overflow]: https://en.wikipedia.org/wiki/Stack_overflow
 
 ## What's next?
 Until now we write magic bits to some memory location when we want to print something to screen. In the [next post] we create a abstraction for the VGA text buffer that allows us to print strings in different colors and provides a simple interface.
