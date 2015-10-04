@@ -5,9 +5,9 @@ permalink:           pretty
 relative_permalinks: true
 
 # Setup
-title:               phil-opp
+title:               phil-opp's blog
 full_title:          Philipp Oppermann's blog
-tagline:             "rust, kernels, and more"
+tagline:             ""
 paginate:            10
 baseurl:             ""
 
