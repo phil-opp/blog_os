@@ -13,3 +13,31 @@
 footer {
   margin-bottom: 2rem;
 }
+
+.updated {
+    -webkit-animation: fadeIt 3s ease-in-out;
+       -moz-animation: fadeIt 3s ease-in-out;
+         -o-animation: fadeIt 3s ease-in-out;
+            animation: fadeIt 3s ease-in-out;
+}
+
+@-webkit-keyframes fadeIt {
+  0%   { background-color: #FFFFFF; }
+  15%  { background-color: #ff7; }
+  100% { background-color: #FFFFFF; }
+}
+@-moz-keyframes fadeIt {
+  0%   { background-color: #FFFFFF; }
+  15%  { background-color: #ff7; }
+  100% { background-color: #FFFFFF; }
+}
+@-o-keyframes fadeIt {
+  0%   { background-color: #FFFFFF; }
+  15%  { background-color: #ff7; }
+  100% { background-color: #FFFFFF; }
+}
+@keyframes fadeIt {
+  0%   { background-color: #FFFFFF; }
+  15%  { background-color: #ff7; }
+  100% { background-color: #FFFFFF; }
+}
