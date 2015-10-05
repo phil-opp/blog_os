@@ -231,7 +231,7 @@ check_exception old: 0x8 new 0xd
 Let me first explain the QEMU arguments: The `-d int` logs CPU interrupts to the console and the `-no-reboot` flag closes QEMU instead of constant rebooting. But what does the cryptical output mean? I already removed most of it as we don't need it here. Let's break down the rest:
 
 - The first two blocks, `SMM: enter` and `SMM: after RSM` are created before our OS boots, so we just ignore them.
-- The next block, `check_exception old: 0xffffffff new 0x6` is the interesting one. It says: “a new CPU exception with number `0xe` occurred“.
+- The next block, `check_exception old: 0xffffffff new 0x6` is the interesting one. It says: “a new CPU exception with number `0x6` occurred“.
 - The last blocks indicate further exceptions. They were thrown because we didn't handle the `0x6` exception, so we're going to ignore them, too.
 
 So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't handling an interrupt when the exception occurred. The new exception has number `0x6`. By looking at an [exception table] we learn that `0x6` indicates a [Invalid Opcode] fault. So the lastly executed instruction was invalid. The register dump tells us that the current instruction was `0x100200` (through `IP`  (instruction pointer) or `pc` (program counter)). Therefore the instruction at `0x100200` seems to be invalid. We can look at it using `objdump`:
