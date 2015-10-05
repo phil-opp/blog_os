@@ -5,7 +5,10 @@ title: Home
 <div class="newest-post">
 <emph>Latest Post</emph>: {% for post in site.categories.rust-os limit:1 %}
   <strong><a href="#{{ post.id }}" onclick="
-    document.getElementById('{{ post.id }}').className += ' updated';
+    post = document.getElementById('{{ post.id }}');
+    post.className = post.className.replace(/\b updated\b/, '');
+    post.offsetWidth = post.offsetWidth; // trigger reflow -> works on 2nd click, too
+    post.className += ' updated';
   ">{{post.title}}</a></strong>
 {% endfor %}
 </div>

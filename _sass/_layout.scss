@@ -15,29 +15,30 @@ footer {
 }
 
 .updated {
-    -webkit-animation: fadeIt 3s ease-in-out;
-       -moz-animation: fadeIt 3s ease-in-out;
-         -o-animation: fadeIt 3s ease-in-out;
-            animation: fadeIt 3s ease-in-out;
+	border-radius: 5px;
+    -webkit-animation: fadeIt 1.5s linear;
+       -moz-animation: fadeIt 1.5s linear;
+         -o-animation: fadeIt 1.5s linear;
+            animation: fadeIt 1.5s linear;
 }
 
 @-webkit-keyframes fadeIt {
   0%   { background-color: #FFFFFF; }
-  15%  { background-color: #ff7; }
+  15%  { background-color: #ff9; }
   100% { background-color: #FFFFFF; }
 }
 @-moz-keyframes fadeIt {
   0%   { background-color: #FFFFFF; }
-  15%  { background-color: #ff7; }
+  15%  { background-color: #ff9; }
   100% { background-color: #FFFFFF; }
 }
 @-o-keyframes fadeIt {
   0%   { background-color: #FFFFFF; }
-  15%  { background-color: #ff7; }
+  15%  { background-color: #ff9; }
   100% { background-color: #FFFFFF; }
 }
 @keyframes fadeIt {
   0%   { background-color: #FFFFFF; }
-  15%  { background-color: #ff7; }
+  15%  { background-color: #ff9; }
   100% { background-color: #FFFFFF; }
 }
