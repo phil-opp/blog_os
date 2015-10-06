@@ -3,7 +3,7 @@ layout: post
 title: 'Setup Rust'
 category: 'rust-os'
 ---
-In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to sweet Rust code. [Rust] is a beautiful high-level language without runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
+In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to [Rust] code. Rust is a high-level language without runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
 
 This blog post tries to setup Rust step-by-step and point out the different problems. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is in a [Github repository], too.
 
@@ -14,12 +14,14 @@ This blog post tries to setup Rust step-by-step and point out the different prob
 [Github repository]: https://github.com/phil-opp/blog_os/tree/setup_rust
 
 ## Installing Rust
-We need a nightly compiler, as we need to use many unstable features. To manage Rust installations I highly recommend brson's [multirust]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. After installing you can just run `multirust update nightly` to install or update to the latest Rust nightly.
+We need a nightly compiler, as we will use many unstable features. To manage Rust installations I highly recommend brson's [multirust]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. After installing it you can just run `multirust update nightly` to install or update to the latest Rust nightly.
 
 [multirust]: https://github.com/brson/multirust
 
-## Creating a Rust project
-Normally you would call `cargo new` when you want to create a new project folder. We can't use it because our folder already exists, so we need to do it manually. Fortunately we only need to add a cargo configuration file named `Cargo.toml`:
+## Creating a Cargo project
+[Cargo] is Rust excellent package manager. Normally you would call `cargo new` when you want to create a new project folder. We can't use it because our folder already exists, so we need to do it manually. Fortunately we only need to add a cargo configuration file named `Cargo.toml`:
+
+[Cargo]: http://doc.crates.io/guide.html
 
 ```toml
 [package]
@@ -30,7 +32,9 @@ authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 [lib]
 crate-type = ["staticlib"]
 ```
-The `package` section contains basic project metadata and is identical to the `Cargo.toml` created by `cargo new blog_os`. The `lib` section specifies that we want to build a static library, i.e. a library that contains all of its dependencies.
+The `package` section contains required project metadata such as the [semantic crate version]. The `lib` section specifies that we want to build a static library, i.e. a library that contains all of its dependencies. This is required to link the Rust project with our kernel.
+
+[semantic crate version]: http://doc.crates.io/manifest.html#the-package-section
 
 Now we place our root source file in `src/lib.rs`:
 
@@ -98,9 +102,9 @@ long_mode_start:
 ```
 By defining `rust_main` as `extern` we tell nasm that the function is defined in another file. As the linker takes care of linking them together, we'll get a linker error if we have a typo in the name or forget to mark the rust function as `pub extern`.
 
-When we've done everything right, we still see the green `OKAY` when executing `make run`. That means that we successfully called the Rust function and returned back to assembly.
+If we've done everything right, we should still see the green `OKAY` when executing `make run`. That means that we successfully called the Rust function and returned back to assembly.
 
-## Testing
+## Fixing Linker Errors
 Now we can try some Rust code:
 
 ```rust
@@ -108,19 +112,19 @@ pub extern fn rust_main() {
     let x = ["Hello", " ", "World", "!"];
 }
 ```
-When we test it using `make run`, it fails with `undefined reference to 'memcpy'`. This function is one of the basic functions of the C library (`libc`). Usually the `libc` crate is linked to every Rust program together with the standard library but we opted out through `#![no_std]`. We could try to fix this by adding the [libc crate] as `extern crate`. But `libc` is just a wrapper for the system `libc`, for example `glibc` on Linux, so this won't work for us. Instead we need to recreate the basic `libc` functions such as `memcpy`, `memmove`, `memset`, and `memcmp` in Rust.
+When we test it using `make run`, it fails with `undefined reference to 'memcpy'`. The `memcpy` function is one of the basic functions of the C library (`libc`). Usually the `libc` crate is linked to every Rust program together with the standard library, but we opted out through `#![no_std]`. We could try to fix this by adding the [libc crate] as `extern crate`. But `libc` is just a wrapper for the system `libc`, for example `glibc` on Linux, so this won't work for us. Instead we need to recreate the basic `libc` functions such as `memcpy`, `memmove`, `memset`, and `memcmp` in Rust.
 
 [libc crate]: https://doc.rust-lang.org/nightly/libc/index.html
 
 ### rlibc
-Fortunately there already is a crate for that: [rlibc]. When we look at its [source code][rlibc source] we see that it contains no magic, just some [raw pointer] operations in a while loop. To add it as a dependency we just need to add two lines to the `Cargo.toml`:
+Fortunately there already is a crate for that: [rlibc]. When we look at its [source code][rlibc source] we see that it contains no magic, just some [raw pointer] operations in a while loop. To add `rlibc` as a dependency we just need to add two lines to the `Cargo.toml`:
 
 ```toml
 ...
 [dependencies]
 rlibc = "*"
 ```
-and an `extern crate` in our `src/lib.rs`:
+and an `extern crate` definition in our `src/lib.rs`:
 
 ```rust
 ...
@@ -150,7 +154,7 @@ The new errors are linker errors about missing `fmod` and `fmodf` functions. The
 
 [libcore]: https://doc.rust-lang.org/core/
 
-So how do we fix this problem? We don't use any floating point operations, so we could just provide our own implementations of `fmod` and `fmodf` that just do a `loop{}`. But there's a better way that doesn't fail silently when we use floats some day. We tell the linker to remove unused sections. That's generally a good idea as it reduces kernel size. And we don't have any references to `fmod` and `fmodf` anymore until we use floating point modulo. The magic linker flag is `--gc-sections`, which stands for “garbage collect sections”. Let's add it to the `$(kernel)` target in our `Makefile`:
+So how do we fix this problem? We don't use any floating point operations, so we could just provide our own implementations of `fmod` and `fmodf` that just do a `loop{}`. But there's a better way that doesn't fail silently when we use float modulo some day: We tell the linker to remove unused sections. That's generally a good idea as it reduces kernel size. And we don't have any references to `fmod` and `fmodf` anymore until we use floating point modulo. The magic linker flag is `--gc-sections`, which stands for “garbage collect sections”. Let's add it to the `$(kernel)` target in our `Makefile`:
 
 ```make
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
@@ -161,7 +165,7 @@ Now we can do a `make run` again and… it doesn't boot anymore:
 ```
 GRUB error: no multiboot header found.
 ```
-What happened? Well, the linker removed unused sections. And since we don't use the Multiboot section anywhere `ld` removes it, too. So we need to tell the linker explicitely that it should keep this section. The `KEEP` command does exactly that, so we add it to the `linker.ld`:
+What happened? Well, the linker removed unused sections. And since we don't use the Multiboot section anywhere, `ld` removes it, too. So we need to tell the linker explicitely that it should keep this section. The `KEEP` command does exactly that, so we add it to the linker script (`linker.ld`):
 
 ```
 .boot :
@@ -186,7 +190,9 @@ The error is a linker error again (hence the ugly error message):
 target/debug/libblog_os.a(blog_os.0.o): In function `blog_os::iter::Iterator::zip<core::iter::FlatMap<core::ops::Range<i32>, core::ops::Range<i32>, closure>,core::ops::RangeFrom<i32>>':
 /home/.../src/libcore/iter.rs:223: undefined reference to `_Unwind_Resume'
 ```
-So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:223` in libcore. This reference is inserted by the compiler, it's not really in the libcore [source][iter.rs:223]. The inserted code is a so-called _landing pad_ that is used for exception handling. The easiest way of fixing this problem is to disable the landing pad creation since we don't supports panics anyway right now. We can do this by passing a `-Z no-landing-pads` flag to rustc. To do this we replace the `cargo build` command in our Makefile:
+So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:223` in libcore. This reference is not really there at [line 223 of libcore's `iter.rs`][iter.rs:223]. Instead, it is a compiler inserted _landing pad_, which is used for exception handling.
+
+The easiest way of fixing this problem is to disable the landing pad creation since we don't supports panics anyway right now. We can do this by passing a `-Z no-landing-pads` flag to `rustc` (the actual Rust compiler below cargo). To do this we replace the `cargo build` command in our Makefile with the `cargo rustc` command, which does the same but allows passing flags to `rustc`:
 
 ```make
 cargo:
@@ -195,7 +201,7 @@ cargo:
 Now we fixed all linking issues.
 
 ## The final problem
-Unfortunately there is one last problem left that gets triggered by the following code:
+Unfortunately there is one last problem left, that gets triggered by the following code:
 
 ```rust
 let mut a = 42;
@@ -207,6 +213,9 @@ When we add that code to `rust_main` and test it using `make run`, the OS will c
 
 ### Debugging
 Such a boot loop is most likely caused by some [CPU exception][exception table]. When these exceptions aren't handled, a [Triple Fault] occurs and the processor resets itself. We can look at generated CPU interrupts/exceptions using QEMU:
+
+[exception table]: http://wiki.osdev.org/Exceptions
+[Triple Fault]: http://wiki.osdev.org/Triple_Fault
 
 ```
 > qemu-system-x86_64 -d int -no-reboot -hda build/os-x86_64.iso
@@ -228,13 +237,15 @@ check_exception old: 0xd new 0xd
 ...
 check_exception old: 0x8 new 0xd
 ```
-Let me first explain the QEMU arguments: The `-d int` logs CPU interrupts to the console and the `-no-reboot` flag closes QEMU instead of constant rebooting. But what does the cryptical output mean? I already removed most of it as we don't need it here. Let's break down the rest:
+Let me first explain the QEMU arguments: The `-d int` logs CPU interrupts to the console and the `-no-reboot` flag closes QEMU instead of constant rebooting. But what does the cryptical output mean? I already omitted most of it as we don't need it here. Let's break down the rest:
 
 - The first two blocks, `SMM: enter` and `SMM: after RSM` are created before our OS boots, so we just ignore them.
 - The next block, `check_exception old: 0xffffffff new 0x6` is the interesting one. It says: “a new CPU exception with number `0x6` occurred“.
 - The last blocks indicate further exceptions. They were thrown because we didn't handle the `0x6` exception, so we're going to ignore them, too.
 
 So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't handling an interrupt when the exception occurred. The new exception has number `0x6`. By looking at an [exception table] we learn that `0x6` indicates a [Invalid Opcode] fault. So the lastly executed instruction was invalid. The register dump tells us that the current instruction was `0x100200` (through `IP`  (instruction pointer) or `pc` (program counter)). Therefore the instruction at `0x100200` seems to be invalid. We can look at it using `objdump`:
+
+[Invalid Opcode]: http://wiki.osdev.org/Exceptions#Invalid_Opcode
 
 ```
 > objdump -D build/kernel-x86_64.bin | grep "100200:"
@@ -243,17 +254,13 @@ So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't
 Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x100200` seems to be a valid `movaps` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps documentation][movaps]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`, so the exception occurs
 > For an unmasked Streaming SIMD Extensions 2 instructions numeric exception (CR4.OSXMMEXCPT =0). If EM in CR0 is set. If OSFXSR in CR4 is 0. If CPUID feature flag SSE2 is 0.
 
+[SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
+[movaps]: http://www.c3se.chalmers.se/Common/VTUNE-9.1/doc/users_guide/mergedProjects/analyzer_ec/mergedProjects/reference_olh/mergedProjects/instructions/instruct32_hh/vc181.htm
+
 The rough translation of this cryptic definition is: _If SSE isn't enabled_. So apparently Rust uses SSE instructions by default and we didn't enable SSE before. So the fix for this bug is enabling SSE.
 
-[Physical Address Extension]: https://en.wikipedia.org/wiki/Physical_Address_Extension
-[exception table]: http://wiki.osdev.org/Exceptions
-[Triple Fault]: http://wiki.osdev.org/Triple_Fault
-[Invalid Opcode]: http://wiki.osdev.org/Exceptions#Invalid_Opcode
-[movaps]: http://www.c3se.chalmers.se/Common/VTUNE-9.1/doc/users_guide/mergedProjects/analyzer_ec/mergedProjects/reference_olh/mergedProjects/instructions/instruct32_hh/vc181.htm
-[SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
-
 ### Enabling SSE
-To enable SSE, assembly code is needed again. We want to add a function that tests if SSE is available and enables it then. Else we want to print an error message. But we can't use our existing `error` function because it uses (now invalid) 32-bit instructions. So we need a new one (in `long_mode_init.asm`):
+To enable SSE, assembly code is needed again. We want to add a function that tests if SSE is available and enables it then. Else we want to print an error message. But we can't use our existing `error` procedure because it uses (now invalid) 32-bit instructions. So we need a new one (in `long_mode_init.asm`):
 
 ```nasm
 ; Prints `ERROR: ` and the given error code to screen and hangs.
@@ -267,7 +274,9 @@ error:
     hlt
     jmp error
 ```
-It's the nearly the same as the 32-bit code in the [previous post][32-bit error function] (instead of `ERR:` we print `ERROR:` here). Now we can add a function that checks for SSE and enables it:
+It's the nearly the same as the 32-bit procedure in the [previous post][32-bit error function] (instead of `ERR:` we print `ERROR:` here).
+
+Now we can add a function that checks for SSE and enables it:
 
 ```nasm
 ; Check for SSE and enable it. If it's not supported throw error "a".
