@@ -103,7 +103,7 @@ The writer will always write to the last line and shift lines up when a line is 
 
 [Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
 
-### Printing Characters
+## Printing to Screen
 Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte:
 
 ```rust
@@ -181,9 +181,7 @@ You can try it yourself in the `print_something` function. When you print string
 [UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
 [Byte String]: https://doc.rust-lang.org/reference.html#characters-and-strings
 
-## Providing an Interface/Printing from outside/Synchronization/...
-
-## Support Formatting Macros
+### Support Formatting Macros
 It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_str` method. To implement the trait, we just need to move it into an `impl ::core::fmt::Write for Writer` block and add a return type:
 
 ```rust
@@ -211,7 +209,7 @@ Now you should see a `Hello! The numbers are 42 and 0.3333333333333333` in stran
 
 [core::fmt::Write]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
-## Newlines
+### Newlines
 Right now, we just ignore newlines and characters that don't fit into the line anymore. Instead we want to move every character one line up (the top line gets deleted) and start at the beginning of the last line again. To do this, we add an implementation for the `new_line` method of `Writer`:
 
 ```rust
@@ -240,6 +238,73 @@ fn clear_row(&mut self, row: usize) {
 }
 ```
 
+## Providing an Interface/Printing from outside/Synchronization/...
+To provide a global writer that can used as an interface from other modules, we can add a `static` writer:
+
+```rust
+pub static WRITER: Writer = Writer {
+    column_position: 0,
+    color_code: ColorCode::new(Color::LightGreen, Color::Black),
+    buffer: Unique::new(0xb8000 as *mut _),
+};
+```
+
+This won't work! You can try it yourself in the `print_something` function. The reason is that we try to take a mutable reference (`&mut`) to a immutable `static` when calling `WRITER.print_byte`.
+
+To resolve it, we could use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged, there are even proposals to [remove it][remove static mut].
+
+[mutable static]: https://doc.rust-lang.org/book/const-and-static.html#mutability
+[remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
+
+But what are the alternatives? We could try to use a cell type like [RefCell] or even [UnsafeCell] to provide [interior mutability]. But these types aren't [Sync] (with good reason), so we can't use them in statics.
+
+[RefCell]: https://doc.rust-lang.org/nightly/core/cell/struct.RefCell.html
+[UnsafeCell]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html
+[interior mutability]: https://doc.rust-lang.org/book/mutability.html#interior-vs.-exterior-mutability
+[Sync]: https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html
+
+To get synchronized interior mutability, users of the standard library can use [Mutex]. It provides mutual exclusion by blocking threads when the resource is already locked. But our basic kernel does not have any blocking support or even a concept of threads, so we can't use it either. However there is a really basic kind of mutex in computer science that requires no operating system features: the [spinlock]. Instead of blocking, the threads simply try to lock it again and again in a tight loop and thus burn CPU time until the mutex is free again.
+
+[Mutex]: https://doc.rust-lang.org/nightly/std/sync/struct.Mutex.html
+[spinlock]: https://en.wikipedia.org/wiki/Spinlock
+
+To use a spinning mutex, we can add the [spin crate] as a dependency in Cargo.toml:
+
+[spin crate]: https://crates.io/crates/spin
+
+```toml
+...
+[dependencies]
+rlibc = "*"
+spin = "*"
+```
+and a `extern crate spin;` definition in `src/lib.rs`. Then we can use the spinning Mutex to provide interior mutability to our static writer:
+
+```rust
+use spin::Mutex;
+...
+pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
+    column_position: 0,
+    color_code: ColorCode::new(Color::LightGreen, Color::Black),
+    buffer: Unique::new(0xb8000 as *mut _),
+});
+```
+[Mutex::new] is a const function, too, so it can be used in statics.
+
+Now we can easily print from our main function:
+
+[Mutex::new]: https://mvdnes.github.io/rust-docs/spinlock-rs/spin/struct.Mutex.html#method.new
+
+```rust
+pub extern fn rust_main() {
+    use core::fmt::Write;
+    vga_buffer::WRITER.lock().write_str("Hello again");
+    write!(vga_buffer::WRITER.lock(), ", some numbers: {} {}", 42, 1.337);
+    loop{}
+}
+```
+Note that we need to import the `Write` trait if we want to use its functions.
+
 ## A println macro
 Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead we look at the source of the [`println!` macro] in the standard library:
 
@@ -252,7 +317,7 @@ macro_rules! println {
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
 ```
-It just adds a `\n` and invokes the [`print!` macro], which is defined as:
+It just adds a `\n` and then invokes the [`print!` macro], which is defined as:
 
 [`print!` macro]: https://doc.rust-lang.org/nightly/std/macro.print!.html
 
@@ -261,21 +326,26 @@ macro_rules! print {
     ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
 }
 ```
-It calls the _print_ method in the `io` module of the current crate (`$crate`), which is `std`. The [`_print` function] in libstd is rather complicated, as it supports different `Stdout`s.
+It calls the `_print` method in the `io` module of the current crate (`$crate`), which is `std`. The [`_print` function] in libstd is rather complicated, as it supports different `Stdout` devices.
 
 [`_print` function]: https://doc.rust-lang.org/nightly/src/std/io/stdio.rs.html#578
 
-To print to the VGA buffer, we just copy both macros, but modify the `print!` macro:
+To print to the VGA buffer, we just copy the `println!` macro and modify the `print!` macro to use our static `WRITER` instead of `_print`:
 
 ```
 macro_rules! print {
-    $crate::vga_buffer::WRITER.lock().write_fmt(format_args!($($arg)*)).unwrap();
+    ($($arg:tt)*) => ({
+            use core::fmt::Write;
+            $crate::vga_buffer::WRITER.lock().write_fmt(format_args!($($arg)*)).unwrap();
+    });
 }
 ```
-Instead of a `_print` function, we call the `write_fmt` method of our static `Writer`. The additional `unwrap()` at the end panics if printing isn't successful. But since we always return `Ok` in `write_str`, that should not happen.
+Instead of a `_print` function, we call the `write_fmt` method of our static `Writer`. Since we're using a method from the `Write` trait, we need to import it before. The additional `unwrap()` at the end panics if printing isn't successful. But since we always return `Ok` in `write_str`, that should not happen.
 
-## Clearing the screen
-We can now add a rather trivial last function:
+Notice the additional scope around the macro: It's `=> ({…})` instead of `=> (…)`. The additional `{}` avoid a silent import of the `Write` trait on macro expansion.
+
+### Clearing the screen
+We can now use `println!` to add a rather trivial function to clear the screen:
 
 ```rust
 pub fn clear_screen() {
