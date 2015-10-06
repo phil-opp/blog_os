@@ -12,7 +12,7 @@ I tried to explain everything in detail and to keep the code as simple as possib
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
 [create an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
-[source code]: https://github.com/phil-opp/blogOS/tree/entering_longmode
+[source code]: https://github.com/phil-opp/blogOS/tree/entering_longmode/src/arch/x86_64
 
 ## Some Tests
 To avoid bugs and strange errors on old CPUs we should test if the processor supports every needed feature. If not, the kernel should abort and display an error message. To handle errors easily, we create an error procedure in `boot.asm`. It prints a rudimentary `ERR: X` message, where X is an error code letter, and hangs:
