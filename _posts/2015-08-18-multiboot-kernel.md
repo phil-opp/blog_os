@@ -12,11 +12,11 @@ I tried to explain everything in detail and to keep the code as simple as possib
 [source code]: https://github.com/phil-opp/blogOS/tree/multiboot_bootstrap/src/arch/x86_64
 
 ## Overview
-When you turn on a computer, it loads the [BIOS] from some special flash memory. The BIOS runs self test and initialization routines of the hardware, then it looks for bootable devices. If it finds one, the control is transferred to its _bootloader_, which is a small portion of executable code stored at the device's beginning. The bootloader has to determine the location of the kernel image on the device and load it into memory. It also needs to switch the CPU to the so-called [Protected Mode] because x86 CPUs start in the very limited [Real Mode] by default (to be compatible to programs from 1978).
+When you turn on a computer, it loads the [BIOS] from some special flash memory. The BIOS runs self test and initialization routines of the hardware, then it looks for bootable devices. If it finds one, the control is transferred to its _bootloader_, which is a small portion of executable code stored at the device's beginning. The bootloader has to determine the location of the kernel image on the device and load it into memory. It also needs to switch the CPU to the so-called [protected mode] because x86 CPUs start in the very limited [real mode] by default (to be compatible to programs from 1978).
 
 [BIOS]: https://en.wikipedia.org/wiki/BIOS
-[Protected Mode]: https://en.wikipedia.org/wiki/Protected_mode
-[Real Mode]: http://wiki.osdev.org/Real_Mode
+[protected mode]: https://en.wikipedia.org/wiki/Protected_mode
+[real mode]: http://wiki.osdev.org/Real_Mode
 
 We won't write a bootloader because that would be a complex project on its own (if you really want to do it, check out [_Rolling Your Own Bootloader_]). Instead we will use one of the [many well-tested bootloaders][bootloader comparison] out there. But which one?
 
@@ -289,7 +289,7 @@ Now we can invoke `make` and all updated assembly files are compiled and linked.
 
 ## What's next?
 
-In the [next post] we will create a page table and do some CPU configuration to switch to the 64-bit [Long Mode].
+In the [next post] we will create a page table and do some CPU configuration to switch to the 64-bit [long mode].
 
 [next post]: {{ site.url }}{{ page.next.url }}
-[Long Mode]: https://en.wikipedia.org/wiki/Long_mode
+[long mode]: https://en.wikipedia.org/wiki/Long_mode
