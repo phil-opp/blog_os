@@ -11,7 +11,7 @@ This blog post tries to setup Rust step-by-step and point out the different prob
 [long mode post]: {{ site.url }}{{ page.previous.url }}
 [Rust]: https://www.rust-lang.org/
 [file an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
-[Github repository]: https://github.com/phil-opp/blogOS/tree/setup_rust
+[Github repository]: https://github.com/phil-opp/blog_os/tree/setup_rust
 
 ## Installing Rust
 We need a nightly compiler, as we need to use many unstable features. To manage Rust installations I highly recommend brson's [multirust]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. After installing you can just run `multirust update nightly` to install or update to the latest Rust nightly.
@@ -79,7 +79,7 @@ We added a new `cargo` target that just executes `cargo build` and modified the 
 
 But now `cargo build` is executed on every `make`, even if no source file was changed. And the ISO is recreated on every `make iso`/`make run`, too. We could try to avoid this by adding dependencies on all rust source and cargo configuration files to the `cargo` target, but the ISO creation takes only half a second on my machine and most of the time we will have changed a Rust file when we run `make`. So we keep it simple for now and let cargo do the bookkeeping of changed files (it does it anyway).
 
-[github makefile]: https://github.com/phil-opp/blogOS/blob/setup_rust/Makefile
+[github makefile]: https://github.com/phil-opp/blog_os/blob/setup_rust/Makefile
 
 ## Calling Rust
 Now we can call the main method in `long_mode_start`:

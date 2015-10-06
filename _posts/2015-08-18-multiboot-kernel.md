@@ -9,7 +9,7 @@ I tried to explain everything in detail and to keep the code as simple as possib
 
 [Rust]: http://www.rust-lang.org/
 [create an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
-[source code]: https://github.com/phil-opp/blogOS/tree/multiboot_bootstrap/src/arch/x86_64
+[source code]: https://github.com/phil-opp/blog_os/tree/multiboot_bootstrap/src/arch/x86_64
 
 ## Overview
 When you turn on a computer, it loads the [BIOS] from some special flash memory. The BIOS runs self test and initialization routines of the hardware, then it looks for bootable devices. If it finds one, the control is transferred to its _bootloader_, which is a small portion of executable code stored at the device's beginning. The bootloader has to determine the location of the kernel image on the device and load it into memory. It also needs to switch the CPU to the so-called [protected mode] because x86 CPUs start in the very limited [real mode] by default (to be compatible to programs from 1978).
