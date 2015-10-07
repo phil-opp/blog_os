@@ -3,6 +3,9 @@ use core::iter::range_inclusive;
 use core::cmp::max;
 
 mod paging;
+mod core_map;
+
+pub const PAGE_SIZE: u64 = 4096;
 
 pub fn init(multiboot: &Multiboot) {
     // ATTENTION: we have a very small stack and no guard page

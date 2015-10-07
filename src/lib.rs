@@ -14,6 +14,7 @@
 
 #![feature(no_std, lang_items, asm)]
 #![feature(core_str_ext, const_fn, range_inclusive)]
+#![feature(unique, core_intrinsics)]
 #![no_std]
 
 extern crate rlibc;

@@ -1,10 +1,8 @@
-use super::{VirtualAddress, Frame};
+use super::{VirtualAddress, Frame, PAGE_SIZE, FrameStack};
 use core::ops::Deref;
 
-pub type FrameAllocator = super::FrameAllocator;
+//pub type FrameAllocator = super::FrameStack;
 pub type Page = super::Page;
-
-pub const PAGE_SIZE: u64 = 4096;
 
 bitflags! {
     flags PageTableFieldFlags: u64 {
@@ -21,18 +19,18 @@ bitflags! {
     }
 }
 
-pub struct Controller {
-    allocator: FrameAllocator,
+pub struct Controller<'a, A> where A: 'a {
+    allocator: &'a mut A,
 }
 
-impl Controller {
-    pub unsafe fn new(allocator: FrameAllocator) -> Controller {
+impl<'a, A> Controller<'a, A> where A: FrameStack {
+    pub unsafe fn new(allocator: &mut A) -> Controller<A> {
         Controller {
             allocator: allocator,
         }
     }
 
-    pub fn identity_map(&mut self, page: Page, writable: bool, executable: bool) {
+    pub fn map_to(&mut self, page: Page, frame:Frame, writable: bool, executable: bool) {
         let mut flags = PRESENT;
         if writable {
             flags = flags | WRITABLE;
@@ -41,11 +39,19 @@ impl Controller {
             flags = flags | NO_EXECUTE;
         }
 
-        page.map_to(Frame{number: page.number}, flags, &mut self.allocator)
+        page.map_to(frame, flags, || {self.allocate_frame()})
+    }
+
+    pub fn identity_map(&mut self, page: Page, writable: bool, executable: bool) {
+        self.map_to(page, Frame{number: page.number}, writable, executable)
+    }
+
+    pub fn unmap(&mut self, page: Page) -> Frame {
+        page.unmap()
     }
 
     pub fn begin_new_table(&mut self) {
-        let new_p4_frame = self.allocator.allocate_frame().unwrap();
+        let new_p4_frame = self.allocate_frame();
         let new_p4_page = &mut PageTablePage(Page{number: new_p4_frame.number});
         unsafe{new_p4_page.zero()};
         new_p4_page.field(511).set(new_p4_frame, PRESENT | WRITABLE);
@@ -65,6 +71,13 @@ impl Controller {
 
             asm!("mov cr3, $0" :: "r"(p4_address) :: "intel")
         }
+    }
+
+    fn allocate_frame(&mut self) -> Frame {
+        let unmap_page = |page: Page| {
+            page.unmap()
+        };
+        self.allocator.pop(unmap_page).expect("no more frames available")
     }
 
     fn flush_tlb() {
@@ -128,25 +141,35 @@ impl Page {
         })
     }
 
-    pub fn map_to(&self, frame: Frame, flags: PageTableFieldFlags, allocator: &mut FrameAllocator) {
+    fn map_to<F>(&self, frame: Frame, flags: PageTableFieldFlags, mut allocate_frame: F)
+        where F: FnMut() -> Frame,
+    {
         let p4_field = self.p4_page().field(self.p4_index());
         if p4_field.is_free() {
-            p4_field.set(allocator.allocate_frame().expect("no frame allocated"), PRESENT | WRITABLE);
+            p4_field.set(allocate_frame(), PRESENT | WRITABLE);
             unsafe{self.p3_page().zero()};
         }
         let p3_field = self.p3_page().field(self.p3_index());
         if p3_field.is_free() {
-            p3_field.set(allocator.allocate_frame().expect("no frame allocated"), PRESENT | WRITABLE);
+            p3_field.set(allocate_frame(), PRESENT | WRITABLE);
             unsafe{self.p2_page().zero()};
         }
         let p2_field = self.p2_page().field(self.p2_index());
         if p2_field.is_free() {
-            p2_field.set(allocator.allocate_frame().expect("no frame allocated"), PRESENT | WRITABLE);
+            p2_field.set(allocate_frame(), PRESENT | WRITABLE);
             unsafe{self.p1_page().zero()};
         }
         let p1_field = self.p1_page().field(self.p1_index());
         //TODOassert!(p1_field.is_free());
         p1_field.set(frame, flags);
+    }
+
+    fn unmap(self) -> Frame {
+        let p1_field = self.p1_page().field(self.p1_index());
+        let frame = p1_field.pointed_frame();
+        p1_field.set_free();
+        // TODO free p(1,2,3) table if empty
+        frame
     }
 
     unsafe fn zero(&self) {
@@ -208,6 +231,11 @@ impl PageTableField {
         let f = unsafe{*self.0};
         let free = f == 0;
         free
+    }
+
+    fn set_free(&self) {
+        //TODO
+        unsafe{ *(self.0 as *mut _)= 0 };
     }
 
     fn pointed_frame(&self) -> Frame {
