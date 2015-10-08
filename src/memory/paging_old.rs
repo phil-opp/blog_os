@@ -19,31 +19,28 @@ bitflags! {
     }
 }
 
-pub struct Controller<'a, A> where A: 'a {
-    allocator: &'a mut A,
+pub struct Controller<A> {
+    allocator: A,
 }
 
-impl<'a, A> Controller<'a, A> where A: FrameStack {
-    pub unsafe fn new(allocator: &mut A) -> Controller<A> {
+impl<A> Controller<A> where A: FrameStack {
+    pub unsafe fn new(allocator: A) -> Controller<A> {
         Controller {
             allocator: allocator,
         }
     }
 
     pub fn map_to(&mut self, page: Page, frame:Frame, writable: bool, executable: bool) {
-        let mut flags = PRESENT;
-        if writable {
-            flags = flags | WRITABLE;
-        }
-        if !executable {
-            flags = flags | NO_EXECUTE;
-        }
-
-        page.map_to(frame, flags, || {self.allocate_frame()})
+        Self::map_to_static(page, frame, writable, executable, &mut self.allocator)
     }
 
     pub fn identity_map(&mut self, page: Page, writable: bool, executable: bool) {
         self.map_to(page, Frame{number: page.number}, writable, executable)
+    }
+
+    pub fn map(&mut self, page: Page, writable: bool, executable: bool) {
+        let frame = self.allocate_frame();
+        self.map_to(page, frame, writable, executable)
     }
 
     pub fn unmap(&mut self, page: Page) -> Frame {
@@ -73,11 +70,31 @@ impl<'a, A> Controller<'a, A> where A: FrameStack {
         }
     }
 
+    pub unsafe fn add_free_frame(&mut self, frame: Frame) {
+        self.allocator.push(frame, Self::map_to_static)
+    }
+
     fn allocate_frame(&mut self) -> Frame {
+        Self::allocate_frame_static(&mut self.allocator)
+    }
+
+    fn allocate_frame_static(allocator: &mut A) -> Frame {
         let unmap_page = |page: Page| {
             page.unmap()
         };
-        self.allocator.pop(unmap_page).expect("no more frames available")
+        allocator.pop(unmap_page).expect("no more frames available")
+    }
+
+    fn map_to_static(page: Page, frame: Frame, writable: bool, executable: bool, allocator: &mut A) {
+        let mut flags = PRESENT;
+        if writable {
+            flags = flags | WRITABLE;
+        }
+        if !executable {
+            flags = flags | NO_EXECUTE;
+        }
+
+        page.map_to(frame, flags, || {Self::allocate_frame_static(allocator)})
     }
 
     fn flush_tlb() {
@@ -99,6 +116,14 @@ struct PageIter(Page);
 struct PageTableField(*const u64);
 
 impl Page {
+    pub fn is_free(&self) -> bool {
+        let p4_field = self.p4_page().field(self.p4_index());
+        let p3_field = self.p3_page().field(self.p3_index());
+        let p2_field = self.p2_page().field(self.p2_index());
+        let p1_field = self.p1_page().field(self.p1_index());
+        p4_field.is_free() || p3_field.is_free() || p2_field.is_free() || p1_field.is_free()
+    }
+
     fn from_address(address: &VirtualAddress) -> Page {
         Page {
             number: address.0 as usize >> 12,

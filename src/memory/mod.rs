@@ -1,24 +1,43 @@
 use multiboot2::Multiboot;
-use core::iter::range_inclusive;
-use core::cmp::max;
+use self::paging::Page;
 
 mod paging;
-mod core_map;
+mod frame_allocator;
+mod tlb;
 
 pub const PAGE_SIZE: u64 = 4096;
 
 pub fn init(multiboot: &Multiboot) {
     // ATTENTION: we have a very small stack and no guard page
+    use core::cmp::max;
+    use self::frame_allocator::FrameAllocator;
 
     let kernel_end = multiboot.elf_tag().unwrap().sections().map(|s| s.addr + s.size).max()
         .unwrap() as usize;
     let multiboot_end = multiboot as *const _ as usize + multiboot.total_size as usize;
-    let mut allocator = FrameAllocator::new(max(kernel_end, multiboot_end));
-    let mut c = unsafe{paging::Controller::new(allocator)};
+    let mut bump_pointer = BumpPointer::new(max(kernel_end, multiboot_end));
 
-    c.begin_new_table();
+    let mut lock = unsafe{ paging::Lock::new() };
+    let new_p4_frame = bump_pointer.allocate_frame(&mut lock).expect("failed allocating
+        new_p4_frame");
 
-    for section in multiboot.elf_tag().unwrap().sections() {
+    unsafe{lock.begin_new_table_on_identity_mapped_frame(new_p4_frame)};
+    identity_map_kernel_sections(multiboot, lock.mapper(&mut bump_pointer));
+    lock.activate_current_table();
+
+    init_core_map(multiboot, &mut lock, bump_pointer);
+
+    let maximal_memory = multiboot.memory_area_tag().unwrap().areas().map(
+        |area| area.base_addr + area.length).max().unwrap();
+    println!("maximal_memory: 0x{:x}", maximal_memory);
+
+}
+
+
+fn identity_map_kernel_sections(multiboot: &Multiboot, mut mapper: paging::Mapper<BumpPointer>) {
+    use core::iter::range_inclusive;
+
+    for section in multiboot.elf_tag().expect("no section tag").sections() {
         let in_memory = section.flags & 0x2 != 0;
         let writable = section.flags & 0x1 != 0;
         let executable = section.flags & 0x4 != 0;
@@ -29,47 +48,86 @@ pub fn init(multiboot: &Multiboot) {
             in_memory, writable, executable);
         let start_page = Page::containing_address(section.addr as usize);
         let end_page = Page::containing_address((section.addr + section.size) as usize);
-        for page in range_inclusive(start_page.number, end_page.number).map(|n| Page{number: n}) {
-            c.identity_map(page, writable, executable);
+        for page in range_inclusive(start_page.number, end_page.number)
+            .map(|n| Page{number: n})
+        {
+            unsafe{ mapper.identity_map(page, writable, executable) };
         }
     }
 
     // identity map VGA text buffer
-    c.identity_map(Page{number: 0xb8}, true, false);
+    unsafe {
+        mapper.identity_map(Page::containing_address(0xb8000), true, false);
+    }
 
     // identity map Multiboot structure
     let multiboot_address = multiboot as *const _ as usize;
     let start_page = Page::containing_address(multiboot_address);
     let end_page = Page::containing_address(multiboot_address + multiboot.total_size as usize);
     for page in range_inclusive(start_page.number, end_page.number).map(|n| Page{number: n}) {
-        c.identity_map(page, false, false);
+        unsafe{ mapper.identity_map(page, false, false) };
     }
-
-    c.activate_new_table();
-
-    let maximal_memory = multiboot.memory_area_tag().unwrap().areas().map(
-        |area| area.base_addr + area.length).max().unwrap();
-    println!("maximal_memory: 0x{:x}", maximal_memory);
-
-    let core_map = allocator.allocate_frames((maximal_memory / paging::PAGE_SIZE) as usize);
 }
 
-struct VirtualAddress(*const u8);
+fn init_core_map(multiboot: &Multiboot, lock: &mut paging::Lock, mut bump_pointer: BumpPointer) {
+    use core::iter::range_inclusive;
+    use self::frame_allocator::{FrameAllocator, DynamicFrameStack};
 
-struct FrameAllocator {
+
+    const CORE_MAP_PAGE: Page = Page{number: 0o_001_000_000};
+
+    lock.mapper(&mut bump_pointer).map(CORE_MAP_PAGE, true, false);
+    let mut frame_stack = DynamicFrameStack::new(CORE_MAP_PAGE);
+
+    println!("{:?}", bump_pointer);
+
+    for area in multiboot.memory_area_tag().expect("no memory tag").areas() {
+        println!("area start {:x} length {:x}", area.base_addr, area.length);
+        let start_frame = Frame::containing_address(area.base_addr as usize);
+        let end_frame = Frame::containing_address((area.base_addr + area.length) as usize);
+        for frame in range_inclusive(start_frame.number, end_frame.number)
+            .map(|n| Frame{number:n})
+        {
+            let page = Page{number: frame.number};
+
+            if page.is_unused() && !bump_pointer.has_allocated(frame) {
+                //print!("_{:x} ", frame.number);
+                frame_stack.deallocate_frame(lock, frame)
+            } else {
+                if !page.is_unused() {
+                    print!("b{} ", frame.number);
+                } else {
+                    print!("+{} ", frame.number);
+                }
+            }
+        }
+    }
+    loop {
+
+    }
+}
+
+#[derive(Debug)]
+struct BumpPointer {
+    first_free_frame: usize,
     next_free_frame: usize,
 }
 
-impl FrameAllocator {
-    fn new(kernel_end: usize) -> FrameAllocator {
-        assert!(kernel_end > 0x100000);
-        FrameAllocator {
-            next_free_frame: ((kernel_end - 1) >> 12) + 1,
-        }
-    }
-
-    fn allocate_frame(&mut self) -> Option<Frame> {
+impl frame_allocator::FrameAllocator for BumpPointer {
+    fn allocate_frame(&mut self, _: &mut paging::Lock) -> Option<Frame> {
         self.allocate_frames(1)
+    }
+    fn deallocate_frame(&mut self, _: &mut paging::Lock, _: Frame) {}
+}
+
+impl BumpPointer {
+    fn new(kernel_end: usize) -> BumpPointer {
+        assert!(kernel_end > 0x100000);
+        let frame = ((kernel_end - 1) >> 12) + 1;
+        BumpPointer {
+            first_free_frame: frame,
+            next_free_frame: frame,
+        }
     }
 
     fn allocate_frames(&mut self, number: usize) -> Option<Frame> {
@@ -79,21 +137,20 @@ impl FrameAllocator {
             number: page_number
         })
     }
+
+    fn has_allocated(&self, frame: Frame) -> bool {
+        frame.number > self.first_free_frame && frame.number < self.next_free_frame
+    }
 }
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
 struct Frame {
     number: usize,
 }
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
-struct Page {
-    number: usize,
-}
-
-impl Page {
-    fn containing_address(address: usize) -> Page {
-        Page {
+impl Frame {
+    fn containing_address(address: usize) -> Frame {
+        Frame {
             number: address >> 12,
         }
     }
