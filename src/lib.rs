@@ -21,6 +21,7 @@ extern crate rlibc;
 extern crate multiboot2;
 #[macro_use]
 extern crate bitflags;
+extern crate spin;
 
 use core::fmt::Write;
 

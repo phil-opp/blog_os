@@ -8,6 +8,7 @@ crate-type = ["staticlib"]
 
 [dependencies]
 rlibc = "*"
+spin = "*"
 
 [dependencies.bitflags]
 git = "https://github.com/phil-opp/bitflags.git"
