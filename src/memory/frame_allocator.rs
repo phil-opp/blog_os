@@ -69,7 +69,10 @@ impl FrameAllocator for DynamicFrameStack {
         } else {
             // frame stack is full, use passed frame to expand it
             let page_address = unsafe{ offset(*self.head, self.capacity as isize) } as usize;
-            lock.mapper(self).map_to(Page::containing_address(page_address), frame, true, false);
+            unsafe {
+                lock.mapper(self).map_to(Page::containing_address(page_address), frame,
+                    true, false);
+            }
             self.capacity += Self::capacity_per_frame();
         }
     }

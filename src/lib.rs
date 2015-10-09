@@ -14,10 +14,12 @@
 
 #![feature(no_std, lang_items, asm)]
 #![feature(core_str_ext, const_fn, range_inclusive)]
-#![feature(unique, core_intrinsics)]
+#![feature(unique, core_intrinsics, alloc)]
 #![no_std]
 
 extern crate rlibc;
+extern crate alloc;
+extern crate allocator;
 extern crate multiboot2;
 #[macro_use]
 extern crate bitflags;
@@ -34,6 +36,7 @@ mod memory;
 pub extern fn rust_main(multiboot_address: usize) {
     // ATTENTION: we have a very small stack and no guard page
     use vga_buffer::{Writer, Color};
+    use alloc::boxed::Box;
 
     vga_buffer::clear_screen();
     if let Some(multiboot) = unsafe{multiboot2::load(multiboot_address)} {
@@ -49,6 +52,8 @@ pub extern fn rust_main(multiboot_address: usize) {
     println!("");
     println!("{} {}", "line", 1);
     print!("line {}", 2);
+
+    Box::new(42);
 
     loop{}
 }

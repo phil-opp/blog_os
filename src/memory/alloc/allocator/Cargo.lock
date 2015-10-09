@@ -1,0 +1,4 @@
+[root]
+name = "allocator"
+version = "0.1.0"
+

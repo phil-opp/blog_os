@@ -16,3 +16,6 @@ branch = "no_std"
 
 [dependencies.multiboot2]
 path = "../multiboot2"
+
+[dependencies.allocator]
+path = "src/memory/alloc/allocator"

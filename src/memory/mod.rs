@@ -1,6 +1,7 @@
 use multiboot2::Multiboot;
 use self::paging::Page;
 
+mod alloc;
 mod paging;
 mod frame_allocator;
 mod tlb;
@@ -34,7 +35,9 @@ pub fn init(multiboot: &Multiboot) {
 }
 
 
-fn identity_map_kernel_sections(multiboot: &Multiboot, mut mapper: paging::Mapper<BumpPointer>) {
+fn identity_map_kernel_sections<T>(multiboot: &Multiboot, mut mapper: paging::Mapper<T>)
+    where T: frame_allocator::FrameAllocator,
+{
     use core::iter::range_inclusive;
 
     for section in multiboot.elf_tag().expect("no section tag").sections() {

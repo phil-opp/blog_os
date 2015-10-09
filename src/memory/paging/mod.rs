@@ -54,23 +54,22 @@ pub struct Mapper<'a, A> where A: 'a {
 }
 
 impl<'a, A> Mapper<'a, A> where A: FrameAllocator {
-    pub fn map_to(&mut self, page: Page, frame: Frame, writable: bool, executable: bool) {
-        map_to(self.lock, page, frame, writable, executable, self.allocator)
-    }
-
     pub fn map(&mut self, page: Page, writable: bool, executable: bool) {
         let frame = self.allocator.allocate_frame(&mut self.lock)
             .expect("no more frames available");
-        self.map_to(page, frame, writable, executable)
+        unsafe{ self.map_to(page, frame, writable, executable) }
     }
 
     pub fn unmap(&mut self, page: Page) {
         unmap(self.lock, page, self.allocator)
     }
 
+    pub unsafe fn map_to(&mut self, page: Page, frame: Frame, writable: bool, executable: bool) {
+        map_to(self.lock, page, frame, writable, executable, self.allocator)
+    }
+
     pub unsafe fn identity_map(&mut self, page: Page, writable: bool, executable: bool) {
         let frame = Frame {number: page.number};
         self.map_to(page, frame, writable, executable)
     }
-
 }
