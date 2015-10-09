@@ -70,6 +70,7 @@ pub fn unmap<A>(lock: &mut Lock, page: Page, allocator: &mut A) where A: FrameAl
 
 
 /// A mapped or unmapped page
+#[derive(Clone, Copy)]
 pub struct Page {
     pub number: usize, // TOOD make private
 }

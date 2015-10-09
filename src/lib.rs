@@ -15,6 +15,7 @@
 #![feature(no_std, lang_items, asm)]
 #![feature(core_str_ext, const_fn, range_inclusive)]
 #![feature(unique, core_intrinsics, alloc)]
+#![feature(box_syntax)]
 #![no_std]
 
 extern crate rlibc;
@@ -54,6 +55,7 @@ pub extern fn rust_main(multiboot_address: usize) {
     print!("line {}", 2);
 
     Box::new(42);
+    box [42; 25000000];
 
     loop{}
 }

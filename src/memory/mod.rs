@@ -1,5 +1,6 @@
 use multiboot2::Multiboot;
 use self::paging::Page;
+use self::frame_allocator::{FrameAllocator, DynamicFrameStack};
 
 mod alloc;
 mod paging;
@@ -26,12 +27,12 @@ pub fn init(multiboot: &Multiboot) {
     identity_map_kernel_sections(multiboot, lock.mapper(&mut bump_pointer));
     lock.activate_current_table();
 
-    init_core_map(multiboot, &mut lock, bump_pointer);
+    let frame_stack = init_core_map(multiboot, &mut lock, bump_pointer);
 
     let maximal_memory = multiboot.memory_area_tag().unwrap().areas().map(
         |area| area.base_addr + area.length).max().unwrap();
     println!("maximal_memory: 0x{:x}", maximal_memory);
-
+    alloc::init(lock, frame_stack);
 }
 
 
@@ -72,9 +73,10 @@ fn identity_map_kernel_sections<T>(multiboot: &Multiboot, mut mapper: paging::Ma
     }
 }
 
-fn init_core_map(multiboot: &Multiboot, lock: &mut paging::Lock, mut bump_pointer: BumpPointer) {
+fn init_core_map(multiboot: &Multiboot, lock: &mut paging::Lock,
+    mut bump_pointer: BumpPointer) -> DynamicFrameStack
+{
     use core::iter::range_inclusive;
-    use self::frame_allocator::{FrameAllocator, DynamicFrameStack};
 
 
     const CORE_MAP_PAGE: Page = Page{number: 0o_001_000_000};
@@ -95,6 +97,7 @@ fn init_core_map(multiboot: &Multiboot, lock: &mut paging::Lock, mut bump_pointe
             }
         }
     }
+    frame_stack
 }
 
 #[derive(Debug)]
