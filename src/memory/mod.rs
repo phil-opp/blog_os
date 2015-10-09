@@ -79,8 +79,6 @@ fn init_core_map(multiboot: &Multiboot, lock: &mut paging::Lock, mut bump_pointe
     lock.mapper(&mut bump_pointer).map(CORE_MAP_PAGE, true, false);
     let mut frame_stack = DynamicFrameStack::new(CORE_MAP_PAGE);
 
-    println!("{:?}", bump_pointer);
-
     for area in multiboot.memory_area_tag().expect("no memory tag").areas() {
         println!("area start {:x} length {:x}", area.base_addr, area.length);
         let start_frame = Frame::containing_address(area.base_addr as usize);
@@ -89,21 +87,10 @@ fn init_core_map(multiboot: &Multiboot, lock: &mut paging::Lock, mut bump_pointe
             .map(|n| Frame{number:n})
         {
             let page = Page{number: frame.number};
-
             if page.is_unused() && !bump_pointer.has_allocated(frame) {
-                //print!("_{:x} ", frame.number);
                 frame_stack.deallocate_frame(lock, frame)
-            } else {
-                if !page.is_unused() {
-                    print!("b{} ", frame.number);
-                } else {
-                    print!("+{} ", frame.number);
-                }
             }
         }
-    }
-    loop {
-
     }
 }
 
@@ -139,7 +126,7 @@ impl BumpPointer {
     }
 
     fn has_allocated(&self, frame: Frame) -> bool {
-        frame.number > self.first_free_frame && frame.number < self.next_free_frame
+        frame.number >= self.first_free_frame && frame.number < self.next_free_frame
     }
 }
 

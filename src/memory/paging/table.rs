@@ -55,7 +55,7 @@ pub fn map_to<A>(lock: &mut Lock, page: Page, frame: Frame, writable: bool,
         unsafe{page.p1_page().zero()};
     }
     let p1_field = page.p1_page().field(page.p1_index());
-    //TODOassert!(p1_field.is_unused());
+    assert!(p1_field.is_unused());
     p1_field.set(frame, flags);
 }
 
@@ -90,7 +90,6 @@ impl Page {
         }
     }
 
-    // TODO fix 
     pub fn is_unused(&self) -> bool {
         self.p4_page().field(self.p4_index()).is_unused() ||
         self.p3_page().field(self.p3_index()).is_unused() ||
@@ -129,8 +128,9 @@ struct Table(Page);
 
 impl Table {
     unsafe fn zero(&mut self) {
-        let page = self.0.pointer() as *mut () as *mut [u64; (PAGE_SIZE/64) as usize];
-        *page = [0; (PAGE_SIZE/64) as usize];
+        const ENTRIES: usize = PAGE_SIZE / 8;
+        let page = self.0.pointer() as *mut () as *mut [u64; ENTRIES];
+        *page = [0; ENTRIES];
     }
 
     fn field(&self, index: usize) -> &'static mut TableField {

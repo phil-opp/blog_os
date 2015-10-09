@@ -37,4 +37,8 @@ SECTIONS {
     *(.data.rel.ro.local*) *(.data.rel.ro .data.rel.ro.*)
   }
 
+  .gcc_except_table BLOCK(4k) : {
+    *(.gcc_except_table .gcc_except_table.*)
+  }
+
 }
