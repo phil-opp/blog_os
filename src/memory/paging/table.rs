@@ -60,7 +60,7 @@ pub fn map_to<A>(lock: &mut Lock, page: Page, frame: Frame, writable: bool,
 }
 
 pub fn unmap<A>(lock: &mut Lock, page: Page, allocator: &mut A) where A: FrameAllocator {
-    // TODO assertions
+    assert!(!page.is_unused());
     let p1_field = page.p1_page().field(page.p1_index());
     let frame = p1_field.pointed_frame();
     p1_field.set_unused();
