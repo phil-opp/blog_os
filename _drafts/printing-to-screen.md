@@ -364,6 +364,22 @@ pub fn clear_screen() {
     }
 }
 ```
+### Hello World using `println`
+To use `println` in `lib.rs`, we need to import the macros of the VGA buffer module first. Therefore we add a `#[macro_use]` attribute to the module declaration:
+
+```rust
+#[macro_use]
+mod vga_buffer;
+
+#[no_mangle]
+pub extern fn rust_main() {
+    // ATTENTION: we have a very small stack and no guard page
+    println!("Hello World{}", "!");
+
+    loop{}
+}
+```
+Since we imported the macros at crate level, they are available in all modules and thus provide an easy and safe interface to the VGA buffer.
 
 ## What's next?
 Soon we will tackle virtual memory management and map the kernel sections correctly. This will cause many strange bugs and boot loops. To understand what's going on a real debugger is indispensable. In the [next post] we will setup [GDB] to work with QEMU.
