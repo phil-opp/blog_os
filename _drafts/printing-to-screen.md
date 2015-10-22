@@ -352,7 +352,7 @@ macro_rules! print {
 ```
 Instead of a `_print` function, we call the `write_fmt` method of our static `Writer`. Since we're using a method from the `Write` trait, we need to import it before. The additional `unwrap()` at the end panics if printing isn't successful. But since we always return `Ok` in `write_str`, that should not happen.
 
-Notice the additional scope around the macro: It's `=> ({…})` instead of `=> (…)`. The additional `{}` avoid a silent import of the `Write` trait on macro expansion.
+Note the additional `{}` scope around the macro: I wrote `=> ({…})` instead of `=> (…)`. The additional `{}` avoids that the `Write` trait is silently imported when `print` is used.
 
 ### Clearing the screen
 We can now use `println!` to add a rather trivial function to clear the screen:
