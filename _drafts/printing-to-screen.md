@@ -382,4 +382,4 @@ pub extern fn rust_main() {
 Since we imported the macros at crate level, they are available in all modules and thus provide an easy and safe interface to the VGA buffer.
 
 ## What's next?
-Soon we will tackle virtual memory management and map the kernel sections correctly. This will cause many strange bugs and boot loops. To understand what's going on a real debugger is indispensable. In the [next post] we will setup [GDB] to work with QEMU.
+In the next posts we will map the kernel pages correctly so that accessing `0x0` or writing to `.rodata` is not possible anymore. To obtain the loaded kernel sections we will read the multiboot information structure. Then we will create a paging module and use it to switch to a new page table where the kernel sections are mapped correctly.
