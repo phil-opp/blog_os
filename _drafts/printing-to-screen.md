@@ -3,12 +3,17 @@ layout: post
 title: 'Printing to Screen'
 category: 'rust-os'
 ---
-In the [previous post] we switched from assembly to [Rust], a much safer and more expressive language. But we still need unsafe features like [raw pointers] every time we want to print something to the screen. In this post we will create a Rust module that provides a safe and easy-to-use interface to the VGA text buffer. It will support Rust's [formatting macros], too.
+In the [previous post] we switched from assembly to [Rust], a systems programming language that provides great safety. But so far we are using unsafe features like [raw pointers] whenever we want to print to screen. In this post we will create a Rust module that provides a safe and easy-to-use interface for the VGA text buffer. It will support Rust's [formatting macros], too.
 
 [previous post]: {{ site.url }}{{ page.previous.url }}
 [Rust]: https://www.rust-lang.org/
 [raw pointers]: https://doc.rust-lang.org/book/raw-pointers.html
 [formatting macros]: https://doc.rust-lang.org/std/fmt/#related-macros
+
+Since we are using some recent unstable features, you will need an up-to-date nighly compiler. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is also available on [Github][code repository].
+
+[file an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
+[code repository]: https://github.com/phil-opp/blog_os/tree/printing_to_screen
 
 ## The VGA Text Buffer
 The text buffer starts at physical address `0xb8000` and contains the characters displayed on screen. It has 80 rows and 25 columns. Each screen character has the following format:
