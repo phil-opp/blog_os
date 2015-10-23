@@ -248,7 +248,7 @@ fn clear_row(&mut self, row: usize) {
 }
 ```
 
-## Providing an Interface/Printing from outside/Synchronization/...
+## Providing an Interface
 To provide a global writer that can used as an interface from other modules, we can add a `static` writer:
 
 ```rust
@@ -259,7 +259,7 @@ pub static WRITER: Writer = Writer {
 };
 ```
 
-This won't work! You can try it yourself in the `print_something` function. The reason is that we try to take a mutable reference (`&mut`) to a immutable `static` when calling `WRITER.print_byte`.
+But we can't use it to print anything! You can try it yourself in the `print_something` function. The reason is that we try to take a mutable reference (`&mut`) to a immutable `static` when calling `WRITER.print_byte`.
 
 To resolve it, we could use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged, there are even proposals to [remove it][remove static mut].
 
