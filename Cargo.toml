@@ -8,3 +8,4 @@ crate-type = ["staticlib"]
 
 [dependencies]
 rlibc = "*"
+spin = "*"
