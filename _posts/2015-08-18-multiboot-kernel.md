@@ -172,6 +172,8 @@ Idx Name          Size      VMA               LMA               File off  Algn
   1 .text         0000000b  0000000000100020  0000000000100020  000000a0  2**4
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
 ```
+_Note_: The `ld` and `objdump` commands are platform specific. If you're not working on x86_64 architecture, you will need to [cross compile binutils]. Then use `x86_64-elf-ld` and `x86_64-elf-objdump` instead of `ld` and `objdump`.
+[cross compile binutils]: {{ site.url }}/rust-os/cross-compile-binutils.html
 
 ## Creating the ISO
 The last step is to create a bootable ISO image with GRUB. We need to create the following directory structure and copy the `kernel.bin` to the right place:
@@ -283,6 +285,7 @@ Some comments (see the [Makefile tutorial] if you don't know `make`):
 - the `$(wildcard src/arch/$(arch)/*.asm)` chooses all assembly files in the src/arch/$(arch)` directory, so you don't have to update the Makefile when you add a file
 - the `patsubst` operation for `assembly_object_files` just translates `src/arch/$(arch)/XYZ.asm` to `build/arch/$(arch)/XYZ.o`
 - the `$<` and `$@` in the assembly target are [automatic variables]
+- if you're using [cross-compiled binutils][cross compile binutils] just replace `ld` with `x86_64-elf-ld`
 
 [automatic variables]: https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 
