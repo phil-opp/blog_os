@@ -1,6 +1,7 @@
 ---
 layout: page
 title: Contact
+redirect_from: "/contact/"
 ---
 
 Philipp Oppermann

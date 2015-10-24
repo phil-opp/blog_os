@@ -2,6 +2,7 @@
 layout: post
 title: 'Printing to Screen'
 category: 'rust-os'
+redirect_from: "/rust-os/2015/10/23/printing-to-screen/"
 ---
 In the [previous post] we switched from assembly to [Rust], a systems programming language that provides great safety. But so far we are using unsafe features like [raw pointers] whenever we want to print to screen. In this post we will create a Rust module that provides a safe and easy-to-use interface for the VGA text buffer. It will support Rust's [formatting macros], too.
 
