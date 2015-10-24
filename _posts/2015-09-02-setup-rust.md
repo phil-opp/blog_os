@@ -68,17 +68,23 @@ Let's break it down:
 [unwinding]: https://doc.rust-lang.org/std/rt/unwind/
 
 ## Building Rust
-We can now build it using `cargo build`. It creates a static library at `target/debug/libblog_os.a`, which can be linked with our assembly kernel. To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
+We can now build it using `cargo build`. To make sure, we are building it for the x86_64 architecture, we can pass an explicit target:
+
+```bash
+cargo build --target=x86_64-unknown-linux-gnu
+```
+It creates a static library at `target/x86_64-unknown-linux-gnu/debug/libblog_os.a`, which can be linked with our assembly kernel. To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
 
 ```make
 # ...
-rust_os := target/debug/libblog_os.a
+target ?= $(arch)-unknown-linux-gnu
+rust_os := target/$(target)/debug/libblog_os.a
 # ...
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
        @ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
 
 cargo:
-       @cargo build
+       @cargo build --target $(target)
 ```
 We added a new `cargo` target that just executes `cargo build` and modified the `$(kernel)` target to link the created static lib .
 
@@ -197,7 +203,7 @@ The easiest way of fixing this problem is to disable the landing pad creation si
 
 ```make
 cargo:
-    @cargo rustc -- -Z no-landing-pads
+    @cargo rustc --target $(target) -- -Z no-landing-pads
 ```
 Now we fixed all linking issues.
 
