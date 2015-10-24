@@ -410,8 +410,10 @@ We can't just use normal labels here, as we need the table offset. We calculate 
 Now there is just one last step left to enter the true 64-bit mode: We need to load `cs` with `gdt64.code`. But we can't do it through `mov`. The only way to reload the code selector is a _far jump_ or a _far return_. These instructions work like a normal jump/return but change the code selector. We use a far jump to a long mode label:
 
 ```nasm
-    global start
-    extern long_mode_start
+global start
+extern long_mode_start
+...
+start:
     ...
     lgdt [gdt64.pointer]
 
@@ -422,6 +424,7 @@ Now there is just one last step left to enter the true 64-bit mode: We need to l
     mov es, ax
 
     jmp gdt64.code:long_mode_start
+...
 ```
 The actual `long_mode_start` label is defined as `extern`, so it's part of another file. The `jmp gdt64.code:long_mode_start` is the mentioned far jump.
 
@@ -437,9 +440,6 @@ long_mode_start:
     mov rax, 0x2f592f412f4b2f4f
     mov qword [0xb8000], rax
     hlt
-
-bits 32
-...
 ```
 You should see a green `OKAY` on the screen. Some notes on this last step:
 
@@ -449,7 +449,7 @@ You should see a green `OKAY` on the screen. Some notes on this last step:
 
 _Congratulations_! You have successfully wrestled through this CPU configuration and compatibility mode mess :).
 
-## Whats next?
+## What's next?
 It's time to finally leave assembly behind[^leave_assembly_behind] and switch to some higher level language. We won't use C or C++ (not even a single line). Instead we will use the relatively new [Rust] language. It's a systems language without garbage collections but with guaranteed memory safety. Through a real type system and many abstractions it feels like a high-level language but can still be low-level enough for OS development. The [next post] describes the Rust setup.
 
 [^leave_assembly_behind]: Actually we will still need some assembly in the future, but I'll try to minimize it.
