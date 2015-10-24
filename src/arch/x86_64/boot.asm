@@ -20,9 +20,9 @@ bits 32
 start:
     mov esp, stack_top
 
-    call check_multiboot
-    call check_cpuid
-    call check_long_mode
+    call test_multiboot
+    call test_cpuid
+    call test_long_mode
 
     call setup_page_tables
     call enable_paging
@@ -83,7 +83,7 @@ error:
     hlt
 
 ; Throw error 0 if eax doesn't contain the Multiboot 2 magic value (0x36d76289).
-check_multiboot:
+test_multiboot:
     cmp eax, 0x36d76289
     jne .no_multiboot
     ret
@@ -92,7 +92,7 @@ check_multiboot:
     jmp error
 
 ; Throw error 1 if the CPU doesn't support the CPUID command.
-check_cpuid:
+test_cpuid:
     pushfd               ; Store the FLAGS-register.
     pop eax              ; Restore the A-register.
     mov ecx, eax         ; Set the C-register to the A-register.
@@ -111,15 +111,15 @@ check_cpuid:
     jmp error
 
 ; Throw error 2 if the CPU doesn't support Long Mode.
-check_long_mode:
+test_long_mode:
     mov eax, 0x80000000    ; Set the A-register to 0x80000000.
     cpuid                  ; CPU identification.
     cmp eax, 0x80000001    ; Compare the A-register with 0x80000001.
     jb .no_long_mode       ; It is less, there is no long mode.
-    mov eax, 0x80000000    ; Set the A-register to 0x80000000.
+    mov eax, 0x80000001    ; Set the A-register to 0x80000001.
     cpuid                  ; CPU identification.
-    cmp eax, 0x80000001    ; Compare the A-register with 0x80000001.
-    jb .no_long_mode       ; It is less, there is no long mode.
+    test edx, 1 << 29      ; Test if the LM-bit, which is bit 29, is set in the D-register.
+    jz .no_long_mode       ; They aren't, there is no long mode.
     ret
 .no_long_mode:
     mov al, "2"
