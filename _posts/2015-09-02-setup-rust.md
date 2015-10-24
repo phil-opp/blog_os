@@ -73,7 +73,10 @@ We can now build it using `cargo build`. To make sure, we are building it for th
 ```bash
 cargo build --target=x86_64-unknown-linux-gnu
 ```
-It creates a static library at `target/x86_64-unknown-linux-gnu/debug/libblog_os.a`, which can be linked with our assembly kernel. To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
+It creates a static library at `target/x86_64-unknown-linux-gnu/debug/libblog_os.a`, which can be linked with our assembly kernel. If you're getting an error about a missing `core` crate, [look here][cross compile libcore].
+[cross compile libcore]: {{ site.url }}/rust-os/cross-compile-libcore.html
+
+To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
 
 ```make
 # ...
