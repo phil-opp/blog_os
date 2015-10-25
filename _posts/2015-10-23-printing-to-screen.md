@@ -84,6 +84,7 @@ The `ColorCode` contains the full color byte, containing foreground and backgrou
 Now we can add structures to represent a screen character and the text buffer:
 
 ```rust
+#[repr(C)]
 struct ScreenChar {
     ascii_character: u8,
     color_code: ColorCode,
@@ -96,10 +97,9 @@ struct Buffer {
     chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 ```
-To ensure that `ScreenChar` is exactly 16-bits, one might be tempted to use the [repr(packed)] attribute. But Rust does not insert any padding around two `u8` values, so it's not needed here. And using `repr(packed)` is generally discouraged because it can [cause undefined behavior][repr(packed) issue].
+Since the field ordering in default structs is undefined in Rust, we need the [repr(C)] attribute. It guarantees that the struct's fields are laid out exactly like in a C struct and thus guarantees the correct field ordering.
 
-[repr(packed)]: https://doc.rust-lang.org/nightly/nomicon/other-reprs.html#reprpacked
-[repr(packed) issue]: https://github.com/rust-lang/rust/issues/27060
+[repr(C)]: https://doc.rust-lang.org/nightly/nomicon/other-reprs.html#reprc
 
 To actually write to screen, we now create a writer type:
 
