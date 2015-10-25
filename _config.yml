@@ -34,6 +34,7 @@ github:
 
 # Navigation
 navigation_pages:
+  RSS: '/atom.xml'
   Archive: '/archive.html'
 
 contact: '/contact.html'
