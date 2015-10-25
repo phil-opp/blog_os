@@ -9,11 +9,11 @@
       <header class="masthead">
         <h3 class="masthead-title">
           <a href="{{ site.baseurl }}/" title="Home">{{ site.full_title }}</a>
-          <small>{{ site.tagline }}</small>
           <span class="navigation">
           {% for page in site.navigation_pages %}
             <small><a href="{{ page[1] }}">{{ page[0] }}</a></small>
           {% endfor %}</span>
+          <small>{{ site.tagline | replace:' ','&nbsp;' }}</small>
         </h3>
       </header>
 
