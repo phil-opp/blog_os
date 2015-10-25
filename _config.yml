@@ -7,7 +7,7 @@ relative_permalinks: true
 # Setup
 title:               phil-opp's blog
 full_title:          Philipp Oppermann's blog
-tagline:             ""
+tagline:             "Writing an OS in Rust"
 paginate:            10
 baseurl:             ""
 
