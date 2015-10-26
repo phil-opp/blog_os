@@ -186,7 +186,7 @@ isofiles
     └── kernel.bin
 
 ```
-The `grub.cfg` specifies the file name of our kernel and it's Multiboot 2 compliance. It looks like this:
+The `grub.cfg` specifies the file name of our kernel and its Multiboot 2 compliance. It looks like this:
 
 ```
 set timeout=0
