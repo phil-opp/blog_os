@@ -265,7 +265,7 @@ run: $(iso)
 
 iso: $(iso)
 
-$(iso): $(kernel)
+$(iso): $(kernel) $(grub_cfg)
     @mkdir -p build/isofiles/boot/grub
     @cp $(kernel) build/isofiles/boot/
     @cp $(grub_cfg) build/isofiles/boot/grub
