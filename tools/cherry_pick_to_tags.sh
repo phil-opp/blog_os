@@ -12,44 +12,9 @@
 # Exit if anything fails
 set -e
 
-if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 COMMIT_HASH TAGS" >&2
-    exit 1
-fi
-
-branch_name=$(git symbolic-ref -q HEAD)
-branch_name=${branch_name##refs/heads/}
-branch_name=${branch_name:-HEAD}
-
-commit="$1"
-
-echo "current branch $branch_name"
-echo "commit hash $commit"
-
-shift
-
-for tag in "$@"; do
-    echo "UPDATING TAG $tag"
-    {
-        # backup the tag in case it doesn't exist in origin
-        git tag backup_"$tag" "$tag"
-        # delete it to get the most recent version from origin
-        git tag -d "$tag"
-        git fetch --tags
-        git branch tmp_update_tag_"$tag" "$tag"
-        # the tag seems exists in origin, delete the backup
-        git tag -d backup_"$tag"
-
-        # cherry pick commit and update tag
-	git checkout tmp_update_tag_"$tag"
-        git cherry-pick -x "$commit"
-        git tag -f "$tag" HEAD
-
-        # switch back to previous branch
-        git checkout "$branch_name"
-        git branch -D tmp_update_tag_"$tag"
-
-        # push the updated tag
-        git push origin "$tag" --force
-    } >/dev/null
-done
+# Copy internal script to a temporary untracked file because an untracked
+# file is kept by git when switching branches (that way we can update tags
+# where this script doesn't exist).
+cp "cherry_pick_to_tags_internal.sh" "cherry_pick_to_tags_internal_tmp.sh"
+sh "cherry_pick_to_tags_internal_tmp.sh" $*
+rm "cherry_pick_to_tags_internal_tmp.sh"
