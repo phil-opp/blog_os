@@ -181,7 +181,7 @@ What happened? Well, the linker removed unused sections. And since we don't use 
 .boot :
 {
     /* ensure that the multiboot header is at the beginning */
-    KEEP(*(.multiboot))
+    KEEP(*(.multiboot_header))
 }
 ```
 Now everything should work again (the green `OKAY`). But there is another linking issue, which is triggered by some other example code.
