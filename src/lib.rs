@@ -25,6 +25,7 @@ mod vga_buffer;
 #[no_mangle]
 pub extern fn rust_main() {
     // ATTENTION: we have a very small stack and no guard page
+    vga_buffer::clear_screen();
     println!("Hello World{}", "!");
 
     loop{}

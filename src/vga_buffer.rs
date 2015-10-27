@@ -23,6 +23,12 @@ macro_rules! print {
     });
 }
 
+pub fn clear_screen() {
+    for _ in 0..BUFFER_HEIGHT {
+        println!("");
+    }
+}
+
 #[allow(dead_code)]
 #[repr(u8)]
 pub enum Color {
