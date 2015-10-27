@@ -126,7 +126,7 @@ The writer will always write to the last line and shift lines up when a line is 
 [Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
 
 ## Printing to Screen
-Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte:
+Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte (it doesn't compile yet):
 
 ```rust
 impl Writer {
@@ -164,8 +164,19 @@ If the byte is the [newline] byte `\n`, the writer does not print anything. Inst
 When printing a byte, the writer checks if the current line is full. In that case, a `new_line` call is required before to wrap the line. Then it writes a new `ScreenChar` to the buffer at the current position. Finally, the current column position is advanced.
 
 The `buffer()` auxiliary method converts the raw pointer in the `buffer` field into a safe mutable buffer reference. The unsafe block is needed because the [get_mut()] method of `Unique` is unsafe. But our `buffer()` method itself isn't marked as unsafe, so it must not introduce any unsafety (e.g. cause segfaults). To guarantee that, it's very important that the `buffer` field always points to a valid `Buffer`. It's like a contract that we must stand to every time we create a `Writer`. To ensure that it's not possible to create an invalid `Writer` from outside of the module, the struct must have at least one private field and public creation functions are not allowed either.
-
 [get_mut()]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html#method.get_mut
+
+### Cannot Move out of Borrowed Content
+When we try to compile it, we get the following error:
+
+```
+error: cannot move out of borrowed content [E0507]
+    color_code: self.color_code,
+                ^~~~
+```
+The reason it that Rust _moves_ values by default instead of copying them like other languages. And we cannot move `color_code` out of `self` because we only borrowed `self`. For more information check out the [ownership section] in the Rust book. To fix it, we can implement the [Copy trait] for the `ColorCode` type by adding `#[derive(Clone, Copy)]` to its struct.
+[ownership section]: https://doc.rust-lang.org/book/ownership.html
+[Copy trait]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 
 ### Try it out!
 To write some characters to the screen, you can create a temporary function:
@@ -242,11 +253,18 @@ fn new_line(&mut self) {
     self.column_position = 0;
 }
 
-fn clear_row(&mut self) {/* see below */}
+fn clear_row(&mut self, row: usize) {/* TODO */}
 ```
-We just move each line to the line above. Notice that the range notation (`..`) is exclusive the upper bound.
+We just move each line to the line above. Notice that the range notation (`..`) is exclusive the upper bound. But when we try to compile it, we get an borrow checker error again:
 
-The `clear_row` method looks like this:
+```
+error: cannot move out of indexed content [E0507]
+    buffer.chars[row] = buffer.chars[row + 1]
+                        ^~~~~~~~~~~~~~~~~~~~~
+```
+It's because of Rust's move semantics again: We try to move out the `ScreenChar` at `row + 1`. If Rust would allow that, the array would become invalid as it would contain some valid and some moved out values. Fortunately, the `ScreenChar` type meets all criteria for the [Copy trait], so we can fix the problem by adding `#derive(Clone, Copy)` to `ScreenChar`.
+
+Now we only need to implement the `clear_row` method to finish the newline code:
 
 ```rust
 fn clear_row(&mut self, row: usize) {
