@@ -417,16 +417,16 @@ In the next posts we will map the kernel pages correctly so that accessing `0x0`
 Now that you know the very basics of OS development in Rust, you should also check out the following projects:
 
 - [Rust Bare-Bones Kernel]: A basic kernel with roughly the same functionality as ours. Writes output to the serial port instead of the VGA buffer and maps the kernel to the [higher half] \(instead of our identity mapping).  
-_Note_: You need a [cross compiler] to build it (or you create some symbolic links[^fn-symlink]).
+_Note_: You need to [cross compile binutils] to build it (or you create some symbolic links[^fn-symlink] if you're on x86_64).
 [Rust Bare-Bones Kernel]: https://github.com/thepowersgang/rust-barebones-kernel
 [higher half]: http://wiki.osdev.org/Higher_Half_Kernel
-[cross compiler]: http://wiki.osdev.org/GCC_Cross-Compiler
-[^fn-symlink]: You will need symlink `x86_64-none_elf-XXX` to `/usr/bin/XXX` where `XXX` is in {`as`, `gcc`, `ld`, `objcopy`, `objdump`, `strip`}. The `x86_64-none_elf-XXX` files must be in some folder that is in your `$PATH`. But then you can only build for your x86_64 host architecture, so use this hack only for testing.
+[cross compile binutils]: {{ site.url }}/rust-os/cross-compile-binutils.html
+[^fn-symlink]: You will need symlink `x86_64-none_elf-XXX` to `/usr/bin/XXX` where `XXX` is in {`as`, `ld`, `objcopy`, `objdump`, `strip`}. The `x86_64-none_elf-XXX` files must be in some folder that is in your `$PATH`. But then you can only build for your x86_64 host architecture, so use this hack only for testing.
 
 - [RustOS]: More advanced kernel that supports allocation, keyboard inputs, and threads. It also has a scheduler and a basic network driver.
 [RustOS]: https://github.com/RustOS-Fork-Holding-Ground/RustOS
 
-- ["Tifflin" Experimental Kernel]: Big kernel project by thepowersgang, that is actively developed and has over 650 commits. It has a separate userspace and supports multiple file systems, even a GUI is included. Needs a cross compiler, too.
+- ["Tifflin" Experimental Kernel]: Big kernel project by thepowersgang, that is actively developed and has over 650 commits. It has a separate userspace and supports multiple file systems, even a GUI is included. Needs a cross compiler.
 ["Tifflin" Experimental Kernel]:https://github.com/thepowersgang/rust_os
 
 - [Redox]: Probably the most complete Rust OS today. It has an active community and over 1000 Github stars. File systems, network, an audio player, a picture viewer, and much more. Just take a look at the [screenshots][redox screenshots].
