@@ -35,7 +35,7 @@ Number | Color      | Number + Bright Bit | Bright Color
 0x2    | Green      | 0xa                 | Light Green
 0x3    | Cyan       | 0xb                 | Light Cyan
 0x4    | Red        | 0xc                 | Light Red
-0x5    | Magenta    | 0xd                 | Light Magenta
+0x5    | Magenta    | 0xd                 | Pink
 0x6    | Brown      | 0xe                 | Yellow
 0x7    | Light Gray | 0xf                 | White
 
@@ -47,14 +47,25 @@ Bit 4 is the _bright bit_, which turns for example blue into light blue. It is u
 Now that we know how the VGA buffer works, we can create a Rust module to handle printing. To create a new module named `vga_buffer`, we just need to create a file named `src/vga_buffer.rs` and add a `mod vga_buffer` line to `src/lib.rs`.
 
 ### Colors
-First, we represent the different colors using an enum ([full file](#TODO)):
+First, we represent the different colors using an enum:
 
 ```rust
 #[repr(u8)]
 pub enum Color {
     Black      = 0,
     Blue       = 1,
-    ...
+    Green      = 2,
+    Cyan       = 3,
+    Red        = 4,
+    Magenta    = 5,
+    Brown      = 6,
+    LightGray  = 7,
+    DarkGray   = 8,
+    LightBlue  = 9,
+    LightGreen = 10,
+    LightCyan  = 11,
+    LightRed   = 12,
+    Pink       = 13,
     Yellow     = 14,
     White      = 15,
 }
@@ -121,9 +132,7 @@ Now we can use the `Writer` to modify the buffer's characters. First we create a
 impl Writer {
     pub fn write_byte(&mut self, byte: u8) {
         match byte {
-            b'\n' => {
-                self.new_line();
-            },
+            b'\n' => self.new_line(),
             byte => {
                 if self.column_position >= BUFFER_WIDTH {
                     self.new_line();
