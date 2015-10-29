@@ -22,7 +22,12 @@ title: Home
       </a>
     </h1>
 
-    <time datetime="{{ post.date | date_to_xmlschema }}" class="post-date">{{ post.date | date_to_string }}</time>
+    <span class="post-date">
+      <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date_to_string }}</time>
+      {% if post.updated %}
+        (updated on {{ post.updated | date_to_string }})
+      {% endif %}
+    </span>
 
     {% if post.content contains '<!--more-->' %}
 	    {{ post.content | split:'<!--more-->' | first }}
