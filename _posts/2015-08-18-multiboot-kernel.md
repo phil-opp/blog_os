@@ -214,7 +214,9 @@ qemu-system-x86_64 -hda os.iso
 ```
 ![qemu output]({{ site.url }}/images/qemu-ok.png)
 
-Notice the green `OK` in the upper left corner. Let's summarize what happens:
+Notice the green `OK` in the upper left corner. If it does not work for you, take a look at the comment section.
+
+Let's summarize what happens:
 
 1. the BIOS loads the bootloader (GRUB) from the virtual hard drive (the ISO)
 2. the bootloader reads the kernel executable and finds the Multiboot header
