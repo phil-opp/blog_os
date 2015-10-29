@@ -15,6 +15,9 @@ I tried to explain everything in detail and to keep the code as simple as possib
 [create an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
 [source code]: https://github.com/phil-opp/blog_os/tree/entering_longmode/src/arch/x86_64
 
+_Notable Changes_: We don't use 1GiB pages anymore, since they have [compatibility problems][1GiB page problems]. The identity mapping is now done through 2MiB pages.
+[1GiB page problems]: https://github.com/phil-opp/blog_os/issues/17
+
 ## Some Tests
 To avoid bugs and strange errors on old CPUs we should test if the processor supports every needed feature. If not, the kernel should abort and display an error message. To handle errors easily, we create an error procedure in `boot.asm`. It prints a rudimentary `ERR: X` message, where X is an error code letter, and hangs:
 
@@ -209,7 +212,10 @@ Bit(s)                | Name | Meaning
 ### Setup Identity Paging
 When we switch to long mode, paging will be activated automatically. The CPU will then try to read the instruction at the following address, but this address is now a virtual address. So we need to do _identity mapping_, i.e. map a physical address to the same virtual address.
 
-The `huge page` bit is now very useful to us. It creates a 2MiB (when used in P2) or even a 1GiB page (when used in P3). So only one P4 table and one P3 table are needed to identity map the first _gigabytes_ of the kernel. Of course we will replace them with finer-grained tables later. But now that we're stuck with assembly, we choose the easiest way.
+The `huge page` bit is now very useful to us. It creates a 2MiB (when used in P2) or even a 1GiB page (when used in P3). So we could map the first _gigabytes_ of the kernel with only one P4 and one P3 table by using 1GiB pages. Unfortunately 1GiB pages are relatively new feature, for example Intel introduced it 2010 in the [Westmere architecture]. Therefore we will use 2MiB pages instead to make our kernel compatible to older computers, too.
+[Westmere architecture]: https://en.wikipedia.org/wiki/Westmere_(microarchitecture)#Technology
+
+To identity map the first gigabyte of our kernel with 2MiB pages, we need one P4, one P3, and one P2 table. Of course we will replace them with finer-grained tables later. But now that we're stuck with assembly, we choose the easiest way.
 
 We can add these two tables at the beginning[^page_table_alignment] of the `.bss` section:
 
@@ -224,13 +230,15 @@ p4_table:
     resb 4096
 p3_table:
     resb 4096
+p2_table:
+    resb 4096
 stack_bottom:
     resb 64
 stack_top:
 ```
 The `resb` command reserves the specified amount of bytes without initializing them, so the 8KiB don't need to be saved in the executable. The `align 4096` ensures that the page tables are page aligned.
 
-When GRUB creates the `.bss` section in memory, it will initialize it to `0`. So the `p4_table` is already valid (it contains 512 non-present entries) but not very useful. To complete the identity mapping, we need to link P4's first entry to the `p3_table` and map the first P3 entry to a huge page:
+When GRUB creates the `.bss` section in memory, it will initialize it to `0`. So the `p4_table` is already valid (it contains 512 non-present entries) but not very useful. To be able to map 2MiB pages, we need to link P4's first entry to the `p3_table` and P3's first entry to the the `p2_table`:
 
 ```nasm
 setup_page_tables:
@@ -239,12 +247,42 @@ setup_page_tables:
     or eax, 0b11 ; present + writable
     mov [p4_table], eax
 
-    ; map first P3 entry to a huge page that starts at address 0
-    mov dword [p3_table], 0b10000011 ; present + writable + huge
+    ; map first P3 entry to P2 table
+    mov eax, p2_table
+    or eax, 0b11 ; present + writable
+    mov [p3_table], eax
+
+    ; TODO map each P2 entry to a huge 2MiB page
+    ret
+```
+We just set the present and writable bits (`0b11` is a binary number) in the aligned P3 table address and move it to the first 4 bytes of the P4 table. Then we do the same to link the first P3 entry to the `p2_table`.
+
+Now we need to map P2's first entry to a huge page starting at 0, P2's second entry to a huge page starting at 2MiB, P3's third entry to a huge page starting at 4MiB, and so on. It's time for our first (and only) assembly loop:
+
+```nasm
+setup_page_tables:
+    ...
+    ; map each P2 entry to a huge 2MiB page
+    mov ecx, 0         ; counter variable
+
+.map_p2_table:
+    ; map ecx-th P2 entry to a huge page that starts at address 2MiB*ecx
+    mov eax, 0x200000  ; 2MiB
+    imul eax, ecx      ; start address of ecx-th page
+    or eax, 0b10000011 ; present + writable + huge
+    mov [p2_table + ecx * 8], eax ; map ecx-th entry
+
+    inc ecx            ; increase counter
+    cmp ecx, 512       ; if counter == 512, the whole P2 table is mapped
+    jne .map_p2_table  ; else map the next entry
 
     ret
 ```
-We just set the present and writable bits (`0b11` is a binary number) in the aligned P3 table address and move it to the first 4 bytes of the P4 table. Then we map the first P3 entry to a huge 1GiB page that starts at address 0. Now the first gigabyte of our kernel is accessible through the same physical and virtual addresses.
+Maybe I first explain how an assembly loop works. We use the `ecx` register as a counter variable, just like `i` in a or loop. After mapping the `ecx-th` entry, we increase `ecx` by one and jump to `.map_p2_table` again if it's still smaller 512.
+
+To map a P2 entry we first calculate the start address of its page in `eax`: The `ecx-th` entry needs to be mapped to `ecx * 2MiB`. Then we set the `present`, `writable`, and `huge page` bits and write it to the P2 entry. The address of the `ecx-th` entry in P2 is `p2_table + ecx * 8`, because each entry is 8 bytes large.
+
+Now the first gigabyte of our kernel is identity mapped and thus accessible through the same physical and virtual addresses.
 
 ### Enable Paging
 To enable paging and enter long mode, we need to do the following:
