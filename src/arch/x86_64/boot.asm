@@ -44,8 +44,23 @@ setup_page_tables:
     or eax, 0b11 ; present + writable
     mov [p4_table], eax
 
-    ; map first P3 entry to a huge page that starts at address 0
-    mov dword [p3_table], 0b10000011 ; present + writable + huge
+    ; map first P3 entry to P2 table
+    mov eax, p2_table
+    or eax, 0b11 ; present + writable
+    mov [p3_table], eax
+
+    ; map each P2 entry to a huge 2MiB page
+    mov ecx, 0 ; counter variable
+.map_p2_table:
+    ; map ecx-th P2 entry to a huge page that starts at address (2MiB * ecx)
+    mov eax, 0x200000  ; 2MiB
+    imul eax, ecx      ; start address of ecx-th page
+    or eax, 0b10000011 ; present + writable + huge
+    mov [p2_table + ecx * 8], eax ; map ecx-th entry
+
+    inc ecx            ; increase counter
+    cmp ecx, 512       ; if counter == 512, the whole P2 table is mapped
+    jne .map_p2_table  ; else map the next entry
 
     ret
 
@@ -130,6 +145,8 @@ align 4096
 p4_table:
     resb 4096
 p3_table:
+    resb 4096
+p2_table:
     resb 4096
 stack_bottom:
     resb 64
