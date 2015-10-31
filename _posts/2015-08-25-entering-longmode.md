@@ -216,7 +216,7 @@ When we switch to long mode, paging will be activated automatically. The CPU wil
 The `huge page` bit is now very useful to us. It creates a 2MiB (when used in P2) or even a 1GiB page (when used in P3). So we could map the first _gigabytes_ of the kernel with only one P4 and one P3 table by using 1GiB pages. Unfortunately 1GiB pages are relatively new feature, for example Intel introduced it 2010 in the [Westmere architecture]. Therefore we will use 2MiB pages instead to make our kernel compatible to older computers, too.
 [Westmere architecture]: https://en.wikipedia.org/wiki/Westmere_(microarchitecture)#Technology
 
-To identity map the first gigabyte of our kernel with 2MiB pages, we need one P4, one P3, and one P2 table. Of course we will replace them with finer-grained tables later. But now that we're stuck with assembly, we choose the easiest way.
+To identity map the first gigabyte of our kernel with 512 2MiB pages, we need one P4, one P3, and one P2 table. Of course we will replace them with finer-grained tables later. But now that we're stuck with assembly, we choose the easiest way.
 
 We can add these two tables at the beginning[^page_table_alignment] of the `.bss` section:
 
@@ -283,7 +283,7 @@ Maybe I first explain how an assembly loop works. We use the `ecx` register as a
 
 To map a P2 entry we first calculate the start address of its page in `eax`: The `ecx-th` entry needs to be mapped to `ecx * 2MiB`. We use the `mul` operation for that, which multiplies `eax` with the given register and stores the result in `eax`. Then we set the `present`, `writable`, and `huge page` bits and write it to the P2 entry. The address of the `ecx-th` entry in P2 is `p2_table + ecx * 8`, because each entry is 8 bytes large.
 
-Now the first gigabyte of our kernel is identity mapped and thus accessible through the same physical and virtual addresses.
+Now the first gigabyte (512 * 2MiB) of our kernel is identity mapped and thus accessible through the same physical and virtual addresses.
 
 ### Enable Paging
 To enable paging and enter long mode, we need to do the following:
