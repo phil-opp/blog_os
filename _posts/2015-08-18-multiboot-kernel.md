@@ -202,7 +202,7 @@ Now we can create a bootable image using the command:
 ```
 grub-mkrescue -o os.iso isofiles
 ```
-_Note_: If you're getting an error about your `xorriso` version, make sure `xorriso` is installed.
+_Note_: If it does not work for you, make sure `xorriso` is installed and try to run it with `--verbose`.
 
 ## Booting
 Now it's time to boot our OS. We will use [QEMU]:
