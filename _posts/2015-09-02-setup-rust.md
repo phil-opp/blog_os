@@ -52,7 +52,7 @@ pub extern fn rust_main() {}
 Let's break it down:
 
 - `#!` defines an [attribute] of the current module. Since we are at the root module, they apply to the crate itself.
-- The `features` attribute is used to allow the specified _feature-gated_ attributes in this crate. You can't do that in a stable/beta compiler, so this is one reason we need a Rust nighly.
+- The `feature` attribute is used to allow the specified _feature-gated_ attributes in this crate. You can't do that in a stable/beta compiler, so this is one reason we need a Rust nighly.
 - The `no_std` attribute prevents the automatic linking of the standard library. We can't use `std` because it relies on operating system features like files, system calls, and various device drivers. Remember that currently the only “feature” of our OS is printing `OKAY` :).
 - A `#` without a `!` afterwards defines an attribute for the _following_ item (a function in our case).
 - The `no_mangle` attribute disables the automatic [name mangling] that Rust uses to get unique function names. We want to do a `call rust_main` from our assembly code, so this function name must stay as it is.
@@ -198,9 +198,9 @@ The error is a linker error again (hence the ugly error message):
 
 ```
 target/debug/libblog_os.a(blog_os.0.o): In function `blog_os::iter::Iterator::zip<core::iter::FlatMap<core::ops::Range<i32>, core::ops::Range<i32>, closure>,core::ops::RangeFrom<i32>>':
-/home/.../src/libcore/iter.rs:223: undefined reference to `_Unwind_Resume'
+/home/.../src/libcore/iter.rs:654: undefined reference to `_Unwind_Resume'
 ```
-So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:223` in libcore. This reference is not really there at [line 223 of libcore's `iter.rs`][iter.rs:223]. Instead, it is a compiler inserted _landing pad_, which is used for exception handling.
+So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:654` in libcore. This reference is not really there at [line 654 of libcore's `iter.rs`][iter.rs:654]. Instead, it is a compiler inserted _landing pad_, which is used for exception handling.
 
 The easiest way of fixing this problem is to disable the landing pad creation since we don't supports panics anyway right now. We can do this by passing a `-Z no-landing-pads` flag to `rustc` (the actual Rust compiler below cargo). To do this we replace the `cargo build` command in our Makefile with the `cargo rustc` command, which does the same but allows passing flags to `rustc`:
 
@@ -219,7 +219,7 @@ a += 1;
 ```
 When we add that code to `rust_main` and test it using `make run`, the OS will constantly reboot itself. Let's try to debug it.
 
-[iter.rs:223]: https://doc.rust-lang.org/nightly/src/core/iter.rs.html#223
+[iter.rs:654]: https://doc.rust-lang.org/nightly/src/core/iter.rs.html#654
 
 ### Debugging
 Such a boot loop is most likely caused by some [CPU exception][exception table]. When these exceptions aren't handled, a [Triple Fault] occurs and the processor resets itself. We can look at generated CPU interrupts/exceptions using QEMU:
