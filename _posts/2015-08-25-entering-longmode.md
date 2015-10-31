@@ -269,7 +269,7 @@ setup_page_tables:
 .map_p2_table:
     ; map ecx-th P2 entry to a huge page that starts at address 2MiB*ecx
     mov eax, 0x200000  ; 2MiB
-    imul eax, ecx      ; start address of ecx-th page
+    mul ecx            ; start address of ecx-th page
     or eax, 0b10000011 ; present + writable + huge
     mov [p2_table + ecx * 8], eax ; map ecx-th entry
 
@@ -281,7 +281,7 @@ setup_page_tables:
 ```
 Maybe I first explain how an assembly loop works. We use the `ecx` register as a counter variable, just like `i` in a for loop. After mapping the `ecx-th` entry, we increase `ecx` by one and jump to `.map_p2_table` again if it's still smaller 512.
 
-To map a P2 entry we first calculate the start address of its page in `eax`: The `ecx-th` entry needs to be mapped to `ecx * 2MiB`. Then we set the `present`, `writable`, and `huge page` bits and write it to the P2 entry. The address of the `ecx-th` entry in P2 is `p2_table + ecx * 8`, because each entry is 8 bytes large.
+To map a P2 entry we first calculate the start address of its page in `eax`: The `ecx-th` entry needs to be mapped to `ecx * 2MiB`. We use the `mul` operation for that, which multiplies `eax` with the given register and stores the result in `eax`. Then we set the `present`, `writable`, and `huge page` bits and write it to the P2 entry. The address of the `ecx-th` entry in P2 is `p2_table + ecx * 8`, because each entry is 8 bytes large.
 
 Now the first gigabyte of our kernel is identity mapped and thus accessible through the same physical and virtual addresses.
 
