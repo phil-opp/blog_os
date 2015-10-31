@@ -198,9 +198,9 @@ The error is a linker error again (hence the ugly error message):
 
 ```
 target/debug/libblog_os.a(blog_os.0.o): In function `blog_os::iter::Iterator::zip<core::iter::FlatMap<core::ops::Range<i32>, core::ops::Range<i32>, closure>,core::ops::RangeFrom<i32>>':
-/home/.../src/libcore/iter.rs:223: undefined reference to `_Unwind_Resume'
+/home/.../src/libcore/iter.rs:654: undefined reference to `_Unwind_Resume'
 ```
-So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:223` in libcore. This reference is not really there at [line 223 of libcore's `iter.rs`][iter.rs:223]. Instead, it is a compiler inserted _landing pad_, which is used for exception handling.
+So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:654` in libcore. This reference is not really there at [line 654 of libcore's `iter.rs`][iter.rs:654]. Instead, it is a compiler inserted _landing pad_, which is used for exception handling.
 
 The easiest way of fixing this problem is to disable the landing pad creation since we don't supports panics anyway right now. We can do this by passing a `-Z no-landing-pads` flag to `rustc` (the actual Rust compiler below cargo). To do this we replace the `cargo build` command in our Makefile with the `cargo rustc` command, which does the same but allows passing flags to `rustc`:
 
@@ -219,7 +219,7 @@ a += 1;
 ```
 When we add that code to `rust_main` and test it using `make run`, the OS will constantly reboot itself. Let's try to debug it.
 
-[iter.rs:223]: https://doc.rust-lang.org/nightly/src/core/iter.rs.html#223
+[iter.rs:654]: https://doc.rust-lang.org/nightly/src/core/iter.rs.html#654
 
 ### Debugging
 Such a boot loop is most likely caused by some [CPU exception][exception table]. When these exceptions aren't handled, a [Triple Fault] occurs and the processor resets itself. We can look at generated CPU interrupts/exceptions using QEMU:
