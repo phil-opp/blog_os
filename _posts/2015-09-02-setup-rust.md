@@ -52,7 +52,7 @@ pub extern fn rust_main() {}
 Let's break it down:
 
 - `#!` defines an [attribute] of the current module. Since we are at the root module, they apply to the crate itself.
-- The `features` attribute is used to allow the specified _feature-gated_ attributes in this crate. You can't do that in a stable/beta compiler, so this is one reason we need a Rust nighly.
+- The `feature` attribute is used to allow the specified _feature-gated_ attributes in this crate. You can't do that in a stable/beta compiler, so this is one reason we need a Rust nighly.
 - The `no_std` attribute prevents the automatic linking of the standard library. We can't use `std` because it relies on operating system features like files, system calls, and various device drivers. Remember that currently the only “feature” of our OS is printing `OKAY` :).
 - A `#` without a `!` afterwards defines an attribute for the _following_ item (a function in our case).
 - The `no_mangle` attribute disables the automatic [name mangling] that Rust uses to get unique function names. We want to do a `call rust_main` from our assembly code, so this function name must stay as it is.
