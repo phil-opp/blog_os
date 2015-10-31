@@ -54,7 +54,7 @@ setup_page_tables:
 .map_p2_table:
     ; map ecx-th P2 entry to a huge page that starts at address (2MiB * ecx)
     mov eax, 0x200000  ; 2MiB
-    imul eax, ecx      ; start address of ecx-th page
+    mul ecx            ; start address of ecx-th page
     or eax, 0b10000011 ; present + writable + huge
     mov [p2_table + ecx * 8], eax ; map ecx-th entry
 
