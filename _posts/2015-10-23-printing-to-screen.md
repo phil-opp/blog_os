@@ -121,7 +121,7 @@ pub struct Writer {
     buffer: Unique<Buffer>,
 }
 ```
-The writer will always write to the last line and shift lines up when a line is full (or on `\n`). The `column_position` field keeps track of the current position in the last row. The current foreground and background colors are specified by `color_code` and a pointer to the VGA buffer is stored in `buffer`. To make it possible to create a `static` Writer later, the `buffer` field stores an `Unique<Buffer>` instead of a plain `*mut Buffer`. [Unique] is a wrapper that implements Send/Sync and is thus usable as a `static`.
+The writer will always write to the last line and shift lines up when a line is full (or on `\n`). The `column_position` field keeps track of the current position in the last row. The current foreground and background colors are specified by `color_code` and a pointer to the VGA buffer is stored in `buffer`. To make it possible to create a `static` Writer later, the `buffer` field stores an `Unique<Buffer>` instead of a plain `*mut Buffer`. [Unique] is a wrapper that implements Send/Sync and is thus usable as a `static`. Since it's unstable, you may need to add the `unique` feature to `lib.rs`.
 
 [Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
 
@@ -207,8 +207,11 @@ pub fn write_str(&mut self, s: &str) {
     }
 }
 ```
-You can try it yourself in the `print_something` function. When you print strings with some special characters like `ä` or `λ`, you'll notice that they cause weird symbols on screen. That's because they are represented by multiple bytes in [UTF-8]. By converting them to bytes, we of course get strange results. But since the VGA buffer doesn't support UTF-8, it's not possible to display these characters anyway. To ensure that a string contains only ASCII characters, you can prefix a `b` to create a [Byte String].
+You can try it yourself in the `print_something` function. Note that you need to add the `core_str_ext` feature, since `core` is [still unstable][core tracking issue].
 
+When you print strings with some special characters like `ä` or `λ`, you'll notice that they cause weird symbols on screen. That's because they are represented by multiple bytes in [UTF-8]. By converting them to bytes, we of course get strange results. But since the VGA buffer doesn't support UTF-8, it's not possible to display these characters anyway. To ensure that a string contains only ASCII characters, you can prefix a `b` to create a [Byte String].
+
+[core tracking issue]: https://github.com/rust-lang/rust/issues/27701
 [UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
 [Byte String]: https://doc.rust-lang.org/reference.html#characters-and-strings
 
