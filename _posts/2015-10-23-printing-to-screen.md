@@ -17,7 +17,7 @@ This post uses recent unstable features, so you need an up-to-date nighly compil
 [code repository]: https://github.com/phil-opp/blog_os/tree/printing_to_screen/src
 
 ## The VGA Text Buffer
-The text buffer starts at physical address `0xb8000` and contains the characters displayed on screen. It has 80 rows and 25 columns. Each screen character has the following format:
+The text buffer starts at physical address `0xb8000` and contains the characters displayed on screen. It has 25 rows and 80 columns. Each screen character has the following format:
 
 Bit(s) | Value
 ------ | ----------------
