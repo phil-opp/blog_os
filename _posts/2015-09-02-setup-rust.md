@@ -9,7 +9,7 @@ This blog post tries to setup Rust step-by-step and point out the different prob
 [multiboot post]: {{ site.url }}{{ page.previous.previous.url }}
 [long mode post]: {{ site.url }}{{ page.previous.url }}
 [Rust]: https://www.rust-lang.org/
-[file an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
+[file an issue]: https://github.com/phil-opp/blog_os/issues
 [Github repository]: https://github.com/phil-opp/blog_os/tree/setup_rust
 
 ## Installing Rust

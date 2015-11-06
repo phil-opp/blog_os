@@ -7,7 +7,7 @@ This post explains how to create a minimal x86 operating system kernel. In fact,
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions or other issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
 [Rust]: http://www.rust-lang.org/
-[create an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
+[create an issue]: https://github.com/phil-opp/blog_os/issues
 [source code]: https://github.com/phil-opp/blog_os/tree/multiboot_bootstrap/src/arch/x86_64
 
 ## Overview

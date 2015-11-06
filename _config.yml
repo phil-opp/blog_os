@@ -30,7 +30,7 @@ author:
 # Custom vars
 version:             1.0.0
 github:
-  repo:              https://github.com/phil-opp/phil-opp.github.io
+  repo:              https://github.com/phil-opp/blog_os
 
 # Navigation
 navigation_pages:

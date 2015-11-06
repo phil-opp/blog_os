@@ -11,7 +11,7 @@ I tried to explain everything in detail and to keep the code as simple as possib
 [Rust]: http://www.rust-lang.org/
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
-[create an issue]: https://github.com/phil-opp/phil-opp.github.io/issues
+[create an issue]: https://github.com/phil-opp/blog_os/issues
 [source code]: https://github.com/phil-opp/blog_os/tree/entering_longmode/src/arch/x86_64
 
 _Notable Changes_: We don't use 1GiB pages anymore, since they have [compatibility problems][1GiB page problems]. The identity mapping is now done through 2MiB pages.
