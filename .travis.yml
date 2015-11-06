@@ -17,3 +17,5 @@ addons:
 
 script:
     - make
+
+after_success: sh scripts/travis-blog-update.sh
