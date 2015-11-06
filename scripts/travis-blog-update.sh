@@ -22,7 +22,7 @@ git clone --branch gh-pages git@github.com:$TRAVIS_REPO_SLUG deploy_blog
 cd deploy_blog
 git config user.name "travis-update-bot"
 git config user.email "nobody@example.com"
-cp -r ../posts _posts
+cp  ../posts/* _posts/
 cp ../pages/* ./
 git add .
 git commit -qm "Update blog to $TRAVIS_COMMIT"
