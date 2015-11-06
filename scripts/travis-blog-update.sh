@@ -17,7 +17,7 @@ mkdir -p ~/.ssh
 openssl aes-256-cbc -K $key -iv $iv -in scripts/travis-blog_os.enc -out ~/.ssh/id_rsa -d
 chmod 600 ~/.ssh/id_rsa
 
-git clone --branch gh-pages ./ deploy_blog
+git clone --branch gh-pages git@github.com:$TRAVIS_REPO_SLUG deploy_blog
 
 cd deploy_blog
 git config user.name "blog update bot"
