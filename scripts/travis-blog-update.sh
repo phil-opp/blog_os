@@ -25,5 +25,5 @@ git config user.email "nobody@example.com"
 cp -r ../posts _posts
 cp ../pages/* ./
 git add .
-git commit -qm "update blog to $TRAVIS_COMMIT"
+git commit -qm "Update blog to $TRAVIS_COMMIT"
 git push -q origin gh-pages
