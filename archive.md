@@ -6,11 +6,11 @@ redirect_from: "/archive/"
 
 ## Rust OS
 
-{% for post in site.categories.rust-os reversed %}
+{% for post in site.posts reversed %}
   * [ {{ post.title }} ]({{ post.url }})
 {% endfor %}
 
 ### Cross Compiling for Rust OS
 
-* [binutils]({{ site.url }}/rust-os/cross-compile-binutils.html)
-* [libcore]({{ site.url }}/rust-os/cross-compile-libcore.html) 
+* [binutils]({{ site.url }}/cross-compile-binutils.html)
+* [libcore]({{ site.url }}/cross-compile-libcore.html)

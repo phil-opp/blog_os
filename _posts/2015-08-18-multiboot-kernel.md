@@ -1,8 +1,6 @@
 ---
 layout: post
 title: 'A minimal x86 kernel'
-category: 'rust-os'
-redirect_from: '/rust-os/2015/08/18/multiboot-kernel/'
 ---
 This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and print `OK` to the screen. The following blog posts we will extend it using the [Rust] programming language.
 
@@ -173,7 +171,7 @@ Idx Name          Size      VMA               LMA               File off  Algn
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
 ```
 _Note_: The `ld` and `objdump` commands are platform specific. If you're _not_ working on x86_64 architecture, you will need to [cross compile binutils]. Then use `x86_64‑elf‑ld` and `x86_64‑elf‑objdump` instead of `ld` and `objdump`.
-[cross compile binutils]: {{ site.url }}/rust-os/cross-compile-binutils.html
+[cross compile binutils]: {{ site.url }}/cross-compile-binutils.html
 
 ## Creating the ISO
 The last step is to create a bootable ISO image with GRUB. We need to create the following directory structure and copy the `kernel.bin` to the right place:

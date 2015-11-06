@@ -3,7 +3,7 @@ layout: default
 title: Home
 ---
 <div class="newest-post">
-<emph>Latest Post</emph>: {% for post in site.categories.rust-os limit:1 %}
+<emph>Latest Post</emph>: {% for post in site.posts limit:1 %}
   <strong><a href="#{{ post.id }}" onclick="
     post = document.getElementById('{{ post.id }}');
     post.className = post.className.replace(/\b updated\b/, '');
@@ -14,7 +14,7 @@ title: Home
 </div>
 
 <div class="posts">
-  {% for post in site.categories.rust-os reversed %}
+  {% for post in site.posts reversed %}
   <article class="post" id="{{ post.id }}">
     <h1 class="post-title">
       <a href="{{ site.baseurl }}{{ post.url }}">

@@ -1,8 +1,6 @@
 ---
 layout: post
 title: 'Setup Rust'
-category: 'rust-os'
-redirect_from: "/rust-os/2015/09/02/setup-rust/"
 ---
 In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to [Rust] code. Rust is a high-level language without runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
 
@@ -74,7 +72,7 @@ We can now build it using `cargo build`. To make sure, we are building it for th
 cargo build --target=x86_64-unknown-linux-gnu
 ```
 It creates a static library at `target/x86_64-unknown-linux-gnu/debug/libblog_os.a`, which can be linked with our assembly kernel. If you're getting an error about a missing `core` crate, [look here][cross compile libcore].
-[cross compile libcore]: {{ site.url }}/rust-os/cross-compile-libcore.html
+[cross compile libcore]: {{ site.url }}/cross-compile-libcore.html
 
 To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
 

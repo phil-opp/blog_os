@@ -1,14 +1,13 @@
 ---
 layout: page
 title: "Cross Compiling: libcore"
-category: "rust-os"
 ---
 So you're getting an ``error: can't find crate for `core` [E0463]`` when using `--target x86_64-unknown-linux-gnu`. That means that you're not running Linux or not using using a x86_64 processor.
 
 **If you have an x86_64 processor and want a quick fix**, try it with `x86_64-pc-windows-gnu` or `x86_64-apple-darwin` (or simply omit the explicit `--target`).
 
 The idiomatic alternative and the only option for non x86_64 CPUs is described below. Note that you need to [cross compile binutils], too.
-[cross compile binutils]: {{ site.url }}/rust-os/cross-compile-binutils.html
+[cross compile binutils]: {{ site.url }}/cross-compile-binutils.html
 
 ## Libcore
 The core library is a dependency-free library that is added implicitly when using `#![no_std]`. It provides basic standard library features like Option or Iterator. The core library is installed together with the rust compiler (just like the std library). But the installed libcore is specific to your architecture. If you aren't working on x86_64 Linux and pass `‑‑target x86_64‑unknown‑linux‑gnu` to cargo, it can't find a x86_64 libcore. To fix this, you can either download it or build it using cargo.
