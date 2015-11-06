@@ -1,6 +1,7 @@
 ---
 layout: post
 title: 'Setup Rust'
+redirect_from: "/rust-os/2015/09/02/setup-rust/"
 ---
 In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to [Rust] code. Rust is a high-level language without runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
 
