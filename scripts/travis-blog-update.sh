@@ -5,8 +5,6 @@
 
 set -e
 
-. ./scripts/travis-doc-upload.cfg
-
 [ "$TRAVIS_BRANCH" = master ]
 
 [ "$TRAVIS_PULL_REQUEST" = false ]
