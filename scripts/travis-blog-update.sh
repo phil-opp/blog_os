@@ -24,6 +24,6 @@ git config user.name "blog update bot"
 git config user.email "nobody@example.com"
 cp -r ../posts _posts
 cp ../pages/* ./
-git add _posts _pages
+git add .
 git commit -qm "update blog to $TRAVIS_COMMIT"
 git push -q origin gh-pages
