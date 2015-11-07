@@ -10,6 +10,7 @@ full_title:          Writing an OS in Rust
 tagline:             Philipp Oppermann's blog
 paginate:            10
 baseurl:             ""
+url:                 http://os.phil-opp.com
 
 markdown: redcarpet
 redcarpet:
