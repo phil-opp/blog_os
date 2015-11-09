@@ -42,3 +42,4 @@ contact: '/contact.html'
 
 gems:
   - jekyll-redirect-from
+  - jekyll-sitemap
