@@ -1,12 +1,11 @@
 ---
 layout: post
-title: 'A Multiboot Module'
+title: 'The Multiboot Information Structure'
 ---
-TODO
 
-## The Multiboot Information Structure
 When a multiboot compliant bootloader loads a kernel, it passes a pointer to a boot information struct in the `ebx` register. We can use it to get information about available memory and loaded kernel sections. So let's write a module for it!
 
+## The Structure
 TODO
 
 ## Start and End of Kernel
