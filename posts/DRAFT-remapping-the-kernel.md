@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 'The Multiboot Information Structure'
+title: 'Remapping the Kernel'
 ---
 
 TODO
