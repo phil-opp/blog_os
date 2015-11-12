@@ -15,7 +15,7 @@ git = "https://github.com/phil-opp/bitflags.git"
 branch = "no_std"
 
 [dependencies.multiboot2]
-path = "../multiboot2"
+git = "https://github.com/phil-opp/multiboot2-elf64"
 
 [dependencies.allocator]
 path = "src/memory/alloc/allocator"

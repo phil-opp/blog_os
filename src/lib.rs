@@ -40,11 +40,8 @@ pub extern fn rust_main(multiboot_address: usize) {
     use alloc::boxed::Box;
 
     vga_buffer::clear_screen();
-    if let Some(multiboot) = unsafe{multiboot2::load(multiboot_address)} {
-        memory::init(multiboot);
-    } else {
-        println!("MULTIBOOT INOFORMATION STRUCTURE INVALID");
-    }
+    let multiboot = unsafe{multiboot2::load(multiboot_address)};
+    memory::init(multiboot);
 
     let mut writer = Writer::new(Color::Blue, Color::LightGreen);
     writer.write_byte(b'H');

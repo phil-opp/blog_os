@@ -14,7 +14,7 @@ pub fn init(multiboot: &Multiboot) {
     use core::cmp::max;
     use self::frame_allocator::FrameAllocator;
 
-    let kernel_end = multiboot.elf_tag().unwrap().sections().map(|s| s.addr + s.size).max()
+    let kernel_end = multiboot.elf_sections_tag().unwrap().sections().map(|s| s.addr + s.size).max()
         .unwrap() as usize;
     let multiboot_end = multiboot as *const _ as usize + multiboot.total_size as usize;
     let mut bump_pointer = BumpPointer::new(max(kernel_end, multiboot_end));
@@ -29,7 +29,7 @@ pub fn init(multiboot: &Multiboot) {
 
     let frame_stack = init_core_map(multiboot, &mut lock, bump_pointer);
 
-    let maximal_memory = multiboot.memory_area_tag().unwrap().areas().map(
+    let maximal_memory = multiboot.memory_area_tag().unwrap().memory_areas().map(
         |area| area.base_addr + area.length).max().unwrap();
     println!("maximal_memory: 0x{:x}", maximal_memory);
     alloc::init(lock, frame_stack);
@@ -41,7 +41,7 @@ fn identity_map_kernel_sections<T>(multiboot: &Multiboot, mut mapper: paging::Ma
 {
     use core::iter::range_inclusive;
 
-    for section in multiboot.elf_tag().expect("no section tag").sections() {
+    for section in multiboot.elf_sections_tag().expect("no section tag").sections() {
         let in_memory = section.flags & 0x2 != 0;
         let writable = section.flags & 0x1 != 0;
         let executable = section.flags & 0x4 != 0;
@@ -84,7 +84,7 @@ fn init_core_map(multiboot: &Multiboot, lock: &mut paging::Lock,
     lock.mapper(&mut bump_pointer).map(CORE_MAP_PAGE, true, false);
     let mut frame_stack = DynamicFrameStack::new(CORE_MAP_PAGE);
 
-    for area in multiboot.memory_area_tag().expect("no memory tag").areas() {
+    for area in multiboot.memory_area_tag().expect("no memory tag").memory_areas() {
         println!("area start {:x} length {:x}", area.base_addr, area.length);
         let start_frame = Frame::containing_address(area.base_addr as usize);
         let end_frame = Frame::containing_address((area.base_addr + area.length) as usize);
