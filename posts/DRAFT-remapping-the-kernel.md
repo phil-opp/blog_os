@@ -8,6 +8,25 @@ TODO
 ## The Multiboot Information Structure
 When a Multiboot compliant bootloader loads a kernel, it passes a pointer to a boot information structure in the `ebx` register. We can use it to get information about available memory and loaded kernel sections.
 
+First, we need to pass this pointer to our kernel as an argument to `rust_main`. To find out how arguments are passed to functions, we can look at the [calling convention of Linux]:
+
+[calling convention of Linux]: https://en.wikipedia.org/wiki/X86_calling_conventions#System_V_AMD64_ABI
+
+> The first six integer or pointer arguments are passed in registers RDI, RSI, RDX, RCX, R8, and R9
+
+So to pass the pointer to our kernel, we need to move it to `rdi` before calling the kernel. Since we're not using the `rdi`/`edi` register in our bootstrap code right now, we can simply set the `edi` register right after booting (in `boot.asm`):
+
+```nasm
+start:
+    mov esp, stack_top
+    mov edi, ebx       ; Move Multiboot info pointer to edi
+```
+Now we can add the argument to our `rust_main`:
+
+```rust
+pub extern fn rust_main(multiboot_information_address: usize) { ... }
+```
+
 ## Start and End of Kernel
 We can now use the ELF section tag to calculate the start and end address of our loaded kernel:
 
