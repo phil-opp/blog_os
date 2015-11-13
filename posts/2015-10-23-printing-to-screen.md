@@ -315,8 +315,8 @@ To use a spinning mutex, we can add the [spin crate] as a dependency in Cargo.to
 ```toml
 ...
 [dependencies]
-rlibc = "*"
-spin = "*"
+rlibc = "0.1.4"
+spin = "0.3.4"
 ```
 and a `extern crate spin;` definition in `src/lib.rs`. Then we can use the spinning Mutex to provide interior mutability to our static writer:
 
