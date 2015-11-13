@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 'Remapping the Kernel'
+title: 'Allocating Frames'
 ---
 
 TODO
