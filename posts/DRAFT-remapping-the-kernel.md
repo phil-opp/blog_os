@@ -72,6 +72,46 @@ If you give QEMU more than 4GiB of memory by passing `-m 5G`, you get another un
 [Memory_map]: http://wiki.osdev.org/Memory_Map_(x86)
 
 ### Kernel ELF Sections
+To read and print the sections of our kernel ELF file, we can use the _Elf-sections_ tag:
+
+```rust
+println!("kernel sections:");
+for section in boot_info.elf_sections_tag().unwrap().sections() {
+    println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
+        section.addr, section.size, section.flags);
+}
+```
+This should print out the start address and size of all kernel sections. If the section is writable, the `0x1` is set in `flags`. The `0x4` bit marks an executable section and the `0x2` indicates that the section was loaded in memory. For example, the `.text` section is executable but not writable and the `.data` section just the opposite.
+
+But when we execute it, tons of really small sections are printed. We can use the `objdump -h build/kernel-x86_64.bin` command to list the sections with name. There seem to be over 200 sections and many of them start with `.text.*` or `.data.rel.ro.local.*`. The Rust compiler puts each function in an own `.text` subsection. To merge these subsections, we can update our linker script:
+
+```
+SECTIONS {
+    . = 1M;
+
+    .boot :
+    {
+        KEEP(*(.multiboot_header))
+    }
+
+    .text :
+    {
+        *(.text .text.*)
+    }
+
+    .rodata : {
+        *(.rodata .rodata.*)
+    }
+
+    .data.rel.ro : {
+        *(.data.rel.ro.local*) *(.data.rel.ro .data.rel.ro.*)
+    }
+}
+```
+
+These lines are taken from the default linker script of `ld`, which can be obtained through `ld ‑verbose`. Now there are only 12 sections left and we get a much more useful output:
+
+![qemu output](/images/qemu-memory-areas-and-kernel-sections.png)
 
 ## Start and End of Kernel
 We can now use the ELF section tag to calculate the start and end address of our loaded kernel:

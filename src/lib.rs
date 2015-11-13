@@ -36,6 +36,12 @@ pub extern fn rust_main(multiboot_information_address: usize) {
         println!("    start: 0x{:x}, length: 0x{:x}", area.base_addr, area.length);
     }
 
+    println!("kernel sections:");
+    for section in boot_info.elf_sections_tag().unwrap().sections() {
+        println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
+            section.addr, section.size, section.flags);
+    }
+
     loop{}
 }
 
