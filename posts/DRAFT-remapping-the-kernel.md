@@ -27,6 +27,52 @@ Now we can add the argument to our `rust_main`:
 pub extern fn rust_main(multiboot_information_address: usize) { ... }
 ```
 
+Now we can use the [multiboot2-elf64] crate to query get some information about mapped kernel sections and available memory. I just wrote it for this blog post since I could not find any other Multiboot 2 crate. It's really ugly and incomplete, but it does its job.
+
+[multiboot2-elf64]: https://github.com/phil-opp/multiboot2-elf64
+
+So let's add a dependency on the git repository in the `Cargo.toml`:
+
+```toml
+...
+[dependencies.multiboot2]
+git = "https://github.com/phil-opp/multiboot2-elf64"
+```
+
+Now we can add `extern crate multiboot2` and use it to print available memory areas.
+
+### Available Memory
+The boot information structure consists of various _tags_. The _memory map_ tag contains a list of all areas of available RAM. Special areas such as the VGA text buffer at `0xb8000` are not available. Note that some of the available memory is already used by our kernel and by the multiboot information structure itself.
+
+To print available memory areas, we can use the `multiboot2` crate in our `rust_main` as follows:
+
+```rust
+let boot_info = unsafe{ multiboot2::load(multiboot_information_address) };
+
+println!("memory areas:");
+for area in boot_info.memory_map_tag().unwrap().memory_areas() {
+    println!("    start: 0x{:x}, length: 0x{:x}", area.base_addr, area.length);
+}
+```
+
+The `load` function is `unsafe` because it relies on a valid address. Since the memory tag is not required, the `memory_map_tag()` function returns an `Option`. The `memory_areas()` function returns the desired memory area iterator.
+
+The output looks like this:
+
+```
+Hello World!
+memory areas:
+    start: 0x0, length: 0x9fc00
+    start: 0x100000, length: 0x7ee0000
+```
+So we have one area from `0x0` to `0x9fc00`, which is a bit below the 1MiB mark. The second, bigger area starts at 1MiB and contains the rest of available memory. The area from `0x9fc00` to 1MiB is not available. For example the VGA text buffer at `0xb8000` is in that area. This is the reason for putting our kernel at 1MiB and not at e.g. `0x0`.
+
+If you give QEMU more than 4GiB of memory by passing `-m 5G`, you get another unusable area below the 4GiB mark. This memory is normally mapped to some hardware devices. See the [OSDev Wiki][Memory_map] for more information.
+
+[Memory_map]: http://wiki.osdev.org/Memory_Map_(x86)
+
+### Kernel ELF Sections
+
 ## Start and End of Kernel
 We can now use the ELF section tag to calculate the start and end address of our loaded kernel:
 

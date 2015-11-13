@@ -18,6 +18,7 @@
 
 extern crate rlibc;
 extern crate spin;
+extern crate multiboot2;
 
 #[macro_use]
 mod vga_buffer;
@@ -27,6 +28,13 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     // ATTENTION: we have a very small stack and no guard page
     vga_buffer::clear_screen();
     println!("Hello World{}", "!");
+
+    let boot_info = unsafe{ multiboot2::load(multiboot_information_address) };
+
+    println!("memory areas:");
+    for area in boot_info.memory_map_tag().unwrap().memory_areas() {
+        println!("    start: 0x{:x}, length: 0x{:x}", area.base_addr, area.length);
+    }
 
     loop{}
 }
