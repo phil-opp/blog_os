@@ -200,24 +200,87 @@ impl Frame {
 }
 ```
 
-The allocator struct looks like this:
+### The Allocator
+Now we can put everything together and create the frame allocator. It looks like this:
 
 ```rust
-struct AreaFrameAllocator {
-    first_used_frame: Frame,
-    last_used_frame: Frame,
-    current_area: Option<MemoryArea>,
+use memory::Frame;
+use multiboot2::{MemoryAreaIter, MemoryArea};
+
+pub struct AreaFrameAllocator {
+    next_free_frame: Frame,
+    current_area: Option<&'static MemoryArea>,
     areas: MemoryAreaIter,
+    kernel_start: Frame,
+    kernel_end: Frame,
+    multiboot_start: Frame,
+    multiboot_end: Frame,
 }
 ```
-TODO
+The `next_free_frame` field is a simple counter that is increased every time we return a frame. The `current_area` field holds the memory area that contains `next_free_frame`. If `next_free_frame` leaves this area, we will look for the next one in `areas`. The `{kernel, multiboot}_{start, end}` fields are used to avoid returning already used fields.
 
-To allocate a frame we try to find one in the current area and update the first/last used bounds. If we can't find one, we look for the new area with the minimal start address, that still contains free frames. If the current area is `None`, there are no free frames left.
+```rust
+pub fn new(kernel_start: usize, kernel_end: usize,
+      multiboot_start: usize, multiboot_end: usize,
+      memory_areas: MemoryAreaIter) -> AreaFrameAllocator
+{
+    let mut allocator = AreaFrameAllocator {
+        next_free_frame: Frame::containing_address(0),
+        current_area: None,
+        areas: memory_areas,
+        kernel_start: Frame::containing_address(kernel_start),
+        kernel_end: Frame::containing_address(kernel_end),
+        multiboot_start: Frame::containing_address(multiboot_start),
+        multiboot_end: Frame::containing_address(multiboot_end),
+    };
+    allocator.choose_next_area();
+    allocator
+}
+```
 
-TODO
+```rust
+fn choose_next_area(&mut self) {
+    self.current_area = self.areas.clone().filter(|area| {
+        let address = area.base_addr + area.length - 1;
+        Frame::containing_address(address as usize) >= self.next_free_frame
+    }).min_by(|area| area.base_addr);
+}
+```
 
-### Unit Tests
-TODO
+```rust
+pub fn allocate_frame(&mut self) -> Option<Frame> {
+    match self.current_area {
+        None => None,
+        Some(area) => {
+            let frame = self.next_free_frame;
+            let current_area_last_frame = {
+                let address = area.base_addr + area.length - 1;
+                Frame::containing_address(address as usize)
+            };
+
+            if frame > current_area_last_frame {
+                self.choose_next_area()
+            } else if frame >= self.kernel_start &&
+                frame <= self.kernel_end
+            {
+                self.next_free_frame = Frame {
+                  number: self.kernel_end.number + 1
+                }
+            } else if frame >= self.multiboot_start &&
+                frame <= self.multiboot_end
+            {
+                self.next_free_frame = Frame {
+                  number: self.multiboot_end.number + 1
+                }
+            } else {
+                self.next_free_frame.number += 1;
+                return Some(frame);
+            }
+            self.allocate_frame()
+        }
+    }
+}
+```
 
 ## Remapping the Kernel Sections
 We can use the ELF section tag to write a skeleton that remaps the kernel correctly:
