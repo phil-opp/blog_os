@@ -59,13 +59,13 @@ To print available memory areas, we can use the `multiboot2` crate in our `rust_
 
 ```rust
 let boot_info = unsafe{ multiboot2::load(multiboot_information_address) };
+let memory_map_tag = boot_info.memory_map_tag().expect("Memory map tag required");
 
 println!("memory areas:");
-for area in boot_info.memory_map_tag().unwrap().memory_areas() {
+for area in emory_map_tag.memory_areas() {
     println!("    start: 0x{:x}, length: 0x{:x}", area.base_addr, area.length);
 }
 ```
-
 The `load` function is `unsafe` because it relies on a valid address. Since the memory tag is not required, the `memory_map_tag()` function returns an `Option`. The `memory_areas()` function returns the desired memory area iterator.
 
 The output looks like this:
@@ -83,7 +83,7 @@ If you give QEMU more than 4GiB of memory by passing `-m 5G`, you get another un
 [Memory_map]: http://wiki.osdev.org/Memory_Map_(x86)
 
 ### Handling Panics
-We used `unwrap` in the code above, which will panic if there is no memory map tag. But our current panic handler just loops without printing any error message. Of course we could replace `unwrap` by a `match`, but we should fix the panic handler nonetheless:
+We used `expect` in the code above, which will panic if there is no memory map tag. But our current panic handler just loops without printing any error message. Of course we could replace `expect` by a `match`, but we should fix the panic handler nonetheless:
 
 ```rust
 #[lang = "panic_fmt"]
@@ -110,8 +110,11 @@ You can try our new panic handler by inserting a `panic` somewhere. Now we get t
 To read and print the sections of our kernel ELF file, we can use the _Elf-sections_ tag:
 
 ```rust
+let elf_sections_tag = boot_info.elf_sections_tag()
+    .expect("Elf-sections tag required");
+
 println!("kernel sections:");
-for section in boot_info.elf_sections_tag().unwrap().sections() {
+for section in elf_sections_tag.sections() {
     println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
         section.addr, section.size, section.flags);
 }
