@@ -211,10 +211,10 @@ pub trait FrameAllocator {
 This allows us to create another, more advanced frame allocator in the future.
 
 ### The Allocator
-Now we can put everything together and create the frame allocator. It looks like this:
+Now we can put everything together and create the actual frame allocator. It looks like this:
 
 ```rust
-use memory::Frame;
+use memory::{Frame, FrameAllocator};
 use multiboot2::{MemoryAreaIter, MemoryArea};
 
 pub struct AreaFrameAllocator {
@@ -227,7 +227,67 @@ pub struct AreaFrameAllocator {
     multiboot_end: Frame,
 }
 ```
-The `next_free_frame` field is a simple counter that is increased every time we return a frame. The `current_area` field holds the memory area that contains `next_free_frame`. If `next_free_frame` leaves this area, we will look for the next one in `areas`. The `{kernel, multiboot}_{start, end}` fields are used to avoid returning already used fields.
+The `next_free_frame` field is a simple counter that is increased every time we return a frame. The `current_area` field holds the memory area that contains `next_free_frame`. If `next_free_frame` leaves this area, we will look for the next one in `areas`. When there are no areas left, all frames are used and `current_area` becomes `None`. The `{kernel, multiboot}_{start, end}` fields are used to avoid returning already used fields.
+
+To implement the `FrameAllocator` trait, we need to implement the `allocate_frame` and the `deallocate_frame` methods. The former looks like this:
+
+```rust
+fn allocate_frame(&mut self) -> Option<Frame> {
+    if let Some(area) = self.current_area {
+        let frame = self.next_free_frame;
+
+        // the last frame of the current area
+        let current_area_last_frame = {
+            let address = area.base_addr + area.length - 1;
+            Frame::containing_address(address as usize)
+        };
+
+        if frame > current_area_last_frame {
+            // all frames of current area are used, switch to next area
+            self.choose_next_area();
+        } else if frame >= self.kernel_start && frame <= self.kernel_end {
+            // `frame` is used by the kernel
+            self.next_free_frame = Frame {
+                number: self.kernel_end.number + 1
+            };
+        } else if frame >= self.multiboot_start && frame <= self.multiboot_end {
+            // `frame` is used by the multiboot information structure
+            self.next_free_frame = Frame {
+                number: self.multiboot_end.number + 1
+            };
+        } else {
+            // frame is unused, increment `next_free_frame` and return it
+            self.next_free_frame.number += 1;
+            return Some(frame);
+        }
+        // `frame` was not valid, try it again with the updated `next_free_frame`
+        self.allocate_frame()
+    } else {
+        None // no free frames left
+    }
+}
+```
+The `choose_next_area` method isn't part of the trait and thus goes into an `impl AreaFrameAllocator` block:
+
+```rust
+fn choose_next_area(&mut self) {
+    self.current_area = self.areas.clone().filter(|area| {
+        let address = area.base_addr + area.length - 1;
+        Frame::containing_address(address as usize) >= self.next_free_frame
+    }).min_by(|area| area.base_addr);
+}
+```
+This function chooses the area with the minimal base address that still has free frames, i.e. `next_free_frame` is smaller than its last frame. Note that we need to clone the iterator because the order of areas in the memory map isn't specified.
+
+We don't have a data structure to store free frames, so we can't implement `deallocate_frame` reasonably. Thus we use the `unimplemented` macro, which just panics when called:
+
+```rust
+fn deallocate_frame(&mut self, _frame: Frame) {
+    unimplemented!()
+}
+```
+
+Now we only need a constructor function:
 
 ```rust
 pub fn new(kernel_start: usize, kernel_end: usize,
@@ -247,50 +307,7 @@ pub fn new(kernel_start: usize, kernel_end: usize,
     allocator
 }
 ```
-
-```rust
-fn choose_next_area(&mut self) {
-    self.current_area = self.areas.clone().filter(|area| {
-        let address = area.base_addr + area.length - 1;
-        Frame::containing_address(address as usize) >= self.next_free_frame
-    }).min_by(|area| area.base_addr);
-}
-```
-
-```rust
-fn allocate_frame(&mut self) -> Option<Frame> {
-    match self.current_area {
-        None => None,
-        Some(area) => {
-            let frame = self.next_free_frame;
-            let current_area_last_frame = {
-                let address = area.base_addr + area.length - 1;
-                Frame::containing_address(address as usize)
-            };
-
-            if frame > current_area_last_frame {
-                self.choose_next_area()
-            } else if frame >= self.kernel_start &&
-                frame <= self.kernel_end
-            {
-                self.next_free_frame = Frame {
-                  number: self.kernel_end.number + 1
-                }
-            } else if frame >= self.multiboot_start &&
-                frame <= self.multiboot_end
-            {
-                self.next_free_frame = Frame {
-                  number: self.multiboot_end.number + 1
-                }
-            } else {
-                self.next_free_frame.number += 1;
-                return Some(frame);
-            }
-            self.allocate_frame()
-        }
-    }
-}
-```
+Note that we call `choose_next_area` manually here because `allocate_frame` returns `None` as soon as `current_area` is `None`.
 
 ## Remapping the Kernel Sections
 We can use the ELF section tag to write a skeleton that remaps the kernel correctly:
