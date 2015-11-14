@@ -82,6 +82,30 @@ If you give QEMU more than 4GiB of memory by passing `-m 5G`, you get another un
 
 [Memory_map]: http://wiki.osdev.org/Memory_Map_(x86)
 
+### Handling Panics
+We used `unwrap` in the code above, which will panic if there is no memory map tag. But our current panic handler just loops without printing any error message. Of course we could replace `unwrap` by a `match`, but we should fix the panic handler nonetheless:
+
+```rust
+#[lang = "panic_fmt"]
+extern fn panic_fmt() -> ! {
+    println!("PANIC");
+    loop{}
+}
+```
+Now we get a `PANIC` message. But we can do even better. The `panic_fmt` function has actually some arguments:
+
+```rust
+#[lang = "panic_fmt"]
+extern fn panic_fmt(fmt: core::fmt::Arguments, file: &str, line: u32) -> ! {
+    println!("\n\nPANIC in {} at line {}:", file, line);
+    println!("    {}", fmt);
+    loop{}
+}
+```
+Be careful with these arguments as the compiler does not check arguments for `lang_items`.
+
+You can try our new panic handler by inserting a `panic` somewhere. Now we get the panic message and the causing source line.
+
 ### Kernel ELF Sections
 To read and print the sections of our kernel ELF file, we can use the _Elf-sections_ tag:
 
