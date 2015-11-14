@@ -151,10 +151,28 @@ These lines are taken from the default linker script of `ld`, which can be obtai
 
 ![qemu output](/images/qemu-memory-areas-and-kernel-sections.png)
 
-## Start and End of Kernel
+### Start and End of Kernel
 We can now use the ELF section tag to calculate the start and end address of our loaded kernel:
 
-TODO
+```rust
+let kernel_start = elf_sections_tag.sections().map(|s| s.addr)
+    .min().unwrap();
+let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size)
+    .max().unwrap();
+```
+The other used memory area is the Multiboot Information structure:
+
+```rust
+let multiboot_start = multiboot_information_address;
+let multiboot_end = multiboot_start + (boot_info.total_size as usize);
+```
+Printing these numbers gives us:
+
+```
+kernel_start: 0x100000, kernel_end: 0x11a168
+multiboot_start: 0x11d400, multiboot_end: 0x11d9c8
+```
+So the kernel starts at 1MiB (like expected) and is about 105 KiB in size. The multiboot information structure was placed at `0x11d400` by GRUB and needs 1480 bytes. Of course your numbers could be a bit different due to different versions of Rust or GRUB.
 
 ## A frame allocator
 When we create a paging module in the next post, we will need to map virtual pages to free physical frames. So we will need some kind of allocator that keeps track of physical frames and gives us a free one when needed. We can use the memory tag to write such a frame allocator.
