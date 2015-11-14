@@ -5,6 +5,17 @@ title: 'Allocating Frames'
 
 TODO
 
+## Preparation
+We still have a really tiny stack of 64 bytes, which won't suffice for this post. So we will increase it to 4096 (one page) in `boot.asm`:
+
+```asm
+section .bss
+...
+stack_bottom:
+    resb 4096
+stack_top:
+```
+
 ## The Multiboot Information Structure
 When a Multiboot compliant bootloader loads a kernel, it passes a pointer to a boot information structure in the `ebx` register. We can use it to get information about available memory and loaded kernel sections.
 
