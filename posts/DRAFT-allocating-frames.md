@@ -175,7 +175,30 @@ multiboot_start: 0x11d400, multiboot_end: 0x11d9c8
 So the kernel starts at 1MiB (like expected) and is about 105 KiB in size. The multiboot information structure was placed at `0x11d400` by GRUB and needs 1480 bytes. Of course your numbers could be a bit different due to different versions of Rust or GRUB.
 
 ## A frame allocator
-When we create a paging module in the next post, we will need to map virtual pages to free physical frames. So we will need some kind of allocator that keeps track of physical frames and gives us a free one when needed. We can use the memory tag to write such a frame allocator.
+When we create a paging module in the next post, we will need to map virtual pages to free physical frames. So we will need some kind of allocator that keeps track of physical frames and gives us a free one when needed. We can use the information about memory areas to write such a frame allocator.
+
+### A Memory Module
+First we create a memory module with a `Frame` type (`src/memory/mod.rs`):
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Frame {
+    number: usize,
+}
+```
+We use `usize` here since the number of frames depends on the memory size. The long `derive` line makes frames printable and comparable. (Don't forget to add the `mod memory` line to `src/lib.rs`.)
+
+To make it easy to get the corresponding frame for a physical address, we add a `containing_address` method:
+
+```rust
+pub const PAGE_SIZE: usize = 4096;
+
+impl Frame {
+    fn containing_address(address: usize) -> Frame {
+        Frame{ number: address / PAGE_SIZE }
+    }
+}
+```
 
 The allocator struct looks like this:
 
