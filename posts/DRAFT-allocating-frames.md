@@ -200,6 +200,16 @@ impl Frame {
 }
 ```
 
+We also add a `FrameAllocator` trait:
+
+```rust
+pub trait FrameAllocator {
+    fn allocate_frame(&mut self) -> Option<Frame>;
+    fn deallocate_frame(&mut self, frame: Frame);
+}
+```
+This allows us to create another, more advanced frame allocator in the future.
+
 ### The Allocator
 Now we can put everything together and create the frame allocator. It looks like this:
 
@@ -248,7 +258,7 @@ fn choose_next_area(&mut self) {
 ```
 
 ```rust
-pub fn allocate_frame(&mut self) -> Option<Frame> {
+fn allocate_frame(&mut self) -> Option<Frame> {
     match self.current_area {
         None => None,
         Some(area) => {

@@ -1,4 +1,4 @@
-use memory::Frame;
+use memory::{Frame, FrameAllocator};
 use multiboot2::{MemoryAreaIter, MemoryArea};
 
 /// A frame allocator that uses the memory areas from the multiboot information structure as
@@ -33,7 +33,16 @@ impl AreaFrameAllocator {
         allocator
     }
 
-    pub fn allocate_frame(&mut self) -> Option<Frame> {
+    fn choose_next_area(&mut self) {
+        self.current_area = self.areas.clone().filter(|area| {
+            let address = area.base_addr + area.length - 1;
+            Frame::containing_address(address as usize) >= self.next_free_frame
+        }).min_by(|area| area.base_addr);
+    }
+}
+
+impl FrameAllocator for AreaFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<Frame> {
         match self.current_area {
             None => None,
             Some(area) => {
@@ -58,10 +67,5 @@ impl AreaFrameAllocator {
         }
     }
 
-    fn choose_next_area(&mut self) {
-        self.current_area = self.areas.clone().filter(|area| {
-            let address = area.base_addr + area.length - 1;
-            Frame::containing_address(address as usize) >= self.next_free_frame
-        }).min_by(|area| area.base_addr);
-    }
+    fn deallocate_frame(&mut self, _frame: Frame) {unimplemented!()}
 }
