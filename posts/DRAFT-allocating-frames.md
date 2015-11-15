@@ -25,7 +25,7 @@ First, we need to pass this pointer to our kernel as an argument to `rust_main`.
 
 > The first six integer or pointer arguments are passed in registers RDI, RSI, RDX, RCX, R8, and R9
 
-So to pass the pointer to our kernel, we need to move it to `rdi` before calling the kernel. Since we're not using the `rdi`/`edi` register in our bootstrap code right now, we can simply set the `edi` register right after booting (in `boot.asm`):
+So to pass the pointer to our kernel, we need to move it to `rdi` before calling the kernel. Since we're not using the `rdi`/`edi` register in our bootstrap code, we can simply set the `edi` register right after booting (in `boot.asm`):
 
 ```nasm
 start:
@@ -38,9 +38,10 @@ Now we can add the argument to our `rust_main`:
 pub extern fn rust_main(multiboot_information_address: usize) { ... }
 ```
 
-Now we can use the [multiboot2-elf64] crate to query get some information about mapped kernel sections and available memory. I just wrote it for this blog post since I could not find any other Multiboot 2 crate. It's really ugly and incomplete, but it does its job.
+Instead of writing an own Multiboot module, we use the [multiboot2-elf64] crate. It gives us some basic information about mapped kernel sections and available memory. I just wrote it for this blog post since I could not find any other Multiboot 2 crate. It's really ugly and incomplete, but it does its job[^fn-multiboot-crate].
 
 [multiboot2-elf64]: https://github.com/phil-opp/multiboot2-elf64
+[^fn-multiboot-crate]: All contributions are welcome! If you want to maintain it, please contact me!
 
 So let's add a dependency on the git repository in the `Cargo.toml`:
 
@@ -53,9 +54,11 @@ git = "https://github.com/phil-opp/multiboot2-elf64"
 Now we can add `extern crate multiboot2` and use it to print available memory areas.
 
 ### Available Memory
-The boot information structure consists of various _tags_. The _memory map_ tag contains a list of all areas of available RAM. Special areas such as the VGA text buffer at `0xb8000` are not available. Note that some of the available memory is already used by our kernel and by the multiboot information structure itself.
+The boot information structure consists of various _tags_. See section 3.4 of the Multiboot specification ([PDF][multiboot specification]) for a complete list. The _memory map_ tag contains a list of all areas of available RAM. Special areas such as the VGA text buffer at `0xb8000` are not available. Note that some of the available memory is already used by our kernel and by the multiboot information structure itself.
 
-To print available memory areas, we can use the `multiboot2` crate in our `rust_main` as follows:
+[multiboot specification]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
+
+To print all available memory areas, we can use the `multiboot2` crate in our `rust_main` as follows:
 
 ```rust
 let boot_info = unsafe{ multiboot2::load(multiboot_information_address) };
@@ -190,7 +193,7 @@ pub struct Frame {
     number: usize,
 }
 ```
-We use `usize` here since the number of frames depends on the memory size. The long `derive` line makes frames printable and comparable. (Don't forget to add the `mod memory` line to `src/lib.rs`.)
+(Don't forget to add the `mod memory` line to `src/lib.rs`.) We use `usize` here since the number of frames depends on the memory size. The long `derive` line makes frames printable, clonable, and comparable.
 
 To make it easy to get the corresponding frame for a physical address, we add a `containing_address` method:
 
@@ -352,7 +355,7 @@ for i in 0.. {
 ```
 You can try different amounts of memory by passing e.g. `-m 500M` to QEMU. To compare these numbers, [WolframAlpha] can be very helpful.
 
-[WolframAlpha]: http://www.wolframalpha.com/input/?i=%2832698+*+4096%29+bytes+in+MiB
+[WolframAlpha]: http://www.wolframalpha.com/input/?i=%2832605+*+4096%29+bytes+in+MiB
 
 ## What's next?
 The next post will be about paging again. But this time we will use the frame allocator to create a safe rust module that allows us to switch page tables and map pages. Then we will use this module and the information from the  ELF sections tag to remap the kernel correctly.
