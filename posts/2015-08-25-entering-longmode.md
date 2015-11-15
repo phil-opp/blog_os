@@ -257,7 +257,7 @@ setup_page_tables:
 ```
 We just set the present and writable bits (`0b11` is a binary number) in the aligned P3 table address and move it to the first 4 bytes of the P4 table. Then we do the same to link the first P3 entry to the `p2_table`.
 
-Now we need to map P2's first entry to a huge page starting at 0, P2's second entry to a huge page starting at 2MiB, P3's third entry to a huge page starting at 4MiB, and so on. It's time for our first (and only) assembly loop:
+Now we need to map P2's first entry to a huge page starting at 0, P2's second entry to a huge page starting at 2MiB, P2's third entry to a huge page starting at 4MiB, and so on. It's time for our first (and only) assembly loop:
 
 ```nasm
 setup_page_tables:
