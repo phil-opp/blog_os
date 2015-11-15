@@ -413,7 +413,11 @@ pub extern fn rust_main() {
 Since we imported the macros at crate level, they are available in all modules and thus provide an easy and safe interface to the VGA buffer.
 
 ## What's next?
-In the next posts we will map the kernel pages correctly so that accessing `0x0` or writing to `.rodata` is not possible anymore. To obtain the loaded kernel sections we will read the multiboot information structure. Then we will create a paging module and use it to switch to a new page table where the kernel sections are mapped correctly.
+In the next posts we will map the kernel pages correctly so that accessing `0x0` or writing to `.rodata` is not possible anymore. To obtain the loaded kernel sections we will read the Multiboot information structure. Then we will create a paging module and use it to switch to a new page table where the kernel sections are mapped correctly.
+
+The [next post] describes the Multiboot information structure and creates a frame allocator using the information about memory areas.
+
+[next post]: {{ page.next.url }}
 
 ## Other Rust OS Projects
 Now that you know the very basics of OS development in Rust, you should also check out the following projects:

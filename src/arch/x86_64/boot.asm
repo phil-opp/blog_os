@@ -19,6 +19,9 @@ section .text
 bits 32
 start:
     mov esp, stack_top
+    ; Move Multiboot info pointer to edi to pass it to the kernel. We must not
+    ; modify the `edi` register until the kernel it called.
+    mov edi, ebx
 
     call test_multiboot
     call test_cpuid
@@ -149,7 +152,7 @@ p3_table:
 p2_table:
     resb 4096
 stack_bottom:
-    resb 64
+    resb 4096
 stack_top:
 
 section .rodata

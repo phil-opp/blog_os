@@ -20,7 +20,7 @@ bits 64
 long_mode_start:
     call setup_SSE
 
-    ; call rust main
+    ; call rust main (with multiboot pointer in rdi)
     call rust_main
 .os_returned:
     ; rust main returned, print `OS returned!`
