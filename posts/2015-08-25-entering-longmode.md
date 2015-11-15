@@ -352,7 +352,7 @@ The Global Descriptor Table (GDT) was used for _Segmentation_ in old operating s
 
 Today almost everyone uses Paging instead of Segmentation (and so do we). But on x86, a GDT is always required, even when you're not using Segmentation. GRUB has set up a valid 32-bit GDT for us but now we need to switch to a long mode GDT.
 
-A GDT always starts with an 0-entry and contains a arbitrary number of segment entries afterwards. An entry has the following format:
+A GDT always starts with a 0-entry and contains an arbitrary number of segment entries afterwards. An entry has the following format:
 
 Bit(s)                | Name | Meaning
 --------------------- | ------ | ----------------------------------
