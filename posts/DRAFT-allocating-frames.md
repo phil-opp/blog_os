@@ -279,9 +279,18 @@ fn choose_next_area(&mut self) {
         let address = area.base_addr + area.length - 1;
         Frame::containing_address(address as usize) >= self.next_free_frame
     }).min_by(|area| area.base_addr);
+
+    if let Some(area) = self.current_area {
+        let start_frame = Frame::containing_address(area.base_addr as usize);
+        if self.next_free_frame < start_frame {
+            self.next_free_frame = start_frame;
+        }
+    }
 }
 ```
 This function chooses the area with the minimal base address that still has free frames, i.e. `next_free_frame` is smaller than its last frame. Note that we need to clone the iterator because the order of areas in the memory map isn't specified. If there are no areas with free frames left, `min_by` automatically returns the desired `None`.
+
+If the `next_free_frame` is below the new `current_area`, it needs to be updated to the area's start frame. Else, the `allocate_frame` call could return an unavailable frame.
 
 We don't have a data structure to store free frames, so we can't implement `deallocate_frame` reasonably. Thus we use the `unimplemented` macro, which just panics when the method is called:
 
