@@ -54,7 +54,7 @@ git = "https://github.com/phil-opp/multiboot2-elf64"
 Now we can add `extern crate multiboot2` and use it to print available memory areas.
 
 ### Available Memory
-The boot information structure consists of various _tags_. See section 3.4 of the Multiboot specification ([PDF][multiboot specification]) for a complete list. The _memory map_ tag contains a list of all areas of available RAM. Special areas such as the VGA text buffer at `0xb8000` are not available. Note that some of the available memory is already used by our kernel and by the multiboot information structure itself.
+The boot information structure consists of various _tags_. See section 3.4 of the Multiboot specification ([PDF][multiboot specification]) for a complete list. The _memory map_ tag contains a list of all available RAM areas. Special areas such as the VGA text buffer at `0xb8000` are not available. Note that some of the available memory is already used by our kernel and by the multiboot information structure itself.
 
 [multiboot specification]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
 
@@ -79,7 +79,7 @@ memory areas:
     start: 0x0, length: 0x9fc00
     start: 0x100000, length: 0x7ee0000
 ```
-So we have one area from `0x0` to `0x9fc00`, which is a bit below the 1MiB mark. The second, bigger area starts at 1MiB and contains the rest of available memory. The area from `0x9fc00` to 1MiB is not available since it contains for example the VGA text buffer at `0xb8000`. This is the reason for putting our kernel at 1MiB and not at e.g. `0x0`.
+So we have one area from `0x0` to `0x9fc00`, which is a bit below the 1MiB mark. The second, bigger area starts at 1MiB and contains the rest of available memory. The area from `0x9fc00` to 1MiB is not available since it contains for example the VGA text buffer at `0xb8000`. This is the reason for putting our kernel at 1MiB and not somewhere below.
 
 If you give QEMU more than 4GiB of memory by passing `-m 5G`, you get another unusable area below the 4GiB mark. This memory is normally mapped to some hardware devices. See the [OSDev Wiki][Memory_map] for more information.
 
@@ -107,7 +107,7 @@ extern fn panic_fmt(fmt: core::fmt::Arguments, file: &str, line: u32) -> ! {
 ```
 Be careful with these arguments as the compiler does not check the function signature for `lang_items`.
 
-You can try our new panic handler by inserting a `panic` somewhere. Now we get the panic message and the causing source line.
+Now we get the panic message and the causing source line. You can try it by inserting a `panic` somewhere.
 
 ### Kernel ELF Sections
 To read and print the sections of our kernel ELF file, we can use the _Elf-sections_ tag:
@@ -124,7 +124,7 @@ for section in elf_sections_tag.sections() {
 ```
 This should print out the start address and size of all kernel sections. If the section is writable, the `0x1` bit is set in `flags`. The `0x4` bit marks an executable section and the `0x2` bit indicates that the section was loaded in memory. For example, the `.text` section is executable but not writable and the `.data` section just the opposite.
 
-But when we execute it, tons of really small sections are printed. We can use the `objdump -h build/kernel-x86_64.bin` command to list the sections with name. There seem to be over 200 sections and many of them start with `.text.*` or `.data.rel.ro.local.*`. This is because the Rust compiler puts e.g. each function in an own `.text` subsection. To merge these subsections, we can update our linker script:
+But when we execute it, tons of really small sections are printed. We can use the `objdump -h build/kernel-x86_64.bin` command to list the sections with name. There seem to be over 200 sections and many of them start with `.text.*` or `.data.rel.ro.local.*`. This is because the Rust compiler puts e.g. each function in its own `.text` subsection. To merge these subsections, we need to update our linker script:
 
 ```
 SECTIONS {
@@ -182,7 +182,7 @@ multiboot_start: 0x11d400, multiboot_end: 0x11d9c8
 So the kernel starts at 1MiB (like expected) and is about 105 KiB in size. The multiboot information structure was placed at `0x11d400` by GRUB and needs 1480 bytes. Of course your numbers could be a bit different due to different versions of Rust or GRUB (or some differences in the source code).
 
 ## A frame allocator
-When we create a paging module in the next post, we will need to map virtual pages to free physical frames. So we will need some kind of allocator that keeps track of physical frames and gives us a free one when needed. We can use the information about memory areas to write such a frame allocator.
+When we create a paging module in the next post, we will need free physical frames to create new page tables. So we need some kind of allocator that keeps track of physical frames and gives us a free one when needed. We can use the information about memory areas to write such a frame allocator.
 
 ### A Memory Module
 First we create a memory module with a `Frame` type (`src/memory/mod.rs`):
@@ -193,7 +193,7 @@ pub struct Frame {
     number: usize,
 }
 ```
-(Don't forget to add the `mod memory` line to `src/lib.rs`.) We use `usize` here since the number of frames depends on the memory size. The long `derive` line makes frames printable, clonable, and comparable.
+(Don't forget to add the `mod memory` line to `src/lib.rs`.) Instead of e.g. the start address, we just store the frame number. We use `usize` here since the number of frames depends on the memory size. The long `derive` line makes frames printable, clonable, and comparable.
 
 To make it easy to get the corresponding frame for a physical address, we add a `containing_address` method:
 
@@ -303,7 +303,7 @@ fn deallocate_frame(&mut self, _frame: Frame) {
 }
 ```
 
-Now we only need a constructor function to make it usable:
+Now we only need a constructor function to make the allocator usable:
 
 ```rust
 pub fn new(kernel_start: usize, kernel_end: usize,
@@ -326,7 +326,7 @@ pub fn new(kernel_start: usize, kernel_end: usize,
 Note that we call `choose_next_area` manually here because `allocate_frame` returns `None` as soon as `current_area` is `None`. So by calling `choose_next_area` we initialize it to the area with the minimal base address.
 
 ### Testing it
-Now we can test it in main. Therefor we need to [re-export] the `AreaFrameAllocator` in the `memory` module. Then we can create a new allocator:
+In order to test it in main, we need to [re-export] the `AreaFrameAllocator` in the `memory` module. Then we can create a new allocator:
 
 [re-export]: https://doc.rust-lang.org/book/crates-and-modules.html#re-exporting-with-pub-use
 
@@ -336,12 +336,12 @@ let mut frame_allocator = memory::AreaFrameAllocator::new(
     multiboot_end, memory_map_tag.memory_areas());
 ```
 
-Now you can test it by adding some test allocations:
+Now we can test it by adding some frame allocations:
 
 ```rust
 println!("{:?}", frame_allocator.allocate_frame())
 ```
-You will see that frame number starts at `0` and increases steadily, but the kernel and Multiboot frames are left out (you need to allocate many frames to see this since the kernel starts at frame 256).
+You will see that the frame number starts at `0` and increases steadily, but the kernel and Multiboot frames are left out (you need to allocate many frames to see this since the kernel starts at frame 256).
 
 The following `for` loop allocates all frames and prints out the total number of allocated frames:
 
@@ -358,7 +358,7 @@ You can try different amounts of memory by passing e.g. `-m 500M` to QEMU. To co
 [WolframAlpha]: http://www.wolframalpha.com/input/?i=%2832605+*+4096%29+bytes+in+MiB
 
 ## What's next?
-The next post will be about paging again. But this time we will use the frame allocator to create a safe rust module that allows us to switch page tables and map pages. Then we will use this module and the information from the  ELF sections tag to remap the kernel correctly.
+The next post will be about paging again. We will use the frame allocator to create a safe module that allows us to switch page tables and map pages. Then we will use this module and the information from the  Elf-sections tag to remap the kernel correctly.
 
 ## Recommended Posts
 Eric Kidd started the [Bare Metal Rust] series last week. Like this post, it builds upon the code from [Printing to Screen], but tries to support keyboard input instead of wrestling through memory management details ;).
