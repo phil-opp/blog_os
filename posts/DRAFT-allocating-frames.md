@@ -346,18 +346,7 @@ You can try different amounts of memory by passing e.g. `-m 500M` to QEMU. To co
 [WolframAlpha]: http://www.wolframalpha.com/input/?i=%2832698+*+4096%29+bytes+in+MiB
 
 ## What's next?
-
-### Remapping the Kernel Sections
-We can use the ELF section tag to write a skeleton that remaps the kernel correctly:
-
-```rust
-for section in multiboot.elf_tag().sections() {
-    for page in start_page..end_page {
-        // TODO identity_map(page, section.writable(), section.executable())
-    }
-}
-```
-TODO
+The next post will be about paging again. But this time we will use the frame allocator to create a safe rust module that allows us to switch page tables and map pages. Then we will use this module and the information from the  ELF sections tag to remap the kernel correctly.
 
 ## Recommended Posts
 Eric Kidd started the [Bare Metal Rust] series last week. Like this post, it builds upon the code from [Printing to Screen], but tries to support keyboard input instead of wrestling through memory management details ;).
