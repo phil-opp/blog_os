@@ -209,6 +209,10 @@ cargo:
 ```
 Now we fixed all linking issues.
 
+(For completeness, there is another flag you should pass to `rustc` as soon as you enable interrupts: `-C no-redzone`. For more information see the [Github issue][redzone issue]).
+
+[redzone issue]:https://github.com/phil-opp/blog_os/issues/10
+
 ## The final problem
 Unfortunately there is one last problem left, that gets triggered by the following code:
 
