@@ -10,7 +10,7 @@ The full source code is available on [Github][source repo]. Feel free to open is
 [source repo]: https://github.com/phil-opp/blog_os/tree/allocating_frames
 
 ## Preparation
-We still have a really tiny stack of 64 bytes, which won't suffice for this post. So we will increase it to 4096 (one page) in `boot.asm`:
+We still have a really tiny stack of 64 bytes, which won't suffice for this post. So we increase it to 4096 bytes (one page) in `boot.asm`:
 
 ```asm
 section .bss
