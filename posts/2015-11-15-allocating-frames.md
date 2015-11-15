@@ -357,6 +357,10 @@ You can try different amounts of memory by passing e.g. `-m 500M` to QEMU. To co
 
 [WolframAlpha]: http://www.wolframalpha.com/input/?i=%2832605+*+4096%29+bytes+in+MiB
 
+## Conclusion
+
+Now we have a working frame allocator. It is a bit rudimentary and cannot free frames, but it also is very fast since it reuses the Multiboot memory map and does not need any costly initialization. A future post will build upon this allocator and add a stack-like data structure for freed frames.
+
 ## What's next?
 The next post will be about paging again. We will use the frame allocator to create a safe module that allows us to switch page tables and map pages. Then we will use this module and the information from the  Elf-sections tag to remap the kernel correctly.
 
