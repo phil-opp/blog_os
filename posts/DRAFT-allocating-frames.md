@@ -66,7 +66,7 @@ for area in emory_map_tag.memory_areas() {
     println!("    start: 0x{:x}, length: 0x{:x}", area.base_addr, area.length);
 }
 ```
-The `load` function is `unsafe` because it relies on a valid address. Since the memory tag is not required, the `memory_map_tag()` function returns an `Option`. The `memory_areas()` function returns the desired memory area iterator.
+The `load` function is `unsafe` because it relies on a valid address. Since the memory tag is not required by the Multiboot specification, the `memory_map_tag()` function returns an `Option`. The `memory_areas()` function returns the desired memory area iterator.
 
 The output looks like this:
 
@@ -76,7 +76,7 @@ memory areas:
     start: 0x0, length: 0x9fc00
     start: 0x100000, length: 0x7ee0000
 ```
-So we have one area from `0x0` to `0x9fc00`, which is a bit below the 1MiB mark. The second, bigger area starts at 1MiB and contains the rest of available memory. The area from `0x9fc00` to 1MiB is not available. For example the VGA text buffer at `0xb8000` is in that area. This is the reason for putting our kernel at 1MiB and not at e.g. `0x0`.
+So we have one area from `0x0` to `0x9fc00`, which is a bit below the 1MiB mark. The second, bigger area starts at 1MiB and contains the rest of available memory. The area from `0x9fc00` to 1MiB is not available since it contains for example the VGA text buffer at `0xb8000`. This is the reason for putting our kernel at 1MiB and not at e.g. `0x0`.
 
 If you give QEMU more than 4GiB of memory by passing `-m 5G`, you get another unusable area below the 4GiB mark. This memory is normally mapped to some hardware devices. See the [OSDev Wiki][Memory_map] for more information.
 
@@ -102,7 +102,7 @@ extern fn panic_fmt(fmt: core::fmt::Arguments, file: &str, line: u32) -> ! {
     loop{}
 }
 ```
-Be careful with these arguments as the compiler does not check arguments for `lang_items`.
+Be careful with these arguments as the compiler does not check the function signature for `lang_items`.
 
 You can try our new panic handler by inserting a `panic` somewhere. Now we get the panic message and the causing source line.
 
@@ -119,9 +119,9 @@ for section in elf_sections_tag.sections() {
         section.addr, section.size, section.flags);
 }
 ```
-This should print out the start address and size of all kernel sections. If the section is writable, the `0x1` is set in `flags`. The `0x4` bit marks an executable section and the `0x2` indicates that the section was loaded in memory. For example, the `.text` section is executable but not writable and the `.data` section just the opposite.
+This should print out the start address and size of all kernel sections. If the section is writable, the `0x1` bit is set in `flags`. The `0x4` bit marks an executable section and the `0x2` bit indicates that the section was loaded in memory. For example, the `.text` section is executable but not writable and the `.data` section just the opposite.
 
-But when we execute it, tons of really small sections are printed. We can use the `objdump -h build/kernel-x86_64.bin` command to list the sections with name. There seem to be over 200 sections and many of them start with `.text.*` or `.data.rel.ro.local.*`. The Rust compiler puts each function in an own `.text` subsection. To merge these subsections, we can update our linker script:
+But when we execute it, tons of really small sections are printed. We can use the `objdump -h build/kernel-x86_64.bin` command to list the sections with name. There seem to be over 200 sections and many of them start with `.text.*` or `.data.rel.ro.local.*`. This is because the Rust compiler puts e.g. each function in an own `.text` subsection. To merge these subsections, we can update our linker script:
 
 ```
 SECTIONS {
@@ -147,9 +147,13 @@ SECTIONS {
 }
 ```
 
-These lines are taken from the default linker script of `ld`, which can be obtained through `ld ‑verbose`. Now there are only 12 sections left and we get a much more useful output:
+These lines are taken from the default linker script of `ld`, which can be obtained through `ld ‑verbose`. The `.text` _output_ section contains now all `.text.*` _input_ sections of the static library (and the same applies for the `.rodata` and `.data.rel.ro` sections).
+
+Now there are only 12 sections left and we get a much more useful output:
 
 ![qemu output](/images/qemu-memory-areas-and-kernel-sections.png)
+
+If you like, you can compare this output to the `objdump -h build/kernel-x86_64.bin` output. You will see that the start addresses and sizes match exactly for each section. The sections with flags `0x0` are mostly debug sections, so they don't need to be loaded. And the last few sections of the QEMU output aren't in the `objdump` output because they are special sections such as string tables.
 
 ### Start and End of Kernel
 We can now use the ELF section tag to calculate the start and end address of our loaded kernel:
@@ -172,7 +176,7 @@ Printing these numbers gives us:
 kernel_start: 0x100000, kernel_end: 0x11a168
 multiboot_start: 0x11d400, multiboot_end: 0x11d9c8
 ```
-So the kernel starts at 1MiB (like expected) and is about 105 KiB in size. The multiboot information structure was placed at `0x11d400` by GRUB and needs 1480 bytes. Of course your numbers could be a bit different due to different versions of Rust or GRUB.
+So the kernel starts at 1MiB (like expected) and is about 105 KiB in size. The multiboot information structure was placed at `0x11d400` by GRUB and needs 1480 bytes. Of course your numbers could be a bit different due to different versions of Rust or GRUB (or some differences in the source code).
 
 ## A frame allocator
 When we create a paging module in the next post, we will need to map virtual pages to free physical frames. So we will need some kind of allocator that keeps track of physical frames and gives us a free one when needed. We can use the information about memory areas to write such a frame allocator.
@@ -211,7 +215,7 @@ pub trait FrameAllocator {
 This allows us to create another, more advanced frame allocator in the future.
 
 ### The Allocator
-Now we can put everything together and create the actual frame allocator. It looks like this:
+Now we can put everything together and create the actual frame allocator. Therefor we create a `src/memory/area_frame_allocator.rs` submodule. The allocator struct looks like this:
 
 ```rust
 use memory::{Frame, FrameAllocator};
@@ -227,7 +231,7 @@ pub struct AreaFrameAllocator {
     multiboot_end: Frame,
 }
 ```
-The `next_free_frame` field is a simple counter that is increased every time we return a frame. The `current_area` field holds the memory area that contains `next_free_frame`. If `next_free_frame` leaves this area, we will look for the next one in `areas`. When there are no areas left, all frames are used and `current_area` becomes `None`. The `{kernel, multiboot}_{start, end}` fields are used to avoid returning already used fields.
+The `next_free_frame` field is a simple counter that is increased every time we return a frame. It's initialized to `0` and every frame below it counts as used. The `current_area` field holds the memory area that contains `next_free_frame`. If `next_free_frame` leaves this area, we will look for the next one in `areas`. When there are no areas left, all frames are used and `current_area` becomes `None`. The `{kernel, multiboot}_{start, end}` fields are used to avoid returning already used fields.
 
 To implement the `FrameAllocator` trait, we need to implement the `allocate_frame` and the `deallocate_frame` methods. The former looks like this:
 
@@ -277,9 +281,9 @@ fn choose_next_area(&mut self) {
     }).min_by(|area| area.base_addr);
 }
 ```
-This function chooses the area with the minimal base address that still has free frames, i.e. `next_free_frame` is smaller than its last frame. Note that we need to clone the iterator because the order of areas in the memory map isn't specified.
+This function chooses the area with the minimal base address that still has free frames, i.e. `next_free_frame` is smaller than its last frame. Note that we need to clone the iterator because the order of areas in the memory map isn't specified. If there are no areas with free frames left, `min_by` automatically returns the desired `None`.
 
-We don't have a data structure to store free frames, so we can't implement `deallocate_frame` reasonably. Thus we use the `unimplemented` macro, which just panics when called:
+We don't have a data structure to store free frames, so we can't implement `deallocate_frame` reasonably. Thus we use the `unimplemented` macro, which just panics when the method is called:
 
 ```rust
 fn deallocate_frame(&mut self, _frame: Frame) {
@@ -287,7 +291,7 @@ fn deallocate_frame(&mut self, _frame: Frame) {
 }
 ```
 
-Now we only need a constructor function:
+Now we only need a constructor function to make it usable:
 
 ```rust
 pub fn new(kernel_start: usize, kernel_end: usize,
@@ -307,9 +311,43 @@ pub fn new(kernel_start: usize, kernel_end: usize,
     allocator
 }
 ```
-Note that we call `choose_next_area` manually here because `allocate_frame` returns `None` as soon as `current_area` is `None`.
+Note that we call `choose_next_area` manually here because `allocate_frame` returns `None` as soon as `current_area` is `None`. So by calling `choose_next_area` we initialize it to the area with the minimal base address.
 
-## Remapping the Kernel Sections
+### Testing it
+Now we can test it in main. Therefor we need to [re-export] the `AreaFrameAllocator` in the `memory` module. Then we can create a new allocator:
+
+[re-export]: https://doc.rust-lang.org/book/crates-and-modules.html#re-exporting-with-pub-use
+
+```rust
+let mut frame_allocator = memory::AreaFrameAllocator::new(
+    kernel_start as usize, kernel_end as usize, multiboot_start,
+    multiboot_end, memory_map_tag.memory_areas());
+```
+
+Now you can test it by adding some test allocations:
+
+```rust
+println!("{:?}", frame_allocator.allocate_frame())
+```
+You will see that frame number starts at `0` and increases steadily, but the kernel and Multiboot frames are left out (you need to allocate many frames to see this since the kernel starts at frame 256).
+
+The following `for` loop allocates all frames and prints out the total number of allocated frames:
+
+```rust
+for i in 0.. {
+    if let None = frame_allocator.allocate_frame() {
+        println!("allocated {} frames", i);
+        break;
+    }
+}
+```
+You can try different amounts of memory by passing e.g. `-m 500M` to QEMU. To compare these numbers, [WolframAlpha] can be very helpful.
+
+[WolframAlpha]: http://www.wolframalpha.com/input/?i=%2832698+*+4096%29+bytes+in+MiB
+
+## What's next?
+
+### Remapping the Kernel Sections
 We can use the ELF section tag to write a skeleton that remaps the kernel correctly:
 
 ```rust
