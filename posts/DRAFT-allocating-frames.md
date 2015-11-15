@@ -358,3 +358,9 @@ for section in multiboot.elf_tag().sections() {
 }
 ```
 TODO
+
+## Recommended Posts
+Eric Kidd started the [Bare Metal Rust] series last week. Like this post, it builds upon the code from [Printing to Screen], but tries to support keyboard input instead of wrestling through memory management details ;).
+
+[Bare Metal Rust]: http://www.randomhacks.net/bare-metal-rust/
+[Printing to Screen]: {% post_url 2015-10-23-printing-to-screen %}
