@@ -3,7 +3,7 @@ layout: post
 title: 'Allocating Frames'
 ---
 
-TODO
+In this post we create an allocator that provides free physical frames for a future paging module. To get the required information about available and used memory we use the Multiboot information structure. Additionally, we improve the `panic` handler to print the corresponding message and source line.
 
 ## Preparation
 We still have a really tiny stack of 64 bytes, which won't suffice for this post. So we will increase it to 4096 (one page) in `boot.asm`:
