@@ -203,12 +203,15 @@ So let's start implementing our memory map based frame allocator.
 First we create a memory module with a `Frame` type (`src/memory/mod.rs`):
 
 ```rust
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Frame {
     number: usize,
 }
 ```
-(Don't forget to add the `mod memory` line to `src/lib.rs`.) Instead of e.g. the start address, we just store the frame number. We use `usize` here since the number of frames depends on the memory size. The long `derive` line makes frames printable, clonable, and comparable.
+(Don't forget to add the `mod memory` line to `src/lib.rs`.) Instead of e.g. the start address, we just store the frame number. We use `usize` here since the number of frames depends on the memory size. The long `derive` line makes frames printable and comparable.
+
+_Update_: In a previous version, the `Clone` and `Copy` traits were derived, too. [This was removed][PR 52] to make the allocator interface safer.
+[PR 52]: https://github.com/phil-opp/blog_os/pull/52
 
 To make it easy to get the corresponding frame for a physical address, we add a `containing_address` method:
 
@@ -256,7 +259,9 @@ To implement the `FrameAllocator` trait, we need to implement the `allocate_fram
 ```rust
 fn allocate_frame(&mut self) -> Option<Frame> {
     if let Some(area) = self.current_area {
-        let frame = self.next_free_frame;
+        // "clone" the frame to return it if it's free. Frame doesn't
+        // implement Clone, but we can construct an identical frame.
+        let frame = Frame{ number: self.next_free_frame.number };
 
         // the last frame of the current area
         let current_area_last_frame = {
