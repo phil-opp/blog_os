@@ -51,7 +51,9 @@ impl AreaFrameAllocator {
 impl FrameAllocator for AreaFrameAllocator {
     fn allocate_frame(&mut self) -> Option<Frame> {
         if let Some(area) = self.current_area {
-            let frame = self.next_free_frame;
+            // "clone" the frame to return it if it's free. Frame doesn't
+            // implement Clone, but we can construct an identical frame.
+            let frame = Frame{ number: self.next_free_frame.number };
 
             // the last frame of the current area
             let current_area_last_frame = {
