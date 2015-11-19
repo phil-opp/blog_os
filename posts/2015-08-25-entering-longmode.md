@@ -36,7 +36,7 @@ At address `0xb8000` begins the so-called [VGA text buffer]. It's an array of sc
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
 [future post]: {{ site.url }}{{ page.next.next.url }}
 
-A screen character consists of a 8 byte color code and a 8 byte [ASCII] character. We used the color code `4f` for all characters, which means white text on red background. `0x52` is an ASCII `R`, `0x45` is an `E`, `0x3a` is a `:`, and `0x20` is a space. The second space is overwritten by the given ASCII byte. Finally the CPU is stopped with the `hlt` instruction.
+A screen character consists of a 8 bit color code and a 8 bit [ASCII] character. We used the color code `4f` for all characters, which means white text on red background. `0x52` is an ASCII `R`, `0x45` is an `E`, `0x3a` is a `:`, and `0x20` is a space. The second space is overwritten by the given ASCII byte. Finally the CPU is stopped with the `hlt` instruction.
 
 [ASCII]: https://en.wikipedia.org/wiki/ASCII
 
