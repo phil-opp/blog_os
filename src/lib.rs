@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #![feature(no_std, lang_items)]
-#![feature(const_fn, unique, core_str_ext, iter_cmp)]
+#![feature(const_fn, unique, core_str_ext, iter_cmp, optin_builtin_traits)]
 #![no_std]
 
 extern crate rlibc;

@@ -15,6 +15,21 @@ When accessing a `P2` table, we only loop two times and then choose entries that
 The math checks out, too. If all page tables are used, there is 1 `P4` table, 511 `P3` tables (the last entry is used for the recursive mapping), `511*512` `P2` tables, and `511*512*512` `P1` tables. So there are `134217728` page tables altogether. Each page table occupies 4KiB, so we need `134217728 * 4KiB = 512GiB` to store them. That's exactly the amount of memory that can be accessed through one `P4` entry since `4KiB per page * 512 P1 entries * 512 P2 entries * 512 P3 entries = 512GiB`.
 
 ## A Safe Module
+We need to make sure that the page tables can't be modified concurrently. So we must ensure exclusive access for all functions that modify the page table. For a normal struct, Rust would handle it at compile time through the `&` and `&mut` rules. But since we have some magic memory address instead, we must do some manual work.
+
+To ensure exclusivity, we introduce a `Lock` struct. All operations that modify the current page table borrow it exclusively (`&mut`) and all operations that just read the table borrow it through `&`. That way, we benefit from Rust's aliasing rules.
+
+The `Lock` struct looks like this (in a new `memory/paging/mod.rs` module):
+
+```rust
+pub struct Lock {
+    _private: (),
+}
+
+impl !Send for Lock {}
+impl !Sync for Lock {}
+```
+The `_private` field is needed to forbid construction from outside. The `!Send` and `!Sync`
 
 ## Switching Page Tables
 
