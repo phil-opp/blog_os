@@ -316,7 +316,6 @@ enable_paging:
     ; enable paging in the cr0 register
     mov eax, cr0
     or eax, 1 << 31
-    or eax, 1 << 16
     mov cr0, eax
 
     ret
