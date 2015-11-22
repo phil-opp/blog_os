@@ -14,7 +14,7 @@ This blog post tries to setup Rust step-by-step and point out the different prob
 [Github repository]: https://github.com/phil-opp/blog_os/tree/setup_rust
 
 ## Installing Rust
-We need a nightly compiler, as we will use many unstable features. To manage Rust installations I highly recommend brson's [multirust]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. After installing it you can just run `multirust update nightly` to install or update to the latest Rust nightly.
+We need a nightly compiler, as we will use many unstable features. To manage Rust installations I highly recommend brson's [multirust]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `multirust override nightly`.
 
 [multirust]: https://github.com/brson/multirust
 
