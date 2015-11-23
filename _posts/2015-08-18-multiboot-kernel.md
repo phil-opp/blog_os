@@ -172,7 +172,7 @@ Idx Name          Size      VMA               LMA               File off  Algn
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
 ```
 _Note_: The `ld` and `objdump` commands are platform specific. If you're _not_ working on x86_64 architecture, you will need to [cross compile binutils]. Then use `x86_64‑elf‑ld` and `x86_64‑elf‑objdump` instead of `ld` and `objdump`.
-[cross compile binutils]: {{ site.url }}/cross-compile-binutils.html
+[cross compile binutils]: /cross-compile-binutils.html
 
 ## Creating the ISO
 The last step is to create a bootable ISO image with GRUB. We need to create the following directory structure and copy the `kernel.bin` to the right place:
@@ -211,7 +211,7 @@ Now it's time to boot our OS. We will use [QEMU]:
 ```
 qemu-system-x86_64 -hda os.iso
 ```
-![qemu output]({{ site.url }}/images/qemu-ok.png)
+![qemu output](/images/qemu-ok.png)
 
 Notice the green `OK` in the upper left corner. If it does not work for you, take a look at the comment section.
 
@@ -297,5 +297,5 @@ Now we can invoke `make` and all updated assembly files are compiled and linked.
 
 In the [next post] we will create a page table and do some CPU configuration to switch to the 64-bit [long mode].
 
-[next post]: {{ site.url }}{{ page.next.url }}
+[next post]: {{ page.next.url }}
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
