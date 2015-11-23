@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: page-without-comments
 title: Contact
 sitemap: false
 ---
