@@ -231,7 +231,7 @@ Such a boot loop is most likely caused by some [CPU exception][exception table].
 [Triple Fault]: http://wiki.osdev.org/Triple_Fault
 
 ```
-> qemu-system-x86_64 -d int -no-reboot -hda build/os-x86_64.iso
+> qemu-system-x86_64 -d int -no-reboot -drive format=raw,file=build/os-x86_64.iso
 SMM: enter
 ...
 SMM: after RSM

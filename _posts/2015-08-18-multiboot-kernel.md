@@ -209,7 +209,7 @@ Now it's time to boot our OS. We will use [QEMU]:
 [QEMU]: https://en.wikipedia.org/wiki/QEMU
 
 ```
-qemu-system-x86_64 -hda os.iso
+qemu-system-x86_64 -drive format=raw,file=os.iso
 ```
 ![qemu output](/images/qemu-ok.png)
 
@@ -263,7 +263,7 @@ clean:
     @rm -r build
 
 run: $(iso)
-    @qemu-system-x86_64 -hda $(iso)
+    @qemu-system-x86_64 -drive format=raw,file=$(iso)
 
 iso: $(iso)
 
