@@ -12,5 +12,5 @@ redirect_from: "/archive/"
 
 ### Cross Compiling for Rust OS
 
-* [binutils]({{ site.url }}/cross-compile-binutils.html)
-* [libcore]({{ site.url }}/cross-compile-libcore.html)
+* [binutils](/cross-compile-binutils.html)
+* [libcore](/cross-compile-libcore.html)
