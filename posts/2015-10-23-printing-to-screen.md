@@ -5,7 +5,7 @@ redirect_from: "/2015/10/23/printing-to-screen/"
 ---
 In the [previous post] we switched from assembly to [Rust], a systems programming language that provides great safety. But so far we are using unsafe features like [raw pointers] whenever we want to print to screen. In this post we will create a Rust module that provides a safe and easy-to-use interface for the VGA text buffer. It will support Rust's [formatting macros], too.
 
-[previous post]: {{ site.url }}{{ page.previous.url }}
+[previous post]: {{ page.previous.url }}
 [Rust]: https://www.rust-lang.org/
 [raw pointers]: https://doc.rust-lang.org/book/raw-pointers.html
 [formatting macros]: https://doc.rust-lang.org/std/fmt/#related-macros
@@ -426,7 +426,7 @@ Now that you know the very basics of OS development in Rust, you should also che
 _Note_: You need to [cross compile binutils] to build it (or you create some symbolic links[^fn-symlink] if you're on x86_64).
 [Rust Bare-Bones Kernel]: https://github.com/thepowersgang/rust-barebones-kernel
 [higher half]: http://wiki.osdev.org/Higher_Half_Kernel
-[cross compile binutils]: {{ site.url }}/cross-compile-binutils.html
+[cross compile binutils]: /cross-compile-binutils.html
 [^fn-symlink]: You will need to symlink `x86_64-none_elf-XXX` to `/usr/bin/XXX` where `XXX` is in {`as`, `ld`, `objcopy`, `objdump`, `strip`}. The `x86_64-none_elf-XXX` files must be in some folder that is in your `$PATH`. But then you can only build for your x86_64 host architecture, so use this hack only for testing.
 
 - [RustOS]: More advanced kernel that supports allocation, keyboard inputs, and threads. It also has a scheduler and a basic network driver.

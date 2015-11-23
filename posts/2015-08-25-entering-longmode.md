@@ -8,7 +8,7 @@ In the [previous post] we created a minimal multiboot kernel. It just prints `OK
 
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions, or issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
-[previous post]: {{ site.url }}{{ page.previous.url }}
+[previous post]: {{ page.previous.url }}
 [Rust]: http://www.rust-lang.org/
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
@@ -34,7 +34,7 @@ error:
 At address `0xb8000` begins the so-called [VGA text buffer]. It's an array of screen characters that are displayed by the graphics card. A [future post] will cover the VGA buffer in detail and create a Rust interface to it. But for now, manual bit-fiddling is the easiest option.
 
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
-[future post]: {{ site.url }}{{ page.next.next.url }}
+[future post]: {{ page.next.next.url }}
 
 A screen character consists of a 8 bit color code and a 8 bit [ASCII] character. We used the color code `4f` for all characters, which means white text on red background. `0x52` is an ASCII `R`, `0x45` is an `E`, `0x3a` is a `:`, and `0x20` is a space. The second space is overwritten by the given ASCII byte. Finally the CPU is stopped with the `hlt` instruction.
 
@@ -179,7 +179,7 @@ Each page table contains 512 entries and one entry is 8 bytes, so they fit exact
 
 [^virtual_physical_translation_source]: Image source: [Wikipedia](https://commons.wikimedia.org/wiki/File:X86_Paging_64bit.svg), with modified font size, page table naming, and removed sign extended bits. The modified file is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.
 
-![translation of virtual to physical addresses in 64 bit mode]({{ site.url }}/images/X86_Paging_64bit.svg)
+![translation of virtual to physical addresses in 64 bit mode](/images/X86_Paging_64bit.svg)
 
 1. Get the address of the P4 table from the CR3 register
 2. Use bits 39-47 (9 bits) as an index into P4 (`2^9 = 512 = number of entries`)
@@ -492,4 +492,4 @@ It's time to finally leave assembly behind[^leave_assembly_behind] and switch to
 [^leave_assembly_behind]: Actually we will still need some assembly in the future, but I'll try to minimize it.
 
 [Rust]: https://www.rust-lang.org/
-[next post]: {{ site.url }}{{ page.next.url }}
+[next post]: {{ page.next.url }}
