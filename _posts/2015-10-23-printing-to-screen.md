@@ -296,7 +296,7 @@ To resolve it, we could use a [mutable static]. But then every read and write to
 [mutable static]: https://doc.rust-lang.org/book/const-and-static.html#mutability
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
 
-But what are the alternatives? We could try to use a cell type like [RefCell] or even [UnsafeCell] to provide [interior mutability]. But these types aren't [Sync] (with good reason), so we can't use them in statics.
+But what are the alternatives? We could try to use a cell type like [RefCell] or even [UnsafeCell] to provide [interior mutability]. But these types aren't [Sync] \(with good reason), so we can't use them in statics.
 
 [RefCell]: https://doc.rust-lang.org/nightly/core/cell/struct.RefCell.html
 [UnsafeCell]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html
