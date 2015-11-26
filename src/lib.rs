@@ -19,6 +19,9 @@
 extern crate rlibc;
 extern crate spin;
 extern crate multiboot2;
+extern crate x86;
+#[macro_use]
+extern crate bitflags;
 
 #[macro_use]
 mod vga_buffer;
