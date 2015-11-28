@@ -11,6 +11,11 @@ I tried to explain everything in detail and to keep the code as simple as possib
 [create an issue]: https://github.com/phil-opp/blog_os/issues
 [source code]: https://github.com/phil-opp/blog_os/tree/multiboot_bootstrap/src/arch/x86_64
 
+Note that this tutorial is written mainly for Linux. For some known problems on OS X see the comment section and [this issue][mac os issue]. If you want to use a virtual Linux machine, you can find instructions and a Vagrantfile in Ashley Willams's [x86-kernel repository].
+
+[mac os issue]: https://github.com/phil-opp/blog_os/issues/55
+[x86-kernel repository]: https://github.com/ashleygwilliams/x86-kernel
+
 ## Overview
 When you turn on a computer, it loads the [BIOS] from some special flash memory. The BIOS runs self test and initialization routines of the hardware, then it looks for bootable devices. If it finds one, the control is transferred to its _bootloader_, which is a small portion of executable code stored at the device's beginning. The bootloader has to determine the location of the kernel image on the device and load it into memory. It also needs to switch the CPU to the so-called [protected mode] because x86 CPUs start in the very limited [real mode] by default (to be compatible to programs from 1978).
 
