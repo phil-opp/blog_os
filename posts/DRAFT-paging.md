@@ -162,7 +162,15 @@ When accessing a `P2` table, we only loop two times and then choose entries that
 
 The math checks out, too. If all page tables are used, there is 1 `P4` table, 511 `P3` tables (the last entry is used for the recursive mapping), `511*512` `P2` tables, and `511*512*512` `P1` tables. So there are `134217728` page tables altogether. Each page table occupies 4KiB, so we need `134217728 * 4KiB = 512GiB` to store them. That's exactly the amount of memory that can be accessed through one `P4` entry since `4KiB per page * 512 P1 entries * 512 P2 entries * 512 P3 entries = 512GiB`.
 
-TODO: recursive map in assembly
+### Implementation
+To map the `P4` table recursively, we just need to point the 511th entry to the table itself. Of course we could do it in Rust, but it would require some way of retrieving the physical address of the `P4`. It's easier to just some lines to our assembly:
+
+```nasm
+mov eax, p4_table
+or eax, 0b11 ; present + writable
+mov [p4_table + 511 * 8], eax
+```
+I put it right after the `setup_page_tables` label, but you can add it wherever you like.
 
 ## Translating addresses
 Now we can use the recursive mapping to translate virtual address manually. We will create a function that takes a virtual address and returns the corresponding physical address.
