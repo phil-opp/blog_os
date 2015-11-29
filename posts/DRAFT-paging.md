@@ -5,8 +5,8 @@ title: 'A Paging Module'
 
 ## Paging
 
-## A Paging Module
-Let's begin a `memory/paging/mod.rs` module:
+## Modeling Page Tables
+Let's begin a `memory/paging/mod.rs` module to model page tables:
 
 ```rust
 pub const PAGE_SIZE: usize = 4096;
@@ -98,7 +98,7 @@ fn pointed_frame(&self) -> Frame {
 ```
 First we mask bits 12-51 and then convert the physical address to the corresponding frame number (through `>> 12`). We don't need to respect any sign extension here since it only exists for virtual addresses.
 
-To model the various flags, we will use the [bitflags] crate. Unfortunately the official version depends on the standard library as `no_std` is still unstable. But since it does not actually require any `std` functions, it's pretty easy to create a `no_std` version. You can find it here [here][bitflags fork]. To add it as a dependency add the following to your `Cargo.toml`:
+To model the various flags, we will use the [bitflags] crate. Unfortunately the official version depends on the standard library as `no_std` is still unstable. But since it does not actually require any `std` functions, it's pretty easy to create a `no_std` version. You can find it here [here][bitflags fork]. To add it as a dependency, add the following to your `Cargo.toml`:
 
 [bitflags]: /TODO
 [bitflags fork]: /TODO
@@ -108,10 +108,51 @@ To model the various flags, we will use the [bitflags] crate. Unfortunately the 
 git = "https://github.com/phil-opp/bitflags.git"
 branch = "no_std"
 ```
+Note that you need a `#[macro_use]` above the `extern crate` definition.
 
+Now we can model the various flags:
 
-## Recursive Mapping
-The trick is to map the `P4` table _recursively_: The last entry doesn't point to a `P3` table, instead it points to the `P4` table itself. Through this entry, we can access and modify page tables of all levels. It may seem a bit strange at first, but is a very clean and simple solution once you wrapped your head around it.
+```rust
+bitflags! {
+    flags TableEntryFlags: u64 {
+        const PRESENT =         1 << 0,
+        const WRITABLE =        1 << 1,
+        const USER_ACCESSIBLE = 1 << 2,
+        const WRITE_THROUGH =   1 << 3,
+        const NO_CACHE =        1 << 4,
+        const ACCESSED =        1 << 5,
+        const DIRTY =           1 << 6,
+        const HUGE_PAGE =       1 << 7,
+        const GLOBAL =          1 << 8,
+        const NO_EXECUTE =      1 << 63,
+    }
+}
+```
+To extract the flags we create a `TableEntryFlags::flags` method that uses [from_bits_truncate]:
+
+[from_bits_truncate]: /TODO
+
+```rust
+fn flags(&self) -> TableEntryFlags {
+    TableEntryFlags::from_bits_truncate(self.0)
+}
+```
+
+Now we can read page tables and retrieve the mapping information. But since we can't access page tables through their physical address, we need to map them to some virtual address, too.
+
+## Mapping Page Tables
+So how do we map the page tables itself? We don't have that problem for the current P4, P3, and P2 table since they are part of the identity-mapped area, but we need a way to access future tables, too.
+
+One solution could be to identity map all page table. That way we would not need to differentiate virtual and physical address and could easily access the tables. But it makes creating page tables more complicated since we need a physical frame whose corresponding page isn't already used for something else. And it clutters the virtual address space and may even cause heap fragmentation.
+
+An alternative solution is to map the page tables only temporary. So to read/write a page table, we would map it to some free virtual address. We could use a small pool of such virtual addresses and reuse them for various tables. This method occupies only few virtual addresses and is thus a good solution for 32-bit systems, which have small address spaces. But it makes things much more complicated since the temporary mapping requires updating other page tables, which need to be mapped, too. So we need to make sure that the temporary addresses are always mapped, else it could cause an endless recursion.
+
+We will use another solution, which uses a trick called _recursive mapping_.
+
+### Recursive Mapping
+The trick is to map the `P4` table recursively: The last entry doesn't point to a `P3` table, but to the `P4` table itself. Through this entry, all page tables are mapped to an unique virtual address. So we can access and modify page tables of all levels by just setting one `P4` entry once. It may seem a bit strange at first, but is a very clean and simple solution once you wrapped your head around it.
+
+TODO image
 
 To access for example the `P4` table itself, we use the address that chooses the 511th `P4` entry, the 511th `P3` entry, the 511th `P2` entry and the 511th `P1` entry. Thus we choose the same `P4` frame over and over again and finally end up on it, too. Through the offset (12 bits) we choose the desired entry.
 
