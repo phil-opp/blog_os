@@ -172,47 +172,95 @@ mov [p4_table + 511 * 8], eax
 ```
 I put it right after the `setup_page_tables` label, but you can add it wherever you like.
 
-## Translating addresses
-Now we can use the recursive mapping to translate virtual address manually. We will create a function that takes a virtual address and returns the corresponding physical address.
-
-TODO
-
-
-To get the page tables and corresponding indexes for a page, we add some methods for `Page`:
+### The special addresses
+Now we can use special virtual addresses to access the page tables. For example, the `P4` table is available at `0xfffffffffffff000`. So let's add some methods to the `Page` type to get the corresponding page tables:
 
 ```rust
-fn p4_index(&self) -> usize {(self.number >> 27) & 0o777}
-fn p3_index(&self) -> usize {(self.number >> 18) & 0o777}
-fn p2_index(&self) -> usize {(self.number >> 9) & 0o777}
-fn p1_index(&self) -> usize {(self.number >> 0) & 0o777}
-
 const fn p4_table(&self) -> Table {
-    Table(Page { number: 0o_777_777_777_777 } )
+    Table(Page { number: 0o_777_777_777_777 })
 }
 
 fn p3_table(&self) -> Table {
-    Table(Page {
-      number: 0o_777_777_777_000 | self.p4_index(),
-    })
+    Table(Page { number: 0o_777_777_777_000 | self.p4_index() })
 }
 
 fn p2_table(&self) -> Table {
     Table(Page {
-      number: 0o_777_777_000_000 | (self.p4_index() << 9) |
-              self.p3_index(),
+        number: 0o_777_777_000_000 | (self.p4_index() << 9) |
+                self.p3_index(),
     })
 }
 
 fn p1_table(&self) -> Table {
     Table(Page {
-      number: 0o_777_000_000_000 | (self.p4_index() << 18) |
-              (self.p3_index() << 9) | self.p2_index(),
+        number: 0o_777_000_000_000 | (self.p4_index() << 18) |
+                (self.p3_index() << 9) | self.p2_index(),
     })
 }
 ```
-We use the octal numbers since they make it easy to express the 9 bit table indexes.
+We use the octal numbers since they make it easy to express the 9 bit table indexes. The `p*_index` methods are described below.
 
 The P4 table is the same for all addresses, so we can make the function `const`. The associated page has index 511 in all four pages, thus the four `777` blocks. The P3 table, however, is different for different P4 indexes. So the last block varies from `000` to `776`, dependent on the page's P4 index. The P2 table additionally depends on the P3 index and to get the P1 table we use the recursive mapping only once (thus only one `777` block).
+
+The `p*_index` methods look like this:
+
+```rust
+fn p4_index(&self) -> usize { (self.number >> 27) & 0o777 }
+fn p3_index(&self) -> usize { (self.number >> 18) & 0o777 }
+fn p2_index(&self) -> usize { (self.number >> 9) & 0o777 }
+fn p1_index(&self) -> usize { (self.number >> 0) & 0o777 }
+```
+
+## Translating addresses
+Now we can use the recursive mapping to translate virtual address manually. We will create a function that takes a virtual address and returns the corresponding physical address:
+
+```rust
+pub fn translate(virtual_address: usize) -> Option<PhysicalAddress> {
+    let page = Page::containing_address(virtual_address);
+    let offset = virtual_address % PAGE_SIZE;
+
+    let frame_number = {
+        let p4_entry = page.p4_table().entry(page.p4_index());
+        assert!(!p4_entry.flags().contains(HUGE_PAGE));
+        if !p4_entry.flags().contains(PRESENT) {
+            return None;
+        }
+
+        let p3_entry = unsafe { page.p3_table() }.entry(page.p3_index());
+        if !p3_entry.flags().contains(PRESENT) {
+            return None;
+        }
+        if p3_entry.flags().contains(HUGE_PAGE) {
+            // 1GiB page (address must be 1GiB aligned)
+            let start_frame_number = p3_entry.pointed_frame().number;
+            assert!(start_frame_number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
+            start_frame_number + page.p2_index() * ENTRY_COUNT + page.p1_index()
+        } else {
+            // 2MiB or 4KiB page
+            let p2_entry = unsafe { page.p2_table() }.entry(page.p2_index());
+            if !p2_entry.flags().contains(PRESENT) {
+                return None;
+            }
+            if p2_entry.flags().contains(HUGE_PAGE) {
+                // 2MiB page (address must be 2MiB aligned)
+                let start_frame_number = p2_entry.pointed_frame().number;
+                assert!(start_frame_number % ENTRY_COUNT == 0);
+                start_frame_number + page.p1_index()
+            } else {
+                // standard 4KiB page
+                let p1_entry = unsafe { page.p1_table() }.entry(page.p1_index());
+                assert!(!p1_entry.flags().contains(HUGE_PAGE));
+                if !p1_entry.flags().contains(PRESENT) {
+                    return None;
+                }
+                p1_entry.pointed_frame().number
+            }
+        }
+    };
+    Some(frame_number * PAGE_SIZE + offset)
+}
+```
+(It's just some naive code and feels quite repeative… I'm open for alternative solutions)
 
 TODO
 
