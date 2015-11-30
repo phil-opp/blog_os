@@ -266,6 +266,30 @@ pub fn translate(virtual_address: usize) -> Option<PhysicalAddress> {
 
 TODO
 
+## Modifying Entries
+To modify page table entries, we add a `set_entry` function to `Table`:
+
+```rust
+fn set_entry(&mut self, index: usize, value: TableEntry) {
+    assert!(index < ENTRY_COUNT);
+    let entry_address = self.0.start_address() + index * ENTRY_SIZE;
+    unsafe { *(entry_address as *mut _) = value }
+}
+```
+
+And to create new entries, we add some `TableEntry` constructors:
+
+```rust
+fn ununsed() -> TableEntry {
+    TableEntry(0)
+}
+
+fn new(frame: Frame, flags: TableEntryFlags) -> TableEntry {
+    let frame_addr = (frame.number << 12) & 0x000fffff_fffff000;
+    TableEntry((frame_addr as u64) | flags.bits())
+}
+```
+
 ## Switching Page Tables
 
 ## Mapping Pages

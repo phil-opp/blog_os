@@ -165,22 +165,25 @@ impl Table {
         let entry_address = self.0.start_address() + index * ENTRY_SIZE;
         unsafe { *(entry_address as *const _) }
     }
+
+    fn set_entry(&mut self, index: usize, value: TableEntry) {
+        assert!(index < ENTRY_COUNT);
+        let entry_address = self.0.start_address() + index * ENTRY_SIZE;
+        unsafe { *(entry_address as *mut _) = value }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 struct TableEntry(u64);
 
 impl TableEntry {
-    fn is_unused(&self) -> bool {
-        self.0 == 0
+    fn ununsed() -> TableEntry {
+        TableEntry(0)
     }
 
-    fn set_unused(&mut self) {
-        self.0 = 0
-    }
-
-    fn set(&mut self, frame: Frame, flags: TableEntryFlags) {
-        self.0 = (((frame.number as u64) << 12) & 0x000fffff_fffff000) | flags.bits();
+    fn new(frame: Frame, flags: TableEntryFlags) -> TableEntry {
+        let frame_addr = (frame.number << 12) & 0x000fffff_fffff000;
+        TableEntry((frame_addr as u64) | flags.bits())
     }
 
     fn flags(&self) -> TableEntryFlags {
