@@ -180,18 +180,18 @@ const fn p4_table(&self) -> Table {
     Table(Page { number: 0o_777_777_777_777 })
 }
 
-fn p3_table(&self) -> Table {
+unsafe fn p3_table(&self) -> Table {
     Table(Page { number: 0o_777_777_777_000 | self.p4_index() })
 }
 
-fn p2_table(&self) -> Table {
+unsafe fn p2_table(&self) -> Table {
     Table(Page {
         number: 0o_777_777_000_000 | (self.p4_index() << 9) |
                 self.p3_index(),
     })
 }
 
-fn p1_table(&self) -> Table {
+unsafe fn p1_table(&self) -> Table {
     Table(Page {
         number: 0o_777_000_000_000 | (self.p4_index() << 18) |
                 (self.p3_index() << 9) | self.p2_index(),
@@ -201,6 +201,8 @@ fn p1_table(&self) -> Table {
 We use the octal numbers since they make it easy to express the 9 bit table indexes. The `p*_index` methods are described below.
 
 The P4 table is the same for all addresses, so we can make the function `const`. The associated page has index 511 in all four pages, thus the four `777` blocks. The P3 table, however, is different for different P4 indexes. So the last block varies from `000` to `776`, dependent on the page's P4 index. The P2 table additionally depends on the P3 index and to get the P1 table we use the recursive mapping only once (thus only one `777` block).
+
+Since the P3, P2, and P1 tables may not exist, the corresponding functions are marked `unsafe`. It's only safe to call them if the entry in the parent table is `PRESENT` and does not have the `HUGE_PAGE` bit set. Else we would interpret random memory as a page table and get wrong results.
 
 The `p*_index` methods look like this:
 

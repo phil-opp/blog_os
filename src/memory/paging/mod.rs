@@ -135,15 +135,21 @@ impl Page {
         Table(Page { number: 0o_777_777_777_777 })
     }
 
-    fn p3_table(&self) -> Table {
+    /// # Safety
+    /// Only valid if the corresponding entry in the parent table is PRESENT and not HUGE_PAGE.
+    unsafe fn p3_table(&self) -> Table {
         Table(Page { number: 0o_777_777_777_000 | self.p4_index() })
     }
 
-    fn p2_table(&self) -> Table {
+    /// # Safety
+    /// Only valid if the corresponding entry in the parent table is PRESENT and not HUGE_PAGE.
+    unsafe fn p2_table(&self) -> Table {
         Table(Page { number: 0o_777_777_000_000 | (self.p4_index() << 9) | self.p3_index() })
     }
 
-    fn p1_table(&self) -> Table {
+    /// # Safety
+    /// Only valid if the corresponding entry in the parent table is PRESENT and not HUGE_PAGE.
+    unsafe fn p1_table(&self) -> Table {
         Table(Page {
             number: 0o_777_000_000_000 | (self.p4_index() << 18) | (self.p3_index() << 9) |
                     self.p2_index(),
