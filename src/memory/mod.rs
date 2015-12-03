@@ -1,6 +1,7 @@
 pub use self::area_frame_allocator::AreaFrameAllocator;
 
-mod paging;
+pub mod paging;
+pub mod paging_new;
 mod area_frame_allocator;
 
 pub const PAGE_SIZE: usize = 4096;
