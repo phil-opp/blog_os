@@ -1,10 +1,9 @@
 use super::{VirtualAddress, PhysicalAddress, Page, PAGE_SIZE, ENTRY_COUNT};
-use super::table::{Table, P4};
+use super::table::P4;
 use super::entry::{PRESENT, HUGE_PAGE};
 use memory::Frame;
 
-
-pub fn translate(virtual_address: usize) -> Option<PhysicalAddress> {
+pub fn translate(virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
     let page = Page::containing_address(virtual_address);
     let offset = virtual_address % PAGE_SIZE;
 
