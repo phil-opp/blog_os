@@ -61,20 +61,23 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     let mut frame_allocator = memory::AreaFrameAllocator::new(kernel_start as usize,
         kernel_end as usize, multiboot_start, multiboot_end, memory_map_tag.memory_areas());
 
-    for i in 0.. {
-        use memory::FrameAllocator;
-        if let None = frame_allocator.allocate_frame() {
-            println!("allocated {} frames", i);
-            break;
-        }
-    }
 
-    //println!("outer {}", {println!("inner"); "NO DEADLOCK"});
-    println!("{:?}", memory::paging::translate(0));
-    println!("{:?}", memory::paging::translate(12345));
-    //for i in 0.. {
-        //println!("0o{:o}", memory::paging::translate1(0o_000_000_000_0000 + i << 21).unwrap());
-    //}
+    // println!("outer {}", {println!("inner"); "NO DEADLOCK"});
+    /*println!("{:?}", memory::paging::translate::translate(0));*/
+
+    println!("{:?}", memory::paging::translate::translate(0));
+    println!("{:?}", memory::paging::translate::translate(0x40000000));
+    println!("{:?}", memory::paging::translate::translate(0x40000000 - 1));
+    println!("{:?}", memory::paging::translate::translate(0xdeadbeaa000));
+    println!("{:?}", memory::paging::translate::translate(0xcafebeaf000));
+    memory::paging::test(&mut frame_allocator);
+    println!("{:x}", memory::paging::translate::translate(0xdeadbeaa000).unwrap());
+    println!("{:x}", memory::paging::translate::translate(0xdeadbeab000).unwrap());
+    println!("{:x}", memory::paging::translate::translate(0xdeadbeac000).unwrap());
+    println!("{:x}", memory::paging::translate::translate(0xdeadbead000).unwrap());
+    println!("{:x}", memory::paging::translate::translate(0xcafebeaf000).unwrap());
+
+
 
     loop{}
 }
