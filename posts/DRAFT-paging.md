@@ -143,7 +143,7 @@ Now we can read page tables and retrieve the mapping information. But since we c
 ## Mapping Page Tables
 So how do we map the page tables itself? We don't have that problem for the current P4, P3, and P2 table since they are part of the identity-mapped area, but we need a way to access future tables, too.
 
-One solution could be to identity map all page table. That way we would not need to differentiate virtual and physical address and could easily access the tables. But it makes creating page tables more complicated since we need a physical frame whose corresponding page isn't already used for something else. And it clutters the virtual address space and may even cause heap fragmentation.
+One solution could be to identity map all page table. That way we would not need to differentiate virtual and physical address and could easily access the tables. But it makes creating page tables more complicated since we need a physical frame whose corresponding page isn't already used for something else. And it clutters the virtual address space and makes it impossible to map page tables in address spaces of user processes (since we can't just occupy some random pages there).
 
 An alternative solution is to map the page tables only temporary. So to read/write a page table, we would map it to some free virtual address. We could use a small pool of such virtual addresses and reuse them for various tables. This method occupies only few virtual addresses and is thus a good solution for 32-bit systems, which have small address spaces. But it makes things much more complicated since the temporary mapping requires updating other page tables, which need to be mapped, too. So we need to make sure that the temporary addresses are always mapped, else it could cause an endless recursion.
 
@@ -280,7 +280,7 @@ fn set_entry(&mut self, index: usize, value: TableEntry) {
 And to create new entries, we add some `TableEntry` constructors:
 
 ```rust
-fn ununsed() -> TableEntry {
+const fn unused() -> TableEntry {
     TableEntry(0)
 }
 
@@ -290,8 +290,42 @@ fn new(frame: Frame, flags: TableEntryFlags) -> TableEntry {
 }
 ```
 
-## Switching Page Tables
-
 ## Mapping Pages
+To map
+
+```rust
+pub fn map_to<A>(page: &Page, frame: Frame, flags: TableEntryFlags,
+    allocator: &mut A) where A: FrameAllocator
+{
+    let p4_index = page.p4_index();
+    let p3_index = page.p3_index();
+    let p2_index = page.p2_index();
+    let p1_index = page.p1_index();
+
+    let mut p4 = page.p4_table();
+    if !p4.entry(p4_index).flags().contains(PRESENT) {
+        let frame = allocator.allocate_frame().expect("no frames available");
+        p4.set_entry(p4_index, TableEntry::new(frame, PRESENT | WRITABLE));
+        unsafe { page.p3_table() }.zero();
+    }
+    let mut p3 = unsafe { page.p3_table() };
+    if !p3.entry(p3_index).flags().contains(PRESENT) {
+        let frame = allocator.allocate_frame().expect("no frames available");
+        p3.set_entry(p3_index, TableEntry::new(frame, PRESENT | WRITABLE));
+        unsafe { page.p2_table() }.zero();
+    }
+    let mut p2 = unsafe { page.p2_table() };
+    if !p2.entry(p2_index).flags().contains(PRESENT) {
+        let frame = allocator.allocate_frame().expect("no frames available");
+        p2.set_entry(p2_index, TableEntry::new(frame, PRESENT | WRITABLE));
+        unsafe { page.p1_table() }.zero();
+    }
+    let mut p1 = unsafe { page.p1_table() };
+    assert!(!p1.entry(p1_index).flags().contains(PRESENT));
+    p1.set_entry(p1_index, TableEntry::new(frame, flags));
+}
+```
 
 ## Unmapping Pages
+
+## Switching Page Tables
