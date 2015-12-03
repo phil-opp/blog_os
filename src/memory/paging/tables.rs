@@ -187,7 +187,7 @@ impl<L> Table<L> where L: HierachicalLevel
     fn next_table_internal(&self) -> Table<L::NextLevel> {
         Table {
             table_page: Page {
-                number: ((self.target_page_number << 9) & 0o_777_777_777_777) | self.index(),
+                number: ((self.table_page.number << 9) & 0o_777_777_777_777) | self.index(),
             },
             target_page_number: self.target_page_number,
             _phantom: PhantomData,

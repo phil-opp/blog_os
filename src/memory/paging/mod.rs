@@ -1,4 +1,4 @@
-use memory::Frame;
+use memory::{Frame, FrameAllocator};
 
 pub const PAGE_SIZE: usize = 4096;
 const ENTRY_SIZE: usize = 8;
@@ -6,48 +6,6 @@ const ENTRY_COUNT: usize = 512;
 
 pub type PhysicalAddress = usize;
 pub type VirtualAddress = usize;
-
-// pub fn translate(virtual_address: usize) -> Option<PhysicalAddress> {
-// let page = Page::containing_address(virtual_address);
-// let offset = virtual_address % PAGE_SIZE;
-//
-// let p4_entry = page.p4_table().entry(page.p4_index());
-// assert!(!p4_entry.flags().contains(HUGE_PAGE));
-// if !p4_entry.flags().contains(PRESENT) {
-// return None;
-// }
-//
-// let p3_entry = page.p3_table().entry(page.p3_index());
-// if !p3_entry.flags().contains(PRESENT) {
-// return None;
-// }
-// if p3_entry.flags().contains(HUGE_PAGE) {
-// 1GiB page (address must be 1GiB aligned)
-// let start_frame_number = p3_entry.pointed_frame().number;
-// assert!(start_frame_number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
-// let frame_number = start_frame_number + page.p2_index() * ENTRY_COUNT + page.p1_index();
-// return Some(frame_number * PAGE_SIZE + offset);
-// }
-//
-// let p2_entry = page.p2_table().entry(page.p2_index());
-// if !p2_entry.flags().contains(PRESENT) {
-// return None;
-// }
-// if p2_entry.flags().contains(HUGE_PAGE) {
-// 2MiB page (address must be 2MiB aligned)
-// let start_frame_number = p2_entry.pointed_frame().number;
-// assert!(start_frame_number % ENTRY_COUNT == 0);
-// let frame_number = start_frame_number + page.p1_index();
-// return Some(frame_number * PAGE_SIZE + offset);
-// }
-//
-// let p1_entry = page.p1_table().entry(page.p1_index());
-// assert!(!p1_entry.flags().contains(HUGE_PAGE));
-// if !p1_entry.flags().contains(PRESENT) {
-// return None;
-// }
-// Some(p1_entry.pointed_frame().number * PAGE_SIZE + offset)
-// }
 
 pub fn translate(virtual_address: usize) -> Option<PhysicalAddress> {
     let page = Page::containing_address(virtual_address);
@@ -92,6 +50,37 @@ pub fn translate(virtual_address: usize) -> Option<PhysicalAddress> {
         }
     };
     Some(frame_number * PAGE_SIZE + offset)
+}
+
+pub fn map_to<A>(page: &Page, frame: Frame, flags: TableEntryFlags, allocator: &mut A)
+    where A: FrameAllocator
+{
+    let p4_index = page.p4_index();
+    let p3_index = page.p3_index();
+    let p2_index = page.p2_index();
+    let p1_index = page.p1_index();
+
+    let mut p4 = page.p4_table();
+    if !p4.entry(p4_index).flags().contains(PRESENT) {
+        let frame = allocator.allocate_frame().expect("no frames available");
+        p4.set_entry(p4_index, TableEntry::new(frame, PRESENT | WRITABLE));
+        unsafe { page.p3_table() }.zero();
+    }
+    let mut p3 = unsafe { page.p3_table() };
+    if !p3.entry(p3_index).flags().contains(PRESENT) {
+        let frame = allocator.allocate_frame().expect("no frames available");
+        p3.set_entry(p3_index, TableEntry::new(frame, PRESENT | WRITABLE));
+        unsafe { page.p2_table() }.zero();
+    }
+    let mut p2 = unsafe { page.p2_table() };
+    if !p2.entry(p2_index).flags().contains(PRESENT) {
+        let frame = allocator.allocate_frame().expect("no frames available");
+        p2.set_entry(p2_index, TableEntry::new(frame, PRESENT | WRITABLE));
+        unsafe { page.p1_table() }.zero();
+    }
+    let mut p1 = unsafe { page.p1_table() };
+    assert!(!p1.entry(p1_index).flags().contains(PRESENT));
+    p1.set_entry(p1_index, TableEntry::new(frame, flags));
 }
 
 pub struct Page {
@@ -171,13 +160,18 @@ impl Table {
         let entry_address = self.0.start_address() + index * ENTRY_SIZE;
         unsafe { *(entry_address as *mut _) = value }
     }
+
+    fn zero(&mut self) {
+        let page = self.0.start_address() as *mut [TableEntry; ENTRY_COUNT];
+        unsafe { *page = [TableEntry::unused(); ENTRY_COUNT] };
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 struct TableEntry(u64);
 
 impl TableEntry {
-    fn ununsed() -> TableEntry {
+    const fn unused() -> TableEntry {
         TableEntry(0)
     }
 
@@ -209,3 +203,6 @@ bitflags! {
         const NO_EXECUTE =      1 << 63,
     }
 }
+
+
+mod tables;
