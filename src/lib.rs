@@ -14,6 +14,7 @@
 
 #![feature(no_std, lang_items)]
 #![feature(const_fn, unique, core_str_ext, iter_cmp, optin_builtin_traits)]
+#![feature(core_intrinsics, core_slice_ext)]
 #![no_std]
 
 extern crate rlibc;
@@ -67,6 +68,13 @@ pub extern fn rust_main(multiboot_information_address: usize) {
             break;
         }
     }
+
+    //println!("outer {}", {println!("inner"); "NO DEADLOCK"});
+    println!("{:?}", memory::paging::translate(0));
+    println!("{:?}", memory::paging::translate(12345));
+    //for i in 0.. {
+        //println!("0o{:o}", memory::paging::translate1(0o_000_000_000_0000 + i << 21).unwrap());
+    //}
 
     loop{}
 }
