@@ -192,7 +192,7 @@ But what happens to bits 48-63 of the 64-bit virtual address? Well, they can't b
 
 [wikipedia_48bit_mode]: https://en.wikipedia.org/wiki/X86-64#Virtual_address_space_details
 
-An entry in the P4, P3, P2, and P1 tables consists of the page aligned 52-bit _physical_ address of the page/next page table and the following bits that can be OR-ed in:
+An entry in the P4, P3, P2, and P1 tables consists of the page aligned 52-bit _physical_ address of the frame or the next page table and the following bits that can be OR-ed in:
 
 Bit(s)                | Name | Meaning
 --------------------- | ------ | ----------------------------------
