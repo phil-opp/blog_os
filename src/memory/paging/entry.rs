@@ -17,7 +17,7 @@ impl Entry {
 
     pub fn pointed_frame(&self) -> Option<Frame> {
         if self.flags().contains(PRESENT) {
-            Some(Frame { number: ((self.0 & 0x000fffff_fffff000) >> 12) as usize })
+            Some(Frame::containing_address(self.0 as usize & 0x000fffff_fffff000))
         } else {
             None
         }
