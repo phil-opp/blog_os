@@ -1,5 +1,5 @@
 use memory::FrameAllocator;
-use memory::paging::{ENTRY_COUNT, Page};
+use memory::paging::ENTRY_COUNT;
 use memory::paging::entry::*;
 use core::ops::{Index, IndexMut};
 use core::marker::PhantomData;
@@ -47,6 +47,8 @@ impl<L> Table<L> where L: HierachicalLevel
     }
 
     fn next_table_address(&self, index: usize) -> Option<usize> {
+        use memory::paging::Page;
+
         let entry_flags = self[index].flags();
         if entry_flags.contains(PRESENT) && !entry_flags.contains(HUGE_PAGE) {
             let table_page = Page::containing_address(self as *const _ as usize);
