@@ -10,7 +10,6 @@ Let's begin a `memory/paging/mod.rs` module to model page tables:
 
 ```rust
 pub const PAGE_SIZE: usize = 4096;
-const ENTRY_SIZE: usize = 8;
 const ENTRY_COUNT: usize = 512;
 
 pub type PhysicalAddress = usize;
@@ -19,11 +18,6 @@ pub type VirtualAddress = usize;
 pub struct Page {
    number: usize,
 }
-
-struct Table(Page);
-
-#[derive(Debug, Clone, Copy)]
-struct TableEntry(u64);
 ```
 We define constants for the page size, the size of an entry in a page table, and the number of entries per table. To make future function signatures more expressive, we can use the type aliases `PhysicalAddress` and `VirtualAddress`. The `Page` struct is similar to the `Frame` struct in the [previous post], but represents a virtual page instead of a physical frame.
 
