@@ -286,10 +286,118 @@ So if we switch to another P4 table at some time, it needs to be identity mapped
 
 _What happens if we call them on a P1 table?_
 
-Well, they would calculate the address of the next table (which does not exist) and treat it as a page table. Either they construct an invalid address (if `XXX < 400`) or access the mapped page itself. That way, we could easily corrupt memory or cause CPU exceptions by accident. So these two functions are not _safe_ in Rust terms. Thus we need to make them `unsafe` functions if we don't find some clever solution.
+Well, they would calculate the address of the next table (which does not exist) and treat it as a page table. Either they construct an invalid address (if `XXX < 400`) or access the mapped page itself. That way, we could easily corrupt memory or cause CPU exceptions by accident. So these two functions are not _safe_ in Rust terms. Thus we need to make them `unsafe` functions unless we find some clever solution.
 
 ## Some Clever Solution
-We can use Rust's type system to statically guarantee that the methods can only be called on P4, P3, and P2 tables.
+We can use Rust's type system to statically guarantee that the methods can only be called on P4, P3, and P2 tables. The idea is to add a `Level` parameter to the `Table` type and implement the `next_table` methods only for level 4, 3, and 2.
+
+To model the levels we use a trait and empty enums:
+
+```rust
+pub trait TableLevel {}
+
+pub enum Level4 {}
+enum Level3 {}
+enum Level2 {}
+enum Level1 {}
+
+impl TableLevel for Level4 {}
+impl TableLevel for Level3 {}
+impl TableLevel for Level2 {}
+impl TableLevel for Level1 {}
+```
+An empty enum has size zero and disappears completely after compiling. Unlike an empty struct, it's not possible to instantiate an empty enum. Since we will use `TableLevel` and `Level4` in exported types, they need to be public as well.
+
+To differentiate the P1 table from the other tables, we introduce a `HierachicalLevel` trait, which is a subtrait of `TableLevel`. But we implement it only for the levels 4, 3, and 2:
+
+```rust
+trait HierachicalLevel: TableLevel {}
+
+impl HierachicalLevel for Level4 {}
+impl HierachicalLevel for Level3 {}
+impl HierachicalLevel for Level2 {}
+```
+
+Now we add the level parameter to the `Table` type:
+
+```rust
+pub struct Table<L: TableLevel> {
+    entries: [Entry; ENTRY_COUNT],
+    level: PhantomData<L>,
+}
+```
+We need to use [PhantomData] here because unused type parameters are not allowed in Rust.
+
+[PhantomData]: https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters
+
+Since we changed the `Table` type, we need to update every use of it:
+
+```rust
+pub const P4: *mut Table<Level4> = 0xffffffff_fffff000 as *mut _;
+...
+impl<L> Table<L> where L: TableLevel
+{
+    pub fn zero(&mut self) {...}
+}
+
+impl<L> Table<L> where L: HierachicalLevel
+{
+    pub fn next_table(&self, index: usize) -> Option<&Table<???>> {...}
+
+    pub fn next_table_mut(&mut self, index: usize) -> Option<&mut Table<???>> {...}
+
+    fn next_table_address(&self, index: usize) -> Option<usize> {...}
+}
+
+impl<L> Index<usize> for Table<L> where L: TableLevel {...}
+
+impl<L> IndexMut<usize> for Table<L> where L: TableLevel {...}
+```
+Now the `next_table` methods are only available for P4, P3, and P2 tables. But they have the incomplete return type `Table<???>` now. What should we fill in for the `???`?
+
+For a P4 table we would like to return a `Table<Level3>`, for a P3 table a `Table<Level2>`, and for a P2 table a `Table<Level1>`. So we want to return a table of the _next level_. So let's add a associated `NextLevel` type to the `HierachicalLevel` trait:
+
+```rust
+trait HierachicalLevel: TableLevel {
+    type NextLevel: TableLevel;
+}
+
+impl HierachicalLevel for Level4 {
+    type NextLevel = Level3;
+}
+
+impl HierachicalLevel for Level3 {
+    type NextLevel = Level2;
+}
+
+impl HierachicalLevel for Level2 {
+    type NextLevel = Level1;
+}
+```
+
+Now we can replace the `Table<???>` types with `Table<L::NextLevel>` types and our code works as intended. You can try it with a simple test function:
+
+```rust
+fn test() {
+    let p4 = unsafe { &*P4 };
+    p4.next_table(42)
+      .and_then(|p3| p3.next_table(1337))
+      .and_then(|p2| p2.next_table(0xdeadbeaf))
+      .and_then(|p1| p1.next_table(0xcafebabe))
+}
+```
+Most of the indexes are completely out of bounds, so it would panic if it's called. But we don't need to call it since it already fails at compile time:
+
+```
+error: no method named `next_table` found for type
+  `&memory::paging::table::Table<memory::paging::table::Level1>`
+  in the current scope
+```
+Now remember that this is bare metal kernel code. We just used type system magic to make low-level page table manipulations safer. Rust is just awesome!
+
+
+
+
 
 # OLD
 
