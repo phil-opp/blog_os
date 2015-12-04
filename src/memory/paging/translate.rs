@@ -4,9 +4,12 @@ use super::entry::{PRESENT, HUGE_PAGE};
 use memory::Frame;
 
 pub fn translate(virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
-    let page = Page::containing_address(virtual_address);
     let offset = virtual_address % PAGE_SIZE;
+    translate_page(Page::containing_address(virtual_address))
+        .map(|frame| frame.number * PAGE_SIZE + offset)
+}
 
+fn translate_page(page: Page) -> Option<Frame> {
     let p4 = unsafe { &*P4 };
 
     let huge_page = || {
@@ -38,5 +41,4 @@ pub fn translate(virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
       .and_then(|p2| p2.next_table(page.p2_index()))
       .map(|p1| p1[page.p1_index()].pointed_frame())
       .or_else(huge_page)
-      .map(|frame| frame.number * PAGE_SIZE + offset)
 }
