@@ -1,4 +1,5 @@
 use memory::Frame;
+use memory::paging::PhysicalAddress;
 
 pub struct Entry(u64);
 
@@ -24,8 +25,8 @@ impl Entry {
     }
 
     pub fn set(&mut self, frame: Frame, flags: EntryFlags) {
-        let frame_addr = (frame.number << 12) & 0x000fffff_fffff000;
-        self.0 = (frame_addr as u64) | flags.bits();
+        assert!(frame.start_address() & !0x000fffff_fffff000 == 0);
+        self.0 = (frame.start_address() as u64) | flags.bits();
     }
 }
 
@@ -41,5 +42,11 @@ bitflags! {
         const HUGE_PAGE =       1 << 7,
         const GLOBAL =          1 << 8,
         const NO_EXECUTE =      1 << 63,
+    }
+}
+
+impl Frame {
+    fn start_address(&self) -> PhysicalAddress {
+        self.number << 12
     }
 }
