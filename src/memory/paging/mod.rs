@@ -2,6 +2,7 @@ mod entry;
 mod table;
 pub mod translate;
 pub mod mapping;
+pub mod lock;
 
 pub fn test<A>(frame_allocator: &mut A)
     where A: super::FrameAllocator
