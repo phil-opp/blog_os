@@ -15,8 +15,12 @@ impl Entry {
         EntryFlags::from_bits_truncate(self.0)
     }
 
-    pub fn pointed_frame(&self) -> Frame {
-        Frame { number: ((self.0 & 0x000fffff_fffff000) >> 12) as usize }
+    pub fn pointed_frame(&self) -> Option<Frame> {
+        if self.flags().contains(PRESENT) {
+            Some(Frame { number: ((self.0 & 0x000fffff_fffff000) >> 12) as usize })
+        } else {
+            None
+        }
     }
 
     pub fn set(&mut self, frame: Frame, flags: EntryFlags) {
