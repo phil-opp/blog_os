@@ -8,7 +8,7 @@ pub const P4: *mut Table<Level4> = 0xffffffff_fffff000 as *mut _;
 
 pub struct Table<L: TableLevel> {
     entries: [Entry; ENTRY_COUNT],
-    _phantom: PhantomData<L>,
+    level: PhantomData<L>,
 }
 
 impl<L> Table<L> where L: TableLevel
