@@ -138,7 +138,7 @@ impl Frame {
 ```
 Since we only need it in the entry submodule, we put it in a new `impl Frame` block in `entry.rs`.
 
-## Page Tables
+### Page Tables
 To model page tables, we create a basic `Table` struct in a new `table` submodule:
 
 ```rust
@@ -220,7 +220,6 @@ mov [p4_table + 511 * 8], eax
 ```
 I put it right after the `setup_page_tables` label, but you can add it wherever you like.
 
-### The special addresses
 Now we can use special virtual addresses to access the page tables. The P4 table is available at `0xfffffffffffff000`. Let's add a P4 constant to the `table` submodule:
 
 ```rust
@@ -393,152 +392,134 @@ error: no method named `next_table` found for type
   `&memory::paging::table::Table<memory::paging::table::Level1>`
   in the current scope
 ```
-Now remember that this is bare metal kernel code. We just used type system magic to make low-level page table manipulations safer. Rust is just awesome!
+Remember that this is bare metal kernel code. We just used type system magic to make low-level page table manipulations safer. Rust is just awesome!
 
-
-
-
-
-# OLD
-
-### Sign Extension
-The `Page::start_address` method doesn't exist yet. But it should be a simple `page.number * PAGE_SIZE`, right? Well, if the x86_64 architecture had true 64bit addresses, yes. But in reality the addresses are just 48bit long and the other bits are just _sign extension_, i.e. a copy of the most significant bit. That means that the address calculated by `page.number * PAGE_SIZE` is wrong if the 47th bit is used. Some examples:
-
-```
-invalid address: 0x0000_800000000000
-        sign extension | 48bit address
-valid sign extension: 0xffff_800000000000
-```
-TODO graphic
-
-So the address space is split into two halves: the _higher half_ containing addresses with sign extension and the _lower half_ containing addresses without. And our `Page::start_address` method needs to respect this:
+## Translating Addresses
+Now let's do something useful with our new module. We will create a function that translates a virtual address to the corresponding physical address. We add it to the `paging/mod.rs` module:
 
 ```rust
-pub fn start_address(&self) -> VirtualAddress {
-    if self.number >= 0x800000000 {
-        // sign extension necessary
-        (self.number << 12) | 0xffff_000000000000
-    } else {
-        self.number << 12
-    }
-}
-```
-The `0x800000000` is the start address of the higher half without the last four 0s (because it's a page _number_).
-
-
-## Translating addresses
-Now we can use the recursive mapping to translate virtual address manually. We will create a function that takes a virtual address and returns the corresponding physical address:
-
-```rust
-pub fn translate(virtual_address: usize) -> Option<PhysicalAddress> {
-    let page = Page::containing_address(virtual_address);
+pub fn translate(virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
     let offset = virtual_address % PAGE_SIZE;
-
-    let frame_number = {
-        let p4_entry = page.p4_table().entry(page.p4_index());
-        assert!(!p4_entry.flags().contains(HUGE_PAGE));
-        if !p4_entry.flags().contains(PRESENT) {
-            return None;
-        }
-
-        let p3_entry = unsafe { page.p3_table() }.entry(page.p3_index());
-        if !p3_entry.flags().contains(PRESENT) {
-            return None;
-        }
-        if p3_entry.flags().contains(HUGE_PAGE) {
-            // 1GiB page (address must be 1GiB aligned)
-            let start_frame_number = p3_entry.pointed_frame().number;
-            assert!(start_frame_number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
-            start_frame_number + page.p2_index() * ENTRY_COUNT + page.p1_index()
-        } else {
-            // 2MiB or 4KiB page
-            let p2_entry = unsafe { page.p2_table() }.entry(page.p2_index());
-            if !p2_entry.flags().contains(PRESENT) {
-                return None;
-            }
-            if p2_entry.flags().contains(HUGE_PAGE) {
-                // 2MiB page (address must be 2MiB aligned)
-                let start_frame_number = p2_entry.pointed_frame().number;
-                assert!(start_frame_number % ENTRY_COUNT == 0);
-                start_frame_number + page.p1_index()
-            } else {
-                // standard 4KiB page
-                let p1_entry = unsafe { page.p1_table() }.entry(page.p1_index());
-                assert!(!p1_entry.flags().contains(HUGE_PAGE));
-                if !p1_entry.flags().contains(PRESENT) {
-                    return None;
-                }
-                p1_entry.pointed_frame().number
-            }
-        }
-    };
-    Some(frame_number * PAGE_SIZE + offset)
+    translate_page(Page::containing_address(virtual_address))
+        .map(|frame| frame.number * PAGE_SIZE + offset)
 }
 ```
-(It's just some naive code and feels quite repeative… I'm open for alternative solutions)
+It uses two functions we haven't defined yet: `Page::containing_address` and `translate_page`. Let's start with the former:
 
+```rust
+fn containing_address(address: VirtualAddress) -> Page {
+    assert!(address < 0x0000_8000_0000_0000 || address >= 0xffff_8000_0000_0000,
+        "invalid address: 0x{:x}", address);
+    Page { number: address / PAGE_SIZE }
+}
+```
+The assertion is needed because there can be invalid addresses. Addresses on x86 are just 48-bit long and the other bits are just _sign extension_, i.e. a copy of the most significant bit. For example:
+
+```
+invalid address: 0x0000_8000_0000_0000
+valid address:   0xffff_8000_0000_0000
+                        └── bit 47
+```
+So the address space is split into two halves: the _higher half_ containing addresses with sign extension and the _lower half_ containing addresses without. Everything in between is invalid.
+
+TODO: The `translate_page` function looks like this:
+
+```rust
+fn translate_page(page: Page) -> Option<Frame> {
+    let p4 = unsafe { &*P4 };
+
+    let huge_page = || None; // TODO
+
+    p4.next_table(page.p4_index())
+      .and_then(|p3| p3.next_table(page.p3_index()))
+      .and_then(|p2| p2.next_table(page.p2_index()))
+      .and_then(|p1| p1[page.p1_index()].pointed_frame())
+      .or_else(huge_page)
+}
+```
 TODO
 
-## Modifying Entries
-To modify page table entries, we add a `set_entry` function to `Table`:
+### Safety
+TODO lock/controller
+
+### Huge Pages
+
+The `huge_page` closure looks like this:
 
 ```rust
-fn set_entry(&mut self, index: usize, value: TableEntry) {
-    assert!(index < ENTRY_COUNT);
-    let entry_address = self.0.start_address() + index * ENTRY_SIZE;
-    unsafe { *(entry_address as *mut _) = value }
-}
+let huge_page = || {
+    p4.next_table(page.p4_index())
+      .and_then(|p3| {
+          // 1GiB page?
+          if p3[page.p3_index()].flags().contains(HUGE_PAGE | PRESENT) {
+              let start_frame_number = p3[page.p3_index()].pointed_frame().unwrap().number;
+              // address must be 1GiB aligned
+              assert!(start_frame_number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
+              return Some(start_frame_number + page.p2_index() * ENTRY_COUNT + page.p1_index());
+          }
+          if let Some(p2) = p3.next_table(page.p3_index()) {
+              // 2MiB page?
+              if p2[page.p2_index()].flags().contains(HUGE_PAGE | PRESENT) {
+                  let start_frame_number = p2[page.p2_index()].pointed_frame().unwrap().number;
+                  // address must be 2MiB aligned
+                  assert!(start_frame_number % ENTRY_COUNT == 0);
+                  return Some(start_frame_number + page.p1_index());
+              }
+          }
+          None
+      })
+      .map(|start_frame_number| Frame { number: start_frame_number })
+};
 ```
-
-And to create new entries, we add some `TableEntry` constructors:
-
-```rust
-const fn unused() -> TableEntry {
-    TableEntry(0)
-}
-
-fn new(frame: Frame, flags: TableEntryFlags) -> TableEntry {
-    let frame_addr = (frame.number << 12) & 0x000fffff_fffff000;
-    TableEntry((frame_addr as u64) | flags.bits())
-}
-```
+TODO + FIXME (ugly)
 
 ## Mapping Pages
-To map
+TODO lock etc
 
 ```rust
-pub fn map_to<A>(page: &Page, frame: Frame, flags: TableEntryFlags,
-    allocator: &mut A) where A: FrameAllocator
+pub fn map_to<A>(page: &Page, frame: Frame, flags: EntryFlags, allocator: &mut A)
+    where A: FrameAllocator
 {
-    let p4_index = page.p4_index();
-    let p3_index = page.p3_index();
-    let p2_index = page.p2_index();
-    let p1_index = page.p1_index();
+    let p4 = unsafe { &mut *P4 };
+    let mut p3 = p4.next_table_create(page.p4_index(), allocator);
+    let mut p2 = p3.next_table_create(page.p3_index(), allocator);
+    let mut p1 = p2.next_table_create(page.p2_index(), allocator);
 
-    let mut p4 = page.p4_table();
-    if !p4.entry(p4_index).flags().contains(PRESENT) {
+    assert!(p1[page.p1_index()].is_unused());
+    p1[page.p1_index()].set(frame, flags | PRESENT);
+}
+```
+
+```rust
+pub fn next_table_create<A>(&mut self,
+                            index: usize,
+                            allocator: &mut A)
+                            -> &mut Table<L::NextLevel>
+    where A: FrameAllocator
+{
+    if let None = self.next_table_address(index) {
+        assert!(!self.entries[index].flags().contains(HUGE_PAGE),
+                "mapping code does not support huge pages");
         let frame = allocator.allocate_frame().expect("no frames available");
-        p4.set_entry(p4_index, TableEntry::new(frame, PRESENT | WRITABLE));
-        unsafe { page.p3_table() }.zero();
+        self.entries[index].set(frame, PRESENT | WRITABLE);
+        self.next_table_mut(index).unwrap().zero();
     }
-    let mut p3 = unsafe { page.p3_table() };
-    if !p3.entry(p3_index).flags().contains(PRESENT) {
-        let frame = allocator.allocate_frame().expect("no frames available");
-        p3.set_entry(p3_index, TableEntry::new(frame, PRESENT | WRITABLE));
-        unsafe { page.p2_table() }.zero();
-    }
-    let mut p2 = unsafe { page.p2_table() };
-    if !p2.entry(p2_index).flags().contains(PRESENT) {
-        let frame = allocator.allocate_frame().expect("no frames available");
-        p2.set_entry(p2_index, TableEntry::new(frame, PRESENT | WRITABLE));
-        unsafe { page.p1_table() }.zero();
-    }
-    let mut p1 = unsafe { page.p1_table() };
-    assert!(!p1.entry(p1_index).flags().contains(PRESENT));
-    p1.set_entry(p1_index, TableEntry::new(frame, flags));
+    self.next_table_mut(index).unwrap()
+}
+```
+
+```rust
+pub fn map<A>(page: &Page, flags: EntryFlags, allocator: &mut A)
+    where A: FrameAllocator
+{
+    let frame = allocator.allocate_frame().expect("out of memory");
+    map_to(page, frame, flags, allocator)
 }
 ```
 
 ## Unmapping Pages
+TODO
+
+## Modifying Inactive Tables
 
 ## Switching Page Tables
