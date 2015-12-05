@@ -40,22 +40,13 @@ pub struct Page {
 
 impl Page {
     fn containing_address(address: VirtualAddress) -> Page {
-        match address {
-            addr if addr < 0o_400_000_000_000_0000 => Page { number: addr / PAGE_SIZE },
-            addr if addr >= 0o177777_400_000_000_000_0000 => {
-                Page { number: (address / PAGE_SIZE) & 0o_777_777_777_777 }
-            }
-            _ => panic!("invalid address: 0x{:x}", address),
-        }
+        assert!(address < 0x0000_8000_0000_0000 || address >= 0xffff_8000_0000_0000,
+            "invalid address: 0x{:x}", address);
+        Page { number: address / PAGE_SIZE }
     }
 
-    pub fn start_address(&self) -> VirtualAddress {
-        if self.number >= 0x800000000 {
-            // sign extension necessary
-            (self.number << 12) | 0xffff_000000000000
-        } else {
-            self.number << 12
-        }
+    fn start_address(&self) -> VirtualAddress {
+        self.number * PAGE_SIZE
     }
 
     fn p4_index(&self) -> usize {
