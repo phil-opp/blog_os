@@ -32,7 +32,7 @@ use memory::Frame; // needed later
 pub struct Entry(u64);
 
 impl Entry {
-    pub fn unused(&self) -> bool {
+    pub fn is_unused(&self) -> bool {
         self.0 == 0
     }
 
