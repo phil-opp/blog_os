@@ -7,9 +7,9 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="7.2500815in"
+   width="7.0769176in"
    height="4.2198086in"
-   viewBox="-2141 2141 8720.2787 5039.0019"
+   viewBox="-2141 2141 8512 5039.0019"
    id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
@@ -47,7 +47,7 @@
      fit-margin-bottom="0"
      inkscape:zoom="1.4142136"
      inkscape:cx="419.60284"
-     inkscape:cy="118.41115"
+     inkscape:cy="118.37878"
      inkscape:window-x="1080"
      inkscape:window-y="568"
      inkscape:window-maximized="1"
@@ -55,7 +55,7 @@
   <g
      style="fill:none;stroke:#000000;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter"
      id="g4"
-     transform="translate(-2845,-286.6897)">
+     transform="translate(-2845,-286.25718)">
     <polyline
        points="3365,2598 3365,3070"
        id="polyline10" />
@@ -637,16 +637,16 @@
     </g>
     <polygon
        transform="matrix(-0.99999761,-0.00225115,0.00225114,-0.99999735,8757.3271,12495.154)"
-       points="3308,6614 3150,6566 3150,6661 3150,6661 "
+       points="3150,6661 3308,6614 3150,6566 3150,6661 "
        style="fill:#0000ff;stroke:#0000ff;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter"
        id="polygon232-0-6" />
     <polygon
-       points="3150,6566 3150,6661 3150,6661 3308,6614 "
+       points="3308,6614 3150,6566 3150,6661 3150,6661 "
        style="fill:#0000ff;stroke:#0000ff"
        id="polygon232"
        transform="matrix(0.96443351,0,0,2.1707597,1110.4988,-9393.2156)" />
     <polygon
-       points="3150,6566 3150,6661 3150,6661 3308,6614 "
+       points="3308,6614 3150,6566 3150,6661 3150,6661 "
        style="fill:#0000ff;stroke:#0000ff;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter"
        id="polygon232-2"
        transform="translate(992.36501,239.27944)" />
