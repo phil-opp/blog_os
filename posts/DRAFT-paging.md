@@ -422,59 +422,67 @@ valid address:   0xffff_8000_0000_0000
 ```
 So the address space is split into two halves: the _higher half_ containing addresses with sign extension and the _lower half_ containing addresses without. Everything in between is invalid.
 
-TODO: The `translate_page` function looks like this:
+The other function, `translate_page`, looks like this:
 
 ```rust
-fn translate_page(page: Page) -> Option<Frame> {
-    let p4 = unsafe { &*P4 };
+pub fn translate_page(page: Page) -> Option<Frame> {
+    let p3 = unsafe { &*P4 }.next_table(page.p4_index());
 
-    let huge_page = || None; // TODO
+    let huge_page = || {
+        // TODO
+    };
 
-    p4.next_table(page.p4_index())
-      .and_then(|p3| p3.next_table(page.p3_index()))
+    p3.and_then(|p3| p3.next_table(page.p3_index()))
       .and_then(|p2| p2.next_table(page.p2_index()))
       .and_then(|p1| p1[page.p1_index()].pointed_frame())
       .or_else(huge_page)
 }
 ```
-TODO
+We use an unsafe block to convert the raw `P4` pointer to a reference. Then we use the [Option::and_then] function to go through the four table levels. If some entry along the way is `None`, we check if the page is a huge page through the (unimplemented) `huge_page` closure.
+
+[Option::and_then]: https://doc.rust-lang.org/nightly/core/option/enum.Option.html#method.and_then
 
 ### Safety
-TODO lock/controller
+We would use an `unsafe` block to convert the raw `P4` pointer into a shared reference. It's safe because we don't create any `&mut` references to the table right now and don't switch the P4 table either.
 
 ### Huge Pages
 
-The `huge_page` closure looks like this:
+The `huge_page` closure calculates the corresponding frame if huge pages are used. Its content looks like this:
 
 ```rust
-let huge_page = || {
-    p4.next_table(page.p4_index())
-      .and_then(|p3| {
-          // 1GiB page?
-          if p3[page.p3_index()].flags().contains(HUGE_PAGE | PRESENT) {
-              let start_frame_number = p3[page.p3_index()].pointed_frame().unwrap().number;
+p3.and_then(|p3| {
+      let p3_entry = &p3[page.p3_index()];
+      // 1GiB page?
+      if let Some(start_frame) = p3_entry.pointed_frame() {
+          if p3_entry.flags().contains(HUGE_PAGE) {
               // address must be 1GiB aligned
-              assert!(start_frame_number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
-              return Some(start_frame_number + page.p2_index() * ENTRY_COUNT + page.p1_index());
+              assert!(start_frame.number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
+              return Some(Frame {
+                  number: start_frame.number + page.p2_index() * ENTRY_COUNT +
+                          page.p1_index(),
+              });
           }
-          if let Some(p2) = p3.next_table(page.p3_index()) {
-              // 2MiB page?
-              if p2[page.p2_index()].flags().contains(HUGE_PAGE | PRESENT) {
-                  let start_frame_number = p2[page.p2_index()].pointed_frame().unwrap().number;
+      }
+      if let Some(p2) = p3.next_table(page.p3_index()) {
+          let p2_entry = &p2[page.p2_index()];
+          // 2MiB page?
+          if let Some(start_frame) = p2_entry.pointed_frame() {
+              if p2_entry.flags().contains(HUGE_PAGE) {
                   // address must be 2MiB aligned
-                  assert!(start_frame_number % ENTRY_COUNT == 0);
-                  return Some(start_frame_number + page.p1_index());
+                  assert!(start_frame.number % ENTRY_COUNT == 0);
+                  return Some(Frame {
+                      number: start_frame.number + page.p1_index()
+                  });
               }
           }
-          None
-      })
-      .map(|start_frame_number| Frame { number: start_frame_number })
-};
+      }
+      None
+  })
 ```
-TODO + FIXME (ugly)
+This function is much longer and more complex than the `translate_page` function itself. To avoid this complexity in the future, we will only work with standard 4KiB pages from now on.
 
 ## Mapping Pages
-TODO lock etc
+Let's add a function that maps a `Page` to some `Frame`:
 
 ```rust
 pub fn map_to<A>(page: &Page, frame: Frame, flags: EntryFlags, allocator: &mut A)
@@ -489,6 +497,7 @@ pub fn map_to<A>(page: &Page, frame: Frame, flags: EntryFlags, allocator: &mut A
     p1[page.p1_index()].set(frame, flags | PRESENT);
 }
 ```
+The `Table::next_table_create` method doesn't exist yet. It should return the next table if it exists, or create a new one. Therefor we need the `FrameAllocator` from the [previous post] and the `Table::zero` method:
 
 ```rust
 pub fn next_table_create<A>(&mut self,
@@ -497,7 +506,7 @@ pub fn next_table_create<A>(&mut self,
                             -> &mut Table<L::NextLevel>
     where A: FrameAllocator
 {
-    if let None = self.next_table_address(index) {
+    if self.next_table(index).is_none() {
         assert!(!self.entries[index].flags().contains(HUGE_PAGE),
                 "mapping code does not support huge pages");
         let frame = allocator.allocate_frame().expect("no frames available");
@@ -507,19 +516,138 @@ pub fn next_table_create<A>(&mut self,
     self.next_table_mut(index).unwrap()
 }
 ```
+We can use `unwrap()` here since the next table definitely exists.
+
+### Safety
+We used an `unsafe` block in `map_to` to convert the raw `P4` pointer to a `&mut` reference. That's bad. It's now possible that the `&mut` reference is not exclusive, which breaks Rust's guarantees. It's only a matter time before we run into a data race. For example, imagine that one thread maps an entry to `frame_A` and another thread (on the same core) tries to map the same entry to `frame_B`.
+
+The problem is that there's no clear _owner_ for the page tables. So let's define the ownership!
+
+### Page Table Ownership
+We define the following:
+
+> A page table owns all of its subtables.
+
+We already obey this rule: To get a reference to a table, we need to lend it from its parent table through the `next_table` method. But who owns the P4 table?
+
+> The recursively mapped P4 table is owned by a `RecursivePageTable` struct.
+
+We just defined some random owner for the P4 table. But it will solve our problems. So let's create it:
 
 ```rust
-pub fn map<A>(page: &Page, flags: EntryFlags, allocator: &mut A)
-    where A: FrameAllocator
-{
-    let frame = allocator.allocate_frame().expect("out of memory");
-    map_to(page, frame, flags, allocator)
+pub struct RecursivePageTable {
+    p4: Unique<Table<Level4>>,
+}
+```
+We can't store the `Table<Level4>` directly because it needs to be at a special memory location (like the [VGA text buffer]). We could use a raw pointer or `&mut` instead of [Unique], but Unique indicates ownership better.
+
+[VGA text buffer]: http://os.phil-opp.com/printing-to-screen.html#the-text-buffer
+[Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
+
+We add some functions to get a P4 reference:
+
+```rust
+fn p4(&self) -> &Table<Level4> {
+    unsafe { self.p4.get() }
+}
+
+fn p4_mut(&mut self) -> &mut Table<Level4> {
+    unsafe { self.p4.get_mut() }
 }
 ```
 
-## Unmapping Pages
+Since we will only create valid P4 pointers, the `unsafe` blocks are safe. However, we don't make these functions public since they could be used to make page tables invalid. Only the higher level functions (such as `translate` or `map_to`) should be usable from other modules.
+
+Now we can make the `map_to` and `translate` functions safe by making them methods of `RecursivePageTable`:
+
+```rust
+impl RecursivePageTable {
+    fn p4(&self) -> &Table<Level4> {...}
+
+    fn p4_mut(&mut self) -> &mut Table<Level4> {...}
+
+    pub fn translate(&self, virtual_address: VirtualAddress)
+        -> Option<PhysicalAddress>
+    {
+        ...
+        self.translate_page(...).map(...)
+    }
+
+    fn translate_page(&self, page: Page) -> Option<Frame> {
+        let p3 = self.p4().next_table(...);
+        ...
+    }
+
+    pub fn map_to<A>(&mut self,
+                     page: &Page,
+                     frame: Frame,
+                     flags: EntryFlags,
+                     allocator: &mut A)
+        where A: FrameAllocator
+    {
+        let mut p3 = self.p4_mut().next_table_create(...);
+        ...
+    }
+}
+```
+Now the `p4()` and `p4_mut()` methods should be the only methods containing an `unsafe` block.
+
+### More Mapping Functions
+
+For convenience, we add a `map` method that just picks a free frame for us:
+
+```rust
+pub fn map<A>(&mut self, page: &Page, flags: EntryFlags, allocator: &mut A)
+    where A: FrameAllocator
+{
+    let frame = allocator.allocate_frame().expect("out of memory");
+    self.map_to(page, frame, flags, allocator)
+}
+```
+
+We also add a `identity_map` function to make it easier to remap the kernel in the next post:
+
+```rust
+pub fn identity_map<A>(&mut self,
+                       frame: Frame,
+                       flags: EntryFlags,
+                       allocator: &mut A)
+    where A: FrameAllocator
+{
+    let page = Page { number: frame.number };
+    self.map_to(&page, frame, flags, allocator)
+}
+```
+
+### Unmapping Pages
+
 TODO
 
-## Modifying Inactive Tables
+```rust
+fn unmap<A>(&mut self, page: &Page, allocator: &mut A)
+    where A: FrameAllocator
+{
+    assert!(self.translate(page.start_address()).is_some());
 
-## Switching Page Tables
+    let p1 = self.p4_mut()
+                 .next_table_mut(page.p4_index())
+                 .and_then(|p3| p3.next_table_mut(page.p3_index()))
+                 .and_then(|p2| p2.next_table_mut(page.p2_index()))
+                 .unwrap();
+    let frame = p1[page.p1_index()].pointed_frame().unwrap();
+    p1[page.p1_index()].set_unused();
+    unsafe { tlb::flush(page.start_address()) };
+    // TODO free p(1,2,3) table if empty
+    allocator.deallocate_frame(frame);
+}
+```
+TODO
+Huge pages…
+
+## Testing it
+
+
+## What's next?
+In the next post we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.
+
+Afterwards, we will use this paging module to build a heap allocator. This will allow us to use allocation and collection types such as `Box` and `Vec`.
