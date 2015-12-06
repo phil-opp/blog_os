@@ -36,7 +36,7 @@ impl<L> Table<L> where L: HierachicalLevel
                                 -> &mut Table<L::NextLevel>
         where A: FrameAllocator
     {
-        if let None = self.next_table_address(index) {
+        if self.next_table(index).is_none() {
             assert!(!self.entries[index].flags().contains(HUGE_PAGE),
                     "mapping code does not support huge pages");
             let frame = allocator.allocate_frame().expect("no frames available");
