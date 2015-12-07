@@ -130,18 +130,16 @@ pub fn set(&mut self, frame: Frame, flags: EntryFlags) {
 ```
 The start address of a frame should be page aligned and smaller than 2^52 (since x86 uses 52bit physical addresses). Since an invalid address could mess up the entry, we add an assertion. To actually set the entry, we just need to `or` the start address and the flag bits.
 
-The missing `start_address` function is pretty simple:
+The missing `Frame::start_address` method is pretty simple:
 
 ```rust
-use memory::paging::PhysicalAddress;
+use self::paging::PhysicalAddress;
 
-impl Frame {
-    fn start_address(&self) -> PhysicalAddress {
-        self.number << 12
-    }
+fn start_address(&self) -> PhysicalAddress {
+    self.number * PAGE_SIZE
 }
 ```
-Since we only need it in the entry submodule, we put it in a new `impl Frame` block in `entry.rs`.
+We add it to the `impl Frame` block in `memory/mod.rs`.
 
 ### Page Tables
 To model page tables, we create a basic `Table` struct in a new `table` submodule:
@@ -640,7 +638,7 @@ pub fn identity_map<A>(&mut self,
                        allocator: &mut A)
     where A: FrameAllocator
 {
-    let page = Page { number: frame.number };
+    let page = Page::containing_address(frame.start_address());
     self.map_to(&page, frame, flags, allocator)
 }
 ```

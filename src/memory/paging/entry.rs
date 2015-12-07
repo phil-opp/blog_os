@@ -44,9 +44,3 @@ bitflags! {
         const NO_EXECUTE =      1 << 63,
     }
 }
-
-impl Frame {
-    fn start_address(&self) -> PhysicalAddress {
-        self.number << 12
-    }
-}

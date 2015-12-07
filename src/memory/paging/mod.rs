@@ -150,7 +150,7 @@ impl RecursivePageTable {
     pub fn identity_map<A>(&mut self, frame: Frame, flags: EntryFlags, allocator: &mut A)
         where A: FrameAllocator
     {
-        let page = Page { number: frame.number };
+        let page = Page::containing_address(frame.start_address());
         self.map_to(&page, frame, flags, allocator)
     }
 
