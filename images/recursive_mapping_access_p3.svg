@@ -13,7 +13,7 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
-   sodipodi:docname="recursive_mapping_access_p4.svg">
+   sodipodi:docname="recursive_mapping_access_p3.svg">
   <metadata
      id="metadata370">
     <rdf:RDF>
@@ -45,9 +45,9 @@
      fit-margin-left="0"
      fit-margin-right="2.7755576e-17"
      fit-margin-bottom="0"
-     inkscape:zoom="0.5"
-     inkscape:cx="150.51041"
-     inkscape:cy="507.56343"
+     inkscape:zoom="1"
+     inkscape:cx="236.56561"
+     inkscape:cy="267.91265"
      inkscape:window-x="1080"
      inkscape:window-y="568"
      inkscape:window-maximized="1"
@@ -294,7 +294,7 @@
        transform="matrix(1.4130509,0,0,1.3955346,-2048.7241,-1956.6141)" />
     <polyline
        points="6519,3590 6236,3779"
-       style="stroke:#008200;stroke-opacity:1"
+       style="stroke:#0000ff"
        id="polyline186"
        transform="matrix(1.4130509,0,0,1.3955346,-2048.7241,-1956.6141)" />
     <polyline
@@ -314,7 +314,7 @@
        transform="matrix(1.4130509,0,0,1.3955346,-2048.7241,-1956.6141)" />
     <polyline
        points="5491,3070 5622,3307 6236,3307 6377,3543 6519,3307 6909,3307 7086,3070"
-       style="stroke:#008200;stroke-opacity:1"
+       style="stroke:#0000ff"
        id="polyline208"
        transform="matrix(1.4130509,0,0,1.3955346,-2048.7241,-1956.6141)" />
     <polyline
@@ -331,6 +331,18 @@
        style="fill:#000000;stroke-width:0"
        id="g242"
        transform="matrix(1.4130509,0,0,1.3955346,-2048.7241,-1956.6141)">
+      <text
+         xml:space="preserve"
+         x="5546.7881"
+         y="6876.4409"
+         font-style="normal"
+         font-weight="normal"
+         font-size="152"
+         id="text320-2-1-5"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:130.85745239px;line-height:125%;font-family:Helvetica;-inkscape-font-specification:'Helvetica, Normal';text-align:center;writing-mode:lr-tb;text-anchor:middle;fill:#4d4d4d;stroke:#000000;stroke-width:0;stroke-linecap:butt;stroke-linejoin:miter"
+         sodipodi:linespacing="125%"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:130.85745239px;line-height:125%;font-family:Helvetica;-inkscape-font-specification:'Helvetica, Normal';text-align:center;writing-mode:lr-tb;text-anchor:middle;fill:#4d4d4d;stroke-width:0"
+           id="tspan3503-48-5-5">0</tspan></text>
       <text
          xml:space="preserve"
          x="3507"
@@ -567,7 +579,7 @@
          font-weight="normal"
          font-size="152"
          id="text358"
-         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:start;fill:#008200;fill-opacity:1;">9</text>
+         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:start;fill:#0000ff">9</text>
       <text
          x="8362"
          y="3732"
@@ -608,7 +620,7 @@
       <circle
          cx="5335.9546"
          cy="4720.2134"
-         style="fill:#008200;stroke:#008200;stroke-width:31.99999809;stroke-linecap:butt;stroke-linejoin:miter;fill-opacity:1;stroke-opacity:1"
+         style="fill:#008200;stroke:#008200;stroke-width:31.99999809;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1"
          id="circle172-4"
          r="46.999996" />
       <text
@@ -668,7 +680,7 @@
       </g>
       <text
          xml:space="preserve"
-         x="3891.613"
+         x="3097.1609"
          y="2954.5652"
          font-style="normal"
          font-weight="normal"
@@ -679,27 +691,76 @@
          inkscape:transform-center-y="1300.106"
          sodipodi:linespacing="125%"><tspan
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:318.2364502px;line-height:125%;font-family:Helvetica;-inkscape-font-specification:'Helvetica, Normal';text-align:center;writing-mode:lr-tb;text-anchor:middle;stroke-width:0"
-           id="tspan3503-4">111111111111111111111111111111111111</tspan></text>
-      <path
-         style="fill:none;fill-rule:evenodd;stroke:#0000ff;stroke-width:13.36426067px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-         d="m 5603.8041,5874.9118 2568.0264,0 0,-2337.6838"
-         id="path5364"
-         inkscape:connector-curvature="0" />
+           id="tspan3503-4">111111111111111111111111111</tspan></text>
+      <rect
+         x="8208.377"
+         y="4073.4419"
+         width="691.0863"
+         height="3268.5144"
+         rx="0"
+         style="fill:#dfdfdf;stroke:#000000;stroke-width:7.85773897;stroke-linecap:butt;stroke-linejoin:miter"
+         id="rect8" />
+      <rect
+         x="8208.377"
+         y="5474.9399"
+         width="691.0863"
+         height="233.25354"
+         rx="0"
+         style="fill:#dfdfdf;stroke:#000000;stroke-width:7.85773897;stroke-linecap:butt;stroke-linejoin:miter"
+         id="rect158" />
+      <g
+         style="fill:#000000;stroke:#000000;stroke-width:0;stroke-linecap:butt;stroke-linejoin:miter"
+         transform="matrix(0,-0.98836234,0.97611052,0,9106.1205,5822.055)"
+         id="g286">
+        <text
+           xml:space="preserve"
+           x="96.892052"
+           y="38.756821"
+           font-style="normal"
+           font-weight="normal"
+           font-size="152"
+           id="text288"
+           style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:middle"><tspan
+             style="font-size:200.46391296px"
+             id="tspan3509">P3 table </tspan></text>
+        <path
+           style="fill:none;fill-rule:evenodd;stroke:#0000ff;stroke-width:14.53380773;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+           d="m 2308.9448,-2797.8507 -483.0169,0 0,-2544.6425 -1879.786585,0 0,339.1222"
+           id="path8874"
+           inkscape:connector-curvature="0" />
+      </g>
       <text
          xml:space="preserve"
-         x="7481.9214"
-         y="6083.3872"
+         x="4809.9756"
+         y="5774.4951"
          font-style="normal"
          font-weight="normal"
          font-size="152"
-         id="text314-5-0-6"
-         style="font-style:normal;font-weight:normal;font-size:151.99998474px;font-family:Helvetica;text-anchor:middle;fill:#000000;stroke:#000000;stroke-width:0;stroke-linecap:butt;stroke-linejoin:miter"><tspan
-           style="font-size:200.46389771px;stroke-width:0"
-           id="tspan3495-6-4-9">Offset in bytes</tspan></text>
+         id="text314-5-5"
+         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:middle;fill:#000000;stroke:#000000;stroke-width:0;stroke-linecap:butt;stroke-linejoin:miter"><tspan
+           style="font-size:200.46392822px;stroke-width:0"
+           id="tspan3495-6-7">P4 entry</tspan></text>
+      <ellipse
+         ry="46.999996"
+         rx="46.999992"
+         cx="5336.855"
+         cy="5714.1816"
+         style="fill:#0000ff;stroke:#0000ff;stroke-width:31.99999809;stroke-linecap:butt;stroke-linejoin:miter"
+         id="circle172-4-4" />
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#0000ff;stroke-width:9.55735683px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 5392.0276,5712.0004 1512.0496,0 0,1631.4957 1257.8109,0"
+         id="path9464"
+         inkscape:connector-curvature="0" />
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#0000ff;stroke-width:9.51690483px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 8173.2452,3542.5202 0,364.8071 -584.0141,0 0,1802.0952 528.0052,0"
+         id="path9466"
+         inkscape:connector-curvature="0" />
       <text
          xml:space="preserve"
-         x="5622.4961"
-         y="5000.6953"
+         x="5610.3569"
+         y="4990.1772"
          font-style="normal"
          font-weight="normal"
          font-size="152"
@@ -708,24 +769,7 @@
          sodipodi:linespacing="125%"><tspan
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:130.85745239px;line-height:125%;font-family:Helvetica;-inkscape-font-specification:'Helvetica, Normal';text-align:center;writing-mode:lr-tb;text-anchor:middle;fill:#4d4d4d;stroke-width:0"
            id="tspan3503-48-5">511</tspan></text>
-      <text
-         xml:space="preserve"
-         x="5548.4839"
-         y="6877.3652"
-         font-style="normal"
-         font-weight="normal"
-         font-size="152"
-         id="text320-2-1-6"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:130.85745239px;line-height:125%;font-family:Helvetica;-inkscape-font-specification:'Helvetica, Normal';text-align:center;writing-mode:lr-tb;text-anchor:middle;fill:#4d4d4d;stroke:#000000;stroke-width:0;stroke-linecap:butt;stroke-linejoin:miter"
-         sodipodi:linespacing="125%"><tspan
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:130.85745239px;line-height:125%;font-family:Helvetica;-inkscape-font-specification:'Helvetica, Normal';text-align:center;writing-mode:lr-tb;text-anchor:middle;fill:#4d4d4d;stroke-width:0"
-           id="tspan3503-48-5-1">0</tspan></text>
     </g>
-    <polygon
-       transform="matrix(-1.4130475,-0.00314156,0.00318097,-1.395531,10325.825,15480.806)"
-       points="3150,6661 3308,6614 3150,6566 3150,6661 "
-       style="fill:#0000ff;stroke:#0000ff;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter"
-       id="polygon232-0-6" />
     <polygon
        points="3308,6614 3150,6566 3150,6661 3150,6661 "
        style="fill:#008200;stroke:#008200;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter;fill-opacity:1;stroke-opacity:1"
@@ -737,29 +781,39 @@
        id="path5354"
        inkscape:connector-curvature="0" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:18.54883385px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 3842.7968,5013.0895 -4222.39215,0 0,-2029.5495"
+       style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:18.52740288px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 3843.9848,5007.8363 -4223.58417,0 0,-2024.2908"
        id="path5356"
        inkscape:connector-curvature="0" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:18.67419624px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 2156.6937,2986.8005 0,2001.4832 1684.7642,0"
+       style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:18.65159035px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 2156.7076,2986.8221 0,1988.2634 1691.863,0"
        id="path5358"
        inkscape:connector-curvature="0" />
     <path
-       style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:18.88186646px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 4696.3171,2980.021 0,502.6836 -1975.6967,0 0,1479.7303 1128.295,0"
+       style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:18.78581619px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 4696.351,2980.052 0,497.5653 -1975.7645,0 0,1464.6642 1128.3337,0"
        id="path5360"
-       inkscape:connector-curvature="0" />
-    <path
-       style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:19.05912971px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 6962.3822,2986.9474 0,745.9077 -3590.1899,0 0,1203.077 448.1838,0"
-       id="path5362"
        inkscape:connector-curvature="0" />
     <polygon
        points="3150,6661 3308,6614 3150,6566 3150,6661 "
+       style="fill:#0000ff;stroke:#0000ff;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter"
+       id="polygon232-2-7"
+       transform="matrix(1.4130509,0,0,1.3955346,-625.83944,-2988.2046)" />
+    <polygon
+       points="3150,6661 3150,6661 3308,6614 3150,6566 "
+       style="fill:#0000ff;stroke:#0000ff;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter"
+       id="polygon232-2-7-3"
+       transform="matrix(1.4130509,0,0,1.3955346,4891.7749,-3219.444)" />
+    <polygon
+       points="3150,6661 3150,6661 3308,6614 3150,6566 "
+       style="fill:#0000ff;stroke:#0000ff;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter"
+       id="polygon232-2-7-3-5"
+       transform="matrix(1.4130509,0,0,1.3955346,4896.989,-940.27671)" />
+    <polygon
+       points="3150,6566 3150,6661 3150,6661 3308,6614 "
        style="fill:#008200;stroke:#008200;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter;fill-opacity:1;stroke-opacity:1"
-       id="polygon232-2-3"
-       transform="matrix(1.4130509,0,0,1.3955346,-639.67391,-4258.2588)" />
+       id="polygon232-2-7-7"
+       transform="matrix(1.4130509,0,0,1.3955346,-628.09888,-4256.4264)" />
   </g>
 </svg>
