@@ -498,7 +498,7 @@ TODO imports
 Let's add a function that maps a `Page` to some `Frame`:
 
 ```rust
-pub fn map_to<A>(page: &Page, frame: Frame, flags: EntryFlags, allocator: &mut A)
+pub fn map_to<A>(page: Page, frame: Frame, flags: EntryFlags, allocator: &mut A)
     where A: FrameAllocator
 {
     let p4 = unsafe { &mut *P4 };
@@ -603,7 +603,7 @@ impl RecursivePageTable {
     }
 
     pub fn map_to<A>(&mut self,
-                     page: &Page,
+                     page: Page,
                      frame: Frame,
                      flags: EntryFlags,
                      allocator: &mut A)
@@ -621,7 +621,7 @@ Now the `p4()` and `p4_mut()` methods should be the only methods containing an `
 For convenience, we add a `map` method that just picks a free frame for us:
 
 ```rust
-pub fn map<A>(&mut self, page: &Page, flags: EntryFlags, allocator: &mut A)
+pub fn map<A>(&mut self, page: Page, flags: EntryFlags, allocator: &mut A)
     where A: FrameAllocator
 {
     let frame = allocator.allocate_frame().expect("out of memory");
@@ -639,7 +639,7 @@ pub fn identity_map<A>(&mut self,
     where A: FrameAllocator
 {
     let page = Page::containing_address(frame.start_address());
-    self.map_to(&page, frame, flags, allocator)
+    self.map_to(page, frame, flags, allocator)
 }
 ```
 
@@ -648,7 +648,7 @@ pub fn identity_map<A>(&mut self,
 TODO
 
 ```rust
-fn unmap<A>(&mut self, page: &Page, allocator: &mut A)
+fn unmap<A>(&mut self, page: Page, allocator: &mut A)
     where A: FrameAllocator
 {
     assert!(self.translate(page.start_address()).is_some());

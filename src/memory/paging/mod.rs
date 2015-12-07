@@ -129,14 +129,14 @@ impl RecursivePageTable {
           .or_else(huge_page)
     }
 
-    pub fn map<A>(&mut self, page: &Page, flags: EntryFlags, allocator: &mut A)
+    pub fn map<A>(&mut self, page: Page, flags: EntryFlags, allocator: &mut A)
         where A: FrameAllocator
     {
         let frame = allocator.allocate_frame().expect("out of memory");
         self.map_to(page, frame, flags, allocator)
     }
 
-    pub fn map_to<A>(&mut self, page: &Page, frame: Frame, flags: EntryFlags, allocator: &mut A)
+    pub fn map_to<A>(&mut self, page: Page, frame: Frame, flags: EntryFlags, allocator: &mut A)
         where A: FrameAllocator
     {
         let mut p3 = self.p4_mut().next_table_create(page.p4_index(), allocator);
@@ -151,11 +151,11 @@ impl RecursivePageTable {
         where A: FrameAllocator
     {
         let page = Page::containing_address(frame.start_address());
-        self.map_to(&page, frame, flags, allocator)
+        self.map_to(page, frame, flags, allocator)
     }
 
 
-    fn unmap<A>(&mut self, page: &Page, allocator: &mut A)
+    fn unmap<A>(&mut self, page: Page, allocator: &mut A)
         where A: FrameAllocator
     {
         use x86::tlb;
