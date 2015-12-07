@@ -71,6 +71,13 @@ pub struct RecursivePageTable {
 }
 
 impl RecursivePageTable {
+    pub unsafe fn new() -> RecursivePageTable {
+        use self::table::P4;
+        RecursivePageTable {
+            p4: Unique::new(P4),
+        }
+    }
+
     fn p4(&self) -> &Table<Level4> {
         unsafe { self.p4.get() }
     }
