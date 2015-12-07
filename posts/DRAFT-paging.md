@@ -3,7 +3,11 @@ layout: post
 title: 'A Paging Module'
 ---
 
+TODO
+
 ## Paging
+
+TODO
 
 ## A Basic Paging Module
 Let's create a basic `memory/paging/mod.rs` module:
@@ -198,13 +202,17 @@ We will use another solution, which uses a trick called _recursive mapping_.
 ### Recursive Mapping
 The trick is to map the P4 table recursively: The last entry doesn't point to a P3 table, but to the P4 table itself. Through this entry, all page tables are mapped to an unique virtual address.
 
-TODO image
+![access P4 table through recursive paging]({{ site.url }}/images/recursive_mapping_access_p4.svg)
 
 To access for example the P4 table itself, we use the address that chooses the 511th P4 entry, the 511th P3 entry, the 511th P2 entry and the 511th P1 entry. Thus we choose the same P4 frame over and over again and finally end up on it, too. Through the offset (12 bits) we choose the desired entry.
 
+![access P3 table through recursive paging]({{ site.url }}/images/recursive_mapping_access_p3.svg)
+
 To access a P3 table, we do the same but choose the real P4 index instead of the fourth loop. So if we like to access the 42th P3 table, we use the address that chooses the 511th entry in the P4, P3, and P2 table, but the 42th P1 entry.
 
-When accessing a P2 table, we only loop two times and then choose entries that correspond to the P4 and P3 table of the desired P2 table. And accessing a P1 table just loops once and then uses the corresponding P4, P3, and P2 entries.
+When accessing a P2 table, we only loop two times and then choose entries that correspond to the P4 and P3 table of the desired P2 table. And accessing a P1 table just loops once and then uses the corresponding P4, P3, and P2 entries:
+
+![access P1 table through recursive paging]({{ site.url }}/images/recursive_mapping_access_p1.svg)
 
 So we can access and modify page tables of all levels by just setting one P4 entry once. It may seem a bit strange at first, but is a very clean and simple solution once you wrapped your head around it.
 
@@ -285,7 +293,9 @@ So if we switch to another P4 table at some time, it needs to be identity mapped
 
 _What happens if we call them on a P1 table?_
 
-Well, they would calculate the address of the next table (which does not exist) and treat it as a page table. Either they construct an invalid address (if `XXX < 400`) or access the mapped page itself. That way, we could easily corrupt memory or cause CPU exceptions by accident. So these two functions are not _safe_ in Rust terms. Thus we need to make them `unsafe` functions unless we find some clever solution.
+Well, they would calculate the address of the next table (which does not exist) and treat it as a page table. Either they construct an invalid address (if `XXX < 400`)[^fn-invalid-address] or access the mapped page itself. That way, we could easily corrupt memory or cause CPU exceptions by accident. So these two functions are not _safe_ in Rust terms. Thus we need to make them `unsafe` functions unless we find some clever solution.
+
+[^fn-invalid-address]: If the `XXX` part of the address is smaller than `0o400`, it's binary representation doesn't start with `1`. But the sign extension bits, which should be a copy of that bit, are `1` instead of `0`. Thus the address is not valid.
 
 ## Some Clever Solution
 We can use Rust's type system to statically guarantee that the methods can only be called on P4, P3, and P2 tables. The idea is to add a `Level` parameter to the `Table` type and implement the `next_table` methods only for level 4, 3, and 2.
@@ -354,7 +364,9 @@ impl<L> IndexMut<usize> for Table<L> where L: TableLevel {...}
 ```
 Now the `next_table` methods are only available for P4, P3, and P2 tables. But they have the incomplete return type `Table<???>` now. What should we fill in for the `???`?
 
-For a P4 table we would like to return a `Table<Level3>`, for a P3 table a `Table<Level2>`, and for a P2 table a `Table<Level1>`. So we want to return a table of the _next level_. So let's add a associated `NextLevel` type to the `HierachicalLevel` trait:
+For a P4 table we would like to return a `Table<Level3>`, for a P3 table a `Table<Level2>`, and for a P2 table a `Table<Level1>`. So we want to return a table of the _next level_.
+
+We can define the next level by adding an associated type to the `HierachicalLevel` trait:
 
 ```rust
 trait HierachicalLevel: TableLevel {
@@ -443,7 +455,7 @@ We use an unsafe block to convert the raw `P4` pointer to a reference. Then we u
 [Option::and_then]: https://doc.rust-lang.org/nightly/core/option/enum.Option.html#method.and_then
 
 ### Safety
-We would use an `unsafe` block to convert the raw `P4` pointer into a shared reference. It's safe because we don't create any `&mut` references to the table right now and don't switch the P4 table either.
+We use an `unsafe` block to convert the raw `P4` pointer into a shared reference. It's safe because we don't create any `&mut` references to the table right now and don't switch the P4 table either. But as soon as we do something like that, we have to revisit this method.
 
 ### Huge Pages
 
@@ -482,6 +494,8 @@ p3.and_then(|p3| {
 This function is much longer and more complex than the `translate_page` function itself. To avoid this complexity in the future, we will only work with standard 4KiB pages from now on.
 
 ## Mapping Pages
+TODO imports
+
 Let's add a function that maps a `Page` to some `Frame`:
 
 ```rust
@@ -521,14 +535,14 @@ We can use `unwrap()` here since the next table definitely exists.
 ### Safety
 We used an `unsafe` block in `map_to` to convert the raw `P4` pointer to a `&mut` reference. That's bad. It's now possible that the `&mut` reference is not exclusive, which breaks Rust's guarantees. It's only a matter time before we run into a data race. For example, imagine that one thread maps an entry to `frame_A` and another thread (on the same core) tries to map the same entry to `frame_B`.
 
-The problem is that there's no clear _owner_ for the page tables. So let's define the ownership!
+The problem is that there's no clear _owner_ for the page tables. So let's define page table ownership!
 
 ### Page Table Ownership
 We define the following:
 
 > A page table owns all of its subtables.
 
-We already obey this rule: To get a reference to a table, we need to lend it from its parent table through the `next_table` method. But who owns the P4 table?
+We already obey this rule: To get a reference to a table, we need to borrow it from its parent table through the `next_table` method. But who owns the P4 table?
 
 > The recursively mapped P4 table is owned by a `RecursivePageTable` struct.
 
@@ -543,6 +557,17 @@ We can't store the `Table<Level4>` directly because it needs to be at a special 
 
 [VGA text buffer]: http://os.phil-opp.com/printing-to-screen.html#the-text-buffer
 [Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
+
+Because the `RecursivePageTable` owns the unique recursive mapped P4 table, there must be only one `RecursivePageTable` instance. Thus we make the constructor function unsafe:
+
+```rust
+pub unsafe fn new() -> RecursivePageTable {
+    use self::table::P4;
+    RecursivePageTable {
+        p4: Unique::new(P4),
+    }
+}
+```
 
 We add some functions to get a P4 reference:
 
