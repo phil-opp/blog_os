@@ -13,16 +13,12 @@
 // limitations under the License.
 
 #![feature(no_std, lang_items)]
-#![feature(const_fn, unique, core_str_ext, iter_cmp, optin_builtin_traits)]
-#![feature(core_slice_ext)]
+#![feature(const_fn, unique, core_str_ext, iter_cmp)]
 #![no_std]
 
 extern crate rlibc;
 extern crate spin;
 extern crate multiboot2;
-extern crate x86;
-#[macro_use]
-extern crate bitflags;
 
 #[macro_use]
 mod vga_buffer;
@@ -61,23 +57,13 @@ pub extern fn rust_main(multiboot_information_address: usize) {
     let mut frame_allocator = memory::AreaFrameAllocator::new(kernel_start as usize,
         kernel_end as usize, multiboot_start, multiboot_end, memory_map_tag.memory_areas());
 
-
-    // println!("outer {}", {println!("inner"); "NO DEADLOCK"});
-    /*println!("{:?}", memory::paging::translate::translate(0));*/
-
-    println!("{:?}", memory::paging::translate::translate(0));
-    println!("{:?}", memory::paging::translate::translate(0x40000000));
-    println!("{:?}", memory::paging::translate::translate(0x40000000 - 1));
-    println!("{:?}", memory::paging::translate::translate(0xdeadbeaa000));
-    println!("{:?}", memory::paging::translate::translate(0xcafebeaf000));
-    memory::paging::test(&mut frame_allocator);
-    println!("{:x}", memory::paging::translate::translate(0xdeadbeaa000).unwrap());
-    println!("{:x}", memory::paging::translate::translate(0xdeadbeab000).unwrap());
-    println!("{:x}", memory::paging::translate::translate(0xdeadbeac000).unwrap());
-    println!("{:x}", memory::paging::translate::translate(0xdeadbead000).unwrap());
-    println!("{:x}", memory::paging::translate::translate(0xcafebeaf000).unwrap());
-
-
+    for i in 0.. {
+        use memory::FrameAllocator;
+        if let None = frame_allocator.allocate_frame() {
+            println!("allocated {} frames", i);
+            break;
+        }
+    }
 
     loop{}
 }

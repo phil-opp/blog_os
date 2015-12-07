@@ -42,11 +42,6 @@ start:
     jmp gdt64.code:long_mode_start
 
 setup_page_tables:
-    ; recursive map P4
-    mov eax, p4_table
-    or eax, 0b11 ; present + writable
-    mov [p4_table + 511 * 8], eax
-
     ; map first P4 entry to P3 table
     mov eax, p3_table
     or eax, 0b11 ; present + writable
@@ -156,7 +151,7 @@ p3_table:
 p2_table:
     resb 4096
 stack_bottom:
-    resb 4096 * 2
+    resb 4096
 stack_top:
 
 section .rodata

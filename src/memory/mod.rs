@@ -1,7 +1,5 @@
 pub use self::area_frame_allocator::AreaFrameAllocator;
-use self::paging::PhysicalAddress;
 
-pub mod paging;
 mod area_frame_allocator;
 
 pub const PAGE_SIZE: usize = 4096;
@@ -13,11 +11,7 @@ pub struct Frame {
 
 impl Frame {
     fn containing_address(address: usize) -> Frame {
-        Frame { number: address / PAGE_SIZE }
-    }
-
-    fn start_address(&self) -> PhysicalAddress {
-        self.number * PAGE_SIZE
+        Frame{ number: address / PAGE_SIZE }
     }
 }
 
