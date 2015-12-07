@@ -437,6 +437,8 @@ The other function, `translate_page`, looks like this:
 
 ```rust
 pub fn translate_page(page: Page) -> Option<Frame> {
+    use self::table::P4;
+
     let p3 = unsafe { &*P4 }.next_table(page.p4_index());
 
     let huge_page = || {
@@ -563,6 +565,9 @@ We already obey this rule: To get a reference to a table, we need to borrow it f
 We just defined some random owner for the P4 table. But it will solve our problems. So let's create it:
 
 ```rust
+use core::ptr::Unique;
+use self::table::{Table, Level4};
+
 pub struct RecursivePageTable {
     p4: Unique<Table<Level4>>,
 }
