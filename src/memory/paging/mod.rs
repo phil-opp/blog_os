@@ -1,5 +1,5 @@
 use core::ptr::Unique;
-use memory::{Frame, FrameAllocator};
+use memory::{PAGE_SIZE, Frame, FrameAllocator};
 use self::table::{Table, Level4};
 use self::entry::*;
 
@@ -30,7 +30,6 @@ pub fn test<A>(frame_allocator: &mut A)
     mapping::map(&Page::containing_address(0x0), PRESENT, frame_allocator);
 }
 
-pub const PAGE_SIZE: usize = 4096;
 const ENTRY_COUNT: usize = 512;
 
 pub type PhysicalAddress = usize;

@@ -1,7 +1,7 @@
-use super::{VirtualAddress, PhysicalAddress, Page, PAGE_SIZE, ENTRY_COUNT};
+use super::{VirtualAddress, PhysicalAddress, Page, ENTRY_COUNT};
 use super::table::P4;
 use super::entry::HUGE_PAGE;
-use memory::Frame;
+use memory::{PAGE_SIZE, Frame};
 
 pub fn translate(virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
     let offset = virtual_address % PAGE_SIZE;

@@ -13,7 +13,8 @@ TODO
 Let's create a basic `memory/paging/mod.rs` module:
 
 ```rust
-pub const PAGE_SIZE: usize = 4096;
+use memory::PAGE_SIZE;
+
 const ENTRY_COUNT: usize = 512;
 
 pub type PhysicalAddress = usize;
@@ -23,7 +24,7 @@ pub struct Page {
    number: usize,
 }
 ```
-We define constants for the page size and the number of entries per table. To make future function signatures more expressive, we can use the type aliases `PhysicalAddress` and `VirtualAddress`. The `Page` struct is similar to the `Frame` struct in the [previous post], but represents a virtual page instead of a physical frame.
+We import the `PAGE_SIZE` and define a constant for the number of entries per table. To make future function signatures more expressive, we can use the type aliases `PhysicalAddress` and `VirtualAddress`. The `Page` struct is similar to the `Frame` struct in the [previous post], but represents a virtual page instead of a physical frame.
 
 [previous post]: {{ page.previous.url }}
 
