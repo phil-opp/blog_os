@@ -449,9 +449,24 @@ pub fn translate_page(page: Page) -> Option<Frame> {
       .or_else(huge_page)
 }
 ```
-We use an unsafe block to convert the raw `P4` pointer to a reference. Then we use the [Option::and_then] function to go through the four table levels. If some entry along the way is `None`, we check if the page is a huge page through the (unimplemented) `huge_page` closure.
+We use an unsafe block to convert the raw `P4` pointer to a reference. Then we use the [Option::and_then] function to go through the four table levels. If some entry along the way is `None`, we check if the page is a huge page through the (unimplemented) `huge_page` closure. The `Page::p*_index` functions look like this:
 
 [Option::and_then]: https://doc.rust-lang.org/nightly/core/option/enum.Option.html#method.and_then
+
+```rust
+fn p4_index(&self) -> usize {
+    (self.number >> 27) & 0o777
+}
+fn p3_index(&self) -> usize {
+    (self.number >> 18) & 0o777
+}
+fn p2_index(&self) -> usize {
+    (self.number >> 9) & 0o777
+}
+fn p1_index(&self) -> usize {
+    (self.number >> 0) & 0o777
+}
+```
 
 ### Safety
 We use an `unsafe` block to convert the raw `P4` pointer into a shared reference. It's safe because we don't create any `&mut` references to the table right now and don't switch the P4 table either. But as soon as we do something like that, we have to revisit this method.
