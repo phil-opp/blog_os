@@ -1,9 +1,13 @@
 ---
 layout: post
-title: 'A Paging Module'
+title: 'Accessing and Modifying Page Tables'
 ---
 
 TODO
+
+In this post we will create a paging module, which uses recursive mapping to access and modify page tables.
+
+In this post we will create a paging module, which allows us to access and modify the 4-level page table. We will create functions to translate a virtual to a physical address.
 
 ## Paging
 _Paging_ is a memory management scheme that separates virtual and physical memory. The address space is split into equal sized _pages_ and _page tables_ specify which virtual page points to which physical page. For an extensive paging introduction take a look at the paging chapter ([PDF][paging chapter]) of the [Three Easy Pieces] OS book.
@@ -708,6 +712,7 @@ We can also free the P1, P2, or even P3 table when the last entry is freed. But 
 _Spoiler_: There is an ugly bug in this function, which we will find in the next section.
 
 ## Testing it
+TODO
 
 
 ## What's next?
