@@ -201,17 +201,17 @@ We will use another solution, which uses a trick called _recursive mapping_.
 ### Recursive Mapping
 The trick is to map the P4 table recursively: The last entry doesn't point to a P3 table, but to the P4 table itself. Through this entry, all page tables are mapped to an unique virtual address.
 
-![access P4 table through recursive paging]({{ site.url }}/images/recursive_mapping_access_p4.svg)
+![access P4 table through recursive paging](/images/recursive_mapping_access_p4.svg)
 
 To access for example the P4 table itself, we use the address that chooses the 511th P4 entry, the 511th P3 entry, the 511th P2 entry and the 511th P1 entry. Thus we choose the same P4 frame over and over again and finally end up on it, too. Through the offset (12 bits) we choose the desired entry.
 
-![access P3 table through recursive paging]({{ site.url }}/images/recursive_mapping_access_p3.svg)
+![access P3 table through recursive paging](/images/recursive_mapping_access_p3.svg)
 
 To access a P3 table, we do the same but choose the real P4 index instead of the fourth loop. So if we like to access the 42th P3 table, we use the address that chooses the 511th entry in the P4, P3, and P2 table, but the 42th P1 entry.
 
 When accessing a P2 table, we only loop two times and then choose entries that correspond to the P4 and P3 table of the desired P2 table. And accessing a P1 table just loops once and then uses the corresponding P4, P3, and P2 entries:
 
-![access P1 table through recursive paging]({{ site.url }}/images/recursive_mapping_access_p1.svg)
+![access P1 table through recursive paging](/images/recursive_mapping_access_p1.svg)
 
 So we can access and modify page tables of all levels by just setting one P4 entry once. It may seem a bit strange at first, but is a very clean and simple solution once you wrapped your head around it.
 
