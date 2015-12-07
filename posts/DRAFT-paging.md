@@ -714,3 +714,7 @@ _Spoiler_: There is an ugly bug in this function, which we will find in the next
 In the next post we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.
 
 Afterwards, we will use this paging module to build a heap allocator. This will allow us to use allocation and collection types such as `Box` and `Vec`.
+
+<small>Image sources: [^virtual_physical_translation_source]</small>
+
+[^virtual_physical_translation_source]: Image sources: Modified versions of an image from  [Wikipedia](https://commons.wikimedia.org/wiki/File:X86_Paging_64bit.svg). The modified files are licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.
