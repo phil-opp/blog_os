@@ -664,8 +664,7 @@ pub fn identity_map<A>(&mut self,
 ```
 
 ### Unmapping Pages
-
-TODO
+To unmap a page, we set the corresponding P1 entry to unused:
 
 ```rust
 fn unmap<A>(&mut self, page: Page, allocator: &mut A)
@@ -680,13 +679,15 @@ fn unmap<A>(&mut self, page: Page, allocator: &mut A)
                  .expect("mapping code does not support huge pages");
     let frame = p1[page.p1_index()].pointed_frame().unwrap();
     p1[page.p1_index()].set_unused();
-    unsafe { tlb::flush(page.start_address()) };
     // TODO free p(1,2,3) table if empty
     allocator.deallocate_frame(frame);
 }
 ```
-TODO
-Huge pages…
+The assertion ensures that the page is mapped. Thus the corresponding P1 table and frame must exist for a standard 4KiB page. We set the entry to unused and free the associated frame in the supplied frame allocator.
+
+We can also free the P1, P2, or even P3 table when the last entry is freed. But checking the whole table on every `unmap` would be very expensive. For now, we leave the `TODO` in place until we find a good solution. I'm open for suggestions :).
+
+_Spoiler_: There is an ugly bug in this function, which we will find in the next section.
 
 ## Testing it
 
