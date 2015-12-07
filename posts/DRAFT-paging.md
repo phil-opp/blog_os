@@ -672,7 +672,7 @@ fn unmap<A>(&mut self, page: Page, allocator: &mut A)
                  .next_table_mut(page.p4_index())
                  .and_then(|p3| p3.next_table_mut(page.p3_index()))
                  .and_then(|p2| p2.next_table_mut(page.p2_index()))
-                 .unwrap();
+                 .expect("mapping code does not support huge pages");
     let frame = p1[page.p1_index()].pointed_frame().unwrap();
     p1[page.p1_index()].set_unused();
     unsafe { tlb::flush(page.start_address()) };
