@@ -1,5 +1,7 @@
 pub use self::entry::*;
 use memory::{PAGE_SIZE, Frame, FrameAllocator};
+use self::table::{Table, Level4};
+use core::ptr::Unique;
 
 mod entry;
 mod table;
@@ -36,6 +38,24 @@ impl Page {
     }
     fn p1_index(&self) -> usize {
         (self.number >> 0) & 0o777
+    }
+}
+
+pub struct RecursivePageTable {
+    p4: Unique<Table<Level4>>,
+}
+
+impl RecursivePageTable {
+    pub unsafe fn new() -> RecursivePageTable {
+        RecursivePageTable { p4: Unique::new(table::P4) }
+    }
+
+    fn p4(&self) -> &Table<Level4> {
+        unsafe { self.p4.get() }
+    }
+
+    fn p4_mut(&mut self) -> &mut Table<Level4> {
+        unsafe { self.p4.get_mut() }
     }
 }
 
