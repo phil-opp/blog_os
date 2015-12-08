@@ -2,6 +2,8 @@ use memory::paging::entry::*;
 use memory::paging::ENTRY_COUNT;
 use core::ops::{Index, IndexMut};
 
+pub const P4: *mut Table = 0xffffffff_fffff000 as *mut _;
+
 pub struct Table {
     entries: [Entry; ENTRY_COUNT],
 }
