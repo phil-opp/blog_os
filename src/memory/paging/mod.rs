@@ -1,3 +1,5 @@
+mod entry;
+
 const ENTRY_COUNT: usize = 512;
 
 pub type PhysicalAddress = usize;

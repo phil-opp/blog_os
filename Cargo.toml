@@ -12,3 +12,7 @@ spin = "0.3.4"
 
 [dependencies.multiboot2]
 git = "https://github.com/phil-opp/multiboot2-elf64"
+
+[dependencies.bitflags]
+git = "https://github.com/phil-opp/bitflags.git"
+branch = "no_std"
