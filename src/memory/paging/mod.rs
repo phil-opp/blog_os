@@ -1,4 +1,5 @@
-use memory::{PAGE_SIZE, Frame};
+pub use self::entry::*;
+use memory::{PAGE_SIZE, Frame, FrameAllocator};
 
 mod entry;
 mod table;
@@ -38,14 +39,13 @@ impl Page {
     }
 }
 
-pub fn translate(virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
+pub unsafe fn translate(virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
     let offset = virtual_address % PAGE_SIZE;
     translate_page(Page::containing_address(virtual_address))
         .map(|frame| frame.number * PAGE_SIZE + offset)
 }
 
-fn translate_page(page: Page) -> Option<Frame> {
-    use self::entry::HUGE_PAGE;
+unsafe fn translate_page(page: Page) -> Option<Frame> {
 
     let p3 = unsafe { &*table::P4 }.next_table(page.p4_index());
 
@@ -82,4 +82,16 @@ fn translate_page(page: Page) -> Option<Frame> {
       .and_then(|p2| p2.next_table(page.p2_index()))
       .and_then(|p1| p1[page.p1_index()].pointed_frame())
       .or_else(huge_page)
+}
+
+pub unsafe fn map_to<A>(page: Page, frame: Frame, flags: EntryFlags, allocator: &mut A)
+    where A: FrameAllocator
+{
+    let p4 = unsafe { &mut *table::P4 };
+    let mut p3 = p4.next_table_create(page.p4_index(), allocator);
+    let mut p2 = p3.next_table_create(page.p3_index(), allocator);
+    let mut p1 = p2.next_table_create(page.p2_index(), allocator);
+
+    assert!(p1[page.p1_index()].is_unused());
+    p1[page.p1_index()].set(frame, flags | PRESENT);
 }
