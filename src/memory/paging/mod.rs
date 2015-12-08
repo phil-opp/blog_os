@@ -1,4 +1,5 @@
 mod entry;
+mod table;
 
 const ENTRY_COUNT: usize = 512;
 
