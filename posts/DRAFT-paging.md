@@ -791,6 +791,32 @@ Some = None
 ```
 The last line is wrong. But why?
 
+In fact, all addresses above `344 * 512 * 4096` seem to get translated to `None`. But even worse, there are some wrong translations, too. For example, on my machine `357 * 512 * 4096` translates to roughly `255TiB`:
+
+```
+Some(280735973961728)
+```
+Something is terribly wrong here. But it's not our code.
+
+The reason for this bug is a silent stack overflow. Remember, our `.bss` section in the `boot.asm` file looks like this:
+
+```nasm
+section .bss
+align 4096
+p4_table:
+    resb 4096
+p3_table:
+    resb 4096
+p2_table:
+    resb 4096
+stack_bottom:
+    resb 4096
+stack_top:
+```
+So a stack overflow overwrites the P2 table, starting at the last entry. But the CPU still uses the memory as page table entries. And if the stack bytes contain the present byte, it seems to point to a frame and `translate` returns a (wrong) `Some`.
+
+To fix it, we double the stack size to `4096 * 2`. Now the last byte gets translated to `Some(1073741823)` correctly. To avoid this kind of bug in the future, we need to add a guard page to the stack, which causes an exception on stack overflow.  We will do that in the next post when we remap the kernel.
+
 ## What's next?
 In the next post we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.
 
