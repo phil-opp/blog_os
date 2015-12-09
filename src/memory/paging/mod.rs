@@ -112,4 +112,18 @@ impl RecursivePageTable {
         assert!(p1[page.p1_index()].is_unused());
         p1[page.p1_index()].set(frame, flags | PRESENT);
     }
+
+    pub fn map<A>(&mut self, page: Page, flags: EntryFlags, allocator: &mut A)
+        where A: FrameAllocator
+    {
+        let frame = allocator.allocate_frame().expect("out of memory");
+        self.map_to(page, frame, flags, allocator)
+    }
+
+    pub fn identity_map<A>(&mut self, frame: Frame, flags: EntryFlags, allocator: &mut A)
+        where A: FrameAllocator
+    {
+        let page = Page::containing_address(frame.start_address());
+        self.map_to(page, frame, flags, allocator)
+    }
 }
