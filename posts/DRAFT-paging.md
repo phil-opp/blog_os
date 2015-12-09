@@ -3,9 +3,11 @@ layout: post
 title: 'Accessing and Modifying Page Tables'
 ---
 
-In this post we will create a paging module, which allows us to access and modify the 4-level page table. We will create functions to translate a virtual to a physical address. TODO more introduction
+In this post we will create a paging module, which allows us to access and modify the 4-level page table. We will explore recursive page table mapping and use some Rust features to make it safe. Finally we will create functions to translate virtual addresses and to map and unmap pages.
 
-TODO current Rust nightly version, link to github repo, etc.
+You can find the source code and this post itself on [Github][source repository]. Please file an issue there if you have any problems or improvement suggestions. There is also a comment section at the end of this page. Note that this post requires a current Rust nightly.
+
+[source repository]: https://github.com/phil-opp/blog_os/tree/paging_module
 
 ## Paging
 _Paging_ is a memory management scheme that separates virtual and physical memory. The address space is split into equal sized _pages_ and _page tables_ specify which virtual page points to which physical frame. For an extensive paging introduction take a look at the paging chapter ([PDF][paging chapter]) of the [Three Easy Pieces] OS book.
@@ -27,10 +29,8 @@ To translate an address, the CPU reads the P4 address from the CR3 register. The
 
 The P4 entry points to a P3 table, where the next 9 bits of the address are used to select an entry. The P3 entry then points to a P2 table and the P2 entry points to a P1 table. The P1 entry, which is specified through bits 12–20, finally points to the physical frame.
 
-So let's create a Rust module for it! (TODO better transition)
-
 ## A Basic Paging Module
-We start by creating a basic `memory/paging/mod.rs` module:
+Let's create a basic paging module in `memory/paging/mod.rs`:
 
 ```rust
 use memory::PAGE_SIZE; // needed later
@@ -548,9 +548,7 @@ p3.and_then(|p3| {
 This function is much longer and more complex than the `translate_page` function itself. To avoid this complexity in the future, we will only work with standard 4KiB pages from now on.
 
 ## Mapping Pages
-TODO introduction/motivation
-
-Let's add a function that maps a `Page` to some `Frame`:
+Let's add a function that modifies the page tables to map a `Page` to a `Frame`:
 
 ```rust
 pub use self::entry::*;
