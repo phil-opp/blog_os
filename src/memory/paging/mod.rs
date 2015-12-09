@@ -16,7 +16,7 @@ pub struct Page {
 }
 
 impl Page {
-    fn containing_address(address: VirtualAddress) -> Page {
+    pub fn containing_address(address: VirtualAddress) -> Page {
         assert!(address < 0x0000_8000_0000_0000 || address >= 0xffff_8000_0000_0000,
                 "invalid address: 0x{:x}",
                 address);
@@ -147,12 +147,24 @@ impl RecursivePageTable {
 pub fn test_paging<A>(allocator: &mut A)
     where A: FrameAllocator
 {
-    let page_table = unsafe { RecursivePageTable::new() };
+    let mut page_table = unsafe { RecursivePageTable::new() };
 
+    // test translate
     println!("Some = {:?}", page_table.translate(0));
     println!("Some = {:?}", page_table.translate(4096)); // second P1 entry
     println!("Some = {:?}", page_table.translate(512 * 4096)); // second P2 entry
     println!("Some = {:?}", page_table.translate(300 * 512 * 4096)); // 300th P2 entry
     println!("None = {:?}", page_table.translate(512 * 512 * 4096)); // second P3 entry
     println!("Some = {:?}", page_table.translate(512 * 512 * 4096 - 1)); // last mapped byte
+
+    // test map_to
+    let addr = 42 * 512 * 512 * 4096; // 42th P3 entry
+    let page = Page::containing_address(addr);
+    let frame = allocator.allocate_frame().expect("no more frames");
+    println!("None = {:?}, map to {:?}",
+             page_table.translate(addr),
+             frame);
+    page_table.map_to(page, frame, EntryFlags::empty(), allocator);
+    println!("Some = {:?}", page_table.translate(addr));
+    println!("next free frame: {:?}", allocator.allocate_frame());
 }

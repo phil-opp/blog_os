@@ -817,6 +817,31 @@ So a stack overflow overwrites the P2 table, starting at the last entry. But the
 
 To fix it, we double the stack size to `4096 * 2`. Now the last byte gets translated to `Some(1073741823)` correctly. To avoid this kind of bug in the future, we need to add a guard page to the stack, which causes an exception on stack overflow.  We will do that in the next post when we remap the kernel.
 
+### map_to
+Let's test the `map_to` function:
+
+```rust
+let addr = 42 * 512 * 512 * 4096; // 42th P3 entry
+let page = Page::containing_address(addr);
+let frame = allocator.allocate_frame().expect("no more frames");
+println!("None = {:?}, map to {:?}",
+         page_table.translate(addr),
+         frame);
+page_table.map_to(page, frame, EntryFlags::empty(), allocator);
+println!("Some = {:?}", page_table.translate(addr));
+println!("next free frame: {:?}", allocator.allocate_frame());
+```
+We just map some random page to a free frame. To be able to borrow the page table as `&mut`, we need to make it mutable.
+
+You should see output similar to this:
+
+```
+None = None, map to Frame { number: 0 }
+Some = Some(0)
+next free frame: Some(Frame { number: 3 })
+```
+It's frame 0 because it's the first frame returned by the frame allocator. Since we map the 42th P3 entry, the mapping code needs to create a P2 and a P1 table. So the next free frame returned by the allocator is frame 3.
+
 ## What's next?
 In the next post we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.
 
