@@ -207,14 +207,14 @@ pub fn zero(&mut self) {
 
 Now we can read page tables and retrieve the mapping information. We can also update them through the `IndexMut` trait and the `Entry::set` method. But how do we get references to the various page tables?
 
-We could read the `CR3` register to get the physical address of the P4 table and read its entries to get the P3 addresses. The P3 entries then point to the P2 tables and so on. But this method only works for identity-mapped pages. But in the future we will create new page tables, which aren't in the identity-mapped area anymore. Since we can't access them through their physical address, we need a way to map them to virtual addresses.
+We could read the `CR3` register to get the physical address of the P4 table and read its entries to get the P3 addresses. The P3 entries then point to the P2 tables and so on. But this method only works for identity-mapped pages. In the future we will create new page tables, which aren't in the identity-mapped area anymore. Since we can't access them through their physical address, we need a way to map them to virtual addresses.
 
 ## Mapping Page Tables
 So how do we map the page tables itself? We don't have that problem for the current P4, P3, and P2 table since they are part of the identity-mapped area, but we need a way to access future tables, too.
 
-One solution is to identity map all page table. That way we would not need to differentiate virtual and physical addresses and could easily access the tables. But it clutters the virtual address space and increases fragmentation. And it makes creating page tables much more complicated since we need a physical frame whose corresponding page isn't already used for something else.
+One solution is to identity map all page tables. That way we would not need to differentiate virtual and physical addresses and could easily access the tables. But it clutters the virtual address space and increases fragmentation. And it makes creating page tables much more complicated since we need a physical frame whose corresponding page isn't already used for something else.
 
-An alternative solution is to map the page tables only temporary. So to read/write a page table, we would map it to some free virtual address. We could use a small pool of such virtual addresses and reuse them for various tables. This method occupies only few virtual addresses and is thus a good solution for 32-bit systems, which have small address spaces. But it makes things much more complicated since we need to temporary map up to 4 tables to access a single page. And the temporary mapping requires modification of other page tables, which need to be mapped, too.
+An alternative solution is to map the page tables only temporary. To read/write a page table, we would map it to some free virtual address until we're done. We could use a small pool of such virtual addresses and reuse them for various tables. This method occupies only few virtual addresses and thus is a good solution for 32-bit systems, which have small address spaces. But it makes things much more complicated since we need to temporary map up to 4 tables to access a single page. And the temporary mapping requires modification of other page tables, which need to be mapped, too.
 
 We will solve the problem in another way using a trick called _recursive mapping_.
 
@@ -239,10 +239,10 @@ So we can access and modify page tables of all levels by just setting one P4 ent
 
 By using recursive mapping, each page table is accessible through an unique virtual address. The math checks out, too: If all page tables are used, there is 1 P4 table, 511 P3 tables (the last entry is used for the recursive mapping), `511*512` P2 tables, and `511*512*512` P1 tables. So there are `134217728` page tables altogether. Each page table occupies 4KiB, so we need `134217728 * 4KiB = 512GiB` to store them. That's exactly the amount of memory that can be accessed through one P4 entry since `4KiB per page * 512 P1 entries * 512 P2 entries * 512 P3 entries = 512GiB`.
 
-Of course recursive mapping has some disadvantages, too. It occupies a whole P4 and thus 512GiB of the virtual address space. But since we're in long mode and have a 48-bit address space, there are still 225.5TiB left. The bigger problem is that only the active table can be modified by default. To access another table, the recursive entry needs to be replaced temporary. We will tackle this problem in the next post when we switch to a new page table.
+Of course recursive mapping has some disadvantages, too. It occupies a P4 entry and thus 512GiB of the virtual address space. But since we're in long mode and have a 48-bit address space, there are still 225.5TiB left. The bigger problem is that only the active table can be modified by default. To access another table, the recursive entry needs to be replaced temporary. We will tackle this problem in the next post when we switch to a new page table.
 
 ### Implementation
-To map the P4 table recursively, we just need to point the 511th entry to the table itself. Of course we could do it in Rust, but it would require some unsafe pointer fiddling. It's easier to just add some lines to our boot assembly:
+To map the P4 table recursively, we just need to point the 511th entry to the table itself. Of course we could do it in Rust, but it would require some fiddling with unsafe pointers. It's easier to just add some lines to our boot assembly:
 
 ```nasm
 mov eax, p4_table
@@ -321,7 +321,7 @@ Well, they would calculate the address of the next table (which does not exist) 
 [^fn-invalid-address]: If the `XXX` part of the address is smaller than `0o400`, it's binary representation doesn't start with `1`. But the sign extension bits, which should be a copy of that bit, are `1` instead of `0`. Thus the address is not valid.
 
 ## Some Clever Solution
-We can use Rust's type system to statically guarantee that the methods can only be called on P4, P3, and P2 tables. The idea is to add a `Level` parameter to the `Table` type and implement the `next_table` methods only for level 4, 3, and 2.
+We can use Rust's type system to statically guarantee that the `next_table` methods can only be called on P4, P3, and P2 tables, but not on a P1 table. The idea is to add a `Level` parameter to the `Table` type and implement the `next_table` methods only for level 4, 3, and 2.
 
 To model the levels we use a trait and empty enums:
 
@@ -353,12 +353,14 @@ impl HierachicalLevel for Level2 {}
 Now we add the level parameter to the `Table` type:
 
 ```rust
+use core::marker::PhantomData;
+
 pub struct Table<L: TableLevel> {
     entries: [Entry; ENTRY_COUNT],
     level: PhantomData<L>,
 }
 ```
-We need to add a [PhantomData] field because unused type parameters are not allowed in Rust. (You need to add a `core::marker::PhantomData` import.)
+We need to add a [PhantomData] field because unused type parameters are not allowed in Rust.
 
 [PhantomData]: https://doc.rust-lang.org/core/marker/struct.PhantomData.html#unused-type-parameters
 
@@ -485,7 +487,9 @@ fn translate_page(page: Page) -> Option<Frame> {
       .or_else(huge_page)
 }
 ```
-We use an unsafe block to convert the raw `P4` pointer to a reference. Then we use the [Option::and_then] function to go through the four table levels. If some entry along the way is `None`, we check if the page is a huge page through the (unimplemented) `huge_page` closure. The `Page::p*_index` functions look like this:
+We use an unsafe block to convert the raw `P4` pointer to a reference. Then we use the [Option::and_then] function to go through the four table levels. If some entry along the way is `None`, we check if the page is a huge page through the (unimplemented) `huge_page` closure.
+
+The `Page::p*_index` functions return the different table indexes. They look like this:
 
 [Option::and_then]: https://doc.rust-lang.org/nightly/core/option/enum.Option.html#method.and_then
 
@@ -544,7 +548,7 @@ p3.and_then(|p3| {
 This function is much longer and more complex than the `translate_page` function itself. To avoid this complexity in the future, we will only work with standard 4KiB pages from now on.
 
 ## Mapping Pages
-TODO imports
+TODO introduction/motivation
 
 Let's add a function that maps a `Page` to some `Frame`:
 
@@ -630,7 +634,7 @@ impl RecursivePageTable {
 }
 ```
 
-We add some functions to get a P4 reference:
+We add some methods to get P4 references:
 
 ```rust
 fn p4(&self) -> &Table<Level4> {
@@ -642,7 +646,7 @@ fn p4_mut(&mut self) -> &mut Table<Level4> {
 }
 ```
 
-Since we will only create valid P4 pointers, the `unsafe` blocks are safe. However, we don't make these functions public since they could be used to make page tables invalid. Only the higher level functions (such as `translate` or `map_to`) should be usable from other modules.
+Since we will only create valid P4 pointers, the `unsafe` blocks are safe. However, we don't make these functions public since they can be used to make page tables invalid. Only the higher level functions (such as `translate` or `map_to`) should be usable from other modules.
 
 Now we can make the `map_to` and `translate` functions safe by making them methods of `RecursivePageTable`:
 
@@ -729,7 +733,7 @@ fn unmap<A>(&mut self, page: Page, allocator: &mut A)
 ```
 The assertion ensures that the page is mapped. Thus the corresponding P1 table and frame must exist for a standard 4KiB page. We set the entry to unused and free the associated frame in the supplied frame allocator.
 
-We can also free the P1, P2, or even P3 table when the last entry is freed. But checking the whole table on every `unmap` would be very expensive. For now, we leave the `TODO` in place until we find a good solution. I'm open for suggestions :).
+We can also free the P1, P2, or even P3 table when the last entry is freed. But checking the whole table on every `unmap` would be very expensive. So we leave the `TODO` in place until we find a good solution. I'm open for suggestions :).
 
 _Spoiler_: There is an ugly bug in this function, which we will find in the next section.
 
