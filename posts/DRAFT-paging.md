@@ -860,7 +860,23 @@ println!("{:#x}", unsafe{
 ```
 Since we don't zero the mapped pages, the output is random. For me, it's `0xf000ff53f000ff53`.
 
-If `unmap` worked correctly, reading it again after unmapping should cause a page fault. But it doesn't. Instead, it just prints the same number again.
+If `unmap` worked correctly, reading it again after unmapping should cause a page fault. But it doesn't. Instead, it just prints the same number again. When we remove the first read, we get the desired page fault (i.e. QEMU reboots again and again). So this seems to be some cache issue.
+
+An x86 processor has many different caches because always accessing the main memory would be very slow. Most of these caches are completely _transparent_. That means everything works exactly the same as without them, it's just much faster. But there is one cache, that needs to be updated manually: the _translation lookaside buffer_.
+
+The translation lookaside buffer, or TLB, caches the translation of virtual to physical addresses. It's filled automatically when a page is accessed. But it's not updated transparently when the mapping of a page changes. This is the reason that we still can access the page even through we unmapped it in the page table.
+
+So to fix our `unmap` function, we need to remove the cached translation from the TLB. We can use Gerd Zellweger's x86 crate to do this easily. To add it, append `x86 = "0.5.0"` to the dependency section in the `Cargo.toml`. Then we can use it to fix `unmap`:
+
+```rust
+...
+  p1[page.p1_index()].set_unused();
+  unsafe { ::x86::tlb::flush(page.start_address() )};
+  // TODO free p(1,2,3) table if empty
+  //allocator.deallocate_frame(frame);
+}
+```
+Now the desired page fault occurs even when we access the page before.
 
 ## What's next?
 In the next post we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.

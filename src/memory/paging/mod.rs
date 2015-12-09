@@ -139,6 +139,7 @@ impl RecursivePageTable {
                      .expect("mapping code does not support huge pages");
         let frame = p1[page.p1_index()].pointed_frame().unwrap();
         p1[page.p1_index()].set_unused();
+        unsafe { ::x86::tlb::flush(page.start_address() )};
         // TODO free p(1,2,3) table if empty
         //allocator.deallocate_frame(frame);
     }
@@ -174,7 +175,4 @@ pub fn test_paging<A>(allocator: &mut A)
     });
     page_table.unmap(Page::containing_address(addr), allocator);
     println!("None = {:?}", page_table.translate(addr));
-    println!("{:#x}", unsafe {
-        *(Page::containing_address(addr).start_address() as *const u64)
-    });
 }
