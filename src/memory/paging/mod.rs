@@ -143,3 +143,9 @@ impl RecursivePageTable {
         allocator.deallocate_frame(frame);
     }
 }
+
+pub fn test_paging<A>(allocator: &mut A)
+    where A: FrameAllocator
+{
+    let page_table = unsafe { RecursivePageTable::new() };
+}

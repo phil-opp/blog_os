@@ -738,8 +738,29 @@ We can also free the P1, P2, or even P3 table when the last entry is freed. But 
 _Spoiler_: There is an ugly bug in this function, which we will find in the next section.
 
 ## Testing it
-TODO
+To test it, we add a `test_paging` function in `memory/paging/mod.rs`:
 
+```rust
+pub fn test_paging<A>(allocator: &mut A)
+    where A: FrameAllocator
+{
+    let page_table = unsafe { RecursivePageTable::new() };
+
+    // test it
+}
+```
+We borrow the frame allocator since we will need it for the mapping functions. To be able to call that function from main, we need to reexport it in `memory/mod.rs`:
+
+```rust
+// in memory/mod.rs
+pub use self::paging::test_paging;
+
+// lib.rs
+let mut frame_allocator = ...;
+memory::test_paging(&mut frame_allocator);
+```
+
+TODO
 
 ## What's next?
 In the next post we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.
