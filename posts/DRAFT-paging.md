@@ -878,6 +878,16 @@ So to fix our `unmap` function, we need to remove the cached translation from th
 ```
 Now the desired page fault occurs even when we access the page before.
 
+## Conclusion
+This post has become pretty long. So let's summarize what we've done:
+
+- we created a paging module and modeled page tables plus entries
+- we mapped the P4 page recursively and created `next_table` methods
+- we used empty enums and associated types to make the `next_table` functions safe
+- we wrote a function to translate virtual to physical addresses
+- we created safe functions to map and unmap pages
+- and we fixed stack overflow and TLB related bugs
+
 ## What's next?
 In the next post we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.
 
