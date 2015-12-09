@@ -760,7 +760,36 @@ let mut frame_allocator = ...;
 memory::test_paging(&mut frame_allocator);
 ```
 
-TODO
+### translate
+First, we translate some addresses:
+
+```rust
+// address 0 is mapped
+println!("Some = {:?}", page_table.translate(0));
+ // second P1 entry
+println!("Some = {:?}", page_table.translate(4096));
+// second P2 entry
+println!("Some = {:?}", page_table.translate(512 * 4096));
+// 300th P2 entry
+println!("Some = {:?}", page_table.translate(300 * 512 * 4096));
+// second P3 entry
+println!("None = {:?}", page_table.translate(512 * 512 * 4096));
+// last mapped byte
+println!("Some = {:?}", page_table.translate(512 * 512 * 4096 - 1));
+```
+Currently, the first GiB of the address space is identity-mapped. Thus all addresses in this area should translate to `Some(x)`, where `x` is the virtual address. Only the second last address, `512 * 512 * 4096`, is not in that area and should resolve to `None`.
+
+But the output shows two `None` lines:
+
+```
+Some = Some(0)
+Some = Some(4096)
+Some = Some(2097152)
+Some = Some(629145600)
+None = None
+Some = None
+```
+The last line is wrong. But why?
 
 ## What's next?
 In the next post we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.

@@ -148,4 +148,11 @@ pub fn test_paging<A>(allocator: &mut A)
     where A: FrameAllocator
 {
     let page_table = unsafe { RecursivePageTable::new() };
+
+    println!("Some = {:?}", page_table.translate(0));
+    println!("Some = {:?}", page_table.translate(4096)); // second P1 entry
+    println!("Some = {:?}", page_table.translate(512 * 4096)); // second P2 entry
+    println!("Some = {:?}", page_table.translate(300 * 512 * 4096)); // 300th P2 entry
+    println!("None = {:?}", page_table.translate(512 * 512 * 4096)); // second P3 entry
+    println!("Some = {:?}", page_table.translate(512 * 512 * 4096 - 1)); // last mapped byte
 }
