@@ -8,7 +8,7 @@ In this post we will create a paging module, which allows us to access and modif
 TODO current Rust nightly version, link to github repo, etc.
 
 ## Paging
-_Paging_ is a memory management scheme that separates virtual and physical memory. The address space is split into equal sized _pages_ and _page tables_ specify which virtual page points to which physical page. For an extensive paging introduction take a look at the paging chapter ([PDF][paging chapter]) of the [Three Easy Pieces] OS book.
+_Paging_ is a memory management scheme that separates virtual and physical memory. The address space is split into equal sized _pages_ and _page tables_ specify which virtual page points to which physical frame. For an extensive paging introduction take a look at the paging chapter ([PDF][paging chapter]) of the [Three Easy Pieces] OS book.
 
 [paging chapter]: http://pages.cs.wisc.edu/~remzi/OSTEP/vm-paging.pdf
 [Three Easy Pieces]: http://pages.cs.wisc.edu/~remzi/OSTEP/
@@ -25,7 +25,7 @@ To translate an address, the CPU reads the P4 address from the CR3 register. The
 
 ![translation of virtual to physical addresses in 64 bit mode](/images/X86_Paging_64bit.svg)
 
-The P4 entry points to a P3 table, where the next 9 bits of the address are used to select an entry. The P3 entry then points to a P2 table and the P2 entry points to a P1 table. The P1 entry, which is specified through bits 12–20, finally points to the physical page.
+The P4 entry points to a P3 table, where the next 9 bits of the address are used to select an entry. The P3 entry then points to a P2 table and the P2 entry points to a P1 table. The P1 entry, which is specified through bits 12–20, finally points to the physical frame.
 
 So let's create a Rust module for it! (TODO better transition)
 
@@ -737,7 +737,7 @@ We can also free the P1, P2, or even P3 table when the last entry is freed. But 
 
 _Spoiler_: There is an ugly bug in this function, which we will find in the next section.
 
-## Testing it
+## Testing and Bugfixing
 To test it, we add a `test_paging` function in `memory/paging/mod.rs`:
 
 ```rust
@@ -854,7 +854,7 @@ It causes a panic since we call the unimplemented `deallocate_frame` method in `
 Let's read something from the mapped page (of course before we unmap it again):
 
 ```rust
-println!("{:#x}", unsafe{
+println!("{:#x}", unsafe {
     *(Page::containing_address(addr).start_address() as *const u64)
 });
 ```
