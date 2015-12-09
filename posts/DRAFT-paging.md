@@ -842,6 +842,26 @@ next free frame: Some(Frame { number: 3 })
 ```
 It's frame 0 because it's the first frame returned by the frame allocator. Since we map the 42th P3 entry, the mapping code needs to create a P2 and a P1 table. So the next free frame returned by the allocator is frame 3.
 
+### unmap
+To test the `unmap` function, we unmap the test page so that it translates to `None` again:
+
+```rust
+page_table.unmap(Page::containing_address(addr), allocator);
+println!("None = {:?}", page_table.translate(addr));
+```
+It causes a panic since we call the unimplemented `deallocate_frame` method in `unwrap`. If we comment this call out, it works without problems. But there is some bug in this function nevertheless.
+
+Let's read something from the mapped page (of course before we unmap it again):
+
+```rust
+println!("{:#x}", unsafe{
+    *(Page::containing_address(addr).start_address() as *const u64)
+});
+```
+Since we don't zero the mapped pages, the output is random. For me, it's `0xf000ff53f000ff53`.
+
+If `unmap` worked correctly, reading it again after unmapping should cause a page fault. But it doesn't. Instead, it just prints the same number again.
+
 ## What's next?
 In the next post we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.
 
