@@ -34,12 +34,12 @@ impl<L> Table<L> where L: HierachicalLevel
 
     pub fn next_table(&self, index: usize) -> Option<&Table<L::NextLevel>> {
         self.next_table_address(index)
-            .map(|t| unsafe { &*(t as *const _) })
+            .map(|address| unsafe { &*(address as *const _) })
     }
 
     pub fn next_table_mut(&mut self, index: usize) -> Option<&mut Table<L::NextLevel>> {
         self.next_table_address(index)
-            .map(|t| unsafe { &mut *(t as *mut _) })
+            .map(|address| unsafe { &mut *(address as *mut _) })
     }
 
     pub fn next_table_create<A>(&mut self,

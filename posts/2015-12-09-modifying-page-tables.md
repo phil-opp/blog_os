@@ -296,12 +296,12 @@ To convert the address into references, we add two functions:
 ```rust
 pub fn next_table(&self, index: usize) -> Option<&Table> {
     self.next_table_address(index)
-        .map(|t| unsafe { &*(t as *const _) })
+        .map(|address| unsafe { &*(address as *const _) })
 }
 
 pub fn next_table_mut(&mut self, index: usize) -> Option<&mut Table> {
     self.next_table_address(index)
-        .map(|t| unsafe { &mut *(t as *mut _) })
+        .map(|address| unsafe { &mut *(address as *mut _) })
 }
 ```
 We convert the address into raw pointers and then convert them into references in `unsafe` blocks. Now we can start at the `P4` constant and use these functions to access the lower tables. And we don't even need `unsafe` blocks to do it!
