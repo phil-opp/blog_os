@@ -273,41 +273,27 @@ Through `objdump -D` we disassemble our whole kernel and `grep` picks the releva
 The rough translation of this cryptic definition is: _If SSE isn't enabled_. So apparently Rust uses SSE instructions by default and we didn't enable SSE before. So the fix for this bug is enabling SSE.
 
 ### Enabling SSE
-To enable SSE, assembly code is needed again. We want to add a function that tests if SSE is available and enables it then. Else we want to print an error message. But we can't use our existing `error` procedure because it uses (now invalid) 32-bit instructions. So we need a new one (in `long_mode_init.asm`):
+To enable SSE, assembly code is needed again. We want to add a function that tests if SSE is available and enables it then. Else we want to print an error message.
 
-```nasm
-; Prints `ERROR: ` and the given error code to screen and hangs.
-; parameter: error code (in ascii) in al
-error:
-    mov rbx, 0x4f4f4f524f524f45
-    mov [0xb8000], rbx
-    mov rbx, 0x4f204f204f3a4f52
-    mov [0xb8008], rbx
-    mov byte [0xb800e], al
-    hlt
-    jmp error
-```
-It's the nearly the same as the 32-bit procedure in the [previous post][32-bit error function] (instead of `ERR:` we print `ERROR:` here).
-
-Now we can add a function that checks for SSE and enables it:
+We add it to the `boot.asm` file:
 
 ```nasm
 ; Check for SSE and enable it. If it's not supported throw error "a".
 setup_SSE:
     ; check for SSE
-    mov rax, 0x1
+    mov eax, 0x1
     cpuid
     test edx, 1<<25
     jz .no_SSE
 
     ; enable SSE
-    mov rax, cr0
+    mov eax, cr0
     and ax, 0xFFFB      ; clear coprocessor emulation CR0.EM
     or ax, 0x2          ; set coprocessor monitoring  CR0.MP
-    mov cr0, rax
-    mov rax, cr4
+    mov cr0, eax
+    mov eax, cr4
     or ax, 3 << 9       ; set CR4.OSFXSR and CR4.OSXMMEXCPT at the same time
-    mov cr4, rax
+    mov cr4, eax
 
     ret
 .no_SSE:
@@ -316,7 +302,7 @@ setup_SSE:
 ```
 The code is from the great [OSDev Wiki][osdev sse] again. Notice that it sets/unsets exactly the bits that can cause the `Invalid Opcode` exception.
 
-When we insert a `call setup_SSE` right before calling `rust_main`, our Rust code will finally work.
+When we insert a `call setup_SSE` somewhere in the `start` function (for example after `call enable_paging`), our Rust code will finally work.
 
 [32-bit error function]: {{ page.previous.url }}#some-tests
 [osdev sse]: http://wiki.osdev.org/SSE#Checking_for_SSE
