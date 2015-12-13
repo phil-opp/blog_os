@@ -4,7 +4,7 @@ title: 'Entering Long Mode'
 redirect_from: "/2015/08/25/entering-longmode/"
 updated: 2015-10-29 00:00:00 +0000
 ---
-In the [previous post] we created a minimal multiboot kernel. It just prints `OK` and hangs. The goal is to extend it and call 64-bit [Rust] code. But the CPU is currently in [protected mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to setup _Paging_ and switch to the 64-bit [long mode] first.
+In the [previous post] we created a minimal multiboot kernel. It just prints `OK` and hangs. The goal is to extend it and call 64-bit [Rust] code. But the CPU is currently in [protected mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to set up _Paging_ and switch to the 64-bit [long mode] first.
 
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions, or issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
@@ -209,7 +209,7 @@ Bit(s)                | Name | Meaning
 52-62 | available | can be used freely by the OS
 63 | no execute | forbid executing code on this page (the NXE bit in the EFER register must be set)
 
-### Setup Identity Paging
+### Set Up Identity Paging
 When we switch to long mode, paging will be activated automatically. The CPU will then try to read the instruction at the following address, but this address is now a virtual address. So we need to do _identity mapping_, i.e. map a physical address to the same virtual address.
 
 The `huge page` bit is now very useful to us. It creates a 2MiB (when used in P2) or even a 1GiB page (when used in P3). So we could map the first _gigabytes_ of the kernel with only one P4 and one P3 table by using 1GiB pages. Unfortunately 1GiB pages are relatively new feature, for example Intel introduced it 2010 in the [Westmere architecture]. Therefore we will use 2MiB pages instead to make our kernel compatible to older computers, too.
@@ -241,7 +241,7 @@ The `resb` command reserves the specified amount of bytes without initializing t
 When GRUB creates the `.bss` section in memory, it will initialize it to `0`. So the `p4_table` is already valid (it contains 512 non-present entries) but not very useful. To be able to map 2MiB pages, we need to link P4's first entry to the `p3_table` and P3's first entry to the the `p2_table`:
 
 ```nasm
-setup_page_tables:
+set_up_page_tables:
     ; map first P4 entry to P3 table
     mov eax, p3_table
     or eax, 0b11 ; present + writable
@@ -260,7 +260,7 @@ We just set the present and writable bits (`0b11` is a binary number) in the ali
 Now we need to map P2's first entry to a huge page starting at 0, P2's second entry to a huge page starting at 2MiB, P2's third entry to a huge page starting at 4MiB, and so on. It's time for our first (and only) assembly loop:
 
 ```nasm
-setup_page_tables:
+set_up_page_tables:
     ...
     ; map each P2 entry to a huge 2MiB page
     mov ecx, 0         ; counter variable
@@ -333,7 +333,7 @@ start:
     call test_cpuid
     call test_long_mode
 
-    call setup_page_tables ; new
+    call set_up_page_tables ; new
     call enable_paging     ; new
 
     ; print `OK` to screen
@@ -344,7 +344,7 @@ start:
 To test it we execute `make run`. If the green OK is still printed, we have successfully enabled paging!
 
 ## The Global Descriptor Table
-After enabling Paging, the processor is in long mode. So we can use 64-bit instructions now, right? Wrong. The processor is still in some 32-bit compatibility submode. To actually execute 64-bit code, we need to setup a new Global Descriptor Table.
+After enabling Paging, the processor is in long mode. So we can use 64-bit instructions now, right? Wrong. The processor is still in some 32-bit compatibility submode. To actually execute 64-bit code, we need to set up a new Global Descriptor Table.
 The Global Descriptor Table (GDT) was used for _Segmentation_ in old operating systems. I won't explain Segmentation but the [Three Easy Pieces] OS book has good introduction ([PDF][Segmentation chapter]) again.
 
 [Segmentation chapter]: http://pages.cs.wisc.edu/~remzi/OSTEP/vm-segmentation.pdf
