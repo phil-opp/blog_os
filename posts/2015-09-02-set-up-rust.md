@@ -1,17 +1,18 @@
 ---
 layout: post
-title: 'Setup Rust'
+title: 'Set Up Rust'
 redirect_from: "/2015/09/02/setup-rust/"
+redirect_from: "/setup-rust.html"
 ---
 In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to [Rust] code. Rust is a high-level language without runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
 
-This blog post tries to setup Rust step-by-step and point out the different problems. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is in a [Github repository], too.
+This blog post tries to set up Rust step-by-step and point out the different problems. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is in a [Github repository], too.
 
 [multiboot post]: {{ page.previous.previous.url }}
 [long mode post]: {{ page.previous.url }}
 [Rust]: https://www.rust-lang.org/
 [file an issue]: https://github.com/phil-opp/blog_os/issues
-[Github repository]: https://github.com/phil-opp/blog_os/tree/setup_rust
+[Github repository]: https://github.com/phil-opp/blog_os/tree/set_up_rust
 
 ## Installing Rust
 We need a nightly compiler, as we will use many unstable features. To manage Rust installations I highly recommend brson's [multirust]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `multirust override nightly`.
@@ -92,7 +93,7 @@ We added a new `cargo` target that just executes `cargo build` and modified the 
 
 But now `cargo build` is executed on every `make`, even if no source file was changed. And the ISO is recreated on every `make iso`/`make run`, too. We could try to avoid this by adding dependencies on all rust source and cargo configuration files to the `cargo` target, but the ISO creation takes only half a second on my machine and most of the time we will have changed a Rust file when we run `make`. So we keep it simple for now and let cargo do the bookkeeping of changed files (it does it anyway).
 
-[github makefile]: https://github.com/phil-opp/blog_os/blob/setup_rust/Makefile
+[github makefile]: https://github.com/phil-opp/blog_os/blob/set_up_rust/Makefile
 
 ## Calling Rust
 Now we can call the main method in `long_mode_start`:
@@ -279,7 +280,7 @@ We add it to the `boot.asm` file:
 
 ```nasm
 ; Check for SSE and enable it. If it's not supported throw error "a".
-setup_SSE:
+set_up_SSE:
     ; check for SSE
     mov eax, 0x1
     cpuid
@@ -302,7 +303,7 @@ setup_SSE:
 ```
 The code is from the great [OSDev Wiki][osdev sse] again. Notice that it sets/unsets exactly the bits that can cause the `Invalid Opcode` exception.
 
-When we insert a `call setup_SSE` somewhere in the `start` function (for example after `call enable_paging`), our Rust code will finally work.
+When we insert a `call set_up_SSE` somewhere in the `start` function (for example after `call enable_paging`), our Rust code will finally work.
 
 [32-bit error function]: {{ page.previous.url }}#some-tests
 [osdev sse]: http://wiki.osdev.org/SSE#Checking_for_SSE
