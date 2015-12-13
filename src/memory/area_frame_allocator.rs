@@ -37,7 +37,7 @@ impl AreaFrameAllocator {
         self.current_area = self.areas.clone().filter(|area| {
             let address = area.base_addr + area.length - 1;
             Frame::containing_address(address as usize) >= self.next_free_frame
-        }).min_by(|area| area.base_addr);
+        }).min_by_key(|area| area.base_addr);
 
         if let Some(area) = self.current_area {
             let start_frame = Frame::containing_address(area.base_addr as usize);
