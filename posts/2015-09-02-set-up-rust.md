@@ -40,7 +40,7 @@ The `package` section contains required project metadata such as the [semantic c
 Now we place our root source file in `src/lib.rs`:
 
 ```rust
-#![feature(no_std, lang_items)]
+#![feature(lang_items)]
 #![no_std]
 
 #[no_mangle]
