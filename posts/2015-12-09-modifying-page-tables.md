@@ -249,7 +249,7 @@ mov eax, p4_table
 or eax, 0b11 ; present + writable
 mov [p4_table + 511 * 8], eax
 ```
-I put it right after the `setup_page_tables` label, but you can add it wherever you like.
+I put it right after the `set_up_page_tables` label, but you can add it wherever you like.
 
 Now we can use special virtual addresses to access the page tables. The P4 table is available at `0xfffffffffffff000`. Let's add a P4 constant to the `table` submodule:
 
