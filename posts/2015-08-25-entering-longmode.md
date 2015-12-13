@@ -130,7 +130,7 @@ test_long_mode:
     jb .no_long_mode       ; It is less, there is no long mode.
     mov eax, 0x80000001    ; Set the A-register to 0x80000001.
     cpuid                  ; CPU identification.
-    test edx, 1 << 29      ; Test if the LM-bit, which is bit 29, is set in the D-register.
+    test edx, 1 << 29      ; Test if the LM-bit is set in the D-register.
     jz .no_long_mode       ; They aren't, there is no long mode.
     ret
 .no_long_mode:
