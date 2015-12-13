@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![feature(no_std, lang_items)]
+#![feature(lang_items)]
 #![feature(const_fn, unique, core_str_ext, iter_cmp)]
 #![no_std]
 
