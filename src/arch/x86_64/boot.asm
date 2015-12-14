@@ -23,9 +23,9 @@ start:
     ; modify the `edi` register until the kernel it called.
     mov edi, ebx
 
-    call test_multiboot
-    call test_cpuid
-    call test_long_mode
+    call check_multiboot
+    call check_cpuid
+    call check_long_mode
 
     call set_up_page_tables
     call enable_paging
@@ -106,7 +106,7 @@ error:
     hlt
 
 ; Throw error 0 if eax doesn't contain the Multiboot 2 magic value (0x36d76289).
-test_multiboot:
+check_multiboot:
     cmp eax, 0x36d76289
     jne .no_multiboot
     ret
@@ -115,7 +115,7 @@ test_multiboot:
     jmp error
 
 ; Throw error 1 if the CPU doesn't support the CPUID command.
-test_cpuid:
+check_cpuid:
     pushfd               ; Store the FLAGS-register.
     pop eax              ; Restore the A-register.
     mov ecx, eax         ; Set the C-register to the A-register.
@@ -134,7 +134,7 @@ test_cpuid:
     jmp error
 
 ; Throw error 2 if the CPU doesn't support Long Mode.
-test_long_mode:
+check_long_mode:
     mov eax, 0x80000000    ; Set the A-register to 0x80000000.
     cpuid                  ; CPU identification.
     cmp eax, 0x80000001    ; Compare the A-register with 0x80000001.
