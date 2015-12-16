@@ -1,13 +1,13 @@
 ---
 layout: post
-title: 'Accessing and Modifying Page Tables'
+title: 'Page Tables'
 ---
 
 In this post we will create a paging module, which allows us to access and modify the 4-level page table. We will explore recursive page table mapping and use some Rust features to make it safe. Finally we will create functions to translate virtual addresses and to map and unmap pages.
 
 You can find the source code and this post itself on [Github][source repository]. Please file an issue there if you have any problems or improvement suggestions. There is also a comment section at the end of this page. Note that this post requires a current Rust nightly.
 
-[source repository]: https://github.com/phil-opp/blog_os/tree/modifying_page_tables
+[source repository]: https://github.com/phil-opp/blog_os/tree/page_tables
 
 ## Paging
 _Paging_ is a memory management scheme that separates virtual and physical memory. The address space is split into equal sized _pages_ and _page tables_ specify which virtual page points to which physical frame. For an extensive paging introduction take a look at the paging chapter ([PDF][paging chapter]) of the [Three Easy Pieces] OS book.
