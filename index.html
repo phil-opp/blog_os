@@ -13,28 +13,24 @@ title: Home
 {% endfor %}
 </div>
 
+{% assign posts = site.posts | reverse %}
+
+<div class="post-category bare-bones">Bare Bones</div>
+<div class="posts bare-bones">
+  {% for post in posts limit:4  %}
+    {% include post_teaser.html %}
+  {% endfor %}
+</div>
+
+<div class="post-category memory-management">Memory Management</div>
+<div class="posts memory-management">
+  {% for post in posts offset:4 limit:2 %}
+    {% include post_teaser.html %}
+  {% endfor %}
+</div>
+
 <div class="posts">
-  {% for post in site.posts reversed %}
-  <article class="post" id="{{ post.id }}">
-    <h1 class="post-title">
-      <a href="{{ site.baseurl }}{{ post.url }}">
-        {{ post.title }}
-      </a>
-    </h1>
-
-    <span class="post-date">
-      <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date_to_string }}</time>
-      {% if post.updated %}
-        (updated on {{ post.updated | date_to_string }})
-      {% endif %}
-    </span>
-
-    {% if post.content contains '<!--more-->' %}
-	    {{ post.content | split:'<!--more-->' | first }}
-    {% else %}
-	    {{ post.excerpt }}
-    {% endif %}
-  </article>
-  <hr>
+  {% for post in posts offset:6 %}
+    {% include post_teaser.html %}
   {% endfor %}
 </div>
