@@ -106,17 +106,17 @@
 }
 
 .posts.bare-bones {
-  @include category-posts(#99f);
+  @include category-posts(#aaf);
 }
 
 .post-category.bare-bones {
-  @include category-title(#66f);
+  @include category-title(#77f);
 }
 
 .posts.memory-management {
-  @include category-posts(#cc0);
+  @include category-posts(#ff7);
 }
 
 .post-category.memory-management {
-  @include category-title(#990);
+  @include category-title(#cc0);
 }
