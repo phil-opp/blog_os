@@ -8,7 +8,6 @@ relative_permalinks: true
 title:               phil-opp's blog
 full_title:          Writing an OS in Rust
 tagline:             Philipp Oppermann's blog
-paginate:            10
 baseurl:             ""
 url:                 http://os.phil-opp.com
 
