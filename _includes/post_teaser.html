@@ -1,0 +1,23 @@
+<article class="post" id="{{ post.id }}">
+  <h1 class="post-title">
+    <a href="{{ site.baseurl }}{{ post.url }}">
+      {{ post.title }}
+    </a>
+  </h1>
+
+  <span class="post-date">
+    <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date_to_string }}</time>
+    {% if post.updated %}
+      (updated on {{ post.updated | date_to_string }})
+    {% endif %}
+  </span>
+
+  {% if post.content contains '<!--more-->' %}
+    {{ post.content | split:'<!--more-->' | first }}
+  {% else %}
+    {{ post.excerpt }}
+  {% endif %}
+</article>
+{% if forloop.last == false %}
+  <hr>
+{% endif %}
