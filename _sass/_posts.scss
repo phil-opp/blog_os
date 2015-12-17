@@ -3,8 +3,7 @@
 // Each post is wrapped in `.post` and is used on default and post layouts. Each
 // page is wrapped in `.page` and is only used on the page layout.
 
-.page,
-.post {
+.page {
   margin-bottom: 4em;
 }
 
@@ -87,10 +86,15 @@
 	margin-top: -2em;
 }
 
+.posts hr {
+  margin: 2rem 0;
+}
+
 @mixin category-posts($color) {
   border: 2px solid $color;
-  border-radius: 5px;
+  border-radius: 10px;
   margin-bottom: 2rem;
+  padding: 1.5rem 1rem;
 }
 
 @mixin category-title($color) {
