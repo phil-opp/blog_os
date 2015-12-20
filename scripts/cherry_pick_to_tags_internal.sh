@@ -17,10 +17,6 @@ if [ "$#" -lt 2 ]; then
     exit 1
 fi
 
-branch_name=$(git symbolic-ref -q HEAD)
-branch_name=${branch_name##refs/heads/}
-branch_name=${branch_name:-HEAD}
-
 commit="$1"
 
 echo "current branch $branch_name"
@@ -33,16 +29,14 @@ shift
 for tag in "$@"; do
     echo "UPDATING TAG $tag"
     {
-        git branch tmp_update_tag_"$tag" "$tag"
+        git co "$tag"
 
         # cherry pick commit and update tag
-	git checkout tmp_update_tag_"$tag"
         git cherry-pick -x "$commit"
         git tag -f "$tag" HEAD
 
         # switch back to previous branch
-        git checkout "$branch_name"
-        git branch -D tmp_update_tag_"$tag"
+        git co -
 
         # push the updated tag
         git push origin "$tag" --force
