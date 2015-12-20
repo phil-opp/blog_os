@@ -206,7 +206,7 @@ pub fn write_str(&mut self, s: &str) {
     }
 }
 ```
-You can try it yourself in the `print_something` function. Note that you need to add the `core_str_ext` feature, since `core` is [still unstable][core tracking issue].
+You can try it yourself in the `print_something` function.
 
 When you print strings with some special characters like `ä` or `λ`, you'll notice that they cause weird symbols on screen. That's because they are represented by multiple bytes in [UTF-8]. By converting them to bytes, we of course get strange results. But since the VGA buffer doesn't support UTF-8, it's not possible to display these characters anyway. To ensure that a string contains only ASCII characters, you can prefix a `b` to create a [Byte String].
 
