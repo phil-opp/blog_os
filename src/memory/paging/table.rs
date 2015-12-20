@@ -20,7 +20,7 @@ impl<L> Table<L> where L: TableLevel
     }
 }
 
-impl<L> Table<L> where L: HierachicalLevel
+impl<L> Table<L> where L: HierarchicalLevel
 {
     fn next_table_address(&self, index: usize) -> Option<usize> {
         let entry_flags = self[index].flags();
@@ -87,18 +87,18 @@ impl TableLevel for Level3 {}
 impl TableLevel for Level2 {}
 impl TableLevel for Level1 {}
 
-trait HierachicalLevel: TableLevel {
+trait HierarchicalLevel: TableLevel {
     type NextLevel: TableLevel;
 }
 
-impl HierachicalLevel for Level4 {
+impl HierarchicalLevel for Level4 {
     type NextLevel = Level3;
 }
 
-impl HierachicalLevel for Level3 {
+impl HierarchicalLevel for Level3 {
     type NextLevel = Level2;
 }
 
-impl HierachicalLevel for Level2 {
+impl HierarchicalLevel for Level2 {
     type NextLevel = Level1;
 }
