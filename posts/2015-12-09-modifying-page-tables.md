@@ -340,14 +340,14 @@ impl TableLevel for Level1 {}
 ```
 An empty enum has size zero and disappears completely after compiling. Unlike an empty struct, it's not possible to instantiate an empty enum. Since we will use `TableLevel` and `Level4` in exported types, they need to be public as well.
 
-To differentiate the P1 table from the other tables, we introduce a `HierachicalLevel` trait, which is a subtrait of `TableLevel`. But we implement it only for the levels 4, 3, and 2:
+To differentiate the P1 table from the other tables, we introduce a `HierarchicalLevel` trait, which is a subtrait of `TableLevel`. But we implement it only for the levels 4, 3, and 2:
 
 ```rust
-trait HierachicalLevel: TableLevel {}
+trait HierarchicalLevel: TableLevel {}
 
-impl HierachicalLevel for Level4 {}
-impl HierachicalLevel for Level3 {}
-impl HierachicalLevel for Level2 {}
+impl HierarchicalLevel for Level4 {}
+impl HierarchicalLevel for Level3 {}
+impl HierarchicalLevel for Level2 {}
 ```
 
 Now we add the level parameter to the `Table` type:
@@ -374,7 +374,7 @@ impl<L> Table<L> where L: TableLevel
     pub fn zero(&mut self) {...}
 }
 
-impl<L> Table<L> where L: HierachicalLevel
+impl<L> Table<L> where L: HierarchicalLevel
 {
     pub fn next_table(&self, index: usize) -> Option<&Table<???>> {...}
 
@@ -391,22 +391,22 @@ Now the `next_table` methods are only available for P4, P3, and P2 tables. But t
 
 For a P4 table we would like to return a `Table<Level3>`, for a P3 table a `Table<Level2>`, and for a P2 table a `Table<Level1>`. So we want to return a table of the _next level_.
 
-We can define the next level by adding an associated type to the `HierachicalLevel` trait:
+We can define the next level by adding an associated type to the `HierarchicalLevel` trait:
 
 ```rust
-trait HierachicalLevel: TableLevel {
+trait HierarchicalLevel: TableLevel {
     type NextLevel: TableLevel;
 }
 
-impl HierachicalLevel for Level4 {
+impl HierarchicalLevel for Level4 {
     type NextLevel = Level3;
 }
 
-impl HierachicalLevel for Level3 {
+impl HierarchicalLevel for Level3 {
     type NextLevel = Level2;
 }
 
-impl HierachicalLevel for Level2 {
+impl HierarchicalLevel for Level2 {
     type NextLevel = Level1;
 }
 ```
