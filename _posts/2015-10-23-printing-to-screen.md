@@ -185,7 +185,7 @@ pub fn print_something() {
     let mut writer = Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::LightGreen, Color::Black),
-        buffer: Unique::new(0xb8000 as *mut _),
+        buffer: unsafe { Unique::new(0xb8000 as *mut _) },
     }
 
     writer.write_byte(b'H');
@@ -285,7 +285,7 @@ To provide a global writer that can used as an interface from other modules, we 
 pub static WRITER: Writer = Writer {
     column_position: 0,
     color_code: ColorCode::new(Color::LightGreen, Color::Black),
-    buffer: Unique::new(0xb8000 as *mut _),
+    buffer: unsafe { Unique::new(0xb8000 as *mut _) },
 };
 ```
 
