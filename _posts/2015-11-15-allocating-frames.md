@@ -384,7 +384,9 @@ You can try different amounts of memory by passing e.g. `-m 500M` to QEMU. To co
 Now we have a working frame allocator. It is a bit rudimentary and cannot free frames, but it also is very fast since it reuses the Multiboot memory map and does not need any costly initialization. A future post will build upon this allocator and add a stack-like data structure for freed frames.
 
 ## What's next?
-The next post will be about paging again. We will use the frame allocator to create a safe module that allows us to switch page tables and map pages. Then we will use this module and the information from the  Elf-sections tag to remap the kernel correctly.
+The [next post] will be about paging again. We will use the frame allocator to create a safe module that allows us to switch page tables and map pages. Then we will use this module and the information from the Elf-sections tag to remap the kernel correctly.
+
+[next post]: {{ page.next.url }}
 
 ## Recommended Posts
 Eric Kidd started the [Bare Metal Rust] series last week. Like this post, it builds upon the code from [Printing to Screen], but tries to support keyboard input instead of wrestling through memory management details ;).
