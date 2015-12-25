@@ -603,7 +603,7 @@ We define the following:
 
 We already obey this rule: To get a reference to a table, we need to borrow it from its parent table through the `next_table` method. But who owns the P4 table?
 
-> The recursively mapped P4 table is owned by a `RecursivePageTable` struct.
+> The recursively mapped P4 table is owned by a `ActivePageTable` struct.
 
 We just defined some random owner for the P4 table. But it will solve our problems. So let's create it:
 
@@ -611,7 +611,7 @@ We just defined some random owner for the P4 table. But it will solve our proble
 use self::table::{Table, Level4};
 use core::ptr::Unique;
 
-pub struct RecursivePageTable {
+pub struct ActivePageTable {
     p4: Unique<Table<Level4>>,
 }
 ```
@@ -620,12 +620,12 @@ We can't store the `Table<Level4>` directly because it needs to be at a special 
 [VGA text buffer]: http://os.phil-opp.com/printing-to-screen.html#the-text-buffer
 [Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
 
-Because the `RecursivePageTable` owns the unique recursive mapped P4 table, there must be only one `RecursivePageTable` instance. Thus we make the constructor function unsafe:
+Because the `ActivePageTable` owns the unique recursive mapped P4 table, there must be only one `ActivePageTable` instance. Thus we make the constructor function unsafe:
 
 ```rust
-impl RecursivePageTable {
-    pub unsafe fn new() -> RecursivePageTable {
-        RecursivePageTable {
+impl ActivePageTable {
+    pub unsafe fn new() -> ActivePageTable {
+        ActivePageTable {
             p4: Unique::new(table::P4),
         }
     }
@@ -646,11 +646,11 @@ fn p4_mut(&mut self) -> &mut Table<Level4> {
 
 Since we will only create valid P4 pointers, the `unsafe` blocks are safe. However, we don't make these functions public since they can be used to make page tables invalid. Only the higher level functions (such as `translate` or `map_to`) should be usable from other modules.
 
-Now we can make the `map_to` and `translate` functions safe by making them methods of `RecursivePageTable`:
+Now we can make the `map_to` and `translate` functions safe by making them methods of `ActivePageTable`:
 
 ```rust
-impl RecursivePageTable {
-    pub unsafe fn new() -> RecursivePageTable {...}
+impl ActivePageTable {
+    pub unsafe fn new() -> ActivePageTable {...}
 
     fn p4(&self) -> &Table<Level4> {...}
 
@@ -742,7 +742,7 @@ To test it, we add a `test_paging` function in `memory/paging/mod.rs`:
 pub fn test_paging<A>(allocator: &mut A)
     where A: FrameAllocator
 {
-    let page_table = unsafe { RecursivePageTable::new() };
+    let page_table = unsafe { ActivePageTable::new() };
 
     // test it
 }

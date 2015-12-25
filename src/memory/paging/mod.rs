@@ -41,13 +41,13 @@ impl Page {
     }
 }
 
-pub struct RecursivePageTable {
+pub struct ActivePageTable {
     p4: Unique<Table<Level4>>,
 }
 
-impl RecursivePageTable {
-    pub unsafe fn new() -> RecursivePageTable {
-        RecursivePageTable { p4: Unique::new(table::P4) }
+impl ActivePageTable {
+    pub unsafe fn new() -> ActivePageTable {
+        ActivePageTable { p4: Unique::new(table::P4) }
     }
 
     fn p4(&self) -> &Table<Level4> {
@@ -148,7 +148,7 @@ impl RecursivePageTable {
 pub fn test_paging<A>(allocator: &mut A)
     where A: FrameAllocator
 {
-    let mut page_table = unsafe { RecursivePageTable::new() };
+    let mut page_table = unsafe { ActivePageTable::new() };
 
     // test translate
     println!("Some = {:?}", page_table.translate(0));
