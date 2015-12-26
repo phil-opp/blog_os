@@ -218,8 +218,8 @@ Now we fixed all linking issues.
 Unfortunately there is one last problem left, that gets triggered by the following code:
 
 ```rust
-let mut a = 42;
-a += 1;
+let mut a = ("hello", 42);
+a.1 += 1;
 ```
 When we add that code to `rust_main` and test it using `make run`, the OS will constantly reboot itself. Let's try to debug it.
 
@@ -238,16 +238,16 @@ SMM: enter
 SMM: after RSM
 ...
 check_exception old: 0xffffffff new 0x6
-     0: v=06 e=0000 i=0 cpl=0 IP=0008:0000000000100200 pc=0000000000100200
-     SP=0010:0000000000102fd0 env->regs[R_EAX]=0000000080010010
+     0: v=06 e=0000 i=0 cpl=0 IP=0008:00000000001001d3 pc=00000000001001d3
+     SP=0010:0000000000102ff0 env->regs[R_EAX]=000000000000002a
 ...
 check_exception old: 0xffffffff new 0xd
-     1: v=0d e=0062 i=0 cpl=0 IP=0008:0000000000100200 pc=0000000000100200
-     SP=0010:0000000000102fd0 env->regs[R_EAX]=0000000080010010
+     1: v=0d e=0062 i=0 cpl=0 IP=0008:00000000001001d3 pc=00000000001001d3
+     SP=0010:0000000000102ff0 env->regs[R_EAX]=000000000000002a
 ...
 check_exception old: 0xd new 0xd
-     2: v=08 e=0000 i=0 cpl=0 IP=0008:0000000000100200 pc=0000000000100200
-     SP=0010:0000000000102fd0 env->regs[R_EAX]=0000000080010010
+     2: v=08 e=0000 i=0 cpl=0 IP=0008:00000000001001d3 pc=00000000001001d3
+     SP=0010:0000000000102ff0 env->regs[R_EAX]=000000000000002a
 ...
 check_exception old: 0x8 new 0xd
 ```
@@ -257,15 +257,15 @@ Let me first explain the QEMU arguments: The `-d int` logs CPU interrupts to the
 - The next block, `check_exception old: 0xffffffff new 0x6` is the interesting one. It says: “a new CPU exception with number `0x6` occurred“.
 - The last blocks indicate further exceptions. They were thrown because we didn't handle the `0x6` exception, so we're going to ignore them, too.
 
-So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't handling an interrupt when the exception occurred. The new exception has number `0x6`. By looking at an [exception table] we learn that `0x6` indicates a [Invalid Opcode] fault. So the lastly executed instruction was invalid. The register dump tells us that the current instruction was `0x100200` (through `IP`  (instruction pointer) or `pc` (program counter)). Therefore the instruction at `0x100200` seems to be invalid. We can look at it using `objdump`:
+So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't handling an interrupt when the exception occurred. The new exception has number `0x6`. By looking at an [exception table] we learn that `0x6` indicates a [Invalid Opcode] fault. So the lastly executed instruction was invalid. The register dump tells us that the current instruction was `0x1001d3` (through `IP`  (instruction pointer) or `pc` (program counter)). Therefore the instruction at `0x1001d3` seems to be invalid. We can look at it using `objdump`:
 
 [Invalid Opcode]: http://wiki.osdev.org/Exceptions#Invalid_Opcode
 
 ```
-> objdump -D build/kernel-x86_64.bin | grep "100200:"
-100200:	0f 28 05 49 01 00 00 	movaps 0x149(%rip),%xmm0 ...
+> objdump -D build/kernel-x86_64.bin | grep "1001d3:"
+1001d3:	0f 10 05 16 01 00 00 	movups 0x116(%rip),%xmm0 ...
 ```
-Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x100200` seems to be a valid `movaps` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps documentation][movaps]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`, so the exception occurs
+Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x1001d3` seems to be a valid `movaps` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps documentation][movaps]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`, so the exception occurs
 > For an unmasked Streaming SIMD Extensions 2 instructions numeric exception (CR4.OSXMMEXCPT =0). If EM in CR0 is set. If OSFXSR in CR4 is 0. If CPUID feature flag SSE2 is 0.
 
 [SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
