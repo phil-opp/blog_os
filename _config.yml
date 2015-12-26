@@ -42,3 +42,6 @@ contact: '/contact.html'
 gems:
   - jekyll-redirect-from
   - jekyll-sitemap
+
+enable_disqus: true
+enable_analytics: true
