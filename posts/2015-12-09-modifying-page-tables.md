@@ -274,7 +274,8 @@ If we look closely, we can see that the P3 address is equal to `(P4 << 9) | XXX_
 next_table_address = (table_address << 9) | (index << 12)
 ```
 
-So let's add it as a `Table` method:
+### The `next_table` Methods
+Let's add the above formula as a `Table` method:
 
 ```rust
 fn next_table_address(&self, index: usize) -> Option<usize> {
@@ -304,9 +305,22 @@ pub fn next_table_mut(&mut self, index: usize) -> Option<&mut Table> {
         .map(|address| unsafe { &mut *(address as *mut _) })
 }
 ```
-We convert the address into raw pointers and then convert them into references in `unsafe` blocks. Now we can start at the `P4` constant and use these functions to access the lower tables. And we don't even need `unsafe` blocks to do it!
+We convert the address into raw pointers through `as` casts and then convert them into Rust references through `&mut *`. The latter is an `unsafe` operation since Rust can't guarantee that the raw pointer is valid.
 
-Right now, your alarm bells should be ringing. Thanks to Rust, everything we've done before in this post was completely safe. But we just introduced two unsafe blocks to convince Rust that there are valid tables at the specified addresses. Can we really be sure?
+Note that `self` stays borrowed as long as the returned reference is valid. This is because of Rust's [lifetime elision] rules. Basically, these rules say that the lifetime of an output reference is the same as the lifetime of the input reference by default. So the above function signatures are expanded to:
+
+[lifetime elision]: https://doc.rust-lang.org/book/lifetimes.html#lifetime-elision
+
+```rust
+pub fn next_table<'a>(&'a self, index: usize) -> Option<&'a Table> {...}
+
+pub fn next_table_mut<'a>(&'a mut self, index: usize) -> Option<&'a mut Table> {...}
+```
+
+Note the additional lifetime parameters, which are identical for input and output references. That's exactly what we want. It ensures that we can't modify tables as long as we have references to lower tables. For example, it would be very bad if we could unmap a P3 table if we still write to one of its P2 tables.
+
+#### Safety
+Now we can start at the `P4` constant and use the `next_table` functions to access the lower tables. And we don't even need `unsafe` blocks to do it! Right now, your alarm bells should be ringing. Thanks to Rust, everything we've done before in this post was completely safe. But we just introduced two unsafe blocks to convince Rust that there are valid tables at the specified addresses. Can we really be sure?
 
 First, these addresses are only valid if the P4 table is mapped recursively. Since the paging module will be the only module that modifies page tables, we can introduce an invariant for the module:
 
@@ -605,7 +619,9 @@ We already obey this rule: To get a reference to a table, we need to borrow it f
 
 > The recursively mapped P4 table is owned by a `ActivePageTable` struct.
 
-We just defined some random owner for the P4 table. But it will solve our problems. So let's create it:
+We just defined some random owner for the P4 table. But it will solve our problems. And it will also provide the interface to other modules.
+
+So let's create the struct:
 
 ```rust
 use self::table::{Table, Level4};
