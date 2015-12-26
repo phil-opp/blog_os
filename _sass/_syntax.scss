@@ -5,7 +5,7 @@
 .highlight .o { color: #555 } /* Operator */
 .highlight .cm { color: #09f; font-style: italic } /* Comment.Multiline */
 .highlight .cp { color: #099 } /* Comment.Preproc */
-.highlight .c1 { color: #09f; font-style: italic } /* Comment.Single */
+.highlight .c1, .c-Doc { color: #09f; font-style: italic } /* Comment.Single */
 .highlight .cs { color: #09f; font-weight: bold; font-style: italic } /* Comment.Special */
 .highlight .gd { background-color: #fcc; border: 1px solid #c00 } /* Generic.Deleted */
 .highlight .ge { font-style: italic } /* Generic.Emph */
