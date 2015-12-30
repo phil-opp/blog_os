@@ -155,6 +155,17 @@ impl ActivePageTable {
     }
 }
 
+pub struct InactivePageTable {
+    p4_frame: Frame,
+}
+
+impl InactivePageTable {
+    pub fn new(frame: Frame) -> InactivePageTable {
+        // TODO zero and recursive map the frame
+        InactivePageTable { p4_frame: frame }
+    }
+}
+
 pub fn test_paging<A>(allocator: &mut A)
     where A: FrameAllocator
 {
