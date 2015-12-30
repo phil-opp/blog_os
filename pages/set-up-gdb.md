@@ -65,6 +65,8 @@ After connecting to QEMU, you can use various gdb commands to control execution 
 - `list` or `l`: Shows the source code around the current position.
 - `print` or `p`: Prints the value of a variable. You can use Cs `*` and `&` operators. To print in hexadecimal, use `p/x`.
 
-Of course there are many more commands. Feel free to send a PR if you think this list is missing something important. The [website for Harvard's CS161 course][CS161] has a more complete GDB overview.
 
+Of course there are many more commands. Feel free to send a PR if you think this list is missing something important. For a more complete GDB overview, check out [Beej's Quick Guide][bggdb] or the [website for Harvard's CS161 course][CS161].
+
+[bggdb]: http://beej.us/guide/bggdb/
 [CS161]: http://www.eecs.harvard.edu/~margo/cs161/resources/gdb.html
