@@ -79,20 +79,34 @@ impl ActivePageTable {
         ActivePageTable { mapper: Mapper::new() }
     }
 
-    pub fn with<F>(&mut self, table: &mut InactivePageTable, f: F)
+    pub fn with<F>(&mut self,
+                   table: &mut InactivePageTable,
+                   temporary_page: &mut temporary_page::TemporaryPage, // new
+                   f: F)
         where F: FnOnce(&mut Mapper)
     {
-        use x86::tlb;
+        use x86::{controlregs, tlb};
         let flush_tlb = || unsafe { tlb::flush_all() };
 
-        // overwrite recursive mapping
-        self.p4_mut()[511].set(table.p4_frame.clone(), PRESENT | WRITABLE);
-        flush_tlb();
+        {
+            let backup = Frame::containing_address(unsafe { controlregs::cr3() } as usize);
 
-        // execute f in the new context
-        f(self);
+            // map temporary_page to current p4 table
+            let p4_table = temporary_page.map_table_frame(backup.clone(), self);
 
-        // TODO restore recursive mapping to original p4 table
+            // overwrite recursive mapping
+            self.p4_mut()[511].set(table.p4_frame.clone(), PRESENT | WRITABLE);
+            flush_tlb();
+
+            // execute f in the new context
+            f(self);
+
+            // restore recursive mapping to original p4 table
+            p4_table[511].set(backup, PRESENT | WRITABLE);
+            flush_tlb();
+        }
+
+        temporary_page.unmap(self);
     }
 }
 
