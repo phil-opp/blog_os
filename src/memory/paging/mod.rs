@@ -10,6 +10,7 @@
 pub use self::entry::*;
 use memory::{PAGE_SIZE, Frame, FrameAllocator};
 use self::table::{Table, Level4};
+use self::temporary_page::TemporaryPage;
 use core::ptr::Unique;
 
 mod entry;
@@ -161,8 +162,17 @@ pub struct InactivePageTable {
 }
 
 impl InactivePageTable {
-    pub fn new(frame: Frame) -> InactivePageTable {
-        // TODO zero and recursive map the frame
+    pub fn new(frame: Frame,
+               active_table: &mut ActivePageTable,
+               temporary_page: &mut TemporaryPage)
+               -> InactivePageTable {
+        {
+            let table = temporary_page.map_table_frame(frame.clone(), active_table);
+            table.zero();
+            table[511].set(frame.clone(), PRESENT | WRITABLE);
+        }
+        temporary_page.unmap(active_table);
+
         InactivePageTable { p4_frame: frame }
     }
 }
