@@ -8,6 +8,7 @@
 // except according to those terms.
 
 use memory::Frame;
+use multiboot2::ElfSection;
 
 pub struct Entry(u64);
 
@@ -50,5 +51,26 @@ bitflags! {
         const HUGE_PAGE =       1 << 7,
         const GLOBAL =          1 << 8,
         const NO_EXECUTE =      1 << 63,
+    }
+}
+
+impl EntryFlags {
+    pub fn from_elf_section_flags(section: &ElfSection) -> EntryFlags {
+        use multiboot2::{ELF_SECTION_ALLOCATED, ELF_SECTION_WRITABLE, ELF_SECTION_EXECUTABLE};
+
+        let mut flags = EntryFlags::empty();
+
+        if section.flags().contains(ELF_SECTION_ALLOCATED) {
+            // section is loaded to memory
+            flags = flags | PRESENT;
+        }
+        if section.flags().contains(ELF_SECTION_WRITABLE) {
+            flags = flags | WRITABLE;
+        }
+        if !section.flags().contains(ELF_SECTION_EXECUTABLE) {
+            flags = flags | NO_EXECUTE;
+        }
+
+        flags
     }
 }
