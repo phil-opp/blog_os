@@ -9,11 +9,9 @@
 
 pub use self::entry::*;
 use memory::{PAGE_SIZE, Frame, FrameAllocator};
-use self::table::{Table, Level4};
 use self::temporary_page::TemporaryPage;
 pub use self::mapper::Mapper;
 use core::ops::{Deref, DerefMut};
-use core::ptr::Unique;
 use multiboot2::BootInformation;
 
 mod entry;
@@ -193,7 +191,6 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
 
         for section in elf_sections_tag.sections() {
             use multiboot2::ELF_SECTION_ALLOCATED;
-            use self::entry::WRITABLE;
 
             if !section.flags().contains(ELF_SECTION_ALLOCATED) {
                 // section is not loaded to memory
