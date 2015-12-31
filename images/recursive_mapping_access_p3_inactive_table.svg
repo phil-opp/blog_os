@@ -8,8 +8,8 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="900.00409"
-   height="530"
-   viewBox="-2141 2141 12027.89 7032.1014"
+   height="530.5"
+   viewBox="-2141 2141 12027.89 7038.7354"
    id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
@@ -43,20 +43,20 @@
      showgrid="false"
      fit-margin-top="0"
      fit-margin-left="0"
-     fit-margin-right="2.7755576e-17"
-     fit-margin-bottom="0"
-     inkscape:zoom="0.70710678"
-     inkscape:cx="561.33977"
-     inkscape:cy="204.62487"
+     fit-margin-right="0"
+     fit-margin-bottom="1"
+     inkscape:zoom="1"
+     inkscape:cx="466.92372"
+     inkscape:cy="267.78109"
      inkscape:window-x="1080"
-     inkscape:window-y="400"
+     inkscape:window-y="413"
      inkscape:window-maximized="1"
      inkscape:current-layer="g242"
      units="in" />
   <g
      style="fill:none;stroke:#000000;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter"
      id="g4"
-     transform="translate(-1087.0637,717.51407)">
+     transform="translate(-1087.0637,710.26871)">
     <polyline
        points="3365,2598 3365,3070"
        id="polyline10"
@@ -275,7 +275,7 @@
        width="1668.8131"
        height="3296.2527"
        rx="0"
-       style="fill:#dfdfdf;stroke-width:11.23412323"
+       style="fill:#dfdfc7;fill-opacity:1;stroke-width:11.23412323"
        id="rect150" />
     <polyline
        points="3118,3590 2834,3779"
@@ -523,15 +523,15 @@
          style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:middle" />
       <text
          xml:space="preserve"
-         x="6045.1738"
-         y="4392.7686"
+         x="5912.7651"
+         y="4431.0742"
          font-style="normal"
          font-weight="normal"
          font-size="152"
          id="text320"
          style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:middle"><tspan
            style="font-size:200.46391296px"
-           id="tspan3503">inactive P4 table</tspan></text>
+           id="tspan3503">P4 table</tspan></text>
       <text
          x="2031"
          y="5622"
@@ -547,7 +547,7 @@
          font-weight="normal"
          font-size="152"
          id="text350"
-         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:start;fill:#008200;fill-opacity:1;">9</text>
+         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:start;fill:#008200;fill-opacity:1">9</text>
       <text
          x="1370"
          y="3732"
@@ -555,7 +555,7 @@
          font-weight="normal"
          font-size="152"
          id="text352"
-         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:start;fill:#008200;fill-opacity:1;">9</text>
+         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:start;fill:#008200;fill-opacity:1">9</text>
       <text
          x="1370"
          y="6708"
@@ -571,7 +571,7 @@
          font-weight="normal"
          font-size="152"
          id="text356"
-         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:start;fill:#008200;fill-opacity:1;">9</text>
+         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:start;fill:#008200;fill-opacity:1">9</text>
       <text
          x="6566"
          y="3732"
@@ -698,7 +698,7 @@
          width="691.0863"
          height="3268.5144"
          rx="0"
-         style="fill:#dfdfdf;stroke:#000000;stroke-width:7.85773897;stroke-linecap:butt;stroke-linejoin:miter"
+         style="fill:#dfdfc7;fill-opacity:1;stroke:#000000;stroke-width:7.85773897;stroke-linecap:butt;stroke-linejoin:miter"
          id="rect8" />
       <rect
          x="8208.377"
@@ -706,7 +706,7 @@
          width="691.0863"
          height="233.25354"
          rx="0"
-         style="fill:#dfdfdf;stroke:#000000;stroke-width:7.85773897;stroke-linecap:butt;stroke-linejoin:miter"
+         style="fill:#dfdfc7;fill-opacity:1;stroke:#000000;stroke-width:7.85773897;stroke-linecap:butt;stroke-linejoin:miter"
          id="rect158" />
       <text
          xml:space="preserve"
@@ -779,7 +779,7 @@
       </g>
       <text
          xml:space="preserve"
-         x="2319.9072"
+         x="2263.1606"
          y="4404.876"
          font-style="normal"
          font-weight="normal"
@@ -787,7 +787,7 @@
          id="text320-8"
          style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:middle;fill:#000000;stroke:#000000;stroke-width:0;stroke-linecap:butt;stroke-linejoin:miter"><tspan
            style="font-size:200.46392822px;stroke-width:0"
-           id="tspan3503-3">active P4 table</tspan></text>
+           id="tspan3503-3">P4 table</tspan></text>
       <rect
          style="fill:none;stroke:#000000;stroke-width:7.99999952;stroke-linecap:butt;stroke-linejoin:miter"
          x="1676.2374"
@@ -841,7 +841,7 @@
            style="font-size:196.89912415px;stroke-width:0"
            id="tspan3509">inactive P3 table </tspan></text>
       <path
-         style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:11.42028623;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+         style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:11.42028618;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          d="m 1180.4935,3543.3667 0,1428.1431 381.7959,0"
          id="path6515"
          inkscape:connector-curvature="0" />
@@ -858,25 +858,48 @@
          id="path6534"
          inkscape:connector-curvature="0" />
       <path
-         style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:11.42028623;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+         style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:11.42028618;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          d="m 4771.7501,3542.097 0,1413.9884 417.9767,0"
          id="path6542"
          inkscape:connector-curvature="0" />
       <path
-         style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:11.42028623;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+         style="fill:none;fill-rule:evenodd;stroke:#008200;stroke-width:11.42028618;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          d="m 2975.9128,3541.8854 0,541.514 1015.0566,0 0,897.233 1213.8046,0"
          id="path6544"
          inkscape:connector-curvature="0" />
       <path
-         style="fill:none;fill-rule:evenodd;stroke:#0000ff;stroke-width:11.42028623;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
-         d="m 6376.72,3540.8786 0,559.4497 -1325.7614,0 0,1765.6868 172.2064,0"
+         style="fill:none;fill-rule:evenodd;stroke:#0000ff;stroke-width:11.42028618;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m 6376.72,3540.8786 0,343.9797 -1325.7614,2.3941 0,1978.7627 172.2064,0"
          id="path6546"
-         inkscape:connector-curvature="0" />
+         inkscape:connector-curvature="0"
+         sodipodi:nodetypes="ccccc" />
       <path
-         style="fill:none;fill-rule:evenodd;stroke:#0000ff;stroke-width:11.42028623;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+         style="fill:none;fill-rule:evenodd;stroke:#0000ff;stroke-width:11.42028618;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          d="m 6378.641,5717.2755 889.0271,0 0,1623.2076 851.1962,0"
          id="path6548"
          inkscape:connector-curvature="0" />
+      <text
+         xml:space="preserve"
+         x="2260.9126"
+         y="4178.6655"
+         font-style="normal"
+         font-weight="normal"
+         font-size="152"
+         id="text320-8-5"
+         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:middle;fill:#000000;stroke:#000000;stroke-width:0;stroke-linecap:butt;stroke-linejoin:miter"><tspan
+           style="font-size:200.46394348px;stroke-width:0"
+           id="tspan3503-3-0">active</tspan></text>
+      <text
+         xml:space="preserve"
+         x="5915.9365"
+         y="4225.4873"
+         font-style="normal"
+         font-weight="normal"
+         font-size="152"
+         id="text320-0"
+         style="font-style:normal;font-weight:normal;font-size:152px;font-family:Helvetica;text-anchor:middle;fill:#000000;stroke:#000000;stroke-width:0;stroke-linecap:butt;stroke-linejoin:miter"><tspan
+           style="font-size:200.46392822px;stroke-width:0"
+           id="tspan3503-9">inactive</tspan></text>
     </g>
     <polygon
        points="3150,6661 3150,6661 3308,6614 3150,6566 "
