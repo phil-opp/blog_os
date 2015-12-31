@@ -109,6 +109,18 @@ impl ActivePageTable {
 
         temporary_page.unmap(self);
     }
+
+    pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
+        use x86::controlregs;
+
+        let old_table = InactivePageTable {
+            p4_frame: Frame::containing_address(unsafe { controlregs::cr3() } as usize),
+        };
+        unsafe {
+            controlregs::cr3_write(new_table.p4_frame.start_address() as u64);
+        }
+        old_table
+    }
 }
 
 pub struct InactivePageTable {
@@ -205,4 +217,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
             }
         }
     });
+
+    let old_table = active_table.switch(new_table);
+    println!("NEW TABLE!!!");
 }
