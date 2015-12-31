@@ -78,6 +78,22 @@ impl ActivePageTable {
     unsafe fn new() -> ActivePageTable {
         ActivePageTable { mapper: Mapper::new() }
     }
+
+    pub fn with<F>(&mut self, table: &mut InactivePageTable, f: F)
+        where F: FnOnce(&mut Mapper)
+    {
+        use x86::tlb;
+        let flush_tlb = || unsafe { tlb::flush_all() };
+
+        // overwrite recursive mapping
+        self.p4_mut()[511].set(table.p4_frame.clone(), PRESENT | WRITABLE);
+        flush_tlb();
+
+        // execute f in the new context
+        f(self);
+
+        // TODO restore recursive mapping to original p4 table
+    }
 }
 
 pub struct InactivePageTable {
