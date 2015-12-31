@@ -14,6 +14,7 @@ use self::temporary_page::TemporaryPage;
 pub use self::mapper::Mapper;
 use core::ops::{Deref, DerefMut};
 use core::ptr::Unique;
+use multiboot2::BootInformation;
 
 mod entry;
 mod table;
@@ -159,4 +160,49 @@ pub fn test_paging<A>(allocator: &mut A)
              unsafe { *(Page::containing_address(addr).start_address() as *const u64) });
     page_table.unmap(Page::containing_address(addr), allocator);
     println!("None = {:?}", page_table.translate(addr));
+}
+
+pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
+    where A: FrameAllocator
+{
+    use core::ops::Range;
+
+    let mut temporary_page = TemporaryPage::new(Page { number: 0xcafebabe }, allocator);
+
+    let mut active_table = unsafe { ActivePageTable::new() };
+    let mut new_table = {
+        let frame = allocator.allocate_frame().expect("no more frames");
+        InactivePageTable::new(frame, &mut active_table, &mut temporary_page)
+    };
+
+    active_table.with(&mut new_table, &mut temporary_page, |mapper| {
+        let elf_sections_tag = boot_info.elf_sections_tag()
+                                        .expect("Memory map tag required");
+
+        for section in elf_sections_tag.sections() {
+            use multiboot2::ELF_SECTION_ALLOCATED;
+            use self::entry::WRITABLE;
+
+            if !section.flags().contains(ELF_SECTION_ALLOCATED) {
+                // section is not loaded to memory
+                continue;
+            }
+
+            println!("mapping section at addr: {:#x}, size: {:#x}",
+                     section.addr,
+                     section.size);
+
+            let flags = WRITABLE; // TODO use real section flags
+
+            let range = Range {
+                start: section.addr as usize,
+                end: (section.addr + section.size) as usize,
+            };
+            for address in range.step_by(PAGE_SIZE) {
+                assert!(address % PAGE_SIZE == 0, "sections need to be page aligned");
+                let frame = Frame::containing_address(address);
+                mapper.identity_map(frame, flags, allocator);
+            }
+        }
+    });
 }

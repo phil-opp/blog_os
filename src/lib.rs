@@ -9,6 +9,7 @@
 
 #![feature(lang_items)]
 #![feature(const_fn, unique)]
+#![feature(step_by)]
 #![no_std]
 
 extern crate rlibc;
