@@ -8,7 +8,7 @@
 // except according to those terms.
 
 pub use self::area_frame_allocator::AreaFrameAllocator;
-pub use self::paging::test_paging;
+pub use self::paging::remap_the_kernel;
 use self::paging::PhysicalAddress;
 
 mod area_frame_allocator;
@@ -28,6 +28,10 @@ impl Frame {
 
     fn start_address(&self) -> PhysicalAddress {
         self.number * PAGE_SIZE
+    }
+
+    fn clone(&self) -> Frame {
+        Frame { number: self.number }
     }
 }
 

@@ -9,6 +9,7 @@
 
 #![feature(lang_items)]
 #![feature(const_fn, unique)]
+#![feature(step_by)]
 #![no_std]
 
 extern crate rlibc;
@@ -30,22 +31,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 
     let boot_info = unsafe { multiboot2::load(multiboot_information_address) };
     let memory_map_tag = boot_info.memory_map_tag().expect("Memory map tag required");
-    let elf_sections_tag = boot_info.elf_sections_tag().expect("Memory map tag required");
-
-    println!("memory areas:");
-    for area in memory_map_tag.memory_areas() {
-        println!("    start: 0x{:x}, length: 0x{:x}",
-                 area.base_addr,
-                 area.length);
-    }
-
-    println!("kernel sections:");
-    for section in elf_sections_tag.sections() {
-        println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
-                 section.addr,
-                 section.size,
-                 section.flags);
-    }
+    let elf_sections_tag = boot_info.elf_sections_tag().expect("Elf sections tag required");
 
     let kernel_start = elf_sections_tag.sections().map(|s| s.addr).min().unwrap();
     let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size).max().unwrap();
@@ -66,9 +52,30 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
                                                               multiboot_end,
                                                               memory_map_tag.memory_areas());
 
-    memory::test_paging(&mut frame_allocator);
+    enable_nxe_bit();
+    enable_write_protect_bit();
+
+    memory::remap_the_kernel(&mut frame_allocator, boot_info);
+    println!("It did not crash!");
 
     loop {}
+}
+
+fn enable_nxe_bit() {
+    use x86::msr::{IA32_EFER, rdmsr, wrmsr};
+
+    let nxe_bit = 1 << 11;
+    unsafe {
+        let efer = rdmsr(IA32_EFER);
+        wrmsr(IA32_EFER, efer | nxe_bit);
+    }
+}
+
+fn enable_write_protect_bit() {
+    use x86::controlregs::{cr0, cr0_write};
+
+    let wp_bit = 1 << 16;
+    unsafe { cr0_write(cr0() | wp_bit) };
 }
 
 #[cfg(not(test))]
