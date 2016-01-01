@@ -67,8 +67,6 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
                                                               multiboot_end,
                                                               memory_map_tag.memory_areas());
 
-    memory::test_paging(&mut frame_allocator);
-
     enable_nxe_bit();
     enable_write_protect_bit();
 

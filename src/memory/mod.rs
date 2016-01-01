@@ -8,7 +8,6 @@
 // except according to those terms.
 
 pub use self::area_frame_allocator::AreaFrameAllocator;
-pub use self::paging::test_paging;
 pub use self::paging::remap_the_kernel;
 use self::paging::PhysicalAddress;
 
