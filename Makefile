@@ -19,7 +19,7 @@ assembly_source_files := $(wildcard src/arch/$(arch)/*.asm)
 assembly_object_files := $(patsubst src/arch/$(arch)/%.asm, \
 	build/arch/$(arch)/%.o, $(assembly_source_files))
 
-.PHONY: all clean run iso cargo
+.PHONY: all clean run debug iso cargo gdb
 
 all: $(kernel)
 
@@ -28,7 +28,13 @@ clean:
 	@rm -rf build
 
 run: $(iso)
-	@qemu-system-x86_64 -drive format=raw,file=$(iso)
+	@qemu-system-x86_64 -drive format=raw,file=$(iso) -s
+
+debug: $(iso)
+	@qemu-system-x86_64 -drive format=raw,file=$(iso) -s -S
+
+gdb:
+	@rust-os-gdb/bin/rust-gdb "build/kernel-x86_64.bin" -ex "target remote :1234"
 
 iso: $(iso)
 
