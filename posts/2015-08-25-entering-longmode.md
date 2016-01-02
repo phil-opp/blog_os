@@ -99,19 +99,37 @@ We compare the value in `eax` with the magic value and jump to the label `no_mul
 
 ```nasm
 check_cpuid:
-    pushfd               ; Store the FLAGS-register.
-    pop eax              ; Restore the A-register.
-    mov ecx, eax         ; Set the C-register to the A-register.
-    xor eax, 1 << 21     ; Flip the ID-bit, which is bit 21.
-    push eax             ; Store the A-register.
-    popfd                ; Restore the FLAGS-register.
-    pushfd               ; Store the FLAGS-register.
-    pop eax              ; Restore the A-register.
-    push ecx             ; Store the C-register.
-    popfd                ; Restore the FLAGS-register.
-    xor eax, ecx         ; Do a XOR-operation on the A-register and the C-register.
-    jz .no_cpuid         ; The zero flag is set, no CPUID.
-    ret                  ; CPUID is available for use.
+    ; Check if CPUID is supported by attempting to flip the ID bit (bit 21) in
+    ; the FLAGS register. If we can flip it, CPUID is available.
+
+    ; Copy FLAGS in to EAX via stack
+    pushfd
+    pop eax
+
+    ; Copy to ECX as well for comparing later on
+    mov ecx, eax
+
+    ; Flip the ID bit
+    xor eax, 1 << 21
+
+    ; Copy EAX to FLAGS via the stack
+    push eax
+    popfd
+
+    ; Copy FLAGS back to EAX (with the flipped bit if CPUID is supported)
+    pushfd
+    pop eax
+
+    ; Restore FLAGS from the old version stored in ECX (i.e. flipping the ID bit
+    ; back if it was ever flipped).
+    push ecx
+    popfd
+
+    ; Compare EAX and ECX. If they are equal then that means the bit wasn't
+    ; flipped, and CPUID isn't supported.
+    xor eax, ecx
+    jz .no_cpuid
+    ret
 .no_cpuid:
     mov al, "1"
     jmp error
