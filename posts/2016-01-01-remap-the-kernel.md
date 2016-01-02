@@ -707,7 +707,7 @@ A QEMU boot load indicates that some CPU exception occured. We can see all throw
 [qemu debugging]: {% post_url 2015-09-02-set-up-rust %}#debugging
 
 ```bash
-> qemu-system-x86_64 -d int -no-reboot -drive format=raw,file=build/os-x86_64.iso
+> qemu-system-x86_64 -d int -no-reboot -cdrom build/os-x86_64.iso
 ...
 check_exception old: 0xffffffff new 0xe
      0: v=0e e=0002 i=0 cpl=0 IP=0008:000000000010ab97 pc=000000000010ab97

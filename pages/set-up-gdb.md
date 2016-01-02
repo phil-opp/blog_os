@@ -9,7 +9,7 @@ To make QEMU listen for a gdb connection, we add the `-s` flag to the `run` targ
 
 ```make
 run: $(iso)
-	@qemu-system-x86_64 -drive format=raw,file=$(iso) -s
+	@qemu-system-x86_64 -cdrom $(iso) -s
 ```
 This allows us to connect a debugger at any time, for example to investigate why a panic occurred.
 
@@ -17,7 +17,7 @@ To wait for a debugger connection on startup, we add a `debug` target to the Mak
 
 ```make
 debug: $(iso)
-	@qemu-system-x86_64 -drive format=raw,file=$(iso) -s -S
+	@qemu-system-x86_64 -cdrom $(iso) -s -S
 ```
 It is identical to the `run` target except for the additional `-S` flag. This flag causes QEMU to freeze on startup and wait until a debugger is connected. Now it _should_ be possible to connect gdb.
 
