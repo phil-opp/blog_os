@@ -91,7 +91,7 @@ We compare the value in `eax` with the magic value and jump to the label `no_mul
 
 [Multiboot specification]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
 
-### CPUID ckeck
+### CPUID check
 [CPUID] is a CPU instruction that can be used to get various information about the CPU. But not every processor supports it. CPUID detection is quite laborious, so we just copy a detection function from the [OSDev wiki][CPUID detection]:
 
 [CPUID]: http://wiki.osdev.org/CPUID
