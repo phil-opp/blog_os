@@ -69,7 +69,7 @@ let boot_info = unsafe{ multiboot2::load(multiboot_information_address) };
 let memory_map_tag = boot_info.memory_map_tag().expect("Memory map tag required");
 
 println!("memory areas:");
-for area in emory_map_tag.memory_areas() {
+for area in memory_map_tag.memory_areas() {
     println!("    start: 0x{:x}, length: 0x{:x}", area.base_addr, area.length);
 }
 ```
@@ -361,7 +361,7 @@ let mut frame_allocator = memory::AreaFrameAllocator::new(
 Now we can test it by adding some frame allocations:
 
 ```rust
-println!("{:?}", frame_allocator.allocate_frame())
+println!("{:?}", frame_allocator.allocate_frame());
 ```
 You will see that the frame number starts at `0` and increases steadily, but the kernel and Multiboot frames are left out (you need to allocate many frames to see this since the kernel starts at frame 256).
 

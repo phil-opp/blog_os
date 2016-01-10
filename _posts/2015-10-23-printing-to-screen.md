@@ -326,7 +326,7 @@ use spin::Mutex;
 pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
     column_position: 0,
     color_code: ColorCode::new(Color::LightGreen, Color::Black),
-    buffer: Unique::new(0xb8000 as *mut _),
+    buffer: unsafe { Unique::new(0xb8000 as *mut _) },
 });
 ```
 [Mutex::new] is a const function, too, so it can be used in statics.
@@ -422,7 +422,7 @@ The [next post] describes the Multiboot information structure and creates a fram
 ## Other Rust OS Projects
 Now that you know the very basics of OS development in Rust, you should also check out the following projects:
 
-- [Rust Bare-Bones Kernel]: A basic kernel with roughly the same functionality as ours. Writes output to the serial port instead of the VGA buffer and maps the kernel to the [higher half] \(instead of our identity mapping).  
+- [Rust Bare-Bones Kernel]: A basic kernel with roughly the same functionality as ours. Writes output to the serial port instead of the VGA buffer and maps the kernel to the [higher half] \(instead of our identity mapping).
 _Note_: You need to [cross compile binutils] to build it (or you create some symbolic links[^fn-symlink] if you're on x86_64).
 [Rust Bare-Bones Kernel]: https://github.com/thepowersgang/rust-barebones-kernel
 [higher half]: http://wiki.osdev.org/Higher_Half_Kernel
