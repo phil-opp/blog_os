@@ -15,5 +15,5 @@ x86 = "0.5.0"
 git = "https://github.com/phil-opp/multiboot2-elf64"
 
 [dependencies.bitflags]
-git = "https://github.com/phil-opp/bitflags.git"
-branch = "no_std"
+version = "0.4.0"
+features = ["no_std"]
