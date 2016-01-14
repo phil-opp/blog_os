@@ -264,7 +264,7 @@ error: cannot move out of indexed content [E0507]
     buffer.chars[row] = buffer.chars[row + 1]
                         ^~~~~~~~~~~~~~~~~~~~~
 ```
-It's because of Rust's move semantics again: We try to move out the `ScreenChar` at `row + 1`. If Rust would allow that, the array would become invalid as it would contain some valid and some moved out values. Fortunately, the `ScreenChar` type meets all criteria for the [Copy trait], so we can fix the problem by adding `#derive(Clone, Copy)` to `ScreenChar`.
+It's because of Rust's move semantics again: We try to move out the `ScreenChar` at `row + 1`. If Rust would allow that, the array would become invalid as it would contain some valid and some moved out values. Fortunately, the `ScreenChar` type meets all criteria for the [Copy trait], so we can fix the problem by adding `#[derive(Clone, Copy)]` to `ScreenChar`.
 
 Now we only need to implement the `clear_row` method to finish the newline code:
 
