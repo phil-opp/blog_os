@@ -86,16 +86,18 @@ Bit(s)                | Name | Meaning
 52-62 | available | can be used freely by the OS
 63 | no execute | forbid executing code on this page (the NXE bit in the EFER register must be set)
 
-To model the various flags, we will use the [bitflags] crate. Unfortunately the official version depends on the standard library because `no_std` is still unstable in stable Rust. But since it does not actually require any `std` functions, it's pretty easy to create a `no_std` version. You can find it here [here][bitflags fork]. To add it as a dependency, add the following to your `Cargo.toml`:
+To model the various flags, we will use the [bitflags] crate. To add it as a dependency, add the following to your `Cargo.toml`:
 
 [bitflags]: https://github.com/rust-lang-nursery/bitflags
-[bitflags fork]: https://github.com/phil-opp/bitflags/tree/no_std
 
 ```toml
 [dependencies.bitflags]
-git = "https://github.com/phil-opp/bitflags.git"
-branch = "no_std"
+version = "0.4.0"
+features = ["no_std"]
 ```
+The `no_std` feature is needed because `bitflags` depends on the standard library by default. But it has a [cargo feature] to use the core library instead. It will become the default as soon as `no_std` is stable in a stable Rust release.
+[cargo feature]: http://doc.crates.io/manifest.html#the-[features]-section
+
 Note that you need a `#[macro_use]` above the `extern crate` definition.
 
 Now we can model the various flags:
