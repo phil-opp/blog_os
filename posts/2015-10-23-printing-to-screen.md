@@ -232,8 +232,7 @@ The `Ok(())` is just a `Ok` Result containing the `()` type. We can drop the `pu
 Now we can use Rust's built-in `write!`/`writeln!` formatting macros:
 
 ```rust
-...
-let mut writer = Writer::new(Color::Blue, Color::LightGreen);
+let mut writer = Writer {...};
 writer.write_byte(b'H');
 writer.write_str("ello! ");
 write!(writer, "The numbers are {} and {}", 42, 1.0/3.0);
