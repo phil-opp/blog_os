@@ -27,7 +27,7 @@ This repository contains the source code for the _Writing an OS in Rust_ series 
 - [Set Up GDB](http://os.phil-opp.com/set-up-gdb.html)
 
 ## Building
-You need to have `nasm`, `grub-mkrescue`, `qemu` and a nighly Rust compiler installed. Then you can run it using `make run`.
+You need to have `nasm`, `grub-mkrescue`, `xorriso`, `qemu` and a nighly Rust compiler installed. Then you can run it using `make run`.
 
 Please file an issue if you run into any problems.
 
