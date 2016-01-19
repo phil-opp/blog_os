@@ -5,13 +5,10 @@ title: Home
 
 <div class="front-page-introduction">
 <p>This blog series creates a small operating system in the <a href="https://www.rust-lang.org/">Rust programming language</a>.
-We start from scratch and build it in small steps. Each post is a
-tutorial and includes all needed code, so you can follow along if you
+Each post is a small tutorial and includes all needed code, so you can follow along if you
 like. The source code is also available in the corresponding <a href="https://github.com/phil-opp/blog_os">Github
 repository</a>.</p>
-<p>First, we create a minimal 64-bit kernel and do the initial Rust setup.
-Then we explore virtual and physical <a href="#memory-management">memory management</a>.
-The latest post is: {% for post in site.posts limit:1 %}
+<p>Latest post: {% for post in site.posts limit:1 %}
   <strong><a href="#{{ post.id }}" onclick="
     post = document.getElementById('{{ post.id }}');
     post.className = post.className.replace(/\b updated\b/, '');
