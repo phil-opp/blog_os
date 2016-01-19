@@ -160,12 +160,18 @@ Let's translate it:
 
 [^Linker 1M]: We don't want to load the kernel to e.g. `0x0` because there are many special memory areas below the 1MB mark (for example the so-called VGA buffer at `0xb8000`, that we use to print `OK` to the screen).
 
-So let's create the ELF object files and link them using our new linker script. It's important to pass the `-n` flag to the linker, which disables the automatic section alignment in the executable. Otherwise the linker may page align the `.boot` section in the executable file. If that happens, GRUB isn't able to find the Multiboot header because it isn't at the beginning anymore. We can use `objdump` to print the sections of the generated executable and verify that the `.boot` section has a low file offset.
+So let's create the ELF object files and link them using our new linker script:
 
 ```
 > nasm -f elf64 multiboot_header.asm
 > nasm -f elf64 boot.asm
 > ld -n -o kernel.bin -T linker.ld multiboot_header.o boot.o
+```
+It's important to pass the `-n` (or `--nmagic`) flag to the linker, which disables the automatic section alignment in the executable. Otherwise the linker may page align the `.boot` section in the executable file. If that happens, GRUB isn't able to find the Multiboot header because it isn't at the beginning anymore.
+
+We can use `objdump` to print the sections of the generated executable and verify that the `.boot` section has a low file offset:
+
+```
 > objdump -h kernel.bin
 kernel.bin:     file format elf64-x86-64
 
