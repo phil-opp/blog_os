@@ -3,11 +3,13 @@ layout: default
 title: Home
 ---
 
-<div class="front-page-introduction">
-<p>This blog series creates a small operating system in the <a href="https://www.rust-lang.org/">Rust programming language</a>.
-Each post is a small tutorial and includes all needed code, so you can follow along if you
-like. The source code is also available in the corresponding <a href="https://github.com/phil-opp/blog_os">Github
-repository</a>.</p>
+<div class="front-page-introduction"><p>
+  This blog series creates a small operating system in the
+  <a href="https://www.rust-lang.org/">Rust programming language</a>. Each post
+  is a small tutorial and includes all needed code, so you can follow along if
+  you like. The source code is also available in the corresponding
+  <a href="https://github.com/phil-opp/blog_os">Github repository</a>.
+</p>
 <p>Latest post: {% for post in site.posts limit:1 %}
   <strong><a href="#{{ post.id }}" onclick="
     post = document.getElementById('{{ post.id }}');
@@ -15,8 +17,8 @@ repository</a>.</p>
     post.offsetWidth = post.offsetWidth; // trigger reflow -> works on 2nd click, too
     post.className += ' updated';
   ">{{post.title}}</a></strong>
-{% endfor %}</p>
-</div>
+  {% endfor %}
+</p></div>
 
 {% assign posts = site.posts | reverse %}
 
