@@ -206,7 +206,12 @@ Now we can create a bootable image using the command:
 ```
 grub-mkrescue -o os.iso isofiles
 ```
-_Note_: If it does not work for you, make sure `xorriso` is installed and try to run it with `--verbose`.
+_Note_: `grub-mkrescue` causes problems on some platforms. If it does not work for you, try the following steps:
+
+- try to run it with `--verbose`
+- make sure `xorriso` is installed (`xorriso` or `libisoburn` package)
+- If you're using an EFI-system, `grub-mkrescue` tries to create an EFI image by default. You can either pass `-d /usr/lib/grub/i386-pc` to avoid EFI or install the `mtools` package to get a working EFI image
+- on some system the command is named `grub2-mkrescue`
 
 ## Booting
 Now it's time to boot our OS. We will use [QEMU]:
