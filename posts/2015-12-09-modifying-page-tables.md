@@ -882,9 +882,20 @@ An x86 processor has many different caches because always accessing the main mem
 
 The translation lookaside buffer, or TLB, caches the translation of virtual to physical addresses. It's filled automatically when a page is accessed. But it's not updated transparently when the mapping of a page changes. This is the reason that we still can access the page even through we unmapped it in the page table.
 
-So to fix our `unmap` function, we need to remove the cached translation from the TLB. We can use Gerd Zellweger's [x86][x86 crate] crate to do this easily. To add it, append `x86 = "0.5.0"` to the dependency section in the `Cargo.toml`. Then we can use it to fix `unmap`:
+So to fix our `unmap` function, we need to remove the cached translation from the TLB. We can use Gerd Zellweger's [x86][x86 crate] crate to do this easily. To add it, we append the following to our `Cargo.toml`:
 
 [x86 crate]: https://github.com/gz/rust-x86
+
+```toml
+[dependencies.x86]
+version = "0.6.0"
+default-features = false
+```
+It has a `performance-counter` feature that allows reading the CPU specific [performance counters] but increases compile times. We don't need it right now, so we disable it using `default-features = false`.
+
+[performance counters]: http://gz.github.io/rust-x86/x86/perfcnt/index.html
+
+ Now we can use it to fix `unmap`:
 
 ```rust
 ...

@@ -9,7 +9,10 @@ crate-type = ["staticlib"]
 [dependencies]
 rlibc = "0.1.4"
 spin = "0.3.4"
-x86 = "0.5.0"
+
+[dependencies.x86]
+version = "0.6.0"
+default-features = false
 
 [dependencies.multiboot2]
 git = "https://github.com/phil-opp/multiboot2-elf64"
