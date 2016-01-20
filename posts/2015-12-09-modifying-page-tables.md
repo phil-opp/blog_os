@@ -118,7 +118,7 @@ bitflags! {
     }
 }
 ```
-To extract the flags from the entry we create a `EntryFlags::flags` method that uses [from_bits_truncate]:
+To extract the flags from the entry we create an `Entry::flags` method that uses [from_bits_truncate]:
 
 [from_bits_truncate]: https://doc.rust-lang.org/bitflags/bitflags/macro.bitflags!.html#methods
 
