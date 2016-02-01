@@ -163,6 +163,7 @@ check_long_mode:
     mov al, "2"
     jmp error
 ```
+It tries to invoke a CPUID function to test if the long mode is available. But this function is not part of CPUIDs core functions, therefore we need to test if the so-called extended functions are available before. So the first `cpuid` call tests whether the function is available that checks long mode support. And then the second `cpuid` call uses that function to test whether long mode support is available. Whew!
 
 ### Putting it together
 We just call these check functions right after start:
