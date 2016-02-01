@@ -139,8 +139,8 @@ check_cpuid:
 
     ; Compare EAX and ECX. If they are equal then that means the bit wasn't
     ; flipped, and CPUID isn't supported.
-    xor eax, ecx
-    jz .no_cpuid
+    cmp eax, ecx
+    je .no_cpuid
     ret
 .no_cpuid:
     mov al, "1"
