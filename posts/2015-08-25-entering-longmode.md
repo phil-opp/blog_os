@@ -130,13 +130,18 @@ check_cpuid:
 
     ; Compare EAX and ECX. If they are equal then that means the bit wasn't
     ; flipped, and CPUID isn't supported.
-    xor eax, ecx
-    jz .no_cpuid
+    cmp eax, ecx
+    je .no_cpuid
     ret
 .no_cpuid:
     mov al, "1"
     jmp error
 ```
+Basically, the `CPUID` instruction is supported if we can flip some bit in the [FLAGS register]. We can't operate on the flags register directly, so we need to load it into some general purpose register such as `eax` first. The only way to do this is to push the `FLAGS` register on the stack through the `pushfd` instruction and then pop it into `eax`. Equally, we write it back through `push ecx` and `popfd`. To flip the bit we use the `xor` instruction to perform an [exclusive OR]. Finally we compare the two values and jump to `.no_cpuid` if both are equal (`je` – “jump if equal”). The `.no_cpuid` code just jumps to the `error` function with error code `1`.
+
+Don't worry, you don't need to understand the details.
+
+[exclusive OR]: https://en.wikipedia.org/wiki/Exclusive_or
 
 ### Long Mode check
 Now we can use CPUID to detect whether long mode can be used. I use code from [OSDev][long mode detection] again:
