@@ -87,9 +87,12 @@ check_multiboot:
     mov al, "0"
     jmp error
 ```
-We compare the value in `eax` with the magic value and jump to the label `no_multiboot` if they're not equal (`jne` – “jump if not equal”). In `no_multiboot`, we jump to the error function with error code `0`.
+We use the `cmp` instruction to compare the value in `eax` to the magic value. If the values are equal, the `cmp` instruction sets the zero flag in the [FLAGS register]. The `jne` (“jump if not equal”) instruction reads this zero flag and jumps to the given address if it's not set. Thus we jump to the `.no_multiboot` label if `eax` does not contain the magic value.
+
+In `no_multiboot`, we use the `jmp` (“jump”) instruction to jump to our error function. We could just as well use the `call` instruction, which additionally pushes the return address. But the return address is not needed because `error` never returns. To pass `0` as error code to the `error` function, we move it into `al` before the jump (`error` will read it from there).
 
 [Multiboot specification]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
+[FLAGS register]: https://en.wikipedia.org/wiki/FLAGS_register
 
 ### CPUID check
 [CPUID] is a CPU instruction that can be used to get various information about the CPU. But not every processor supports it. CPUID detection is quite laborious, so we just copy a detection function from the [OSDev wiki][CPUID detection]:
