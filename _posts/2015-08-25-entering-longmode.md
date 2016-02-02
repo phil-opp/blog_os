@@ -87,9 +87,12 @@ check_multiboot:
     mov al, "0"
     jmp error
 ```
-We compare the value in `eax` with the magic value and jump to the label `no_multiboot` if they're not equal (`jne` – “jump if not equal”). In `no_multiboot`, we jump to the error function with error code `0`.
+We use the `cmp` instruction to compare the value in `eax` to the magic value. If the values are equal, the `cmp` instruction sets the zero flag in the [FLAGS register]. The `jne` (“jump if not equal”) instruction reads this zero flag and jumps to the given address if it's not set. Thus we jump to the `.no_multiboot` label if `eax` does not contain the magic value.
+
+In `no_multiboot`, we use the `jmp` (“jump”) instruction to jump to our error function. We could just as well use the `call` instruction, which additionally pushes the return address. But the return address is not needed because `error` never returns. To pass `0` as error code to the `error` function, we move it into `al` before the jump (`error` will read it from there).
 
 [Multiboot specification]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
+[FLAGS register]: https://en.wikipedia.org/wiki/FLAGS_register
 
 ### CPUID check
 [CPUID] is a CPU instruction that can be used to get various information about the CPU. But not every processor supports it. CPUID detection is quite laborious, so we just copy a detection function from the [OSDev wiki][CPUID detection]:
@@ -127,13 +130,18 @@ check_cpuid:
 
     ; Compare EAX and ECX. If they are equal then that means the bit wasn't
     ; flipped, and CPUID isn't supported.
-    xor eax, ecx
-    jz .no_cpuid
+    cmp eax, ecx
+    je .no_cpuid
     ret
 .no_cpuid:
     mov al, "1"
     jmp error
 ```
+Basically, the `CPUID` instruction is supported if we can flip some bit in the [FLAGS register]. We can't operate on the flags register directly, so we need to load it into some general purpose register such as `eax` first. The only way to do this is to push the `FLAGS` register on the stack through the `pushfd` instruction and then pop it into `eax`. Equally, we write it back through `push ecx` and `popfd`. To flip the bit we use the `xor` instruction to perform an [exclusive OR]. Finally we compare the two values and jump to `.no_cpuid` if both are equal (`je` – “jump if equal”). The `.no_cpuid` code just jumps to the `error` function with error code `1`.
+
+Don't worry, you don't need to understand the details.
+
+[exclusive OR]: https://en.wikipedia.org/wiki/Exclusive_or
 
 ### Long Mode check
 Now we can use CPUID to detect whether long mode can be used. I use code from [OSDev][long mode detection] again:
@@ -142,19 +150,27 @@ Now we can use CPUID to detect whether long mode can be used. I use code from [O
 
 ```nasm
 check_long_mode:
-    mov eax, 0x80000000    ; Set the A-register to 0x80000000.
-    cpuid                  ; CPU identification.
-    cmp eax, 0x80000001    ; Compare the A-register with 0x80000001.
-    jb .no_long_mode       ; It is less, there is no long mode.
-    mov eax, 0x80000001    ; Set the A-register to 0x80000001.
-    cpuid                  ; CPU identification.
-    test edx, 1 << 29      ; Test if the LM-bit is set in the D-register.
-    jz .no_long_mode       ; They aren't, there is no long mode.
+    ; test if extended processor info in available
+    mov eax, 0x80000000    ; implicit argument for cpuid
+    cpuid                  ; get highest supported argument
+    cmp eax, 0x80000001    ; it needs to be at least 0x80000001
+    jb .no_long_mode       ; if it's less, the CPU is too old for long mode
+    
+    ; use extended info to test if long mode is available
+    mov eax, 0x80000001    ; argument for extended processor info
+    cpuid                  ; returns various feature bits in ecx and edx
+    test edx, 1 << 29      ; test if the LM-bit is set in the D-register
+    jz .no_long_mode       ; If it's not set, there is no long mode
     ret
 .no_long_mode:
     mov al, "2"
     jmp error
 ```
+Like many low-level things, CPUID is a bit strange. Instead of taking a parameter, the `cpuid` instruction implicitely uses the `eax` register as argument. To test if long mode is available, we need to call `cpuid` with `0x80000001` in `eax`. This loads some information to the `ecx` and `edx` registers. Long mode is supported if the 29th bit in `edx` is set. [Wikipedia][cpuid long mode] has detailed information.
+
+[cpuid long mode]: https://en.wikipedia.org/wiki/CPUID#EAX.3D80000001h:_Extended_Processor_Info_and_Feature_Bits
+
+If you look at the assembly above, you'll probably notice that we call `cpuid` twice. The reason is that the CPUID command started with only a few functions and was extended over time. So old processors may not know the `0x80000001` argument at all. To test if they do, we need to invoke `cpuid` with `0x80000000` in `eax` first. It returns the highest supported parameter value in `eax`. If it's at least `0x80000001`, we can test for long mode as described above. Else the CPU is old and doesn't know what long mode is either. In that case, we directly jump to `.no_long_mode` through the `jb` instruction (“jump if below”).
 
 ### Putting it together
 We just call these check functions right after start:
