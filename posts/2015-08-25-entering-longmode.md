@@ -150,20 +150,27 @@ Now we can use CPUID to detect whether long mode can be used. I use code from [O
 
 ```nasm
 check_long_mode:
-    mov eax, 0x80000000    ; Set the A-register to 0x80000000.
-    cpuid                  ; CPU identification.
-    cmp eax, 0x80000001    ; Compare the A-register with 0x80000001.
-    jb .no_long_mode       ; It is less, there is no long mode.
-    mov eax, 0x80000001    ; Set the A-register to 0x80000001.
-    cpuid                  ; CPU identification.
-    test edx, 1 << 29      ; Test if the LM-bit is set in the D-register.
-    jz .no_long_mode       ; They aren't, there is no long mode.
+    ; test if extended processor info in available
+    mov eax, 0x80000000    ; implicit argument for cpuid
+    cpuid                  ; get highest supported argument
+    cmp eax, 0x80000001    ; it needs to be at least 0x80000001
+    jb .no_long_mode       ; if it's less, the CPU is too old for long mode
+    
+    ; use extended info to test if long mode is available
+    mov eax, 0x80000001    ; argument for extended processor info
+    cpuid                  ; returns various feature bits in ecx and edx
+    test edx, 1 << 29      ; test if the LM-bit is set in the D-register
+    jz .no_long_mode       ; If it's not set, there is no long mode
     ret
 .no_long_mode:
     mov al, "2"
     jmp error
 ```
-It tries to invoke a CPUID function to test if the long mode is available. But this function is not part of CPUIDs core functions, therefore we need to test if the so-called extended functions are available before. So the first `cpuid` call tests whether the function is available that checks long mode support. And then the second `cpuid` call uses that function to test whether long mode support is available. Whew!
+Like many low-level things, CPUID is a bit strange. Instead of taking a parameter, the `cpuid` instruction implicitely uses the `eax` register as argument. To test if long mode is available, we need to call `cpuid` with `0x80000001` in `eax`. This loads some information to the `ecx` and `edx` registers. Long mode is supported if the 29th bit in `edx` is set. [Wikipedia][cpuid long mode] has detailed information.
+
+[cpuid long mode]: https://en.wikipedia.org/wiki/CPUID#EAX.3D80000001h:_Extended_Processor_Info_and_Feature_Bits
+
+If you look at the assembly above, you'll probably notice that we call `cpuid` twice. The reason is that the CPUID command started with only a few functions and was extended over time. So old processors may not know the `0x80000001` argument at all. To test if they do, we need to invoke `cpuid` with `0x80000000` in `eax` first. It returns the highest supported parameter value in `eax`. If it's at least `0x80000001`, we can test for long mode as described above. Else the CPU is old and doesn't know what long mode is either. In that case, we directly jump to `.no_long_mode` through the `jb` instruction (“jump if below”).
 
 ### Putting it together
 We just call these check functions right after start:
