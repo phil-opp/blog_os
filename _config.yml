@@ -2,7 +2,6 @@
 #
 # Use of `relative_permalinks` ensures post links from the index work properly.
 permalink:           none
-relative_permalinks: true
 
 # Setup
 title:               phil-opp's blog
