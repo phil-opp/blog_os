@@ -38,12 +38,21 @@ Number | Color      | Number + Bright Bit | Bright Color
 0x6    | Brown      | 0xe                 | Yellow
 0x7    | Light Gray | 0xf                 | White
 
-Bit 4 is the _bright bit_, which turns for example blue into light blue. It is unavailable in background color as the bit is used to enable blinking. However, it's possible to disable blinking through a [BIOS function][disable blinking]. Then the full 16 colors can be used as background.
+Bit 4 is the _bright bit_, which turns for example blue into light blue. It is unavailable in background color as the bit is used to control if the text should blink. If you want to use a light background color (e.g. white) you have to disable blinking through a [BIOS function][disable blinking].
 
 [disable blinking]: http://www.ctyme.com/intr/rb-0117.htm
 
 ## A basic Rust Module
-Now that we know how the VGA buffer works, we can create a Rust module to handle printing. To create a new module named `vga_buffer`, we just need to create a file named `src/vga_buffer.rs` and add a `mod vga_buffer` line to `src/lib.rs`.
+Now that we know how the VGA buffer works, we can create a Rust module to handle printing:
+
+```rust
+// in src/lib.rs
+mod vga_buffer;
+```
+
+The content of this module can live either in `src/vga_buffer.rs` or `src/vga_buffer/mod.rs`. The latter supports submodules while the former does not. But our module does not need any submodules so we create it as `src/vga_buffer.rs`.
+
+All of the code below goes into our new module (unless specified otherwise).
 
 ### Colors
 First, we represent the different colors using an enum:
@@ -200,6 +209,7 @@ It just creates a new Writer that points to the VGA buffer at `0xb8000`. Then it
 To print whole strings, we can convert them to bytes and print them one-by-one:
 
 ```rust
+// in `impl Writer`
 pub fn write_str(&mut self, s: &str) {
     for byte in s.bytes() {
       self.write_byte(byte)
@@ -232,6 +242,7 @@ The `Ok(())` is just a `Ok` Result containing the `()` type. We can drop the `pu
 Now we can use Rust's built-in `write!`/`writeln!` formatting macros:
 
 ```rust
+// in the `print_something` function
 let mut writer = Writer {...};
 writer.write_byte(b'H');
 writer.write_str("ello! ");
@@ -245,6 +256,8 @@ Now you should see a `Hello! The numbers are 42 and 0.3333333333333333` in stran
 Right now, we just ignore newlines and characters that don't fit into the line anymore. Instead we want to move every character one line up (the top line gets deleted) and start at the beginning of the last line again. To do this, we add an implementation for the `new_line` method of `Writer`:
 
 ```rust
+// in `impl Writer`
+
 fn new_line(&mut self) {
     for row in 0..(BUFFER_HEIGHT-1) {
         let buffer = self.buffer();
@@ -268,6 +281,7 @@ It's because of Rust's move semantics again: We try to move out the `ScreenChar`
 Now we only need to implement the `clear_row` method to finish the newline code:
 
 ```rust
+// in `impl Writer`
 fn clear_row(&mut self, row: usize) {
     let blank = ScreenChar {
         ascii_character: b' ',
@@ -312,7 +326,7 @@ To use a spinning mutex, we can add the [spin crate] as a dependency in Cargo.to
 [spin crate]: https://crates.io/crates/spin
 
 ```toml
-...
+# in Cargo.toml
 [dependencies]
 rlibc = "0.1.4"
 spin = "0.3.4"
@@ -320,6 +334,7 @@ spin = "0.3.4"
 and a `extern crate spin;` definition in `src/lib.rs`. Then we can use the spinning Mutex to provide interior mutability to our static writer:
 
 ```rust
+// in src/vga_buffer.rs again
 use spin::Mutex;
 ...
 pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
@@ -335,6 +350,7 @@ Now we can easily print from our main function:
 [Mutex::new]: https://mvdnes.github.io/rust-docs/spinlock-rs/spin/struct.Mutex.html#method.new
 
 ```rust
+// in src/lib.rs
 pub extern fn rust_main() {
     use core::fmt::Write;
     vga_buffer::WRITER.lock().write_str("Hello again");
@@ -372,6 +388,7 @@ It calls the `_print` method in the `io` module of the current crate (`$crate`),
 To print to the VGA buffer, we just copy the `println!` macro and modify the `print!` macro to use our static `WRITER` instead of `_print`:
 
 ```
+// in src/vga_buffer.rs
 macro_rules! print {
     ($($arg:tt)*) => ({
             use core::fmt::Write;
@@ -387,6 +404,7 @@ Note the additional `{}` scope around the macro: I wrote `=> ({…})` instead of
 We can now use `println!` to add a rather trivial function to clear the screen:
 
 ```rust
+// in src/vga_buffer.rs
 pub fn clear_screen() {
     for _ in 0..BUFFER_HEIGHT {
         println!("");
@@ -397,6 +415,8 @@ pub fn clear_screen() {
 To use `println` in `lib.rs`, we need to import the macros of the VGA buffer module first. Therefore we add a `#[macro_use]` attribute to the module declaration:
 
 ```rust
+// in src/lib.rs
+
 #[macro_use]
 mod vga_buffer;
 
