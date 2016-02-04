@@ -186,7 +186,11 @@ multiboot_start: 0x11d400, multiboot_end: 0x11d9c8
 So the kernel starts at 1MiB (like expected) and is about 105 KiB in size. The multiboot information structure was placed at `0x11d400` by GRUB and needs 1480 bytes. Of course your numbers could be a bit different due to different versions of Rust or GRUB (or some differences in the source code).
 
 ## A frame allocator
-When we create a paging module in the next post, we will need free physical frames to create new page tables. So we need some kind of allocator that keeps track of physical frames and gives us a free one when needed. There are various ways to write such a frame allocator.
+When using paging, the physical memory is split into equally sized chunks (normally 4096 bytes) Such a chunk is called "physical page" or "frame". These frames can be mapped to any virtual page through page tables. For more information about paging take a peek at the [next post].
+
+We will need a free frame in many cases. For example when want to increase the size of our future kernel heap. Or when we create a new page table. Or when we add a new kernel thread and thus need to allocate a new stack. So we need some kind of allocator that keeps track of physical frames and gives us a free one when needed.
+
+There are various ways to write such a frame allocator:
 
 We could create some kind of linked list from the free frames. For example, each frame could begin with a pointer to the next free frame. Since the frames are free, this would not overwrite any data. Our allocator would just save the head of the list and could easily allocate and deallocate frames by updating pointers. Unfortunately, this approach has a problem: It requires reading and writing these free frames. So we would need to map all physical frames to some virtual address, at least temporary. Another disadvantage is that we need to create this linked list at startup. That implies that we need to set over one million pointers at startup if the machine has 4GiB of RAM.
 
