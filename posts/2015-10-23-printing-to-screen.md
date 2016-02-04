@@ -129,9 +129,14 @@ pub struct Writer {
     buffer: Unique<Buffer>,
 }
 ```
-The writer will always write to the last line and shift lines up when a line is full (or on `\n`). The `column_position` field keeps track of the current position in the last row. The current foreground and background colors are specified by `color_code` and a pointer to the VGA buffer is stored in `buffer`. To make it possible to create a `static` Writer later, the `buffer` field stores an `Unique<Buffer>` instead of a plain `*mut Buffer`. [Unique] is a wrapper that implements Send/Sync and is thus usable as a `static`. Since it's unstable, you may need to add the `unique` feature to `lib.rs`.
+The writer will always write to the last line and shift lines up when a line is full (or on `\n`). The `column_position` field keeps track of the current position in the last row. The current foreground and background colors are specified by `color_code` and a pointer to the VGA buffer is stored in `buffer`. To make it possible to create a `static` Writer later, the `buffer` field stores an `Unique<Buffer>` instead of a plain `*mut Buffer`. [Unique] is a wrapper that implements Send/Sync and is thus usable as a `static`. Since it's unstable, you may need to add the `unique` feature to `lib.rs`:
 
 [Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
+
+```rust
+// in src/lib.rs
+#![feature(unique)]
+```
 
 ## Printing to Screen
 Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte (it doesn't compile yet):
@@ -321,7 +326,7 @@ To get synchronized interior mutability, users of the standard library can use [
 [Mutex]: https://doc.rust-lang.org/nightly/std/sync/struct.Mutex.html
 [spinlock]: https://en.wikipedia.org/wiki/Spinlock
 
-To use a spinning mutex, we can add the [spin crate] as a dependency in Cargo.toml:
+To use a spinning mutex, we can add the [spin crate] as a dependency:
 
 [spin crate]: https://crates.io/crates/spin
 
@@ -331,7 +336,13 @@ To use a spinning mutex, we can add the [spin crate] as a dependency in Cargo.to
 rlibc = "0.1.4"
 spin = "0.3.4"
 ```
-and a `extern crate spin;` definition in `src/lib.rs`. Then we can use the spinning Mutex to provide interior mutability to our static writer:
+
+```rust
+// in src/lib.rs
+extern crate spin;
+```
+
+Then we can use the spinning Mutex to add interior mutability to our static writer:
 
 ```rust
 // in src/vga_buffer.rs again
