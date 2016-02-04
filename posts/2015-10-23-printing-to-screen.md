@@ -223,11 +223,10 @@ pub fn write_str(&mut self, s: &str) {
 ```
 You can try it yourself in the `print_something` function.
 
-When you print strings with some special characters like `ä` or `λ`, you'll notice that they cause weird symbols on screen. That's because they are represented by multiple bytes in [UTF-8]. By converting them to bytes, we of course get strange results. But since the VGA buffer doesn't support UTF-8, it's not possible to display these characters anyway. To ensure that a string contains only ASCII characters, you can prefix a `b` to create a [Byte String].
+When you print strings with some special characters like `ä` or `λ`, you'll notice that they cause weird symbols on screen. That's because they are represented by multiple bytes in [UTF-8]. By converting them to bytes, we of course get strange results. But since the VGA buffer doesn't support UTF-8, it's not possible to display these characters anyway.
 
 [core tracking issue]: https://github.com/rust-lang/rust/issues/27701
 [UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
-[Byte String]: https://doc.rust-lang.org/reference.html#characters-and-strings
 
 ### Support Formatting Macros
 It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_str` method. To implement the trait, we just need to move it into an `impl ::core::fmt::Write for Writer` block and add a return type:
