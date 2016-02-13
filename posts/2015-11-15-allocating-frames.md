@@ -128,7 +128,9 @@ for section in elf_sections_tag.sections() {
 ```
 This should print out the start address and size of all kernel sections. If the section is writable, the `0x1` bit is set in `flags`. The `0x4` bit marks an executable section and the `0x2` bit indicates that the section was loaded in memory. For example, the `.text` section is executable but not writable and the `.data` section just the opposite.
 
-But when we execute it, tons of really small sections are printed. We can use the `objdump -h build/kernel-x86_64.bin` command to list the sections with name. There seem to be over 200 sections and many of them start with `.text.*` or `.data.rel.ro.local.*`. This is because the Rust compiler puts e.g. each function in its own `.text` subsection. To merge these subsections, we need to update our linker script:
+But when we execute it, tons of really small sections are printed. We can use the `objdump -h build/kernel-x86_64.bin` command to list the sections with name. There seem to be over 200 sections and many of them start with `.text.*` or `.data.rel.ro.local.*`. This is because the Rust compiler puts e.g. each function in its own `.text` subsection. That way, unused functions are removed when the linker omits unused sections.
+
+To merge these subsections, we need to update our linker script:
 
 ```
 SECTIONS {
