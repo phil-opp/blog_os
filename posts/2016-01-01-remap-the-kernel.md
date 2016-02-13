@@ -8,6 +8,14 @@ As always, you can find the source code on [Github]. Don't hesitate to file issu
 
 [Github]: https://github.com/phil-opp/blog_os/tree/remap_the_kernel
 
+_Updates_: The `AreaFrameAllocator` [was broken][areaframeallocator broken] after switching to a new table. To fix this, we added the [Fixing the Frame Allocator] section and updated the [linker script][linker script update]. For a complete set of changes see [#131] and [this diff][#131-changes].
+
+[areaframeallocator broken]: https://github.com/phil-opp/blog_os/issues/126
+[Fixing the Frame Allocator]: #fixing-the-frame-allocator
+[linker script update]: #page-align-sections
+[#131]: https://github.com/phil-opp/blog_os/pull/131
+[#131-changes]: https://github.com/phil-opp/blog_os/compare/75aa669cdbb427c7bf0485c68692d243065cd3e9...635f7d3f9dced752f84d429e1d51f5c2b29854e3
+
 ## Motivation
 
 In the [previous post], we had a strange bug in the `unmap` function. Its reason was a silent stack overflow, which corrupted the page tables. Fortunately, our kernel stack is right above the page tables so that we noticed the overflow relatively quickly. This won't be the case when we add threads with new stacks in the future. Then a silent stack overflow could overwrite some data without us noticing. But eventually some completely unrelated function fails because a variable changed its value.
