@@ -804,6 +804,42 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
 ```
 Now we should see the `NEW TABLE!!!` message (and also the `It did not crash!` line again).
 
+### Fixing the Frame Allocator
+The same problem as above occurs when we try to use our [AreaFrameAllocator] again. Try to add the following to `rust_main` after switching to the new table:
+
+[AreaFrameAllocator]: http://os.phil-opp.com/allocating-frames.html#the-allocator
+
+```rust
+// in src/lib.rs
+pub extern "C" fn rust_main(multiboot_information_address: usize) {
+    ...
+    memory::remap_the_kernel(&mut frame_allocator, boot_info);
+    frame_allocator.allocate_frame(); // new: try to allocate a frame
+    println!("It did not crash!");
+```
+This causes the same bootloop as above. The reason is that the `AreaFrameAllocator` uses the memory map of the Multiboot information structure. But we did not map the Multiboot structure, so it causes a page fault. To fix it, we identity map it as well:
+
+```rust
+// in `remap_the_kernel` in src/memory/paging/mod.rs
+active_table.with(&mut new_table, &mut temporary_page, |mapper| {
+
+    // … identity map the allocated kernel sections
+    // … identity map the VGA text buffer
+
+    // new:
+    // identity map the multiboot info structure
+    let multiboot_start = boot_info as *const _ as usize;
+    let range = Range {
+        start: multiboot_start,
+        end: multiboot_start + (boot_info.total_size as usize),
+    };
+    for address in range.step_by(PAGE_SIZE) {
+        mapper.identity_map(Frame::containing_address(address), PRESENT, allocator);
+    }
+});
+```
+Normally the multiboot struct fits on one page. But GRUB can place it anywhere, so it could randomly cross a page boundary. Therefore we use a range to be on the safe side. Now we should be able to allocate frames again.
+
 Congratulations! We successfully switched our kernel to a new page table!
 
 ## Using the Correct Flags
