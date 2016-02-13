@@ -845,7 +845,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
 
 But when we test it now, we get a page fault again. We can use the same technique as above to get the responsible function. I won't bother you with the QEMU output and just tell you the results:
 
-This time the responsible function is `controlregs::cr3_write()` itself. From the [error code][page fault error code] we learn that it was a page protection violation and caused by “reading a 1 in a reserved field”. So the page table had some reserved bit set that should be always 0. It must be either the `NO_EXECUTE` flag, since it's the only new bit that we set in the page table.
+This time the responsible function is `controlregs::cr3_write()` itself. From the [error code][page fault error code] we learn that it was a page protection violation and caused by “reading a 1 in a reserved field”. So the page table had some reserved bit set that should be always 0. It must be the `NO_EXECUTE` flag, since it's the only new bit that we set in the page table.
 
 ### The NXE Bit
 The reason is that the `NO_EXECUTE` bit must only be used when the `NXE` bit in the [Extended Feature Enable Register] \(EFER) is set. That register is similar to Rust's feature gating and can be used to enable all sorts of advanced CPU features. Since the `NXE` bit is off by default, we caused a page fault when we added the `NO_EXECUTE` bit to the page table.
@@ -910,7 +910,7 @@ stack_bottom:
 stack_top:
 ```
 
-The old page tables are right below the stack. They are still identity mapped since they are part of the kernel's `.bss` section. We just need to turn the old `p4_table` into a guard page to secure the kernel stack. That way we elegantly reuse the memory of the old P3 and P2 tables to increase the stack size.
+The old page tables are right below the stack. They are still identity mapped since they are part of the kernel's `.bss` section. We just need to turn the old `p4_table` into a guard page to secure the kernel stack. That way we even reuse the memory of the old P3 and P2 tables to increase the stack size.
 
 So let's implement it:
 
@@ -933,7 +933,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
 ```
 Now we have a very basic guard page: The page below the stack is unmapped, so a stack overflow causes an immediate page fault. Thus, silent stack overflows are no longer possible.
 
-Or to be precise, they are highly improbable. If we have a function with many big stack variables, it's possible that the guard page is missed. For example, the following function could still corrupt memory below the stack:
+Or to be precise, they are improbable. If we have a function with many big stack variables, it's possible that the guard page is missed. For example, the following function could still corrupt memory below the stack:
 
 ```rust
 fn stack_overflow() {
