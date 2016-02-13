@@ -577,7 +577,23 @@ We require that all sections are page aligned because a page must not contain se
 [^fn-nmagic]: The default behavior changes not only the virtual section alignment, but also the section alignment in the ELF file. Thus the Multiboot header isn't at the beginning of the file anymore and GRUB no longer finds it. So we've disabled this magical default by passing the `-n` or `--nmagic` flag.
 
 ### Page Align Sections
-So our sections aren't page aligned right now and the assertion would fail. We can fix this by adding `ALIGN(4K)` to all sections in the linker file:
+So our sections aren't page aligned right now and the assertion would fail. We can fix this by making the section size a multiple of the page size. To do this, we add an `ALIGN` statement to all sections in the linker file. For example:
+
+```
+SECTIONS {
+  . = 1M;
+
+  .text :
+  {
+    *(.text .text.*)
+    . = ALIGN(4K);
+  }
+}
+```
+The `.` is the “current location counter” and represents the current virtual address. At the beginning of the `SECTIONS` tag we set it to `1M`, so our kernel starts at 1MiB. We use the [ALIGN][linker align] function to align the current location counter to the next `4K` boundary (`4K` is the page size). Thus the end of the `.text` section – and the beginning of the next section – are page aligned.
+[linker align]: http://www.math.utah.edu/docs/info/ld_3.html#SEC12
+
+To put all sections on their own page, we add the `ALIGN` statement to all of them:
 
 ```
 /* src/arch/x86_64/linker.ld */
@@ -585,33 +601,44 @@ So our sections aren't page aligned right now and the assertion would fail. We c
 SECTIONS {
   . = 1M;
 
-  .rodata : ALIGN(4K)
+  .rodata :
   {
     /* ensure that the multiboot header is at the beginning */
     KEEP(*(.multiboot_header))
     *(.rodata .rodata.*)
+    . = ALIGN(4K);
   }
 
-  .text : ALIGN(4K)
+  .text :
   {
     *(.text .text.*)
+    . = ALIGN(4K);
   }
 
-  .data : ALIGN(4K)
+  .data :
   {
     *(.data .data.*)
+    . = ALIGN(4K);
+  }
+
+  .bss :
+  {
+    *(.bss .bss.*)
+    . = ALIGN(4K);
   }
 
   .data.rel.ro : ALIGN(4K) {
     *(.data.rel.ro.local*) *(.data.rel.ro .data.rel.ro.*)
+    . = ALIGN(4K);
   }
 
   .gcc_except_table : ALIGN(4K) {
     *(.gcc_except_table)
+    . = ALIGN(4K);
   }
 }
 ```
-We merged the `.multiboot_header` section into the `.rodata` section as they have the same flags (neither writable nor executable). It needs to be the first section because the Multiboot header must be at the beginning. We also added some other sections that are created by the Rust compiler, as these sections need to be page aligned, too.
+Instead of page aligning the `.multiboot_header` section, we merge it into the `.rodata` section. That way, we don't waste a whole page for the few bytes of the Multiboot header. We could merge it into any section, but `.rodata` fits best because it has the same flags (neither writable nor executable). The Multiboot header still needs to be at the beginning of the file, so `.rodata` must be our first section now.
 
 ### Testing it
 Time to test it! We reexport the `remap_the_kernel` function from the memory module and call it from `rust_main`:
