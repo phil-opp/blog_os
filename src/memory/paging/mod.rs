@@ -160,9 +160,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
 
         // identity map the allocated kernel sections
         for section in elf_sections_tag.sections() {
-            use multiboot2::ELF_SECTION_ALLOCATED;
-
-            if !section.flags().contains(ELF_SECTION_ALLOCATED) {
+            if !section.is_allocated() {
                 // section is not loaded to memory
                 continue;
             }
