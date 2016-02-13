@@ -158,6 +158,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
         let elf_sections_tag = boot_info.elf_sections_tag()
                                         .expect("Memory map tag required");
 
+        // identity map the allocated kernel sections
         for section in elf_sections_tag.sections() {
             use multiboot2::ELF_SECTION_ALLOCATED;
 
@@ -183,8 +184,19 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
             }
         }
 
+        // identity map the VGA text buffer
         let vga_buffer_frame = Frame::containing_address(0xb8000);
         mapper.identity_map(vga_buffer_frame, WRITABLE, allocator);
+
+        // identity map the multiboot info structure
+        let multiboot_start = boot_info as *const _ as usize;
+        let range = Range {
+            start: multiboot_start,
+            end: multiboot_start + (boot_info.total_size as usize),
+        };
+        for address in range.step_by(PAGE_SIZE) {
+            mapper.identity_map(Frame::containing_address(address), PRESENT, allocator);
+        }
     });
 
     let old_table = active_table.switch(new_table);
