@@ -15,11 +15,11 @@
 
   <link rel="canonical" href="{{ .Permalink }}">
   {{ if .RSSlink }}
-    <link href="{{ .RSSlink }}" rel="alternate" type="application/rss+xml" title="{{ .Site.Title }}" />
-    <link href="{{ .RSSlink }}" rel="feed" type="application/rss+xml" title="{{ .Site.Title }}" />
+    <link href="/atom.xml" rel="alternate" type="application/rss+xml" title="{{ .Site.Title }}" />
+    <link href="/atom.xml" rel="feed" type="application/rss+xml" title="{{ .Site.Title }}" />
   {{ end }}
 
   <!-- CSS -->
   <link rel="stylesheet" href="/css/poole.css">
-  <link rel="stylesheet" href="{{ .Site.BaseURL }}css/main.css">
+  <link rel="stylesheet" href="/css/main.css">
 </head>
