@@ -1,0 +1,25 @@
+<head>
+  <meta charset="UTF-8">
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta http-equiv="X-Frame-Options" content="sameorigin">
+  {{ with .Site.Params.author }}<meta name="author" content="{{ . }}">{{ end }}
+  {{ with .Site.Params.description }}<meta name="description" content="{{ . }}">{{ end }}
+
+  <title>
+    {{ .Title }}{{ if not .IsHome }} &middot; {{ .Site.Title }}{{end}}
+  </title>
+
+
+  <link rel="canonical" href="{{ .Permalink }}">
+  {{ if .RSSlink }}
+    <link href="{{ .RSSlink }}" rel="alternate" type="application/rss+xml" title="{{ .Site.Title }}" />
+    <link href="{{ .RSSlink }}" rel="feed" type="application/rss+xml" title="{{ .Site.Title }}" />
+  {{ end }}
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/poole.css">
+  <link rel="stylesheet" href="{{ .Site.BaseURL }}css/main.css">
+</head>
