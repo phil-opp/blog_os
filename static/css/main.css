@@ -1,4 +1,8 @@
 
+.masthead-title small {
+   margin-left: 1rem;
+}
+
 .front-page-introduction {
 	margin-bottom: 2rem;
 }
