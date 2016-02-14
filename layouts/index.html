@@ -1,0 +1,21 @@
+{{ partial "header.html" . }}
+
+<div class="front-page-introduction"><p>
+  This blog series creates a small operating system in the
+  <a href="https://www.rust-lang.org/">Rust programming language</a>. Each post
+  is a small tutorial and includes all needed code, so you can follow along if
+  you like. The source code is also available in the corresponding
+  <a href="https://github.com/phil-opp/blog_os">Github repository</a>.
+</p>
+<p>Latest post: {{ range first 1 .Site.Pages }}
+  <strong><a href="{{ .RelPermalink }}">{{ .Title }}</a></strong>
+  {{ end }}
+</p></div>
+
+<div class="posts">
+  {{ range .Site.Pages }}
+    {{ .Render "teaser" }}
+  {{ end }}
+</div>
+
+{{ partial "footer.html" . }}
