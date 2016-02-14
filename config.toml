@@ -4,6 +4,9 @@ title = "Writing an OS in Rust"
 rssURI = "atom.xml"
 copyright = "&copy; 2016. All rights reserved."
 
+PygmentsCodeFences = true
+pygmentsuseclasses = true
+
 [author]
   name = "Philipp Oppermann"
   email = "dev@phil-opp.com"
