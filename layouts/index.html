@@ -13,7 +13,7 @@
 </p></div>
 
 <div class="posts">
-  {{ range .Site.Pages }}
+  {{ range .Site.Pages.ByDate }}
     {{ .Render "teaser" }}
   {{ end }}
 </div>
