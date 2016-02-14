@@ -17,6 +17,8 @@ uglyurls = true
   subtitle = "Philipp Oppermann's blog"
   date_format = "Jan 2, 2006"
 
-
 [permalinks]
   post = "/:filename.html"
+
+[blackfriday]
+  plainIDAnchors = true
