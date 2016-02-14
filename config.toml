@@ -2,8 +2,12 @@ baseurl = "http://replace-this-with-your-hugo-site.com/"
 languageCode = "en-us"
 title = "Writing an OS in Rust"
 rssURI = "atom.xml"
+copyright = "&copy; 2016. All rights reserved."
+
+[author]
+  name = "Philipp Oppermann"
+  email = "dev@phil-opp.com"
 
 [params]
   subtitle = "Philipp Oppermann's blog"
-  author = "Philipp Oppermann"
   date_format = "Jan 2, 2006"
