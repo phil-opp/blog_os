@@ -1,3 +1,9 @@
 baseurl = "http://replace-this-with-your-hugo-site.com/"
 languageCode = "en-us"
-title = "My New Hugo Site"
+title = "Writing an OS in Rust"
+rssURI = "atom.xml"
+
+[params]
+  subtitle = "Philipp Oppermann's blog"
+  author = "Philipp Oppermann"
+  date_format = "Jan 2, 2006"
