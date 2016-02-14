@@ -7,6 +7,8 @@ copyright = "&copy; 2016. All rights reserved."
 PygmentsCodeFences = true
 pygmentsuseclasses = true
 
+uglyurls = true
+
 [author]
   name = "Philipp Oppermann"
   email = "dev@phil-opp.com"
@@ -14,3 +16,7 @@ pygmentsuseclasses = true
 [params]
   subtitle = "Philipp Oppermann's blog"
   date_format = "Jan 2, 2006"
+
+
+[permalinks]
+  post = "/:filename.html"
