@@ -1,0 +1,9 @@
+language: go
+
+install:
+  - export PATH=$HOME/.local/bin:$PATH
+  - pip install pygments --user
+  - pip install pygments-github-lexers --user
+  - go get -u -v github.com/spf13/hugo
+
+script: hugo
