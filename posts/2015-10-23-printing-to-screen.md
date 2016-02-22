@@ -58,6 +58,7 @@ All of the code below goes into our new module (unless specified otherwise).
 First, we represent the different colors using an enum:
 
 ```rust
+#[allow(dead_code)]
 #[repr(u8)]
 pub enum Color {
     Black      = 0,
@@ -81,6 +82,8 @@ pub enum Color {
 We use a [C-like enum] here to explicitly specify the number for each color. Because of the `repr(u8)` attribute each enum variant is stored as an `u8`. Actually 4 bits would be sufficient, but Rust doesn't have an `u4` type.
 
 [C-like enum]: http://rustbyexample.com/custom_types/enum/c_like.html
+
+Normally the compiler would issue a warning for each unused variant. By using the `#[allow(dead_code)]` attribute we disable these warnings for the `Color` enum.
 
 To represent a full color code that specifies foreground and background color, we create a [newtype] on top of `u8`:
 
