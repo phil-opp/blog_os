@@ -345,21 +345,21 @@ To model the levels we use a trait and empty enums:
 pub trait TableLevel {}
 
 pub enum Level4 {}
-enum Level3 {}
-enum Level2 {}
-enum Level1 {}
+pub enum Level3 {}
+pub enum Level2 {}
+pub enum Level1 {}
 
 impl TableLevel for Level4 {}
 impl TableLevel for Level3 {}
 impl TableLevel for Level2 {}
 impl TableLevel for Level1 {}
 ```
-An empty enum has size zero and disappears completely after compiling. Unlike an empty struct, it's not possible to instantiate an empty enum. Since we will use `TableLevel` and `Level4` in exported types, they need to be public as well.
+An empty enum has size zero and disappears completely after compiling. Unlike an empty struct, it's not possible to instantiate an empty enum. Since we will use `TableLevel` and the table levels in exported types, they need to be public.
 
 To differentiate the P1 table from the other tables, we introduce a `HierarchicalLevel` trait, which is a subtrait of `TableLevel`. But we implement it only for the levels 4, 3, and 2:
 
 ```rust
-trait HierarchicalLevel: TableLevel {}
+pub trait HierarchicalLevel: TableLevel {}
 
 impl HierarchicalLevel for Level4 {}
 impl HierarchicalLevel for Level3 {}
