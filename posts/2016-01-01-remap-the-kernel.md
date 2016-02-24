@@ -552,10 +552,9 @@ Let's resolve the above `TODO` by identity mapping the sections:
 
 ```rust
 for section in elf_sections_tag.sections() {
-    use multiboot2::ELF_SECTION_ALLOCATED;
     use self::entry::WRITABLE;
 
-    if !section.flags().contains(ELF_SECTION_ALLOCATED) {
+    if !section.is_allocated() {
         // section is not loaded to memory
         continue;
     }
@@ -895,7 +894,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
         ...
         for section in elf_sections_tag.sections() {
             ...
-            if !section.flags().contains(ELF_SECTION_ALLOCATED) {
+            if !section.is_allocated() {
                 // section is not loaded to memory
                 continue;
             }
