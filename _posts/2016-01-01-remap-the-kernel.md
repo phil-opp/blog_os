@@ -8,6 +8,14 @@ As always, you can find the source code on [Github]. Don't hesitate to file issu
 
 [Github]: https://github.com/phil-opp/blog_os/tree/remap_the_kernel
 
+_Updates_: The `AreaFrameAllocator` [was broken][areaframeallocator broken] after switching to a new table. To fix this, we added the [Fixing the Frame Allocator] section and updated the [linker script][linker script update]. For a complete set of changes see [#131] and [this diff][#131-changes].
+
+[areaframeallocator broken]: https://github.com/phil-opp/blog_os/issues/126
+[Fixing the Frame Allocator]: #fixing-the-frame-allocator
+[linker script update]: #page-align-sections
+[#131]: https://github.com/phil-opp/blog_os/pull/131
+[#131-changes]: https://github.com/phil-opp/blog_os/compare/75aa669cdbb427c7bf0485c68692d243065cd3e9...635f7d3f9dced752f84d429e1d51f5c2b29854e3
+
 ## Motivation
 
 In the [previous post], we had a strange bug in the `unmap` function. Its reason was a silent stack overflow, which corrupted the page tables. Fortunately, our kernel stack is right above the page tables so that we noticed the overflow relatively quickly. This won't be the case when we add threads with new stacks in the future. Then a silent stack overflow could overwrite some data without us noticing. But eventually some completely unrelated function fails because a variable changed its value.
@@ -577,7 +585,23 @@ We require that all sections are page aligned because a page must not contain se
 [^fn-nmagic]: The default behavior changes not only the virtual section alignment, but also the section alignment in the ELF file. Thus the Multiboot header isn't at the beginning of the file anymore and GRUB no longer finds it. So we've disabled this magical default by passing the `-n` or `--nmagic` flag.
 
 ### Page Align Sections
-So our sections aren't page aligned right now and the assertion would fail. We can fix this by adding `ALIGN(4K)` to all sections in the linker file:
+So our sections aren't page aligned right now and the assertion would fail. We can fix this by making the section size a multiple of the page size. To do this, we add an `ALIGN` statement to all sections in the linker file. For example:
+
+```
+SECTIONS {
+  . = 1M;
+
+  .text :
+  {
+    *(.text .text.*)
+    . = ALIGN(4K);
+  }
+}
+```
+The `.` is the “current location counter” and represents the current virtual address. At the beginning of the `SECTIONS` tag we set it to `1M`, so our kernel starts at 1MiB. We use the [ALIGN][linker align] function to align the current location counter to the next `4K` boundary (`4K` is the page size). Thus the end of the `.text` section – and the beginning of the next section – are page aligned.
+[linker align]: http://www.math.utah.edu/docs/info/ld_3.html#SEC12
+
+To put all sections on their own page, we add the `ALIGN` statement to all of them:
 
 ```
 /* src/arch/x86_64/linker.ld */
@@ -585,33 +609,44 @@ So our sections aren't page aligned right now and the assertion would fail. We c
 SECTIONS {
   . = 1M;
 
-  .rodata : ALIGN(4K)
+  .rodata :
   {
     /* ensure that the multiboot header is at the beginning */
     KEEP(*(.multiboot_header))
     *(.rodata .rodata.*)
+    . = ALIGN(4K);
   }
 
-  .text : ALIGN(4K)
+  .text :
   {
     *(.text .text.*)
+    . = ALIGN(4K);
   }
 
-  .data : ALIGN(4K)
+  .data :
   {
     *(.data .data.*)
+    . = ALIGN(4K);
+  }
+
+  .bss :
+  {
+    *(.bss .bss.*)
+    . = ALIGN(4K);
   }
 
   .data.rel.ro : ALIGN(4K) {
     *(.data.rel.ro.local*) *(.data.rel.ro .data.rel.ro.*)
+    . = ALIGN(4K);
   }
 
   .gcc_except_table : ALIGN(4K) {
     *(.gcc_except_table)
+    . = ALIGN(4K);
   }
 }
 ```
-We merged the `.multiboot_header` section into the `.rodata` section as they have the same flags (neither writable nor executable). It needs to be the first section because the Multiboot header must be at the beginning. We also added some other sections that are created by the Rust compiler, as these sections need to be page aligned, too.
+Instead of page aligning the `.multiboot_header` section, we merge it into the `.rodata` section. That way, we don't waste a whole page for the few bytes of the Multiboot header. We could merge it into any section, but `.rodata` fits best because it has the same flags (neither writable nor executable). The Multiboot header still needs to be at the beginning of the file, so `.rodata` must be our first section now.
 
 ### Testing it
 Time to test it! We reexport the `remap_the_kernel` function from the memory module and call it from `rust_main`:
@@ -776,6 +811,42 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
 }
 ```
 Now we should see the `NEW TABLE!!!` message (and also the `It did not crash!` line again).
+
+### Fixing the Frame Allocator
+The same problem as above occurs when we try to use our [AreaFrameAllocator] again. Try to add the following to `rust_main` after switching to the new table:
+
+[AreaFrameAllocator]: http://os.phil-opp.com/allocating-frames.html#the-allocator
+
+```rust
+// in src/lib.rs
+pub extern "C" fn rust_main(multiboot_information_address: usize) {
+    ...
+    memory::remap_the_kernel(&mut frame_allocator, boot_info);
+    frame_allocator.allocate_frame(); // new: try to allocate a frame
+    println!("It did not crash!");
+```
+This causes the same bootloop as above. The reason is that the `AreaFrameAllocator` uses the memory map of the Multiboot information structure. But we did not map the Multiboot structure, so it causes a page fault. To fix it, we identity map it as well:
+
+```rust
+// in `remap_the_kernel` in src/memory/paging/mod.rs
+active_table.with(&mut new_table, &mut temporary_page, |mapper| {
+
+    // … identity map the allocated kernel sections
+    // … identity map the VGA text buffer
+
+    // new:
+    // identity map the multiboot info structure
+    let multiboot_start = boot_info as *const _ as usize;
+    let range = Range {
+        start: multiboot_start,
+        end: multiboot_start + (boot_info.total_size as usize),
+    };
+    for address in range.step_by(PAGE_SIZE) {
+        mapper.identity_map(Frame::containing_address(address), PRESENT, allocator);
+    }
+});
+```
+Normally the multiboot struct fits on one page. But GRUB can place it anywhere, so it could randomly cross a page boundary. Therefore we use a range to be on the safe side. Now we should be able to allocate frames again.
 
 Congratulations! We successfully switched our kernel to a new page table!
 
