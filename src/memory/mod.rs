@@ -33,6 +33,32 @@ impl Frame {
     fn clone(&self) -> Frame {
         Frame { number: self.number }
     }
+
+    fn range_inclusive(start: Frame, end: Frame) -> FrameIter {
+        FrameIter {
+            start: start,
+            end: end,
+        }
+    }
+}
+
+struct FrameIter {
+    start: Frame,
+    end: Frame,
+}
+
+impl Iterator for FrameIter {
+    type Item = Frame;
+
+    fn next(&mut self) -> Option<Frame> {
+        if self.start <= self.end {
+            let frame = self.start.clone();
+            self.start.number += 1;
+            Some(frame)
+        } else {
+            None
+        }
+    }
 }
 
 pub trait FrameAllocator {
