@@ -1,6 +1,7 @@
 ---
 layout: post
 title: 'Remap the Kernel'
+updated: 2016-03-06 00:00:00 +0000
 ---
 In this post we will create a new page table to map the kernel sections correctly. Therefor we will extend the paging module to support modifications of _inactive_ page tables as well. Then we will switch to the new table and secure our kernel stack by creating a guard page.
 
@@ -8,13 +9,19 @@ As always, you can find the source code on [Github]. Don't hesitate to file issu
 
 [Github]: https://github.com/phil-opp/blog_os/tree/remap_the_kernel
 
-_Updates_: The `AreaFrameAllocator` [was broken][areaframeallocator broken] after switching to a new table. To fix this, we added the [Fixing the Frame Allocator] section and updated the [linker script][linker script update]. For a complete set of changes see [#131] and [this diff][#131-changes].
+_Updates_:
+
+- The `AreaFrameAllocator` [was broken][areaframeallocator broken] after switching to a new table. To fix this, we added the [Fixing the Frame Allocator] section and updated the [linker script][linker script update]. For a complete set of changes see [#131] and [this diff][#131-changes].
+- We [fixed a bug][#141] in iterating over a section's frames. Therefor we added a `Frame::range_inclusive` function and updated the [Remapping the Kernel section]. For a complete list of changes check out [this diff][#141-changes].
 
 [areaframeallocator broken]: https://github.com/phil-opp/blog_os/issues/126
 [Fixing the Frame Allocator]: #fixing-the-frame-allocator
 [linker script update]: #page-align-sections
 [#131]: https://github.com/phil-opp/blog_os/pull/131
 [#131-changes]: https://github.com/phil-opp/blog_os/compare/75aa669cdbb427c7bf0485c68692d243065cd3e9...635f7d3f9dced752f84d429e1d51f5c2b29854e3
+[#141]: https://github.com/phil-opp/blog_os/pull/141
+[Remapping the Kernel section]: #remapping-the-kernel
+[#141-changes]: https://github.com/phil-opp/blog_os/commit/03ed3ce9a0758bf0d14a13144892c731216e25c6
 
 ## Motivation
 
@@ -522,8 +529,6 @@ use memory::{PAGE_SIZE, Frame, FrameAllocator};
 pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
     where A: FrameAllocator
 {
-    use core::ops::Range;
-
     let mut temporary_page = TemporaryPage::new(Page { number: 0xcafebabe },
         allocator);
 
@@ -558,33 +563,67 @@ for section in elf_sections_tag.sections() {
         // section is not loaded to memory
         continue;
     }
+    assert!(address % PAGE_SIZE == 0,
+            "sections need to be page aligned");
 
     println!("mapping section at addr: {:#x}, size: {:#x}",
         section.addr, section.size);
 
     let flags = WRITABLE; // TODO use real section flags
 
-    let range = Range {
-        start: section.addr as usize,
-        end: (section.addr + section.size) as usize,
-    };
-    for address in range.step_by(PAGE_SIZE) {
-        assert!(address % PAGE_SIZE == 0,
-            "sections need to be page aligned");
-        let frame = Frame::containing_address(address);
+    let start_frame = Frame::containing_address(section.start_address());
+    let end_frame = Frame::containing_address(section.end_address() - 1);
+    for frame in Frame::range_inclusive(start_frame, end_frame)
         mapper.identity_map(frame, flags, allocator);
     }
 }
 ```
-We skip all sections that were not loaded into memory (e.g. debug sections). Then we iterate over all frames of a section by using [step_by]. It's unstable, so we need to add `#![feature(step_by)]` to `lib.rs`.
-[step_by]: https://doc.rust-lang.org/nightly/core/ops/struct.Range.html#method.step_by
+We skip all sections that were not loaded into memory (e.g. debug sections). We require that all sections are page aligned because a page must not contain sections with different flags. For example, we would need to set the `EXECUTABLE` and `WRITABLE` flags for a page that contains parts of the `.code` and `.data` section. Thus we could modify the running code or execute bytes from the `.data` section as code.
 
-We require that all sections are page aligned because a page must not contain sections with different flags. For example, we would need to set the `EXECUTABLE` and `WRITABLE` flags for a page that contains parts of the `.code` and `.data` section. Thus we could modify the running code or execute bytes from the `.data` section as code. So page aligning the sections is a good idea and normally the linker does it by default. But we disabled the default [right from the start] since it causes problems with GRUB.[^fn-nmagic]
-[right from the start]: {% post_url 2015-08-18-multiboot-kernel %}#building-the-executable
-[^fn-nmagic]: The default behavior changes not only the virtual section alignment, but also the section alignment in the ELF file. Thus the Multiboot header isn't at the beginning of the file anymore and GRUB no longer finds it. So we've disabled this magical default by passing the `-n` or `--nmagic` flag.
+To map a section, we iterate over all of its frames of a section by using a new `Frame::range_inclusive` function (shown below). Note that the end address is exclusive, so that it's not part of the section anymore (it's the first byte of the next section). Thus we need to subtract 1 to get the `end_frame`.
+
+The `Frame::range_inclusive` function looks like this:
+
+```rust
+// in src/memory/mod.rs
+
+impl Frame {
+    fn range_inclusive(start: Frame, end: Frame) -> FrameIter {
+        FrameIter {
+            start: start,
+            end: end,
+        }
+    }
+}
+
+struct FrameIter {
+    start: Frame,
+    end: Frame,
+}
+
+impl Iterator for FrameIter {
+    type Item = Frame;
+
+    fn next(&mut self) -> Option<Frame> {
+        if self.start <= self.end {
+            let frame = self.start.clone();
+            self.start.number += 1;
+            Some(frame)
+        } else {
+            None
+        }
+    }
+ }
+```
+
+Instead of creating a custom iterator, we could have used the [Range] struct of the standard library. But it requires that we implement the [One] and [Add] traits for `Frame`. Then every module could perform arithmetic operations on frames, for example `let frame3 = frame1 + frame2`. This would violate our safety invariants because `frame3` could be already in use. The `range_inclusive` function does not have these problems because it is only available inside the `memory` module.
+
+[Range]: https://doc.rust-lang.org/nightly/core/ops/struct.Range.html
+[One]: https://doc.rust-lang.org/nightly/core/num/trait.One.html
+[Add]: https://doc.rust-lang.org/nightly/core/ops/trait.Add.html
 
 ### Page Align Sections
-So our sections aren't page aligned right now and the assertion would fail. We can fix this by making the section size a multiple of the page size. To do this, we add an `ALIGN` statement to all sections in the linker file. For example:
+Right now our sections aren't page aligned, so the assertion in `remap_the_kernel` would fail. We can fix this by making the section size a multiple of the page size. To do this, we add an `ALIGN` statement to all sections in the linker file. For example:
 
 ```
 SECTIONS {
@@ -809,7 +848,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
     println!("NEW TABLE!!!");
 }
 ```
-Now we should see the `NEW TABLE!!!` message (and also the `It did not crash!` line again).
+Now we should see the `NEW TABLE!!!` message (and also the `It did not crash!` line again). Congratulations! We successfully switched our kernel to a new page table!
 
 ### Fixing the Frame Allocator
 The same problem as above occurs when we try to use our [AreaFrameAllocator] again. Try to add the following to `rust_main` after switching to the new table:
@@ -835,19 +874,16 @@ active_table.with(&mut new_table, &mut temporary_page, |mapper| {
 
     // new:
     // identity map the multiboot info structure
-    let multiboot_start = boot_info as *const _ as usize;
-    let range = Range {
-        start: multiboot_start,
-        end: multiboot_start + (boot_info.total_size as usize),
-    };
-    for address in range.step_by(PAGE_SIZE) {
-        mapper.identity_map(Frame::containing_address(address), PRESENT, allocator);
+    let multiboot_start = Frame::containing_address(boot_info.start_address());
+    let multiboot_end = Frame::containing_address(boot_info.end_address() - 1);
+    for frame in Frame::range_inclusive(multiboot_start, multiboot_end) {
+        mapper.identity_map(frame, PRESENT, allocator);
     }
 });
 ```
-Normally the multiboot struct fits on one page. But GRUB can place it anywhere, so it could randomly cross a page boundary. Therefore we use a range to be on the safe side. Now we should be able to allocate frames again.
+Normally the multiboot struct fits on one page. But GRUB can place it anywhere, so it could randomly cross a page boundary. Therefore we use `range_inclusive` to be on the safe side. Note that we need to subtract 1 to get the address of the last byte because the end address is exclusive.
 
-Congratulations! We successfully switched our kernel to a new page table!
+Now we should be able to allocate frames again.
 
 ## Using the Correct Flags
 Right now, our new table maps all kernel sections as writable and executable. To fix this, we add a `EntryFlags::from_elf_section_flags` function:
@@ -902,8 +938,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
             // this is the new part
             let flags = EntryFlags::from_elf_section_flags(section);
             ...
-            for address in range.step_by(PAGE_SIZE) {
-                ...
+            for frame in Frame::range_inclusive(start_frame, end_frame) {
                 mapper.identity_map(frame, flags, allocator);
             }
         }
