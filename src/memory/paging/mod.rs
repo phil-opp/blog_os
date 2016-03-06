@@ -165,19 +165,17 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
                 continue;
             }
 
+            assert!(section.addr as usize % PAGE_SIZE == 0,
+                    "sections need to be page aligned");
             println!("mapping section at addr: {:#x}, size: {:#x}",
                      section.addr,
                      section.size);
 
             let flags = EntryFlags::from_elf_section_flags(section);
 
-            let range = Range {
-                start: section.addr as usize,
-                end: (section.addr + section.size) as usize,
-            };
-            for address in range.step_by(PAGE_SIZE) {
-                assert!(address % PAGE_SIZE == 0, "sections need to be page aligned");
-                let frame = Frame::containing_address(address);
+            let start_frame = Frame::containing_address(section.start_address());
+            let end_frame = Frame::containing_address(section.end_address() - 1);
+            for frame in Frame::range_inclusive(start_frame, end_frame) {
                 mapper.identity_map(frame, flags, allocator);
             }
         }
@@ -187,13 +185,10 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
         mapper.identity_map(vga_buffer_frame, WRITABLE, allocator);
 
         // identity map the multiboot info structure
-        let multiboot_start = boot_info as *const _ as usize;
-        let range = Range {
-            start: multiboot_start,
-            end: multiboot_start + (boot_info.total_size as usize),
-        };
-        for address in range.step_by(PAGE_SIZE) {
-            mapper.identity_map(Frame::containing_address(address), PRESENT, allocator);
+        let multiboot_start = Frame::containing_address(boot_info.start_address());
+        let multiboot_end = Frame::containing_address(boot_info.end_address() - 1);
+        for frame in Frame::range_inclusive(multiboot_start, multiboot_end) {
+            mapper.identity_map(frame, PRESENT, allocator);
         }
     });
 
