@@ -144,8 +144,6 @@ impl InactivePageTable {
 pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
     where A: FrameAllocator
 {
-    use core::ops::Range;
-
     let mut temporary_page = TemporaryPage::new(Page { number: 0xcafebabe }, allocator);
 
     let mut active_table = unsafe { ActivePageTable::new() };
