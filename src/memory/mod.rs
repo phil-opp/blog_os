@@ -43,7 +43,18 @@ pub fn init(boot_info: &BootInformation) {
         boot_info.start_address(), boot_info.end_address(),
         memory_map_tag.memory_areas());
 
-    paging::remap_the_kernel(&mut frame_allocator, boot_info);
+    let mut active_table = paging::remap_the_kernel(&mut frame_allocator,
+        boot_info);
+
+    use self::paging::{Page, WRITABLE};
+    use bump_allocator::{HEAP_START, HEAP_SIZE};
+
+    let heap_start_page = Page::containing_address(HEAP_START);
+    let heap_end_page = Page::containing_address(HEAP_START + HEAP_SIZE-1);
+
+    for page in Page::range_inclusive(heap_start_page, heap_end_page) {
+        active_table.map(page, paging::WRITABLE, &mut frame_allocator);
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
