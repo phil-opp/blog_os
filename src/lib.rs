@@ -61,6 +61,10 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     enable_write_protect_bit();
 
     memory::remap_the_kernel(&mut frame_allocator, boot_info);
+
+    use alloc::boxed::Box;
+    let heap_test = Box::new(42);
+
     println!("It did not crash!");
 
     loop {}
@@ -93,4 +97,9 @@ extern "C" fn panic_fmt(fmt: core::fmt::Arguments, file: &str, line: u32) -> ! {
     println!("\n\nPANIC in {} at line {}:", file, line);
     println!("    {}", fmt);
     loop {}
+}
+
+#[no_mangle]
+pub extern fn _Unwind_Resume() -> ! {
+    loop{}
 }
