@@ -20,7 +20,8 @@ pub struct Table<L: TableLevel> {
     level: PhantomData<L>,
 }
 
-impl<L> Table<L> where L: TableLevel
+impl<L> Table<L>
+    where L: TableLevel
 {
     pub fn zero(&mut self) {
         for entry in self.entries.iter_mut() {
@@ -29,7 +30,8 @@ impl<L> Table<L> where L: TableLevel
     }
 }
 
-impl<L> Table<L> where L: HierarchicalLevel
+impl<L> Table<L>
+    where L: HierarchicalLevel
 {
     fn next_table_address(&self, index: usize) -> Option<usize> {
         let entry_flags = self[index].flags();
@@ -68,7 +70,8 @@ impl<L> Table<L> where L: HierarchicalLevel
     }
 }
 
-impl<L> Index<usize> for Table<L> where L: TableLevel
+impl<L> Index<usize> for Table<L>
+    where L: TableLevel
 {
     type Output = Entry;
 
@@ -77,7 +80,8 @@ impl<L> Index<usize> for Table<L> where L: TableLevel
     }
 }
 
-impl<L> IndexMut<usize> for Table<L> where L: TableLevel
+impl<L> IndexMut<usize> for Table<L>
+    where L: TableLevel
 {
     fn index_mut(&mut self, index: usize) -> &mut Entry {
         &mut self.entries[index]
