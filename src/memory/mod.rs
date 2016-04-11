@@ -18,6 +18,8 @@ mod paging;
 pub const PAGE_SIZE: usize = 4096;
 
 pub fn init(boot_info: &BootInformation) {
+    assert_has_not_been_called!("memory::init must be called only once");
+
     let memory_map_tag = boot_info.memory_map_tag().expect(
         "Memory map tag required");
     let elf_sections_tag = boot_info.elf_sections_tag().expect(

@@ -18,6 +18,8 @@ extern crate multiboot2;
 #[macro_use]
 extern crate bitflags;
 extern crate x86;
+#[macro_use]
+extern crate once;
 
 extern crate bump_allocator;
 extern crate alloc;
