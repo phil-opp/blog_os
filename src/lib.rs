@@ -21,7 +21,7 @@ extern crate x86;
 #[macro_use]
 extern crate once;
 
-extern crate bump_allocator;
+extern crate hole_list_allocator;
 extern crate alloc;
 #[macro_use]
 extern crate collections;
@@ -45,6 +45,10 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 
     use alloc::boxed::Box;
     let heap_test = Box::new(42);
+
+    for i in 0..10000 {
+        format!("Some String");
+    }
 
     println!("It did not crash!");
 
