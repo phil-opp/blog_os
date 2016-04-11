@@ -1,0 +1,7 @@
+[package]
+authors = ["Philipp Oppermann <dev@phil-opp.com>"]
+name = "bump_allocator"
+version = "0.1.0"
+
+[dependencies]
+spin = "0.3.5"
