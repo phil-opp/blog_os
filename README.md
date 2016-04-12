@@ -20,6 +20,8 @@ This repository contains the source code for the _Writing an OS in Rust_ series 
       ([source code](https://github.com/phil-opp/blog_os/tree/page_tables))
 - [Remap the Kernel](http://os.phil-opp.com/remap-the-kernel.html)
       ([source code](https://github.com/phil-opp/blog_os/tree/remap_the_kernel))
+- [Kernel Heap](http://os.phil-opp.com/kernel-heap.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/kernel_heap))
 
 ## Additional Resources
 - [Cross Compile Binutils](http://os.phil-opp.com/cross-compile-binutils.html)

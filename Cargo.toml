@@ -1,22 +1,26 @@
 [package]
+authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 name = "blog_os"
 version = "0.1.0"
-authors = ["Philipp Oppermann <dev@phil-opp.com>"]
-
-[lib]
-crate-type = ["staticlib"]
 
 [dependencies]
+once = "0.2.1"
 rlibc = "0.1.4"
 spin = "0.3.4"
 
-[dependencies.x86]
-version = "0.6.0"
-default-features = false
+[dependencies.bitflags]
+features = ["no_std"]
+version = "0.4.0"
+
+[dependencies.hole_list_allocator]
+path = "libs/hole_list_allocator"
 
 [dependencies.multiboot2]
 git = "https://github.com/phil-opp/multiboot2-elf64"
 
-[dependencies.bitflags]
-version = "0.4.0"
-features = ["no_std"]
+[dependencies.x86]
+default-features = false
+version = "0.6.0"
+
+[lib]
+crate-type = ["staticlib"]
