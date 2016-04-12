@@ -735,7 +735,7 @@ However, we get an error when we try to compile it:
 error: function calls in statics are limited to constant functions,
    struct and enum constructors [E0015]
 static HEAP: Mutex<Heap> = Mutex::new(Heap::new(HEAP_START, HEAP_SIZE));
-                                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ```
 The reason is that the `Heap::new` function needs to initialize the first hole (like described [above](#initialization)). This can't be done at compile time, so the function can't be a `const` function. Therefore we can't use it to initialize a static.
 
