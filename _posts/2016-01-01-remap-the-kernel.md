@@ -1054,7 +1054,8 @@ Unfortunately stack probes require compiler support. They already work on Window
 [stack probes issue]: https://github.com/rust-lang/rust/issues/16012#issuecomment-160380183
 
 ## What's next?
-Now that we have a (mostly) safe kernel stack and a working page table module, we can add a virtual memory allocator. The next post will explore Rust's allocator API and create a very basic allocator. At the end of that post, we will be able to use Rust's allocation and collections types such as [Box], [Vec], or even [BTreeMap].
+Now that we have a (mostly) safe kernel stack and a working page table module, we can add a virtual memory allocator. The [next post] will explore Rust's allocator API and create a very basic allocator. At the end of that post, we will be able to use Rust's allocation and collections types such as [Box], [Vec], or even [BTreeMap].
+[next post]: {{ page.next.url }}
 [Box]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html
 [Vec]: https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html
 [BTreeMap]: https://doc.rust-lang.org/nightly/collections/struct.BTreeMap.html
