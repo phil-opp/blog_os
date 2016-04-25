@@ -1,9 +1,13 @@
----
-layout: post
-title: 'Entering Long Mode'
-redirect_from: "/2015/08/25/entering-longmode/"
-updated: 2015-10-29 00:00:00 +0000
----
++++
+title = "Entering Long Mode"
+slug = "entering-longmode"
+date = "2015-08-25"
+updated = "2015-10-29"
+aliases = [
+    "/2015/08/25/entering-longmode/",
+]
++++
+
 In the [previous post] we created a minimal multiboot kernel. It just prints `OK` and hangs. The goal is to extend it and call 64-bit [Rust] code. But the CPU is currently in [protected mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to set up _Paging_ and switch to the 64-bit [long mode] first.
 
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions, or issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
@@ -155,7 +159,7 @@ check_long_mode:
     cpuid                  ; get highest supported argument
     cmp eax, 0x80000001    ; it needs to be at least 0x80000001
     jb .no_long_mode       ; if it's less, the CPU is too old for long mode
-    
+
     ; use extended info to test if long mode is available
     mov eax, 0x80000001    ; argument for extended processor info
     cpuid                  ; returns various feature bits in ecx and edx

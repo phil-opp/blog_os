@@ -1,7 +1,7 @@
----
-layout: post
-title: 'Kernel Heap'
----
++++
+title = "Kernel Heap"
+date = "2016-04-11"
++++
 
 In the previous posts we have created a [frame allocator] and a [page table module]. Now we are ready to create a kernel heap and a memory allocator. Thus, we will unlock `Box`, `Vec`, `BTreeMap`, and the rest of the [alloc] and [collections] crates.
 

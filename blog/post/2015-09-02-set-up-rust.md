@@ -1,9 +1,12 @@
----
-layout: post
-title: 'Set Up Rust'
-redirect_from: "/2015/09/02/setup-rust/"
-redirect_from: "/setup-rust.html"
----
++++
+title = "Set Up Rust"
+date = "2015-09-02"
+aliases = [
+    "/2015/09/02/setup-rust/",
+    "/setup-rust.html",
+]
++++
+
 In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to [Rust] code. Rust is a high-level language without runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
 
 This blog post tries to set up Rust step-by-step and point out the different problems. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is in a [Github repository], too.

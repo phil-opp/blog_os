@@ -1,7 +1,8 @@
----
-layout: post
-title: 'Page Tables'
----
++++
+title = "Page Tables"
+slug = "modifying-page-tables"
+date = "2015-12-09"
++++
 
 In this post we will create a paging module, which allows us to access and modify the 4-level page table. We will explore recursive page table mapping and use some Rust features to make it safe. Finally we will create functions to translate virtual addresses and to map and unmap pages.
 
