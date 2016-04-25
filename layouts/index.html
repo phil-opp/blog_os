@@ -7,13 +7,17 @@
   you like. The source code is also available in the corresponding
   <a href="https://github.com/phil-opp/blog_os">Github repository</a>.
 </p>
-<p>Latest post: {{ range first 1 .Site.Pages }}
+<p>Latest post: {{ range first 1 (where .Site.Pages "Section" "post") }}
   <strong><a href="{{ .RelPermalink }}">{{ .Title }}</a></strong>
   {{ end }}
 </p></div>
 
 <div class="posts">
-  {{ range .Site.Pages.ByDate }}
+  {{ range first 4 (where .Site.Pages.ByDate "Section" "post") }}
+    {{ .Render "teaser" }}
+  {{ end }}
+  <hr>
+  {{ range first 4 (after 4 (where .Site.Pages.ByDate "Section" "post")) }}
     {{ .Render "teaser" }}
   {{ end }}
 </div>
