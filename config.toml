@@ -9,6 +9,8 @@ pygmentsuseclasses = true
 
 uglyurls = true
 
+contentdir = "../blog"
+
 [author]
   name = "Philipp Oppermann"
   email = "dev@phil-opp.com"
