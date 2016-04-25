@@ -10,12 +10,15 @@ aliases = [
 
 In the [previous post] we created a minimal multiboot kernel. It just prints `OK` and hangs. The goal is to extend it and call 64-bit [Rust] code. But the CPU is currently in [protected mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to set up _Paging_ and switch to the 64-bit [long mode] first.
 
-I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions, or issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
-
-[previous post]: {{ page.previous.url }}
+[previous post]: {{% relref "2015-08-18-multiboot-kernel.md" %}}
 [Rust]: http://www.rust-lang.org/
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
+
+<!--more-->
+
+I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions, or issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
+
 [create an issue]: https://github.com/phil-opp/blog_os/issues
 [source code]: https://github.com/phil-opp/blog_os/tree/entering_longmode/src/arch/x86_64
 
@@ -38,7 +41,7 @@ error:
 At address `0xb8000` begins the so-called [VGA text buffer]. It's an array of screen characters that are displayed by the graphics card. A [future post] will cover the VGA buffer in detail and create a Rust interface to it. But for now, manual bit-fiddling is the easiest option.
 
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
-[future post]: {{ page.next.next.url }}
+[future post]: {{% relref "2015-10-23-printing-to-screen.md" %}}
 
 A screen character consists of a 8 bit color code and a 8 bit [ASCII] character. We used the color code `4f` for all characters, which means white text on red background. `0x52` is an ASCII `R`, `0x45` is an `E`, `0x3a` is a `:`, and `0x20` is a space. The second space is overwritten by the given ASCII byte. Finally the CPU is stopped with the `hlt` instruction.
 
@@ -530,4 +533,4 @@ It's time to finally leave assembly behind[^leave_assembly_behind] and switch to
 [^leave_assembly_behind]: Actually we will still need some assembly in the future, but I'll try to minimize it.
 
 [Rust]: https://www.rust-lang.org/
-[next post]: {{ page.next.url }}
+[next post]: {{% relref "2015-09-02-set-up-rust.md" %}}

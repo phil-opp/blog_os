@@ -5,6 +5,8 @@ date = "2015-11-15"
 
 In this post we create an allocator that provides free physical frames for a future paging module. To get the required information about available and used memory we use the Multiboot information structure. Additionally, we improve the `panic` handler to print the corresponding message and source line.
 
+<!--more-->
+
 The full source code is available on [Github][source repo]. Feel free to open issues there if you have any problems or improvements. You can also leave a comment at the bottom.
 
 [source repo]: https://github.com/phil-opp/blog_os/tree/allocating_frames
@@ -392,10 +394,10 @@ Now we have a working frame allocator. It is a bit rudimentary and cannot free f
 ## What's next?
 The [next post] will be about paging again. We will use the frame allocator to create a safe module that allows us to switch page tables and map pages. Then we will use this module and the information from the Elf-sections tag to remap the kernel correctly.
 
-[next post]: {{ page.next.url }}
+[next post]: {{% relref "2015-12-09-modifying-page-tables.md" %}}
 
 ## Recommended Posts
 Eric Kidd started the [Bare Metal Rust] series last week. Like this post, it builds upon the code from [Printing to Screen], but tries to support keyboard input instead of wrestling through memory management details ;).
 
 [Bare Metal Rust]: http://www.randomhacks.net/bare-metal-rust/
-[Printing to Screen]: {% post_url 2015-10-23-printing-to-screen %}
+[Printing to Screen]: {{% relref "2015-10-23-printing-to-screen.md" %}}

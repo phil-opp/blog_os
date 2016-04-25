@@ -6,6 +6,8 @@ date = "2015-12-09"
 
 In this post we will create a paging module, which allows us to access and modify the 4-level page table. We will explore recursive page table mapping and use some Rust features to make it safe. Finally we will create functions to translate virtual addresses and to map and unmap pages.
 
+<!--more-->
+
 You can find the source code and this post itself on [Github][source repository]. Please file an issue there if you have any problems or improvement suggestions. There is also a comment section at the end of this page. Note that this post requires a current Rust nightly.
 
 [source repository]: https://github.com/phil-opp/blog_os/tree/page_tables
@@ -47,7 +49,7 @@ pub struct Page {
 ```
 We import the `PAGE_SIZE` and define a constant for the number of entries per table. To make future function signatures more expressive, we can use the type aliases `PhysicalAddress` and `VirtualAddress`. The `Page` struct is similar to the `Frame` struct in the [previous post], but represents a virtual page instead of a physical frame.
 
-[previous post]: {{ page.previous.url }}#a-memory-module
+[previous post]: {{% relref "2015-11-15-allocating-frames.md#a-memory-module" %}}
 
 ### Page Table Entries
 To model page table entries, we create a new `entry` submodule:
@@ -636,7 +638,7 @@ pub struct ActivePageTable {
 ```
 We can't store the `Table<Level4>` directly because it needs to be at a special memory location (like the [VGA text buffer]). We could use a raw pointer or `&mut` instead of [Unique], but Unique indicates ownership better.
 
-[VGA text buffer]: http://os.phil-opp.com/printing-to-screen.html#the-text-buffer
+[VGA text buffer]: {{% relref "2015-10-23-printing-to-screen.md#the-text-buffer" %}}
 [Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
 
 Because the `ActivePageTable` owns the unique recursive mapped P4 table, there must be only one `ActivePageTable` instance. Thus we make the constructor function unsafe:
@@ -921,7 +923,9 @@ This post has become pretty long. So let's summarize what we've done:
 - and we fixed stack overflow and TLB related bugs
 
 ## What's next?
-In the next post we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.
+In the [next post] we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.
+
+[next post]: {{% relref "2016-01-01-remap-the-kernel.md" %}}
 
 Afterwards, we will use this paging module to build a heap allocator. This will allow us to use allocation and collection types such as `Box` and `Vec`.
 
