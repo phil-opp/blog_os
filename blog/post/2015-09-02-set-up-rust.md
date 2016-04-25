@@ -241,7 +241,7 @@ a.1 += 1;
 ```
 When we add that code to `rust_main` and test it using `make run`, the OS will constantly reboot itself. Let's try to debug it.
 
-[iter.rs:654]: https://doc.rust-lang.org/nightly/src/core/iter.rs.html#654
+[iter.rs:654]: https://github.com/rust-lang/rust/blob/b0ca03923359afc8df92a802b7cc1476a72fb2d0/src/libcore/iter.rs#L654
 
 ### Debugging
 Such a boot loop is most likely caused by some [CPU exception][exception table]. When these exceptions aren't handled, a [Triple Fault] occurs and the processor resets itself. We can look at generated CPU interrupts/exceptions using QEMU:
