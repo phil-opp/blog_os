@@ -20,7 +20,7 @@ contentdir = "../blog"
   date_format = "Jan 2, 2006"
 
 [permalinks]
-  post = "/:filename.html"
+  post = "/:slug.html"
 
 [blackfriday]
   plainIDAnchors = true
