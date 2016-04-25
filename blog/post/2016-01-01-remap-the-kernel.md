@@ -6,6 +6,8 @@ updated = "2016-03-06"
 
 In this post we will create a new page table to map the kernel sections correctly. Therefor we will extend the paging module to support modifications of _inactive_ page tables as well. Then we will switch to the new table and secure our kernel stack by creating a guard page.
 
+<!--more-->
+
 As always, you can find the source code on [Github]. Don't hesitate to file issues there if you have any problems or improvement suggestions. There is also a comment section at the end of this page. Note that this post requires a current Rust nightly.
 
 [Github]: https://github.com/phil-opp/blog_os/tree/remap_the_kernel
@@ -27,16 +29,16 @@ _Updates_:
 ## Motivation
 
 In the [previous post], we had a strange bug in the `unmap` function. Its reason was a silent stack overflow, which corrupted the page tables. Fortunately, our kernel stack is right above the page tables so that we noticed the overflow relatively quickly. This won't be the case when we add threads with new stacks in the future. Then a silent stack overflow could overwrite some data without us noticing. But eventually some completely unrelated function fails because a variable changed its value.
-[previous post]: {{ page.previous.url }}
+[previous post]: {{% relref "2015-12-09-modifying-page-tables.md" %}}
 
 As you can imagine, these kinds of bugs are horrendous to debug. For that reason we will create a new hierarchical page table in this post, which has _guard page_ below the stack. A guard page is basically an unmapped page that causes a page fault when accessed. Thus we can catch stack overflows right when they happen.
 
 Also, we will use the [information about kernel sections] to map the various sections individually instead of blindly mapping the first gigabyte. To improve safety even further, we will set the correct page table flags for the various sections. Thus it won't be possible to modify the contents of `.text` or to execute code from `.data` anymore.
-[information about kernel sections]: {% post_url 2015-11-15-allocating-frames %}#kernel-elf-sections
+[information about kernel sections]: {{% relref "2015-11-15-allocating-frames.md#kernel-elf-sections" %}}
 
 ## Preparation
 There are many things that can go wrong when we switch to a new table. Therefore it's a good idea to [set up a debugger][set up gdb]. You should not need it when you follow this post, but it's good to know how to debug a problem when it occurs[^fn-debug-notes].
-[set up gdb]: /set-up-gdb.html
+[set up gdb]: {{% relref "set-up-gdb.md" %}}
 [^fn-debug-notes]: For this post the most useful GDB command is probably `p/x *((long int*)0xfffffffffffff000)@512`. It prints all entries of the recursively mapped P4 table by interpreting it as an array of 512 long ints (the `@512` is GDB's array syntax). Of course you can also print other tables by adjusting the address.
 
 We also update the `Page` and `Frame` types to make our lives easier. The `Page` struct gets some derived traits:
@@ -275,8 +277,8 @@ Now our `TemporaryPage` type is nearly complete. We only add one more method for
 ```rust
 use super::table::{Table, Level1};
 
-/// Maps the temporary page to the given page table frame in the active table.
-/// Returns a reference to the now mapped table.
+/// Maps the temporary page to the given page table frame in the active
+/// table. Returns a reference to the now mapped table.
 pub fn map_table_frame(&mut self,
                        frame: Frame,
                        active_table: &mut ActivePageTable)
@@ -285,7 +287,7 @@ pub fn map_table_frame(&mut self,
 }
 ```
 This function interprets the given frame as a page table frame and returns a `Table` reference. We return a table of level 1 because it [forbids calling the `next_table` methods][some clever solution]. Calling `next_table` must not be possible since it's not a page of the recursive mapping. To be able to return a `Table<Level1>`, we need to make the `Level1` enum in `memory/paging/table.rs` public.
-[some clever solution]: {% post_url 2015-12-09-modifying-page-tables %}#some-clever-solution
+[some clever solution]: {{% relref "2015-12-09-modifying-page-tables.md#some-clever-solution" %}}
 
 
 The `unsafe` block is safe since the `VirtualAddress` returned by the `map` function is always valid and the type cast just reinterprets the frame's content.
@@ -317,7 +319,8 @@ impl InactivePageTable {
                temporary_page: &mut TemporaryPage)
                -> InactivePageTable {
         {
-            let table = temporary_page.map_table_frame(frame.clone(), active_table);
+            let table = temporary_page.map_table_frame(frame.clone(),
+                active_table);
             // now we are able to zero the table
             table.zero();
             // set up recursive mapping for the table
@@ -461,7 +464,9 @@ To backup the physical P4 frame of the active table, we can either read it from 
 
 ```rust
 use x86::controlregs;
-let backup = Frame::containing_address(unsafe { controlregs::cr3() } as usize);
+let backup = Frame::containing_address(
+    unsafe { controlregs::cr3() } as usize
+);
 ```
 Why is it unsafe? Because reading the CR3 register leads to a CPU exception if the processor is not running in kernel mode ([Ring 0]). But this code will always run in kernel mode, so the `unsafe` block is completely safe here.
 
@@ -552,7 +557,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
 First, we create a temporary page at page number `0xcafebabe`. We could use `0xdeadbeaf` or `0x123456789` as well, as long as the page is unused. The `active_table` and the `new_table` are created using their constructor functions.
 
 Then we use the `with` function to temporary change the recursive mapping and execute the closure as if the `new_table` were active. This allows us to map the sections in the new table without changing the active mapping. To get the kernel sections, we use the [Multiboot information structure].
-[Multiboot information structure]: {% post_url 2015-11-15-allocating-frames %}#the-multiboot-information-structure
+[Multiboot information structure]: {{% relref "2015-11-15-allocating-frames.md#the-multiboot-information-structure" %}}
 
 Let's resolve the above `TODO` by identity mapping the sections:
 
@@ -693,7 +698,9 @@ Time to test it! We reexport the `remap_the_kernel` function from the memory mod
 ```rust
 // in src/memory/mod.rs
 pub use self::paging::remap_the_kernel;
+```
 
+```rust
 // in src/lib.rs
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_information_address: usize) {
@@ -703,15 +710,18 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     vga_buffer::clear_screen();
     println!("Hello World{}", "!");
 
-    let boot_info = unsafe { multiboot2::load(multiboot_information_address) };
+    let boot_info = unsafe {
+        multiboot2::load(multiboot_information_address)
+    };
     let memory_map_tag = boot_info.memory_map_tag()
         .expect("Memory map tag required");
     let elf_sections_tag = boot_info.elf_sections_tag()
         .expect("Elf sections tag required");
 
-    let kernel_start = elf_sections_tag.sections().map(|s| s.addr).min().unwrap();
-    let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size).max()
-        .unwrap();
+    let kernel_start = elf_sections_tag.sections().map(|s| s.addr)
+        .min().unwrap();
+    let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size)
+        .max().unwrap();
 
     let multiboot_start = multiboot_information_address;
     let multiboot_end = multiboot_start + (boot_info.total_size as usize);
@@ -748,7 +758,9 @@ pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
     use x86::controlregs;
 
     let old_table = InactivePageTable {
-        p4_frame: Frame::containing_address(unsafe { controlregs::cr3() } as usize),
+        p4_frame: Frame::containing_address(
+            unsafe { controlregs::cr3() } as usize
+        ),
     };
     unsafe {
         controlregs::cr3_write(new_table.p4_frame.start_address() as u64);
@@ -778,7 +790,7 @@ Let's cross our fingers and run it…
 
 ### Debugging
 A QEMU boot load indicates that some CPU exception occured. We can see all thrown CPU exception by starting QEMU with `-d int` (as described [here][qemu debugging]):
-[qemu debugging]: {% post_url 2015-09-02-set-up-rust %}#debugging
+[qemu debugging]: {{% relref "2015-09-02-set-up-rust.md#debugging" %}}
 
 ```bash
 > qemu-system-x86_64 -d int -no-reboot -cdrom build/os-x86_64.iso
@@ -798,12 +810,12 @@ These lines are the important ones. We can read many useful information from the
 [page fault error code]: http://wiki.osdev.org/Exceptions#Error_code
 
 - `IP=0008:000000000010ab97` or `pc=000000000010ab97`: The program counter register tells us that the exception occurred when the CPU tried to execute the instruction at `0x10ab97`. We can disassemble this address to see the corresponding function. The `0008:` prefix in `IP` indicates the code [GDT segment].
-[GDT segment]: {% post_url 2015-08-25-entering-longmode %}#loading-the-gdt
+[GDT segment]: {{% relref "2015-08-25-entering-longmode.md#loading-the-gdt" %}}
 
 - `SP=0010:00000000001182d0`: The stack pointer was `0x1182d0` (the `0010:` prefix indicates the data [GDT segment]). This tells us if it the stack overflowed.
 
 - `CR2=00000000000b8f00`: Finally the most useful register. It tells us which virtual address caused the page fault. In our case it's `0xb8f00`, which is part of the [VGA text buffer].
-[VGA text buffer]: {% post_url 2015-10-23-printing-to-screen %}#the-vga-text-buffer
+[VGA text buffer]: {{% relref "2015-10-23-printing-to-screen.md#the-vga-text-buffer" %}}
 
 So let's find out which function caused the exception:
 
@@ -998,7 +1010,7 @@ If we haven't forgotten to set the `WRITABLE` flag somewhere, it should still wo
 The final step is to create a guard page for our kernel stack.
 
 The decision to place the kernel stack right above the page tables was already useful to detect a silent stack overflow in the [previous post][silent stack overflow]. Now we profit from it again. Let's look at our assembly `.bss` section again to understand why:
-[silent stack overflow]: {% post_url 2015-12-09-modifying-page-tables %}#translate
+[silent stack overflow]: {{% relref "2015-12-09-modifying-page-tables.md#translate" %}}
 
 ```nasm
 ; in src/arch/x86_64/boot.asm
@@ -1032,7 +1044,9 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
     // below is the new part
 
     // turn the old p4 page into a guard page
-    let old_p4_page = Page::containing_address(old_table.p4_frame.start_address());
+    let old_p4_page = Page::containing_address(
+      old_table.p4_frame.start_address()
+    );
     active_table.unmap(old_p4_page, allocator);
     println!("guard page at {:#x}", old_p4_page.start_address());
 }
@@ -1056,7 +1070,7 @@ Unfortunately stack probes require compiler support. They already work on Window
 
 ## What's next?
 Now that we have a (mostly) safe kernel stack and a working page table module, we can add a virtual memory allocator. The [next post] will explore Rust's allocator API and create a very basic allocator. At the end of that post, we will be able to use Rust's allocation and collections types such as [Box], [Vec], or even [BTreeMap].
-[next post]: {{ page.next.url }}
+[next post]: {{% relref "2016-04-11-kernel-heap.md" %}}
 [Box]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html
 [Vec]: https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html
 [BTreeMap]: https://doc.rust-lang.org/nightly/collections/struct.BTreeMap.html

@@ -183,11 +183,11 @@ We can use `objdump` to print the sections of the generated executable and verif
 kernel.bin:     file format elf64-x86-64
 
 Sections:
-Idx Name          Size      VMA               LMA               File off  Algn
-  0 .boot         00000018  0000000000100000  0000000000100000  00000080  2**0
-                  CONTENTS, ALLOC, LOAD, READONLY, DATA
-  1 .text         0000000b  0000000000100020  0000000000100020  000000a0  2**4
-                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+Idx Name      Size      VMA               LMA               File off  Algn
+  0 .boot     00000018  0000000000100000  0000000000100000  00000080  2**0
+              CONTENTS, ALLOC, LOAD, READONLY, DATA
+  1 .text     0000000b  0000000000100020  0000000000100020  000000a0  2**4
+              CONTENTS, ALLOC, LOAD, READONLY, CODE
 ```
 _Note_: The `ld` and `objdump` commands are platform specific. If you're _not_ working on x86_64 architecture, you will need to [cross compile binutils]. Then use `x86_64‑elf‑ld` and `x86_64‑elf‑objdump` instead of `ld` and `objdump`.
 [cross compile binutils]: {{% relref "cross-compile-binutils.md" %}}
@@ -265,7 +265,7 @@ Right now we need to execute 4 commands in the right order everytime we change a
             ├── linker.ld
             └── grub.cfg
 ```
-The Makefile looks like this (but indented with tabs instead of spaces):
+The Makefile looks like this (indented with tabs instead of spaces):
 
 ```Makefile
 arch ?= x86_64
@@ -276,34 +276,34 @@ linker_script := src/arch/$(arch)/linker.ld
 grub_cfg := src/arch/$(arch)/grub.cfg
 assembly_source_files := $(wildcard src/arch/$(arch)/*.asm)
 assembly_object_files := $(patsubst src/arch/$(arch)/%.asm, \
-    build/arch/$(arch)/%.o, $(assembly_source_files))
+	build/arch/$(arch)/%.o, $(assembly_source_files))
 
 .PHONY: all clean run iso
 
 all: $(kernel)
 
 clean:
-    @rm -r build
+	@rm -r build
 
 run: $(iso)
-    @qemu-system-x86_64 -cdrom $(iso)
+	@qemu-system-x86_64 -cdrom $(iso)
 
 iso: $(iso)
 
 $(iso): $(kernel) $(grub_cfg)
-    @mkdir -p build/isofiles/boot/grub
-    @cp $(kernel) build/isofiles/boot/kernel.bin
-    @cp $(grub_cfg) build/isofiles/boot/grub
-    @grub-mkrescue -o $(iso) build/isofiles 2> /dev/null
-    @rm -r build/isofiles
+	@mkdir -p build/isofiles/boot/grub
+	@cp $(kernel) build/isofiles/boot/kernel.bin
+	@cp $(grub_cfg) build/isofiles/boot/grub
+	@grub-mkrescue -o $(iso) build/isofiles 2> /dev/null
+	@rm -r build/isofiles
 
 $(kernel): $(assembly_object_files) $(linker_script)
-    @ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files)
+	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files)
 
 # compile assembly files
 build/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
-    @mkdir -p $(shell dirname $@)
-    @nasm -felf64 $< -o $@
+	@mkdir -p $(shell dirname $@)
+	@nasm -felf64 $< -o $@
 ```
 Some comments (see the [Makefile tutorial] if you don't know `make`):
 

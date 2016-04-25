@@ -92,7 +92,8 @@ target ?= $(arch)-unknown-linux-gnu
 rust_os := target/$(target)/debug/libblog_os.a
 # ...
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
-       @ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
+	@ld -n -T $(linker_script) -o $(kernel) \
+		$(assembly_object_files) $(rust_os)
 
 cargo:
        @cargo build --target $(target)
@@ -155,10 +156,14 @@ pub extern fn rust_main() {
 Now `make run` doesn't complain about `memcpy` anymore. Instead it will show a pile of new errors:
 
 ```
-target/debug/libblog_os.a(core-35017696.0.o): In function `ops::f32.Rem::rem::hfcbbcbe5711a6e6emxm':
-core.0.rs:(.text._ZN3ops7f32.Rem3rem20hfcbbcbe5711a6e6emxmE+0x1): undefined reference to `fmodf'
-target/debug/libblog_os.a(core-35017696.0.o): In function `ops::f64.Rem::rem::hbf225030671c7a35Txm':
-core.0.rs:(.text._ZN3ops7f64.Rem3rem20hbf225030671c7a35TxmE+0x1): undefined reference to `fmod'
+target/debug/libblog_os.a(core-35017696.0.o):
+    In function `ops::f32.Rem::rem::hfcbbcbe5711a6e6emxm':
+    core.0.rs:(.text._ZN3ops7f32.Rem3rem20hfcbbcbe5711a6e6emxmE+0x1):
+    undefined reference to `fmodf'
+target/debug/libblog_os.a(core-35017696.0.o):
+    In function `ops::f64.Rem::rem::hbf225030671c7a35Txm':
+    core.0.rs:(.text._ZN3ops7f64.Rem3rem20hbf225030671c7a35TxmE+0x1):
+    undefined reference to `fmod'
 ...
 ```
 
@@ -176,7 +181,8 @@ So how do we fix this problem? We don't use any floating point operations, so we
 
 ```make
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
-	@ld -n --gc-sections -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
+	@ld -n --gc-sections -T $(linker_script) -o $(kernel) \
+		$(assembly_object_files) $(rust_os)
 ```
 Now we can do a `make run` again and… it doesn't boot anymore:
 
@@ -205,8 +211,12 @@ The following snippet still fails:
 The error is a linker error again (hence the ugly error message):
 
 ```
-target/debug/libblog_os.a(blog_os.0.o): In function `blog_os::iter::Iterator::zip<core::iter::FlatMap<core::ops::Range<i32>, core::ops::Range<i32>, closure>,core::ops::RangeFrom<i32>>':
-/home/.../src/libcore/iter.rs:654: undefined reference to `_Unwind_Resume'
+target/debug/libblog_os.a(blog_os.0.o):
+    In function `blog_os::iter::Iterator::zip<core::iter::FlatMap<
+        core::ops::Range<i32>, core::ops::Range<i32>, closure>,
+        core::ops::RangeFrom<i32>>':
+    /home/.../src/libcore/iter.rs:654:
+    undefined reference to `_Unwind_Resume'
 ```
 So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:654` in libcore. This reference is not really there at [line 654 of libcore's `iter.rs`][iter.rs:654]. Instead, it is a compiler inserted _landing pad_, which is used for exception handling.
 
@@ -214,7 +224,7 @@ The easiest way of fixing this problem is to disable the landing pad creation si
 
 ```make
 cargo:
-    @cargo rustc --target $(target) -- -Z no-landing-pads
+	@cargo rustc --target $(target) -- -Z no-landing-pads
 ```
 Now we fixed all linking issues.
 

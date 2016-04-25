@@ -109,8 +109,8 @@ In `no_multiboot`, we use the `jmp` (“jump”) instruction to jump to our erro
 
 ```nasm
 check_cpuid:
-    ; Check if CPUID is supported by attempting to flip the ID bit (bit 21) in
-    ; the FLAGS register. If we can flip it, CPUID is available.
+    ; Check if CPUID is supported by attempting to flip the ID bit (bit 21)
+    ; in the FLAGS register. If we can flip it, CPUID is available.
 
     ; Copy FLAGS in to EAX via stack
     pushfd
@@ -130,13 +130,13 @@ check_cpuid:
     pushfd
     pop eax
 
-    ; Restore FLAGS from the old version stored in ECX (i.e. flipping the ID bit
-    ; back if it was ever flipped).
+    ; Restore FLAGS from the old version stored in ECX (i.e. flipping the
+    ; ID bit back if it was ever flipped).
     push ecx
     popfd
 
-    ; Compare EAX and ECX. If they are equal then that means the bit wasn't
-    ; flipped, and CPUID isn't supported.
+    ; Compare EAX and ECX. If they are equal then that means the bit
+    ; wasn't flipped, and CPUID isn't supported.
     cmp eax, ecx
     je .no_cpuid
     ret

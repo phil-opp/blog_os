@@ -137,7 +137,9 @@ To extract the physical address, we add a `pointed_frame` method:
 ```rust
 pub fn pointed_frame(&self) -> Option<Frame> {
     if self.flags().contains(PRESENT) {
-        Some(Frame::containing_address(self.0 as usize & 0x000fffff_fffff000))
+        Some(Frame::containing_address(
+            self.0 as usize & 0x000fffff_fffff000
+        ))
     } else {
         None
     }
@@ -319,7 +321,9 @@ Note that `self` stays borrowed as long as the returned reference is valid. This
 ```rust
 pub fn next_table<'a>(&'a self, index: usize) -> Option<&'a Table> {...}
 
-pub fn next_table_mut<'a>(&'a mut self, index: usize) -> Option<&'a mut Table> {...}
+pub fn next_table_mut<'a>(&'a mut self, index: usize)
+    -> Option<&'a mut Table>
+{...}
 ```
 
 Note the additional lifetime parameters, which are identical for input and output references. That's exactly what we want. It ensures that we can't modify tables as long as we have references to lower tables. For example, it would be very bad if we could unmap a P3 table if we still write to one of its P2 tables.
@@ -397,7 +401,8 @@ impl<L> Table<L> where L: HierarchicalLevel
 {
     pub fn next_table(&self, index: usize) -> Option<&Table<???>> {...}
 
-    pub fn next_table_mut(&mut self, index: usize) -> Option<&mut Table<???>> {...}
+    pub fn next_table_mut(&mut self, index: usize) -> Option<&mut Table<???>>
+    {...}
 
     fn next_table_address(&self, index: usize) -> Option<usize> {...}
 }
@@ -454,7 +459,9 @@ Remember that this is bare metal kernel code. We just used type system magic to 
 Now let's do something useful with our new module. We will create a function that translates a virtual address to the corresponding physical address. We add it to the `paging/mod.rs` module:
 
 ```rust
-pub fn translate(virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
+pub fn translate(virtual_address: VirtualAddress)
+    -> Option<PhysicalAddress>
+{
     let offset = virtual_address % PAGE_SIZE;
     translate_page(Page::containing_address(virtual_address))
         .map(|frame| frame.number * PAGE_SIZE + offset)
@@ -464,7 +471,8 @@ It uses two functions we haven't defined yet: `translate_page` and `Page::contai
 
 ```rust
 pub fn containing_address(address: VirtualAddress) -> Page {
-    assert!(address < 0x0000_8000_0000_0000 || address >= 0xffff_8000_0000_0000,
+    assert!(address < 0x0000_8000_0000_0000 ||
+        address >= 0xffff_8000_0000_0000,
         "invalid address: 0x{:x}", address);
     Page { number: address / PAGE_SIZE }
 }
@@ -543,8 +551,8 @@ p3.and_then(|p3| {
               // address must be 1GiB aligned
               assert!(start_frame.number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
               return Some(Frame {
-                  number: start_frame.number + page.p2_index() * ENTRY_COUNT +
-                          page.p1_index(),
+                  number: start_frame.number + page.p2_index() *
+                          ENTRY_COUNT + page.p1_index(),
               });
           }
       }
@@ -573,7 +581,8 @@ Let's add a function that modifies the page tables to map a `Page` to a `Frame`:
 pub use self::entry::*;
 use memory::FrameAllocator;
 
-pub fn map_to<A>(page: Page, frame: Frame, flags: EntryFlags, allocator: &mut A)
+pub fn map_to<A>(page: Page, frame: Frame, flags: EntryFlags,
+                 allocator: &mut A)
     where A: FrameAllocator
 {
     let p4 = unsafe { &mut *P4 };

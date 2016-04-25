@@ -68,11 +68,13 @@ To print all available memory areas, we can use the `multiboot2` crate in our `r
 
 ```rust
 let boot_info = unsafe{ multiboot2::load(multiboot_information_address) };
-let memory_map_tag = boot_info.memory_map_tag().expect("Memory map tag required");
+let memory_map_tag = boot_info.memory_map_tag()
+    .expect("Memory map tag required");
 
 println!("memory areas:");
 for area in memory_map_tag.memory_areas() {
-    println!("    start: 0x{:x}, length: 0x{:x}", area.base_addr, area.length);
+    println!("    start: 0x{:x}, length: 0x{:x}",
+        area.base_addr, area.length);
 }
 ```
 The `load` function is `unsafe` because it relies on a valid address. Since the memory tag is not required by the Multiboot specification, the `memory_map_tag()` function returns an `Option`. The `memory_areas()` function returns the desired memory area iterator.
@@ -397,7 +399,7 @@ The [next post] will be about paging again. We will use the frame allocator to c
 [next post]: {{% relref "2015-12-09-modifying-page-tables.md" %}}
 
 ## Recommended Posts
-Eric Kidd started the [Bare Metal Rust] series last week. Like this post, it builds upon the code from [Printing to Screen], but tries to support keyboard input instead of wrestling through memory management details ;).
+Eric Kidd started the [Bare Metal Rust] series last week. Like this post, it builds upon the code from [Printing to Screen], but tries to support keyboard input instead of wrestling through memory management details.
 
 [Bare Metal Rust]: http://www.randomhacks.net/bare-metal-rust/
 [Printing to Screen]: {{% relref "2015-10-23-printing-to-screen.md" %}}

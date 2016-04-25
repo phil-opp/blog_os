@@ -384,7 +384,7 @@ Rust's [macro syntax] is a bit strange, so we won't try to write a macro from sc
 [macro syntax]: https://doc.rust-lang.org/nightly/book/macros.html
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
-```
+```rust
 macro_rules! println {
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
@@ -394,7 +394,7 @@ It just adds a `\n` and then invokes the [`print!` macro], which is defined as:
 
 [`print!` macro]: https://doc.rust-lang.org/nightly/std/macro.print!.html
 
-```
+```rust
 macro_rules! print {
     ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
 }
@@ -405,12 +405,13 @@ It calls the `_print` method in the `io` module of the current crate (`$crate`),
 
 To print to the VGA buffer, we just copy the `println!` macro and modify the `print!` macro to use our static `WRITER` instead of `_print`:
 
-```
+```rust
 // in src/vga_buffer.rs
 macro_rules! print {
     ($($arg:tt)*) => ({
             use core::fmt::Write;
-            $crate::vga_buffer::WRITER.lock().write_fmt(format_args!($($arg)*)).unwrap();
+            let writer = $crate::vga_buffer::WRITER.lock();
+            writer.write_fmt(format_args!($($arg)*)).unwrap();
     });
 }
 ```
