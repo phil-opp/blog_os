@@ -5,6 +5,7 @@ date = "2015-08-25"
 updated = "2015-10-29"
 aliases = [
     "/2015/08/25/entering-longmode/",
+    "/rust-os/entering-longmode.html",
 ]
 +++
 

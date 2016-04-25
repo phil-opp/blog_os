@@ -4,6 +4,7 @@ date = "2015-09-02"
 aliases = [
     "/2015/09/02/setup-rust/",
     "/setup-rust.html",
+    "/rust-os/setup-rust.html",
 ]
 +++
 

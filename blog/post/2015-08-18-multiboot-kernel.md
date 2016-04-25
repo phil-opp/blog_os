@@ -4,6 +4,7 @@ slug = "multiboot-kernel"
 date = "2015-08-18"
 aliases = [
     "/2015/08/18/multiboot-kernel/",
+    "/rust-os/multiboot-kernel.html",
 ]
 +++
 
