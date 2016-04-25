@@ -49,15 +49,20 @@ Instead of writing an own Multiboot module, we use the [multiboot2-elf64] crate.
 [multiboot2-elf64]: https://github.com/phil-opp/multiboot2-elf64
 [^fn-multiboot-crate]: All contributions are welcome! If you want to maintain it, please contact me!
 
-So let's add a dependency on the git repository in the `Cargo.toml`:
+So let's add a dependency on the git repository:
 
 ```toml
-...
+# in Cargo.toml
 [dependencies.multiboot2]
 git = "https://github.com/phil-opp/multiboot2-elf64"
 ```
 
-Now we can add `extern crate multiboot2` and use it to print available memory areas.
+```rust
+// in src/lib.rs
+extern crate multiboot2;
+```
+
+Now we can use it to print available memory areas.
 
 ### Available Memory
 The boot information structure consists of various _tags_. See section 3.4 of the Multiboot specification ([PDF][multiboot specification]) for a complete list. The _memory map_ tag contains a list of all available RAM areas. Special areas such as the VGA text buffer at `0xb8000` are not available. Note that some of the available memory is already used by our kernel and by the multiboot information structure itself.
@@ -264,49 +269,64 @@ pub struct AreaFrameAllocator {
 ```
 The `next_free_frame` field is a simple counter that is increased every time we return a frame. It's initialized to `0` and every frame below it counts as used. The `current_area` field holds the memory area that contains `next_free_frame`. If `next_free_frame` leaves this area, we will look for the next one in `areas`. When there are no areas left, all frames are used and `current_area` becomes `None`. The `{kernel, multiboot}_{start, end}` fields are used to avoid returning already used fields.
 
-To implement the `FrameAllocator` trait, we need to implement the `allocate_frame` and the `deallocate_frame` methods. The former looks like this:
+To implement the `FrameAllocator` trait, we need to implement the allocation and deallocation methods:
 
 ```rust
-fn allocate_frame(&mut self) -> Option<Frame> {
-    if let Some(area) = self.current_area {
-        // "clone" the frame to return it if it's free. Frame doesn't
-        // implement Clone, but we can construct an identical frame.
-        let frame = Frame{ number: self.next_free_frame.number };
+impl FrameAllocator for AreaFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<Frame> {
+        // TODO (see below)
+    }
 
-        // the last frame of the current area
-        let current_area_last_frame = {
-            let address = area.base_addr + area.length - 1;
-            Frame::containing_address(address as usize)
-        };
-
-        if frame > current_area_last_frame {
-            // all frames of current area are used, switch to next area
-            self.choose_next_area();
-        } else if frame >= self.kernel_start && frame <= self.kernel_end {
-            // `frame` is used by the kernel
-            self.next_free_frame = Frame {
-                number: self.kernel_end.number + 1
-            };
-        } else if frame >= self.multiboot_start && frame <= self.multiboot_end {
-            // `frame` is used by the multiboot information structure
-            self.next_free_frame = Frame {
-                number: self.multiboot_end.number + 1
-            };
-        } else {
-            // frame is unused, increment `next_free_frame` and return it
-            self.next_free_frame.number += 1;
-            return Some(frame);
-        }
-        // `frame` was not valid, try it again with the updated `next_free_frame`
-        self.allocate_frame()
-    } else {
-        None // no free frames left
+    fn deallocate_frame(&mut self, frame: Frame) {
+        // TODO (see below)
     }
 }
 ```
-The `choose_next_area` method isn't part of the trait and thus goes into an `impl AreaFrameAllocator` block:
+The `allocate_frame` method looks like this:
 
 ```rust
+// in `allocate_frame` in `impl FrameAllocator for AreaFrameAllocator`
+
+if let Some(area) = self.current_area {
+    // "Clone" the frame to return it if it's free. Frame doesn't
+    // implement Clone, but we can construct an identical frame.
+    let frame = Frame{ number: self.next_free_frame.number };
+
+    // the last frame of the current area
+    let current_area_last_frame = {
+        let address = area.base_addr + area.length - 1;
+        Frame::containing_address(address as usize)
+    };
+
+    if frame > current_area_last_frame {
+        // all frames of current area are used, switch to next area
+        self.choose_next_area();
+    } else if frame >= self.kernel_start && frame <= self.kernel_end {
+        // `frame` is used by the kernel
+        self.next_free_frame = Frame {
+            number: self.kernel_end.number + 1
+        };
+    } else if frame >= self.multiboot_start && frame <= self.multiboot_end {
+        // `frame` is used by the multiboot information structure
+        self.next_free_frame = Frame {
+            number: self.multiboot_end.number + 1
+        };
+    } else {
+        // frame is unused, increment `next_free_frame` and return it
+        self.next_free_frame.number += 1;
+        return Some(frame);
+    }
+    // `frame` was not valid, try it again with the updated `next_free_frame`
+    self.allocate_frame()
+} else {
+    None // no free frames left
+}
+```
+The `choose_next_area` method isn't part of the trait and thus goes into a new `impl AreaFrameAllocator` block:
+
+```rust
+// in `impl AreaFrameAllocator`
+
 fn choose_next_area(&mut self) {
     self.current_area = self.areas.clone().filter(|area| {
         let address = area.base_addr + area.length - 1;
@@ -330,8 +350,14 @@ If the `next_free_frame` is below the new `current_area`, it needs to be updated
 We don't have a data structure to store free frames, so we can't implement `deallocate_frame` reasonably. Thus we use the `unimplemented` macro, which just panics when the method is called:
 
 ```rust
-fn deallocate_frame(&mut self, _frame: Frame) {
-    unimplemented!()
+impl FrameAllocator for AreaFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<Frame> {
+        // described above
+    }
+
+    fn deallocate_frame(&mut self, _frame: Frame) {
+        unimplemented!()
+    }
 }
 ```
 

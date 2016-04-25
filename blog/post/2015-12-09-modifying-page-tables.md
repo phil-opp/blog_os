@@ -101,7 +101,13 @@ features = ["no_std"]
 The `no_std` feature is needed because `bitflags` depends on the standard library by default. But it has a [cargo feature] to use the core library instead. It will become the default as soon as `no_std` is stable in a stable Rust release.
 [cargo feature]: http://doc.crates.io/manifest.html#the-[features]-section
 
-Note that you need a `#[macro_use]` above the `extern crate` definition.
+To import the macro, we need to use `#[macro_use]` above the `extern crate` definition:
+
+```rust
+// in src/lib.rs
+#[macro_use]
+extern crate bitflags;
+```
 
 Now we can model the various flags:
 
