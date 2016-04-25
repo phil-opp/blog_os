@@ -283,13 +283,14 @@ So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't
 > objdump -D build/kernel-x86_64.bin | grep "1001d3:"
 1001d3:	0f 10 05 16 01 00 00 	movups 0x116(%rip),%xmm0 ...
 ```
-Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x1001d3` seems to be a valid `movaps` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps documentation][movaps]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`, so the exception occurs
+Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x1001d3` seems to be a valid `movaps` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps documentation][movaps]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`. An `#UD` exception occurs:
+
 > For an unmasked Streaming SIMD Extensions 2 instructions numeric exception (CR4.OSXMMEXCPT =0). If EM in CR0 is set. If OSFXSR in CR4 is 0. If CPUID feature flag SSE2 is 0.
 
 [SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
 [movaps]: http://www.c3se.chalmers.se/Common/VTUNE-9.1/doc/users_guide/mergedProjects/analyzer_ec/mergedProjects/reference_olh/mergedProjects/instructions/instruct32_hh/vc181.htm
 
-The rough translation of this cryptic definition is: _If SSE isn't enabled_. So apparently Rust uses SSE instructions by default and we didn't enable SSE before. So the fix for this bug is enabling SSE.
+The rough translation of this cryptic definition is: _If SSE isn't enabled_. So apparently Rust uses SSE instructions by default and we didn't enable SSE before. To fix this, we can either disable SSE instructions in the compiler or enable SSE in our kernel. We do the latter, as it's easier.
 
 ### Enabling SSE
 To enable SSE, assembly code is needed again. We want to add a function that tests if SSE is available and enables it then. Else we want to print an error message.
@@ -323,7 +324,6 @@ The code is from the great [OSDev Wiki][osdev sse] again. Notice that it sets/un
 
 When we insert a `call set_up_SSE` somewhere in the `start` function (for example after `call enable_paging`), our Rust code will finally work.
 
-[32-bit error function]: {{ page.previous.url }}#some-tests
 [osdev sse]: http://wiki.osdev.org/SSE#Checking_for_SSE
 
 ### “OS returned!”
