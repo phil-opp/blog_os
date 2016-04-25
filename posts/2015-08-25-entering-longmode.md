@@ -54,6 +54,8 @@ stack_bottom:
     resb 64
 stack_top:
 ```
+The `stack_bottom` symbol denotes the lower end of the stack and the `stack_top` symbol the upper end. Note that `stack_bottom` needs to be _above_ `stack_top` in the source file, since the addresses grow top-to-bottom in it.
+
 A stack doesn't need to be initialized because we will `pop` only when we `pushed` before. So storing the stack memory in the executable file would make it unnecessary large. By using the [.bss] section and the `resb` (reserve byte) command, we just store the length of the uninitialized data (= 64). When loading the executable, GRUB will create the section of required size in memory.
 
 [.bss]: https://en.wikipedia.org/wiki/.bss
