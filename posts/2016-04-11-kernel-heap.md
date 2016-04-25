@@ -30,9 +30,7 @@ A good allocator is fast and reliable. It also effectively utilizes the availabl
 [fragmentation]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
 [false sharing]: http://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 
-These requirements make good allocators pretty complex. For example, [jemalloc] has over 30.000 lines of code. This complexity is out of scope for  most _kernel_ allocators. Even the Linux kernel uses a much simpler [buddy allocator] internally. Most of the complexity just isn't needed for kernel allocators, since kernels differ greatly from common applications. For example, kernels normally don't do heavy concurrent allocations. They allocate only when it's absolutely necessary.
-
-[buddy allocator]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
+These requirements make good allocators pretty complex. For example, [jemalloc] has over 30.000 lines of code. This complexity is out of scope for our kernel, so we will create a much simpler allocator. However, it should suffice for the foreseeable future, since we'll allocate only when it's absolutely necessary.
 
 ## A Bump Allocator
 
