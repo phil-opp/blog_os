@@ -12,15 +12,19 @@
     {{ .Title }}{{ if not .IsHome }} &middot; {{ .Site.Title }}{{end}}
   </title>
 
-
   <link rel="canonical" href="{{ .Permalink }}">
-  {{ if .RSSlink }}
-    <link href="/atom.xml" rel="alternate" type="application/rss+xml" title="{{ .Site.Title }}" />
-    <link href="/atom.xml" rel="feed" type="application/rss+xml" title="{{ .Site.Title }}" />
-  {{ end }}
 
   <!-- CSS -->
   <link rel="stylesheet" href="/css/poole.css">
   <link rel="stylesheet" href="/css/main.css">
   <link rel="stylesheet" href="/css/syntax.css">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/images/apple-touch-icon-precomposed.png">
+  <link rel="shortcut icon" href="/images/favicon.ico">
+
+  {{ if .RSSlink }}
+    <link href="/atom.xml" rel="alternate" type="application/rss+xml" title="{{ .Site.Title }}" />
+    <link href="/atom.xml" rel="feed" type="application/rss+xml" title="{{ .Site.Title }}" />
+  {{ end }}
 </head>
