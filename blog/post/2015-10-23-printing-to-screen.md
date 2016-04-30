@@ -1,19 +1,25 @@
----
-layout: post
-title: 'Printing to Screen'
-redirect_from: "/2015/10/23/printing-to-screen/"
----
++++
+title = "Printing to Screen"
+date = "2015-10-23"
+aliases = [
+    "/2015/10/23/printing-to-screen/",
+    "/rust-os/printing-to-screen.html",
+]
++++
+
 In the [previous post] we switched from assembly to [Rust], a systems programming language that provides great safety. But so far we are using unsafe features like [raw pointers] whenever we want to print to screen. In this post we will create a Rust module that provides a safe and easy-to-use interface for the VGA text buffer. It will support Rust's [formatting macros], too.
 
-[previous post]: {{ page.previous.url }}
+[previous post]: {{% relref "2015-09-02-set-up-rust.md" %}}
 [Rust]: https://www.rust-lang.org/
 [raw pointers]: https://doc.rust-lang.org/book/raw-pointers.html
 [formatting macros]: https://doc.rust-lang.org/std/fmt/#related-macros
 
+<!--more-->
+
 This post uses recent unstable features, so you need an up-to-date nighly compiler. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is also available on [Github][code repository].
 
 [file an issue]: https://github.com/phil-opp/blog_os/issues
-[code repository]: https://github.com/phil-opp/blog_os/tree/printing_to_screen/src
+[code repository]: https://github.com/phil-opp/blog_os/tree/printing_to_screen
 
 ## The VGA Text Buffer
 The text buffer starts at physical address `0xb8000` and contains the characters displayed on screen. It has 25 rows and 80 columns. Each screen character has the following format:
@@ -379,7 +385,7 @@ Rust's [macro syntax] is a bit strange, so we won't try to write a macro from sc
 [macro syntax]: https://doc.rust-lang.org/nightly/book/macros.html
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
-```
+```rust
 macro_rules! println {
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
@@ -389,7 +395,7 @@ It just adds a `\n` and then invokes the [`print!` macro], which is defined as:
 
 [`print!` macro]: https://doc.rust-lang.org/nightly/std/macro.print!.html
 
-```
+```rust
 macro_rules! print {
     ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
 }
@@ -400,12 +406,13 @@ It calls the `_print` method in the `io` module of the current crate (`$crate`),
 
 To print to the VGA buffer, we just copy the `println!` macro and modify the `print!` macro to use our static `WRITER` instead of `_print`:
 
-```
+```rust
 // in src/vga_buffer.rs
 macro_rules! print {
     ($($arg:tt)*) => ({
             use core::fmt::Write;
-            $crate::vga_buffer::WRITER.lock().write_fmt(format_args!($($arg)*)).unwrap();
+            let writer = $crate::vga_buffer::WRITER.lock();
+            writer.write_fmt(format_args!($($arg)*)).unwrap();
     });
 }
 ```
@@ -449,7 +456,7 @@ In the next posts we will map the kernel pages correctly so that accessing `0x0`
 
 The [next post] describes the Multiboot information structure and creates a frame allocator using the information about memory areas.
 
-[next post]: {{ page.next.url }}
+[next post]: {{% relref "2015-11-15-allocating-frames.md" %}}
 
 ## Other Rust OS Projects
 Now that you know the very basics of OS development in Rust, you should also check out the following projects:
@@ -458,7 +465,7 @@ Now that you know the very basics of OS development in Rust, you should also che
 _Note_: You need to [cross compile binutils] to build it (or you create some symbolic links[^fn-symlink] if you're on x86_64).
 [Rust Bare-Bones Kernel]: https://github.com/thepowersgang/rust-barebones-kernel
 [higher half]: http://wiki.osdev.org/Higher_Half_Kernel
-[cross compile binutils]: /cross-compile-binutils.html
+[cross compile binutils]: {{% relref "cross-compile-binutils.md" %}}
 [^fn-symlink]: You will need to symlink `x86_64-none_elf-XXX` to `/usr/bin/XXX` where `XXX` is in {`as`, `ld`, `objcopy`, `objdump`, `strip`}. The `x86_64-none_elf-XXX` files must be in some folder that is in your `$PATH`. But then you can only build for your x86_64 host architecture, so use this hack only for testing.
 
 - [RustOS]: More advanced kernel that supports allocation, keyboard inputs, and threads. It also has a scheduler and a basic network driver.

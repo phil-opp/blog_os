@@ -34,4 +34,4 @@ You need to have `nasm`, `grub-mkrescue`, `xorriso`, `qemu` and a nighly Rust co
 Please file an issue if you run into any problems.
 
 ## License
-The source code is dual-licensed under MIT or the Apache License (Version 2.0). This excludes the `posts` and `pages` directories.
+The source code is dual-licensed under MIT or the Apache License (Version 2.0). This excludes the `blog` directory.

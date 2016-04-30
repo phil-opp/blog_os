@@ -1,16 +1,23 @@
----
-layout: post
-title: 'Set Up Rust'
-redirect_from: "/2015/09/02/setup-rust/"
-redirect_from: "/setup-rust.html"
----
++++
+title = "Set Up Rust"
+date = "2015-09-02"
+aliases = [
+    "/2015/09/02/setup-rust/",
+    "/setup-rust.html",
+    "/rust-os/setup-rust.html",
+]
++++
+
 In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to [Rust] code. Rust is a high-level language without runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
+
+[multiboot post]: {{% relref "2015-08-18-multiboot-kernel.md" %}}
+[long mode post]: {{% relref "2015-08-25-entering-longmode.md" %}}
+[Rust]: https://www.rust-lang.org/
+
+<!--more-->
 
 This blog post tries to set up Rust step-by-step and point out the different problems. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is in a [Github repository], too.
 
-[multiboot post]: {{ page.previous.previous.url }}
-[long mode post]: {{ page.previous.url }}
-[Rust]: https://www.rust-lang.org/
 [file an issue]: https://github.com/phil-opp/blog_os/issues
 [Github repository]: https://github.com/phil-opp/blog_os/tree/set_up_rust
 
@@ -76,7 +83,7 @@ We can now build it using `cargo build`. To make sure, we are building it for th
 cargo build --target=x86_64-unknown-linux-gnu
 ```
 It creates a static library at `target/x86_64-unknown-linux-gnu/debug/libblog_os.a`, which can be linked with our assembly kernel. If you're getting an error about a missing `core` crate, [look here][cross compile libcore].
-[cross compile libcore]: /cross-compile-libcore.html
+[cross compile libcore]: {{% relref "cross-compile-libcore.md" %}}
 
 To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
 
@@ -86,7 +93,8 @@ target ?= $(arch)-unknown-linux-gnu
 rust_os := target/$(target)/debug/libblog_os.a
 # ...
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
-       @ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
+	@ld -n -T $(linker_script) -o $(kernel) \
+		$(assembly_object_files) $(rust_os)
 
 cargo:
        @cargo build --target $(target)
@@ -149,10 +157,14 @@ pub extern fn rust_main() {
 Now `make run` doesn't complain about `memcpy` anymore. Instead it will show a pile of new errors:
 
 ```
-target/debug/libblog_os.a(core-35017696.0.o): In function `ops::f32.Rem::rem::hfcbbcbe5711a6e6emxm':
-core.0.rs:(.text._ZN3ops7f32.Rem3rem20hfcbbcbe5711a6e6emxmE+0x1): undefined reference to `fmodf'
-target/debug/libblog_os.a(core-35017696.0.o): In function `ops::f64.Rem::rem::hbf225030671c7a35Txm':
-core.0.rs:(.text._ZN3ops7f64.Rem3rem20hbf225030671c7a35TxmE+0x1): undefined reference to `fmod'
+target/debug/libblog_os.a(core-35017696.0.o):
+    In function `ops::f32.Rem::rem::hfcbbcbe5711a6e6emxm':
+    core.0.rs:(.text._ZN3ops7f32.Rem3rem20hfcbbcbe5711a6e6emxmE+0x1):
+    undefined reference to `fmodf'
+target/debug/libblog_os.a(core-35017696.0.o):
+    In function `ops::f64.Rem::rem::hbf225030671c7a35Txm':
+    core.0.rs:(.text._ZN3ops7f64.Rem3rem20hbf225030671c7a35TxmE+0x1):
+    undefined reference to `fmod'
 ...
 ```
 
@@ -170,7 +182,8 @@ So how do we fix this problem? We don't use any floating point operations, so we
 
 ```make
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
-	@ld -n --gc-sections -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
+	@ld -n --gc-sections -T $(linker_script) -o $(kernel) \
+		$(assembly_object_files) $(rust_os)
 ```
 Now we can do a `make run` again and… it doesn't boot anymore:
 
@@ -199,8 +212,12 @@ The following snippet still fails:
 The error is a linker error again (hence the ugly error message):
 
 ```
-target/debug/libblog_os.a(blog_os.0.o): In function `blog_os::iter::Iterator::zip<core::iter::FlatMap<core::ops::Range<i32>, core::ops::Range<i32>, closure>,core::ops::RangeFrom<i32>>':
-/home/.../src/libcore/iter.rs:654: undefined reference to `_Unwind_Resume'
+target/debug/libblog_os.a(blog_os.0.o):
+    In function `blog_os::iter::Iterator::zip<core::iter::FlatMap<
+        core::ops::Range<i32>, core::ops::Range<i32>, closure>,
+        core::ops::RangeFrom<i32>>':
+    /home/.../src/libcore/iter.rs:654:
+    undefined reference to `_Unwind_Resume'
 ```
 So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:654` in libcore. This reference is not really there at [line 654 of libcore's `iter.rs`][iter.rs:654]. Instead, it is a compiler inserted _landing pad_, which is used for exception handling.
 
@@ -208,7 +225,7 @@ The easiest way of fixing this problem is to disable the landing pad creation si
 
 ```make
 cargo:
-    @cargo rustc --target $(target) -- -Z no-landing-pads
+	@cargo rustc --target $(target) -- -Z no-landing-pads
 ```
 Now we fixed all linking issues.
 
@@ -225,7 +242,7 @@ a.1 += 1;
 ```
 When we add that code to `rust_main` and test it using `make run`, the OS will constantly reboot itself. Let's try to debug it.
 
-[iter.rs:654]: https://doc.rust-lang.org/nightly/src/core/iter.rs.html#654
+[iter.rs:654]: https://github.com/rust-lang/rust/blob/b0ca03923359afc8df92a802b7cc1476a72fb2d0/src/libcore/iter.rs#L654
 
 ### Debugging
 Such a boot loop is most likely caused by some [CPU exception][exception table]. When these exceptions aren't handled, a [Triple Fault] occurs and the processor resets itself. We can look at generated CPU interrupts/exceptions using QEMU:
@@ -267,13 +284,14 @@ So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't
 > objdump -D build/kernel-x86_64.bin | grep "1001d3:"
 1001d3:	0f 10 05 16 01 00 00 	movups 0x116(%rip),%xmm0 ...
 ```
-Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x1001d3` seems to be a valid `movaps` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps documentation][movaps]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`, so the exception occurs
+Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x1001d3` seems to be a valid `movaps` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps documentation][movaps]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`. An `#UD` exception occurs:
+
 > For an unmasked Streaming SIMD Extensions 2 instructions numeric exception (CR4.OSXMMEXCPT =0). If EM in CR0 is set. If OSFXSR in CR4 is 0. If CPUID feature flag SSE2 is 0.
 
 [SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
 [movaps]: http://www.c3se.chalmers.se/Common/VTUNE-9.1/doc/users_guide/mergedProjects/analyzer_ec/mergedProjects/reference_olh/mergedProjects/instructions/instruct32_hh/vc181.htm
 
-The rough translation of this cryptic definition is: _If SSE isn't enabled_. So apparently Rust uses SSE instructions by default and we didn't enable SSE before. So the fix for this bug is enabling SSE.
+The rough translation of this cryptic definition is: _If SSE isn't enabled_. So apparently Rust uses SSE instructions by default and we didn't enable SSE before. To fix this, we can either disable SSE instructions in the compiler or enable SSE in our kernel. We do the latter, as it's easier.
 
 ### Enabling SSE
 To enable SSE, assembly code is needed again. We want to add a function that tests if SSE is available and enables it then. Else we want to print an error message.
@@ -307,7 +325,6 @@ The code is from the great [OSDev Wiki][osdev sse] again. Notice that it sets/un
 
 When we insert a `call set_up_SSE` somewhere in the `start` function (for example after `call enable_paging`), our Rust code will finally work.
 
-[32-bit error function]: {{ page.previous.url }}#some-tests
 [osdev sse]: http://wiki.osdev.org/SSE#Checking_for_SSE
 
 ### “OS returned!”
@@ -365,10 +382,10 @@ Some notes:
 ### Stack Overflows
 Since we still use the small 64 byte [stack from the last post], we must be careful not to [overflow] it. Normally, Rust tries to avoid stack overflows through _guard pages_: The page below the stack isn't mapped and such a stack overflow triggers a page fault (instead of silently overwriting random memory). But we can't unmap the page below our stack right now since we currently use only a single big page. Fortunately the stack is located just above the page tables. So some important page table entry would probably get overwritten on stack overflow and then a page fault occurs, too.
 
-[stack from the last post]: {{ page.previous.url }}#creating-a-stack
+[stack from the last post]: {{% relref "2015-08-25-entering-longmode.md#creating-a-stack" %}}
 [overflow]: https://en.wikipedia.org/wiki/Stack_overflow
 
 ## What's next?
 Until now we write magic bits to some memory location when we want to print something to screen. In the [next post] we create a abstraction for the VGA text buffer that allows us to print strings in different colors and provides a simple interface.
 
-[next post]: {{ page.next.url }}
+[next post]: {{% relref "2015-10-23-printing-to-screen.md" %}}

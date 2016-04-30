@@ -1,14 +1,16 @@
----
-layout: post
-title: 'Kernel Heap'
----
++++
+title = "Kernel Heap"
+date = "2016-04-11"
++++
 
 In the previous posts we have created a [frame allocator] and a [page table module]. Now we are ready to create a kernel heap and a memory allocator. Thus, we will unlock `Box`, `Vec`, `BTreeMap`, and the rest of the [alloc] and [collections] crates.
 
-[frame allocator]: {% post_url 2015-11-15-allocating-frames %}
-[page table module]: {% post_url 2015-12-09-modifying-page-tables %}
+[frame allocator]: {{% relref "2015-11-15-allocating-frames.md" %}}
+[page table module]: {{% relref "2015-12-09-modifying-page-tables.md" %}}
 [alloc]: https://doc.rust-lang.org/nightly/alloc/index.html
 [collections]: https://doc.rust-lang.org/nightly/collections/index.html
+
+<!--more-->
 
 As always, you can find the complete source code on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a comment section at the end of this page.
 
@@ -318,7 +320,7 @@ let heap_test = Box::new(42);
 When we try to compile it using `make run`, we get several linker errors about a function named `_Unwind_Resume`:
 
 ```
-target/x86_64-unknown-linux-gnu/debug/libblog_os.a(bump_allocator-947b648f2a584929.0.o):
+target/x86_64-unknown-linux-gnu/debug/libblog_os.a(bump_allocator-[…].0.o):
     In function `bump_allocator::__rust_allocate':
 /home/…/blog_os/libs/bump_allocator/src/lib.rs:19:
     undefined reference to `_Unwind_Resume'
@@ -459,8 +461,8 @@ The crate provides an [assert_has_not_been_called!] macro (sorry for the long na
 pub fn init(boot_info: &BootInformation) {
     assert_has_not_been_called!("memory::init must be called only once");
 
-    let memory_map_tag = …
-    …
+    let memory_map_tag = ...
+    ...
 }
 ```
 That's it. Now our `memory::init` function can only be called once. The macro works by creating a static [AtomicBool] named `CALLED`, which is initialized to `false`. When the macro is invoked, it checks the value of `CALLED` and sets it to `true`. If the value was already `true` before, the macro panics.
@@ -479,7 +481,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
     -> ActivePageTable // new
     where A: FrameAllocator
 {
-    …
+    ...
     println!("guard page at {:#x}", old_p4_page.start_address());
 
     active_table // new
@@ -492,9 +494,9 @@ Now we have full page table access in the `memory::init` function. This allows u
 // in src/memory/mod.rs
 
 pub fn init(boot_info: &BootInformation) {
-    …
+    ...
 
-    let mut frame_allocator = …;
+    let mut frame_allocator = ...;
 
     // below is the new part
 
@@ -518,10 +520,10 @@ The `Page::range_inclusive` function is just a copy of the `Frame::range_inclusi
 // in src/memory/paging/mod.rs
 
 #[derive(…, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Page {…}
+pub struct Page {...}
 
 impl Page {
-    …
+    ...
     pub fn range_inclusive(start: Page, end: Page) -> PageIter {
         PageIter {
             start: start,

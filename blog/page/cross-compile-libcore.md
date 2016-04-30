@@ -1,7 +1,7 @@
----
-layout: page
-title: "Cross Compiling: libcore"
----
++++
+title = "Cross Compiling: libcore"
++++
+
 So you're getting an ``error: can't find crate for `core` [E0463]`` when using `--target x86_64-unknown-linux-gnu`. That means that you're not running Linux or not using using a x86_64 processor.
 
 **If you have an x86_64 processor and want a quick fix**, try it with `x86_64-pc-windows-gnu` or `x86_64-apple-darwin` (or simply omit the explicit `--target`).

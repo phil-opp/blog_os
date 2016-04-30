@@ -1,9 +1,11 @@
----
-layout: post
-title: 'Allocating Frames'
----
++++
+title = "Allocating Frames"
+date = "2015-11-15"
++++
 
 In this post we create an allocator that provides free physical frames for a future paging module. To get the required information about available and used memory we use the Multiboot information structure. Additionally, we improve the `panic` handler to print the corresponding message and source line.
+
+<!--more-->
 
 The full source code is available on [Github][source repo]. Feel free to open issues there if you have any problems or improvements. You can also leave a comment at the bottom.
 
@@ -47,15 +49,20 @@ Instead of writing an own Multiboot module, we use the [multiboot2-elf64] crate.
 [multiboot2-elf64]: https://github.com/phil-opp/multiboot2-elf64
 [^fn-multiboot-crate]: All contributions are welcome! If you want to maintain it, please contact me!
 
-So let's add a dependency on the git repository in the `Cargo.toml`:
+So let's add a dependency on the git repository:
 
 ```toml
-...
+# in Cargo.toml
 [dependencies.multiboot2]
 git = "https://github.com/phil-opp/multiboot2-elf64"
 ```
 
-Now we can add `extern crate multiboot2` and use it to print available memory areas.
+```rust
+// in src/lib.rs
+extern crate multiboot2;
+```
+
+Now we can use it to print available memory areas.
 
 ### Available Memory
 The boot information structure consists of various _tags_. See section 3.4 of the Multiboot specification ([PDF][multiboot specification]) for a complete list. The _memory map_ tag contains a list of all available RAM areas. Special areas such as the VGA text buffer at `0xb8000` are not available. Note that some of the available memory is already used by our kernel and by the multiboot information structure itself.
@@ -66,11 +73,13 @@ To print all available memory areas, we can use the `multiboot2` crate in our `r
 
 ```rust
 let boot_info = unsafe{ multiboot2::load(multiboot_information_address) };
-let memory_map_tag = boot_info.memory_map_tag().expect("Memory map tag required");
+let memory_map_tag = boot_info.memory_map_tag()
+    .expect("Memory map tag required");
 
 println!("memory areas:");
 for area in memory_map_tag.memory_areas() {
-    println!("    start: 0x{:x}, length: 0x{:x}", area.base_addr, area.length);
+    println!("    start: 0x{:x}, length: 0x{:x}",
+        area.base_addr, area.length);
 }
 ```
 The `load` function is `unsafe` because it relies on a valid address. Since the memory tag is not required by the Multiboot specification, the `memory_map_tag()` function returns an `Option`. The `memory_areas()` function returns the desired memory area iterator.
@@ -260,49 +269,64 @@ pub struct AreaFrameAllocator {
 ```
 The `next_free_frame` field is a simple counter that is increased every time we return a frame. It's initialized to `0` and every frame below it counts as used. The `current_area` field holds the memory area that contains `next_free_frame`. If `next_free_frame` leaves this area, we will look for the next one in `areas`. When there are no areas left, all frames are used and `current_area` becomes `None`. The `{kernel, multiboot}_{start, end}` fields are used to avoid returning already used fields.
 
-To implement the `FrameAllocator` trait, we need to implement the `allocate_frame` and the `deallocate_frame` methods. The former looks like this:
+To implement the `FrameAllocator` trait, we need to implement the allocation and deallocation methods:
 
 ```rust
-fn allocate_frame(&mut self) -> Option<Frame> {
-    if let Some(area) = self.current_area {
-        // "clone" the frame to return it if it's free. Frame doesn't
-        // implement Clone, but we can construct an identical frame.
-        let frame = Frame{ number: self.next_free_frame.number };
+impl FrameAllocator for AreaFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<Frame> {
+        // TODO (see below)
+    }
 
-        // the last frame of the current area
-        let current_area_last_frame = {
-            let address = area.base_addr + area.length - 1;
-            Frame::containing_address(address as usize)
-        };
-
-        if frame > current_area_last_frame {
-            // all frames of current area are used, switch to next area
-            self.choose_next_area();
-        } else if frame >= self.kernel_start && frame <= self.kernel_end {
-            // `frame` is used by the kernel
-            self.next_free_frame = Frame {
-                number: self.kernel_end.number + 1
-            };
-        } else if frame >= self.multiboot_start && frame <= self.multiboot_end {
-            // `frame` is used by the multiboot information structure
-            self.next_free_frame = Frame {
-                number: self.multiboot_end.number + 1
-            };
-        } else {
-            // frame is unused, increment `next_free_frame` and return it
-            self.next_free_frame.number += 1;
-            return Some(frame);
-        }
-        // `frame` was not valid, try it again with the updated `next_free_frame`
-        self.allocate_frame()
-    } else {
-        None // no free frames left
+    fn deallocate_frame(&mut self, frame: Frame) {
+        // TODO (see below)
     }
 }
 ```
-The `choose_next_area` method isn't part of the trait and thus goes into an `impl AreaFrameAllocator` block:
+The `allocate_frame` method looks like this:
 
 ```rust
+// in `allocate_frame` in `impl FrameAllocator for AreaFrameAllocator`
+
+if let Some(area) = self.current_area {
+    // "Clone" the frame to return it if it's free. Frame doesn't
+    // implement Clone, but we can construct an identical frame.
+    let frame = Frame{ number: self.next_free_frame.number };
+
+    // the last frame of the current area
+    let current_area_last_frame = {
+        let address = area.base_addr + area.length - 1;
+        Frame::containing_address(address as usize)
+    };
+
+    if frame > current_area_last_frame {
+        // all frames of current area are used, switch to next area
+        self.choose_next_area();
+    } else if frame >= self.kernel_start && frame <= self.kernel_end {
+        // `frame` is used by the kernel
+        self.next_free_frame = Frame {
+            number: self.kernel_end.number + 1
+        };
+    } else if frame >= self.multiboot_start && frame <= self.multiboot_end {
+        // `frame` is used by the multiboot information structure
+        self.next_free_frame = Frame {
+            number: self.multiboot_end.number + 1
+        };
+    } else {
+        // frame is unused, increment `next_free_frame` and return it
+        self.next_free_frame.number += 1;
+        return Some(frame);
+    }
+    // `frame` was not valid, try it again with the updated `next_free_frame`
+    self.allocate_frame()
+} else {
+    None // no free frames left
+}
+```
+The `choose_next_area` method isn't part of the trait and thus goes into a new `impl AreaFrameAllocator` block:
+
+```rust
+// in `impl AreaFrameAllocator`
+
 fn choose_next_area(&mut self) {
     self.current_area = self.areas.clone().filter(|area| {
         let address = area.base_addr + area.length - 1;
@@ -326,8 +350,14 @@ If the `next_free_frame` is below the new `current_area`, it needs to be updated
 We don't have a data structure to store free frames, so we can't implement `deallocate_frame` reasonably. Thus we use the `unimplemented` macro, which just panics when the method is called:
 
 ```rust
-fn deallocate_frame(&mut self, _frame: Frame) {
-    unimplemented!()
+impl FrameAllocator for AreaFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<Frame> {
+        // described above
+    }
+
+    fn deallocate_frame(&mut self, _frame: Frame) {
+        unimplemented!()
+    }
 }
 ```
 
@@ -392,10 +422,10 @@ Now we have a working frame allocator. It is a bit rudimentary and cannot free f
 ## What's next?
 The [next post] will be about paging again. We will use the frame allocator to create a safe module that allows us to switch page tables and map pages. Then we will use this module and the information from the Elf-sections tag to remap the kernel correctly.
 
-[next post]: {{ page.next.url }}
+[next post]: {{% relref "2015-12-09-modifying-page-tables.md" %}}
 
 ## Recommended Posts
-Eric Kidd started the [Bare Metal Rust] series last week. Like this post, it builds upon the code from [Printing to Screen], but tries to support keyboard input instead of wrestling through memory management details ;).
+Eric Kidd started the [Bare Metal Rust] series last week. Like this post, it builds upon the code from [Printing to Screen], but tries to support keyboard input instead of wrestling through memory management details.
 
 [Bare Metal Rust]: http://www.randomhacks.net/bare-metal-rust/
-[Printing to Screen]: {% post_url 2015-10-23-printing-to-screen %}
+[Printing to Screen]: {{% relref "2015-10-23-printing-to-screen.md" %}}

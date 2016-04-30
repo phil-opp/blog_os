@@ -1,17 +1,25 @@
----
-layout: post
-title: 'Entering Long Mode'
-redirect_from: "/2015/08/25/entering-longmode/"
-updated: 2015-10-29 00:00:00 +0000
----
++++
+title = "Entering Long Mode"
+slug = "entering-longmode"
+date = "2015-08-25"
+updated = "2015-10-29"
+aliases = [
+    "/2015/08/25/entering-longmode/",
+    "/rust-os/entering-longmode.html",
+]
++++
+
 In the [previous post] we created a minimal multiboot kernel. It just prints `OK` and hangs. The goal is to extend it and call 64-bit [Rust] code. But the CPU is currently in [protected mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to set up _Paging_ and switch to the 64-bit [long mode] first.
 
-I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions, or issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
-
-[previous post]: {{ page.previous.url }}
+[previous post]: {{% relref "2015-08-18-multiboot-kernel.md" %}}
 [Rust]: http://www.rust-lang.org/
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
+
+<!--more-->
+
+I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions, or issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
+
 [create an issue]: https://github.com/phil-opp/blog_os/issues
 [source code]: https://github.com/phil-opp/blog_os/tree/entering_longmode/src/arch/x86_64
 
@@ -34,7 +42,7 @@ error:
 At address `0xb8000` begins the so-called [VGA text buffer]. It's an array of screen characters that are displayed by the graphics card. A [future post] will cover the VGA buffer in detail and create a Rust interface to it. But for now, manual bit-fiddling is the easiest option.
 
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
-[future post]: {{ page.next.next.url }}
+[future post]: {{% relref "2015-10-23-printing-to-screen.md" %}}
 
 A screen character consists of a 8 bit color code and a 8 bit [ASCII] character. We used the color code `4f` for all characters, which means white text on red background. `0x52` is an ASCII `R`, `0x45` is an `E`, `0x3a` is a `:`, and `0x20` is a space. The second space is overwritten by the given ASCII byte. Finally the CPU is stopped with the `hlt` instruction.
 
@@ -102,8 +110,8 @@ In `no_multiboot`, we use the `jmp` (“jump”) instruction to jump to our erro
 
 ```nasm
 check_cpuid:
-    ; Check if CPUID is supported by attempting to flip the ID bit (bit 21) in
-    ; the FLAGS register. If we can flip it, CPUID is available.
+    ; Check if CPUID is supported by attempting to flip the ID bit (bit 21)
+    ; in the FLAGS register. If we can flip it, CPUID is available.
 
     ; Copy FLAGS in to EAX via stack
     pushfd
@@ -123,13 +131,13 @@ check_cpuid:
     pushfd
     pop eax
 
-    ; Restore FLAGS from the old version stored in ECX (i.e. flipping the ID bit
-    ; back if it was ever flipped).
+    ; Restore FLAGS from the old version stored in ECX (i.e. flipping the
+    ; ID bit back if it was ever flipped).
     push ecx
     popfd
 
-    ; Compare EAX and ECX. If they are equal then that means the bit wasn't
-    ; flipped, and CPUID isn't supported.
+    ; Compare EAX and ECX. If they are equal then that means the bit
+    ; wasn't flipped, and CPUID isn't supported.
     cmp eax, ecx
     je .no_cpuid
     ret
@@ -155,7 +163,7 @@ check_long_mode:
     cpuid                  ; get highest supported argument
     cmp eax, 0x80000001    ; it needs to be at least 0x80000001
     jb .no_long_mode       ; if it's less, the CPU is too old for long mode
-    
+
     ; use extended info to test if long mode is available
     mov eax, 0x80000001    ; argument for extended processor info
     cpuid                  ; returns various feature bits in ecx and edx
@@ -526,4 +534,4 @@ It's time to finally leave assembly behind[^leave_assembly_behind] and switch to
 [^leave_assembly_behind]: Actually we will still need some assembly in the future, but I'll try to minimize it.
 
 [Rust]: https://www.rust-lang.org/
-[next post]: {{ page.next.url }}
+[next post]: {{% relref "2015-09-02-set-up-rust.md" %}}

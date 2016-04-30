@@ -1,7 +1,7 @@
----
-layout: page
-title: "Set Up GDB"
----
++++
+title = "Set Up GDB"
++++
+
 There are a lot of things that can go wrong when developing an OS. So it's a good idea to add a debugger to our toolset, which allows us to set breakpoints and examine variables. We will use [GDB](https://www.gnu.org/software/gdb/) as QEMU supports it out of the box.
 
 ### QEMU parameters
@@ -71,4 +71,4 @@ After connecting to QEMU, you can use various gdb commands to control execution 
 Of course there are many more commands. Feel free to send a PR if you think this list is missing something important. For a more complete GDB overview, check out [Beej's Quick Guide][bggdb] or the [website for Harvard's CS161 course][CS161].
 
 [bggdb]: http://beej.us/guide/bggdb/
-[CS161]: http://www.eecs.harvard.edu/~margo/cs161/resources/gdb.html
+[CS161]: http://www.eecs.harvard.edu/~cs161/resources/gdb.html
