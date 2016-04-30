@@ -6,3 +6,50 @@
 .front-page-introduction {
 	margin-bottom: 2rem;
 }
+
+main img {
+  max-width: 100%;
+}
+
+.post {
+  margin-bottom: 2em;
+}
+
+.post:last-child {
+  margin-bottom: 0em;
+}
+
+.posts {
+  padding: 1.5rem 1rem 0.5rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+
+.posts.bare-bones {
+  border: 2px solid #66f;
+}
+
+.posts.memory-management {
+  border: 2px solid #cc0;
+}
+
+.posts hr {
+  margin: 2rem 0;
+}
+
+.post-category {
+  margin-right: 0.5rem;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.post-category.bare-bones {
+  color: #55d;
+}
+
+.post-category.memory-management {
+  color: #990;
+}

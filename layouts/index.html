@@ -12,11 +12,15 @@
   {{ end }}
 </p></div>
 
-<div class="posts">
+<div id="bare-bones" class="post-category bare-bones">Bare Bones</div>
+<div class="posts bare-bones">
   {{ range first 4 (where .Site.Pages.ByDate "Section" "post") }}
     {{ .Render "teaser" }}
   {{ end }}
-  <hr>
+</div>
+
+<div id="memory-management" class="post-category memory-management">Memory Management</div>
+<div class="posts memory-management">
   {{ range first 4 (after 4 (where .Site.Pages.ByDate "Section" "post")) }}
     {{ .Render "teaser" }}
   {{ end }}
