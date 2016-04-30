@@ -1,4 +1,4 @@
-baseurl = "http://replace-this-with-your-hugo-site.com/"
+baseurl = "http://os.phil-opp.com/"
 languageCode = "en-us"
 title = "Writing an OS in Rust"
 rssURI = "atom.xml"
