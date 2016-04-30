@@ -8,6 +8,9 @@
 <header class="masthead">
   <h3 class="masthead-title">
     <a href="/" title="Home">{{ .Site.Title }}</a>
+    <span class="navigation">
+      <small><a href="/atom.xml"><img src="/images/feed-icon.png" alt="RSS"></a></small><!-- image source: https://commons.wikimedia.org/wiki/File:Generic_Feed-icon.svg -->
+    </span>
     <small>{{ replace .Site.Params.subtitle " " "&nbsp;" | safeHTML }}</small>
   </h3>
 </header>

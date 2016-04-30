@@ -7,6 +7,19 @@
 	margin-bottom: 2rem;
 }
 
+.navigation {
+  float: right;
+}
+
+.navigation img {
+  height: 1em;
+  vertical-align: baseline;
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+}
+
 main img {
   max-width: 100%;
 }
