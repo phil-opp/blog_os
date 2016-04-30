@@ -22,6 +22,3 @@ contentdir = "../blog"
 [permalinks]
   post = "/:slug.html"
   page = "/:filename.html"
-
-[blackfriday]
-  plainIDAnchors = true
