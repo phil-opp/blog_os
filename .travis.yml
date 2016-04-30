@@ -6,4 +6,7 @@ install:
   - pip install pygments-github-lexers --user
   - go get -u -v github.com/spf13/hugo
 
-script: hugo
+script:
+  - git clone https://github.com/phil-opp/blog_os.git
+  - cp -r blog_os/blog ../blog
+  - hugo
