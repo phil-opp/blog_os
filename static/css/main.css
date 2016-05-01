@@ -66,3 +66,39 @@ main img {
 .post-category.memory-management {
   color: #990;
 }
+
+.PageNavigation {
+  font-size: 0.9em;
+  display: table;
+  width: 100%;
+  overflow: hidden;
+}
+
+.PageNavigation a {
+  display: table-cell;
+}
+
+.PageNavigation .previous {
+  text-align: left;
+}
+
+.PageNavigation .next {
+  text-align: right;
+}
+
+footer.footer {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.footnotes {
+  font-size: 85%;
+}
+
+.footnotes li {
+  margin-bottom: 1rem;
+}
+
+sup, sub {
+  line-height: 0;
+}

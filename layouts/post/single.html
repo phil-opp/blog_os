@@ -12,6 +12,16 @@
   {{ .Content }}
 </article>
 
+<hr>
+<div class="PageNavigation">
+  {{ if .PrevInSection }}
+    <a class="prev" href="{{ .PrevInSection.RelPermalink }}">&laquo; {{ .PrevInSection.Title }}</a>
+  {{ end }}
+  {{ if .NextInSection }}
+    <a class="next" href="{{ .NextInSection.RelPermalink }}">{{ .NextInSection.Title }} &raquo;</a>
+  {{ end }}
+</div>
+<hr>
 
 {{ partial "disqus.html" . }}
 {{ partial "footer.html" . }}
