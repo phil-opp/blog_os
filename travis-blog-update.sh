@@ -26,6 +26,8 @@ git config user.email "travis-update-bot@phil-opp.com"
 # update blog
 rm -r *
 cp -r ../public/. .
+rm atom.xml # remove feed that includes all content types
+mv post/atom.xml . # use post feed as main feed
 rm -r post post.html page page.html # remove per-category pages/feeds
 
 # commit
