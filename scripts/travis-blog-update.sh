@@ -25,7 +25,7 @@ git config user.email "travis-update-bot@phil-opp.com"
 
 # update blog
 rm -r *
-cp -r ../hugo/public/* .
+cp -r ../hugo/public .
 rm -r post post.html page page.html # remove per-category pages/feeds
 
 # commit
