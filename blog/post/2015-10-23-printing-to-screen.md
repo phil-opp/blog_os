@@ -125,9 +125,9 @@ struct Buffer {
     chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 ```
-Since the field ordering in default structs is undefined in Rust, we need the [repr(C)] attribute. It guarantees that the struct's fields are laid out exactly like in a C struct and thus guarantees the correct field ordering.
+Since the field ordering in default structs is undefined in Rust, we need the [repr(C\)] attribute. It guarantees that the struct's fields are laid out exactly like in a C struct and thus guarantees the correct field ordering.
 
-[repr(C)]: https://doc.rust-lang.org/nightly/nomicon/other-reprs.html#reprc
+[repr(C\)]: https://doc.rust-lang.org/nightly/nomicon/other-reprs.html#reprc
 
 To actually write to screen, we now create a writer type:
 
