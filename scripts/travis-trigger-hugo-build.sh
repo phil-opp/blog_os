@@ -10,7 +10,7 @@ body='{
   "branch":"hugo",
   "config": {
     "env": {
-      "matrix": ["UPDATE_COMMIT=$TRAVIS_COMMIT"]
+      "matrix": ["UPDATE_COMMIT='"$TRAVIS_COMMIT"'"]
     }
   }
 }}'
