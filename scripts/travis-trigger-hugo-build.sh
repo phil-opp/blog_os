@@ -7,7 +7,12 @@ set -e
 
 body='{
 "request": {
-  "branch":"hugo"
+  "branch":"hugo",
+  "config": {
+    "env": {
+      "matrix": ["UPDATE_COMMIT=$TRAVIS_COMMIT"]
+    }
+  }
 }}'
 
 curl -s -X POST \
