@@ -102,3 +102,7 @@ footer.footer {
 sup, sub {
   line-height: 0;
 }
+
+a.anchorjs-link:hover {
+    text-decoration: none;
+}
