@@ -11,4 +11,4 @@ script:
   - cp -r blog_os/blog ../blog
   - hugo
 
-after_success: bash travis-blog-update.sh
+after_success: bash ci/travis-blog-update.sh
