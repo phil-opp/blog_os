@@ -15,11 +15,6 @@ addons:
     packages:
       - nasm
 
-install:
-  - export PATH=$HOME/.local/bin:$PATH
-  - pip install pygments --user
-  - pip install pygments-github-lexers --user
-
 script: bash scripts/travis-build.sh
 
 after_success: bash scripts/travis-trigger-hugo-build.sh
