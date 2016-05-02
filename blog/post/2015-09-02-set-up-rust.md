@@ -221,30 +221,17 @@ target/debug/libblog_os.a(blog_os.0.o):
 ```
 So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:654` in libcore. This reference is not really there at [line 654 of libcore's `iter.rs`][iter.rs:654]. Instead, it is a compiler inserted _landing pad_, which is used for exception handling.
 
+[iter.rs:654]: https://github.com/rust-lang/rust/blob/b0ca03923359afc8df92a802b7cc1476a72fb2d0/src/libcore/iter.rs#L654
+
 The easiest way of fixing this problem is to disable the landing pad creation since we don't supports panics anyway right now. We can do this by passing a `-Z no-landing-pads` flag to `rustc` (the actual Rust compiler below cargo). To do this we replace the `cargo build` command in our Makefile with the `cargo rustc` command, which does the same but allows passing flags to `rustc`:
 
 ```make
 cargo:
 	@cargo rustc --target $(target) -- -Z no-landing-pads
 ```
-Now we fixed all linking issues.
+Now we fixed all linking issues and our kernel should _build_ again. But instead of displaying `Hello World`, it constantly reboots itself when we start it.
 
-(For completeness, there is another flag you should pass to `rustc` as soon as you enable interrupts: `-C no-redzone`. For more information see the [Github issue][redzone issue]).
-
-[redzone issue]:https://github.com/phil-opp/blog_os/issues/10
-
-## The final problem
-Unfortunately there is one last problem left, that gets triggered by the following code:
-
-```rust
-let mut a = ("hello", 42);
-a.1 += 1;
-```
-When we add that code to `rust_main` and test it using `make run`, the OS will constantly reboot itself. Let's try to debug it.
-
-[iter.rs:654]: https://github.com/rust-lang/rust/blob/b0ca03923359afc8df92a802b7cc1476a72fb2d0/src/libcore/iter.rs#L654
-
-### Debugging
+## Debugging the Boot Loop
 Such a boot loop is most likely caused by some [CPU exception][exception table]. When these exceptions aren't handled, a [Triple Fault] occurs and the processor resets itself. We can look at generated CPU interrupts/exceptions using QEMU:
 
 [exception table]: http://wiki.osdev.org/Exceptions
@@ -257,36 +244,36 @@ SMM: enter
 SMM: after RSM
 ...
 check_exception old: 0xffffffff new 0x6
-     0: v=06 e=0000 i=0 cpl=0 IP=0008:00000000001001d3 pc=00000000001001d3
-     SP=0010:0000000000102ff0 env->regs[R_EAX]=000000000000002a
+     0: v=06 e=0000 i=0 cpl=0 IP=0008:000000000010018a pc=000000000010018a
+     SP=0010:0000000000102f70 env->regs[R_EAX]=0000000080010010
 ...
 check_exception old: 0xffffffff new 0xd
-     1: v=0d e=0062 i=0 cpl=0 IP=0008:00000000001001d3 pc=00000000001001d3
-     SP=0010:0000000000102ff0 env->regs[R_EAX]=000000000000002a
+     1: v=0d e=0062 i=0 cpl=0 IP=0008:000000000010018a pc=000000000010018a
+     SP=0010:0000000000102f70 env->regs[R_EAX]=0000000080010010
 ...
 check_exception old: 0xd new 0xd
-     2: v=08 e=0000 i=0 cpl=0 IP=0008:00000000001001d3 pc=00000000001001d3
-     SP=0010:0000000000102ff0 env->regs[R_EAX]=000000000000002a
+     2: v=08 e=0000 i=0 cpl=0 IP=0008:000000000010018a pc=000000000010018a
+     SP=0010:0000000000102f70 env->regs[R_EAX]=0000000080010010
 ...
 check_exception old: 0x8 new 0xd
 ```
 Let me first explain the QEMU arguments: The `-d int` logs CPU interrupts to the console and the `-no-reboot` flag closes QEMU instead of constant rebooting. But what does the cryptical output mean? I already omitted most of it as we don't need it here. Let's break down the rest:
 
-- The first two blocks, `SMM: enter` and `SMM: after RSM` are created before our OS boots, so we just ignore them.
-- The next block, `check_exception old: 0xffffffff new 0x6` is the interesting one. It says: “a new CPU exception with number `0x6` occurred“.
+- The `SMM: enter` and `SMM: after RSM` blocks are created before our OS boots, so we just ignore them.
+- The `check_exception old: 0xffffffff new 0x6` block is the interesting one. It says: “a new CPU exception with number `0x6` occurred“.
 - The last blocks indicate further exceptions. They were thrown because we didn't handle the `0x6` exception, so we're going to ignore them, too.
 
-So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't handling an interrupt when the exception occurred. The new exception has number `0x6`. By looking at an [exception table] we learn that `0x6` indicates a [Invalid Opcode] fault. So the lastly executed instruction was invalid. The register dump tells us that the current instruction was `0x1001d3` (through `IP`  (instruction pointer) or `pc` (program counter)). Therefore the instruction at `0x1001d3` seems to be invalid. We can look at it using `objdump`:
+So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't handling an interrupt when the exception occurred. The new exception has number `0x6`. By looking at an [exception table] we learn that `0x6` indicates a [Invalid Opcode] fault. So the lastly executed instruction was invalid. The register dump tells us that the current instruction was `0x10018a` (through `IP`  (instruction pointer) or `pc` (program counter)). Therefore the instruction at `0x10018a` seems to be invalid. We can look at it using `objdump`:
 
 [Invalid Opcode]: http://wiki.osdev.org/Exceptions#Invalid_Opcode
 
 ```
-> objdump -D build/kernel-x86_64.bin | grep "1001d3:"
-1001d3:	0f 10 05 16 01 00 00 	movups 0x116(%rip),%xmm0 ...
+> objdump -D build/kernel-x86_64.bin | grep "10018a:"
+10018a:	0f 10 05 c7 01 00 00 	movups 0x1c7(%rip),%xmm0 ...
 ```
-Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x1001d3` seems to be a valid `movaps` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps documentation][movaps]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`. An `#UD` exception occurs:
+Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x10018a` seems to be a valid `movaps` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movaps documentation][movaps]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`. An `#UD` exception occurs:
 
-> For an unmasked Streaming SIMD Extensions 2 instructions numeric exception (CR4.OSXMMEXCPT =0). If EM in CR0 is set. If OSFXSR in CR4 is 0. If CPUID feature flag SSE2 is 0.
+> If an unmasked SIMD floating-point exception and OSXMMEXCPT in CR4 is 0. If EM in CR0 is set. If OSFXSR in CR4 is 0. If CPUID feature flag SSE is 0.
 
 [SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
 [movaps]: http://www.c3se.chalmers.se/Common/VTUNE-9.1/doc/users_guide/mergedProjects/analyzer_ec/mergedProjects/reference_olh/mergedProjects/instructions/instruct32_hh/vc181.htm
