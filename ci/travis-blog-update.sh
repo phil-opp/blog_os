@@ -32,7 +32,8 @@ rm -r post post.html page page.html # remove per-category pages/feeds
 
 # commit
 git add --all .
-git commit -qm "Update blog to $TRAVIS_COMMIT"
+: ${UPDATE_COMMIT=$TRAVIS_COMMIT}
+git commit -qm "Update blog to $UPDATE_COMMIT"
 
 # push changes
 git push -q origin gh-pages
