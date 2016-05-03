@@ -132,6 +132,8 @@ Since the field ordering in default structs is undefined in Rust, we need the [r
 To actually write to screen, we now create a writer type:
 
 ```rust
+use core::ptr::Unique;
+
 pub struct Writer {
     column_position: usize,
     color_code: ColorCode,
@@ -256,6 +258,7 @@ Now we can use Rust's built-in `write!`/`writeln!` formatting macros:
 
 ```rust
 // in the `print_something` function
+use core::fmt::Write;
 let mut writer = Writer {...};
 writer.write_byte(b'H');
 writer.write_str("ello! ");
