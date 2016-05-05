@@ -414,7 +414,7 @@ To print to the VGA buffer, we just copy the `println!` macro and modify the `pr
 macro_rules! print {
     ($($arg:tt)*) => ({
             use core::fmt::Write;
-            let writer = $crate::vga_buffer::WRITER.lock();
+            let mut writer = $crate::vga_buffer::WRITER.lock();
             writer.write_fmt(format_args!($($arg)*)).unwrap();
     });
 }
