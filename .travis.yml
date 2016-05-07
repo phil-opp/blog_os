@@ -1,5 +1,8 @@
 language: go
 
+go:
+  - tip
+
 install:
   - export PATH=$HOME/.local/bin:$PATH
   - pip install pygments --user
