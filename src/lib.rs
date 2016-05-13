@@ -10,6 +10,7 @@
 #![feature(lang_items)]
 #![feature(const_fn, unique)]
 #![feature(alloc, collections)]
+#![feature(asm)]
 #![no_std]
 
 extern crate rlibc;
@@ -29,6 +30,7 @@ extern crate collections;
 #[macro_use]
 mod vga_buffer;
 mod memory;
+mod interrupts;
 
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_information_address: usize) {
@@ -48,6 +50,14 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 
     for i in 0..10000 {
         format!("Some String");
+    }
+
+    interrupts::init();
+
+    unsafe { *(0xdeadbeaf as *mut u32) = 42};
+
+    unsafe {
+        asm!("xor eax, eax; idiv eax" :::: "intel");
     }
 
     println!("It did not crash!");
