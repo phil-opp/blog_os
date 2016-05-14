@@ -739,23 +739,25 @@ static HEAP: Mutex<Heap> = Mutex::new(Heap::new(HEAP_START, HEAP_SIZE));
 ```
 The reason is that the `Heap::new` function needs to initialize the first hole (like described [above](#initialization)). This can't be done at compile time, so the function can't be a `const` function. Therefore we can't use it to initialize a static.
 
-There is an easy solution for crates with access to the standard library: [lazy-static]. It automatically initializes the static when it's used the first time. However, it relies on the `std::sync::once` module and is thus unusable in our kernel. I couldn't find any alternatives for `#![no_std]` crates, so I've tried to port it. The results are part of the [once] crate, which we already used above. I've created it quite recently and haven't tested it much, so be careful when using it. Please [report][once issues] any issues you find!
+There is an easy solution for crates with access to the standard library: [lazy_static]. It automatically initializes the static when it's used the first time. By default, it relies on the `std::sync::once` module and is thus unusable in our kernel. Fortunately it has a `spin_no_std` feature for `no_std` projects.
 
-[once issues]: https://github.com/phil-opp/rust-once/issues
+[lazy_static]: https://github.com/rust-lang-nursery/lazy-static.rs
 
-Let's use the ported `lazy_static!` macro to fix our `hole_list_allocator`:
+So let's use the `lazy_static!` macro to fix our `hole_list_allocator`:
 
-[lazy-static]: https://github.com/rust-lang-nursery/lazy-static.rs
+```toml
+# in libs/hole_list_allocator/Cargo.toml
 
-```shell
-> cargo add once
+[dependencies.lazy_static]
+version = "0.2.1"
+features = ["spin_no_std"]
 ```
 
 ```rust
 // in libs/hole_list_allocator/src/lib.rs
 
 #[macro_use]
-extern crate once;
+extern crate lazy_static;
 
 lazy_static! {
     static ref HEAP: Mutex<Heap> = Mutex::new(unsafe {

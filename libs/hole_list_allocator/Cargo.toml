@@ -6,4 +6,7 @@ version = "0.1.0"
 [dependencies]
 linked_list_allocator = "0.2.0"
 spin = "0.3.5"
-once = "0.2.0"
+
+[dependencies.lazy_static]
+version = "0.2.1"
+features = ["spin_no_std"]
