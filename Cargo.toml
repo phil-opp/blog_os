@@ -7,10 +7,7 @@ version = "0.1.0"
 once = "0.2.1"
 rlibc = "0.1.4"
 spin = "0.3.4"
-
-[dependencies.bitflags]
-features = ["no_std"]
-version = "0.4.0"
+bitflags = "0.7.0"
 
 [dependencies.hole_list_allocator]
 path = "libs/hole_list_allocator"
