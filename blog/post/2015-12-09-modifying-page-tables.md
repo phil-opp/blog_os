@@ -94,12 +94,10 @@ To model the various flags, we will use the [bitflags] crate. To add it as a dep
 [bitflags]: https://github.com/rust-lang-nursery/bitflags
 
 ```toml
-[dependencies.bitflags]
-version = "0.4.0"
-features = ["no_std"]
+[dependencies]
+...
+bitflags = "0.7.0"
 ```
-The `no_std` feature is needed because `bitflags` depends on the standard library by default. But it has a [cargo feature] to use the core library instead. It will become the default as soon as `no_std` is stable in a stable Rust release.
-[cargo feature]: http://doc.crates.io/manifest.html#the-[features]-section
 
 To import the macro, we need to use `#[macro_use]` above the `extern crate` definition:
 
@@ -113,7 +111,7 @@ Now we can model the various flags:
 
 ```rust
 bitflags! {
-    flags EntryFlags: u64 {
+    pub flags EntryFlags: u64 {
         const PRESENT =         1 << 0,
         const WRITABLE =        1 << 1,
         const USER_ACCESSIBLE = 1 << 2,
