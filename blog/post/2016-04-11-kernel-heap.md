@@ -834,7 +834,7 @@ in src/lib.rs:
 in memory::init in src/memory/mod.rs:
 
 -use bump_allocator::{HEAP_START, HEAP_SIZE};
-+use linked_list_allocator::{HEAP_START, HEAP_SIZE};
++use hole_list_allocator::{HEAP_START, HEAP_SIZE};
 ```
 
 Our kernel uses the new allocator now, so we can deallocate memory without leaking it. The example from above should work now without causing an OOM situation:
