@@ -27,6 +27,8 @@ extern crate alloc;
 #[macro_use]
 extern crate collections;
 
+extern crate bit_field;
+
 #[macro_use]
 mod vga_buffer;
 mod memory;
