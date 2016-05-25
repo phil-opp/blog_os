@@ -155,7 +155,7 @@ pub struct EntryOptions(BitField<u16>);
 impl EntryOptions {
     fn minimal() -> Self {
         let mut options = BitField::new(0);
-        options.set_range(9..12, 0b111); // required 'one' bits
+        options.set_range(9..12, 0b111); // 'must-be-one' bits
         EntryOptions(options)
     }
 
@@ -186,9 +186,9 @@ impl EntryOptions {
     }
 }
 ```
-Note that the ranges are _exclusive_ the upper bound. The bit indexes are different from the values in the [above table], because the `option` field starts at bit 32. Thus the privilege level bits are bits 13 (`=45‑32`) and 14 (`=46‑32`).
+Note that the ranges are _exclusive_ the upper bound. The bit indexes are different from the values in the [above table], because the `option` field starts at bit 32. Thus e.g. the privilege level bits are bits 13 (`= 45‑32`) and 14 (`= 46‑32`).
 
-The `minimal` function creates an `EntryOptions` type with only the “must-be-one” bits set. The `new` function, on the other hand, chooses reasonable defaults: It sets the present bit (why would you want to create a non-present entry?) and disables interrupts (normally we don't want that our exception handlers are interrupted). By returning the self pointer from the `set_*` methods, we allow easy method chaining such as `options.set_present(true).disable_interrupts(true)`.
+The `minimal` function creates an `EntryOptions` type with only the “must-be-one” bits set. The `new` function, on the other hand, chooses reasonable defaults: It sets the present bit (why would you want to create a non-present entry?) and disables interrupts (normally we don't want that our exception handlers can be interrupted). By returning the self pointer from the `set_*` methods, we allow easy method chaining such as `options.set_present(true).disable_interrupts(true)`.
 
 [above table]: {{% relref "#the-interrupt-descriptor-table" %}}
 
@@ -196,8 +196,6 @@ The `minimal` function creates an `EntryOptions` type with only the “must-be-o
 Now we can add a function to create new IDT entries:
 
 ```rust
-type HandlerFunc = extern "C" fn() -> !;
-
 impl Entry {
     pub fn new(gdt_selector: SegmentSelector, handler: HandlerFunc) -> Self {
         let pointer = handler as u64;
@@ -212,10 +210,28 @@ impl Entry {
     }
 }
 ```
-We chose `extern "C" fn() -> !` as handler function type, which is a function using the C [calling convention]. It takes no arguments and is [diverging] \(indicated by the `!` return type). TODO why?
+We take a GDT selector and a handler function as arguments and create a new IDT entry for it. The `HandlerFunc` type is described below. It is a function pointer that can be converted to an `u64`. We choose the lower 16 bits for `pointer_low`, the next 16 bits for `pointer_middle` and the remaining 32 bits for `pointer_high`. For the options field we choose our default options, i.e. present and disabled interrupts.
+
+### The Handler Function Type
+
+The `HandlerFunc` type is a type alias for a function type:
+
+``` rust
+type HandlerFunc = extern "C" fn() -> !;
+```
+It needs to be a function with a defined [calling convention], as it called directly by the hardware. The C calling convention is the de facto standard in OS development, so we're using it, too. The function takes no arguments, since the hardware doesn't supply any arguments when jumping to the handler function.
 
 [calling convention]: https://en.wikipedia.org/wiki/Calling_convention
+
+It is important that the function is [diverging], i.e. it must never return. The reason is that the hardware doesn't _call_ the handler functions, it just _jumps_ to them after pushing some values to the stack. So our stack might look different:
+
 [diverging]: https://doc.rust-lang.org/book/functions.html#diverging-functions
+
+![normal function return vs interrupt function return](/images/normal-vs-interrupt-function-return.svg)
+
+If our handler function returned normally, it would try to pop the return address from the stack. But it might get some completely different value then. For example, the CPU pushes an error code for some exceptions. Bad things would happen if we interpreted this error code as return address and jumped to it. Therefore interrupt handler functions must diverge[^fn-must-diverge].
+
+[^fn-must-diverge]: Another reason is that overwrite the current register values by executing the handler function. Thus, the interrupted function looses its state and can't proceed anyway.
 
 ### IDT methods
 TODO
