@@ -135,3 +135,15 @@ struct ScreenChar {
 struct Buffer {
     chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
+
+pub unsafe fn print_error(fmt: fmt::Arguments) {
+    use core::fmt::Write;
+
+    let mut writer = Writer {
+        column_position: 0,
+        color_code: ColorCode::new(Color::Red, Color::Black),
+        buffer: unsafe { Unique::new(0xb8000 as *mut _) },
+    };
+    writer.new_line();
+    writer.write_fmt(fmt);
+}

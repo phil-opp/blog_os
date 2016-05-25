@@ -4,14 +4,11 @@ name = "blog_os"
 version = "0.1.0"
 
 [dependencies]
+bit_field = "0.1.0"
 bitflags = "0.7.0"
 once = "0.2.1"
 rlibc = "0.1.4"
 spin = "0.3.4"
-
-[dependencies.bit-field]
-git = "https://github.com/phil-opp/rust-bit-field.git"
-optional = false
 
 [dependencies.hole_list_allocator]
 path = "libs/hole_list_allocator"

@@ -6,12 +6,15 @@ impl Idt {
         Idt([Entry::missing(); 16])
     }
 
-    pub fn set_handler(&mut self, entry: usize, handler: extern "C" fn() -> !) {
-        self.0[entry] = Entry::new(EntryType::InterruptGate, 0x8, handler);
+    pub fn set_handler(&mut self, entry: u8, handler: extern "C" fn() -> !) {
+        let segment: u16;
+        unsafe { asm!("mov %cs, $0" : "=r" (segment) ) };
+        let code_segment = SegmentSelector::from_raw(segment);
+        self.0[entry as usize] = Entry::new(code_segment, handler);
     }
 
-    pub fn set_interrupt_stack(&mut self, entry: usize, stack_index: u16) {
-        self.0[entry].options.set_stack_index(stack_index);
+    pub fn options(&mut self, entry: u8) -> &mut EntryOptions {
+        &mut self.0[entry as usize].options
     }
 
     pub unsafe fn load(&'static self) {
@@ -28,75 +31,77 @@ impl Idt {
 }
 
 use bit_field::BitField;
+use x86::segmentation::SegmentSelector;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct Entry {
-    target_low: u16,
-    gdt_selector: u16,
+    pointer_low: u16,
+    gdt_selector: SegmentSelector,
     options: EntryOptions,
-    target_middle: u16,
-    target_high: u32,
+    pointer_middle: u16,
+    pointer_high: u32,
     reserved: u32,
 }
 
 impl Entry {
-    pub fn missing() -> Entry {
+    fn missing() -> Self {
         Entry {
-            gdt_selector: 0,
-            target_low: 0,
-            target_middle: 0,
-            target_high: 0,
-            options: MISSING,
+            gdt_selector: SegmentSelector::new(0),
+            pointer_low: 0,
+            pointer_middle: 0,
+            pointer_high: 0,
+            options: EntryOptions::minimal(),
             reserved: 0,
         }
     }
 
-    pub fn new(ty: EntryType, gdt_selector: u16, handler: extern "C" fn() -> !) -> Entry {
-        let target = handler as u64;
-
+    pub fn new(gdt_selector: SegmentSelector, handler: extern "C" fn() -> !) -> Self {
+        let pointer = handler as u64;
         Entry {
             gdt_selector: gdt_selector,
-            target_low: target as u16,
-            target_middle: (target >> 16) as u16,
-            target_high: (target >> 32) as u32,
-            options: EntryOptions::new(ty),
+            pointer_low: pointer as u16,
+            pointer_middle: (pointer >> 16) as u16,
+            pointer_high: (pointer >> 32) as u32,
+            options: EntryOptions::new(),
             reserved: 0,
         }
     }
 }
-
-const MISSING: EntryOptions = EntryOptions(BitField::new(0));
 
 #[derive(Debug, Clone, Copy)]
 pub struct EntryOptions(BitField<u16>);
 
 impl EntryOptions {
-    pub fn new(ty: EntryType) -> Self {
-        let mut flags = BitField::new(0);
-        match ty {
-            EntryType::InterruptGate => flags.set_range(8..12, 0b1110),
-            EntryType::TrapGate => flags.set_range(8..12, 0b1111),
-        }
-        // set present bit
-        flags.set_bit(15);
-
-        EntryOptions(flags)
+    pub fn minimal() -> Self {
+        let mut options = BitField::new(0);
+        options.set_range(9..12, 0b111); // required 'one' bits
+        EntryOptions(options)
     }
 
-    pub fn set_privilege(&mut self, dpl: u16) {
-        assert!(dpl < 4);
+    pub fn new() -> Self {
+        let mut options = Self::minimal();
+        options.set_present(true);
+        options
+    }
+
+    pub fn set_present(&mut self, present: bool) -> &mut Self {
+        self.0.set_bit(15, present);
+        self
+    }
+
+    pub fn disable_interrupts(&mut self, disable: bool) -> &mut Self {
+        self.0.set_bit(8, !disable);
+        self
+    }
+
+    pub fn set_privilege_level(&mut self, dpl: u16) -> &mut Self {
         self.0.set_range(13..15, dpl);
+        self
     }
 
-    pub fn set_stack_index(&mut self, index: u16) {
-        assert!(index < 8);
+    pub fn set_stack_index(&mut self, index: u16) -> &mut Self {
         self.0.set_range(0..3, index);
+        self
     }
-}
-
-#[allow(dead_code)]
-pub enum EntryType {
-    InterruptGate,
-    TrapGate,
 }
