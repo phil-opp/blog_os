@@ -67,13 +67,13 @@ impl Entry {
 pub struct EntryOptions(BitField<u16>);
 
 impl EntryOptions {
-    pub fn minimal() -> Self {
+    fn minimal() -> Self {
         let mut options = BitField::new(0);
         options.set_range(9..12, 0b111); // required 'one' bits
         EntryOptions(options)
     }
 
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut options = Self::minimal();
         options.set_present(true);
         options

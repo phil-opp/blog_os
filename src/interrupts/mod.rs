@@ -68,22 +68,23 @@ pub fn init() {
     IDT.load();
 }
 
-pub extern "C" fn divide_by_zero_handler() -> ! {
+extern "C" fn divide_by_zero_handler() -> ! {
     unsafe { print_error(format_args!("EXCEPTION: DIVIDE BY ZERO")) };
     loop {}
 }
 
-pub extern "C" fn double_fault_handler() -> ! {
+extern "C" fn double_fault_handler() -> ! {
     unsafe { print_error(format_args!("EXCEPTION: DOUBLE FAULT")) };
+    unsafe { asm!("iretq")};
     loop {}
 }
 
-pub extern "C" fn general_protection_fault_handler() -> ! {
+extern "C" fn general_protection_fault_handler() -> ! {
     unsafe { print_error(format_args!("EXCEPTION: GENERAL PROTECTION FAULT")) };
     loop {}
 }
 
-pub extern "C" fn page_fault_handler() -> ! {
+extern "C" fn page_fault_handler() -> ! {
     unsafe { print_error(format_args!("EXCEPTION: PAGE FAULT")) };
     loop {}
 }
