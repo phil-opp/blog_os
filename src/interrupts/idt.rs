@@ -12,7 +12,7 @@ impl Idt {
         &mut self.0[entry as usize].options
     }
 
-    pub unsafe fn load(&'static self) {
+    pub fn load(&'static self) {
         use x86::dtables::{DescriptorTablePointer, lidt};
         use core::mem::size_of;
 
@@ -21,7 +21,7 @@ impl Idt {
             limit: (size_of::<Self>() - 1) as u16,
         };
 
-        lidt(&ptr);
+        unsafe { lidt(&ptr) };
     }
 }
 

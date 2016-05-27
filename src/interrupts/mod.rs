@@ -64,8 +64,8 @@ pub fn init() {
         GDT.table.load();
         gdt::reload_segment_registers(GDT.selectors.code, GDT.selectors.data);
         gdt::load_ltr(GDT.selectors.tss);
-        IDT.load();
     }
+    IDT.load();
 }
 
 pub extern "C" fn divide_by_zero_handler() -> ! {
