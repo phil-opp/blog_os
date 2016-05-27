@@ -1,3 +1,4 @@
+use x86::segmentation::{self, SegmentSelector};
 
 pub struct Idt([Entry; 16]);
 
@@ -6,14 +7,8 @@ impl Idt {
         Idt([Entry::missing(); 16])
     }
 
-    pub fn set_handler(&mut self, entry: u8, handler: extern "C" fn() -> !) {
-        let segment: u16;
-        unsafe { asm!("mov %cs, $0" : "=r" (segment) ) };
-        let code_segment = SegmentSelector::from_raw(segment);
-        self.0[entry as usize] = Entry::new(code_segment, handler);
-    }
-
-    pub fn options(&mut self, entry: u8) -> &mut EntryOptions {
+    pub fn set_handler(&mut self, entry: u8, handler: extern "C" fn() -> !) -> &mut EntryOptions {
+        self.0[entry as usize] = Entry::new(segmentation::cs(), handler);
         &mut self.0[entry as usize].options
     }
 
@@ -31,7 +26,6 @@ impl Idt {
 }
 
 use bit_field::BitField;
-use x86::segmentation::SegmentSelector;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
@@ -56,7 +50,7 @@ impl Entry {
         }
     }
 
-    pub fn new(gdt_selector: SegmentSelector, handler: extern "C" fn() -> !) -> Self {
+    fn new(gdt_selector: SegmentSelector, handler: extern "C" fn() -> !) -> Self {
         let pointer = handler as u64;
         Entry {
             gdt_selector: gdt_selector,

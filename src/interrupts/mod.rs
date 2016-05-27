@@ -9,12 +9,10 @@ lazy_static! {
         let mut idt = idt::Idt::new();
 
         idt.set_handler(0, divide_by_zero_handler);
-        idt.set_handler(8, double_fault_handler);
+        idt.set_handler(8, double_fault_handler).set_stack_index(1);
         idt.set_handler(13, general_protection_fault_handler);
         idt.set_handler(14, page_fault_handler);
 
-        idt.options(8).set_stack_index(1);
-        
         idt
     };
 

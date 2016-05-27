@@ -18,7 +18,7 @@ git = "https://github.com/phil-opp/multiboot2-elf64"
 
 [dependencies.x86]
 default-features = false
-version = "0.6.0"
+version = "0.7.0"
 
 [lib]
 crate-type = ["staticlib"]
