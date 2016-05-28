@@ -83,7 +83,7 @@ Now we create types for the IDT and its entries:
 ```rust
 // src/interrupts/idt.rs
 
-use x86::segmentation::SegmentSelector;
+use x86::segmentation::{self, SegmentSelector};
 
 pub struct Idt([Entry; 16]);
 
@@ -222,7 +222,7 @@ We take a GDT selector and a handler function as arguments and create a new IDT 
 The `HandlerFunc` type is a type alias for a function type:
 
 ``` rust
-type HandlerFunc = extern "C" fn() -> !;
+pub type HandlerFunc = extern "C" fn() -> !;
 ```
 It needs to be a function with a defined [calling convention], as it called directly by the hardware. The C calling convention is the de facto standard in OS development, so we're using it, too. The function takes no arguments, since the hardware doesn't supply any arguments when jumping to the handler function.
 
@@ -251,7 +251,7 @@ impl Idt {
 impl Entry {
     fn missing() -> Self {
         Entry {
-            gdt_selector: 0,
+            gdt_selector: SegmentSelector::new(0),
             pointer_low: 0,
             pointer_middle: 0,
             pointer_high: 0,
@@ -582,6 +582,8 @@ Let's use the new `print_error` function to print the page fault error:
 
 ```rust
 // in src/interrupts/mod.rs
+
+use vga_buffer::print_error;
 
 extern "C" fn page_fault_handler() -> ! {
     unsafe { print_error(format_args!("EXCEPTION: PAGE FAULT")) };
