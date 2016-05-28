@@ -49,8 +49,8 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // initialize our IDT
     interrupts::init();
 
-    // provoke a page fault by writing to some random address
-    unsafe{ *(0xdeadbeaf as *mut u64) = 42 };
+    // provoke a page fault inside println
+    println!("{:?}", unsafe{ *(0xdeadbeaf as *mut u64) = 42 });
 
     println!("It did not crash!");
     loop {}
