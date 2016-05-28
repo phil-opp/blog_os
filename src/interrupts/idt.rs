@@ -36,7 +36,7 @@ pub struct Entry {
     reserved: u32,
 }
 
-type HandlerFunc = extern "C" fn() -> !;
+pub type HandlerFunc = extern "C" fn() -> !;
 
 impl Entry {
     fn new(gdt_selector: SegmentSelector, handler: HandlerFunc) -> Self {
