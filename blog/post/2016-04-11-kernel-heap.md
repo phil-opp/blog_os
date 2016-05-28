@@ -326,9 +326,7 @@ target/x86_64-unknown-linux-gnu/debug/libblog_os.a(bump_allocator-[…].0.o):
     undefined reference to `_Unwind_Resume'
 ```
 
-This function is part of Rust's unwinding machinery. We disabled most of by passing `-Z no-landing-pads` to rustc, but apparently some panic related code still links to it. The new “[panic as abort]” feature might fix this.
-
-[panic as abort]: https://github.com/rust-lang/rust/issues/32837
+This function is part of Rust's unwinding machinery. We disabled most of by passing `-Z no-landing-pads` to rustc, but apparently our precompiled `libcollections` still links to it.
 
 To work around this issue for now, we add a dummy function:
 
@@ -341,7 +339,7 @@ pub extern fn _Unwind_Resume() -> ! {
 }
 ```
 
-This is just a temporary fix to keep this post simple. The next post will resolve this issue in a better way using a new build setup.
+This is just a temporary fix to keep this post simple. We will resolve this issue in a better way in a future post.
 
 Now our kernel compiles again. But when we run it, a triple fault occurs and causes permanent rebooting. We use QEMU for debugging as described [in the previous post][qemu debugging]:
 
@@ -857,4 +855,6 @@ Now we're able to use heap storage in our kernel without leaking memory. This al
 [B-tree]: https://en.wikipedia.org/wiki/B-tree
 
 ## What's next?
-This post concludes the section about memory management for now. We will revisit this topic eventually, but now it's time to explore other topics. The upcoming posts will be about CPU exceptions and interrupts. We will catch all page, double, and triple faults and create a driver to read keyboard input. But first, we need to improve our build setup. The next post will eliminate most of our Makefile using advanced Cargo features and prepare our kernel for interrupt handling.
+This post concludes the section about memory management for now. We will revisit this topic eventually, but now it's time to explore other topics. The upcoming posts will be about CPU exceptions and interrupts. We will catch all page, double, and triple faults and create a driver to read keyboard input. The [next post] starts by setting up a so-called _Interrupt Descriptor Table_.
+
+[next post]: {{% relref "2016-05-28-catching-exceptions.md" %}}

@@ -20,6 +20,7 @@ extern crate bitflags;
 extern crate x86;
 #[macro_use]
 extern crate once;
+extern crate bit_field;
 
 extern crate hole_list_allocator;
 extern crate alloc;
@@ -29,6 +30,8 @@ extern crate collections;
 #[macro_use]
 mod vga_buffer;
 mod memory;
+
+mod interrupts;
 
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_information_address: usize) {
@@ -43,15 +46,13 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // set up guard page and map the heap pages
     memory::init(boot_info);
 
-    use alloc::boxed::Box;
-    let heap_test = Box::new(42);
+    // initialize our IDT
+    interrupts::init();
 
-    for i in 0..10000 {
-        format!("Some String");
-    }
+    // provoke a page fault inside println
+    println!("{:?}", unsafe{ *(0xdeadbeaf as *mut u64) = 42 });
 
     println!("It did not crash!");
-
     loop {}
 }
 
