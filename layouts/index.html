@@ -26,4 +26,11 @@
   {{ end }}
 </div>
 
+<div id="interrupts" class="post-category interrupts">Interrupts</div>
+<div class="posts interrupts">
+  {{ range first 4 (after 8 (where .Site.Pages.ByDate "Section" "post")) }}
+    {{ .Render "teaser" }}
+  {{ end }}
+</div>
+
 {{ partial "footer.html" . }}
