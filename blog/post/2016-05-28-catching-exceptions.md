@@ -1,14 +1,16 @@
 +++
 title = "Catching Exceptions"
-date = "2016-05-10"
+date = "2016-05-28"
 +++
 
-TODO We will catch page faults,
+In this post, we start exploring exceptions. We set up an interrupt descriptor table and add handler functions. At the end of this post, our kernel will be able to catch page faults.
 
 <!--more-->
 
-## Interrupts
-Whenever a device (e.g. the keyboard contoller) needs
+As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a comment section at the end of this page.
+
+[Github]: https://github.com/phil-opp/blog_os/tree/catching_exceptions
+[issues]: https://github.com/phil-opp/blog_os/issues
 
 ## Exceptions
 An exception signals that something is wrong with the current instruction. For example, the CPU issues an exception if the current instruction tries to divide by 0. When an exception occurs, the CPU interrupts its current work and immediately calls a specific exception handler function, depending on the exception type.
@@ -343,17 +345,17 @@ fn load_idt() {
 
 fn cause_page_fault() {
     let x = [1,2,3,4,5,6,7,8,9];
-    unsafe{ *(0xdeadbeaf as *mut u64) = x[4]};
+    unsafe{ *(0xdeadbeaf as *mut u64) = x[4] };
 }
 ```
 This won't work. If we're lucky, we get a triple fault and a boot loop. If we're unlucky, our kernel does strange things and fails at some completely unrelated place. So what's the problem here?
 
-Well, we construct an IDT _on the stack_ and load it. It is perfectly valid until the end of the `load_idt` function. But as soon as the function returns, its stack frame can be reused by other functions. Thus, the IDT gets overwritten by the stack frame of the `cause_page_fault` function. It declares an array of integers, which overwrite the entries of our loaded IDT. So when the page fault occurs and the CPU tries to read the entry, it only sees some garbage values and issues a double fault, which escalates to a triple fault and a CPU reset.
+Well, we construct an IDT _on the stack_ and load it. It is perfectly valid until the end of the `load_idt` function. But as soon as the function returns, its stack frame can be reused by other functions. Thus, the IDT gets overwritten by the stack frame of the `cause_page_fault` function. So when the page fault occurs and the CPU tries to read the entry, it only sees some garbage values and issues a double fault, which escalates to a triple fault and a CPU reset.
 
 Now imagine that the `cause_page_fault` function declared an array of pointers instead. If the present was coincidentally set, the CPU would jump to some random pointer and interpret random memory as code. This would be a clear violation of memory safety.
 
 ### Fixing the load method
-So how do we fix it? We could make the load function itself `unsafe` and push the unsafety to the caller. However, there is a much better solution in this case. Let's formulate our requirement:
+So how do we fix it? We could make the load function itself `unsafe` and push the unsafety to the caller. However, there is a much better solution in this case. In order to see it, we formulate the requirement for the `load` method:
 
 > The referenced IDT must be valid until a new IDT is loaded.
 
@@ -367,6 +369,7 @@ This is exactly the definition of a [static lifetime]. So we can easily ensure t
 
 ```rust
 pub fn load(&'static self) {...}
+//           ^^^^^^^ ensure that the IDT reference has the 'static lifetime
 ```
 
 That's it! Now the Rust compiler ensures that the above error can't happen anymore:
@@ -401,12 +404,11 @@ static IDT: idt::Idt = {
 };
 
 extern "C" fn page_fault_handler() -> ! {
-  println!("EXCEPTION: PAGE FAULT");
-  loop {}
+    println!("EXCEPTION: PAGE FAULT");
+    loop {}
 }
 ```
-
-Well… this doesn't work:
+We register a single handler function for a page fault (index 14). The handler function just prints an error message and enters a `loop`. However, it doesn't work this way:
 
 ```
 error: calls in statics are limited to constant functions, struct and enum
@@ -417,10 +419,10 @@ error: blocks in statics are limited to items and tail expressions [E0016]
 error: references in statics may only refer to immutable values [E0017]
 ...
 ```
-Maybe it will work someday when `const` functions become more powerful. But until then, we have to find another solution.
+The reason is that the Rust compiler is not able to evaluate the value of the `static` at compile time. Maybe it will work someday when `const` functions become more powerful. But until then, we have to find another solution.
 
 ### Lazy Statics to the Rescue
-Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro evaluates it when it's referenced the first time. Thus, we can do almost everything in it and are even able to read runtime values (e.g. the number of cores).
+Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values (e.g. the number of cores).
 
 With `lazy_static`, we can define our IDT without problems:
 
@@ -436,31 +438,179 @@ lazy_static! {
 }
 ```
 
-Now we're ready to load it! We add a `interrupts::init` function, which takes care of it:
+Now we're ready to load our IDT! Therefore we add a `interrupts::init` function:
 
 ```rust
 // in src/interrupts/mod.rs
 
 pub fn init() {
-    assert_has_not_been_called!();
-
     IDT.load();
 }
 ```
-We're using our `assert_has_not_been_called` macro to ensure that the `init` function is called only once. It doesn't really matter in this case since we would just load the table again. However, calling an initialization function twice is a sign of some bug, so we leave it in.
-
+We don't need our `assert_has_not_been_called` macro here, since nothing bad happens when `init` is called twice. It just reloads the same IDT again.
 
 ## Testing it
-TODO page fault, some other fault to trigger double fault, kernel stack overflow
+Now we should be able to catch page faults! Let's try it in our `rust_main`:
 
-## Switching stacks
+```rust
+// in src/lib.rs
 
-### The Interrupt Stack Table
+pub extern "C" fn rust_main(...) {
+    ...
+    memory::init(boot_info);
 
-### The Task State Segment
+    // initialize our IDT
+    interrupts::init();
 
-### The Global Descriptor Table (again)
+    // provoke a page fault by writing to some random address
+    unsafe{ *(0xdeadbeaf as *mut u64) = 42 };
 
-### Putting it together
+    println!("It did not crash!");
+    loop {}
+}
+```
+It works! We see a `EXCEPTION: PAGE FAULT` message at the bottom of our screen:
+
+![QEMU screenshot with `EXCEPTION: PAGE FAULT` message](images/qemu-page-fault-println.png)
+
+Let's try something else:
+
+```rust
+pub extern "C" fn rust_main(...) {
+    ...
+    interrupts::init();
+
+    // provoke a page fault inside println
+    println!("{:?}", unsafe{ *(0xdeadbeaf as *mut u64) = 42 });
+
+    println!("It did not crash!");
+    loop {}
+}
+```
+Now the output ends on the `guard page` line. No `EXCEPTION` message and no `It did not crash` message either. What's happening?
+
+### Debugging
+Let's debug it using [GDB]. It is a console debugger and works with nearly everything, including QEMU. To make QEMU listen for a debugger connection, we start it with the `-s` flag:
+
+[GDB]: https://www.gnu.org/software/gdb/
+
+```Makefile
+# in `Makefile`
+
+run: $(iso)
+	@qemu-system-x86_64 -cdrom $(iso) -s
+```
+
+Then we can launch GDB in another console window:
+
+```
+> gdb build/kernel-x86_64.bin
+[some version, copyright, and usage information]
+Reading symbols from build/kernel-x86_64.bin...done.
+(gdb)
+```
+Now we can connect to our running QEMU instance on port `1234`:
+
+```
+(gdb) target extern :1234
+Remote debugging using :1234
+0x00000000001031dd in spin::mutex::cpu_relax ()
+    at /home/.../spin-0.3.5/src/mutex.rs:102
+102	    unsafe { asm!("pause" :::: "volatile"); }
+```
+So we're locked in a function named `mutex::cpu_relax` inside the `spin` crate. Let's try a backtrace:
+
+```
+(gdb) backtrace
+#0  0x00000000001031dd in spin::mutex::cpu_relax ()
+    at /home/.../spin-0.3.5/src/mutex.rs:102
+#1  spin::mutex::{{impl}}::obtain_lock<blog_os::vga_buffer::Writer> (
+    self=0x117220 <blog_os::vga_buffer::WRITER::h702c3f466147ac3b>)
+    at /home/.../spin-0.3.5/src/mutex.rs:142
+#2  0x0000000000103163 in spin::mutex::{{impl}}::lock<blog_os::vga_buffer::
+    Writer> (
+    self=0x117220 <blog_os::vga_buffer::WRITER::h702c3f466147ac3b>)
+    at /home/.../spin-0.3.5/src/mutex.rs:163
+#3  0x000000000010de09 in blog_os::interrupts::page_fault_handler ()
+    at src/vga_buffer.rs:31
+...
+```
+Pretty verbose… but very useful. Let's clean it up a bit:
+
+- `spin::mutex::cpu_relax`
+- `spin::mutex::obtain_lock<vga_buffer::Writer>`
+- `spin::mutex::lock<vga_buffer::Writer>`
+- `blog_os::interrupts::page_fault_handler`
+- ...
+
+It's a _back_-trace, so it goes from the innermost function to the outermost function. We see that our page fault handler was called successfully. It then tried to write its error message. Therefore, it tried to `lock` the static `WRITER`, which in turn called `obtain_lock` and `cpu_relax`.
+
+So our kernel tries to lock the output `WRITER`, which is already locked by the interrupted `println`. Thus, our exception handler waits forever and we don't see what error occurred. Yay, that's our first deadlock! :)
+
+(As you see, GDB can be very useful sometimes. For more GDB information check out our [Set Up GDB] page.)
+
+[Set Up GDB]: {{% relref "set-up-gdb.md" %}}
+
+## Printing Errors Reliably
+In order to guarantee that we always see error messages, we add a `print_error` function to our `vga_buffer` module:
+
+```rust
+// in src/vga_buffer.rs
+
+pub unsafe fn print_error(fmt: fmt::Arguments) {
+    use core::fmt::Write;
+
+    let mut writer = Writer {
+        column_position: 0,
+        color_code: ColorCode::new(Color::Red, Color::Black),
+        buffer: Unique::new(0xb8000 as *mut _),
+    };
+    writer.new_line();
+    writer.write_fmt(fmt);
+}
+```
+
+Instead of using the static `WRITER`, this function creates a new `Writer` on each invocation. Thereby it ignores the mutex and is always able to print to the screen without deadlocking. We print in red to highlight the error and add a newline to avoid overwriting unfinished lines.
+
+### Safety
+This function clearly violates the invariants of the `vga_buffer` module, as it creates another `Unique` pointing to `0xb8000`. Thus, we deliberately introduce a data race on the VGA buffer. For this reason, the function is marked as `unsafe` and should only be used if absolutely necessary.
+
+However, the situation is not _that_ bad. The VGA buffer only stores characters (no pointers) and we never rely on the buffer's values. So the function might cause mangled output, but should never be able to violate memory safety.
+
+### Using print_error
+Let's use the new `print_error` function to print the page fault error:
+
+```rust
+// in src/interrupts/mod.rs
+
+extern "C" fn page_fault_handler() -> ! {
+    unsafe { print_error(format_args!("EXCEPTION: PAGE FAULT")) };
+    loop {}
+}
+```
+We use the built-in [format_args] macro to translate the error string to a `fmt::Arguments` type. Now we should always see the error message, even if the exception occurred inside `println`:
+
+[format_args]: https://doc.rust-lang.org/nightly/std/macro.format_args!.html
+
+![QEMU screenshot with new red `EXCEPTION: PAGE FAULT` message](images/qemu-page-fault-red.png)
 
 ## What's next?
+Now we're able to catch _almost_ all page faults. However, some page faults still cause a triple fault and a bootloop. For example, try the following code:
+
+```rust
+pub extern "C" fn rust_main(...) {
+    ...
+    interrupts::init();
+
+    // provoke a kernel stack overflow, which hits the guard page
+    fn recursive() {
+        recursive();
+    }
+    recursive();
+
+    println!("It did not crash!");
+    loop {}
+}
+```
+
+The next post will explore and fix this triple fault by creating a double fault handler. After that, we should never again experience a triple fault in our kernel.
