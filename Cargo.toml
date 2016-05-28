@@ -4,11 +4,10 @@ name = "blog_os"
 version = "0.1.0"
 
 [dependencies]
-bit_field = "0.1.0"
-bitflags = "0.7.0"
 once = "0.2.1"
 rlibc = "0.1.4"
 spin = "0.3.4"
+bitflags = "0.7.0"
 
 [dependencies.hole_list_allocator]
 path = "libs/hole_list_allocator"
@@ -18,7 +17,7 @@ git = "https://github.com/phil-opp/multiboot2-elf64"
 
 [dependencies.x86]
 default-features = false
-version = "0.7.0"
+version = "0.6.0"
 
 [lib]
 crate-type = ["staticlib"]

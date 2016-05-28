@@ -10,9 +10,6 @@
 #![feature(lang_items)]
 #![feature(const_fn, unique)]
 #![feature(alloc, collections)]
-#![feature(asm)]
-#![feature(drop_types_in_const)]
-#![feature(heap_api)]
 #![no_std]
 
 extern crate rlibc;
@@ -29,12 +26,9 @@ extern crate alloc;
 #[macro_use]
 extern crate collections;
 
-extern crate bit_field;
-
 #[macro_use]
 mod vga_buffer;
 mod memory;
-mod interrupts;
 
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_information_address: usize) {
@@ -49,20 +43,11 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // set up guard page and map the heap pages
     memory::init(boot_info);
 
-    interrupts::init();
+    use alloc::boxed::Box;
+    let heap_test = Box::new(42);
 
-    //println!("{:?}", unsafe { *(0xdeadbeaf as *mut u32) });
-    //unsafe { *(0xdeadbeaf as *mut u32) = 42 };
-
-    fn recursive() {
-        recursive();
-    }
-    recursive();
-
-    unsafe { *(0xdeadbeaf as *mut u32) = 42 };
-
-    unsafe {
-        asm!("xor eax, eax; idiv eax" :::: "intel");
+    for i in 0..10000 {
+        format!("Some String");
     }
 
     println!("It did not crash!");
@@ -94,11 +79,8 @@ extern "C" fn eh_personality() {}
 #[cfg(not(test))]
 #[lang = "panic_fmt"]
 extern "C" fn panic_fmt(fmt: core::fmt::Arguments, file: &str, line: u32) -> ! {
-    use vga_buffer::print_error;
-    unsafe {
-        print_error(format_args!("\n\nPANIC in {} at line {}:", file, line));
-        print_error(format_args!("    {}", fmt));
-    }
+    println!("\n\nPANIC in {} at line {}:", file, line);
+    println!("    {}", fmt);
     loop {}
 }
 
