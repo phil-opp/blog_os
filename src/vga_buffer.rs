@@ -142,7 +142,7 @@ pub unsafe fn print_error(fmt: fmt::Arguments) {
     let mut writer = Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Red, Color::Black),
-        buffer: unsafe { Unique::new(0xb8000 as *mut _) },
+        buffer: Unique::new(0xb8000 as *mut _),
     };
     writer.new_line();
     writer.write_fmt(fmt);
