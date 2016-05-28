@@ -19,8 +19,8 @@ We've already seen several types of exceptions in our kernel:
 
 - **Invalid Opcode**: This exception occurs when the current instruction is invalid. For example, this exception occurred when we tried to use SSE instructions before enabling SSE. Without SSE, the CPU didn't know the `movups` and `movaps` instructions, so it throws an exception when it stumbles over them.
 - **Page Fault**: A page fault occurs on illegal memory accesses. For example, if the current instruction tries to read from an unmapped page or tries to write to a read-only page.
-- **Double Fault**: When an exception occurs, the CPU tries to call the corresponding handler function. If another exception exception occurs _while calling the exception handler_, the CPU raises a double fault exception. This exception also occurs when there is no handler function registered.
-- **Triple Fault**: If another exception occurs when the CPU tries to call the double fault handler function, it issues a fatal _triple fault_. We can't catch or handle a triple fault. Most processors react by resetting themselves and rebooting the operating system. This causes the bootloops we experienced in the previous posts.
+- **Double Fault**: When an exception occurs, the CPU tries to call the corresponding handler function. If another exception exception occurs _while calling the exception handler_, the CPU raises a double fault exception. This exception also occurs when there is no handler function registered for an exception.
+- **Triple Fault**: If an exception occurs while the CPU tries to call the double fault handler function, it issues a fatal _triple fault_. We can't catch or handle a triple fault. Most processors react by resetting themselves and rebooting the operating system. This causes the bootloops we experienced in the previous posts.
 
 For the full list of exceptions check out the [OSDev wiki][exceptions].
 
@@ -47,7 +47,7 @@ Bits  | Name                              | Description
 8     | 0: Interrupt Gate, 1: Trap Gate   | If this bit is 0, interrupts are disabled when this handler is called.
 9-11  | must be one                       |
 12    | must be zero                      |
-13‑14 | Descriptor Privilege Level (DPL)  | The minimal required privilege level required for calling this handler.
+13‑14 | Descriptor Privilege Level (DPL)  | The minimal privilege level required for calling this handler.
 15    | Present                           |
 
 Each exception has a predefined IDT index. For example the invalid opcode exception has table index 6 and the page fault exception has table index 14. Thus, the hardware can automatically load the corresponding IDT entry for each exception. The [Exception Table][exceptions] in the OSDev wiki shows the IDT indexes of all exceptions in the “Vector nr.” column.
@@ -422,19 +422,21 @@ error: references in statics may only refer to immutable values [E0017]
 The reason is that the Rust compiler is not able to evaluate the value of the `static` at compile time. Maybe it will work someday when `const` functions become more powerful. But until then, we have to find another solution.
 
 ### Lazy Statics to the Rescue
-Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values (e.g. the number of cores).
+Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values.
 
 With `lazy_static`, we can define our IDT without problems:
 
 ```rust
+// in src/interrupts/mod.rs
+
 lazy_static! {
-  static ref IDT: idt::Idt = {
-    let mut idt = idt::Idt::new();
+    static ref IDT: idt::Idt = {
+        let mut idt = idt::Idt::new();
 
-    idt.set_handler(14, page_fault_handler);
+        idt.set_handler(14, page_fault_handler);
 
-    idt
-  };
+        idt
+    };
 }
 ```
 
@@ -512,9 +514,9 @@ Reading symbols from build/kernel-x86_64.bin...done.
 Now we can connect to our running QEMU instance on port `1234`:
 
 ```
-(gdb) target extern :1234
+(gdb) target remote :1234
 Remote debugging using :1234
-0x00000000001031dd in spin::mutex::cpu_relax ()
+0x00000000001031bd in spin::mutex::cpu_relax ()
     at /home/.../spin-0.3.5/src/mutex.rs:102
 102	    unsafe { asm!("pause" :::: "volatile"); }
 ```
@@ -522,16 +524,16 @@ So we're locked in a function named `mutex::cpu_relax` inside the `spin` crate. 
 
 ```
 (gdb) backtrace
-#0  0x00000000001031dd in spin::mutex::cpu_relax ()
+#0  0x00000000001031bd in spin::mutex::cpu_relax ()
     at /home/.../spin-0.3.5/src/mutex.rs:102
 #1  spin::mutex::{{impl}}::obtain_lock<blog_os::vga_buffer::Writer> (
-    self=0x117220 <blog_os::vga_buffer::WRITER::h702c3f466147ac3b>)
+    self=0x111230 <blog_os::vga_buffer::WRITER::h702c3f466147ac3b>)
     at /home/.../spin-0.3.5/src/mutex.rs:142
-#2  0x0000000000103163 in spin::mutex::{{impl}}::lock<blog_os::vga_buffer::
+#2  0x0000000000103143 in spin::mutex::{{impl}}::lock<blog_os::vga_buffer::
     Writer> (
-    self=0x117220 <blog_os::vga_buffer::WRITER::h702c3f466147ac3b>)
+    self=0x111230 <blog_os::vga_buffer::WRITER::h702c3f466147ac3b>)
     at /home/.../spin-0.3.5/src/mutex.rs:163
-#3  0x000000000010de09 in blog_os::interrupts::page_fault_handler ()
+#3  0x000000000010da59 in blog_os::interrupts::page_fault_handler ()
     at src/vga_buffer.rs:31
 ...
 ```
