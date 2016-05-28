@@ -855,4 +855,6 @@ Now we're able to use heap storage in our kernel without leaking memory. This al
 [B-tree]: https://en.wikipedia.org/wiki/B-tree
 
 ## What's next?
-This post concludes the section about memory management for now. We will revisit this topic eventually, but now it's time to explore other topics. The upcoming posts will be about CPU exceptions and interrupts. We will catch all page, double, and triple faults and create a driver to read keyboard input. But first, we need to improve our build setup. The next post will eliminate most of our Makefile using advanced Cargo features and prepare our kernel for interrupt handling.
+This post concludes the section about memory management for now. We will revisit this topic eventually, but now it's time to explore other topics. The upcoming posts will be about CPU exceptions and interrupts. We will catch all page, double, and triple faults and create a driver to read keyboard input. The [next post] starts by setting up a so-called _Interrupt Descriptor Table_.
+
+[next post]: {{% relref "2016-05-28-catching-exceptions.md" %}}
