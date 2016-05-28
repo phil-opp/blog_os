@@ -20,6 +20,7 @@ extern crate bitflags;
 extern crate x86;
 #[macro_use]
 extern crate once;
+extern crate bit_field;
 
 extern crate hole_list_allocator;
 extern crate alloc;
@@ -29,6 +30,8 @@ extern crate collections;
 #[macro_use]
 mod vga_buffer;
 mod memory;
+
+mod interrupts;
 
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_information_address: usize) {
