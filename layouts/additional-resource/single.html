@@ -1,0 +1,11 @@
+{{ partial "header.html" . }}
+
+<article class="post">
+  <h1 class="post-title">{{ .Title }}</h1>
+
+  {{ .Content }}
+</article>
+
+{{ partial "disqus.html" . }}
+{{ partial "anchorjs.html" . }}
+{{ partial "footer.html" . }}

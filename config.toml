@@ -21,6 +21,7 @@ contentdir = "../blog"
 
 [permalinks]
   post = "/:slug.html"
+  additional-resource = "/:filename.html"
   page = "/:filename.html"
 
 [blackfriday]
