@@ -33,4 +33,14 @@
   {{ end }}
 </div>
 
+<hr>
+<h1>Additional Resources</h1>
+
+<ul>
+  {{ range (where .Site.Pages.ByDate "Section" "additional-resource") }}
+    <li>{{ .Render "link" }}
+  {{ end }}
+</ul>
+<hr>
+
 {{ partial "footer.html" . }}
