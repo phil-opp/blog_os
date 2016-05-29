@@ -1,6 +1,7 @@
 +++
 title = "Set Up Rust"
 date = "2015-09-02"
+updated = "2015-05-29"
 aliases = [
     "/2015/09/02/setup-rust/",
     "/setup-rust.html",
@@ -20,6 +21,8 @@ This blog post tries to set up Rust step-by-step and point out the different pro
 
 [file an issue]: https://github.com/phil-opp/blog_os/issues
 [Github repository]: https://github.com/phil-opp/blog_os/tree/set_up_rust
+
+**Update**: We now use the `panic=abort` cargo option instead of `-Z no-landing-pads`. See [#170](https://github.com/phil-opp/blog_os/pull/170).
 
 ## Installing Rust
 We need a nightly compiler, as we will use many unstable features. To manage Rust installations I highly recommend brson's [multirust]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `multirust override nightly`.
@@ -219,17 +222,31 @@ target/debug/libblog_os.a(blog_os.0.o):
     /home/.../src/libcore/iter.rs:654:
     undefined reference to `_Unwind_Resume'
 ```
-So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:654` in libcore. This reference is not really there at [line 654 of libcore's `iter.rs`][iter.rs:654]. Instead, it is a compiler inserted _landing pad_, which is used for exception handling.
+So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:654` in libcore. This reference is not really there at [line 654 of libcore's `iter.rs`][iter.rs:654]. Instead, it is a compiler inserted _landing pad_, which is used for panic handling by default.
 
 [iter.rs:654]: https://github.com/rust-lang/rust/blob/b0ca03923359afc8df92a802b7cc1476a72fb2d0/src/libcore/iter.rs#L654
 
-The easiest way of fixing this problem is to disable the landing pad creation since we don't supports panics anyway right now. We can do this by passing a `-Z no-landing-pads` flag to `rustc` (the actual Rust compiler below cargo). To do this we replace the `cargo build` command in our Makefile with the `cargo rustc` command, which does the same but allows passing flags to `rustc`:
+By default, the destructors of all stack variables are run when a `panic` occurs. This is called _unwinding_ and allows parent threads to [recover from panics]. However, it requires a platform specific gcc library, which isn't available in our kernel.
 
-```make
-cargo:
-	@cargo rustc --target $(target) -- -Z no-landing-pads
+[recover from panics]: https://doc.rust-lang.org/book/concurrency.html#panics
+
+Fortunately, Rust allows us to disable unwinding. We just need to add some entries in our `Cargo.toml`:
+
+```toml
+# The development profile, used for `cargo build`.
+[profile.dev]
+panic = "abort"
+
+# The release profile, used for `cargo build --release`.
+[profile.release]
+panic = "abort"
 ```
-Now we fixed all linking issues and our kernel should _build_ again. But instead of displaying `Hello World`, it constantly reboots itself when we start it.
+
+These [profile sections] specify options for `cargo build` and `cargo release`. By setting the `panic` option to `abort`, we disable all unwinding in our kernel.
+
+[profile sections]: http://doc.crates.io/manifest.html#the-profile-sections
+
+Now we fixed all linking issues and our kernel builds again. But instead of displaying `Hello World`, it constantly reboots itself when we start it.
 
 ## Debugging the Boot Loop
 Such a boot loop is most likely caused by some [CPU exception][exception table]. When these exceptions aren't handled, a [Triple Fault] occurs and the processor resets itself. We can look at generated CPU interrupts/exceptions using QEMU:

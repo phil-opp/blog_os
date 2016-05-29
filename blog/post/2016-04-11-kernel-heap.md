@@ -317,31 +317,11 @@ use alloc::boxed::Box;
 let heap_test = Box::new(42);
 ```
 
-When we try to compile it using `make run`, we get several linker errors about a function named `_Unwind_Resume`:
+(If you're getting a linker error about `_Unwind_Resume`, try to use the [panic=abort cargo option].)
 
-```
-target/x86_64-unknown-linux-gnu/debug/libblog_os.a(bump_allocator-[…].0.o):
-    In function `bump_allocator::__rust_allocate':
-/home/…/blog_os/libs/bump_allocator/src/lib.rs:19:
-    undefined reference to `_Unwind_Resume'
-```
+[panic=abort cargo option]: https://github.com/phil-opp/blog_os/pull/170
 
-This function is part of Rust's unwinding machinery. We disabled most of by passing `-Z no-landing-pads` to rustc, but apparently our precompiled `libcollections` still links to it.
-
-To work around this issue for now, we add a dummy function:
-
-```rust
-// in libs/bump_allocator/src/lib.rs
-
-#[no_mangle]
-pub extern fn _Unwind_Resume() -> ! {
-    loop{}
-}
-```
-
-This is just a temporary fix to keep this post simple. We will resolve this issue in a better way in a future post.
-
-Now our kernel compiles again. But when we run it, a triple fault occurs and causes permanent rebooting. We use QEMU for debugging as described [in the previous post][qemu debugging]:
+When we run it, a triple fault occurs and causes permanent rebooting. Let's try debug it using QEMU and objdump as described [in the previous post][qemu debugging]:
 
 [qemu debugging]: http://os.phil-opp.com/remap-the-kernel.html#debugging
 
