@@ -113,13 +113,13 @@ pub struct EntryOptions(u16);
 impl EntryOptions {
     fn new() -> Self {...}
 
-    fn set_present(&mut self, present: bool) {...}
+    pub fn set_present(&mut self, present: bool) {...}
 
-    fn disable_interrupts(&mut self, disable: bool) {...}
+    pub fn disable_interrupts(&mut self, disable: bool) {...}
 
-    fn set_privilege_level(&mut self, dpl: u16) {...}
+    pub fn set_privilege_level(&mut self, dpl: u16) {...}
 
-    fn set_stack_index(&mut self, index: u16) {...}
+    pub fn set_stack_index(&mut self, index: u16) {...}
 }
 ```
 
@@ -174,22 +174,22 @@ impl EntryOptions {
         options
     }
 
-    fn set_present(&mut self, present: bool) -> &mut Self {
+    pub fn set_present(&mut self, present: bool) -> &mut Self {
         self.0.set_bit(15, present);
         self
     }
 
-    fn disable_interrupts(&mut self, disable: bool) -> &mut Self {
+    pub fn disable_interrupts(&mut self, disable: bool) -> &mut Self {
         self.0.set_bit(8, !disable);
         self
     }
 
-    fn set_privilege_level(&mut self, dpl: u16) -> &mut Self {
+    pub fn set_privilege_level(&mut self, dpl: u16) -> &mut Self {
         self.0.set_range(13..15, dpl);
         self
     }
 
-    fn set_stack_index(&mut self, index: u16) -> &mut Self {
+    pub fn set_stack_index(&mut self, index: u16) -> &mut Self {
         self.0.set_range(0..3, index);
         self
     }
