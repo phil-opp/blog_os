@@ -22,3 +22,9 @@ version = "0.7.0"
 
 [lib]
 crate-type = ["staticlib"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
