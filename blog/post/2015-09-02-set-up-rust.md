@@ -25,9 +25,9 @@ This blog post tries to set up Rust step-by-step and point out the different pro
 **Update**: We now use the `panic=abort` cargo option instead of `-Z no-landing-pads`. See [#170](https://github.com/phil-opp/blog_os/pull/170).
 
 ## Installing Rust
-We need a nightly compiler, as we will use many unstable features. To manage Rust installations I highly recommend brson's [multirust]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `multirust override nightly`.
+We need a nightly compiler, as we will use many unstable features. To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `rustup override add nightly`.
 
-[multirust]: https://github.com/brson/multirust
+[rustup]: https://www.rustup.rs/
 
 The code from this post (and all following) is [automatically tested](https://travis-ci.org/phil-opp/blog_os) every day and should always work for the newest nightly. If it doesn't, please [file an issue](https://github.com/phil-opp/blog_os/issues).
 
