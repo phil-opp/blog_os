@@ -149,7 +149,7 @@ self.0.set_range(0..3, stack_index);
 
 I think it is much more readable, since we abstracted away all bit-masking details. The `BitField` type is contained in the [bit_field] crate. (It's pretty new, so it might still contain bugs.) To add it as dependency, we run `cargo add bit_field` and add `extern crate bit_field;` to our `src/lib.rs`.
 
-[bit_field]: TODO
+[bit_field]: https://crates.io/crates/bit_field
 
 Now we can use the crate to implement the methods of `EntryOptions`:
 
