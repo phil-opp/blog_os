@@ -789,7 +789,7 @@ Let's cross our fingers and run it…
 … and it fails with a boot loop.
 
 ### Debugging
-A QEMU boot load indicates that some CPU exception occured. We can see all thrown CPU exception by starting QEMU with `-d int` (as described [here][qemu debugging]):
+A QEMU boot loop indicates that some CPU exception occured. We can see all thrown CPU exception by starting QEMU with `-d int` (as described [here][qemu debugging]):
 [qemu debugging]: {{% relref "2015-09-02-set-up-rust.md#debugging" %}}
 
 ```bash
