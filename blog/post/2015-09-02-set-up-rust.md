@@ -204,7 +204,7 @@ What happened? Well, the linker removed unused sections. And since we don't use 
 ```
 Now everything should work again (the green `OKAY`). But there is another linking issue, which is triggered by some other example code.
 
-### no-landing-pads
+### panic == abort
 
 The following snippet still fails:
 
