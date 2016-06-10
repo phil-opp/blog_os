@@ -579,7 +579,7 @@ for section in elf_sections_tag.sections() {
 
     let start_frame = Frame::containing_address(section.start_address());
     let end_frame = Frame::containing_address(section.end_address() - 1);
-    for frame in Frame::range_inclusive(start_frame, end_frame)
+    for frame in Frame::range_inclusive(start_frame, end_frame) {
         mapper.identity_map(frame, flags, allocator);
     }
 }
