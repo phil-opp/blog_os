@@ -683,6 +683,11 @@ SECTIONS {
     *(.data.rel.ro.local*) *(.data.rel.ro .data.rel.ro.*)
     . = ALIGN(4K);
   }
+
+  .gcc_except_table : ALIGN(4K) {
+    *(.gcc_except_table)
+    . = ALIGN(4K);
+  }
 }
 ```
 Instead of page aligning the `.multiboot_header` section, we merge it into the `.rodata` section. That way, we don't waste a whole page for the few bytes of the Multiboot header. We could merge it into any section, but `.rodata` fits best because it has the same flags (neither writable nor executable). The Multiboot header still needs to be at the beginning of the file, so `.rodata` must be our first section now.
