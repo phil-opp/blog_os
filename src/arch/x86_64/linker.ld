@@ -44,4 +44,9 @@ SECTIONS {
     *(.data.rel.ro.local*) *(.data.rel.ro .data.rel.ro.*)
     . = ALIGN(4K);
   }
+
+  .gcc_except_table : ALIGN(4K) {
+    *(.gcc_except_table)
+    . = ALIGN(4K);
+  }
 }
