@@ -48,7 +48,7 @@ main img {
   border: 2px solid #cc0;
 }
 
-.posts.interrupts {
+.posts.exceptions {
   border: 2px solid #f66;
 }
 
@@ -71,7 +71,7 @@ main img {
   color: #990;
 }
 
-.post-category.interrupts {
+.post-category.exceptions {
   color: #f33;
 }
 
