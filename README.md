@@ -1,4 +1,6 @@
 # Blog OS
+
+[![Join the chat at https://gitter.im/phil-opp/blog_os](https://badges.gitter.im/phil-opp/blog_os.svg)](https://gitter.im/phil-opp/blog_os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=master)](https://travis-ci.org/phil-opp/blog_os)
 
 This repository contains the source code for the _Writing an OS in Rust_ series at [os.phil-opp.com](http://os.phil-opp.com).
