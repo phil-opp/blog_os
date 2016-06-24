@@ -24,7 +24,7 @@ This repository contains the source code for the _Writing an OS in Rust_ series 
 - [Kernel Heap](http://os.phil-opp.com/kernel-heap.html)
       ([source code](https://github.com/phil-opp/blog_os/tree/kernel_heap))
 
-## Interrupts
+## Exceptions
 - [Catching Exceptions](http://os.phil-opp.com/catching-exceptions.html)
       ([source code](https://github.com/phil-opp/blog_os/tree/catching_exceptions))
 
