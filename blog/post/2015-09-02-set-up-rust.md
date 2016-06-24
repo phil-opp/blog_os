@@ -204,7 +204,7 @@ What happened? Well, the linker removed unused sections. And since we don't use 
 ```
 Now everything should work again (the green `OKAY`). But there is another linking issue, which is triggered by some other example code.
 
-### panic == abort
+### panic = "abort"
 
 The following snippet still fails:
 
@@ -222,7 +222,7 @@ target/debug/libblog_os.a(blog_os.0.o):
     /home/.../src/libcore/iter.rs:654:
     undefined reference to `_Unwind_Resume'
 ```
-So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:654` in libcore. This reference is not really there at [line 654 of libcore's `iter.rs`][iter.rs:654]. Instead, it is a compiler inserted _landing pad_, which is used for panic handling by default.
+So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:654` in libcore. This reference is not really there at [line 654 of libcore's `iter.rs`][iter.rs:654]. Instead, it is a compiler inserted _landing pad_, which is used for panic handling.
 
 [iter.rs:654]: https://github.com/rust-lang/rust/blob/b0ca03923359afc8df92a802b7cc1476a72fb2d0/src/libcore/iter.rs#L654
 
@@ -245,6 +245,20 @@ panic = "abort"
 These [profile sections] specify options for `cargo build` and `cargo release`. By setting the `panic` option to `abort`, we disable all unwinding in our kernel.
 
 [profile sections]: http://doc.crates.io/manifest.html#the-profile-sections
+
+However, there are still references to `_Unwind_Resume` in the precompiled standard libraries. This might lead to linker errors when we use specific parts of `libcore`. To avoid this, we create a dummy `_Unwind_Resume` function that loops indefinitely[^fn-libcore-unwind]:
+
+[^fn-libcore-unwind]: A better solution is to recompile `libcore` with `panic="abort"`. We will do this in a future post.
+
+```rust
+// in src/lib.rs
+
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn _Unwind_Resume() -> ! {
+    loop {}
+}
+```
 
 Now we fixed all linking issues and our kernel builds again. But instead of displaying `Hello World`, it constantly reboots itself when we start it.
 
