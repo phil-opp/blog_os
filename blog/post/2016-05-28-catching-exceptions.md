@@ -660,22 +660,4 @@ We use the built-in [format_args] macro to translate the error string to a `fmt:
 ![QEMU screenshot with new red `EXCEPTION: PAGE BY ZERO` message](images/qemu-divide-error-red.png)
 
 ## What's next?
-Now we're able to catch _almost_ all page faults. However, some page faults still cause a triple fault and a bootloop. For example, try the following code:
-
-```rust
-pub extern "C" fn rust_main(...) {
-    ...
-    interrupts::init();
-
-    // provoke a kernel stack overflow, which hits the guard page
-    fn recursive() {
-        recursive();
-    }
-    recursive();
-
-    println!("It did not crash!");
-    loop {}
-}
-```
-
-The next post will explore and fix this triple fault by creating a double fault handler. After that, we should never again experience a triple fault in our kernel.
+We've successfully caught our first exception! However, our `EXCEPTION: DIVIDE BY ZERO` message doesn't contain much information about the cause of the exception. The next post improves the situation by printing i.a. the current stack pointer and address of the causing instruction. We will also explore other exceptions such as page faults, for which the CPU pushes an _error code_ on the stack.
