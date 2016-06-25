@@ -10,6 +10,7 @@
 #![feature(lang_items)]
 #![feature(const_fn, unique)]
 #![feature(alloc, collections)]
+#![feature(asm)]
 #![no_std]
 
 extern crate rlibc;
@@ -49,8 +50,12 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // initialize our IDT
     interrupts::init();
 
-    // provoke a page fault inside println
-    println!("{:?}", unsafe{ *(0xdeadbeaf as *mut u64) = 42 });
+    fn divide_by_zero() {
+        unsafe { asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel") }
+    }
+
+    // provoke a divide by zero fault inside println
+    println!("{:?}", divide_by_zero());
 
     println!("It did not crash!");
     loop {}
