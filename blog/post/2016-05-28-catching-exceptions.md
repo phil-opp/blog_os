@@ -141,7 +141,9 @@ Or:
 self.0 = ((self.0 >> 3) << 3) | stack_index;
 ```
 
-Well, none of these variants is really _readable_ and it's very easy to make mistakes somewhere. Therefore I created a `BitField` type with the following API:
+Well, none of these variants is really _readable_ and it's very easy to make mistakes somewhere. Therefore I created a `BitField` type with the following [Range]-based API:
+
+[Range]: https://doc.rust-lang.org/nightly/core/ops/struct.Range.html
 
 ``` rust
 self.0.set_range(0..3, stack_index);
@@ -537,7 +539,7 @@ So we're locked in a function named `mutex::cpu_relax` inside the `spin` crate. 
     at src/vga_buffer.rs:31
 ...
 ```
-Pretty verbose… but very useful. Let's clean it up a bit:
+Pretty verbose… and very useful. Let's clean it up a bit:
 
 - `spin::mutex::cpu_relax`
 - `spin::mutex::obtain_lock<vga_buffer::Writer>`
@@ -549,7 +551,7 @@ It's a _back_-trace, so it goes from the innermost function to the outermost fun
 
 So our kernel tries to lock the output `WRITER`, which is already locked by the interrupted `println`. Thus, our exception handler waits forever and we don't see what error occurred. Yay, that's our first deadlock! :)
 
-(As you see, GDB can be very useful sometimes. For more GDB information check out our [Set Up GDB] page.)
+(As you see, GDB can be very useful sometimes. For more information about GDB check out our [Set Up GDB] page.)
 
 [Set Up GDB]: {{% relref "set-up-gdb.md" %}}
 
@@ -577,7 +579,7 @@ Instead of using the static `WRITER`, this function creates a new `Writer` on ea
 ### Safety
 This function clearly violates the invariants of the `vga_buffer` module, as it creates another `Unique` pointing to `0xb8000`. Thus, we deliberately introduce a data race on the VGA buffer. For this reason, the function is marked as `unsafe` and should only be used if absolutely necessary.
 
-However, the situation is not _that_ bad. The VGA buffer only stores characters (no pointers) and we never rely on the buffer's values. So the function might cause mangled output, but should never be able to violate memory safety.
+However, the situation is not _that_ bad. The VGA buffer only stores characters (no pointers) and we never rely on the buffer's values. So the function might cause mangled output, but should never be able to violate memory safety. Nevertheless, we will implement a better solution in a future post.
 
 ### Using print_error
 Let's use the new `print_error` function to print the page fault error:
