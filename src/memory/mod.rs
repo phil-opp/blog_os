@@ -24,15 +24,15 @@ pub fn init(boot_info: &BootInformation) {
     let elf_sections_tag = boot_info.elf_sections_tag().expect("Elf sections tag required");
 
     let kernel_start = elf_sections_tag.sections()
-                                       .filter(|s| s.is_allocated())
-                                       .map(|s| s.addr)
-                                       .min()
-                                       .unwrap();
+        .filter(|s| s.is_allocated())
+        .map(|s| s.addr)
+        .min()
+        .unwrap();
     let kernel_end = elf_sections_tag.sections()
-                                     .filter(|s| s.is_allocated())
-                                     .map(|s| s.addr + s.size)
-                                     .max()
-                                     .unwrap();
+        .filter(|s| s.is_allocated())
+        .map(|s| s.addr + s.size)
+        .max()
+        .unwrap();
 
     println!("kernel start: {:#x}, kernel end: {:#x}",
              kernel_start,
