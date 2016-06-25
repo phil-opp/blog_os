@@ -1,9 +1,10 @@
 +++
 title = "Catching Exceptions"
 date = "2016-05-28"
+updated = "2016-06-25"
 +++
 
-In this post, we start exploring exceptions. We set up an interrupt descriptor table and add handler functions. At the end of this post, our kernel will be able to catch page faults.
+In this post, we start exploring exceptions. We set up an interrupt descriptor table and add handler functions. At the end of this post, our kernel will be able to catch divide-by-zero faults.
 
 <!--more-->
 
@@ -11,6 +12,10 @@ As always, the complete source code is on [Github]. Please file [issues] for any
 
 [Github]: https://github.com/phil-opp/blog_os/tree/catching_exceptions
 [issues]: https://github.com/phil-opp/blog_os/issues
+
+**Update**: Due to a subtle [stack alignment bug], we no longer catch page faults in this post. Instead, we catch divide-by-zero errors.
+
+[stack alignment bug]: https://github.com/phil-opp/blog_os/issues/184
 
 ## Exceptions
 An exception signals that something is wrong with the current instruction. For example, the CPU issues an exception if the current instruction tries to divide by 0. When an exception occurs, the CPU interrupts its current work and immediately calls a specific exception handler function, depending on the exception type.
@@ -400,17 +405,21 @@ So a valid IDT needs to have the `'static` lifetime. We can either create a `sta
 static IDT: idt::Idt = {
     let mut idt = idt::Idt::new();
 
-    idt.set_handler(14, page_fault_handler);
+    idt.set_handler(0, divide_by_zero_handler);
 
     idt
 };
 
-extern "C" fn page_fault_handler() -> ! {
-    println!("EXCEPTION: PAGE FAULT");
+extern "C" fn divide_by_zero_handler() -> ! {
+    println!("EXCEPTION: DIVIDE BY ZERO");
     loop {}
 }
 ```
-We register a single handler function for a page fault (index 14). The handler function just prints an error message and enters a `loop`. However, it doesn't work this way:
+We register a single handler function for a [divide by zero error] (index 0). Like the name says, this exception occurs when dividing a number by 0. Thus we have an easy way to test our new exception handler.
+
+[divide by zero error]: http://wiki.osdev.org/Exceptions#Divide-by-zero_Error
+
+However, it doesn't work this way:
 
 ```
 error: calls in statics are limited to constant functions, struct and enum
@@ -435,7 +444,7 @@ lazy_static! {
     static ref IDT: idt::Idt = {
         let mut idt = idt::Idt::new();
 
-        idt.set_handler(14, page_fault_handler);
+        idt.set_handler(0, divide_by_zero_handler);
 
         idt
     };
@@ -466,26 +475,76 @@ pub extern "C" fn rust_main(...) {
     // initialize our IDT
     interrupts::init();
 
-    // provoke a page fault by writing to some random address
-    unsafe{ *(0xdeadbeaf as *mut u64) = 42 };
+    // provoke a divide-by-zero fault
+    42 / 0;
 
     println!("It did not crash!");
     loop {}
 }
 ```
-It works! We see a `EXCEPTION: PAGE FAULT` message at the bottom of our screen:
+When we run it, we get a runtime panic:
 
-![QEMU screenshot with `EXCEPTION: PAGE FAULT` message](images/qemu-page-fault-println.png)
+```
+PANIC in src/lib.rs at line 57:
+    attempted to divide by zero
+```
 
-Let's try something else:
+That's a not our exception handler. The reason is that Rust itself checks for a possible division by zero and panics in that case. So in order to raise a divide-by-zero error in the CPU, we need to bypass the Rust compiler somehow.
+
+### Inline Assembly
+In order to cause a divide-by-zero exception, we need to execute a [div] or [idiv] assembly instruction with operand 0. We could write a small assembly function and call it from our Rust code. An easier way is to use Rust's [inline assembly] macro.
+
+[div]: http://x86.renejeschke.de/html/file_module_x86_id_72.html
+[idiv]: http://x86.renejeschke.de/html/file_module_x86_id_137.html
+[inline assembly]: https://doc.rust-lang.org/book/inline-assembly.html
+
+Inline assembly allows us to write raw x86 assembly within a Rust function. The feature is unstable, so we need to add `#![feature(asm)]` to our `src/lib.rs`. Then we're able to write a `divide_by_zero` function:
+
+```rust
+fn divide_by_zero() {
+    unsafe {
+        asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel")
+    }
+}
+```
+Let's try to decode it:
+
+- The `asm!` macro emits raw assembly instructions, so it's `unsafe` to use it.
+- We insert two assembly instructions here: `mov dx, 0` and `div dx`. The former loads a 0 into the `dx` register (a subset of `rdx`) and the latter divides the `ax` register by `dx`. (The `div` instruction always implicitly operates on the `ax` register).
+- The colons are separators. After the first `:` we could specify output operands and after the second `:` we could specify input operands. We need neither, so we leave these areas empty.
+- After the third colon, we specify the so-called _clobbers_. These tell the compiler that our assembly modifies the values of some registers. Otherwise, the compiler assumes that the registers preserve their value. In our case, we clobber `dx` (we load 0 to it) and `ax` (the `div` instruction places the result in it).
+- The last block (after the 4th colon) specifies some options. The `volatile` option tells the compiler: “This code has side effects. Do not delete it and do not move it elsewhere”. In our case, the “side effect” is the divide-by-zero exception. Finally, the `intel` option allows us to use the Intel assembly syntax instead of the default AT&T syntax.
+
+Let's use our new `divide_by_zero` function to raise a CPU exception:
+
+```rust
+// in src/lib.rs
+
+pub extern "C" fn rust_main(...) {
+    ...
+
+    // provoke a divide-by-zero fault
+    divide_by_zero();
+
+    println!("It did not crash!");
+    loop {}
+}
+```
+
+It works! We see a `EXCEPTION: DIVIDE BY ZERO` message at the bottom of our screen:
+
+![QEMU screenshot with `EXCEPTION: PAGE BY ZERO` message](images/qemu-divide-error-println.png)
+
+### Exceptions inside println
+What happens when the exception occurs in the body of a `println`? Let's try:
 
 ```rust
 pub extern "C" fn rust_main(...) {
     ...
     interrupts::init();
 
-    // provoke a page fault inside println
-    println!("{:?}", unsafe{ *(0xdeadbeaf as *mut u64) = 42 });
+    // provoke a divide by zero fault inside println
+    println!("{:?}", divide_by_zero());
 
     println!("It did not crash!");
     loop {}
@@ -535,7 +594,7 @@ So we're locked in a function named `mutex::cpu_relax` inside the `spin` crate. 
     Writer> (
     self=0x111230 <blog_os::vga_buffer::WRITER::h702c3f466147ac3b>)
     at /home/.../spin-0.3.5/src/mutex.rs:163
-#3  0x000000000010da59 in blog_os::interrupts::page_fault_handler ()
+#3  0x000000000010da59 in blog_os::interrupts::divide_by_zero_handler ()
     at src/vga_buffer.rs:31
 ...
 ```
@@ -544,10 +603,10 @@ Pretty verbose… and very useful. Let's clean it up a bit:
 - `spin::mutex::cpu_relax`
 - `spin::mutex::obtain_lock<vga_buffer::Writer>`
 - `spin::mutex::lock<vga_buffer::Writer>`
-- `blog_os::interrupts::page_fault_handler`
+- `blog_os::interrupts::divide_by_zero_handler`
 - ...
 
-It's a _back_-trace, so it goes from the innermost function to the outermost function. We see that our page fault handler was called successfully. It then tried to write its error message. Therefore, it tried to `lock` the static `WRITER`, which in turn called `obtain_lock` and `cpu_relax`.
+It's a _back_-trace, so it goes from the innermost function to the outermost function. We see that our divide-by-zero handler was called successfully. It then tried to write its error message. Therefore, it tried to `lock` the static `WRITER`, which in turn called `obtain_lock` and `cpu_relax`.
 
 So our kernel tries to lock the output `WRITER`, which is already locked by the interrupted `println`. Thus, our exception handler waits forever and we don't see what error occurred. Yay, that's our first deadlock! :)
 
@@ -582,15 +641,15 @@ This function clearly violates the invariants of the `vga_buffer` module, as it 
 However, the situation is not _that_ bad. The VGA buffer only stores characters (no pointers) and we never rely on the buffer's values. So the function might cause mangled output, but should never be able to violate memory safety. Nevertheless, we will implement a better solution in a future post.
 
 ### Using print_error
-Let's use the new `print_error` function to print the page fault error:
+Let's use the new `print_error` function to print the divide-by-zero error:
 
 ```rust
 // in src/interrupts/mod.rs
 
 use vga_buffer::print_error;
 
-extern "C" fn page_fault_handler() -> ! {
-    unsafe { print_error(format_args!("EXCEPTION: PAGE FAULT")) };
+extern "C" fn divide_by_zero_handler() -> ! {
+    unsafe { print_error(format_args!("EXCEPTION: DIVIDE BY ZERO")) };
     loop {}
 }
 ```
@@ -598,7 +657,7 @@ We use the built-in [format_args] macro to translate the error string to a `fmt:
 
 [format_args]: https://doc.rust-lang.org/nightly/std/macro.format_args!.html
 
-![QEMU screenshot with new red `EXCEPTION: PAGE FAULT` message](images/qemu-page-fault-red.png)
+![QEMU screenshot with new red `EXCEPTION: PAGE BY ZERO` message](images/qemu-divide-error-red.png)
 
 ## What's next?
 Now we're able to catch _almost_ all page faults. However, some page faults still cause a triple fault and a bootloop. For example, try the following code:
