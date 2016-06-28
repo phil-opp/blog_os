@@ -142,6 +142,8 @@ But when we execute it, tons of really small sections are printed. We can use th
 To merge these subsections, we need to update our linker script:
 
 ```
+ENTRY(start)
+
 SECTIONS {
     . = 1M;
 
