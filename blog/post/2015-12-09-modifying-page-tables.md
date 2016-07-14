@@ -904,7 +904,7 @@ So to fix our `unmap` function, we need to remove the cached translation from th
 
 ```toml
 [dependencies.x86]
-version = "0.6.0"
+version = "0.7.1"
 default-features = false
 ```
 It has a `performance-counter` feature that allows reading the CPU specific [performance counters] but increases compile times. We don't need it right now, so we disable it using `default-features = false`.
