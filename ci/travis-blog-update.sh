@@ -28,7 +28,7 @@ rm -r *
 cp -r ../public/. .
 rm atom.xml # remove feed that includes all content types
 mv post/atom.xml . # use post feed as main feed
-rm -r post post.html page page.html # remove per-category pages/feeds
+rm -r post post.html page page.html additional-resource additional-resource.html # remove per-category pages/feeds
 
 # commit
 git add --all .
