@@ -650,6 +650,8 @@ To put all sections on their own page, we add the `ALIGN` statement to all of th
 ```
 /* src/arch/x86_64/linker.ld */
 
+ENTRY(start)
+
 SECTIONS {
   . = 1M;
 
@@ -676,6 +678,18 @@ SECTIONS {
   .bss :
   {
     *(.bss .bss.*)
+    . = ALIGN(4K);
+  }
+
+  .got :
+  {
+    *(.got)
+    . = ALIGN(4K);
+  }
+
+  .got.plt :
+  {
+    *(.got.plt)
     . = ALIGN(4K);
   }
 
