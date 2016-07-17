@@ -10,7 +10,7 @@ In the previous posts we have created a [frame allocator] and a [page table modu
 [alloc]: https://doc.rust-lang.org/nightly/alloc/index.html
 [collections]: https://doc.rust-lang.org/nightly/collections/index.html
 
-<!--more-->
+<!--more--><aside id="toc"></aside>
 
 As always, you can find the complete source code on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a comment section at the end of this page.
 

@@ -14,7 +14,7 @@ In the [previous post] we switched from assembly to [Rust], a systems programmin
 [raw pointers]: https://doc.rust-lang.org/book/raw-pointers.html
 [formatting macros]: https://doc.rust-lang.org/std/fmt/#related-macros
 
-<!--more-->
+<!--more--><aside id="toc"></aside>
 
 This post uses recent unstable features, so you need an up-to-date nighly compiler. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is also available on [Github][code repository].
 

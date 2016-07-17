@@ -6,7 +6,7 @@ updated = "2016-06-25"
 
 In this post, we start exploring exceptions. We set up an interrupt descriptor table and add handler functions. At the end of this post, our kernel will be able to catch divide-by-zero faults.
 
-<!--more-->
+<!--more--><aside id="toc"></aside>
 
 As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a comment section at the end of this page.
 
@@ -328,7 +328,7 @@ The method does not need to modify the IDT, so it takes `self` by immutable refe
 
 Then we pass a pointer to our `ptr` structure to the `lidt` function, which calls the `lidt` assembly instruction in order to reload the IDT register. We need an unsafe block here, because the `lidt` assumes that the specified handler addresses are valid.
 
-### Safety
+#### Safety
 But can we really guarantee that handler addresses are always valid? Let's see:
 
 - The `Idt::new` function creates a new table populated with non-present entries. There's no way to set these entries to present from outside of this module, so this function is fine.
@@ -361,7 +361,7 @@ Well, we construct an IDT _on the stack_ and load it. It is perfectly valid unti
 
 Now imagine that the `cause_page_fault` function declared an array of pointers instead. If the present was coincidentally set, the CPU would jump to some random pointer and interpret random memory as code. This would be a clear violation of memory safety.
 
-### Fixing the load method
+#### Fixing the load method
 So how do we fix it? We could make the load function itself `unsafe` and push the unsafety to the caller. However, there is a much better solution in this case. In order to see it, we formulate the requirement for the `load` method:
 
 > The referenced IDT must be valid until a new IDT is loaded.
@@ -432,7 +432,7 @@ error: references in statics may only refer to immutable values [E0017]
 ```
 The reason is that the Rust compiler is not able to evaluate the value of the `static` at compile time. Maybe it will work someday when `const` functions become more powerful. But until then, we have to find another solution.
 
-### Lazy Statics to the Rescue
+#### Lazy Statics to the Rescue
 Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values.
 
 With `lazy_static`, we can define our IDT without problems:
@@ -552,7 +552,7 @@ pub extern "C" fn rust_main(...) {
 ```
 Now the output ends on the `guard page` line. No `EXCEPTION` message and no `It did not crash` message either. What's happening?
 
-### Debugging
+#### Debugging
 Let's debug it using [GDB]. It is a console debugger and works with nearly everything, including QEMU. To make QEMU listen for a debugger connection, we start it with the `-s` flag:
 
 [GDB]: https://www.gnu.org/software/gdb/
