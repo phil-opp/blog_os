@@ -91,7 +91,7 @@ Let's see what's happening by looking at the disassembly of our function:
 > objdump -d build/kernel-x86_64.bin | grep -A20 "divide_by_zero_handler"
 
  [...]
-000000000010ced0 <_ZN7blog_os10interrupts22divide_by_zero_handler17h621c1e80480189e8E>:
+000000000010ced0 <_ZN7blog_os10interrupts22divide_by_zero_handler17h62189e8E>:
  10ced0:	55                   	push   %rbp
  10ced1:	48 89 e5             	mov    %rsp,%rbp
  10ced4:	48 81 ec b0 00 00 00 	sub    $0xb0,%rsp
@@ -157,25 +157,77 @@ extern "C" fn divide_by_zero_handler() -> ! {
     unsafe {
         asm!(/* load exception frame pointer and call main_handler */);
     }
-    ::core::intrinsics::unreachable();
+}
 
-    extern "C" fn main_handler(stack_frame: *const ExceptionStackFrame) -> ! {
-        unsafe {
-            print_error(format_args!("EXCEPTION: DIVIDE BY ZERO\n{:#?}",
-                *stack_frame));
-        }
-        loop {}
+extern "C" fn main_handler(stack_frame: *const ExceptionStackFrame) -> ! {
+    unsafe {
+        print_error(format_args!("EXCEPTION: DIVIDE BY ZERO\n{:#?}",
+            *stack_frame));
+    }
+    loop {}
+}
+
+```
+The naked wrapper function retrieves the exception stack frame pointer and then calls the `main_handler` with the pointer as argument. We can't use Rust code in naked functions, so we need to do both things in inline assembly.
+
+Retrieving the pointer to the exception stack frame is easy: We just need to load it from the `rsp` register. Our function has no prologue (it's naked), so we can be sure that nothing modifies the register before.
+
+Calling the main function is a bit more complicated, since we need to pass the argument correctly. Our `main_handler` uses the C calling convention, which passes the first argument in the `rdi` register. So we need to load the pointer value into `rdi` and then use the `call` instruction to call `main_handler`.
+
+So the assembly looks like this:
+
+```nasm
+mov rdi, rsp
+call main_handler
+```
+It moves the exception stack frame pointer from `rsp` to `rdi`, where the first argument is expected, and then calls `main_handler`. Let's create the corresponding inline assembly to complete our wrapper function:
+
+```rust
+#[naked]
+extern "C" fn divide_by_zero_handler() -> ! {
+    unsafe {
+        asm!("mov rdi, rsp; call $0" ::
+             "i"(main_handler as extern "C" fn(_) -> !) : "rdi" : "intel");
     }
 }
 ```
+Instead of `call main_handler`, we use a placeholder again. The reason is Rust's name mangling, which changes the name of the `main_handler` function. To circumvent this, we pass a function pointer as input parameter (after the second colon). The `"i"` tells the compiler that it is an immediate value, which can be directly inserted for the placeholder. We also specify a clobber after the third colon, which tells the compiler that we change the value of the `rdi` register.
 
-TODO:
+### Intrinsics::Unreachable
+When we try to compile it, we get the following error:
 
-- unreachable
-- pointer as argument
-- inner function
+```
+error: computation may converge in a function marked as diverging
+  --> src/interrupts/mod.rs:23:1
+   |>
+23 |> extern "C" fn divide_by_zero_handler() -> ! {
+   |> ^
+```
+The reason is that we marked our `divide_by_zero_handler` function as diverging (the `!`). We call another diverging function in inline assembly, so it is clear that the function diverges. However, the Rust compiler doesn't understand inline assembly, so it doesn't know that. To fix this, we tell the compiler that all code after the `asm!` macro is unreachable:
 
------
+```rust
+#[naked]
+extern "C" fn divide_by_zero_handler() -> ! {
+    unsafe {
+        asm!("mov rdi, rsp; call $0" ::
+             "i"(main_handler as extern "C" fn(_) -> !) : "rdi" : "intel");
+        ::core::intrinsics::unreachable();
+    }
+}
+```
+The [intrinsics::unreachable] function is unstable, so we need to add `#![feature(core_intrinsics)]` to our `src/lib.rs`. It is just an annotation for the compiler and produces no real code. (Not to be confused with the [unreachable!] macro, which is completely different!)
+
+[intrinsics::unreachable]: https://doc.rust-lang.org/nightly/core/intrinsics/fn.unreachable.html
+[unreachable!]: https://doc.rust-lang.org/nightly/core/macro.unreachable!.html
+
+### It works!
+Now we see a correct exception stack frame when we execute `make run`:
+
+![QEMU showing correct divide by zero stack frame](images/qemu-divide-by-zero-stack-frame.png)
+
+The values look correct this time.
+
+However, it no longer works on a real machine! It triple faults and enters a boot loop.
 
 ## Failure on real Hardware
 
@@ -189,29 +241,6 @@ TODO:
 - assembly stub required to ensure correct stack alignment
 - naked functions for handlers with and without error code (`push 0`, `call`)
 
-## Exception Stack Frame
-In order to read values such as the error code or the address of the interrupted instruction, we need to know how the CPU modifies the stack when an exception occurs:
-
-
-When an exception occurs, the CPU:
-
-1. Aligns the stack pointer on a 16-byte boundary.
-2. Pushes the stack segment descriptor (SS) and the old stack pointer (from before the alignment) onto the stack. The SS value is padded to 8 bytes.
-3. Pushes the 64-bit RFLAGS register onto the stack.
-4. Pushes the previous CS register and RIP register onto the stack. The CS value is padded to 8 bytes.
-5. If the interrupt vector number has an error code associated with it, pushes the error code onto the stack. The error code is padded with four bytes to form a quadword.
-6. Loads the offset field from the gate descriptor into the target RIP. The interrupt handler begins execution when control is transferred to the instruction referenced by the new RIP.
-
-```rust
-#[repr(C)]
-struct ExceptionStackFrame {
-    stack_segment: u64,
-    stack_pointer: u64,
-    cpu_flags: u64,
-    code_segment: u64,
-    instruction_pointer: u64,
-}
-```
 
 ## What's next?
 Now TODO. However, some page faults still cause a triple fault and a bootloop. For example, try the following code:
