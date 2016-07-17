@@ -30,12 +30,31 @@
 
   <!-- JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/2.0.0/anchor.min.js"></script>
+  <script src="js/toc.min.js"></script>
   {{ partial "analytics.html" . }}
 
   <!-- redirect from phil-opp.github.io/blog_os -->
   <script type="text/javascript">
     if (window.location.hostname == "phil-opp.github.io") {
       window.location.href = "http://os.phil-opp.com/";
+    }
+
+    window.onload = function() {
+      var container = document.querySelector('#toc');
+
+      var selector = "h2";
+      if (container.className.split(" ").indexOf("coarse") == -1) {
+        selector += ",h3";
+      }
+
+      var toc = initTOC({
+          selector: selector,
+          scope: '.post',
+          overwrite: false,
+          prefix: 'toc'
+      });
+
+      container.appendChild(toc);
     }
   </script>
 </head>
