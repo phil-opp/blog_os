@@ -22,19 +22,20 @@ use vga_buffer::print_error;
 #[naked]
 extern "C" fn divide_by_zero_handler() -> ! {
     unsafe {
-        asm!(/* load excepiton fram pointer and call main_handler*/);
-    }
-    ::core::intrinsics::unreachable();
-
-    extern "C" fn main_handler(stack_frame: *const ExceptionStackFrameErrorCode) -> ! {
-        unsafe {
-            print_error(format_args!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", *stack_frame));
-        }
-        loop {}
+        asm!("mov rdi, rsp; call $0" ::
+             "i"(main_handler as extern "C" fn(_) -> !) : "rdi" : "intel");
+        ::core::intrinsics::unreachable();
     }
 }
 
-extern "C" fn divide_by_zero_handler() -> ! {
+extern "C" fn main_handler(stack_frame: *const ExceptionStackFrame) -> ! {
+    unsafe {
+        print_error(format_args!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", *stack_frame));
+    }
+    loop {}
+}
+
+extern "C" fn divide_by_zero_handler_() -> ! {
     let stack_frame: *const ExceptionStackFrame;
     unsafe {
         asm!("mov $0, rsp" : "=r"(stack_frame) ::: "intel");
