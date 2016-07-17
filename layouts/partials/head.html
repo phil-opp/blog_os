@@ -54,6 +54,11 @@
           prefix: 'toc'
       });
 
+      var heading = document.createElement("H2");
+      var heading_text = document.createTextNode("Table of Contents");
+      heading.appendChild(heading_text);
+
+      container.appendChild(heading);
       container.appendChild(toc);
     }
   </script>

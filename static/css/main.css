@@ -130,9 +130,9 @@ aside#toc {
     line-height: 1.1;
   }
 
-  aside#toc:before {
-    content: "Table of Contents";
-    font-weight: bold;
+  aside#toc h2 {
+    font-size: 110%;
+    margin-bottom: .2rem;
   }
 
   aside#toc ol {
