@@ -7,7 +7,7 @@ In the [previous post], we've set up an interrupt descriptor table in order to c
 
 [previous post]: {{% relref "2016-05-28-catching-exceptions.md" %}}
 
-<!--more-->
+<!--more--><aside id="toc"></aside>
 
 As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a comment section at the end of this page.
 
