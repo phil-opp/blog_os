@@ -6,7 +6,7 @@ updated = "2016-03-06"
 
 In this post we will create a new page table to map the kernel sections correctly. Therefor we will extend the paging module to support modifications of _inactive_ page tables as well. Then we will switch to the new table and secure our kernel stack by creating a guard page.
 
-<!--more-->
+<!--more--><aside id="toc" class="coarse"></aside>
 
 As always, you can find the source code on [Github]. Don't hesitate to file issues there if you have any problems or improvement suggestions. There is also a comment section at the end of this page. Note that this post requires a current Rust nightly.
 

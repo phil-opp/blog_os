@@ -15,7 +15,7 @@ In the previous posts we created a [minimal Multiboot kernel][multiboot post] an
 [long mode post]: {{% relref "2015-08-25-entering-longmode.md" %}}
 [Rust]: https://www.rust-lang.org/
 
-<!--more-->
+<!--more--><aside id="toc"></aside>
 
 This blog post tries to set up Rust step-by-step and point out the different problems. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is in a [Github repository], too.
 
