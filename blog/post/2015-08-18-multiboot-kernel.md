@@ -110,7 +110,7 @@ There are some new commands:
 - `global` exports a label (makes it public). As `start` will be the entry point of our kernel, it needs to be public.
 - the `.text` section is the default section for executable code
 - `bits 32` specifies that the following lines are 32-bit instructions. It's needed because the CPU is still in [Protected mode] when GRUB starts our kernel. When we switch to [Long mode] in the [next post] we can use `bits 64` (64-bit instructions).
-- the `mov dword` instruction moves the 32bit constant `0x2f4f2f4b` to the memory at address `b8000` (it prints `OK` to the screen, an explanation follows in the next posts)
+- the `mov dword` instruction moves the 32bit constant `0x2f4b2f4f` to the memory at address `b8000` (it prints `OK` to the screen, an explanation follows in the next posts)
 - `hlt` is the halt instruction and causes the CPU to stop
 
 Through assembling, viewing and disassembling we can see the CPU [Opcodes] in action:
