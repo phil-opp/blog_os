@@ -122,12 +122,12 @@ aside#toc {
 @media (min-width: 80rem) {
   aside#toc {
     display: block;
-    width: 15em;
+    width: 12rem;
     position: fixed;
-    left:1rem;
     top: 4rem;
+    margin-left: -15rem;
     font-size: 90%;
-    line-height: 1.1;
+    line-height: 1.2;
   }
 
   aside#toc h2 {
