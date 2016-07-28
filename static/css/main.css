@@ -128,6 +128,12 @@ aside#toc {
     margin-left: -15rem;
     font-size: 90%;
     line-height: 1.2;
+    opacity: .2;
+    transition: opacity .5s;
+  }
+
+  aside#toc:hover {
+    opacity: 1;
   }
 
   aside#toc h2 {
