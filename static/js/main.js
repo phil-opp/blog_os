@@ -1,13 +1,8 @@
 window.onload = function() {
   var container = document.querySelector('#toc');
 
-  var selector = "h2";
-  if (container.className.split(" ").indexOf("coarse") == -1) {
-    selector += ",h3";
-  }
-
   var toc = initTOC({
-      selector: selector,
+      selector: 'h2, h3',
       scope: '.post',
       overwrite: false,
       prefix: 'toc'

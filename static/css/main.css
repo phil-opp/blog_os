@@ -159,4 +159,8 @@ aside#toc {
     top: 0.9em;
     position: relative;
   }
+
+  aside#toc.coarse li ol {
+    display: none;
+  }
 }
