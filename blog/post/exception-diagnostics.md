@@ -227,19 +227,130 @@ Now we see a correct exception stack frame when we execute `make run`:
 
 The values look correct this time.
 
-However, it no longer works on a real machine! It triple faults and enters a boot loop.
+## Testing on real Hardware
+Virtual machines such as QEMU are very convenient to quickly test our kernel. However, they might behave a bit different than real hardware in some situations. So we should test our kernel on real hardware, too.
 
-## Failure on real Hardware
+Let's do it by burning it to an USB stick:
 
-- reproduce using `-enable-kvm`
-- debugging using `loop {}` and gdb
-- frame pointer and thus stack pointer alignment wrong
-- requirements system v
-- stack frame high level (xx bytes)
-- hacky workaround (`push 0`)
-- `extern "C" fn() -> !` not the correct handler function type
-- assembly stub required to ensure correct stack alignment
-- naked functions for handlers with and without error code (`push 0`, `call`)
+```
+> sudo dd if=build/os-x86_64.iso of=/dev/sdX; and sync
+```
+
+Replace `sdX` by the device name of your USB stick. But **be careful**! The command will erase everything on that device.
+
+When we boot from this USB stick now, we see that our computer reboots just before printing the exception message. So our code, which worked well in QEMU, causes a triple fault on real hardware. What's happening?
+
+### Reproducing in QEMU
+Debugging on a real machine is difficult. Fortunately there is a way to reproduce this bug in QEMU: We use Linux's [Kernel-based Virtual Machine] \(KVM) by passing the `‑enable-kvm` flag:
+
+[Kernel-based Virtual Machine]: https://en.wikipedia.org/wiki/Kernel-based_Virtual_Machine
+
+```
+> qemu-system-x86_64 -cdrom build/os-x86_64.iso -enable-kvm
+```
+
+Now QEMU triple faults as well. This should make debugging much easier.
+
+### Debugging
+
+QEMU's `-d int`, which prints every exception, doesn't seem to work in KVM mode. However `-d cpu_reset` still works. It prints the complete CPU state whenever the CPU resets. Let's try it:
+
+```
+> qemu-system-x86_64 -cdrom build/os-x86_64.iso -enable-kvm -d cpu_reset
+CPU Reset (CPU 0)
+EAX=00000000 EBX=00000000 ECX=00000000 EDX=00000000
+ESI=00000000 EDI=00000000 EBP=00000000 ESP=00000000
+EIP=00000000 EFL=00000000 [-------] CPL=0 II=0 A20=0 SMM=0 HLT=0
+[...]
+CPU Reset (CPU 0)
+EAX=00000000 EBX=00000000 ECX=00000000 EDX=00000663
+ESI=00000000 EDI=00000000 EBP=00000000 ESP=00000000
+EIP=0000fff0 EFL=00000002 [-------] CPL=0 II=0 A20=1 SMM=0 HLT=0
+[...]
+CPU Reset (CPU 0)
+RAX=000000000011fac8 RBX=0000000000000800 RCX=1d1d1d1d1d1d1d1d RDX=0000000000000000
+RSI=0000000000119d70 RDI=000000000011fb58 RBP=000000000011fb48 RSP=000000000011f9c8
+R8 =0000000000000000 R9 =0000000000000100 R10=000000000011f500 R11=000000000011f800
+R12=0000000000000000 R13=0000000000000000 R14=0000000000000000 R15=0000000000000000
+RIP=000000000010db23 RFL=00210002 [-------] CPL=0 II=0 A20=1 SMM=0 HLT=0
+[...]
+```
+The first two resets occur while the CPU is still in 32-bit mode (`EAX` instead of `RAX`), so we ignore them. The third interrupt is the interesting one. It tells us that the instruction pointer value was `0x10db23` just before the reset. This might be the address of the instruction that caused the triple fault.
+
+We can find the corresponding instruction by disassembling our kernel:
+
+```shell
+objdump -d build/kernel-x86_64.bin | grep "10db23:"
+  10db23:	0f 29 45 b0          	movaps %xmm0,-0x50(%rbp)
+```
+The [movaps] instruction is an [SSE] instruction that moves aligned 128bit values. It can fail for a number of reasons:
+
+[movaps]: http://x86.renejeschke.de/html/file_module_x86_id_180.html
+[SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
+
+1. For an illegal memory operand effective address in the CS, DS, ES, FS or GS segments.
+2. For an illegal address in the SS segment.
+3. If a memory operand is not aligned on a 16-byte boundary.
+4. For a page fault.
+5. If TS in CR0 is set.
+
+The segment registers contain no meaningful values in long mode, so they can't contain illegal addresses. We did not change the TS bit in [CR0] and there is no reason for a page fault either. So it has to be option 3.
+
+[CR0]: https://en.wikipedia.org/wiki/Control_register#CR0
+
+### 16-byte Alignment
+Some SSE instructions such as `movaps` require that memory operands are 16-byte aligned. In our case, the instruction is `movaps %xmm0,-0x50(%rbp)`, which writes to address `rbp - 0x50`. To number `0x50` is 16-byte aligned, since `0x50 = 5*0x10 = 5*16`. Therefore `rbp` needs to be 16-byte aligned too.
+
+Let's look at the above `-d cpu_reset` dump again and check the value of `rbp`:
+
+```
+CPU Reset (CPU 0)
+RAX=[...] RBX=[...] RCX=[...] RDX=[...]
+RSI=[...] RDI=[...] RBP=000000000011fb48 RSP=[...]
+...
+```
+`RBP` is `0x11fb48`, which is _not_ 16-byte aligned. So this is the reason for the triple fault. It seems like QEMU doesn't check the alignment for `movaps`, but real hardware of course does.
+
+But how did we end up with a misaligned `rbp` register?
+
+### Calling Conventions
+In order to solve this mystery, we need to look at the disassembly of the preceding code:
+
+```
+> objdump -d build/kernel-x86_64.bin | grep -B12 "10db23:"
+000000000010daf0 <_ZN7blog_os10interrupts12main_handler17he035E>:
+  10daf0:	55                   	push   %rbp
+  10daf1:	48 89 e5             	mov    %rsp,%rbp
+  10daf4:	48 81 ec 80 01 00 00 	sub    $0x180,%rsp
+  10dafb:	48 8d 45 80          	lea    -0x80(%rbp),%rax
+  10daff:	48 b9 1d 1d 1d 1d 1d 	movabs $0x1d1d1d1d1d1d1d1d,%rcx
+  10db06:	1d 1d 1d
+  10db09:	48 89 4d 88          	mov    %rcx,-0x78(%rbp)
+  10db0d:	48 89 4d 80          	mov    %rcx,-0x80(%rbp)
+  10db11:	48 89 8d f0 fe ff ff 	mov    %rcx,-0x110(%rbp)
+  10db18:	48 89 7d f8          	mov    %rdi,-0x8(%rbp)
+  10db1c:	0f 10 05 8d b5 00 00 	movups 0xb58d(%rip),%xmm0
+  10db23:	0f 29 45 b0          	movaps %xmm0,-0x50(%rbp)
+```
+The exception occurs inside our `main_handler` function. We see that `rbp` is loaded with the value of `rsp` at the beginning. The `rbp` register now holds the so-called _base pointer_, which points to the beginning of the stack frame. It is used in the following to address variables and other values on the stack.
+
+The base pointer is initialized directly from the stack pointer (`rsp`) after pushing the old base pointer. There is no special alignment code, so the compiler blindly assumes that `(rsp - 8)`[^fn-rsp-8] is always 16-byte aligned. This seems to be wrong in our case. But why does the compiler assume this?
+
+[^fn-rsp-8]: By pushing the old base pointer, `rsp` is updated to `rsp-8`.
+
+The reason is that our exception handler is defined as `extern "C" function`, which means that it's using the C [calling convention]. On x86_64 Linux, the C calling convention is specified by the System V AMD64 ABI ([PDF][system v abi]). Section 3.2.2 defines the following:
+
+[calling convention]: https://en.wikipedia.org/wiki/X86_calling_conventions
+[system v abi]: http://www.x86-64.org/documentation/abi.pdf
+
+> The end of the input argument area shall be aligned on a 16 byte boundary. In other words, the value (%rsp + 8) is always a multiple of 16 when control is transferred to the function entry point.
+
+The “end of the input argument area” refers to the last stack-passed argument (in our case there aren't any). So the stack pointer must be 16 byte aligned when we `call` a function with C calling convention. The `call` instruction then pushes the return value on the stack so that “the value (%rsp + 8) is a multiple of 16 when control is transferred to the function entry point”.
+
+_Summary_: The calling convention requires a 16 byte aligned stack pointer before `call` instructions. The compiler relies on this requirement, but we broke it somehow. Thus the generated code triple faults due to a misaligned memory address in the `movaps` instruction.
+
+### Fixing the Alignment
+In order to fix this bug, we need to make sure that the stack pointer is correctly aligned before calling `extern "C"` functions. Let's calculate the
 
 
 ## What's next?
