@@ -1,13 +1,48 @@
 mod idt;
 
+macro_rules! handler {
+    ($name: ident) => {{
+        #[naked]
+        extern "C" fn wrapper() -> ! {
+            unsafe {
+                asm!("mov rdi, rsp
+                      sub rsp, 8 // align the stack pointer
+                      call $0"
+                      :: "i"($name as extern "C" fn(*const ExceptionStackFrame) -> !)
+                      : "rdi" : "intel");
+                ::core::intrinsics::unreachable();
+            }
+        }
+        wrapper
+    }}
+}
+
+macro_rules! handler_with_error_code {
+    ($name: ident) => {{
+        #[naked]
+        extern "C" fn wrapper() -> ! {
+            unsafe {
+                asm!("pop rsi // pop error code into rsi
+                      mov rdi, rsp
+                      sub rsp, 8 // align the stack pointer
+                      call $0"
+                      :: "i"($name as extern "C" fn(*const ExceptionStackFrame, u64) -> !)
+                      : "rdi" : "intel");
+                ::core::intrinsics::unreachable();
+            }
+        }
+        wrapper
+    }}
+}
+
 lazy_static! {
     static ref IDT: idt::Idt = {
         let mut idt = idt::Idt::new();
 
-        idt.set_handler(0, divide_by_zero_handler);
-        //idt.set_handler(8, double_fault_handler);
-        //idt.set_handler(13, general_protection_fault_handler);
-        idt.set_handler(14, page_fault_handler);
+        idt.set_handler(0, handler!(divide_by_zero_handler));
+        idt.set_handler(6, handler!(invalid_opcode_handler));
+        idt.set_handler(8, double_fault_handler);
+        idt.set_handler(14, handler_with_error_code!(page_fault_handler));
 
         idt
     };
@@ -19,28 +54,31 @@ pub fn init() {
 
 use vga_buffer::print_error;
 
-#[naked]
-extern "C" fn divide_by_zero_handler() -> ! {
-    unsafe {
-        asm!("mov rdi, rsp; call $0" ::
-             "i"(main_handler as extern "C" fn(_) -> !) : "rdi" : "intel");
-        ::core::intrinsics::unreachable();
-    }
-}
-
-extern "C" fn main_handler(stack_frame: *const ExceptionStackFrame) -> ! {
+extern "C" fn divide_by_zero_handler(stack_frame: *const ExceptionStackFrame) -> ! {
     unsafe {
         print_error(format_args!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", *stack_frame));
     }
     loop {}
 }
 
-extern "C" fn divide_by_zero_handler_() -> ! {
-    let stack_frame: *const ExceptionStackFrame;
+extern "C" fn invalid_opcode_handler(stack_frame: *const ExceptionStackFrame)
+    -> !
+{
     unsafe {
-        asm!("mov $0, rsp" : "=r"(stack_frame) ::: "intel");
-        print_error(format_args!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", *stack_frame));
-    };
+        print_error(format_args!("EXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
+            (*stack_frame).instruction_pointer, *stack_frame));
+    }
+    loop {}
+}
+
+extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
+                                 error_code: u64) -> !
+{
+    unsafe {
+        print_error(format_args!(
+            "EXCEPTION: PAGE FAULT with error code {:?}\n{:#?}",
+            PageFaultErrorCode::from_bits(error_code), *stack_frame));
+    }
     loop {}
 }
 
@@ -48,12 +86,6 @@ extern "C" fn double_fault_handler() -> ! {
     unsafe { print_error(format_args!("EXCEPTION: DOUBLE FAULT")) };
     loop {}
 }
-
-extern "C" fn general_protection_fault_handler() -> ! {
-    loop {}
-    unsafe { print_error(format_args!("EXCEPTION: GENERAL PROTECTION FAULT")) };
-}
-
 
 #[derive(Debug)]
 #[repr(C)]
@@ -65,31 +97,12 @@ struct ExceptionStackFrame {
     stack_segment: u64,
 }
 
-#[derive(Debug)]
-#[repr(C)]
-struct ExceptionStackFrameErrorCode {
-    error_code: u64,
-    instruction_pointer: u64,
-    code_segment: u64,
-    cpu_flags: u64,
-    stack_pointer: u64,
-    stack_segment: u64,
-}
-
-#[naked]
-extern "C" fn page_fault_handler() -> ! {
-    unsafe {
-        asm!("
-            mov rdi, rsp
-            call $0
-        " :: "i"(handler as extern "C" fn(*const ExceptionStackFrameErrorCode) -> !) :: "intel");
-    }
-    loop{}
-
-    extern "C" fn handler(stack_frame: *const ExceptionStackFrameErrorCode) -> ! {
-        unsafe {
-            print_error(format_args!("EXCEPTION: PAGE FAULT\n  stack frame: {:#?}", *stack_frame));
-        }
-        loop {}
+bitflags! {
+    flags PageFaultErrorCode: u64 {
+        const PROTECTION_VIOLATION = 1 << 0,
+        const CAUSED_BY_WRITE = 1 << 1,
+        const USER_MODE = 1 << 2,
+        const MALFORMED_TABLE = 1 << 3,
+        const INSTRUCTION_FETCH = 1 << 4,
     }
 }
