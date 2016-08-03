@@ -1,10 +1,28 @@
 mod idt;
 
+macro_rules! handler {
+    ($name: ident) => {{
+        #[naked]
+        extern "C" fn wrapper() -> ! {
+            unsafe {
+                asm!("mov rdi, rsp
+                      sub rsp, 8 // align the stack pointer
+                      call $0"
+                      :: "i"($name as extern "C" fn(
+                          *const ExceptionStackFrame) -> !)
+                      : "rdi" : "intel");
+                ::core::intrinsics::unreachable();
+            }
+        }
+        wrapper
+    }}
+}
+
 lazy_static! {
     static ref IDT: idt::Idt = {
         let mut idt = idt::Idt::new();
 
-        idt.set_handler(0, divide_by_zero_wrapper);
+        idt.set_handler(0, handler!(divide_by_zero_handler));
 
         idt
     };
@@ -25,18 +43,6 @@ struct ExceptionStackFrame {
 }
 
 use vga_buffer::print_error;
-
-#[naked]
-extern "C" fn divide_by_zero_wrapper() -> ! {
-    unsafe {
-        asm!("mov rdi, rsp
-              sub rsp, 8 // align the stack pointer
-              call $0"
-              :: "i"(divide_by_zero_handler as extern "C" fn(_) -> !)
-              : "rdi" : "intel");
-        ::core::intrinsics::unreachable();
-    }
-}
 
 extern "C" fn divide_by_zero_handler(stack_frame: *const ExceptionStackFrame)
     -> !
