@@ -83,7 +83,7 @@ Let's try it by executing `make run`:
 
 ![qemu printing an ExceptionStackFrame with strange values](images/qemu-print-stack-frame-try.png)
 
-Those `ExceptionStackFrame` values look very wrong. The instruction pointer definitely shouldn't be 1 and the code segment should be `0x8` instead of `1129552`. So what's going on here?
+Those `ExceptionStackFrame` values look very wrong. The instruction pointer definitely shouldn't be 1 and the code segment should be `0x8` instead of some big number. So what's going on here?
 
 ### Debugging
 It seems like we somehow got the pointer wrong. The `ExceptionStackFrame` type and our inline assembly seem correct, so something must be modifying `rsp` before we load it into `stack_frame`.
@@ -159,6 +159,8 @@ We can't use Rust code in naked functions, but we still want to use Rust in our 
 Our new two-stage exception handler looks like this:
 
 ```rust
+// in src/interrupts/mod.rs
+
 #[naked]
 extern "C" fn divide_by_zero_wrapper() -> ! {
     unsafe {
@@ -291,22 +293,20 @@ ESI=00000000 EDI=00000000 EBP=00000000 ESP=00000000
 EIP=0000fff0 EFL=00000002 [-------] CPL=0 II=0 A20=1 SMM=0 HLT=0
 [...]
 CPU Reset (CPU 0)
-RAX=000000000011fac8 RBX=0000000000000800 RCX=1d1d1d1d1d1d1d1d
-RDX=0000000000000000 RSI=0000000000119d70 RDI=000000000011fb58
-RBP=000000000011fb48 RSP=000000000011f9c8
-R8 =0000000000000000 R9 =0000000000000100 R10=000000000011f500
-R11=000000000011f800 R12=0000000000000000 R13=0000000000000000
-R14=0000000000000000 R15=0000000000000000
-RIP=000000000010db23 RFL=00210002 [-------] CPL=0 II=0 A20=1 SMM=0 HLT=0
+RAX=0000000000118cb8 RBX=0000000000000800 RCX=1d1d1d1d1d1d1d1d RDX=0..0000000
+RSI=0000000000112cd0 RDI=0000000000118d38 RBP=0000000000118d28 RSP=0..0118c68
+R8 =0000000000000000 R9 =0000000000000100 R10=0000000000118700 R11=0..0118a00
+R12=0000000000000000 R13=0000000000000000 R14=0000000000000000 R15=0..0000000
+RIP=000000000010cf08 RFL=00210002 [-------] CPL=0 II=0 A20=1 SMM=0 HLT=0
 [...]
 ```
-The first two resets occur while the CPU is still in 32-bit mode (`EAX` instead of `RAX`), so we ignore them. The third reset is the interesting one, because it occurs in 64-bit mode. The register dump tells us that the instruction pointer (`rip`) was `0x10db23` just before the reset. This might be the address of the instruction that caused the triple fault.
+The first two resets occur while the CPU is still in 32-bit mode (`EAX` instead of `RAX`), so we ignore them. The third reset is the interesting one, because it occurs in 64-bit mode. The register dump tells us that the instruction pointer (`rip`) was `0x10cf08` just before the reset. This might be the address of the instruction that caused the triple fault.
 
 We can find the corresponding instruction by disassembling our kernel:
 
-```shell
-objdump -d build/kernel-x86_64.bin | grep "10db23:"
-  10db23:	0f 29 45 b0          	movaps %xmm0,-0x50(%rbp)
+```
+objdump -d build/kernel-x86_64.bin | grep "10cf08:"
+  10cf08:	0f 29 45 b0          	movaps %xmm0,-0x50(%rbp)
 ```
 The [movaps] instruction is an [SSE] instruction that moves aligned 128bit values. It can fail for a number of reasons:
 
@@ -331,10 +331,10 @@ Let's look at the above `-d cpu_reset` dump again and check the value of `rbp`:
 ```
 CPU Reset (CPU 0)
 RAX=[...] RBX=[...] RCX=[...] RDX=[...]
-RSI=[...] RDI=[...] RBP=000000000011fb48 RSP=[...]
+RSI=[...] RDI=[...] RBP=0000000000118d28 RSP=[...]
 ...
 ```
-`RBP` is `0x11fb48`, which is _not_ 16-byte aligned. So this is the reason for the triple fault. (It seems like QEMU doesn't check the alignment for `movaps`, but real hardware of course does.)
+`RBP` is `0x118d28`, which is _not_ 16-byte aligned. So this is the reason for the triple fault. (It seems like QEMU doesn't check the alignment for `movaps`, but real hardware of course does.)
 
 But how did we end up with a misaligned `rbp` register?
 
@@ -342,22 +342,20 @@ But how did we end up with a misaligned `rbp` register?
 In order to solve this mystery, we need to look at the disassembly of the preceding code:
 
 ```
-> objdump -d build/kernel-x86_64.bin | grep -B12 "10db23:"
-000000000010daf0 <_ZN7blog_os10interrupts12divide_by_zero_handler1735E>:
-  10daf0:	55                   	push   %rbp
-  10daf1:	48 89 e5             	mov    %rsp,%rbp
-  10daf4:	48 81 ec 80 01 00 00 	sub    $0x180,%rsp
-  10dafb:	48 8d 45 80          	lea    -0x80(%rbp),%rax
-  10daff:	48 b9 1d 1d 1d 1d 1d 	movabs $0x1d1d1d1d1d1d1d1d,%rcx
-  10db06:	1d 1d 1d
-  10db09:	48 89 4d 88          	mov    %rcx,-0x78(%rbp)
-  10db0d:	48 89 4d 80          	mov    %rcx,-0x80(%rbp)
-  10db11:	48 89 8d f0 fe ff ff 	mov    %rcx,-0x110(%rbp)
-  10db18:	48 89 7d f8          	mov    %rdi,-0x8(%rbp)
-  10db1c:	0f 10 05 8d b5 00 00 	movups 0xb58d(%rip),%xmm0
-  10db23:	0f 29 45 b0          	movaps %xmm0,-0x50(%rbp)
+> objdump -d build/kernel-x86_64.bin | grep -B10 "10cf08:"
+000000000010cee0 <_ZN7blog_os10interrupts22divide_by_zero_handler17hE>:
+  10cee0:	55                   	push   %rbp
+  10cee1:	48 89 e5             	mov    %rsp,%rbp
+  10cee4:	48 81 ec c0 00 00 00 	sub    $0xc0,%rsp
+  10ceeb:	48 8d 45 90          	lea    -0x70(%rbp),%rax
+  10ceef:	48 b9 1d 1d 1d 1d 1d 	movabs $0x1d1d1d1d1d1d1d1d,%rcx
+  10cef6:	1d 1d 1d
+  10cef9:	48 89 4d 90          	mov    %rcx,-0x70(%rbp)
+  10cefd:	48 89 7d f8          	mov    %rdi,-0x8(%rbp)
+  10cf01:	0f 10 05 a8 51 00 00 	movups 0x51a8(%rip),%xmm0
+  10cf08:	0f 29 45 b0          	movaps %xmm0,-0x50(%rbp)
 ```
-At the last line (`0x10db23`) we have the `movaps` instruction, which caused the triple fault. The exception occurs inside our `divide_by_zero_handler` function. We see that `rbp` is loaded with the value of `rsp` at the beginning. The `rbp` register holds the so-called _base pointer_, which points to the beginning of the stack frame. It is used in the rest of the function to address variables and other values on the stack.
+At the last line we have the `movaps` instruction, which caused the triple fault. The exception occurs inside our `divide_by_zero_handler` function. We see that `rbp` is loaded with the value of `rsp` at the beginning (at `0x10cee1`). The `rbp` register holds the so-called _base pointer_, which points to the beginning of the stack frame. It is used in the rest of the function to address variables and other values on the stack.
 
 The base pointer is initialized directly from the stack pointer (`rsp`) after pushing the old base pointer. There is no special alignment code, so the compiler blindly assumes that `(rsp - 8)`[^fn-rsp-8] is always 16-byte aligned. This seems to be wrong in our case. But why does the compiler assume this?
 
@@ -497,6 +495,8 @@ When a divide-by-zero exception occurs, we immediately know the reason: Someone 
 Since the CPU pushes an additional error code, the stack frame is different and our `handler!` macro is not applicable. Therefore we create a new `handler_with_error_code!` macro for them:
 
 ```rust
+// in src/interrupts/mod.rs
+
 macro_rules! handler_with_error_code {
     ($name: ident) => {{
         #[naked]
@@ -522,6 +522,8 @@ The difference to the `handler!` macro is the additional error code argument. Th
 Let's write a page fault handler which analyzes and prints the error code:
 
 ```rust
+// in src/interrupts/mod.rs
+
 extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
                                  error_code: u64) -> !
 {
