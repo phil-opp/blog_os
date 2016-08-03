@@ -18,12 +18,32 @@ macro_rules! handler {
     }}
 }
 
+macro_rules! handler_with_error_code {
+    ($name: ident) => {{
+        #[naked]
+        extern "C" fn wrapper() -> ! {
+            unsafe {
+                asm!("pop rsi // pop error code into rsi
+                      mov rdi, rsp
+                      sub rsp, 8 // align the stack pointer
+                      call $0"
+                      :: "i"($name as extern "C" fn(
+                          *const ExceptionStackFrame, u64) -> !)
+                      : "rdi" : "intel");
+                ::core::intrinsics::unreachable();
+            }
+        }
+        wrapper
+    }}
+}
+
 lazy_static! {
     static ref IDT: idt::Idt = {
         let mut idt = idt::Idt::new();
 
         idt.set_handler(0, handler!(divide_by_zero_handler));
         idt.set_handler(6, handler!(invalid_opcode_handler));
+        idt.set_handler(14, handler_with_error_code!(page_fault_handler));
 
         idt
     };
@@ -61,6 +81,17 @@ extern "C" fn invalid_opcode_handler(stack_frame: *const ExceptionStackFrame)
     unsafe {
         print_error(format_args!("EXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
             (*stack_frame).instruction_pointer, *stack_frame));
+    }
+    loop {}
+}
+
+extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
+                                 error_code: u64) -> !
+{
+    unsafe {
+        print_error(format_args!(
+            "EXCEPTION: PAGE FAULT with error code {:?}\n{:#?}",
+            error_code, *stack_frame));
     }
     loop {}
 }
