@@ -66,7 +66,7 @@ extern "C" fn divide_by_zero_handler() -> ! {
 ```
 We're using [inline assembly] here to load the value from the `rsp` register into `stack_frame`. The syntax is a bit strange, so here's a quick explanation:
 
-[inline assembly]: https://doc.rust-lang.org/book/inline-assembly.html
+[inline assembly]: https://doc.rust-lang.org/nightly/book/inline-assembly.html
 
 - The `asm!` macro emits raw assembly instructions. This is the only way to read raw register values in Rust.
 - We insert a single assembly instruction: `mov $0, rsp`. It moves the value of `rsp` to some register (the `$0` is a placeholder for an arbitrary register, which gets filled by the compiler).
@@ -75,7 +75,7 @@ We're using [inline assembly] here to load the value from the `rsp` register int
 - After the third colon, the macro expects so called [clobbers]. We don't change any register values, so we leave it empty too.
 - The last block (after the 4th colon) specifies options. The `intel` option tells the compiler that our code is in Intel assembly syntax (instead of the default AT&T syntax).
 
-[clobbers]: https://doc.rust-lang.org/book/inline-assembly.html#clobbers
+[clobbers]: https://doc.rust-lang.org/nightly/book/inline-assembly.html#clobbers
 
 So the inline assembly loads the stack pointer value to `stack_frame` at the very beginning of our function. Thus we have a pointer to the exception stack frame and are able to pretty-print its `Debug` formatting through the `{:#?}` argument.
 
