@@ -424,7 +424,7 @@ Now we have a working frame allocator. It is a bit rudimentary and cannot free f
 ## What's next?
 The [next post] will be about paging again. We will use the frame allocator to create a safe module that allows us to switch page tables and map pages. Then we will use this module and the information from the Elf-sections tag to remap the kernel correctly.
 
-[next post]: {{% relref "2015-12-09-modifying-page-tables.md" %}}
+[next post]: {{% relref "2015-12-09-page-tables.md" %}}
 
 ## Recommended Posts
 Eric Kidd started the [Bare Metal Rust] series last week. Like this post, it builds upon the code from [Printing to Screen], but tries to support keyboard input instead of wrestling through memory management details.

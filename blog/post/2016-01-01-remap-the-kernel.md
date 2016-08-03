@@ -29,7 +29,7 @@ _Updates_:
 ## Motivation
 
 In the [previous post], we had a strange bug in the `unmap` function. Its reason was a silent stack overflow, which corrupted the page tables. Fortunately, our kernel stack is right above the page tables so that we noticed the overflow relatively quickly. This won't be the case when we add threads with new stacks in the future. Then a silent stack overflow could overwrite some data without us noticing. But eventually some completely unrelated function fails because a variable changed its value.
-[previous post]: {{% relref "2015-12-09-modifying-page-tables.md" %}}
+[previous post]: {{% relref "2015-12-09-page-tables.md" %}}
 
 As you can imagine, these kinds of bugs are horrendous to debug. For that reason we will create a new hierarchical page table in this post, which has _guard page_ below the stack. A guard page is basically an unmapped page that causes a page fault when accessed. Thus we can catch stack overflows right when they happen.
 
@@ -287,7 +287,7 @@ pub fn map_table_frame(&mut self,
 }
 ```
 This function interprets the given frame as a page table frame and returns a `Table` reference. We return a table of level 1 because it [forbids calling the `next_table` methods][some clever solution]. Calling `next_table` must not be possible since it's not a page of the recursive mapping. To be able to return a `Table<Level1>`, we need to make the `Level1` enum in `memory/paging/table.rs` public.
-[some clever solution]: {{% relref "2015-12-09-modifying-page-tables.md#some-clever-solution" %}}
+[some clever solution]: {{% relref "2015-12-09-page-tables.md#some-clever-solution" %}}
 
 
 The `unsafe` block is safe since the `VirtualAddress` returned by the `map` function is always valid and the type cast just reinterprets the frame's content.
@@ -1024,7 +1024,7 @@ If we haven't forgotten to set the `WRITABLE` flag somewhere, it should still wo
 The final step is to create a guard page for our kernel stack.
 
 The decision to place the kernel stack right above the page tables was already useful to detect a silent stack overflow in the [previous post][silent stack overflow]. Now we profit from it again. Let's look at our assembly `.bss` section again to understand why:
-[silent stack overflow]: {{% relref "2015-12-09-modifying-page-tables.md#translate" %}}
+[silent stack overflow]: {{% relref "2015-12-09-page-tables.md#translate" %}}
 
 ```nasm
 ; in src/arch/x86_64/boot.asm

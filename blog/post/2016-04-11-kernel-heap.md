@@ -6,7 +6,7 @@ date = "2016-04-11"
 In the previous posts we have created a [frame allocator] and a [page table module]. Now we are ready to create a kernel heap and a memory allocator. Thus, we will unlock `Box`, `Vec`, `BTreeMap`, and the rest of the [alloc] and [collections] crates.
 
 [frame allocator]: {{% relref "2015-11-15-allocating-frames.md" %}}
-[page table module]: {{% relref "2015-12-09-modifying-page-tables.md" %}}
+[page table module]: {{% relref "2015-12-09-page-tables.md" %}}
 [alloc]: https://doc.rust-lang.org/nightly/alloc/index.html
 [collections]: https://doc.rust-lang.org/nightly/collections/index.html
 
