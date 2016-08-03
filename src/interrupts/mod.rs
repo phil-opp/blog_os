@@ -61,23 +61,23 @@ extern "C" fn divide_by_zero_handler(stack_frame: *const ExceptionStackFrame) ->
     loop {}
 }
 
-extern "C" fn invalid_opcode_handler(stack_frame: *const ExceptionStackFrame)
-    -> !
-{
+extern "C" fn invalid_opcode_handler(stack_frame: *const ExceptionStackFrame) -> ! {
     unsafe {
         print_error(format_args!("EXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
-            (*stack_frame).instruction_pointer, *stack_frame));
+                                 (*stack_frame).instruction_pointer,
+                                 *stack_frame));
     }
     loop {}
 }
 
-extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
-                                 error_code: u64) -> !
-{
+extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame, error_code: u64) -> ! {
+    use x86::controlregs;
     unsafe {
-        print_error(format_args!(
-            "EXCEPTION: PAGE FAULT with error code {:?}\n{:#?}",
-            PageFaultErrorCode::from_bits(error_code), *stack_frame));
+        print_error(format_args!("EXCEPTION: PAGE FAULT while accessing {:#x}\nerror code: \
+                                  {:?}\n{:#?}",
+                                 controlregs::cr2(),
+                                 PageFaultErrorCode::from_bits(error_code).unwrap(),
+                                 *stack_frame));
     }
     loop {}
 }
