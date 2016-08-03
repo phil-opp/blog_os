@@ -11,8 +11,6 @@
 #![feature(const_fn, unique)]
 #![feature(alloc, collections)]
 #![feature(asm)]
-#![feature(naked_functions)]
-#![feature(core_intrinsics)]
 #![no_std]
 
 extern crate rlibc;
@@ -49,21 +47,12 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // set up guard page and map the heap pages
     memory::init(boot_info);
 
-
     // initialize our IDT
     interrupts::init();
-
-    // provoke a page fault
-    unsafe { *(0xdeadbeaf as *mut u64) = 42 };
 
     fn divide_by_zero() {
         unsafe { asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel") }
     }
-
-    println!("{:?}", divide_by_zero());
-
-    // provoke a page fault inside println
-    println!("{:?}", unsafe { *(0xdeadbeaf as *mut u64) = 42 });
 
     // provoke a divide by zero fault inside println
     println!("{:?}", divide_by_zero());
