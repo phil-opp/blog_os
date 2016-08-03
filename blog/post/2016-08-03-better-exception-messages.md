@@ -509,7 +509,7 @@ macro_rules! handler_with_error_code {
                       call $0"
                       :: "i"($name as extern "C" fn(
                           *const ExceptionStackFrame, u64) -> !)
-                      : "rdi" : "intel");
+                      : "rdi,rsi" : "intel");
                 ::core::intrinsics::unreachable();
             }
         }
