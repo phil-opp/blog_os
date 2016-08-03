@@ -23,6 +23,7 @@ lazy_static! {
         let mut idt = idt::Idt::new();
 
         idt.set_handler(0, handler!(divide_by_zero_handler));
+        idt.set_handler(6, handler!(invalid_opcode_handler));
 
         idt
     };
@@ -50,6 +51,16 @@ extern "C" fn divide_by_zero_handler(stack_frame: *const ExceptionStackFrame)
     unsafe {
         print_error(format_args!("EXCEPTION: DIVIDE BY ZERO\n{:#?}",
             *stack_frame));
+    }
+    loop {}
+}
+
+extern "C" fn invalid_opcode_handler(stack_frame: *const ExceptionStackFrame)
+    -> !
+{
+    unsafe {
+        print_error(format_args!("EXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
+            (*stack_frame).instruction_pointer, *stack_frame));
     }
     loop {}
 }

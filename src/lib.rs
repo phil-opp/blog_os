@@ -52,12 +52,8 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // initialize our IDT
     interrupts::init();
 
-    fn divide_by_zero() {
-        unsafe { asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel") }
-    }
-
-    // provoke a divide by zero fault inside println
-    println!("{:?}", divide_by_zero());
+    // provoke a invalid opcode exception
+    unsafe { asm!("ud2") };
 
     println!("It did not crash!");
     loop {}
