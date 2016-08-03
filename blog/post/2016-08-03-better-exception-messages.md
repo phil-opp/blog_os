@@ -9,7 +9,7 @@ In this post, we explore exceptions in more detail. Our goal is to print additio
 
 As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [comment section] at the end of this page.
 
-[Github]: https://github.com/phil-opp/blog_os/tree/TODO
+[Github]: https://github.com/phil-opp/blog_os/tree/better_exception_messages
 [issues]: https://github.com/phil-opp/blog_os/issues
 [comment section]: #disqus_thread
 
