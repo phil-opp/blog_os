@@ -11,6 +11,8 @@
 #![feature(const_fn, unique)]
 #![feature(alloc, collections)]
 #![feature(asm)]
+#![feature(naked_functions)]
+#![feature(core_intrinsics)]
 #![no_std]
 
 extern crate rlibc;
