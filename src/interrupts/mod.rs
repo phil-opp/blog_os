@@ -85,13 +85,27 @@ extern "C" fn invalid_opcode_handler(stack_frame: *const ExceptionStackFrame)
     loop {}
 }
 
+bitflags! {
+    flags PageFaultErrorCode: u64 {
+        const PROTECTION_VIOLATION = 1 << 0,
+        const CAUSED_BY_WRITE = 1 << 1,
+        const USER_MODE = 1 << 2,
+        const MALFORMED_TABLE = 1 << 3,
+        const INSTRUCTION_FETCH = 1 << 4,
+    }
+}
+
 extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
                                  error_code: u64) -> !
 {
+    use x86::controlregs;
     unsafe {
         print_error(format_args!(
-            "EXCEPTION: PAGE FAULT with error code {:?}\n{:#?}",
-            error_code, *stack_frame));
+            "EXCEPTION: PAGE FAULT while accessing {:#x}\
+            \nerror code: {:?}\n{:#?}",
+            controlregs::cr2(),
+            PageFaultErrorCode::from_bits(error_code).unwrap(),
+            *stack_frame));
     }
     loop {}
 }
