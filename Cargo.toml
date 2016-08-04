@@ -6,7 +6,7 @@ version = "0.1.0"
 [dependencies]
 bit_field = "0.1.0"
 bitflags = "0.7.0"
-once = "0.2.1"
+once = "0.3.2"
 rlibc = "0.1.4"
 spin = "0.3.4"
 
@@ -19,6 +19,10 @@ git = "https://github.com/phil-opp/multiboot2-elf64"
 [dependencies.x86]
 default-features = false
 version = "0.7.1"
+
+[dependencies.lazy_static]
+version = "0.2.1"
+features = ["spin_no_std"]
 
 [lib]
 crate-type = ["staticlib"]
