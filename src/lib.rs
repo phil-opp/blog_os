@@ -24,6 +24,8 @@ extern crate x86;
 #[macro_use]
 extern crate once;
 extern crate bit_field;
+#[macro_use]
+extern crate lazy_static;
 
 extern crate hole_list_allocator;
 extern crate alloc;

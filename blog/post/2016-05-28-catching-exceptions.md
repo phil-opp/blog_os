@@ -435,6 +435,24 @@ The reason is that the Rust compiler is not able to evaluate the value of the `s
 #### Lazy Statics to the Rescue
 Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values.
 
+Let's add the `lazy_static` crate to our project:
+
+```rust
+// in src/lib.rs
+
+#[macro_use]
+extern crate lazy_static;
+```
+
+```toml
+# in Cargo.toml
+
+[dependencies.lazy_static]
+version = "0.2.1"
+features = ["spin_no_std"]
+```
+We need the `spin_no_std` feature, since we don't link the standard library.
+
 With `lazy_static`, we can define our IDT without problems:
 
 ```rust
