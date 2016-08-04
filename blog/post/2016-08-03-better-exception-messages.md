@@ -424,7 +424,7 @@ macro_rules! handler {
 ```
 The macro takes a single Rust identifier (`ident`) as argument and expands to a `{}` block (hence the double braces). The block defines a new wrapper function that calls the function `$name` and passes a pointer to the exception stack frame. Note that we're fixing the argument type to `*const ExceptionStackFrame`. If we used a `_` like before, the passed function could accept an arbitrary argument, which would lead to ugly bugs at runtime.
 
-Now we can use remove the `divide_by_zero_wrapper` and use our new `handler!` macro instead:
+Now we can remove the `divide_by_zero_wrapper` and use our new `handler!` macro instead:
 
 ```rust
 // in src/interrupts/mod.rs
