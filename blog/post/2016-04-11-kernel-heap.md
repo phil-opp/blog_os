@@ -45,6 +45,20 @@ For our own allocator, we start simple. We create an allocator crate in a new `l
 > cd bump_allocator
 ```
 
+Normally, this subcrate would have its own `Cargo.lock` and its own `target` output folder. To avoid this, we can create a so-called _[workspace]_. For that we only need to add a single line to our `Cargo.toml`:
+
+[workspace]: http://doc.crates.io/manifest.html#the-workspace-section
+
+```toml
+# in Cargo.toml
+
+[workspace]
+```
+We don't need to add any keys to the `workspace` section, since they have [sensible defaults]. Now our `bump_allocator` subcrate shares the `Cargo.toml` and `target` folder of the root project.
+
+[sensible defaults]: https://github.com/rust-lang/rfcs/blob/master/text/1525-cargo-workspace.md#implicit-relations
+
+### Implementation
 Our allocator is very basic. It only keeps track of the next free address:
 
 ``` rust
