@@ -331,10 +331,6 @@ use alloc::boxed::Box;
 let heap_test = Box::new(42);
 ```
 
-(If you're getting a linker error about `_Unwind_Resume`, try to use the [panic=abort cargo option].)
-
-[panic=abort cargo option]: https://github.com/phil-opp/blog_os/pull/170
-
 When we run it, a triple fault occurs and causes permanent rebooting. Let's try debug it using QEMU and objdump as described [in the previous post][qemu debugging]:
 
 [qemu debugging]: http://os.phil-opp.com/remap-the-kernel.html#debugging
