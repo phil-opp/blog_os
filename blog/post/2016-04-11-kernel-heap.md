@@ -458,9 +458,10 @@ That's it. Now our `memory::init` function can only be called once. The macro wo
 [AtomicBool]: https://doc.rust-lang.org/nightly/core/sync/atomic/struct.AtomicBool.html
 
 ### Mapping the Heap
-Now we're ready to map the heap pages. In order to do it, we need access to the `ActivePageTable` or `Mapper` instance (see the [previous post]). Therefore we return it from the `paging::remap_the_kernel` function:
+Now we're ready to map the heap pages. In order to do it, we need access to the `ActivePageTable` or `Mapper` instance (see the [page table] and [kernel remapping] posts). Therefore we return it from the `paging::remap_the_kernel` function:
 
-[previous post]: {{ page.previous.url }}
+[page table]: {{% relref "2015-12-09-page-tables.md" %}}
+[kernel remapping]: {{% relref "2016-01-01-remap-the-kernel.md" %}}
 
 ```rust
 // in src/memory/paging/mod.rs
