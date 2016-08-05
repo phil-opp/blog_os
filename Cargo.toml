@@ -23,6 +23,8 @@ version = "0.7.1"
 [lib]
 crate-type = ["staticlib"]
 
+[workspace]
+
 [profile.dev]
 panic = "abort"
 
