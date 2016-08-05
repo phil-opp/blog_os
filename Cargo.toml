@@ -27,6 +27,8 @@ features = ["spin_no_std"]
 [lib]
 crate-type = ["staticlib"]
 
+[workspace]
+
 [profile.dev]
 panic = "abort"
 
