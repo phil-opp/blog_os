@@ -141,7 +141,7 @@ But how do we deallocate memory in our bump allocator? Well, we don't ;). We jus
 
 (Don't worry, we will introduce a better allocator later in this post.)
 
-### Custom Allocators in Rust
+## Custom Allocators in Rust
 In order to use our crate as system allocator, we add some attributes at the beginning of the file:
 
 ``` rust
@@ -320,7 +320,7 @@ The `collections` crate provides the [format!] and [vec!] macros, so we use `#[m
 [format!]: //doc.rust-lang.org/nightly/collections/macro.format!.html
 [vec!]: https://doc.rust-lang.org/nightly/collections/macro.vec!.html
 
-## Testing
+### Testing
 
 Now we should be able to allocate memory on the heap. Let's try it in our `rust_main`:
 
@@ -330,10 +330,6 @@ Now we should be able to allocate memory on the heap. Let's try it in our `rust_
 use alloc::boxed::Box;
 let heap_test = Box::new(42);
 ```
-
-(If you're getting a linker error about `_Unwind_Resume`, try to use the [panic=abort cargo option].)
-
-[panic=abort cargo option]: https://github.com/phil-opp/blog_os/pull/170
 
 When we run it, a triple fault occurs and causes permanent rebooting. Let's try debug it using QEMU and objdump as described [in the previous post][qemu debugging]:
 
@@ -462,9 +458,10 @@ That's it. Now our `memory::init` function can only be called once. The macro wo
 [AtomicBool]: https://doc.rust-lang.org/nightly/core/sync/atomic/struct.AtomicBool.html
 
 ### Mapping the Heap
-Now we're ready to map the heap pages. In order to do it, we need access to the `ActivePageTable` or `Mapper` instance (see the [previous post]). Therefore we return it from the `paging::remap_the_kernel` function:
+Now we're ready to map the heap pages. In order to do it, we need access to the `ActivePageTable` or `Mapper` instance (see the [page table] and [kernel remapping] posts). Therefore we return it from the `paging::remap_the_kernel` function:
 
-[previous post]: {{ page.previous.url }}
+[page table]: {{% relref "2015-12-09-page-tables.md" %}}
+[kernel remapping]: {{% relref "2016-01-01-remap-the-kernel.md" %}}
 
 ```rust
 // in src/memory/paging/mod.rs
