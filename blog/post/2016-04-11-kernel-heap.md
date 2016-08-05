@@ -141,7 +141,7 @@ But how do we deallocate memory in our bump allocator? Well, we don't ;). We jus
 
 (Don't worry, we will introduce a better allocator later in this post.)
 
-### Custom Allocators in Rust
+## Custom Allocators in Rust
 In order to use our crate as system allocator, we add some attributes at the beginning of the file:
 
 ``` rust
@@ -320,7 +320,7 @@ The `collections` crate provides the [format!] and [vec!] macros, so we use `#[m
 [format!]: //doc.rust-lang.org/nightly/collections/macro.format!.html
 [vec!]: https://doc.rust-lang.org/nightly/collections/macro.vec!.html
 
-## Testing
+### Testing
 
 Now we should be able to allocate memory on the heap. Let's try it in our `rust_main`:
 
