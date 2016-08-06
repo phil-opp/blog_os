@@ -321,5 +321,5 @@ Now we can invoke `make` and all updated assembly files are compiled and linked.
 
 In the [next post] we will create a page table and do some CPU configuration to switch to the 64-bit [long mode].
 
-[next post]: {{% relref "2015-08-25-entering-longmode.md" %}}
+[next post]: {{% relref "02-entering-longmode.md" %}}
 [long mode]: https://en.wikipedia.org/wiki/Long_mode

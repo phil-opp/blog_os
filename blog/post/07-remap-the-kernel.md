@@ -29,12 +29,12 @@ _Updates_:
 ## Motivation
 
 In the [previous post], we had a strange bug in the `unmap` function. Its reason was a silent stack overflow, which corrupted the page tables. Fortunately, our kernel stack is right above the page tables so that we noticed the overflow relatively quickly. This won't be the case when we add threads with new stacks in the future. Then a silent stack overflow could overwrite some data without us noticing. But eventually some completely unrelated function fails because a variable changed its value.
-[previous post]: {{% relref "2015-12-09-page-tables.md" %}}
+[previous post]: {{% relref "06-page-tables.md" %}}
 
 As you can imagine, these kinds of bugs are horrendous to debug. For that reason we will create a new hierarchical page table in this post, which has _guard page_ below the stack. A guard page is basically an unmapped page that causes a page fault when accessed. Thus we can catch stack overflows right when they happen.
 
 Also, we will use the [information about kernel sections] to map the various sections individually instead of blindly mapping the first gigabyte. To improve safety even further, we will set the correct page table flags for the various sections. Thus it won't be possible to modify the contents of `.text` or to execute code from `.data` anymore.
-[information about kernel sections]: {{% relref "2015-11-15-allocating-frames.md#kernel-elf-sections" %}}
+[information about kernel sections]: {{% relref "05-allocating-frames.md#kernel-elf-sections" %}}
 
 ## Preparation
 There are many things that can go wrong when we switch to a new table. Therefore it's a good idea to [set up a debugger][set up gdb]. You should not need it when you follow this post, but it's good to know how to debug a problem when it occurs[^fn-debug-notes].
@@ -287,7 +287,7 @@ pub fn map_table_frame(&mut self,
 }
 ```
 This function interprets the given frame as a page table frame and returns a `Table` reference. We return a table of level 1 because it [forbids calling the `next_table` methods][some clever solution]. Calling `next_table` must not be possible since it's not a page of the recursive mapping. To be able to return a `Table<Level1>`, we need to make the `Level1` enum in `memory/paging/table.rs` public.
-[some clever solution]: {{% relref "2015-12-09-page-tables.md#some-clever-solution" %}}
+[some clever solution]: {{% relref "06-page-tables.md#some-clever-solution" %}}
 
 
 The `unsafe` block is safe since the `VirtualAddress` returned by the `map` function is always valid and the type cast just reinterprets the frame's content.
@@ -557,7 +557,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
 First, we create a temporary page at page number `0xcafebabe`. We could use `0xdeadbeaf` or `0x123456789` as well, as long as the page is unused. The `active_table` and the `new_table` are created using their constructor functions.
 
 Then we use the `with` function to temporary change the recursive mapping and execute the closure as if the `new_table` were active. This allows us to map the sections in the new table without changing the active mapping. To get the kernel sections, we use the [Multiboot information structure].
-[Multiboot information structure]: {{% relref "2015-11-15-allocating-frames.md#the-multiboot-information-structure" %}}
+[Multiboot information structure]: {{% relref "05-allocating-frames.md#the-multiboot-information-structure" %}}
 
 Let's resolve the above `TODO` by identity mapping the sections:
 
@@ -804,7 +804,7 @@ Let's cross our fingers and run it…
 
 ### Debugging
 A QEMU boot loop indicates that some CPU exception occured. We can see all thrown CPU exception by starting QEMU with `-d int` (as described [here][qemu debugging]):
-[qemu debugging]: {{% relref "2015-09-02-set-up-rust.md#debugging" %}}
+[qemu debugging]: {{% relref "03-set-up-rust.md#debugging" %}}
 
 ```bash
 > qemu-system-x86_64 -d int -no-reboot -cdrom build/os-x86_64.iso
@@ -824,12 +824,12 @@ These lines are the important ones. We can read many useful information from the
 [page fault error code]: http://wiki.osdev.org/Exceptions#Error_code
 
 - `IP=0008:000000000010ab97` or `pc=000000000010ab97`: The program counter register tells us that the exception occurred when the CPU tried to execute the instruction at `0x10ab97`. We can disassemble this address to see the corresponding function. The `0008:` prefix in `IP` indicates the code [GDT segment].
-[GDT segment]: {{% relref "2015-08-25-entering-longmode.md#loading-the-gdt" %}}
+[GDT segment]: {{% relref "02-entering-longmode.md#loading-the-gdt" %}}
 
 - `SP=0010:00000000001182d0`: The stack pointer was `0x1182d0` (the `0010:` prefix indicates the data [GDT segment]). This tells us if it the stack overflowed.
 
 - `CR2=00000000000b8f00`: Finally the most useful register. It tells us which virtual address caused the page fault. In our case it's `0xb8f00`, which is part of the [VGA text buffer].
-[VGA text buffer]: {{% relref "2015-10-23-printing-to-screen.md#the-vga-text-buffer" %}}
+[VGA text buffer]: {{% relref "04-printing-to-screen.md#the-vga-text-buffer" %}}
 
 So let's find out which function caused the exception:
 
@@ -1024,7 +1024,7 @@ If we haven't forgotten to set the `WRITABLE` flag somewhere, it should still wo
 The final step is to create a guard page for our kernel stack.
 
 The decision to place the kernel stack right above the page tables was already useful to detect a silent stack overflow in the [previous post][silent stack overflow]. Now we profit from it again. Let's look at our assembly `.bss` section again to understand why:
-[silent stack overflow]: {{% relref "2015-12-09-page-tables.md#translate" %}}
+[silent stack overflow]: {{% relref "06-page-tables.md#translate" %}}
 
 ```nasm
 ; in src/arch/x86_64/boot.asm
@@ -1084,7 +1084,7 @@ Unfortunately stack probes require compiler support. They already work on Window
 
 ## What's next?
 Now that we have a (mostly) safe kernel stack and a working page table module, we can add a virtual memory allocator. The [next post] will explore Rust's allocator API and create a very basic allocator. At the end of that post, we will be able to use Rust's allocation and collections types such as [Box], [Vec], or even [BTreeMap].
-[next post]: {{% relref "2016-04-11-kernel-heap.md" %}}
+[next post]: {{% relref "08-kernel-heap.md" %}}
 [Box]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html
 [Vec]: https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html
 [BTreeMap]: https://doc.rust-lang.org/nightly/collections/struct.BTreeMap.html

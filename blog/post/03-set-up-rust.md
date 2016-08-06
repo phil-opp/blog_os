@@ -11,8 +11,8 @@ aliases = [
 
 In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to [Rust] code. Rust is a high-level language without runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
 
-[multiboot post]: {{% relref "2015-08-18-multiboot-kernel.md" %}}
-[long mode post]: {{% relref "2015-08-25-entering-longmode.md" %}}
+[multiboot post]: {{% relref "01-multiboot-kernel.md" %}}
+[long mode post]: {{% relref "02-entering-longmode.md" %}}
 [Rust]: https://www.rust-lang.org/
 
 <!--more--><aside id="toc"></aside>
@@ -401,10 +401,10 @@ Some notes:
 ### Stack Overflows
 Since we still use the small 64 byte [stack from the last post], we must be careful not to [overflow] it. Normally, Rust tries to avoid stack overflows through _guard pages_: The page below the stack isn't mapped and such a stack overflow triggers a page fault (instead of silently overwriting random memory). But we can't unmap the page below our stack right now since we currently use only a single big page. Fortunately the stack is located just above the page tables. So some important page table entry would probably get overwritten on stack overflow and then a page fault occurs, too.
 
-[stack from the last post]: {{% relref "2015-08-25-entering-longmode.md#creating-a-stack" %}}
+[stack from the last post]: {{% relref "02-entering-longmode.md#creating-a-stack" %}}
 [overflow]: https://en.wikipedia.org/wiki/Stack_overflow
 
 ## What's next?
 Until now we write magic bits to some memory location when we want to print something to screen. In the [next post] we create a abstraction for the VGA text buffer that allows us to print strings in different colors and provides a simple interface.
 
-[next post]: {{% relref "2015-10-23-printing-to-screen.md" %}}
+[next post]: {{% relref "04-printing-to-screen.md" %}}
