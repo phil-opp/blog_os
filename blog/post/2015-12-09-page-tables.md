@@ -600,7 +600,7 @@ pub fn map_to<A>(page: Page, frame: Frame, flags: EntryFlags,
 ```
 We add an reexport for all `entry` types since they are required to call the function. We assert that the page is unmapped and always set the present flag (since it wouldn't make sense to map a page without setting it).
 
-The `Table::next_table_create` method doesn't exist yet. It should return the next table if it exists, or create a new one. Therefore we need the `FrameAllocator` from the [previous post] and the `Table::zero` method:
+The `Table::next_table_create` method doesn't exist yet. It should return the next table if it exists, or create a new one. For the implementation we need the FrameAllocator from the [previous post] and the `Table::zero` method:
 
 ```rust
 use memory::FrameAllocator;
