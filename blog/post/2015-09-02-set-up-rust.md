@@ -132,7 +132,8 @@ Now we can try some Rust code:
 
 ```rust
 pub extern fn rust_main() {
-    let x = ["Hello", " ", "World", "!"];
+    let x = ["Hello", "World", "!"];
+    let y = x;
 }
 ```
 When we test it using `make run`, it fails with `undefined reference to 'memcpy'`. The `memcpy` function is one of the basic functions of the C library (`libc`). Usually the `libc` crate is linked to every Rust program together with the standard library, but we opted out through `#![no_std]`. We could try to fix this by adding the [libc crate] as `extern crate`. But `libc` is just a wrapper for the system `libc`, for example `glibc` on Linux, so this won't work for us. Instead we need to recreate the basic `libc` functions such as `memcpy`, `memmove`, `memset`, and `memcmp` in Rust.
