@@ -77,7 +77,7 @@ Let's break it down:
 [name mangling]: https://en.wikipedia.org/wiki/Name_mangling
 [calling convention]: https://en.wikipedia.org/wiki/Calling_convention
 [language item]: https://doc.rust-lang.org/book/lang-items.html
-[unwinding]: https://doc.rust-lang.org/std/rt/unwind/
+[unwinding]: https://doc.rust-lang.org/nomicon/unwinding.html
 
 ## Building Rust
 We can now build it using `cargo build`. To make sure, we are building it for the x86_64 architecture, we can pass an explicit target:
