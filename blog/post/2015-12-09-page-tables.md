@@ -598,7 +598,7 @@ pub fn map_to<A>(page: Page, frame: Frame, flags: EntryFlags,
     p1[page.p1_index()].set(frame, flags | PRESENT);
 }
 ```
-We add an reexport for all `entry` types since they are required to call the function. We assert that the page is unmapped and always set the present flag (since it wouldn't make sense to map a page without setting it).
+We add an re-export for all `entry` types since they are required to call the function. We assert that the page is unmapped and always set the present flag (since it wouldn't make sense to map a page without setting it).
 
 The `Table::next_table_create` method doesn't exist yet. It should return the next table if it exists, or create a new one. For the implementation we need the `FrameAllocator` from the [previous post] and the `Table::zero` method:
 
@@ -781,7 +781,7 @@ pub fn test_paging<A>(allocator: &mut A)
     // test it
 }
 ```
-We borrow the frame allocator since we will need it for the mapping functions. To be able to call that function from main, we need to reexport it in `memory/mod.rs`:
+We borrow the frame allocator since we will need it for the mapping functions. To be able to call that function from main, we need to re-export it in `memory/mod.rs`:
 
 ```rust
 // in memory/mod.rs
@@ -881,7 +881,7 @@ To test the `unmap` function, we unmap the test page so that it translates to `N
 page_table.unmap(Page::containing_address(addr), allocator);
 println!("None = {:?}", page_table.translate(addr));
 ```
-It causes a panic since we call the unimplemented `deallocate_frame` method in `unwrap`. If we comment this call out, it works without problems. But there is some bug in this function nevertheless.
+It causes a panic since we call the unimplemented `deallocate_frame` method in `unmap`. If we comment this call out, it works without problems. But there is some bug in this function nevertheless.
 
 Let's read something from the mapped page (of course before we unmap it again):
 

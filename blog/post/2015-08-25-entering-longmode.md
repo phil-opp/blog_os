@@ -184,11 +184,11 @@ If you look at the assembly above, you'll probably notice that we call `cpuid` t
 We just call these check functions right after start:
 
 ```nasm
-global _start
+global start
 
 section .text
 bits 32
-_start:
+start:
     mov esp, stack_top
 
     call check_multiboot
