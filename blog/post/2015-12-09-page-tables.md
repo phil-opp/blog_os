@@ -881,7 +881,7 @@ To test the `unmap` function, we unmap the test page so that it translates to `N
 page_table.unmap(Page::containing_address(addr), allocator);
 println!("None = {:?}", page_table.translate(addr));
 ```
-It causes a panic since we call the unimplemented `deallocate_frame` method in `unwrap`. If we comment this call out, it works without problems. But there is some bug in this function nevertheless.
+It causes a panic since we call the unimplemented `deallocate_frame` method in `unmap`. If we comment this call out, it works without problems. But there is some bug in this function nevertheless.
 
 Let's read something from the mapped page (of course before we unmap it again):
 
