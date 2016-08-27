@@ -5,6 +5,8 @@ rust:
     
 cache: cargo
 
+before_script: (cargo install rustfmt || true)
+
 sudo: false
 
 notifications:
