@@ -5,6 +5,10 @@ set -e
 # build rust project
 make
 
+# check formatting (rustfmt)
+PATH=~/.cargo/bin:$PATH
+cargo fmt -- --write-mode=diff
+
 # clone hugo branch, which contains the blog template
 git clone --branch=hugo https://github.com/phil-opp/blog_os.git hugo
 cd hugo
