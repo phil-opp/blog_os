@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/PR-SVG-20010719/DTD/svg10.dtd">
+<svg width="14cm" height="9cm" viewBox="-60 -21 270 172" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <text font-size="9.03111" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="90" y="65.9389">
+    <tspan x="90" y="65.9389"></tspan>
+  </text>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" x1="154" y1="70" x2="126.236" y2="70"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" points="135.118,65 125.118,70 135.118,75 "/>
+  </g>
+  <text font-size="7.90222" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="158" y="72.75">
+    <tspan x="158" y="72.75">Stack Pointer</tspan>
+  </text>
+  <text font-size="7.90222" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="75" y="230">
+    <tspan x="75" y="230"></tspan>
+  </text>
+  <line style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" x1="-20" y1="70" x2="-4" y2="70"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" x1="-20" y1="150" x2="-4" y2="150"/>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 1; stroke-dasharray: 4; stroke: #000000" x1="-12" y1="72.2361" x2="-12" y2="147.764"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" points="-7,81.118 -12,71.118 -17,81.118 "/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" points="-17,138.882 -12,148.882 -7,138.882 "/>
+  </g>
+  <line style="fill: none; fill-opacity:0; stroke-width: 1; stroke-dasharray: 4; stroke: #000000" x1="0" y1="-20" x2="0" y2="0"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 1; stroke-dasharray: 4; stroke: #000000" x1="120" y1="-20" x2="120" y2="0"/>
+  <g>
+    <rect style="fill: #00ff00" x="0" y="0" width="120" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" x="0" y="0" width="120" height="20"/>
+  </g>
+  <text font-size="9.03097" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="60" y="13.125">
+    <tspan x="60" y="13.125">Return Address</tspan>
+  </text>
+  <text font-size="9.03097" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="84" y="4">
+    <tspan x="84" y="4"></tspan>
+  </text>
+  <g>
+    <rect style="fill: #dddddd" x="0" y="20" width="120" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" x="0" y="20" width="120" height="20"/>
+  </g>
+  <text font-size="9.03111" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="60" y="33.125">
+    <tspan x="60" y="33.125">Local Variable 1</tspan>
+  </text>
+  <g>
+    <rect style="fill: #cccccc" x="0" y="40" width="120" height="32"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 1; stroke-dasharray: 4; stroke: #000000" x="0" y="40" width="120" height="32"/>
+  </g>
+  <text font-size="9.03097" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="60" y="59.125">
+    <tspan x="60" y="59.125">Local Variables 2..n</tspan>
+  </text>
+  <line style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" x1="0" y1="40" x2="120" y2="40"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" x1="0" y1="72" x2="120" y2="72"/>
+  <g>
+    <rect style="fill: #ff3333" x="0" y="70" width="120" height="80"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" x="0" y="70" width="120" height="80"/>
+  </g>
+  <text font-size="9.03111" style="fill: #ffffff;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="60" y="113.125">
+    <tspan x="60" y="113.125">Red Zone</tspan>
+  </text>
+  <text font-size="7.9021" style="fill: #000000;text-anchor:end;font-family:sans-serif;font-style:normal;font-weight:normal" x="-20" y="112.75">
+    <tspan x="-20" y="112.75">128 bytes</tspan>
+  </text>
+</svg>
