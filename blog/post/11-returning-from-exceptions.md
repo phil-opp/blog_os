@@ -712,8 +712,178 @@ We add one additional option at the end: `"disable-redzone": true`. As you might
 
 Now we have a red zone free kernel!
 
-## Handers with Error Code
-TODO
+## Exceptions with Error Codes
+We're now able to correctly return from exceptions without error codes. However, we still can't return from exceptions that push an error code (e.g. page faults). Let's fix that by updating our `handler_with_error_code` macro:
+
+{{< highlight rust "hl_lines=13 15" >}}
+// in src/interrupts/mod.rs
+
+macro_rules! handler_with_error_code {
+    ($name: ident) => {{
+        #[naked]
+        extern "C" fn wrapper() -> ! {
+            unsafe {
+                asm!("pop rsi // pop error code into rsi
+                      mov rdi, rsp
+                      sub rsp, 8 // align the stack pointer
+                      call $0"
+                      :: "i"($name as extern "C" fn(
+                          *const ExceptionStackFrame, u64))
+                      : "rdi","rsi" : "intel");
+                asm!("iretq" :::: "intel", "volatile");
+                ::core::intrinsics::unreachable();
+            }
+        }
+        wrapper
+    }}
+}
+{{< / highlight >}}<!--end*-->
+
+First, we change the type of the handler function: no more `-> !`, so it no longer needs to diverge. We also add an `iretq` instruction at the end.
+
+However, now we have the same problem as above: The handler function will overwrite the scratch registers and cause bugs when returning. Let's fix this by invoking `save_scratch_registers` at the beginning:
+
+{{< highlight rust "hl_lines=8 11 14 18" >}}
+// in src/interrupts/mod.rs
+
+macro_rules! handler_with_error_code {
+    ($name: ident) => {{
+        #[naked]
+        extern "C" fn wrapper() -> ! {
+            unsafe {
+                save_scratch_registers!();
+                asm!("pop rsi // pop error code into rsi
+                      mov rdi, rsp
+                      add rdi, 10*8 // calculate exception stack frame pointer
+                      sub rsp, 8 // align the stack pointer
+                      call $0
+                      add rsp, 8 // undo stack pointer alignment
+                      " :: "i"($name as extern "C" fn(
+                          *const ExceptionStackFrame, u64))
+                      : "rdi","rsi" : "intel");
+                restore_scratch_registers!();
+                asm!("iretq" :::: "intel", "volatile");
+                ::core::intrinsics::unreachable();
+            }
+        }
+        wrapper
+    }}
+}
+{{< / highlight >}}<!--end*-->
+Now we backup the scratch registers to the stack right at the beginning and restore them just before the `iretq`. Like in the `handler` macro, we now need to add `10*8` to `rdi` in order to get the correct exception stack frame pointer (`save_scratch_registers` pushes nine 8 byte registers, plus the error code). We also need to undo the stack pointer alignment after the `call` [^fn-stack-alignment].
+
+[^fn-stack-alignment]: The stack alignment is actually wrong here, since we additionally pushed an uneven number of registers. However, the `pop rsi` is wrong too, since the error code is no longer at the top of the stack. When we fix that problem, the stack alignment becomes correct again. So I left it in to keep things simple.
+
+Now we have one last bug: We `pop` the error code into `rsi`, but the error code is no longer at the top of the stack (since `save_scratch_registers` pushed 9 registers on top of it). So we need to do it differently:
+
+{{< highlight rust "hl_lines=9 19" >}}
+// in src/interrupts/mod.rs
+
+macro_rules! handler_with_error_code {
+    ($name: ident) => {{
+        #[naked]
+        extern "C" fn wrapper() -> ! {
+            unsafe {
+                save_scratch_registers!();
+                asm!("mov rsi, [rsp + 9*8] // load error code into rsi
+                      mov rdi, rsp
+                      add rdi, 10*8 // calculate exception stack frame pointer
+                      sub rsp, 8 // align the stack pointer
+                      call $0
+                      add rsp, 8 // undo stack pointer alignment
+                      " :: "i"($name as extern "C" fn(
+                          *const ExceptionStackFrame, u64))
+                      : "rdi","rsi" : "intel");
+                restore_scratch_registers!();
+                asm!("add rsp, 8 // pop error code
+                      iretq" :::: "intel", "volatile");
+                ::core::intrinsics::unreachable();
+            }
+        }
+        wrapper
+    }}
+}
+{{< / highlight >}}<!--end*-->
+
+Instead of using `pop`, we're calculating the error code address manually (`save_scratch_registers` pushes nine 8 byte registers) and load it into `rsi` using a `mov`. So now the error code stays on the stack. But `iretq` doesn't handle the error code, so we need to pop it before invoking `iretq`.
+
+Phew! That was a lot of fiddling with assembly. Let's test if it still works.
+
+### Testing
+First, we test if the exception stack frame pointer and the error code are still correct:
+
+```rust
+// in rust_main in src/lib.rs
+
+...
+unsafe { int!(3) };
+
+// provoke a page fault
+unsafe { *(0xdeadbeaf as *mut u64) = 42; }
+
+println!("It did not crash!");
+...
+```
+
+This should cause the following error message:
+
+```
+EXCEPTION: PAGE FAULT while accessing 0xdeadbeaf
+error code: CAUSED_BY_WRITE
+ExceptionStackFrame {
+    instruction_pointer: 1114753,
+    code_segment: 8,
+    cpu_flags: 2097158,
+    stack_pointer: 1171104,
+    stack_segment: 16
+}
+```
+The error code should still be `CAUSED_BY_WRITE` and the exception stack frame values should also be correct (e.g. `code_segment` should be 8 and `stack_segment` should be 16).
+
+### Page Faults as Breakpoints
+In order to test our `iretq` logic, we _temporary_ define accesses to `0xdeadbeaf` as legal. They should behave exactly like the breakpoint exception: Print an error message and then continue with the next instruction.
+
+Therefore we update our `page_fault_handler`:
+
+{{< highlight rust "hl_lines=10 11 12 13 14 15 16" >}}
+// in src/interrupts/mod.rs
+
+extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
+    error_code: u64)
+{
+    use x86::controlregs;
+    unsafe {  print_error(...); }
+
+    // new
+    if controlregs::cr2() == 0xdeadbeaf {
+        unsafe {
+            let stack_frame = &mut *(stack_frame as *mut ExceptionStackFrame);
+        }
+        stack_frame.instruction_pointer += 7;
+        return;
+    }
+
+    loop {}
+}
+{{< / highlight >}}<!--end*-->
+
+If the accessed memory address (the CPU stores this information in the `cr2` register) is `0xdeadbeaf`, we don't `loop` endlessly. Instead we update the stored instruction pointer and return. Remember, the normal behavior when returning from a page fault is to restart the failing instruction. We don't want that, so we manipulated the stored instruction pointer to point to the next instruction.
+
+In our case, the page fault is caused by the instruction at address `1114753`, which is `0x110281` in hexadecimal. Let's examine this instruction using `objdump`:
+
+```
+> objdump -d build/kernel-x86_64.bin | grep "110281"
+110281:	48 c7 02 2a 00 00 00 	movq   $0x2a,(%rdx)
+```
+It's a `movq` instruction with the 7 byte opcode `48 c7 02 2a 00 00 00`. So the next instruction starts 7 bytes after.
+
+Thus, we can jump to the next instruction in our `page_fault_handler` by adding `7` to the instruction pointer. _This is a horrible hack_, since the page fault could also be caused by other instructions with different opcode lengths. But it's good enough for a quick test.
+
+When we execute `make run` now, we should see the _“It did not crash”_ message after the page fault:
+
+![QEMU showing the the page fault error and the “It did not crash” message](images/qemu-page-fault-as-breakpoint.png)
+
+Our `iretq` logic seems to work! So let's remove the `0xdeadbeaf` hack from our `page_fault_handler` again.
 
 ## What's next?
 double faults
