@@ -886,4 +886,7 @@ When we execute `make run` now, we should see the _“It did not crash”_ messa
 Our `iretq` logic seems to work! So let's remove the `0xdeadbeaf` hack from our `page_fault_handler` again.
 
 ## What's next?
-double faults
+We are now able to catch exceptions and to return from them. However, there are still exceptions that completely crash our kernel by causing a [triple fault]. In the next post, we will fix this issue by handling a special type of exception: the [double fault]. Thus, we will be able to avoid random reboots in our kernel.
+
+[triple fault]: https://en.wikipedia.org/wiki/Triple_fault
+[double fault]: https://en.wikipedia.org/wiki/Double_fault
