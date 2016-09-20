@@ -3,9 +3,16 @@ title = "Returning from Exceptions"
 date = "2016-08-06"
 +++
 
-In this post, we learn how to return from exceptions correctly. TODO
+In this post, we learn how to return from exceptions correctly. In the course of this, we will explore the `iretq` instruction, the C calling convention, multimedia registers, and the red zone.
 
 <!--more--><aside id="toc"></aside>
+
+As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a [comment section] at the end of this page.
+
+[Github]: https://github.com/phil-opp/blog_os/tree/returning_from_exceptions
+[issues]: https://github.com/phil-opp/blog_os/issues
+[gitter chat]: https://gitter.im/phil-opp/blog_os
+[comment section]: #disqus_thread
 
 ## Introduction
 Most exceptions are fatal and can't be resolved. For example, we can't return from a divide-by-zero exception in a reasonable way. However, there are some exceptions that we can resolve:
