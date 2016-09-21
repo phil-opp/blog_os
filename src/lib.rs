@@ -20,6 +20,7 @@ extern crate spin;
 extern crate multiboot2;
 #[macro_use]
 extern crate bitflags;
+#[macro_use]
 extern crate x86;
 #[macro_use]
 extern crate once;
@@ -54,9 +55,8 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // initialize our IDT
     interrupts::init();
 
-    // provoke a page fault
-    unsafe { *(0xdeadbeaf as *mut u64) = 42 };
-
+    // trigger a breakpoint exception
+    unsafe { int!(3) };
 
     println!("It did not crash!");
     loop {}
