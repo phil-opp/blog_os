@@ -27,6 +27,7 @@ git config user.email "travis-update-bot@phil-opp.com"
 rm -r *
 cp -r ../public/. .
 rm -r post post.html page page.html additional-resource additional-resource.html # remove per-category pages/feeds
+rm -r diagrams # remove diagram sources
 
 # commit
 git add --all .
