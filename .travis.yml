@@ -8,6 +8,7 @@ cache: cargo
 before_script:
   - (cargo install rustfmt || true)
   - (cargo install xargo || true)
+  - PATH=$PATH:~/.cargo/bin
 
 sudo: false
 
