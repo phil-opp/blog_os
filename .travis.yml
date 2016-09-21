@@ -20,6 +20,9 @@ addons:
   apt:
     packages:
       - nasm
+      - cmake
+    sources:
+      - kalakris-cmake
 
 script: bash scripts/travis-build.sh
 
