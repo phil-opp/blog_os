@@ -25,10 +25,4 @@ addons:
     sources:
       - kalakris-cmake
 
-script: bash scripts/travis-build.sh
-
-after_success: bash scripts/travis-trigger-hugo-build.sh
-
-env:
-  global:
-    secure: YQvZpLe32k8N+vLMa8PB80LKJdiD4WEUuw2lPFk3AJLSK6dojWq8MKjGuedxLvtmjURu401m7D06NFCjwd6j0dpR4L2xmVJ/EgufP2Wc62BUa2XvIIU/zURv0dFpGvaOTyHKl4j46SIk2LDugIzB1WyYRqeYTCpiN0xHuWsywXjPpCCJ04ftxHwrjYjzA8vvtyehjMeN4HC3J9r6anFlN9Ka7RFVSQ0Bun79pd6Xa/OPIxTsZuw24Ru4v458e4QxVh0atJif0lqmu5tZAeR/S0FTnG3XlKqfIYDmDWKJVKUwk6AHnsgaYAFASQhi9XOcr+cMir38/8k8FQpx80hjqkWXCZafUWuypgQnZOKS8K1oZLmMAQnrssM8HbMZEIYH40I8G5MqcpgPUvdwFO2PMGRNimMk6bEvrtheNwZn1XBTxgNOW4huCBoR0/E95FFGiTH5HL2kZi5N5+1EGJMdhPGjybIdJgawsAY2SOdw6rvHgf+ZMkJFBU2R9ftS88DHygMhkOifLDUq3GFPiFePNrE97LBFH3WN48fxPTcske00tAPTMcMGvw8zDBH4tZAHQikH6oMZFzKNQ0GvBTiKNvLMl1HaCcM/h1QmGXho4HtVD6PNrgOocdVxxXBcntQMVewkcr3hwDwaAZ/7+AqjeG9M+V2wEkI20Y4XYiq24HY=
+script: make
