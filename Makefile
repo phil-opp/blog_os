@@ -8,7 +8,7 @@
 # except according to those terms.
 
 arch ?= x86_64
-target ?= $(arch)-unknown-linux-gnu
+target ?= $(arch)-blog_os
 kernel := build/kernel-$(arch).bin
 iso := build/os-$(arch).iso
 
@@ -49,7 +49,7 @@ $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
 	@ld -n --gc-sections -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
 
 cargo:
-	@cargo build --target $(target)
+	@xargo build --target $(target)
 
 # compile assembly files
 build/arch/$(arch)/%.o: src/arch/$(arch)/%.asm

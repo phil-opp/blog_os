@@ -2,10 +2,13 @@ language: rust
 
 rust:
     - nightly
-    
+
 cache: cargo
 
-before_script: (cargo install rustfmt || true)
+before_script:
+  - (cargo install rustfmt || true)
+  - (cargo install xargo || true)
+  - PATH=$PATH:~/.cargo/bin
 
 sudo: false
 
@@ -18,6 +21,9 @@ addons:
   apt:
     packages:
       - nasm
+      - cmake
+    sources:
+      - kalakris-cmake
 
 script: bash scripts/travis-build.sh
 
