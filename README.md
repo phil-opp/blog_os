@@ -1,48 +1,16 @@
-# Blog OS
+# Blog OS (Returning from Exceptions)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=returning_from_exceptions)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=master)](https://travis-ci.org/phil-opp/blog_os) [![Join the chat at https://gitter.im/phil-opp/blog_os](https://badges.gitter.im/phil-opp/blog_os.svg)](https://gitter.im/phil-opp/blog_os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+This repository contains the source code for the [Returning from Exceptions](http://os.phil-opp.com/returning-from-exceptions.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
 
-This repository contains the source code for the _Writing an OS in Rust_ series at [os.phil-opp.com](http://os.phil-opp.com).
-
-## Bare Bones
-- [A Minimal x86 Kernel](http://os.phil-opp.com/multiboot-kernel.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/multiboot_bootstrap))
-- [Entering Long Mode](http://os.phil-opp.com/entering-longmode.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/entering_longmode))
-- [Set Up Rust](http://os.phil-opp.com/set-up-rust.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/set_up_rust))
-- [Printing to Screen](http://os.phil-opp.com/printing-to-screen.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/printing_to_screen))
-
-## Memory Management
-- [Allocating Frames](http://os.phil-opp.com/allocating-frames.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/allocating_frames))
-- [Page Tables](http://os.phil-opp.com/modifying-page-tables.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/page_tables))
-- [Remap the Kernel](http://os.phil-opp.com/remap-the-kernel.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/remap_the_kernel))
-- [Kernel Heap](http://os.phil-opp.com/kernel-heap.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/kernel_heap))
-
-## Exceptions
-- [Catching Exceptions](http://os.phil-opp.com/catching-exceptions.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/catching_exceptions))
-- [Better Exception Messages](http://os.phil-opp.com/better-exception-messages.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/better_exception_messages))
-- [Returning from Exceptions](http://os.phil-opp.com/returning-from-exceptions.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/returning_from_exceptions))
-
-## Additional Resources
-- [Cross Compile Binutils](http://os.phil-opp.com/cross-compile-binutils.html)
-- [Cross Compile libcore](http://os.phil-opp.com/cross-compile-libcore.html)
-- [Set Up GDB](http://os.phil-opp.com/set-up-gdb.html)
+**Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
 ## Building
-You need to have `nasm`, `grub-mkrescue`, `mformat` (included in `mtools`), `xorriso`, `qemu`, a nighly Rust compiler, and [xargo] installed. Then you can run it using `make run`.
+You need to have `nasm`, `grub-mkrescue`, `xorriso`, `qemu`, a nightly Rust compiler, and [xargo] installed. Then you can run it using `make run`.
 
 [xargo]: https://github.com/japaric/xargo
 
-Please file an issue if you run into any problems.
+Please file an issue if you have any problems.
 
 ## License
-The source code is dual-licensed under MIT or the Apache License (Version 2.0). This excludes the `blog` directory.
+The source code is dual-licensed under MIT or the Apache License (Version 2.0).
