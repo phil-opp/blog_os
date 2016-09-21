@@ -2,10 +2,12 @@ language: rust
 
 rust:
     - nightly
-    
+
 cache: cargo
 
-before_script: (cargo install rustfmt || true)
+before_script:
+  - (cargo install rustfmt || true)
+  - (cargo install xargo || true)
 
 sudo: false
 
