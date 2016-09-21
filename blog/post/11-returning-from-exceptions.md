@@ -17,16 +17,16 @@ As always, the complete source code is on [Github]. Please file [issues] for any
 ## Introduction
 Most exceptions are fatal and can't be resolved. For example, we can't return from a divide-by-zero exception in a reasonable way. However, there are some exceptions that we can resolve:
 
-Imagine a system that uses [memory mapped files]: We map a file into the virtual address space without loading it into memory. Whenever we access a part of the file for the first time, a page fault occurs. However, this page fault is not fatal. We can resolve it by loading the corresponding page from disk into memory and setting the `present` flag in the page table. Then we can return from the page fault handler and restart the failed instruction, which now successfully accesses the file.
+Imagine a system that uses [memory mapped files]: We map a file into the virtual address space without loading it into memory. Whenever we access a part of the file for the first time, a page fault occurs. However, this page fault is not fatal. We can resolve it by loading the corresponding page from disk into memory and setting the `present` flag in the page table. Then we can return from the page fault handler and restart the failed instruction, which now successfully accesses the file data.
 
 [memory mapped files]: https://en.wikipedia.org/wiki/Memory-mapped_file
 
-But memory mapped files are completely out of scope for us right now (we have neither a file concept nor a hard disk driver). So we need an exception that we can resolve easily so that we can return from it in a reasonable way. Fortunately, there is an exception that needs no resolution at all: the breakpoint exception.
+Memory mapped files are completely out of scope for us right now (we have neither a file concept nor a hard disk driver). So we need an exception that we can resolve easily so that we can return from it in a reasonable way. Fortunately, there is an exception that needs no resolution at all: the breakpoint exception.
 
 ## The Breakpoint Exception
 The breakpoint exception is the perfect exception to test our upcoming return-from-exception logic. Its only purpose is to temporary pause a program when the breakpoint instruction `int3` is executed.
 
-The breakpoint exceptions is commonly used in debuggers: When the user sets a breakpoint, the debugger overwrites the corresponding instruction with the `int3` instruction so that the CPU throws the breakpoint exception when it reaches that line. When the user wants to continue the program, the debugger replaces the `int3` instruction with the original instruction again and continues the program. For more details, see the [How debuggers work] series.
+The breakpoint exception is commonly used in debuggers: When the user sets a breakpoint, the debugger overwrites the corresponding instruction with the `int3` instruction so that the CPU throws the breakpoint exception when it reaches that line. When the user wants to continue the program, the debugger replaces the `int3` instruction with the original instruction again and continues the program. For more details, see the [How debuggers work] series.
 
 [How debuggers work]: http://eli.thegreenplace.net/2011/01/27/how-debuggers-work-part-2-breakpoints
 
@@ -74,7 +74,7 @@ lazy_static! {
 We set the IDT entry with number 3 since it's the vector number of the breakpoint exception.
 
 #### Testing it
-In order to test it, we insert trigger the breakpoint exception by executing the `int3` instruction in our `rust_main`:
+In order to test it, we insert an `int3` instruction in our `rust_main`:
 
 {{< highlight rust "hl_lines=3 12 13" >}}
 // in src/lib.rs
@@ -98,7 +98,7 @@ pub extern "C" fn rust_main(...) {
 
 When we execute `make run`, we see the following:
 
-![QEMU showing `EXCEPTION: BREAKPOINT at 0x112006` and a dump of the exception stack frame](images/qemu-breakpoint-handler.png)
+![QEMU showing `EXCEPTION: BREAKPOINT at 0x1100aa` and a dump of the exception stack frame](images/qemu-breakpoint-handler.png)
 
 It works! Now we “just” need to return from the breakpoint handler somehow so that we see the `It did not crash` message again.
 
@@ -126,21 +126,23 @@ IRETQ restores `rip`, `cs`, `rflags`, `rsp`, and `cs` from the values saved on t
 
 We see that `iretq` treats the stored instruction pointer as return address. For most exceptions, the stored `rip` points to the instruction that caused the fault. So by executing `iretq`, we restart the failing instruction. This makes sense because we should have resolved the exception when returning from it, so the instruction should no longer fail (e.g. the accessed part of the memory mapped file is now present in memory).
 
-The situation is a bit different for the breakpoint exception, since it needs no resolution. Restarting the `int3` instruction wouldn't make sense, since it would cause a new breakpoint exception and we would enter an endless loop. For this reason the hardware designers decided that the stored `rip` should point to the instruction _after_ right after the `int3` instruction. Let's check this for our breakpoint handler. Remember, the handler printed the following message (see the image above):
+The situation is a bit different for the breakpoint exception, since it needs no resolution. Restarting the `int3` instruction wouldn't make sense, since it would cause a new breakpoint exception and we would enter an endless loop. For this reason the hardware designers decided that the stored `rip` should point to the next instruction after the `int3` instruction.
+
+Let's check this for our breakpoint handler. Remember, the handler printed the following message (see the image above):
 
 ```
-EXCEPTION: BREAKPOINT at 0x112006
+EXCEPTION: BREAKPOINT at 0x1100aa
 ```
 
-So let's disassemble the instruction at `0x112006` and its predecessor:
+So let's disassemble the instruction at `0x1100aa` and its predecessor:
 
 {{< highlight shell "hl_lines=3" >}}
-> objdump -d build/kernel-x86_64.bin | grep -B1 "112006:"
-  112005:	cc                   	int3   
-  112006:	48 c7 01 2a 00 00 00 	movq   $0x2a,(%rcx)
+> objdump -d build/kernel-x86_64.bin | grep -B1 "1100aa:"
+  1100a9:	cc                   	int3
+  1100aa:	48 89 c6             	mov    %rax,%rsi
 {{< / highlight >}}
 
-We see that `0x112006` indeed points to the next instruction after `int3`. So we can simply jump to the stored instruction pointer when we want to return from the breakpoint exception.
+We see that `0x1100aa` indeed points to the next instruction after `int3`. So we can simply jump to the stored instruction pointer when we want to return from the breakpoint exception.
 
 ### Implementation
 Let's update our `handler!` macro to support non-diverging exception handlers:
@@ -201,18 +203,18 @@ Let's try our new `iretq` logic:
 
 ![QEMU output with `EXCEPTION BREAKPOINT` and `EXCEPTION PAG FAULT` but no `It did not crash`](images/qemu-breakpoint-return-page-fault.png)
 
-Instead of the expected _“It did not crash”_ message after the breakpoint exception, we get another page fault. The strange thing is that our kernel tried to access address `0x0`, which should never happen. So it seems like we messed up something important.
+Instead of the expected _“It did not crash”_ message after the breakpoint exception, we get a page fault. The strange thing is that our kernel tried to access address `0x0`, which should never happen. So it seems like we messed up something important.
 
 ### Debugging
 Let's debug it using GDB. For that we execute `make debug` in one terminal (which starts QEMU with the `-s -S` flags) and then `make gdb` (which starts and connects GDB) in a second terminal. For more information about GDB debugging, check out our [Set Up GDB] guide.
 
 [Set Up GDB]: {{% relref "set-up-gdb.md" %}}
 
-First we want to check if our `iretq` was successful. Therefore we set a breakpoint on the `println!("It did not crash line!")` statement in `src/lib.rs`. Let's assume that it's on line 58:
+First we want to check if our `iretq` was successful. Therefore we set a breakpoint on the `println!("It did not crash line!")` statement in `src/lib.rs`. Let's assume that it's on line 61:
 
 ```
-(gdb) break blog_os/src/lib.rs:58
-Breakpoint 1 at 0x110a95: file /home/.../blog_os/src/lib.rs, line 58.
+(gdb) break blog_os/src/lib.rs:61
+Breakpoint 1 at 0x110a95: file /home/.../blog_os/src/lib.rs, line 61.
 ```
 
 This line is after the `int3` instruction, so we know that the `iretq` succeeded when the breakpoint is hit. To test this, we continue the execution:
@@ -221,23 +223,23 @@ This line is after the `int3` instruction, so we know that the `iretq` succeeded
 (gdb) continue
 Continuing.
 
-Breakpoint 1, blog_os::interrupts::{{impl}}::fmt (self=0x11ee68,
-                                                  __arg_0=0x11eab8)
-    at /home/.../blog_os/src/lib.rs:58
-64	    println!("It did not crash!");
+Breakpoint 1, blog_os::rust_main (multiboot_information_address=1539136)
+    at /home/.../blog_os/src/lib.rs:61
+61	    println!("It did not crash!");
+
 ```
 It worked! So our kernel successfully returned from the `int3` instruction, which means that the `iretq` itself works.
 
 However, when we `continue` the execution again, we get the page fault. So the exception occurs somewhere in the `println` logic. This means that it occurs in code generated by the compiler (and not e.g. in inline assembly). But the compiler should never access `0x0`, so how is this happening?
 
-The answer is that we've violated some compiler invariants in our exception handlers. Thus, the code that works fine without intermediate exceptions, starts to violate memory safety when it's executed after a breakpoint exception. The reason is that our exception handler assumes the wrong calling convention.
+The answer is that we've used the wrong _calling convention_ for our exception handlers. Thus, we violate some compiler invariants so that the code that works fine without intermediate exceptions starts to violate memory safety when it's executed after a breakpoint exception.
 
 ## Calling Conventions
 Exceptions are quite similar to function calls: The CPU jumps to the first instruction of the (handler) function and executes the function. Afterwards, if the function is not diverging, the CPU jumps to the return address and continues the execution of the parent function.
 
 However, there is a major difference between exceptions and function calls: A function call is invoked voluntary by a compiler inserted `call` instruction, while an exception might occur at _any_ instruction. In order to understand the consequences of this difference, we need to examine function calls in more detail.
 
-[Calling conventions] specify the details of a function call. For example, they specify where function parameters are placed (e.g. in registers or on the stack) and how results are returned. On x86_64 Linux, the following rules apply (specified in the [System V ABI]):
+[Calling conventions] specify the details of a function call. For example, they specify where function parameters are placed (e.g. in registers or on the stack) and how results are returned. On x86_64 Linux, the following rules apply for C functions (specified in the [System V ABI]):
 
 [Calling conventions]: https://en.wikipedia.org/wiki/Calling_convention
 [System V ABI]: http://refspecs.linuxbase.org/elf/x86-64-abi-0.99.pdf
@@ -257,7 +259,7 @@ The values of the preserved register must remain unchanged across function calls
 
 In contrast, a called function is allowed to overwrite scratch registers without restrictions. If the caller wants to preserve the value of a scratch register across a function call, it needs to backup and restore it (e.g. by pushing it to the stack before the function call). So the scratch registers are _caller-saved_.
 
-On x86_64, the calling convention specifies the following preserved and scratch registers:
+On x86_64, the C calling convention specifies the following preserved and scratch registers:
 
 preserved registers | scratch registers
 ---|---
@@ -336,6 +338,8 @@ This wrapper function saves all _scratch_ registers to the stack before calling 
 Let's update our handler macro to fix the calling convention problem. Therefore we need to backup and restore all scratch registers. For that we create two new macros:
 
 ```rust
+// in src/interrupts/mod.rs
+
 macro_rules! save_scratch_registers {
     () => {
         asm!("push rax
@@ -366,6 +370,7 @@ macro_rules! restore_scratch_registers {
     }
 }
 ```
+We need to declare these macros _above_ our `handler` macro, since macros are only available after their declaration.
 
 Now we can use these macros to fix our `handler!` macro:
 
@@ -419,14 +424,14 @@ However, modern CPUs also have a set of _special purpose registers_, which can b
 
 ![`(1,2,3,4) + (5,6,7,8) = (6,8,10,12)`](http://mathurl.com/jz3nvev.png)
 
-Such multimedia instructions are called [Single Instruction Multiple Data (SIMD)] instructions, because they simultaneously perform an operation (e.g. addition) on multiple data words. Good compilers are able to transform normal loops such SIMD code automatically. This process is called [auto-vectorization] and can lead to huge performance improvements.
+Such multimedia instructions are called [Single Instruction Multiple Data (SIMD)] instructions, because they simultaneously perform an operation (e.g. addition) on multiple data words. Good compilers are able to transform normal loops into such SIMD code automatically. This process is called [auto-vectorization] and can lead to huge performance improvements.
 
 [Single Instruction Multiple Data (SIMD)]: https://en.wikipedia.org/wiki/SIMD
 [auto-vectorization]: https://en.wikipedia.org/wiki/Automatic_vectorization
 
 However, auto-vectorization causes a problem for us: Most of the multimedia registers are caller-saved. According to our discussion of calling conventions above, this means that our exception handlers erroneously assume that they are allowed to overwrite them without preserving their values.
 
-We don't use any multimedia registers explicitely, but the Rust compiler might auto-vectorize our code (including the exception handlers). Thus we could silently clobber the multimedia registers, which leads to the same problems as above:
+We don't use any multimedia registers explicitly, but the Rust compiler might auto-vectorize our code (including the exception handlers). Thus we could silently clobber the multimedia registers, which leads to the same problems as above:
 
 ![example: program uses mm0, mm1, and mm2. Then the exception handler clobbers mm1.](images/xmm-overwrite.svg)
 
@@ -444,7 +449,7 @@ In order to fix this problem, we need to backup all caller-saved multimedia regi
 [SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
 [AVX]: https://en.wikipedia.org/wiki/Advanced_Vector_Extensions
 
-The Rust compiler (and LLVM) assume that the x86_64-unknown-linux-gnu target supports only MMX and SSE, so we don't need to save the `ymm0` through `ymm15`. But we need to save `xmm0` through `xmm15` and also `mm0` through `mm7`. There is a special instruction to do this: [fxsave]. This instruction saves the floating point and multimedia state to a given address. It needs _512 bytes_ to store that state.
+The Rust compiler (and LLVM) assume that the `x86_64-unknown-linux-gnu` target supports only MMX and SSE, so we don't need to save the `ymm0` through `ymm15`. But we need to save `xmm0` through `xmm15` and also `mm0` through `mm7`. There is a special instruction to do this: [fxsave]. This instruction saves the floating point and multimedia state to a given address. It needs _512 bytes_ to store that state.
 
 [fxsave]: http://x86.renejeschke.de/html/file_module_x86_id_128.html
 
@@ -478,9 +483,9 @@ Fortunately, there exists an alternative solution.
 ### Disabling Multimedia Extensions
 We just disable MMX, SSE, and all the other fancy multimedia extensions. This way, our exception handlers won't clobber the multimedia registers because they won't use them at all.
 
-This solution has its own disadvantages, of course. For example, it leads to slower kernel code because the compiler can't perform any auto-vectorization optimizations. But it's still the faster solution and most kernels do it this way (including Linux).
+This solution has its own disadvantages, of course. For example, it leads to slower kernel code because the compiler can't perform any auto-vectorization optimizations. But it's still the faster solution (since we save many memory accesses) and most kernels do it this way (including Linux).
 
-So how do we disable MMX and SSE? Well, we just tell the compiler that our target system doesn't support it. Since the very beginning, we're compiling our kernel for the `x86_64-unknown-linux-gnu` target. This worked fine so far, but now we want a different target with no support for multimedia extensions. We can do so by creating a _target configuration file_.
+So how do we disable MMX and SSE? Well, we just tell the compiler that our target system doesn't support it. Since the very beginning, we're compiling our kernel for the `x86_64-unknown-linux-gnu` target. This worked fine so far, but now we want a different target without support for multimedia extensions. We can do so by creating a _target configuration file_.
 
 ### Target Specifications
 In order to disable the multimedia extensions for our kernel, we need to compile for a custom target. We want a target that is equal to `x86_64-unknown-linux-gnu`, but without MMX and SSE support. Rust allows us to specify such a target using a JSON configuration file.
@@ -503,10 +508,10 @@ The `llvm-target` field specifies the target triple that is passed to LLVM. We w
 The other fields are used for conditional compilation. This allows crate authors to use `cfg` variables to write special code for depending on the OS or the architecture. There isn't any up-to-date documentation about these fields but the [corresponding source code][target specification] is quite readable.
 
 [data layout]: http://llvm.org/docs/LangRef.html#data-layout
-[target specification]: https://github.com/rust-lang/rust/blob/5114f8a29ba29c7a168b46ede82fb62d67a2d619/src/librustc_back/target/mod.rs#L194-L214
+[target specification]: https://github.com/rust-lang/rust/blob/c772948b687488a087356cb91432425662e034b9/src/librustc_back/target/mod.rs#L194-L214
 
 #### Disabling MMX and SSE
-In order to disable the multimedia extensions, we create a new target named `x86_64-blog_os`. This target is described by a file named `x86_64-blog_os.json` in the project root with the following content:
+In order to disable the multimedia extensions, we create a new target named `x86_64-blog_os`. To describe this target, we create a file named `x86_64-blog_os.json` in the project root with the following content:
 
 {{< highlight json "hl_lines=8" >}}
 {
@@ -532,7 +537,7 @@ In order to compile for the new target, we need to adjust our Makefile:
 +target ?= $(arch)-blog_os
 ...
 ```
-The new target name (`x86_64-blog_os`) is the file name of our JSON configuration without the `.json` extension.
+The new target name (`x86_64-blog_os`) is the file name of the JSON configuration file without the `.json` extension.
 
 ### Cross compilation
 Let's try if our kernel still works with the new target:
@@ -554,7 +559,7 @@ make: *** [cargo] Error 101
 ```
 It doesn't compile anymore. The error tells us that the Rust compiler no longer finds the core library.
 
-The [core library] is implicitly linked to all `no_std` crates and contains things such as `Result`, `Option`, and iterators. We've used that library without problems since [the very beginning], so why is it no longer available anymore?
+The [core library] is implicitly linked to all `no_std` crates and contains things such as `Result`, `Option`, and iterators. We've used that library without problems since [the very beginning], so why is it no longer available?
 
 [core library]: https://doc.rust-lang.org/nightly/core/index.html
 [the very beginning]: {{% relref "03-set-up-rust.md" %}}
@@ -590,7 +595,7 @@ Now the build goes through `xargo`, which should fix the compilation error. Let'
 
 ```
 > make run
-Downloading https://static.rust-lang.org/dist/2016-09-16/rustc-nightly-src.tar.gz
+Downloading https://static.rust-lang.org/dist/2016-09-19/rustc-nightly-src.tar.gz
 Unpacking rustc-nightly-src.tar.gz
 Compiling sysroot for x86_64-blog_os
 Compiling core v0.0.0
@@ -600,7 +605,9 @@ error: Could not compile `core`.
 ```
 Well, we get a different error now, so it seems like we're making progress :).
 
-We see that `xargo` downloads the corresponding source code for our nightly version from the Rust servers and then compiles a new _sysroot_ for our new target. A sysroot contains the various pre-compiled crates such as `core`, `alloc`, and `collections`. However, a strange error occurs when compiling `core`:
+We see that `xargo` downloads the corresponding source code for our Rust nightly from the Rust servers and then compiles a new _sysroot_ for our new target. A sysroot contains the various pre-compiled crates such as `core`, `alloc`, and `collections`.
+
+However, a strange error occurs when compiling `core`:
 
 ```
 LLVM ERROR: SSE register return with SSE disabled
@@ -620,7 +627,7 @@ In order to fix this problem, we need to change our float ABI. The idea is to av
 }
 {{< / highlight >}}
 
-The plus prefix tells LLVM to enable the feature.
+The plus prefix tells LLVM to enable the `soft-float` feature.
 
 Let's try `make run` again:
 
@@ -748,6 +755,16 @@ macro_rules! handler_with_error_code {
 
 First, we change the type of the handler function: no more `-> !`, so it no longer needs to diverge. We also add an `iretq` instruction at the end.
 
+Now we can make our `page_fault_handler` non-diverging:
+
+```diff
+// in src/interrupts/mod.rs
+
+ extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
+-   error_code: u64) -> ! { ... }
++   error_code: u64) { ... }
+```
+
 However, now we have the same problem as above: The handler function will overwrite the scratch registers and cause bugs when returning. Let's fix this by invoking `save_scratch_registers` at the beginning:
 
 {{< highlight rust "hl_lines=8 11 14 18" >}}
@@ -829,7 +846,7 @@ unsafe { int!(3) };
 unsafe { *(0xdeadbeaf as *mut u64) = 42; }
 
 println!("It did not crash!");
-...
+loop {}
 ```
 
 This should cause the following error message:
@@ -848,7 +865,7 @@ ExceptionStackFrame {
 The error code should still be `CAUSED_BY_WRITE` and the exception stack frame values should also be correct (e.g. `code_segment` should be 8 and `stack_segment` should be 16).
 
 ### Page Faults as Breakpoints
-In order to test our `iretq` logic, we _temporary_ define accesses to `0xdeadbeaf` as legal. They should behave exactly like the breakpoint exception: Print an error message and then continue with the next instruction.
+We didn't test returns from the page fault handler yet. In order to test our `iretq` logic, we _temporary_ define accesses to `0xdeadbeaf` as legal. They should behave exactly like the breakpoint exception: Print an error message and then continue with the next instruction.
 
 Therefore we update our `page_fault_handler`:
 
@@ -862,19 +879,19 @@ extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
     unsafe {  print_error(...); }
 
     // new
-    if controlregs::cr2() == 0xdeadbeaf {
-        unsafe {
+    unsafe {
+        if controlregs::cr2() == 0xdeadbeaf {
             let stack_frame = &mut *(stack_frame as *mut ExceptionStackFrame);
+            stack_frame.instruction_pointer += 7;
+            return;
         }
-        stack_frame.instruction_pointer += 7;
-        return;
     }
 
     loop {}
 }
 {{< / highlight >}}<!--end*-->
 
-If the accessed memory address (the CPU stores this information in the `cr2` register) is `0xdeadbeaf`, we don't `loop` endlessly. Instead we update the stored instruction pointer and return. Remember, the normal behavior when returning from a page fault is to restart the failing instruction. We don't want that, so we manipulated the stored instruction pointer to point to the next instruction.
+If the accessed memory address is `0xdeadbeaf` (the CPU stores this information in the `cr2` register), we don't `loop` endlessly. Instead we update the stored instruction pointer and return. Remember, the normal behavior when returning from a page fault is to restart the failing instruction. We don't want that, so we manipulate the stored instruction pointer to point to the next instruction.
 
 In our case, the page fault is caused by the instruction at address `1114753`, which is `0x110281` in hexadecimal. Let's examine this instruction using `objdump`:
 
@@ -890,7 +907,9 @@ When we execute `make run` now, we should see the _“It did not crash”_ messa
 
 ![QEMU showing the the page fault error and the “It did not crash” message](images/qemu-page-fault-as-breakpoint.png)
 
-Our `iretq` logic seems to work! So let's remove the `0xdeadbeaf` hack from our `page_fault_handler` again.
+Our `iretq` logic seems to work!
+
+Let's quickly remove the `0xdeadbeaf` hack from our `page_fault_handler` again and pretend that we've never done that :).
 
 ## What's next?
 We are now able to catch exceptions and to return from them. However, there are still exceptions that completely crash our kernel by causing a [triple fault]. In the next post, we will fix this issue by handling a special type of exception: the [double fault]. Thus, we will be able to avoid random reboots in our kernel.
