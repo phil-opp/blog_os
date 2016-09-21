@@ -1,6 +1,6 @@
 +++
 title = "Returning from Exceptions"
-date = "2016-08-06"
+date = "2016-09-21"
 +++
 
 In this post, we learn how to return from exceptions correctly. In the course of this, we will explore the `iretq` instruction, the C calling convention, multimedia registers, and the red zone.
