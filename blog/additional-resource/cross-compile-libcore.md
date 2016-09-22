@@ -2,46 +2,32 @@
 title = "Cross Compiling: libcore"
 +++
 
-So you're getting an ``error: can't find crate for `core` [E0463]`` when using `--target x86_64-unknown-linux-gnu`. That means that you're not running Linux or not using using a x86_64 processor.
+If you get an `error: can't find crate for 'core'`, you're probably compiling for a different target (e.g. you're passing the `target` option to `cargo build`). Now the compiler complains that it can't find the `core` library. This document gives a quick overview how to fix this problem. For more details, see the [rust-cross] project.
 
-**If you have an x86_64 processor and want a quick fix**, try it with `x86_64-pc-windows-gnu` or `x86_64-apple-darwin` (or simply omit the explicit `--target`).
-
-The idiomatic alternative and the only option for non x86_64 CPUs is described below. Note that you need to [cross compile binutils], too.
-[cross compile binutils]: /cross-compile-binutils.html
+[rust-cross]: https://github.com/japaric/rust-cross
 
 ## Libcore
-The core library is a dependency-free library that is added implicitly when using `#![no_std]`. It provides basic standard library features like Option or Iterator. The core library is installed together with the rust compiler (just like the std library). But the installed libcore is specific to your architecture. If you aren't working on x86_64 Linux and pass `‑‑target x86_64‑unknown‑linux‑gnu` to cargo, it can't find a x86_64 libcore. To fix this, you can either download it or build it using cargo.
+The core library is a dependency-free library that is added implicitly when using `#![no_std]`. It provides basic standard library features like Option or Iterator. The core library is installed together with the rust compiler (just like the std library). But the installed libcore is specific to your architecture. If you aren't working on x86_64 Linux and pass `‑‑target x86_64‑unknown‑linux‑gnu` to cargo, it can't find a x86_64 libcore. To fix this, you can either use `rustup` or `xargo`.
 
-## Download it
-You need to download the 64-bit Linux Rust build corresponding to your installed nightly. You can either just update to the current nightly and download the current nightly source [here][Rust downloads]. Or you retrieve your installed version through `rustc --version` and search the corresponding subfolder [here](http://static.rust-lang.org/dist/).
-[Rust downloads]: https://www.rust-lang.org/downloads.html
+## rustup
+Thanks to [rustup], cross-compilation for [official target triples] is pretty easy today: Just execute `rustup target add x86_64-unknown-linux-gnu`.
 
-After extracting it and you need to copy the `x86_64-unknown-linux-gnu` folder in `rust-std-x86_64-unknown-linux-gnu/lib/rustlib` to your local Rust installation. For multirust, the right target folder is `~/.multirust/toolchains/nightly/lib/rustlib`. That's it!
+[rustup]: https://rustup.rs
+[official target triples]: [target triple]: https://github.com/japaric/rust-cross#the-target-triple
 
-## Build it using cargo
-The alternative is to use cargo to build libcore. But this variant has one big disadvantage: You have to modify each crate you depend on because it needs to use the same libcore. So you can't just add a crates.io dependency anymore, you need to fork and modify it first.
+## xargo
+If you're using a _custom target specification_, the `rustup` method doesn't work. Instead, you can use [xargo]. Xargo is a wrapper for cargo that eases cross compilation. We can install it by executing:
 
-If you want to build libcore anyway, you need its source code. You can either clone the [rust repository] \(makes updates easy) or manually [download the Rust source][Rust downloads] \(faster and less memory).
-[rust repository]: https://github.com/rust-lang/rust
-
-Now we create a new cargo project named `core`, but delete its `src` folder:
-
-```bash
-cargo new core
-rm -r core/src
 ```
-
-Then we create a symbolic link named `src` to the `rust/src/libcore` of the Rust source code:
-
-```bash
-ln -s ../rust/src/libcore core/src
+cargo install xargo
 ```
+If the installation fails, make sure that you have `cmake` and the OpenSSL headers installed. For more details, see the xargo's [dependency section].
 
-To use our new libcore crate (instead of the one installed together with rust) in our OS, we need to add it as a local dependency in the `Cargo.toml`:
+[xargo]: https://github.com/japaric/xargo
+[dependency section]: https://github.com/japaric/xargo#dependencies
 
-```toml
-...
-[dependencies.core]
-path = "core"
-```
-Now cargo compiles libcore for all Rust targets automatically.
+Xargo is “a drop-in replacement for cargo”, so every cargo command also works with `xargo`. You can do e.g. `xargo --help`, `xargo clean`, or `xargo doc`. However, the `build` command gains additional functionality: `xargo build` will automatically cross compile the `core` library (and a few other libraries such as `alloc` and `collections`) when compiling for custom targets.
+
+[xargo]: https://github.com/japaric/xargo
+
+So if your custom target file is named `your-cool-target.json`, you can compile your code using xargo through `xargo build --target your-cool-target` (note the omitted extension).
