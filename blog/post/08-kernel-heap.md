@@ -86,8 +86,8 @@ impl BumpAllocator {
 
     /// Allocates a block of memory with the given size and alignment.
     fn allocate(&mut self, size: usize, align: usize) -> Option<*mut u8> {
-    	let alloc_start = align_up(self.next, align);
-        let alloc_end = alloc_start + size;
+        let alloc_start = align_up(self.next, align);
+        let alloc_end = alloc_start.saturating_add(size);
 
         if alloc_end <= self.heap_start + self.heap_size {
             self.next = alloc_end;
@@ -99,7 +99,7 @@ impl BumpAllocator {
 }
 ```
 
-The `heap_start` and `heap_size` fields just contain the start address and size of our kernel heap. The `next` field contains the next free address and is increased after every allocation. To `allocate` a memory block we align the `next` address using the `align_up` function (decribed below). Then we add up the desired `size` and make sure that we don't exceed the end of the heap. If everything goes well, we update the `next` address and return a pointer to the start address of the allocation. Else, we return `None`.
+The `heap_start` and `heap_size` fields just contain the start address and size of our kernel heap. The `next` field contains the next free address and is increased after every allocation. To `allocate` a memory block we align the `next` address using the `align_up` function (described below). Then we add up the desired `size` and make sure that we don't exceed the end of the heap. We use a saturating add so that the calling code cannot overflow `heap_start`, which would cause undefined behaviour. If everything goes well, we update the `next` address and return a pointer to the start address of the allocation. Else, we return `None`.
 
 Note that we need to add a feature flag at the beginning of the file, because we've marked the `new` function as `const`. [Const functions] are unstable, so we need to add the `#![feature(const_fn)]` flag.
 
