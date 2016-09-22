@@ -80,13 +80,16 @@ Let's break it down:
 [unwinding]: https://doc.rust-lang.org/nomicon/unwinding.html
 
 ## Building Rust
-We can now build it using `cargo build`. To make sure, we are building it for the x86_64 architecture, we can pass an explicit target:
+We can now build it using `cargo build`. To make sure that we build it for the x86_64 architecture and that we use a Linux compatible format, we pass an explicit [target triple]:
+
+[target triple]: https://github.com/japaric/rust-cross#the-target-triple
 
 ```bash
 cargo build --target=x86_64-unknown-linux-gnu
 ```
-It creates a static library at `target/x86_64-unknown-linux-gnu/debug/libblog_os.a`, which can be linked with our assembly kernel. If you're getting an error about a missing `core` crate, [look here][cross compile libcore].
-[cross compile libcore]: {{% relref "cross-compile-libcore.md" %}}
+This command creates a static library at `target/x86_64-unknown-linux-gnu/debug/libblog_os.a`, which can be linked with our assembly kernel.
+
+(If you're getting an error about a missing `core` crate, you're probably using a host system with a different target triple. You can easily resolve this by executing `rustup target add x86_64-unknown-linux-gnu`. This command will install the pre-compiled standard libraries for this target, including the missing `core` crate.)
 
 To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
 
