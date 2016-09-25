@@ -13,7 +13,7 @@ The core library is a dependency-free library that is added implicitly when usin
 Thanks to [rustup], cross-compilation for [official target triples] is pretty easy today: Just execute `rustup target add x86_64-unknown-linux-gnu`.
 
 [rustup]: https://rustup.rs
-[official target triples]: [target triple]: https://github.com/japaric/rust-cross#the-target-triple
+[official target triples]: https://github.com/japaric/rust-cross#the-target-triple
 
 ## xargo
 If you're using a _custom target specification_, the `rustup` method doesn't work. Instead, you can use [xargo]. Xargo is a wrapper for cargo that eases cross compilation. We can install it by executing:
