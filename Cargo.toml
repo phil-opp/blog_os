@@ -13,6 +13,10 @@ spin = "0.3.4"
 [dependencies.hole_list_allocator]
 path = "libs/hole_list_allocator"
 
+[dependencies.lazy_static]
+features = ["spin_no_std"]
+version = "0.2.1"
+
 [dependencies.multiboot2]
 git = "https://github.com/phil-opp/multiboot2-elf64"
 
@@ -20,17 +24,15 @@ git = "https://github.com/phil-opp/multiboot2-elf64"
 default-features = false
 version = "0.7.1"
 
-[dependencies.lazy_static]
-version = "0.2.1"
-features = ["spin_no_std"]
-
 [lib]
 crate-type = ["staticlib"]
 
-[workspace]
+[profile]
 
 [profile.dev]
 panic = "abort"
 
 [profile.release]
 panic = "abort"
+
+[workspace]
