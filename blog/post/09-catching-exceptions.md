@@ -146,7 +146,7 @@ Or:
 self.0 = ((self.0 >> 3) << 3) | stack_index;
 ```
 
-Well, none of these variants is really _readable_ and it's very easy to make mistakes somewhere. Therefore I created a `BitField` type with the following [Range]-based API:
+Well, none of these variants is really _readable_ and it's very easy to make mistakes somewhere. Therefore I created a `BitField` trait that provides the following [Range]-based API:
 
 [Range]: https://doc.rust-lang.org/nightly/core/ops/struct.Range.html
 
@@ -154,11 +154,11 @@ Well, none of these variants is really _readable_ and it's very easy to make mis
 self.0.set_range(0..3, stack_index);
 ```
 
-I think it is much more readable, since we abstracted away all bit-masking details. The `BitField` type is contained in the [bit_field] crate. (It's pretty new, so it might still contain bugs.) To add it as dependency, we run `cargo add bit_field` and add `extern crate bit_field;` to our `src/lib.rs`.
+I think it is much more readable, since we abstracted away all bit-masking details. The `BitField` trait is contained in the [bit_field] crate. (It's pretty new, so it might still contain bugs.) To add it as dependency, we run `cargo add bit_field` and add `extern crate bit_field;` to our `src/lib.rs`.
 
 [bit_field]: https://crates.io/crates/bit_field
 
-Now we can use the crate to implement the methods of `EntryOptions`:
+Now we can use the trait to implement the methods of `EntryOptions`:
 
 ```rust
 // in src/interrupts/idt.rs
@@ -166,11 +166,11 @@ Now we can use the crate to implement the methods of `EntryOptions`:
 use bit_field::BitField;
 
 #[derive(Debug, Clone, Copy)]
-pub struct EntryOptions(BitField<u16>);
+pub struct EntryOptions(u16);
 
 impl EntryOptions {
     fn minimal() -> Self {
-        let mut options = BitField::new(0);
+        let mut options = 0;
         options.set_range(9..12, 0b111); // 'must-be-one' bits
         EntryOptions(options)
     }
