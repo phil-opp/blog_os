@@ -66,11 +66,11 @@ impl Entry {
 use bit_field::BitField;
 
 #[derive(Debug, Clone, Copy)]
-pub struct EntryOptions(BitField<u16>);
+pub struct EntryOptions(u16);
 
 impl EntryOptions {
     fn minimal() -> Self {
-        let mut options = BitField::new(0);
+        let mut options = 0;
         options.set_range(9..12, 0b111); // 'must-be-one' bits
         EntryOptions(options)
     }
