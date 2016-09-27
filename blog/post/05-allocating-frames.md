@@ -44,17 +44,17 @@ Now we can add the argument to our `rust_main`:
 pub extern fn rust_main(multiboot_information_address: usize) { ... }
 ```
 
-Instead of writing an own Multiboot module, we use the [multiboot2-elf64] crate. It gives us some basic information about mapped kernel sections and available memory. I just wrote it for this blog post since I could not find any other Multiboot 2 crate. It's really ugly and incomplete, but it does its job[^fn-multiboot-crate].
+Instead of writing an own Multiboot module, we use the [multiboot2] crate. It gives us some basic information about mapped kernel sections and available memory. I just wrote it for this blog post since I could not find any other Multiboot 2 crate. It's still incomplete, but it does its job.
 
-[multiboot2-elf64]: https://github.com/phil-opp/multiboot2-elf64
-[^fn-multiboot-crate]: All contributions are welcome! If you want to maintain it, please contact me!
+[multiboot2]: https://docs.rs/multiboot2
 
 So let's add a dependency on the git repository:
 
 ```toml
 # in Cargo.toml
-[dependencies.multiboot2]
-git = "https://github.com/phil-opp/multiboot2-elf64"
+[dependencies]
+...
+multiboot2 = "0.1.0"
 ```
 
 ```rust
