@@ -6,6 +6,7 @@ version = "0.1.0"
 [dependencies]
 bit_field = "0.5.0"
 bitflags = "0.7.0"
+multiboot2 = "0.1.0"
 once = "0.2.1"
 rlibc = "0.1.4"
 spin = "0.3.4"
@@ -13,8 +14,6 @@ spin = "0.3.4"
 [dependencies.hole_list_allocator]
 path = "libs/hole_list_allocator"
 
-[dependencies.multiboot2]
-git = "https://github.com/phil-opp/multiboot2-elf64"
 
 [dependencies.x86]
 default-features = false
