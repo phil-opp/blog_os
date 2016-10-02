@@ -481,7 +481,9 @@ However, _we won't do it that way_. The problem is the large amount of memory re
 Fortunately, there exists an alternative solution.
 
 ### Disabling Multimedia Extensions
-We just disable MMX, SSE, and all the other fancy multimedia extensions. This way, our exception handlers won't clobber the multimedia registers because they won't use them at all.
+We just disable MMX, SSE, and all the other fancy multimedia extensions in our kernel[^fn-userspace-sse]. This way, our exception handlers won't clobber the multimedia registers because they won't use them at all.
+
+[^fn-userspace-sse]: Userspace programs will still be able to use the multimedia registers.
 
 This solution has its own disadvantages, of course. For example, it leads to slower kernel code because the compiler can't perform any auto-vectorization optimizations. But it's still the faster solution (since we save many memory accesses) and most kernels do it this way (including Linux).
 
