@@ -62,27 +62,27 @@ impl fmt::Display for DateFmt {
         try!(write!(f, r#"<time datetime="{}">"#, self.0));
 
         try!(if self.0.num_minutes() == 1 {
-            write!(f, "1 minute ago")
+            write!(f, "1\u{a0}minute\u{a0}ago")
         } else if self.0.num_minutes() < 60 {
-            write!(f, "{} minutes ago", self.0.num_minutes())
+            write!(f, "{}\u{a0}minutes\u{a0}ago", self.0.num_minutes())
         } else if self.0.num_hours() == 1 {
-            write!(f, "1 hour ago")
+            write!(f, "1\u{a0}hour\u{a0}ago")
         } else if self.0.num_hours() < 24 {
-            write!(f, "{} hours ago", self.0.num_hours())
+            write!(f, "{}\u{a0}hours\u{a0}ago", self.0.num_hours())
         } else if self.0.num_days() == 1 {
-            write!(f, "1 day ago")
+            write!(f, "1\u{a0}day\u{a0}ago")
         } else if self.0.num_days() < 7 {
-            write!(f, "{} days ago", self.0.num_days())
+            write!(f, "{}\u{a0}days\u{a0}ago", self.0.num_days())
         } else if self.0.num_weeks() == 1 {
-            write!(f, "1 week ago")
+            write!(f, "1\u{a0}week\u{a0}ago")
         } else if self.0.num_weeks() < 4 {
-            write!(f, "{} weeks ago", self.0.num_weeks())
+            write!(f, "{}\u{a0}weeks\u{a0}ago", self.0.num_weeks())
         } else if self.0.num_weeks() == 4 {
-            write!(f, "1 month ago")
+            write!(f, "1\u{a0}month\u{a0}ago")
         } else if self.0.num_days() < 365 {
-            write!(f, "{} months ago", self.0.num_days() / 30)
+            write!(f, "{}\u{a0}months\u{a0}ago", self.0.num_days() / 30)
         } else if self.0.num_days() < 365 * 2 {
-            write!(f, "1 year ago")
+            write!(f, "1\u{a0}year\u{a0}ago")
         } else {
             write!(f, "{} years ago", self.0.num_days() / 365)
         });
