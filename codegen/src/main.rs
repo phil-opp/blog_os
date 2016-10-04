@@ -2,7 +2,7 @@ extern crate requests;
 extern crate getopts;
 extern crate chrono;
 
-use chrono::Duration;
+use chrono::{DateTime, UTC};
 use std::fmt;
 
 fn main() {
@@ -29,8 +29,6 @@ fn main() {
 }
 
 fn pr_list() -> String {
-    use chrono::{UTC, DateTime};
-
     const URL: &'static str = "https://api.github.com/search/issues?q=repo:phil-opp/blog_os+type:\
                                pr+is:merged+label:relnotes";
 
@@ -40,14 +38,11 @@ fn pr_list() -> String {
     let data = res.json().expect("Error parsing JSON");
 
     for pr in data["items"].members().take(5) {
-        let now = UTC::now();
         let merged_at = pr["closed_at"].as_str().unwrap().parse::<DateTime<UTC>>().unwrap();
-        let ago = now - merged_at;
-
-        let item = format!(r#"<li><a href="{}">{}</a> {}"#,
+        let item = format!("<li><a href='{}'>{}</a> {}",
                            pr["html_url"],
                            pr["title"],
-                           DateFmt(ago));
+                           DateFmt(merged_at));
         ret.push_str(&item);
     }
 
@@ -55,38 +50,13 @@ fn pr_list() -> String {
     ret
 }
 
-struct DateFmt(Duration);
+struct DateFmt(DateTime<UTC>);
 
 impl fmt::Display for DateFmt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, r#"<time datetime="{}">"#, self.0));
-
-        try!(if self.0.num_minutes() == 1 {
-            write!(f, "1\u{a0}minute\u{a0}ago")
-        } else if self.0.num_minutes() < 60 {
-            write!(f, "{}\u{a0}minutes\u{a0}ago", self.0.num_minutes())
-        } else if self.0.num_hours() == 1 {
-            write!(f, "1\u{a0}hour\u{a0}ago")
-        } else if self.0.num_hours() < 24 {
-            write!(f, "{}\u{a0}hours\u{a0}ago", self.0.num_hours())
-        } else if self.0.num_days() == 1 {
-            write!(f, "1\u{a0}day\u{a0}ago")
-        } else if self.0.num_days() < 7 {
-            write!(f, "{}\u{a0}days\u{a0}ago", self.0.num_days())
-        } else if self.0.num_weeks() == 1 {
-            write!(f, "1\u{a0}week\u{a0}ago")
-        } else if self.0.num_weeks() < 4 {
-            write!(f, "{}\u{a0}weeks\u{a0}ago", self.0.num_weeks())
-        } else if self.0.num_weeks() == 4 {
-            write!(f, "1\u{a0}month\u{a0}ago")
-        } else if self.0.num_days() < 365 {
-            write!(f, "{}\u{a0}months\u{a0}ago", self.0.num_days() / 30)
-        } else if self.0.num_days() < 365 * 2 {
-            write!(f, "1\u{a0}year\u{a0}ago")
-        } else {
-            write!(f, "{} years ago", self.0.num_days() / 365)
-        });
-
-        write!(f, "</datetime>")
+        write!(f,
+               r#"<time datetime="{}">{}</datetime>"#,
+               self.0,
+               self.0.format("%b\u{a0}%d"))
     }
 }
