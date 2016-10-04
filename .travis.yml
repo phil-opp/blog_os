@@ -1,7 +1,4 @@
-language: go
-
-go:
-  - 1.6
+language: rust
 
 install:
   - export PATH=$HOME/.local/bin:$PATH
