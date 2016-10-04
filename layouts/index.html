@@ -41,6 +41,13 @@
     <li>{{ .Render "link" }}
   {{ end }}
 </ul>
+
+<hr>
+<aside id="recent-updates">
+  <h1>Recent Updates</h1>
+  {{ partial "recent-updates.html" . }}
+</aside>
+
 <hr>
 
 {{ partial "footer.html" . }}

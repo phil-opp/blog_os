@@ -1,5 +1,7 @@
 language: rust
 
+cache: cargo
+
 install:
   - export PATH=$HOME/.local/bin:$PATH
   - pip install pygments --user
@@ -8,10 +10,7 @@ install:
   - wget https://github.com/spf13/hugo/releases/download/v0.16/hugo_0.16_linux-64bit.tgz
   - tar xf hugo_0.16_linux-64bit.tgz
 
-script:
-  - git clone https://github.com/phil-opp/blog_os.git
-  - cp -r blog_os/blog ../blog
-  - ./hugo
+script: bash ci/travis-build.sh
 
 after_success: bash ci/travis-blog-update.sh
 

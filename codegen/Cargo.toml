@@ -1,0 +1,9 @@
+[package]
+authors = ["Philipp Oppermann <dev@phil-opp.com>"]
+name = "codegen"
+version = "0.1.0"
+
+[dependencies]
+chrono = "0.2.25"
+getopts = "0.2.14"
+requests = "0.0.22"
