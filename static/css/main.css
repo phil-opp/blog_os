@@ -164,4 +164,31 @@ aside#toc {
   aside#toc.coarse li ol {
     display: none;
   }
+
+  aside#recent-updates {
+    position: absolute;
+    max-width: 17rem;
+    top: 4rem;
+    margin-left: 45rem;
+    margin-right: 2rem;
+    font-size: 90%;
+  }
+
+  aside#recent-updates h1 {
+    font-size: 110%;
+    margin-bottom: .2rem;
+  }
+
+  aside#recent-updates ul {
+    margin: 0 0 .2rem 0;
+    padding: 0 0 0 1rem;
+  }
+
+  aside#recent-updates ul li {
+    margin-top: .5rem;
+  }
+}
+
+aside#recent-updates time {
+  color: #9a9a9a;
 }
