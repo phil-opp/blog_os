@@ -1,6 +1,7 @@
 +++
 title = "Printing to Screen"
 date = "2015-10-23"
+updated = "2016-10-06"
 aliases = [
     "/2015/10/23/printing-to-screen/",
     "/rust-os/printing-to-screen.html",
@@ -149,7 +150,7 @@ The writer will always write to the last line and shift lines up when a line is 
 #![feature(unique)]
 ```
 
-## Printing to Screen
+## Printing Characters
 Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte (it doesn't compile yet):
 
 ```rust
@@ -165,9 +166,10 @@ impl Writer {
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position;
 
+                let color_code = self.color_code;
                 self.buffer().chars[row][col] = ScreenChar {
                     ascii_character: byte,
-                    color_code: self.color_code,
+                    color_code: color_code,
                 };
                 self.column_position += 1;
             }
@@ -194,13 +196,48 @@ The `buffer()` auxiliary method converts the raw pointer in the `buffer` field i
 When we try to compile it, we get the following error:
 
 ```
-error: cannot move out of borrowed content [E0507]
-    color_code: self.color_code,
-                ^~~~
+error[E0507]: cannot move out of borrowed content
+  --> src/vga_buffer.rs:79:34
+   |
+79 | let color_code = self.color_code;
+   |                  ^^^^ cannot move out of borrowed content
 ```
-The reason it that Rust _moves_ values by default instead of copying them like other languages. And we cannot move `color_code` out of `self` because we only borrowed `self`. For more information check out the [ownership section] in the Rust book. To fix it, we can implement the [Copy trait] for the `ColorCode` type by adding `#[derive(Clone, Copy)]` to its struct.
+The reason it that Rust _moves_ values by default instead of copying them like other languages. And we cannot move `color_code` out of `self` because we only borrowed `self`. For more information check out the [ownership section] in the Rust book.
+
 [ownership section]: https://doc.rust-lang.org/book/ownership.html
-[Copy trait]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
+[by reference]: http://rust-lang.github.io/book/ch04-02-references-and-borrowing.html
+
+To fix it, we can implement the [Copy] trait for the `ColorCode` type. The easiest way to do this is to use the built-in [derive macro]:
+
+[Copy]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
+[derive macro]: http://rustbyexample.com/trait/derive.html
+
+{{< highlight rust "hl_lines=1" >}}
+#[derive(Debug, Clone, Copy)]
+struct ColorCode(u8);
+{{< / highlight >}}
+
+We also derive the [Clone] trait, since it's a requirement for `Copy`, and the [Debug] trait, which allows us to print this field for debugging purposes.
+
+[Clone]: https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html
+[Debug]: https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html
+
+Now our project should compile again.
+
+However, the [documentation for Copy] says: _“if your type can implement Copy, it should”_. Therefore we also derive Copy for `Color` and `ScreenChar`:
+
+[documentation for Copy]: https://doc.rust-lang.org/core/marker/trait.Copy.html#when-should-my-type-be-copy
+
+{{< highlight rust "hl_lines=2 6" >}}
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum Color {...}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+struct ScreenChar {...}
+{{< / highlight >}}
 
 ### Try it out!
 To write some characters to the screen, you can create a temporary function:
@@ -220,7 +257,83 @@ It just creates a new Writer that points to the VGA buffer at `0xb8000`. Then it
 
 [byte character]: https://doc.rust-lang.org/reference.html#characters-and-strings
 
-### Printing Strings
+### Volatile
+We just saw that our `H` was printed correctly. However, it might not work with future Rust compilers that optimize more aggressively.
+
+The problem is that we only write to the `Buffer` and never read from it again. The compiler doesn't know about the side effect that some characters appear on the screen. So it might decide that these writes are unnecessary and can be omitted.
+
+To avoid this erroneous optimization, we need to specify these writes as _[volatile]_. This tells the compiler that the write has side effects and should not be optimized away.
+
+[volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
+
+In order to use volatile writes for the VGA buffer, we use the [volatile][volatile crate] library. This _crate_ (this is how packages are called in the Rust world) provides a `Volatile` wrapper type with `read` and `write` methods. These methods internally use the [read_volatile] and [write_volatile] functions of the standard library and thus guarantee that the reads/writes are not optimized away.
+
+[volatile crate]: https://docs.rs/volatile
+[read_volatile]: https://doc.rust-lang.org/nightly/core/ptr/fn.read_volatile.html
+[write_volatile]: https://doc.rust-lang.org/nightly/core/ptr/fn.write_volatile.html
+
+We can add a dependency on the `volatile` crate by adding it to the `dependencies` section of our `Cargo.toml`:
+
+```toml
+# in Cargo.toml
+
+[dependencies]
+volatile = "0.1.0"
+```
+
+The `0.1.0` is the [semantic] version number. For more information, see the [Specifying Dependencies] guide of the cargo documentation.
+
+[semantic]: http://semver.org/
+[Specifying Dependencies]: http://doc.crates.io/specifying-dependencies.html
+
+Now we've declared that our project depends on the `volatile` crate and are able to import it in `src/lib.rs`:
+
+```rust
+// in src/lib.rs
+
+extern crate volatile;
+```
+
+Let's use it to make writes to the VGA buffer volatile. We update our `Buffer` type as follows:
+
+```rust
+// in src/vga_buffer.rs
+
+use volatile::Volatile;
+
+struct Buffer {
+    chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
+}
+```
+Instead of a `ScreenChar`, we're now using a `Volatile<ScreenChar>`. (The `Volatile` type is [generic] and can wrap (almost) any type). This ensures that we can't accidentally write to it through a “normal” write. Instead, we have to use the `write` method now.
+
+[generic]: https://doc.rust-lang.org/book/generics.html
+
+This means that we have to update our `Writer::write_byte` method:
+
+{{< highlight rust "hl_lines=8 11" >}}
+impl Writer {
+    pub fn write_byte(&mut self, byte: u8) {
+        match byte {
+            b'\n' => self.new_line(),
+            byte => {
+                ...
+
+                self.buffer().chars[row][col].write(ScreenChar {
+                    ascii_character: byte,
+                    color_code: color_code,
+                });
+                ...
+            }
+        }
+    }
+    ...
+}
+{{< / highlight >}}
+
+Instead of a normal assignment using `=`, we're now using the `write` method. This guarantees that the compiler will never optimize away this write.
+
+## Printing Strings
 
 To print whole strings, we can convert them to bytes and print them one-by-one:
 
@@ -275,9 +388,12 @@ Right now, we just ignore newlines and characters that don't fit into the line a
 // in `impl Writer`
 
 fn new_line(&mut self) {
-    for row in 0..(BUFFER_HEIGHT-1) {
-        let buffer = self.buffer();
-        buffer.chars[row] = buffer.chars[row + 1]
+    for row in 1..BUFFER_HEIGHT {
+        for col in 0..BUFFER_WIDTH {
+            let buffer = self.buffer();
+            let character = buffer.chars[row][col].read();
+            buffer.chars[row - 1][col].write(character);
+        }
     }
     self.clear_row(BUFFER_HEIGHT-1);
     self.column_position = 0;
@@ -285,14 +401,7 @@ fn new_line(&mut self) {
 
 fn clear_row(&mut self, row: usize) {/* TODO */}
 ```
-We just move each line to the line above. Notice that the range notation (`..`) is exclusive the upper bound. But when we try to compile it, we get an borrow checker error again:
-
-```
-error: cannot move out of indexed content [E0507]
-    buffer.chars[row] = buffer.chars[row + 1]
-                        ^~~~~~~~~~~~~~~~~~~~~
-```
-It's because of Rust's move semantics again: We try to move out the `ScreenChar` at `row + 1`. If Rust would allow that, the array would become invalid as it would contain some valid and some moved out values. Fortunately, the `ScreenChar` type meets all criteria for the [Copy trait], so we can fix the problem by adding `#[derive(Clone, Copy)]` to `ScreenChar`.
+We iterate over all screen characters and move each characters one row up. Note that the range notation (`..`) is exclusive the upper bound. We also omit the 0th row (the first range starts at `1`) because it's the row that is shifted off screen.
 
 Now we only need to implement the `clear_row` method to finish the newline code:
 
@@ -303,9 +412,12 @@ fn clear_row(&mut self, row: usize) {
         ascii_character: b' ',
         color_code: self.color_code,
     };
-    self.buffer().chars[row] = [blank; BUFFER_WIDTH];
+    for col in 0..BUFFER_WIDTH {
+        self.buffer().chars[row][col].write(blank);
+    }
 }
 ```
+This method clears a row by overwriting all of its characters with a space character.
 
 ## Providing an Interface
 To provide a global writer that can used as an interface from other modules, we can add a `static` writer:

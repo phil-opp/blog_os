@@ -10,6 +10,7 @@
 use core::ptr::Unique;
 use core::fmt;
 use spin::Mutex;
+use volatile::Volatile;
 
 const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
@@ -50,8 +51,8 @@ pub unsafe fn print_error(fmt: fmt::Arguments) {
     writer.write_fmt(fmt);
 }
 
-
 #[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum Color {
     Black = 0,
@@ -89,10 +90,12 @@ impl Writer {
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position;
 
-                self.buffer().chars[row][col] = ScreenChar {
+                let color_code = self.color_code;
+
+                self.buffer().chars[row][col].write(ScreenChar {
                     ascii_character: byte,
-                    color_code: self.color_code,
-                };
+                    color_code: color_code,
+                });
                 self.column_position += 1;
             }
         }
@@ -103,9 +106,12 @@ impl Writer {
     }
 
     fn new_line(&mut self) {
-        for row in 0..(BUFFER_HEIGHT - 1) {
-            let buffer = self.buffer();
-            buffer.chars[row] = buffer.chars[row + 1]
+        for row in 1..BUFFER_HEIGHT {
+            for col in 0..BUFFER_WIDTH {
+                let buffer = self.buffer();
+                let character = buffer.chars[row][col].read();
+                buffer.chars[row - 1][col].write(character);
+            }
         }
         self.clear_row(BUFFER_HEIGHT - 1);
         self.column_position = 0;
@@ -116,7 +122,9 @@ impl Writer {
             ascii_character: b' ',
             color_code: self.color_code,
         };
-        self.buffer().chars[row] = [blank; BUFFER_WIDTH];
+        for col in 0..BUFFER_WIDTH {
+            self.buffer().chars[row][col].write(blank);
+        }
     }
 }
 
@@ -129,7 +137,7 @@ impl fmt::Write for Writer {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 struct ColorCode(u8);
 
 impl ColorCode {
@@ -138,7 +146,7 @@ impl ColorCode {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 struct ScreenChar {
     ascii_character: u8,
@@ -146,5 +154,5 @@ struct ScreenChar {
 }
 
 struct Buffer {
-    chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
+    chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
