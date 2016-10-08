@@ -260,11 +260,13 @@ It just creates a new Writer that points to the VGA buffer at `0xb8000`. Then it
 ### Volatile
 We just saw that our `H` was printed correctly. However, it might not work with future Rust compilers that optimize more aggressively.
 
-The problem is that we only write to the `Buffer` and never read from it again. The compiler doesn't know about the side effects (some characters appear on the screen), so it might decide that these writes are unnecessary.
+The problem is that we only write to the `Buffer` and never read from it again. The compiler doesn't know about the side effect that some characters appear on the screen. So it might decide that these writes are unnecessary and can be omitted.
 
-To avoid this erroneous optimization, we need to specify these writes as _volatile_. This tells the compiler that the write has side effects and should not be removed.
+To avoid this erroneous optimization, we need to specify these writes as _[volatile]_. This tells the compiler that the write has side effects and should not be optimized away.
 
-In order to use volatile writes for the VGA buffer, we use the [volatile][volatile crate] library. This _crate_ (this is how libraries are called in the Rust world) provides a `Volatile` wrapper type with `read` and `write` methods. These methods internally use the [read_volatile] and [write_volatile] functions of the standard library and thus guarantee that the reads/writes are not optimized away.
+[volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
+
+In order to use volatile writes for the VGA buffer, we use the [volatile][volatile crate] library. This _crate_ (this is how packages are called in the Rust world) provides a `Volatile` wrapper type with `read` and `write` methods. These methods internally use the [read_volatile] and [write_volatile] functions of the standard library and thus guarantee that the reads/writes are not optimized away.
 
 [volatile crate]: https://docs.rs/volatile
 [read_volatile]: https://doc.rust-lang.org/nightly/core/ptr/fn.read_volatile.html
@@ -292,7 +294,7 @@ Now we've declared that our project depends on the `volatile` crate and are able
 extern crate volatile;
 ```
 
-Let's use this crate to make writes to the VGA buffer volatile. We update our `Buffer` type as follows:
+Let's use it to make writes to the VGA buffer volatile. We update our `Buffer` type as follows:
 
 ```rust
 // in src/vga_buffer.rs
