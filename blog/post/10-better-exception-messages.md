@@ -264,7 +264,26 @@ Let's do it by burning it to an USB stick:
 
 Replace `sdX` by the device name of your USB stick. But **be careful**! The command will erase everything on that device.
 
-When we boot from this USB stick now, we see that our computer reboots just before printing the exception message. So our code, which worked well in QEMU, _causes a triple fault_ on real hardware. What's happening?
+Now we should be able to boot from this USB stick. When we do it, we see that it works fine on real hardware, too. Great!
+
+However, this section wouldn't exist if there weren't a problem. To trigger this problem, we add some example code to the start of our `divide_by_zero_handler`:
+
+{{< highlight rust "hl_lines=4 5 6" >}}
+// in src/interrupts/mod.rs
+
+extern "C" fn divide_by_zero_handler(...) {
+    let x = (1u64, 2u64, 3u64);
+    let y = Some(x);
+    for i in (0..100).map(|z| (z, z - 1)) {}
+
+    unsafe { print_error(...)); }
+    loop {}
+}
+{{< / highlight >}}
+
+This is just some garbage code that doesn't do anything useful. When we try it in QEMU using `make run`, it still works fine. However, when we burn it to an USB stick again and boot from it on real hardware, we see that our computer reboots just before printing the exception message.
+
+So our code, which worked well in QEMU, _causes a triple fault_ on real hardware. What's happening?
 
 ### Reproducing the Bug in QEMU
 Debugging on a real machine is difficult. Fortunately there is a way to reproduce this bug in QEMU: We use Linux's [Kernel-based Virtual Machine] \(KVM) by passing the `‑enable-kvm` flag:
