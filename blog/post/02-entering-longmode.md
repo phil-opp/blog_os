@@ -23,9 +23,6 @@ I tried to explain everything in detail and to keep the code as simple as possib
 [create an issue]: https://github.com/phil-opp/blog_os/issues
 [source code]: https://github.com/phil-opp/blog_os/tree/entering_longmode/src/arch/x86_64
 
-_Notable Changes_: We don't use 1GiB pages anymore, since they have [compatibility problems][1GiB page problems]. The identity mapping is now done through 2MiB pages.
-[1GiB page problems]: https://github.com/phil-opp/blog_os/issues/17
-
 ## Some Tests
 To avoid bugs and strange errors on old CPUs we should check if the processor supports every needed feature. If not, the kernel should abort and display an error message. To handle errors easily, we create an error procedure in `boot.asm`. It prints a rudimentary `ERR: X` message, where X is an error code letter, and hangs:
 

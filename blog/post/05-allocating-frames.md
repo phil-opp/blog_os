@@ -227,9 +227,6 @@ pub struct Frame {
 ```
 (Don't forget to add the `mod memory` line to `src/lib.rs`.) Instead of e.g. the start address, we just store the frame number. We use `usize` here since the number of frames depends on the memory size. The long `derive` line makes frames printable and comparable.
 
-_Update_: In a previous version, the `Clone` and `Copy` traits were derived, too. [This was removed][PR 52] to make the allocator interface safer.
-[PR 52]: https://github.com/phil-opp/blog_os/pull/52
-
 To make it easy to get the corresponding frame for a physical address, we add a `containing_address` method:
 
 ```rust
