@@ -253,7 +253,7 @@ By using recursive mapping, each page table is accessible through an unique virt
 Of course recursive mapping has some disadvantages, too. It occupies a P4 entry and thus 512GiB of the virtual address space. But since we're in long mode and have a 48-bit address space, there are still 225.5TiB left. The bigger problem is that only the active table can be modified by default. To access another table, the recursive entry needs to be replaced temporary. We will tackle this problem in the next post when we switch to a new page table.
 
 ### Implementation
-To map the P4 table recursively, we just need to point the 511th entry to the table itself. It's very easy to just add some lines to our boot assembly:
+To map the P4 table recursively, we just need to point the 511th entry to the table itself. We can do so by adding some lines to our boot assembly:
 
 ```nasm
 mov eax, p4_table
