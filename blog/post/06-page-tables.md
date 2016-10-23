@@ -260,7 +260,7 @@ mov eax, p4_table
 or eax, 0b11 ; present + writable
 mov [p4_table + 511 * 8], eax
 ```
-I put it right after the `set_up_page_tables` label, but you can add it wherever you like, **as long it's before paging gets enabled**. Why? since once we've set paging on, the p4_table will be treatd as a **virtual address** - so it won't work!
+I put it right after the `set_up_page_tables` label, but you can add it wherever you like, **as long it's before paging gets enabled**. Why? since once we've set paging on, the p4_table will be treated as a **virtual address** - so it won't work!
 We have to map the P4 table recursively before setting paging.
 We could do it also in Rust, but it would be more complicated since it requires some fiddling with unsafe pointers.
 
