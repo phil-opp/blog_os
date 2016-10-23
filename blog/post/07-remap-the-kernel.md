@@ -769,7 +769,7 @@ pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
 }
 ```
 This function activates the given inactive table and returns the previous active table as a `InactivePageTable`. We don't need to flush the TLB here, as the CPU does it automatically when the P4 table is switched. In fact, the `tlb::flush_all` function, which we used above, does nothing more than [reloading the CR3 register].
-[reloading the CR3 register]: https://github.com/gz/rust-x86/blob/master/src/tlb.rs#L19
+[reloading the CR3 register]: https://github.com/gz/rust-x86/blob/master/src/shared/tlb.rs#L19
 
 Now we are finally able to switch to the new table. We do it by adding the following lines to our `remap_the_kernel` function:
 
