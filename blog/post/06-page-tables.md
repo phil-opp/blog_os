@@ -253,14 +253,16 @@ By using recursive mapping, each page table is accessible through an unique virt
 Of course recursive mapping has some disadvantages, too. It occupies a P4 entry and thus 512GiB of the virtual address space. But since we're in long mode and have a 48-bit address space, there are still 225.5TiB left. The bigger problem is that only the active table can be modified by default. To access another table, the recursive entry needs to be replaced temporary. We will tackle this problem in the next post when we switch to a new page table.
 
 ### Implementation
-To map the P4 table recursively, we just need to point the 511th entry to the table itself. Of course we could do it in Rust, but it would require some fiddling with unsafe pointers. It's easier to just add some lines to our boot assembly:
+To map the P4 table recursively, we just need to point the 511th entry to the table itself. We can do so by adding some lines to our boot assembly:
 
 ```nasm
 mov eax, p4_table
 or eax, 0b11 ; present + writable
 mov [p4_table + 511 * 8], eax
 ```
-I put it right after the `set_up_page_tables` label, but you can add it wherever you like.
+
+I put it right after the `set_up_page_tables` label, but you can add it wherever you like, *as long it's before paging gets enabled*. Why? since once we've set paging on, the p4_table will be treated as a *virtual address* - so it won't work!
+We could do it also in Rust, but it would be more complicated since it requires some fiddling with unsafe pointers.
 
 Now we can use special virtual addresses to access the page tables. The P4 table is available at `0xfffffffffffff000`. Let's add a P4 constant to the `table` submodule:
 
