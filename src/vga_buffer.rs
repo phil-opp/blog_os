@@ -43,17 +43,6 @@ pub fn clear_screen() {
     }
 }
 
-pub fn print_error(fmt: fmt::Arguments) {
-    use core::fmt::Write;
-    use core::mem;
-
-    let mut writer = WRITER.lock();
-    let red = ColorCode::new(Color::Red, Color::Black);
-    let default_color = mem::replace(&mut writer.color_code, red);
-    writer.write_fmt(fmt).unwrap();
-    writer.color_code = default_color;
-}
-
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
