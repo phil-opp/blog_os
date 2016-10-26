@@ -28,9 +28,13 @@ macro_rules! println {
 
 macro_rules! print {
     ($($arg:tt)*) => ({
-            use core::fmt::Write;
-            $crate::vga_buffer::WRITER.lock().write_fmt(format_args!($($arg)*)).unwrap();
+            $crate::vga_buffer::print(format_args!($($arg)*));
     });
+}
+
+pub fn print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
 }
 
 pub fn clear_screen() {
