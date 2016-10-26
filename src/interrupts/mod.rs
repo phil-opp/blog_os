@@ -23,9 +23,7 @@ pub fn init() {
     IDT.load();
 }
 
-use vga_buffer::print_error;
-
 extern "C" fn divide_by_zero_handler() -> ! {
-    unsafe { print_error(format_args!("EXCEPTION: DIVIDE BY ZERO")) };
+    println!("EXCEPTION: DIVIDE BY ZERO");
     loop {}
 }
