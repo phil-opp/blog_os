@@ -43,16 +43,15 @@ pub fn clear_screen() {
     }
 }
 
-pub unsafe fn print_error(fmt: fmt::Arguments) {
+pub fn print_error(fmt: fmt::Arguments) {
     use core::fmt::Write;
+    use core::mem;
 
-    let mut writer = Writer {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Red, Color::Black),
-        buffer: Unique::new(0xb8000 as *mut _),
-    };
-    writer.new_line();
-    writer.write_fmt(fmt);
+    let mut writer = WRITER.lock();
+    let red = ColorCode::new(Color::Red, Color::Black);
+    let default_color = mem::replace(&mut writer.color_code, red);
+    writer.write_fmt(fmt).unwrap();
+    writer.color_code = default_color;
 }
 
 #[allow(dead_code)]
