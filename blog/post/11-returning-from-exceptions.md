@@ -40,7 +40,7 @@ Let's start by defining a handler function for the breakpoint exception:
 ```rust
 // in src/interrupts/mod.rs
 
-extern "C" fn breakpoint_handler(stack_frame: *const ExceptionStackFrame) -> !
+extern "C" fn breakpoint_handler(stack_frame: &ExceptionStackFrame) -> !
 {
     let stack_frame = unsafe { &*stack_frame };
     println!("\nEXCEPTION: BREAKPOINT at {:#x}\n{:#?}",
@@ -157,7 +157,7 @@ macro_rules! handler {
                       sub rsp, 8 // align the stack pointer
                       call $0"
                       :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame)) // no longer diverging
+                          &ExceptionStackFrame)) // no longer diverging
                       : "rdi" : "intel", "volatile");
 
                 // new
@@ -180,16 +180,16 @@ We've changed the handler function type, so we need to adjust our existing excep
 // in src/interrupts/mod.rs
 
 extern "C" fn divide_by_zero_handler(
--   stack_frame: *const ExceptionStackFrame) -> ! {...}
-+   stack_frame: *const ExceptionStackFrame) {...}
+-   stack_frame: &ExceptionStackFrame) -> ! {...}
++   stack_frame: &ExceptionStackFrame) {...}
 
 extern "C" fn invalid_opcode_handler(
--   stack_frame: *const ExceptionStackFrame) -> ! {...}
-+   stack_frame: *const ExceptionStackFrame) {...}
+-   stack_frame: &ExceptionStackFrame) -> ! {...}
++   stack_frame: &ExceptionStackFrame) {...}
 
 extern "C" fn breakpoint_handler(
--   stack_frame: *const ExceptionStackFrame) -> ! {
-+   stack_frame: *const ExceptionStackFrame) {
+-   stack_frame: &ExceptionStackFrame) -> ! {
++   stack_frame: &ExceptionStackFrame) {
     println!(...);
 -   loop {}
 }
@@ -386,7 +386,7 @@ macro_rules! handler {
                       // sub rsp, 8 (stack is aligned already)
                       call $0"
                       :: "i"($name as
-                             extern "C" fn(*const ExceptionStackFrame))
+                             extern "C" fn(&ExceptionStackFrame))
                       : "rdi" : "intel", "volatile");
 
                 restore_scratch_registers!();
@@ -742,7 +742,7 @@ macro_rules! handler_with_error_code {
                       sub rsp, 8 // align the stack pointer
                       call $0"
                       :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame, u64))
+                          &ExceptionStackFrame, u64))
                       : "rdi","rsi" : "intel");
                 asm!("iretq" :::: "intel", "volatile");
                 ::core::intrinsics::unreachable();
@@ -760,7 +760,7 @@ Now we can make our `page_fault_handler` non-diverging:
 ```diff
 // in src/interrupts/mod.rs
 
- extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
+ extern "C" fn page_fault_handler(stack_frame: &ExceptionStackFrame,
 -   error_code: u64) -> ! { ... }
 +   error_code: u64) { ... }
 ```
@@ -783,7 +783,7 @@ macro_rules! handler_with_error_code {
                       call $0
                       add rsp, 8 // undo stack pointer alignment
                       " :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame, u64))
+                          &ExceptionStackFrame, u64))
                       : "rdi","rsi" : "intel");
                 restore_scratch_registers!();
                 asm!("iretq" :::: "intel", "volatile");
@@ -816,7 +816,7 @@ macro_rules! handler_with_error_code {
                       call $0
                       add rsp, 8 // undo stack pointer alignment
                       " :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame, u64))
+                          &ExceptionStackFrame, u64))
                       : "rdi","rsi" : "intel");
                 restore_scratch_registers!();
                 asm!("add rsp, 8 // pop error code
@@ -872,7 +872,7 @@ Therefore we update our `page_fault_handler`:
 {{< highlight rust "hl_lines=10 11 12 13 14 15 16" >}}
 // in src/interrupts/mod.rs
 
-extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
+extern "C" fn page_fault_handler(stack_frame: &ExceptionStackFrame,
     error_code: u64)
 {
     use x86::controlregs;
