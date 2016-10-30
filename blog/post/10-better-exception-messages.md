@@ -55,12 +55,11 @@ Now we need a way to find the memory address of this stack frame. When we look a
 // in src/interrupts/mod.rs
 
 extern "C" fn divide_by_zero_handler() -> ! {
-    let stack_frame: *const ExceptionStackFrame;
+    let stack_frame: &ExceptionStackFrame;
     unsafe {
         asm!("mov $0, rsp" : "=r"(stack_frame) ::: "intel");
-        println!("\nEXCEPTION: DIVIDE BY ZERO\n{:#?}",
-            *stack_frame);
-    };
+    }
+    println!("\nEXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame);
     loop {}
 }
 ```
@@ -169,7 +168,7 @@ extern "C" fn divide_by_zero_wrapper() -> ! {
     }
 }
 
-extern "C" fn divide_by_zero_handler(stack_frame: *const ExceptionStackFrame)
+extern "C" fn divide_by_zero_handler(stack_frame: &ExceptionStackFrame)
     -> !
 {
     println!("\nEXCEPTION: DIVIDE BY ZERO\n{:#?}",
@@ -433,7 +432,7 @@ macro_rules! handler {
                       sub rsp, 8 // align the stack pointer
                       call $0"
                       :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame) -> !)
+                          &ExceptionStackFrame) -> !)
                       : "rdi" : "intel");
                 ::core::intrinsics::unreachable();
             }
@@ -442,7 +441,7 @@ macro_rules! handler {
     }}
 }
 ```
-The macro takes a single Rust identifier (`ident`) as argument and expands to a `{}` block (hence the double braces). The block defines a new wrapper function that calls the function `$name` and passes a pointer to the exception stack frame. Note that we're fixing the argument type to `*const ExceptionStackFrame`. If we used a `_` like before, the passed function could accept an arbitrary argument, which would lead to ugly bugs at runtime.
+The macro takes a single Rust identifier (`ident`) as argument and expands to a `{}` block (hence the double braces). The block defines a new wrapper function that calls the function `$name` and passes a pointer to the exception stack frame. Note that we're fixing the argument type to `&ExceptionStackFrame`. If we used a `_` like before, the passed function could accept an arbitrary argument, which would lead to ugly bugs at runtime.
 
 Now we can remove the `divide_by_zero_wrapper` and use our new `handler!` macro instead:
 
@@ -475,7 +474,7 @@ lazy_static! {
     };
 }
 
-extern "C" fn invalid_opcode_handler(stack_frame: *const ExceptionStackFrame)
+extern "C" fn invalid_opcode_handler(stack_frame: &ExceptionStackFrame)
     -> !
 {
     let stack_frame = unsafe { &*stack_frame };
@@ -527,7 +526,7 @@ macro_rules! handler_with_error_code {
                       sub rsp, 8 // align the stack pointer
                       call $0"
                       :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame, u64) -> !)
+                          &ExceptionStackFrame, u64) -> !)
                       : "rdi","rsi" : "intel");
                 ::core::intrinsics::unreachable();
             }
@@ -544,7 +543,7 @@ Let's write a page fault handler which analyzes and prints the error code:
 ```rust
 // in src/interrupts/mod.rs
 
-extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
+extern "C" fn page_fault_handler(stack_frame: &ExceptionStackFrame,
                                  error_code: u64) -> !
 {
     println!(
@@ -626,7 +625,7 @@ bitflags! {
 Now we can improve our page fault error message by using the new `PageFaultErrorCode`. We also print the accessed memory address:
 
 ```rust
-extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
+extern "C" fn page_fault_handler(stack_frame: &ExceptionStackFrame,
                                  error_code: u64) -> !
 {
     use x86::controlregs;
