@@ -547,7 +547,7 @@ pub extern "C" fn rust_main(...) {
 
 It works! We see a `EXCEPTION: DIVIDE BY ZERO` message at the bottom of our screen:
 
-![QEMU screenshot with `EXCEPTION: PAGE BY ZERO` message](images/qemu-divide-error-println.png)
+![QEMU screenshot with `EXCEPTION: DIVIDE BY ZERO` message](images/qemu-divide-error-println.png)
 
 ## What's next?
 We've successfully caught our first exception! However, our `EXCEPTION: DIVIDE BY ZERO` message doesn't contain much information about the cause of the exception. The next post improves the situation by printing i.a. the current stack pointer and address of the causing instruction. We will also explore other exceptions such as page faults, for which the CPU pushes an _error code_ on the stack.
