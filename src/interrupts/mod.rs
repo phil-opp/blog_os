@@ -49,7 +49,7 @@ macro_rules! handler {
                       add rdi, 9*8 // calculate exception stack frame pointer
                       call $0"
                       :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame))
+                          &ExceptionStackFrame))
                       : "rdi" : "intel");
 
                 restore_scratch_registers!();
@@ -74,7 +74,7 @@ macro_rules! handler_with_error_code {
                       call $0
                       add rsp, 8 // undo stack pointer alignment
                       " :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame, u64))
+                          &ExceptionStackFrame, u64))
                       : "rdi","rsi" : "intel");
                 restore_scratch_registers!();
                 asm!("add rsp, 8 // pop error code
@@ -113,21 +113,18 @@ struct ExceptionStackFrame {
     stack_segment: u64,
 }
 
-extern "C" fn divide_by_zero_handler(stack_frame: *const ExceptionStackFrame) {
-    let stack_frame = unsafe { &*stack_frame };
+extern "C" fn divide_by_zero_handler(stack_frame: &ExceptionStackFrame) {
     println!("\nEXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame);
     loop {}
 }
 
-extern "C" fn breakpoint_handler(stack_frame: *const ExceptionStackFrame) {
-    let stack_frame = unsafe { &*stack_frame };
+extern "C" fn breakpoint_handler(stack_frame: &ExceptionStackFrame) {
     println!("\nEXCEPTION: BREAKPOINT at {:#x}\n{:#?}",
              stack_frame.instruction_pointer,
              stack_frame);
 }
 
-extern "C" fn invalid_opcode_handler(stack_frame: *const ExceptionStackFrame) {
-    let stack_frame = unsafe { &*stack_frame };
+extern "C" fn invalid_opcode_handler(stack_frame: &ExceptionStackFrame) {
     println!("\nEXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
              stack_frame.instruction_pointer,
              stack_frame);
@@ -144,8 +141,7 @@ bitflags! {
     }
 }
 
-extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame, error_code: u64) {
-    let stack_frame = unsafe { &*stack_frame };
+extern "C" fn page_fault_handler(stack_frame: &ExceptionStackFrame, error_code: u64) {
     use x86::controlregs;
     println!("\nEXCEPTION: PAGE FAULT while accessing {:#x}\nerror code: \
                                   {:?}\n{:#?}",
