@@ -575,6 +575,56 @@ pub extern fn rust_main() {
 ```
 Since we imported the macros at crate level, they are available in all modules and thus provide an easy and safe interface to the VGA buffer.
 
+### Deadlock
+Whenever use locks, we must be careful to not accidentally introduce deadlocks. A [deadlock] occurs when a thread/program waits for a lock that will never be released. Normally, this happens when multiple threads access multiple locks. For example, when thread A holds lock 1 and tries to acquire lock 2 and -- at the same time -- thread B holds lock 2 and tries to acquire lock 1.
+
+[deadlock]: https://en.wikipedia.org/wiki/Deadlock
+
+However, a deadlock can also occur when a thread tries to acquire the same lock twice. Thus, we can trigger a deadlock in our VGA driver:
+
+```rust
+// in rust_main in src/lib.rs
+
+println!("{}", { println!("inner"); "outer" });
+```
+The first argument is new block that resolves to the string _“outer”_ (a block always returns the result of the last expression). But before returning “outer”, the block tries to print the string _“inner”_.
+
+When we try it, we see that neither of the strings are printed. To understand what's happening, we take a look at our `print` macro again:
+
+```rust
+macro_rules! print {
+    ($($arg:tt)*) => ({
+        use core::fmt::Write;
+        let mut writer = $crate::vga_buffer::WRITER.lock();
+        writer.write_fmt(format_args!($($arg)*)).unwrap();
+    });
+}
+```
+So we _first_ lock the `WRITER` and then we evaluate the arguments using `format_args`. The problem is that the first argument in our code example contains another `println`, which tries to lock the `WRITER` again. So now the inner `println` waits for the outer `println` and vice versa. Thus, a deadlock occurs and the CPU spins endlessly.
+
+### Fixing the Deadlock
+In order to fix the deadlock, we need to evaluate the arguments _before_ locking the `WRITER`. We can do so by using the same approach as the standard library:
+
+```rust
+// in src/vga_buffer.rs
+
+macro_rules! print {
+    ($($arg:tt)*) => ({
+        $crate::vga_buffer::print(format_args!($($arg)*));
+    });
+}
+
+pub fn print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
+}
+```
+Now the macro evaluates the arguments (through `format_args!`) and passes it to the new `print` function. The function then locks the `WRITER` and prints the formatting arguments using `write_fmt`.
+
+So the macro evaluates the arguments before locking the `WRITER` now. Thus, we fixed the deadlock problem:
+
+![QEMU printing “inner” and then “outer”](images/fixed-println-deadlock.png)
+
 ## What's next?
 In the next posts we will map the kernel pages correctly so that accessing `0x0` or writing to `.rodata` is not possible anymore. To obtain the loaded kernel sections we will read the Multiboot information structure. Then we will create a paging module and use it to switch to a new page table where the kernel sections are mapped correctly.
 
