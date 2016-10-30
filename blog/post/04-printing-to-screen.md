@@ -353,11 +353,13 @@ When you print strings with some special characters like `ä` or `λ`, you'll no
 [UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
 
 ### Support Formatting Macros
-It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_str` method. To implement the trait, we just need to move it into an `impl ::core::fmt::Write for Writer` block and add a return type:
+It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_str` method. To implement the trait, we just need to move it into an `impl fmt::Write for Writer` block and add a return type:
 
 ```rust
-impl ::core::fmt::Write for Writer {
-    fn write_str(&mut self, s: &str) -> ::core::fmt::Result {
+use core::fmt;
+
+impl fmt::Write for Writer {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
         for byte in s.bytes() {
           self.write_byte(byte)
         }
@@ -506,7 +508,9 @@ macro_rules! println {
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
 ```
-It just adds a `\n` and then invokes the [`print!` macro], which is defined as:
+Macros are defined through one or more rules, which are similar to `match` arms. The `println` macro has two rules: The first rule is for invocations with a single argument (e.g. `println!("Hello")`) and the second rule is for invocations with additional parameters (e.g. `println!("{}{}", 4, 2)`).
+
+Both rules simply append a newline character (`\n`) to the format string and then invoke the [`print!` macro], which is defined as:
 
 [`print!` macro]: https://doc.rust-lang.org/nightly/std/macro.print!.html
 
@@ -515,9 +519,14 @@ macro_rules! print {
     ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
 }
 ```
-It calls the `_print` method in the `io` module of the current crate (`$crate`), which is `std`. The [`_print` function] in libstd is rather complicated, as it supports different `Stdout` devices.
+The macro expands to a call of the [`_print` function] in the `io` module. The [`$crate` variable] ensures that the macro also works from outside the `std` crate. For example, it expands to `::std` when it's used in other crates.
 
-[`_print` function]: https://doc.rust-lang.org/nightly/src/std/io/stdio.rs.html#578
+The [`format_args` macro] builds a [fmt::Arguments] type from the passed arguments, which is passed to `_print`. The [`_print` function] of libstd is rather complicated, as it supports different `Stdout` devices. We don't need that complexity since we just want to print to the VGA buffer.
+
+[`_print` function]: https://github.com/rust-lang/rust/blob/46d39f3329487115e7d7dcd37bc64eea6ef9ba4e/src/libstd/io/stdio.rs#L631
+[`$crate` variable]: https://doc.rust-lang.org/book/macros.html#the-variable-crate
+[`format_args` macro]: https://doc.rust-lang.org/nightly/std/macro.format_args.html
+[fmt::Arguments]: https://doc.rust-lang.org/nightly/core/fmt/struct.Arguments.html
 
 To print to the VGA buffer, we just copy the `println!` macro and modify the `print!` macro to use our static `WRITER` instead of `_print`:
 
@@ -525,15 +534,15 @@ To print to the VGA buffer, we just copy the `println!` macro and modify the `pr
 // in src/vga_buffer.rs
 macro_rules! print {
     ($($arg:tt)*) => ({
-            use core::fmt::Write;
-            let mut writer = $crate::vga_buffer::WRITER.lock();
-            writer.write_fmt(format_args!($($arg)*)).unwrap();
+        use core::fmt::Write;
+        let mut writer = $crate::vga_buffer::WRITER.lock();
+        writer.write_fmt(format_args!($($arg)*)).unwrap();
     });
 }
 ```
 Instead of a `_print` function, we call the `write_fmt` method of our static `Writer`. Since we're using a method from the `Write` trait, we need to import it before. The additional `unwrap()` at the end panics if printing isn't successful. But since we always return `Ok` in `write_str`, that should not happen.
 
-Note the additional `{}` scope around the macro: I wrote `=> ({…})` instead of `=> (…)`. The additional `{}` avoids that the `Write` trait is silently imported when `print` is used.
+Note the additional `{}` scope around the macro: We write `=> ({…})` instead of `=> (…)`. The additional `{}` avoids that the `Write` trait is silently imported to the parent scope when `print` is used.
 
 ### Clearing the screen
 We can now use `println!` to add a rather trivial function to clear the screen:
