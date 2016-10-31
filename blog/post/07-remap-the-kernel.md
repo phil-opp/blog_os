@@ -969,7 +969,7 @@ This time the responsible function is `controlregs::cr3_write()` itself. From th
 The reason is that the `NO_EXECUTE` bit must only be used when the `NXE` bit in the [Extended Feature Enable Register] \(EFER) is set. That register is similar to Rust's feature gating and can be used to enable all sorts of advanced CPU features. Since the `NXE` bit is off by default, we caused a page fault when we added the `NO_EXECUTE` bit to the page table.
 [Extended Feature Enable Register]: https://en.wikipedia.org/wiki/Control_register#EFER
 
-So we need to enable the `NXE` bit. Therefor we use Gerd Zellweger's awesome [x86][rust-x86] crate again:
+So we need to enable the `NXE` bit. For that we use the awesome [x86][rust-x86] crate again:
 [rust-x86]: https://github.com/gz/rust-x86
 
 ```rust
