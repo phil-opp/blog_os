@@ -115,20 +115,20 @@ struct ExceptionStackFrame {
 
 extern "C" fn divide_by_zero_handler(stack_frame: *const ExceptionStackFrame) {
     let stack_frame = unsafe { &*stack_frame };
-    println!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame);
+    println!("\nEXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame);
     loop {}
 }
 
 extern "C" fn breakpoint_handler(stack_frame: *const ExceptionStackFrame) {
     let stack_frame = unsafe { &*stack_frame };
-    println!("EXCEPTION: BREAKPOINT at {:#x}\n{:#?}",
+    println!("\nEXCEPTION: BREAKPOINT at {:#x}\n{:#?}",
              stack_frame.instruction_pointer,
              stack_frame);
 }
 
 extern "C" fn invalid_opcode_handler(stack_frame: *const ExceptionStackFrame) {
     let stack_frame = unsafe { &*stack_frame };
-    println!("EXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
+    println!("\nEXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
              stack_frame.instruction_pointer,
              *stack_frame);
     loop {}
@@ -147,7 +147,7 @@ bitflags! {
 extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame, error_code: u64) {
     let stack_frame = unsafe { &*stack_frame };
     use x86::controlregs;
-    println!("EXCEPTION: PAGE FAULT while accessing {:#x}\nerror code: \
+    println!("\nEXCEPTION: PAGE FAULT while accessing {:#x}\nerror code: \
                                   {:?}\n{:#?}",
              unsafe { controlregs::cr2() },
              PageFaultErrorCode::from_bits(error_code).unwrap(),
