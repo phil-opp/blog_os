@@ -253,9 +253,11 @@ pub fn print_something() {
     writer.write_byte(b'H');
 }
 ```
-It just creates a new Writer that points to the VGA buffer at `0xb8000`. Then it writes the byte `b'H'` to it. The `b` prefix creates a [byte character], which represents an ASCII code point. When we call `vga_buffer::print_something` in main, a `H` should be printed in the _lower_ left corner of the screen in light green.
+It just creates a new Writer that points to the VGA buffer at `0xb8000`. Then it writes the byte `b'H'` to it. The `b` prefix creates a [byte character], which represents an ASCII code point. When we call `vga_buffer::print_something` in main, a `H` should be printed in the _lower_ left corner of the screen in light green:
 
 [byte character]: https://doc.rust-lang.org/reference.html#characters-and-strings
+
+![QEMU output with a green `H` in the lower left corner](images/vga-H-lower-left.png)
 
 ### Volatile
 We just saw that our `H` was printed correctly. However, it might not work with future Rust compilers that optimize more aggressively.
@@ -353,11 +355,13 @@ When you print strings with some special characters like `ä` or `λ`, you'll no
 [UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
 
 ### Support Formatting Macros
-It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_str` method. To implement the trait, we just need to move it into an `impl ::core::fmt::Write for Writer` block and add a return type:
+It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_str` method. To implement the trait, we just need to move it into an `impl fmt::Write for Writer` block and add a return type:
 
 ```rust
-impl ::core::fmt::Write for Writer {
-    fn write_str(&mut self, s: &str) -> ::core::fmt::Result {
+use core::fmt;
+
+impl fmt::Write for Writer {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
         for byte in s.bytes() {
           self.write_byte(byte)
         }
@@ -369,15 +373,16 @@ The `Ok(())` is just a `Ok` Result containing the `()` type. We can drop the `pu
 
 Now we can use Rust's built-in `write!`/`writeln!` formatting macros:
 
-```rust
+{{< highlight rust "hl_lines=2 4 5 6" >}}
 // in the `print_something` function
 use core::fmt::Write;
 let mut writer = Writer {...};
 writer.write_byte(b'H');
 writer.write_str("ello! ");
 write!(writer, "The numbers are {} and {}", 42, 1.0/3.0);
-```
-Now you should see a `Hello! The numbers are 42 and 0.3333333333333333` in strange colors at the bottom of the screen.
+{{< / highlight >}}
+
+Now you should see a `Hello! The numbers are 42 and 0.3333333333333333` at the bottom of the screen.
 
 [core::fmt::Write]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
@@ -506,7 +511,9 @@ macro_rules! println {
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
 ```
-It just adds a `\n` and then invokes the [`print!` macro], which is defined as:
+Macros are defined through one or more rules, which are similar to `match` arms. The `println` macro has two rules: The first rule is for invocations with a single argument (e.g. `println!("Hello")`) and the second rule is for invocations with additional parameters (e.g. `println!("{}{}", 4, 2)`).
+
+Both rules simply append a newline character (`\n`) to the format string and then invoke the [`print!` macro], which is defined as:
 
 [`print!` macro]: https://doc.rust-lang.org/nightly/std/macro.print!.html
 
@@ -515,9 +522,14 @@ macro_rules! print {
     ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
 }
 ```
-It calls the `_print` method in the `io` module of the current crate (`$crate`), which is `std`. The [`_print` function] in libstd is rather complicated, as it supports different `Stdout` devices.
+The macro expands to a call of the [`_print` function] in the `io` module. The [`$crate` variable] ensures that the macro also works from outside the `std` crate. For example, it expands to `::std` when it's used in other crates.
 
-[`_print` function]: https://doc.rust-lang.org/nightly/src/std/io/stdio.rs.html#578
+The [`format_args` macro] builds a [fmt::Arguments] type from the passed arguments, which is passed to `_print`. The [`_print` function] of libstd is rather complicated, as it supports different `Stdout` devices. We don't need that complexity since we just want to print to the VGA buffer.
+
+[`_print` function]: https://github.com/rust-lang/rust/blob/46d39f3329487115e7d7dcd37bc64eea6ef9ba4e/src/libstd/io/stdio.rs#L631
+[`$crate` variable]: https://doc.rust-lang.org/book/macros.html#the-variable-crate
+[`format_args` macro]: https://doc.rust-lang.org/nightly/std/macro.format_args.html
+[fmt::Arguments]: https://doc.rust-lang.org/nightly/core/fmt/struct.Arguments.html
 
 To print to the VGA buffer, we just copy the `println!` macro and modify the `print!` macro to use our static `WRITER` instead of `_print`:
 
@@ -525,15 +537,15 @@ To print to the VGA buffer, we just copy the `println!` macro and modify the `pr
 // in src/vga_buffer.rs
 macro_rules! print {
     ($($arg:tt)*) => ({
-            use core::fmt::Write;
-            let mut writer = $crate::vga_buffer::WRITER.lock();
-            writer.write_fmt(format_args!($($arg)*)).unwrap();
+        use core::fmt::Write;
+        let mut writer = $crate::vga_buffer::WRITER.lock();
+        writer.write_fmt(format_args!($($arg)*)).unwrap();
     });
 }
 ```
 Instead of a `_print` function, we call the `write_fmt` method of our static `Writer`. Since we're using a method from the `Write` trait, we need to import it before. The additional `unwrap()` at the end panics if printing isn't successful. But since we always return `Ok` in `write_str`, that should not happen.
 
-Note the additional `{}` scope around the macro: I wrote `=> ({…})` instead of `=> (…)`. The additional `{}` avoids that the `Write` trait is silently imported when `print` is used.
+Note the additional `{}` scope around the macro: We write `=> ({…})` instead of `=> (…)`. The additional `{}` avoids that the `Write` trait is silently imported to the parent scope when `print` is used.
 
 ### Clearing the screen
 We can now use `println!` to add a rather trivial function to clear the screen:
@@ -549,7 +561,7 @@ pub fn clear_screen() {
 ### Hello World using `println`
 To use `println` in `lib.rs`, we need to import the macros of the VGA buffer module first. Therefore we add a `#[macro_use]` attribute to the module declaration:
 
-```rust
+{{< highlight rust "hl_lines=3 9 10" >}}
 // in src/lib.rs
 
 #[macro_use]
@@ -563,8 +575,65 @@ pub extern fn rust_main() {
 
     loop{}
 }
-```
+{{< / highlight >}}
+
 Since we imported the macros at crate level, they are available in all modules and thus provide an easy and safe interface to the VGA buffer.
+
+As expected, we now see a _“Hello World!”_ on a cleared screen:
+
+![QEMU printing “Hello World!” on a cleared screen](images/vga-hello-world.png)
+
+### Deadlocks
+Whenever we use locks, we must be careful to not accidentally introduce _deadlocks_. A [deadlock] occurs when a thread/program waits for a lock that will never be released. Normally, this happens when multiple threads access multiple locks. For example, when thread A holds lock 1 and tries to acquire lock 2 and -- at the same time -- thread B holds lock 2 and tries to acquire lock 1.
+
+[deadlock]: https://en.wikipedia.org/wiki/Deadlock
+
+However, a deadlock can also occur when a thread tries to acquire the same lock twice. This way we can trigger a deadlock in our VGA driver:
+
+```rust
+// in rust_main in src/lib.rs
+
+println!("{}", { println!("inner"); "outer" });
+```
+The argument passed to `println` is new block that resolves to the string _“outer”_ (a block always returns the result of the last expression). But before returning “outer”, the block tries to print the string _“inner”_.
+
+When we try this code in QEMU, we see that neither of the strings are printed. To understand what's happening, we take a look at our `print` macro again:
+
+```rust
+macro_rules! print {
+    ($($arg:tt)*) => ({
+        use core::fmt::Write;
+        let mut writer = $crate::vga_buffer::WRITER.lock();
+        writer.write_fmt(format_args!($($arg)*)).unwrap();
+    });
+}
+```
+So we _first_ lock the `WRITER` and then we evaluate the arguments using `format_args`. The problem is that the argument in our code example contains another `println`, which tries to lock the `WRITER` again. So now the inner `println` waits for the outer `println` and vice versa. Thus, a deadlock occurs and the CPU spins endlessly.
+
+### Fixing the Deadlock
+In order to fix the deadlock, we need to evaluate the arguments _before_ locking the `WRITER`. We can do so by moving the locking and printing logic into a new `print` function (like it's done in the standard library):
+
+```rust
+// in src/vga_buffer.rs
+
+macro_rules! print {
+    ($($arg:tt)*) => ({
+        $crate::vga_buffer::print(format_args!($($arg)*));
+    });
+}
+
+pub fn print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
+}
+```
+Now the macro only evaluates the arguments (through `format_args!`) and passes them to the new `print` function. The `print` function then locks the `WRITER` and prints the formatting arguments using `write_fmt`. So now the arguments are evaluated before locking the `WRITER`.
+
+Thus, we fixed the deadlock:
+
+![QEMU printing “inner” and then “outer”](images/fixed-println-deadlock.png)
+
+We see that both “inner” and “outer” are printed.
 
 ## What's next?
 In the next posts we will map the kernel pages correctly so that accessing `0x0` or writing to `.rodata` is not possible anymore. To obtain the loaded kernel sections we will read the Multiboot information structure. Then we will create a paging module and use it to switch to a new page table where the kernel sections are mapped correctly.

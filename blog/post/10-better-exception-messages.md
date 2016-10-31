@@ -58,8 +58,8 @@ extern "C" fn divide_by_zero_handler() -> ! {
     let stack_frame: *const ExceptionStackFrame;
     unsafe {
         asm!("mov $0, rsp" : "=r"(stack_frame) ::: "intel");
-        print_error(format_args!("EXCEPTION: DIVIDE BY ZERO\n{:#?}",
-            *stack_frame));
+        println!("\nEXCEPTION: DIVIDE BY ZERO\n{:#?}",
+            *stack_frame);
     };
     loop {}
 }
@@ -172,10 +172,8 @@ extern "C" fn divide_by_zero_wrapper() -> ! {
 extern "C" fn divide_by_zero_handler(stack_frame: *const ExceptionStackFrame)
     -> !
 {
-    unsafe {
-        print_error(format_args!("EXCEPTION: DIVIDE BY ZERO\n{:#?}",
-            *stack_frame));
-    }
+    println!("\nEXCEPTION: DIVIDE BY ZERO\n{:#?}",
+        unsafe { &*stack_frame });
     loop {}
 }
 
@@ -194,7 +192,7 @@ call divide_by_zero_handler
 ```
 It moves the exception stack frame pointer from `rsp` to `rdi`, where the first argument is expected, and then calls the main handler. Let's create the corresponding inline assembly to complete our wrapper function:
 
-```rust
+{{< highlight rust "hl_lines=4 5 6" >}}
 #[naked]
 extern "C" fn divide_by_zero_wrapper() -> ! {
     unsafe {
@@ -203,7 +201,8 @@ extern "C" fn divide_by_zero_wrapper() -> ! {
              : "rdi" : "intel");
     }
 }
-```
+{{< / highlight >}}<!--end_-->
+
 Instead of `call divide_by_zero_handler`, we use a placeholder again. The reason is Rust's name mangling, which changes the name of the `divide_by_zero_handler` function. To circumvent this, we pass a function pointer as input parameter (after the second colon). The `"i"` tells the compiler that it is an immediate value, which can be directly inserted for the placeholder. We also specify a clobber after the third colon, which tells the compiler that we change the value of the `rdi` register.
 
 ### Intrinsics::Unreachable
@@ -218,7 +217,7 @@ error: computation may converge in a function marked as diverging
 ```
 The reason is that we marked our `divide_by_zero_wrapper` function as diverging (the `!`). We call another diverging function in inline assembly, so it is clear that the function diverges. However, the Rust compiler doesn't understand inline assembly, so it doesn't know that. To fix this, we tell the compiler that all code after the `asm!` macro is unreachable:
 
-```rust
+{{< highlight rust "hl_lines=7" >}}
 #[naked]
 extern "C" fn divide_by_zero_wrapper() -> ! {
     unsafe {
@@ -228,7 +227,8 @@ extern "C" fn divide_by_zero_wrapper() -> ! {
         ::core::intrinsics::unreachable();
     }
 }
-```
+{{< / highlight >}}<!--end_-->
+
 The [intrinsics::unreachable] function is unstable, so we need to add `#![feature(core_intrinsics)]` to our `src/lib.rs`. It is just an annotation for the compiler and produces no real code. (Not to be confused with the [unreachable!] macro, which is completely different!)
 
 [intrinsics::unreachable]: https://doc.rust-lang.org/nightly/core/intrinsics/fn.unreachable.html
@@ -237,7 +237,7 @@ The [intrinsics::unreachable] function is unstable, so we need to add `#![featur
 ### It works!
 The last step is to update the interrupt descriptor table (IDT) to use our new wrapper function:
 
-```rust
+{{< highlight rust "hl_lines=6" >}}
 // in src/interrupts/mod.rs
 
 lazy_static! {
@@ -247,7 +247,7 @@ lazy_static! {
         idt
     };
 }
-```
+{{< / highlight >}}
 
 Now we see a correct exception stack frame when we execute `make run`:
 
@@ -276,7 +276,7 @@ extern "C" fn divide_by_zero_handler(...) {
     let y = Some(x);
     for i in (0..100).map(|z| (z, z - 1)) {}
 
-    unsafe { print_error(...)); }
+    println!(...);
     loop {}
 }
 {{< / highlight >}}
@@ -402,7 +402,7 @@ In order to fix this bug, we need to make sure that the stack pointer is correct
 
 The problem is that we're pushing an uneven number of 8 byte registers. Thus we need to align the stack pointer again before the `call` instruction:
 
-```rust
+{{< highlight rust "hl_lines=5" >}}
 #[naked]
 extern "C" fn divide_by_zero_wrapper() -> ! {
     unsafe {
@@ -414,7 +414,8 @@ extern "C" fn divide_by_zero_wrapper() -> ! {
         ::core::intrinsics::unreachable();
     }
 }
-```
+{{< / highlight >}}<!--end_-->
+
 The additional `sub rsp, 8` instruction aligns the stack pointer to a 16 byte boundary. Now it should work on real hardware (and in QEMU KVM mode) again.
 
 ## A Handler Macro
@@ -445,7 +446,7 @@ The macro takes a single Rust identifier (`ident`) as argument and expands to a 
 
 Now we can remove the `divide_by_zero_wrapper` and use our new `handler!` macro instead:
 
-```rust
+{{< highlight rust "hl_lines=6" >}}
 // in src/interrupts/mod.rs
 
 lazy_static! {
@@ -455,7 +456,7 @@ lazy_static! {
         idt
     };
 }
-```
+{{< / highlight >}}
 
 Note that the `handler!` macro needs to be defined above the static `IDT`, because macros are only available after their definition.
 
@@ -477,10 +478,9 @@ lazy_static! {
 extern "C" fn invalid_opcode_handler(stack_frame: *const ExceptionStackFrame)
     -> !
 {
-    unsafe {
-        print_error(format_args!("EXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
-            (*stack_frame).instruction_pointer, *stack_frame));
-    }
+    let stack_frame = unsafe { &*stack_frame };
+    println!("\nEXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
+        stack_frame.instruction_pointer, stack_frame);
     loop {}
 }
 ```
@@ -547,18 +547,16 @@ Let's write a page fault handler which analyzes and prints the error code:
 extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
                                  error_code: u64) -> !
 {
-    unsafe {
-        print_error(format_args!(
-            "EXCEPTION: PAGE FAULT with error code {:?}\n{:#?}",
-            error_code, *stack_frame));
-    }
+    println!(
+        "\nEXCEPTION: PAGE FAULT with error code {:?}\n{:#?}",
+        error_code, unsafe { &*stack_frame });
     loop {}
 }
 ```
 
 We need to register our new handler function in the static interrupt descriptor table (IDT):
 
-```rust
+{{< highlight rust "hl_lines=10" >}}
 // in src/interrupts/mod.rs
 
 lazy_static! {
@@ -573,7 +571,8 @@ lazy_static! {
         idt
     };
 }
-```
+{{< / highlight >}}
+
 Page faults have the vector number 14, so we set the 14th IDT entry.
 
 #### Testing it
@@ -631,14 +630,12 @@ extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
                                  error_code: u64) -> !
 {
     use x86::controlregs;
-    unsafe {
-        print_error(format_args!(
-            "EXCEPTION: PAGE FAULT while accessing {:#x}\
-            \nerror code: {:?}\n{:#?}",
-            controlregs::cr2(),
-            PageFaultErrorCode::from_bits(error_code).unwrap(),
-            *stack_frame));
-    }
+    println!(
+        "\nEXCEPTION: PAGE FAULT while accessing {:#x}\
+        \nerror code: {:?}\n{:#?}",
+        unsafe { controlregs::cr2() },
+        PageFaultErrorCode::from_bits(error_code).unwrap(),
+        unsafe { &*stack_frame });
     loop {}
 }
 ```
