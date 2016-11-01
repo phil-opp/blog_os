@@ -40,7 +40,7 @@ Let's start by defining a handler function for the breakpoint exception:
 ```rust
 // in src/interrupts/mod.rs
 
-extern "C" fn breakpoint_handler(stack_frame: *const ExceptionStackFrame) -> !
+extern "C" fn breakpoint_handler(stack_frame: &ExceptionStackFrame) -> !
 {
     let stack_frame = unsafe { &*stack_frame };
     println!("\nEXCEPTION: BREAKPOINT at {:#x}\n{:#?}",
@@ -157,7 +157,7 @@ macro_rules! handler {
                       sub rsp, 8 // align the stack pointer
                       call $0"
                       :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame)) // no longer diverging
+                          &ExceptionStackFrame)) // no longer diverging
                       : "rdi" : "intel", "volatile");
 
                 // new
@@ -180,16 +180,16 @@ We've changed the handler function type, so we need to adjust our existing excep
 // in src/interrupts/mod.rs
 
 extern "C" fn divide_by_zero_handler(
--   stack_frame: *const ExceptionStackFrame) -> ! {...}
-+   stack_frame: *const ExceptionStackFrame) {...}
+-   stack_frame: &ExceptionStackFrame) -> ! {...}
++   stack_frame: &ExceptionStackFrame) {...}
 
 extern "C" fn invalid_opcode_handler(
--   stack_frame: *const ExceptionStackFrame) -> ! {...}
-+   stack_frame: *const ExceptionStackFrame) {...}
+-   stack_frame: &ExceptionStackFrame) -> ! {...}
++   stack_frame: &ExceptionStackFrame) {...}
 
 extern "C" fn breakpoint_handler(
--   stack_frame: *const ExceptionStackFrame) -> ! {
-+   stack_frame: *const ExceptionStackFrame) {
+-   stack_frame: &ExceptionStackFrame) -> ! {
++   stack_frame: &ExceptionStackFrame) {
     println!(...);
 -   loop {}
 }
@@ -386,7 +386,7 @@ macro_rules! handler {
                       // sub rsp, 8 (stack is aligned already)
                       call $0"
                       :: "i"($name as
-                             extern "C" fn(*const ExceptionStackFrame))
+                             extern "C" fn(&ExceptionStackFrame))
                       : "rdi" : "intel", "volatile");
 
                 restore_scratch_registers!();
@@ -742,7 +742,7 @@ macro_rules! handler_with_error_code {
                       sub rsp, 8 // align the stack pointer
                       call $0"
                       :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame, u64))
+                          &ExceptionStackFrame, u64))
                       : "rdi","rsi" : "intel");
                 asm!("iretq" :::: "intel", "volatile");
                 ::core::intrinsics::unreachable();
@@ -760,7 +760,7 @@ Now we can make our `page_fault_handler` non-diverging:
 ```diff
 // in src/interrupts/mod.rs
 
- extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
+ extern "C" fn page_fault_handler(stack_frame: &ExceptionStackFrame,
 -   error_code: u64) -> ! { ... }
 +   error_code: u64) { ... }
 ```
@@ -783,7 +783,7 @@ macro_rules! handler_with_error_code {
                       call $0
                       add rsp, 8 // undo stack pointer alignment
                       " :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame, u64))
+                          &ExceptionStackFrame, u64))
                       : "rdi","rsi" : "intel");
                 restore_scratch_registers!();
                 asm!("iretq" :::: "intel", "volatile");
@@ -816,7 +816,7 @@ macro_rules! handler_with_error_code {
                       call $0
                       add rsp, 8 // undo stack pointer alignment
                       " :: "i"($name as extern "C" fn(
-                          *const ExceptionStackFrame, u64))
+                          &ExceptionStackFrame, u64))
                       : "rdi","rsi" : "intel");
                 restore_scratch_registers!();
                 asm!("add rsp, 8 // pop error code
@@ -864,52 +864,21 @@ ExceptionStackFrame {
 ```
 The error code should still be `CAUSED_BY_WRITE` and the exception stack frame values should also be correct (e.g. `code_segment` should be 8 and `stack_segment` should be 16).
 
-### Page Faults as Breakpoints
-We didn't test returns from the page fault handler yet. In order to test our `iretq` logic, we _temporary_ define accesses to `0xdeadbeaf` as legal. They should behave exactly like the breakpoint exception: Print an error message and then continue with the next instruction.
+#### Returning from Page Faults
+Let's see what happens if we comment out the trailing `loop` in our page fault handler:
 
-Therefore we update our `page_fault_handler`:
+![QEMU printing the same page fault message again and again](images/qemu-page-fault-return.png)
 
-{{< highlight rust "hl_lines=10 11 12 13 14 15 16" >}}
-// in src/interrupts/mod.rs
+We see that the same error message is printed over and over again. Here is what happens:
 
-extern "C" fn page_fault_handler(stack_frame: *const ExceptionStackFrame,
-    error_code: u64)
-{
-    use x86::controlregs;
-    println!(...);
+- The CPU executes `rust_main` and tries to access `0xdeadbeaf`. This causes a page fault.
+- The page fault handler prints an error message and returns without fixing the cause of the exception (`0xdeadbeaf` is still unaccessible).
+- The CPU restarts the instruction that caused the page fault and thus tries to access `0xdeadbeaf` again. Of course, this causes a page fault again.
+- The page fault handler prints the error message and returns.
 
-    // new
-    unsafe {
-        if controlregs::cr2() == 0xdeadbeaf {
-            let stack_frame = &mut *(stack_frame as *mut ExceptionStackFrame);
-            stack_frame.instruction_pointer += 7;
-            return;
-        }
-    }
+… and so on. Thus, our code indefinitely jumps between the page fault handler and the instruction that accesses `0xdeadbeaf`.
 
-    loop {}
-}
-{{< / highlight >}}<!--end*-->
-
-If the accessed memory address is `0xdeadbeaf` (the CPU stores this information in the `cr2` register), we don't `loop` endlessly. Instead we update the stored instruction pointer and return. Remember, the normal behavior when returning from a page fault is to restart the failing instruction. We don't want that, so we manipulate the stored instruction pointer to point to the next instruction.
-
-In our case, the page fault is caused by the instruction at address `1114753`, which is `0x110281` in hexadecimal. Let's examine this instruction using `objdump`:
-
-```
-> objdump -d build/kernel-x86_64.bin | grep "110281"
-110281:	48 c7 02 2a 00 00 00 	movq   $0x2a,(%rdx)
-```
-It's a `movq` instruction with the 7 byte opcode `48 c7 02 2a 00 00 00`. So the next instruction starts 7 bytes after.
-
-Thus, we can jump to the next instruction in our `page_fault_handler` by adding `7` to the instruction pointer. _This is a horrible hack_, since the page fault could also be caused by other instructions with different opcode lengths. But it's good enough for a quick test.
-
-When we execute `make run` now, we should see the _“It did not crash”_ message after the page fault:
-
-![QEMU showing the the page fault error and the “It did not crash” message](images/qemu-page-fault-as-breakpoint.png)
-
-Our `iretq` logic seems to work!
-
-Let's quickly remove the `0xdeadbeaf` hack from our `page_fault_handler` again and pretend that we've never done that :).
+This is a good thing! It means that our `iretq` logic is working correctly, since it returns to the correct instruction every time. So our `handler_with_error_code` macro seems to be correct.
 
 ## What's next?
 We are now able to catch exceptions and to return from them. However, there are still exceptions that completely crash our kernel by causing a [triple fault]. In the next post, we will fix this issue by handling a special type of exception: the [double fault]. Thus, we will be able to avoid random reboots in our kernel.
