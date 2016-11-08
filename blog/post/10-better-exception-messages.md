@@ -1,6 +1,7 @@
 +++
 title = "Better Exception Messages"
 date = "2016-08-03"
+updated = "2016-11-01"
 +++
 
 In this post, we explore exceptions in more detail. Our goal is to print additional information when an exception occurs, for example the values of the instruction and stack pointer. In the course of this, we will explore inline assembly and naked functions. We will also add a handler function for page faults and read the associated error code.
