@@ -1,7 +1,7 @@
 +++
 title = "Printing to Screen"
 date = "2015-10-23"
-updated = "2016-10-06"
+updated = "2016-10-31"
 aliases = [
     "/2015/10/23/printing-to-screen/",
     "/rust-os/printing-to-screen.html",
