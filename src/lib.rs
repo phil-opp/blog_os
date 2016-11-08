@@ -56,8 +56,23 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // initialize our IDT
     interrupts::init();
 
-    // trigger a breakpoint exception
-    unsafe { int!(3) };
+    stack_overflow();
+    // trigger a debug exception
+    unsafe { int!(1) };
+
+    fn divide_by_zero() {
+        unsafe { asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel") }
+    }
+
+    fn int_overflow() {
+        unsafe { asm!("mov al, 0xf0; add al, 0x10; into" ::: "ax", "dx" : "volatile", "intel") }
+    }
+
+    fn stack_overflow() {
+        let _large_array = [1; 100000];
+    }
+
+    int_overflow();
 
     println!("It did not crash!");
     loop {}

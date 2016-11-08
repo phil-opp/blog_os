@@ -93,6 +93,7 @@ lazy_static! {
         idt.set_handler(0, handler!(divide_by_zero_handler));
         idt.set_handler(3, handler!(breakpoint_handler));
         idt.set_handler(6, handler!(invalid_opcode_handler));
+        idt.set_handler(8, handler_with_error_code!(double_fault_handler));
         idt.set_handler(14, handler_with_error_code!(page_fault_handler));
 
         idt
@@ -148,5 +149,10 @@ extern "C" fn page_fault_handler(stack_frame: &ExceptionStackFrame, error_code: 
              unsafe { control_regs::cr2() },
              PageFaultErrorCode::from_bits(error_code).unwrap(),
              stack_frame);
+    loop {}
+}
+
+extern "C" fn double_fault_handler(stack_frame: &ExceptionStackFrame, _error_code: u64) {
+    println!("\nEXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
     loop {}
 }
