@@ -6,9 +6,11 @@ rust:
 cache: cargo
 
 before_script:
+  - curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$TRAVIS_RUST_VERSION -y
+  - source ~/.cargo/env
+  - rustup component add rust-src
   - (cargo install rustfmt || true)
   - (cargo install xargo || true)
-  - PATH=$PATH:~/.cargo/bin
 
 sudo: false
 
@@ -21,8 +23,5 @@ addons:
   apt:
     packages:
       - nasm
-      - cmake
-    sources:
-      - kalakris-cmake
 
 script: make
