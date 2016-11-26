@@ -112,7 +112,9 @@ Now we get a `PANIC` message. But we can do even better. The `panic_fmt` functio
 
 ```rust
 #[lang = "panic_fmt"]
-extern fn panic_fmt(fmt: core::fmt::Arguments, file: &str, line: u32) -> ! {
+extern fn panic_fmt(fmt: core::fmt::Arguments, file: &'static str,
+    line: u32) -> !
+{
     println!("\n\nPANIC in {} at line {}:", file, line);
     println!("    {}", fmt);
     loop{}
