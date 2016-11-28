@@ -13,6 +13,8 @@
 #![feature(asm)]
 #![feature(naked_functions)]
 #![feature(core_intrinsics)]
+#![feature(nonzero)]
+#![feature(drop_types_in_const)]
 #![no_std]
 
 extern crate rlibc;
@@ -51,10 +53,15 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     enable_write_protect_bit();
 
     // set up guard page and map the heap pages
-    memory::init(boot_info);
+    let mut memory_controller = memory::init(boot_info);
+
 
     // initialize our IDT
-    interrupts::init();
+    let double_fault_stack = memory_controller.alloc_stack(1)
+        .expect("could not allocate double fault stack");
+    interrupts::init(double_fault_stack);
+
+    unsafe { int!(3) };
 
     stack_overflow();
     // trigger a debug exception
@@ -69,7 +76,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     }
 
     fn stack_overflow() {
-        let _large_array = [1; 100000];
+        stack_overflow();
     }
 
     int_overflow();
