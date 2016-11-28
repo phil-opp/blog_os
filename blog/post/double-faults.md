@@ -127,12 +127,22 @@ Fortunately, the AMD64 manual ([PDF][AMD64 manual]) has an exact definition (in 
 
 First Exception | Second Exception
 ----------------|-----------------
-divide-by-zero,<br>invalid-tss,<br>segment-not-present,<br>stack,<br>general-protection | invalid-tss,<br>segment-not-present,<br>stack,<br>general-protection
-page fault | page fault,<br>invalid-tss,<br>segment-not-present,<br>stack,<br>general-protection
+[Divide-by-zero],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault] | [Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
+[Page Fault] | [Page Fault],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
+
+[Divide-by-zero]: http://wiki.osdev.org/Exceptions#Divide-by-zero_Error
+[Invalid TSS]: http://wiki.osdev.org/Exceptions#Invalid_TSS
+[Segment Not Present]: http://wiki.osdev.org/Exceptions#Segment_Not_Present
+[Stack-Segment Fault]: http://wiki.osdev.org/Exceptions#Stack-Segment_Fault
+[General Protection Fault]: http://wiki.osdev.org/Exceptions#General_Protection_Fault
+[Page Fault]: http://wiki.osdev.org/Exceptions#Page_Fault
+
 
 [AMD64 manual]: http://developer.amd.com/wordpress/media/2012/10/24593_APM_v21.pdf
 
-So for example a divide-by-zero fault followed by a page fault is fine, but a divide-by-zero fault followed by a general-protection fault leads to a double fault. With the help of this table, we can answer the first three of the above questions:
+So for example a divide-by-zero fault followed by a page fault is fine (the page fault handler is invoked), but a divide-by-zero fault followed by a general-protection fault leads to a double fault.
+
+With the help of this table, we can answer the first three of the above questions:
 
 1. When a divide-by-zero exception occurs and the corresponding handler function is swapped out, a _page fault_ occurs and the _page fault handler_ is invoked.
 2. When a page fault occurs and the page fault handler is swapped out, a _double fault_ occurs and the _double fault_ handler is invoked.
@@ -149,7 +159,7 @@ When our kernel overflows its stack and hits the guard page, a _page fault_ occu
 
 [exception stack frame]: http://os.phil-opp.com/better-exception-messages.html#exceptions-in-detail
 
-So the CPU tries to call our _double fault handler_ now. However, on a double fault the CPU tries to push the exception stack frame, too. Thus, a _third_ page fault occurs, which causes a _triple fault_ and a system reboot. So our current double fault handler can't avoid a triple fault in this case.
+So the CPU tries to call our _double fault handler_ now. However, on a double fault the CPU tries to push the exception stack frame, too. Our stack pointer still points to the guard page, so a _third_ page fault occurs, which causes a _triple fault_ and a system reboot. So our current double fault handler can't avoid a triple fault in this case.
 
 Let's try it ourselves! We can easily provoke a kernel stack overflow by calling a function that recurses endlessly:
 
@@ -163,7 +173,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     interrupts::init();
 
     fn stack_overflow() {
-        stack_overflow();
+        stack_overflow(); // for each recursion, the return address is pushed
     }
 
     // trigger a stack overflow
@@ -174,16 +184,84 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 }
 {{< / highlight >}}
 
-When we try this code in QEMU, we see that the system enters a boot-loop again. Here is what happens: When the `stack_overflow` function is called, the whole stack gets filled with return addresses. At some point, we overflow the stack and hit the guard page, which we [set up][set up guard page] for exactly this case. Thus, a _page fault_ occurs.
+When we try this code in QEMU, we see that the system enters a boot-loop again.
 
-Now the CPU pushes the exception stack frame and the registers and invokes the page fault handler… wait… this can't work. We overflowed our stack, so the stack pointer points to the guard page. And now the CPU tries to push to it, which causes another page fault. At this point, a double fault occurs, since an exception occurred while calling an exception handler.
-
-So the CPU tries to invoke the double fault handler now. But first, it tries to push the exception stack frame, since exceptions on x86 work that way. Of course, this is still not possible (the stack pointer still points to the guard page), so another page fault occurs while calling the double fault handler. Thus, a triple fault occurs and QEMU issues a system reset.
-
-So how can we avoid this problem? We can't omit the pushing of the exception stack frame, since it's the CPU itself that does it. So we need to ensure somehow that the stack is always valid when a double fault exception occurs. Fortunately, the x86_64 architecture has a trick for this problem.
+So how can we avoid this problem? We can't omit the pushing of the exception stack frame, since the CPU itself does it. So we need to ensure somehow that the stack is always valid when a double fault exception occurs. Fortunately, the x86_64 architecture has a solution to this problem.
 
 ## Switching Stacks
-The x86_64 architecture is able to switch to a predefined stack when an exception occurs. However, it is a bit cumbersome to setup this mechanism.
+The x86_64 architecture is able to switch to a predefined stack for some exceptions through an _Interrupt Stack Table_ (IST). The IST is a table of 7 pointers to known-good stacks. In Rust-like pseudo code:
+
+```rust
+struct InterruptStackTable {
+    stack_pointers: [Option<StackPointer>; 7],
+}
+```
+
+For each exception handler, we can choose an IST stack through the options field in the [IDT entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack _before_ it pushes anything. Thus, we are able to avoid the triple fault.
+
+[IDT entry]: {{% relref "09-catching-exceptions.md#the-interrupt-descriptor-table" %}}
+
+### The Task State Segment
+The Interrupt Stack Table (IST) is part of an old legacy structure called [Task State Segment] (TSS). The TSS used to hold various information (e.g. processor register state) about a task in 32-bit x86 and was for example used for [hardware context switching]. However, hardware context switching is no longer supported in 64-bit mode and the format of the TSS changed completely.
+
+[Task State Segment]: https://en.wikipedia.org/wiki/Task_state_segment
+[hardware context switching]: http://wiki.osdev.org/Context_Switching#Hardware_Context_Switching
+
+On x86_64, the TSS no longer holds any task specific information at all. Instead, it holds two stack tables (the IST is one of them). The only common field between the 32-bit and 64-bit TSS is the pointer to the [I/O port permissions bitmap].
+
+[I/O port permissions bitmap]: https://en.wikipedia.org/wiki/Task_state_segment#I.2FO_port_permissions
+
+The 64-bit TSS has the following format:
+
+Field  | Type
+------ | ----------------
+(reserved) | `u32`
+Privilege Stack Table | `[u64; 3]`
+(reserved) | `u64`
+Interrupt Stack Table | `[u64; 7]`
+(reserved) | `u64`
+(reserved) | `u16`
+I/O Map Base Address | `u16`
+
+The _Privilege Stack Table_ is used by the CPU when the privilege level changes. For example, if an exception occurs while the CPU is in user mode (privilege level 3), the CPU normally switches to kernel mode (privilege level 0) before invoking the exception handler. In that case, the CPU would switch to the 0th stack in the Privilege Stack Table (since 0 is the target privilege level). We don't have any user mode programs yet, so we can safely ignore this table for now.
+
+Let's create a `TaskStateSegment` struct in new tss submodule:
+
+```rust
+// in src/interrupts/mod.rs
+
+mod tss;
+
+// in src/interrupts/tss.rs
+
+use core::nonzero::NonZero;
+
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct TaskStateSegment {
+    reserved_0: u32,
+    pub privilege_stacks: PrivilegeStackTable,
+    reserved_1: u64,
+    pub interrupt_stacks: InterruptStackTable,
+    reserved_2: u64,
+    reserved_3: u16,
+    iomap_base: u16,
+}
+
+#[derive(Debug)]
+pub struct PrivilegeStackTable([Option<StackPointer>; 3]);
+
+#[derive(Debug)]
+pub struct InterruptStackTable([Option<StackPointer>; 7]);
+
+#[derive(Debug)]
+pub struct StackPointer(NonZero<u64>);
+```
+
+TODO lang item
+
+
+ However, it is a bit cumbersome to setup this mechanism.
 
 The mechanism consists of two main components: An _Interrupt Stack Table_ and a _Task State Segment_.
 
