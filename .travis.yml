@@ -9,8 +9,8 @@ before_script:
   - curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$TRAVIS_RUST_VERSION -y
   - source ~/.cargo/env
   - rustup component add rust-src
-  - (cargo install rustfmt || true)
-  - (cargo install xargo || true)
+  - (test -x $HOME/.cargo/bin/rustfmt || cargo install rustfmt)
+  - (test -x $HOME/.cargo/bin/xargo || cargo install xargo)
 
 sudo: false
 
