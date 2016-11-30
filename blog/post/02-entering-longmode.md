@@ -317,7 +317,7 @@ set_up_page_tables:
 
     ret
 ```
-Maybe I first explain how an assembly loop works. We use the `ecx` register as a counter variable, just like `i` in a for loop. After mapping the `ecx-th` entry, we increase `ecx` by one and jump to `.map_p2_table` again if it's still smaller 512.
+Maybe I should first explain how an assembly loop works. We use the `ecx` register as a counter variable, just like `i` in a for loop. After mapping the `ecx-th` entry, we increase `ecx` by one and jump to `.map_p2_table` again if it's still smaller than 512.
 
 To map a P2 entry we first calculate the start address of its page in `eax`: The `ecx-th` entry needs to be mapped to `ecx * 2MiB`. We use the `mul` operation for that, which multiplies `eax` with the given register and stores the result in `eax`. Then we set the `present`, `writable`, and `huge page` bits and write it to the P2 entry. The address of the `ecx-th` entry in P2 is `p2_table + ecx * 8`, because each entry is 8 bytes large.
 
