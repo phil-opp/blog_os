@@ -1,6 +1,6 @@
 use bit_field::BitField;
 use collections::vec::Vec;
-use interrupts::tss::TaskStateSegment;
+use x86::bits64::task::TaskStateSegment;
 
 pub struct Gdt(Vec<u64>);
 
@@ -26,11 +26,11 @@ impl Gdt {
     }
 
     pub fn load(&'static self) {
-        use x86::dtables::{DescriptorTablePointer, lgdt};
+        use x86::shared::dtables::{DescriptorTablePointer, lgdt};
         use core::mem::size_of;
 
         let ptr = DescriptorTablePointer {
-            base: self.0.as_ptr() as u64,
+            base: self.0.as_ptr() as *const ::x86::shared::segmentation::SegmentDescriptor,
             limit: (self.0.len() * size_of::<u64>() - 1) as u16,
         };
 

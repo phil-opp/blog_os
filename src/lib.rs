@@ -13,7 +13,6 @@
 #![feature(asm)]
 #![feature(naked_functions)]
 #![feature(core_intrinsics)]
-#![feature(nonzero)]
 #![feature(drop_types_in_const)]
 #![no_std]
 

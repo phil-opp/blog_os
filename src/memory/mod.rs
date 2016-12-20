@@ -9,7 +9,7 @@
 
 pub use self::area_frame_allocator::AreaFrameAllocator;
 pub use self::paging::remap_the_kernel;
-pub use self::stack_allocator::{Stack, StackPointer};
+pub use self::stack_allocator::Stack;
 use self::paging::PhysicalAddress;
 use multiboot2::BootInformation;
 

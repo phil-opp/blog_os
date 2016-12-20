@@ -109,7 +109,7 @@ impl EntryOptions {
 
     #[allow(dead_code)]
     pub fn set_stack_index(&mut self, index: u8) -> &mut Self {
-        self.0.set_range(0..3, index.into());
+        self.0.set_range(0..3, (index + 1).into());
         self
     }
 }

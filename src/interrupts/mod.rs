@@ -9,9 +9,9 @@
 
 use spin::Once;
 use memory::MemoryController;
+use x86::bits64::task::TaskStateSegment;
 
 mod idt;
-mod tss;
 mod gdt;
 
 macro_rules! save_scratch_registers {
@@ -92,22 +92,18 @@ macro_rules! handler_with_error_code {
 }
 
 static IDT: Once<idt::Idt> = Once::new();
-static TSS: Once<tss::TaskStateSegment> = Once::new();
+static TSS: Once<TaskStateSegment> = Once::new();
 static GDT: Once<gdt::Gdt> = Once::new();
 
 pub fn init(memory_controller: &mut MemoryController) {
     let double_fault_stack = memory_controller.alloc_stack(1)
         .expect("could not allocate double fault stack");
 
-    let mut double_fault_ist_index = 0;
+    const DOUBLE_FAULT_IST_INDEX: u8 = 0;
 
     let tss = TSS.call_once(|| {
-        let mut tss = tss::TaskStateSegment::new();
-
-        double_fault_ist_index = tss.interrupt_stacks
-            .insert_stack(double_fault_stack)
-            .expect("IST flush_all");
-
+        let mut tss = TaskStateSegment::new();
+        tss.ist[DOUBLE_FAULT_IST_INDEX as usize] = double_fault_stack.top() as u64;
         tss
     });
 
@@ -134,7 +130,7 @@ pub fn init(memory_controller: &mut MemoryController) {
         idt.set_handler(3, handler!(breakpoint_handler));
         idt.set_handler(6, handler!(invalid_opcode_handler));
         idt.set_handler(8, handler_with_error_code!(double_fault_handler))
-            .set_stack_index(double_fault_ist_index);
+            .set_stack_index(DOUBLE_FAULT_IST_INDEX);
         idt.set_handler(14, handler_with_error_code!(page_fault_handler));
 
         idt

@@ -1,6 +1,5 @@
 use memory::paging::{self, Page, PageIter, ActivePageTable};
 use memory::{PAGE_SIZE, FrameAllocator};
-use core::nonzero::NonZero;
 
 pub fn new_stack_allocator(page_range: PageIter) -> StackAllocator {
     StackAllocator { range: page_range }
@@ -52,36 +51,24 @@ impl StackAllocator {
 
 #[derive(Debug)]
 pub struct Stack {
-    top: StackPointer,
-    bottom: StackPointer,
+    top: usize,
+    bottom: usize,
 }
 
 impl Stack {
     fn new(top: usize, bottom: usize) -> Stack {
         assert!(top > bottom);
         Stack {
-            top: StackPointer::new(top),
-            bottom: StackPointer::new(bottom),
+            top: top,
+            bottom: bottom,
         }
     }
 
-    pub fn top(&self) -> StackPointer {
+    pub fn top(&self) -> usize {
         self.top
     }
-}
 
-#[derive(Debug, Clone, Copy)]
-pub struct StackPointer(NonZero<usize>);
-
-impl StackPointer {
-    fn new(ptr: usize) -> StackPointer {
-        assert!(ptr != 0);
-        StackPointer(unsafe { NonZero::new(ptr) })
-    }
-}
-
-impl Into<usize> for StackPointer {
-    fn into(self) -> usize {
-        *self.0
+    pub fn bottom(&self) -> usize {
+        self.bottom
     }
 }

@@ -307,47 +307,29 @@ Finally, we create and return a new `Stack`, which we define as follows:
 
 #[derive(Debug)]
 pub struct Stack {
-    top: StackPointer,
-    bottom: StackPointer,
+    top: usize,
+    bottom: usize,
 }
 
 impl Stack {
     fn new(top: usize, bottom: usize) -> Stack {
         assert!(top > bottom);
         Stack {
-            top: StackPointer::new(top),
-            bottom: StackPointer::new(bottom),
+            top: top,
+            bottom: bottom,
         }
     }
 
     pub fn top(&self) -> StackPointer {
         self.top
     }
-}
 
-use core::nonzero::NonZero;
-
-#[derive(Debug, Clone, Copy)]
-pub struct StackPointer(NonZero<usize>);
-
-impl StackPointer {
-    fn new(ptr: usize) -> StackPointer {
-        assert!(ptr != 0);
-        StackPointer(unsafe { NonZero::new(ptr) })
-    }
-}
-
-impl Into<usize> for StackPointer {
-    fn into(self) -> usize {
-        *self.0
+    pub fn bottom(&self) -> StackPointer {
+        self.bottom
     }
 }
 ```
-The `Stack` struct describes a stack though its top and bottom pointers. A stack pointer can never be `0`, so we use the unstable [NonZero] wrapper for `StackPointer`. This wrapper is an optimization that tells the compiler that it can use the value `0` to differentiate enum variants. Thus, an `Option<StackPointer>` has always the same size as a bare `usize` (the value `0` is used to store the `None` case). We will require this feature when we create the Interrupt Stack Table later.
-
-Since `NonZero` is unstable, we need to add `#![feature(nonzero)]` in our `lib.rs`.
-
-[NonZero]: https://doc.rust-lang.org/nightly/core/nonzero/struct.NonZero.html
+The `Stack` struct describes a stack though its top and bottom addresses.
 
 #### The Memory Controller
 Now we're able to allocate a new double fault stack. However, we add one more level of abstraction to make things easier. For that we add a new `MemoryController` type to our `memory` module:
@@ -355,7 +337,7 @@ Now we're able to allocate a new double fault stack. However, we add one more le
 ```rust
 // in src/memory/mod.rs
 
-pub use self::stack_allocator::{Stack, StackPointer};
+pub use self::stack_allocator::Stack;
 
 pub struct MemoryController {
     active_table: paging::ActivePageTable,
@@ -475,81 +457,16 @@ I/O Map Base Address | `u16`
 
 The _Privilege Stack Table_ is used by the CPU when the privilege level changes. For example, if an exception occurs while the CPU is in user mode (privilege level 3), the CPU normally switches to kernel mode (privilege level 0) before invoking the exception handler. In that case, the CPU would switch to the 0th stack in the Privilege Stack Table (since 0 is the target privilege level). We don't have any user mode programs yet, so we ignore this table for now.
 
-Let's create a `TaskStateSegment` struct in a new `tss` submodule:
+#### Creating a TSS
+Let's create a new TSS that contains our double fault stack in its Interrupt Stack Table. For that we need a TSS struct. Fortunately, the `x86` crate already contains a [`TaskStateSegment` struct] that we can use:
+
+[`TaskStateSegment` struct]: https://docs.rs/x86/0.7.1/x86/task/struct.TaskStateSegment.html
 
 ```rust
 // in src/interrupts/mod.rs
 
-mod tss;
-
-// in src/interrupts/tss.rs
-
-#[derive(Debug)]
-#[repr(C, packed)]
-pub struct TaskStateSegment {
-    reserved_0: u32,
-    pub privilege_stacks: PrivilegeStackTable,
-    reserved_1: u64,
-    pub interrupt_stacks: InterruptStackTable,
-    reserved_2: u64,
-    reserved_3: u16,
-    iomap_base: u16,
-}
-
-use memory::StackPointer;
-
-#[derive(Debug)]
-pub struct PrivilegeStackTable([Option<StackPointer>; 3]);
-
-#[derive(Debug)]
-pub struct InterruptStackTable([Option<StackPointer>; 7]);
+use x86::task::TaskStateSegment;
 ```
-
-We use [repr\(C)] for the struct since the order is fields is important. We also use `[repr(packed)]` because otherwise the compiler might insert additional padding between the `reserved_0` and `privilege_stacks` fields.
-
-The `PrivilegeStackTable`  and `InterruptStackTable` types are just newtype wrappers for arrays of `Option<StackPointer>`. Here it becomes important that we implemented `NonZero` for `StackPointer`: Thus, an `Option<StackPointer>` still has the required size of 64 bits.
-
-Let's add a `TaskStateSegment::new` function that creates an empty TSS:
-
-```rust
-impl TaskStateSegment {
-    pub fn new() -> TaskStateSegment {
-        TaskStateSegment {
-            privilege_stacks: PrivilegeStackTable([None, None, None]),
-            interrupt_stacks: InterruptStackTable(
-                [None, None, None, None, None, None, None]),
-            iomap_base: 0,
-            reserved_0: 0,
-            reserved_1: 0,
-            reserved_2: 0,
-            reserved_3: 0,
-        }
-    }
-}
-```
-
-We also add a `InterruptStackTable::insert_stack` method, that inserts a given stack into a free table entry:
-
-```rust
-use memory::Stack;
-
-impl InterruptStackTable {
-    pub fn insert_stack(&mut self, stack: Stack) -> Result<u8, Stack> {
-        // TSS index starts at 1, so we do a `zip(1..)`
-        for (entry, i) in self.0.iter_mut().zip(1..) {
-            if entry.is_none() {
-                *entry = Some(stack.top());
-                return Ok(i);
-            }
-        }
-        Err(stack)
-    }
-}
-```
-The function iterates over the table and places the stack pointer in the first free entry. In the case of success, we return the table index of the inserted pointer. If there's no free entry left, we return the stack back to the caller as `Err`.
-
-#### Creating a TSS
-Let's build a new TSS that contains our double fault stack in its Interrupt Stack Table.
 
 The Global Descriptor Table (again)
 Putting it together
