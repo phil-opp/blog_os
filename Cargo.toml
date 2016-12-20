@@ -15,7 +15,6 @@ volatile = "0.1.0"
 [dependencies.hole_list_allocator]
 path = "libs/hole_list_allocator"
 
-
 [dependencies.x86]
 default-features = false
 version = "0.7.1"
@@ -26,8 +25,6 @@ features = ["spin_no_std"]
 
 [lib]
 crate-type = ["staticlib"]
-
-[workspace]
 
 [profile.dev]
 panic = "abort"
