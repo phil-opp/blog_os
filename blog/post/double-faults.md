@@ -8,14 +8,14 @@ In this post we will make our kernel completely exception-proof by catching doub
 <!--more--><aside id="toc"></aside>
 
 ## What is a Double Fault?
-In simplified terms, a double fault is a special exception that occurs when the CPU can't invoke an exception handler. For example, it occurs when a page fault is triggered but there is no page fault handler registered in the [IDT]. So it's kind of similar to catch-all blocks in programming languages with exceptions, e.g. `catch(...)` in C++ or `catch(Exception e)` in Java or C#.
+In simplified terms, a double fault is a special exception that occurs when the CPU fails to invoke an exception handler. For example, it occurs when a page fault is triggered but there is no page fault handler registered in the [Interrupt Descriptor Table][IDT] (IDT). So it's kind of similar to catch-all blocks in programming languages with exceptions, e.g. `catch(...)` in C++ or `catch(Exception e)` in Java or C#.
 
 [IDT]: {{% relref "09-catching-exceptions.md#the-interrupt-descriptor-table" %}}
 
 A double fault behaves like a normal exception. It has the vector number `8` and we can define a normal handler function for it in the IDT. It is really important to provide a double fault handler, because if a double fault is unhandled a fatal _triple fault_ occurs. Triple faults can't be caught and most hardware reacts with a system reset.
 
 ### Triggering a Double Fault
-Let's provoke a double fault by triggering an exception for that we didn't define a handler function yet:
+Let's provoke a double fault by triggering an exception for that we didn't define a handler function:
 
 {{< highlight rust "hl_lines=10" >}}
 // in src/lib.rs
@@ -58,7 +58,7 @@ The reason for the boot loop is the following:
 
 [int 1]: https://en.wikipedia.org/wiki/INT_(x86_instruction)
 
-So in order to prevent this triple fault, we need to either provide a handler function for `Debug` exceptions or a double fault handler. We will do the latter, since this post is all about the double fault.
+So in order to prevent this triple fault, we need to either provide a handler function for `Debug` exceptions or a double fault handler. We will do the latter, since we want to avoid triple faults completely.
 
 ### A Double Fault Handler
 A double fault is a normal exception with an error code, so we can use our `handler_with_error_code` macro to create a wrapper function:
@@ -103,14 +103,14 @@ It worked! Here is what happens this time:
 
 The triple fault (and the boot-loop) no longer occurs, since the CPU can now call the double fault handler.
 
-That was pretty straightforward! So why do we need a whole post for this topic? Well, we're now able to catch _most_ double faults, but there are some cases where our current approach doesn't suffice.
+That was quite straightforward! So why do we need a whole post for this topic? Well, we're now able to catch _most_ double faults, but there are some cases where our current approach doesn't suffice.
 
 ## Causes of Double Faults
 Before we look at the special cases, we need to know the exact causes of double faults. Above, we used a pretty vague definition:
 
-> A double fault is a special exception that occurs when the CPU can't invoke an exception handler.
+> A double fault is a special exception that occurs when the CPU fails to invoke an exception handler.
 
-What does _“can't invoke”_ mean exactly? The handler is not present? The handler is [swapped out]? And what happens if a handler causes exceptions itself?
+What does _“fails to invoke”_ mean exactly? The handler is not present? The handler is [swapped out]? And what happens if a handler causes exceptions itself?
 
 [swapped out]: http://pages.cs.wisc.edu/~remzi/OSTEP/vm-beyondphys.pdf
 
@@ -118,7 +118,7 @@ For example, what happens if… :
 
 1. a divide-by-zero exception occurs, but the corresponding handler function is swapped out?
 2. a page fault occurs, but the page fault handler is swapped out?
-3. a divide-by-zero handler invokes a breakpoint exception, but the breakpoint handler is swapped out?
+3. a divide-by-zero handler causes a breakpoint exception, but the breakpoint handler is swapped out?
 4. our kernel overflows its stack and the [guard page] is hit?
 
 [guard page]: {{% relref "07-remap-the-kernel.md#creating-a-guard-page" %}}
@@ -144,9 +144,9 @@ So for example a divide-by-zero fault followed by a page fault is fine (the page
 
 With the help of this table, we can answer the first three of the above questions:
 
-1. When a divide-by-zero exception occurs and the corresponding handler function is swapped out, a _page fault_ occurs and the _page fault handler_ is invoked.
-2. When a page fault occurs and the page fault handler is swapped out, a _double fault_ occurs and the _double fault_ handler is invoked.
-3. When a divide-by-zero handler invokes a breakpoint exception and the breakpoint handler is swapped out, a _breakpoint exception_ occurs first. However, the corresponding handler is swapped out, so a _page fault_ occurs and the _page fault handler_ is invoked.
+1. If a divide-by-zero exception occurs and the corresponding handler function is swapped out, a _page fault_ occurs and the _page fault handler_ is invoked.
+2. If a page fault occurs and the page fault handler is swapped out, a _double fault_ occurs and the _double fault handler_ is invoked.
+3. If a divide-by-zero handler causes a breakpoint exception, the CPU tries to invoke the breakpoint handler. If the breakpoint handler is swapped out, a _page fault_ occurs and the _page fault handler_ is invoked.
 
 In fact, even the case of a non-present handler follows this scheme: A non-present handler causes a _segment-not-present_ exception. We didn't define a segment-not-present handler, so another segment-not-present exception occurs. According to the table, this leads to a double fault.
 
@@ -155,7 +155,7 @@ Let's look at the fourth question:
 
 > What happens if our kernel overflows its stack and the [guard page] is hit?
 
-When our kernel overflows its stack and hits the guard page, a _page fault_ occurs and the CPU invokes the page fault handler. However, the CPU also tries to push the [exception stack frame] onto the stack. This fails of course, since our current stack pointer still points to the guard page. Thus, a second page fault occurs, which causes a double fault (according to the above table).
+When our kernel overflows its stack and hits the guard page, a _page fault_ occurs. The CPU looks up the page fault handler in the IDT and tries to push the [exception stack frame] onto the stack. However, our current stack pointer still points to the non-present guard page. Thus, a second page fault occurs, which causes a double fault (according to the above table).
 
 [exception stack frame]: http://os.phil-opp.com/better-exception-messages.html#exceptions-in-detail
 
@@ -199,9 +199,9 @@ struct InterruptStackTable {
 }
 ```
 
-For each exception handler, we can choose an stack from the IST through the `options` field in the corresponding [Interrupt Descriptor Table entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack whenever a double fault occurs. This switch would happen before anything is pushed, so it would prevent the triple fault.
+For each exception handler, we can choose an stack from the IST through the `options` field in the corresponding [IDT entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack whenever a double fault occurs. This switch would happen before anything is pushed, so it would prevent the triple fault.
 
-[Interrupt Descriptor Table entry]: {{% relref "09-catching-exceptions.md#the-interrupt-descriptor-table" %}}
+[IDT entry]: {{% relref "09-catching-exceptions.md#the-interrupt-descriptor-table" %}}
 
 ### Allocating a new Stack
 In order to fill an Interrupt Stack Table later, we need a way to allocate new stacks. Therefore we extend our `memory` module with a new `stack_allocator` submodule:
@@ -232,7 +232,6 @@ impl StackAllocator {
 }
 ```
 We create a simple `StackAllocator` that allocates stacks from a given range of pages (`PageIter` is an Iterator over a range of pages; we introduced it [in the kernel heap post].).
-TODO: Instead of adding a `StackAllocator::new` function, we use a separate `new_stack_allocator` function. This way, we can re-export `StackAllocator` from the `memory` module without re-exporting the `new` function.
 
 [in the kernel heap post]:  {{% relref "08-kernel-heap.md#mapping-the-heap" %}}
 
@@ -289,11 +288,19 @@ impl StackAllocator {
 ```
 The method takes mutable references to the [ActivePageTable] and a [FrameAllocator], since it needs to map the new virtual stack pages to physical frames. The stack size is a multiple of the page size.
 
-Instead of operating directly on `self.range`, we [clone] it and only write it back on success. This way, subsequent stack allocations can still succeed if there are pages left. For example, a call with `size_in_pages = 3` can still succeed after a failed call with `size_in_pages = 100`. In order to be able to clone `PageIter`, we add a `#[derive(Clone)]` to its definition in `src/memory/paging/mod.rs`.
+[ActivePageTable]: {{% relref "06-page-tables.md#page-table-ownership" %}}
+[FrameAllocator]: {{% relref "05-allocating-frames.md#a-frame-allocator" %}}
+
+Instead of operating directly on `self.range`, we [clone] it and only write it back on success. This way, subsequent stack allocations can still succeed if there are pages left (e.g., a call with `size_in_pages = 3` can still succeed after a failed call with `size_in_pages = 100`). In order to be able to clone `PageIter`, we add a `#[derive(Clone)]` to its definition in `src/memory/paging/mod.rs`.
+
+[clone]: https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone
 
 The actual allocation is straightforward: First, we choose the next page as [guard page]. Then we choose the next `size_in_pages` pages as stack pages using [Iterator::nth]. If all three variables are `Some`, the allocation succeeded and we map the stack pages to physical frames using [ActivePageTable::map]. The guard page remains unmapped.
 
-Finally, we create and return a new `Stack`, which is defined as follows:
+[Iterator::nth]: https://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html#method.nth
+[ActivePageTable::map]: {{% relref "06-page-tables.md#more-mapping-functions" %}}
+
+Finally, we create and return a new `Stack`, which we define as follows:
 
 ```rust
 // in src/memory/stack_allocator.rs
@@ -336,14 +343,14 @@ impl Into<usize> for StackPointer {
     }
 }
 ```
-The `Stack` struct describes a stack though its top and bottom pointers. A stack pointer can never be `0`, so we use the unstable [NonZero] wrapper for `StackPointer`. This wrapper is an optimization that tells the compiler that it can use the value `0` to differentiate enum variants. Thus, an `Option<StackPointer>` has always the same size as a bare `usize` (the value `0` is used to store the `None` case). We will require this property when we create the Interrupt Stack Table later.
+The `Stack` struct describes a stack though its top and bottom pointers. A stack pointer can never be `0`, so we use the unstable [NonZero] wrapper for `StackPointer`. This wrapper is an optimization that tells the compiler that it can use the value `0` to differentiate enum variants. Thus, an `Option<StackPointer>` has always the same size as a bare `usize` (the value `0` is used to store the `None` case). We will require this feature when we create the Interrupt Stack Table later.
 
 Since `NonZero` is unstable, we need to add `#![feature(nonzero)]` in our `lib.rs`.
 
 [NonZero]: https://doc.rust-lang.org/nightly/core/nonzero/struct.NonZero.html
 
 #### The Memory Controller
-Now we're already able to allocate a new double fault stack. However, we add one more level of abstraction to make things nicer. For that we add a `MemoryController` type to our `memory` module:
+Now we're able to allocate a new double fault stack. However, we add one more level of abstraction to make things easier. For that we add a new `MemoryController` type to our `memory` module:
 
 ```rust
 // in src/memory/mod.rs
@@ -366,9 +373,12 @@ impl MemoryController {
     }
 }
 ```
-The `MemoryController` struct holds the three types that are required for `alloc_stack` and provides a simpler interface (only one argument). The `alloc_stack` wrapper just takes the tree types as `&mut` through [destructuring] and forwards them to the `stack_allocator`. Note that we're re-exporting the `Stack` and `StackPointer` types since they are returned by `alloc_stack`.
+The `MemoryController` struct holds the three types that are required for `alloc_stack` and provides a simpler interface (only one argument). The `alloc_stack` wrapper just takes the tree types as `&mut` through [destructuring] and forwards them to the `stack_allocator`. The [ref mut]-s are needed to take the inner fields by mutable reference. Note that we're re-exporting the `Stack` and `StackPointer` types since they are returned by `alloc_stack`.
 
-The last step is to create a `stack_allocator` and return a `MemoryController` from `memory::init`:
+[destructuring]: http://rust-lang.github.io/book/chXX-patterns.html#Destructuring
+[ref mut]: http://rust-lang.github.io/book/chXX-patterns.html#ref-and-ref-mut
+
+The last step is to create a `StackAllocator` and return a `MemoryController` from `memory::init`:
 
 ```rust
 // in src/memory/mod.rs
@@ -442,7 +452,7 @@ pub fn init(memory_controller: &mut MemoryController) {
 We allocate a 4096 bytes stack (one page) for our double fault handler. Now we just need some way to tell the CPU that it should use this stack for handling double faults.
 
 ### The IST and TSS
-The Interrupt Stack Table (IST) is part of an old legacy structure called [Task State Segment] (TSS). The TSS used to hold various information (e.g. processor register state) about a task in 32-bit x86 and was for example used for [hardware context switching]. However, hardware context switching is no longer supported in 64-bit mode and the format of the TSS changed completely.
+The Interrupt Stack Table (IST) is part of an old legacy structure called [Task State Segment] \(TSS). The TSS used to hold various information (e.g. processor register state) about a task in 32-bit x86 and was for example used for [hardware context switching]. However, hardware context switching is no longer supported in 64-bit mode and the format of the TSS changed completely.
 
 [Task State Segment]: https://en.wikipedia.org/wiki/Task_state_segment
 [hardware context switching]: http://wiki.osdev.org/Context_Switching#Hardware_Context_Switching
@@ -455,12 +465,12 @@ The 64-bit TSS has the following format:
 
 Field  | Type
 ------ | ----------------
-(reserved) | `u32`
+<span style="opacity: 0.5">(reserved)</span> | `u32`
 Privilege Stack Table | `[u64; 3]`
-(reserved) | `u64`
+<span style="opacity: 0.5">(reserved)</span> | `u64`
 Interrupt Stack Table | `[u64; 7]`
-(reserved) | `u64`
-(reserved) | `u16`
+<span style="opacity: 0.5">(reserved)</span> | `u64`
+<span style="opacity: 0.5">(reserved)</span> | `u16`
 I/O Map Base Address | `u16`
 
 The _Privilege Stack Table_ is used by the CPU when the privilege level changes. For example, if an exception occurs while the CPU is in user mode (privilege level 3), the CPU normally switches to kernel mode (privilege level 0) before invoking the exception handler. In that case, the CPU would switch to the 0th stack in the Privilege Stack Table (since 0 is the target privilege level). We don't have any user mode programs yet, so we ignore this table for now.
