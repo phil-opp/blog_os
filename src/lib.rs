@@ -55,11 +55,8 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // set up guard page and map the heap pages
     let mut memory_controller = memory::init(boot_info);
 
-
     // initialize our IDT
-    let double_fault_stack = memory_controller.alloc_stack(1)
-        .expect("could not allocate double fault stack");
-    interrupts::init(double_fault_stack);
+    interrupts::init(&mut memory_controller);
 
     unsafe { int!(3) };
 

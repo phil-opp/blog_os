@@ -1,4 +1,4 @@
-use memory::StackPointer;
+use memory::{Stack, StackPointer};
 
 #[derive(Debug)]
 #[repr(C, packed)]
@@ -16,7 +16,7 @@ impl TaskStateSegment {
     pub fn new() -> TaskStateSegment {
         TaskStateSegment {
             privilege_stacks: PrivilegeStackTable([None, None, None]),
-            interrupt_stacks: InterruptStackTable::new(),
+            interrupt_stacks: InterruptStackTable([None, None, None, None, None, None, None]),
             iomap_base: 0,
             reserved_0: 0,
             reserved_1: 0,
@@ -33,18 +33,14 @@ pub struct PrivilegeStackTable([Option<StackPointer>; 3]);
 pub struct InterruptStackTable([Option<StackPointer>; 7]);
 
 impl InterruptStackTable {
-    pub fn new() -> InterruptStackTable {
-        InterruptStackTable([None, None, None, None, None, None, None])
-    }
-
-    pub fn insert_stack(&mut self, stack_pointer: StackPointer) -> Result<u8, StackPointer> {
+    pub fn insert_stack(&mut self, stack: Stack) -> Result<u8, Stack> {
         // TSS index starts at 1
         for (entry, i) in self.0.iter_mut().zip(1..) {
             if entry.is_none() {
-                *entry = Some(stack_pointer);
+                *entry = Some(stack.top());
                 return Ok(i);
             }
         }
-        Err(stack_pointer)
+        Err(stack)
     }
 }

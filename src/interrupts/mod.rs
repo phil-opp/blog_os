@@ -8,7 +8,7 @@
 // except according to those terms.
 
 use spin::Once;
-use memory::StackPointer;
+use memory::MemoryController;
 
 mod idt;
 mod tss;
@@ -95,7 +95,10 @@ static IDT: Once<idt::Idt> = Once::new();
 static TSS: Once<tss::TaskStateSegment> = Once::new();
 static GDT: Once<gdt::Gdt> = Once::new();
 
-pub fn init(double_fault_stack: StackPointer) {
+pub fn init(memory_controller: &mut MemoryController) {
+    let double_fault_stack = memory_controller.alloc_stack(1)
+        .expect("could not allocate double fault stack");
+
     let mut double_fault_ist_index = 0;
 
     let tss = TSS.call_once(|| {

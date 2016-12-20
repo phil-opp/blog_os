@@ -9,7 +9,7 @@
 
 pub use self::area_frame_allocator::AreaFrameAllocator;
 pub use self::paging::remap_the_kernel;
-pub use self::stack_allocator::{StackAllocator, StackPointer};
+pub use self::stack_allocator::{Stack, StackPointer};
 use self::paging::PhysicalAddress;
 use multiboot2::BootInformation;
 
@@ -62,11 +62,10 @@ pub fn init(boot_info: &BootInformation) -> MemoryController {
     }
 
     let stack_allocator = {
-        let stack_alloc_start_page = heap_end_page + 1;
-        let stack_alloc_end_page = stack_alloc_start_page + 100;
-        let stack_alloc_page_range = Page::range_inclusive(stack_alloc_start_page,
-                                                           stack_alloc_end_page);
-        stack_allocator::new_stack_allocator(stack_alloc_page_range)
+        let stack_alloc_start = heap_end_page + 1;
+        let stack_alloc_end = stack_alloc_start + 100;
+        let stack_alloc_range = Page::range_inclusive(stack_alloc_start, stack_alloc_end);
+        stack_allocator::new_stack_allocator(stack_alloc_range)
     };
 
     MemoryController {
@@ -79,11 +78,11 @@ pub fn init(boot_info: &BootInformation) -> MemoryController {
 pub struct MemoryController {
     active_table: paging::ActivePageTable,
     frame_allocator: AreaFrameAllocator,
-    stack_allocator: StackAllocator,
+    stack_allocator: stack_allocator::StackAllocator,
 }
 
 impl MemoryController {
-    pub fn alloc_stack(&mut self, size_in_pages: usize) -> Result<StackPointer, ()> {
+    pub fn alloc_stack(&mut self, size_in_pages: usize) -> Option<Stack> {
         let &mut MemoryController { ref mut active_table,
                                     ref mut frame_allocator,
                                     ref mut stack_allocator } = self;

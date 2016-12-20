@@ -70,6 +70,7 @@ impl Add<usize> for Page {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct PageIter {
     start: Page,
     end: Page,

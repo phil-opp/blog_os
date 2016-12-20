@@ -15,37 +15,73 @@ impl StackAllocator {
                                            active_table: &mut ActivePageTable,
                                            frame_allocator: &mut FA,
                                            size_in_pages: usize)
-                                           -> Result<StackPointer, ()> {
+                                           -> Option<Stack> {
         if size_in_pages == 0 {
-            return Err(());
+            return None;
         }
 
-        let _guard_page = self.range.next().ok_or(())?;
+        let mut range = self.range.clone();
 
-        let stack_start = self.range.next().ok_or(())?;
+        // try to allocate the stack pages and a guard page
+        let guard_page = range.next();
+        let stack_start = range.next();
         let stack_end = if size_in_pages == 1 {
             stack_start
         } else {
-            self.range.nth(size_in_pages - 1).ok_or(())?
+            range.nth(size_in_pages - 2)
         };
 
-        for page in Page::range_inclusive(stack_start, stack_end) {
-            active_table.map(page, paging::WRITABLE, frame_allocator);
-        }
+        match (guard_page, stack_start, stack_end) {
+            (Some(_), Some(start), Some(end)) => {
+                // success! write back updated range
+                self.range = range;
 
-        let top_of_stack = stack_end.start_address() + PAGE_SIZE;
-        StackPointer::new(top_of_stack).ok_or(())
+                // map stack pages to physical frames
+                for page in Page::range_inclusive(start, end) {
+                    active_table.map(page, paging::WRITABLE, frame_allocator);
+                }
+
+                // create a new stack
+                let top_of_stack = end.start_address() + PAGE_SIZE;
+                Some(Stack::new(top_of_stack, start.start_address()))
+            }
+            _ => None, /* not enough pages */
+        }
     }
 }
 
 #[derive(Debug)]
+pub struct Stack {
+    top: StackPointer,
+    bottom: StackPointer,
+}
+
+impl Stack {
+    fn new(top: usize, bottom: usize) -> Stack {
+        assert!(top > bottom);
+        Stack {
+            top: StackPointer::new(top),
+            bottom: StackPointer::new(bottom),
+        }
+    }
+
+    pub fn top(&self) -> StackPointer {
+        self.top
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct StackPointer(NonZero<usize>);
 
 impl StackPointer {
-    fn new(ptr: usize) -> Option<StackPointer> {
-        match ptr {
-            0 => None,
-            ptr => Some(StackPointer(unsafe { NonZero::new(ptr) })),
-        }
+    fn new(ptr: usize) -> StackPointer {
+        assert!(ptr != 0);
+        StackPointer(unsafe { NonZero::new(ptr) })
+    }
+}
+
+impl Into<usize> for StackPointer {
+    fn into(self) -> usize {
+        *self.0
     }
 }
