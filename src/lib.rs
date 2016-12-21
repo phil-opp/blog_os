@@ -62,7 +62,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 }
 
 fn enable_nxe_bit() {
-    use x86::msr::{IA32_EFER, rdmsr, wrmsr};
+    use x86::shared::msr::{IA32_EFER, rdmsr, wrmsr};
 
     let nxe_bit = 1 << 11;
     unsafe {
@@ -72,10 +72,9 @@ fn enable_nxe_bit() {
 }
 
 fn enable_write_protect_bit() {
-    use x86::controlregs::{cr0, cr0_write};
+    use x86::shared::control_regs::{cr0, cr0_write, CR0_WRITE_PROTECT};
 
-    let wp_bit = 1 << 16;
-    unsafe { cr0_write(cr0() | wp_bit) };
+    unsafe { cr0_write(cr0() | CR0_WRITE_PROTECT) };
 }
 
 #[cfg(not(test))]

@@ -95,10 +95,10 @@ bitflags! {
 }
 
 extern "C" fn page_fault_handler(stack_frame: &ExceptionStackFrame, error_code: u64) -> ! {
-    use x86::controlregs;
+    use x86::shared::control_regs;
     println!("\nEXCEPTION: PAGE FAULT while accessing {:#x}\nerror code: \
                                   {:?}\n{:#?}",
-             unsafe { controlregs::cr2() },
+             unsafe { control_regs::cr2() },
              PageFaultErrorCode::from_bits(error_code).unwrap(),
              stack_frame);
     loop {}
