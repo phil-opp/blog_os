@@ -7,7 +7,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use x86::segmentation::{self, SegmentSelector};
+use x86::shared::segmentation::{self, SegmentSelector};
+use x86::shared::PrivilegeLevel;
 
 pub struct Idt([Entry; 16]);
 
@@ -22,11 +23,11 @@ impl Idt {
     }
 
     pub fn load(&'static self) {
-        use x86::dtables::{DescriptorTablePointer, lidt};
+        use x86::shared::dtables::{DescriptorTablePointer, lidt};
         use core::mem::size_of;
 
         let ptr = DescriptorTablePointer {
-            base: self as *const _ as u64,
+            base: self as *const _ as *const ::x86::bits64::irq::IdtEntry,
             limit: (size_of::<Self>() - 1) as u16,
         };
 
@@ -62,7 +63,7 @@ impl Entry {
 
     fn missing() -> Self {
         Entry {
-            gdt_selector: SegmentSelector::new(0),
+            gdt_selector: SegmentSelector::new(0, PrivilegeLevel::Ring0),
             pointer_low: 0,
             pointer_middle: 0,
             pointer_high: 0,

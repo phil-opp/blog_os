@@ -110,11 +110,11 @@ impl ActivePageTable {
                    f: F)
         where F: FnOnce(&mut Mapper)
     {
-        use x86::{controlregs, tlb};
+        use x86::shared::{control_regs, tlb};
         let flush_tlb = || unsafe { tlb::flush_all() };
 
         {
-            let backup = Frame::containing_address(unsafe { controlregs::cr3() } as usize);
+            let backup = Frame::containing_address(unsafe { control_regs::cr3() } as usize);
 
             // map temporary_page to current p4 table
             let p4_table = temporary_page.map_table_frame(backup.clone(), self);
@@ -135,13 +135,13 @@ impl ActivePageTable {
     }
 
     pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
-        use x86::controlregs;
+        use x86::shared::control_regs;
 
         let old_table = InactivePageTable {
-            p4_frame: Frame::containing_address(unsafe { controlregs::cr3() } as usize),
+            p4_frame: Frame::containing_address(unsafe { control_regs::cr3() } as usize),
         };
         unsafe {
-            controlregs::cr3_write(new_table.p4_frame.start_address() as u64);
+            control_regs::cr3_write(new_table.p4_frame.start_address());
         }
         old_table
     }
