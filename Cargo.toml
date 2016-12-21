@@ -17,7 +17,7 @@ path = "libs/hole_list_allocator"
 
 [dependencies.x86]
 default-features = false
-version = "0.7.1"
+version = "0.8.0"
 
 [dependencies.lazy_static]
 version = "0.2.1"
