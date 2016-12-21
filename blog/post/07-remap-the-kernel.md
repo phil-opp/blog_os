@@ -345,7 +345,7 @@ pub fn with<F>(&mut self,
                f: F)
     where F: FnOnce(&mut ActivePageTable)
 {
-    use x86::tlb;
+    use x86::shared::tlb;
     let flush_tlb = || unsafe { tlb::flush_all() };
 
     // overwrite recursive mapping
@@ -449,9 +449,9 @@ Right now, the `with` function overwrites the recursive mapping and calls the cl
 To backup the physical P4 frame of the active table, we can either read it from the 511th P4 entry (before we change it) or from the CR3 control register directly. We will do the latter as it should be faster and we already have a external crate that makes it easy:
 
 ```rust
-use x86::controlregs;
+use x86::shared::control_regs;
 let backup = Frame::containing_address(
-    unsafe { controlregs::cr3() } as usize
+    unsafe { control_regs::cr3() } as usize
 );
 ```
 Why is it unsafe? Because reading the CR3 register leads to a CPU exception if the processor is not running in kernel mode ([Ring 0]). But this code will always run in kernel mode, so the `unsafe` block is completely safe here.
@@ -482,12 +482,12 @@ pub fn with<F>(&mut self,
                    f: F)
     where F: FnOnce(&mut Mapper)
 {
-    use x86::{controlregs, tlb};
+    use x86::shared::{control_regs, tlb};
     let flush_tlb = || unsafe { tlb::flush_all() };
 
     {
         let backup = Frame::containing_address(
-            unsafe { controlregs::cr3() } as usize);
+            unsafe { control_regs::cr3() } as usize);
 
         // map temporary_page to current p4 table
         let p4_table = temporary_page.map_table_frame(backup.clone(), self);
@@ -755,15 +755,15 @@ We do this in a new `ActivePageTable::switch` method:
 // in `impl ActivePageTable` in src/memory/paging/mod.rs
 
 pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
-    use x86::controlregs;
+    use x86::shared::control_regs;
 
     let old_table = InactivePageTable {
         p4_frame: Frame::containing_address(
-            unsafe { controlregs::cr3() } as usize
+            unsafe { control_regs::cr3() } as usize
         ),
     };
     unsafe {
-        controlregs::cr3_write(new_table.p4_frame.start_address() as u64);
+        control_regs::cr3_write(new_table.p4_frame.start_address());
     }
     old_table
 }
@@ -963,7 +963,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
 
 But when we test it now, we get a page fault again. We can use the same technique as above to get the responsible function. I won't bother you with the QEMU output and just tell you the results:
 
-This time the responsible function is `controlregs::cr3_write()` itself. From the [error code][page fault error code] we learn that it was a page protection violation and caused by “reading a 1 in a reserved field”. So the page table had some reserved bit set that should be always 0. It must be the `NO_EXECUTE` flag, since it's the only new bit that we set in the page table.
+This time the responsible function is `control_regs::cr3_write()` itself. From the [error code][page fault error code] we learn that it was a page protection violation and caused by “reading a 1 in a reserved field”. So the page table had some reserved bit set that should be always 0. It must be the `NO_EXECUTE` flag, since it's the only new bit that we set in the page table.
 
 ### The NXE Bit
 The reason is that the `NO_EXECUTE` bit must only be used when the `NXE` bit in the [Extended Feature Enable Register] \(EFER) is set. That register is similar to Rust's feature gating and can be used to enable all sorts of advanced CPU features. Since the `NXE` bit is off by default, we caused a page fault when we added the `NO_EXECUTE` bit to the page table.
@@ -976,7 +976,7 @@ So we need to enable the `NXE` bit. For that we use the awesome [x86][rust-x86] 
 // in lib.rs
 
 fn enable_nxe_bit() {
-    use x86::msr::{IA32_EFER, rdmsr, wrmsr};
+    use x86::shared::msr::{IA32_EFER, rdmsr, wrmsr};
 
     let nxe_bit = 1 << 11;
     unsafe {
@@ -996,10 +996,9 @@ Right now, we are still able to modify the `.code` and `.rodata` sections, even 
 // in lib.rs
 
 fn enable_write_protect_bit() {
-    use x86::controlregs::{cr0, cr0_write};
+    use x86::shared::control_regs::{cr0, cr0_write, CR0_WRITE_PROTECT};
 
-    let wp_bit = 1 << 16;
-    unsafe { cr0_write(cr0() | wp_bit) };
+    unsafe { cr0_write(cr0() | CR0_WRITE_PROTECT) };
 }
 ```
 The `cr0` functions are unsafe because accessing the `CR0` register is only allowed in kernel mode.

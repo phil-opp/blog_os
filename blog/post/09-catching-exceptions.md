@@ -84,7 +84,8 @@ Now we create types for the IDT and its entries:
 ```rust
 // src/interrupts/idt.rs
 
-use x86::segmentation::{self, SegmentSelector};
+use x86::shared::segmentation::{self, SegmentSelector};
+use x86::shared::PrivilegeLevel;
 
 pub struct Idt([Entry; 16]);
 
@@ -254,7 +255,7 @@ impl Idt {
 impl Entry {
     fn missing() -> Self {
         Entry {
-            gdt_selector: SegmentSelector::new(0),
+            gdt_selector: SegmentSelector::new(0, PrivilegeLevel::Ring0),
             pointer_low: 0,
             pointer_middle: 0,
             pointer_high: 0,
@@ -306,11 +307,11 @@ This structure is already contained [in the x86 crate], so we don't need to crea
 ```rust
 impl Idt {
     pub fn load(&self) {
-        use x86::dtables::{DescriptorTablePointer, lidt};
+        use x86::shared::dtables::{DescriptorTablePointer, lidt};
         use core::mem::size_of;
 
         let ptr = DescriptorTablePointer {
-            base: self as *const _ as u64,
+            base: self as *const _ as *const ::x86::bits64::irq::IdtEntry,
             limit: (size_of::<Self>() - 1) as u16,
         };
 
@@ -318,11 +319,11 @@ impl Idt {
     }
 }
 ```
-The method does not need to modify the IDT, so it takes `self` by immutable reference. We convert this reference to an u64 and calculate the table size using [mem::size_of]. The additional `-1` is needed because the limit field has to be the maximum addressable byte.
+The method does not need to modify the IDT, so it takes `self` by immutable reference. First, we create a `DescriptorTablePointer` and then we pass it to `lidt`. The `lidt` function expects that the `base` field has the type `x86::bits64::irq::IdtEntry`[^fn-x86-idt-entry], therefore we need to cast the `self` pointer. For calculating the `limit` we use [mem::size_of]. The additional `-1` is needed because the limit field has to be the maximum addressable byte (inclusive bound). We need an unsafe block around `lidt`, because the function assumes that the specified handler addresses are valid.
+
+[^fn-x86-idt-entry]: The `x86` crate has its own `IdtEntry` type, but it is a bit incomplete. Therefore we created our own IDT types.
 
 [mem::size_of]: https://doc.rust-lang.org/nightly/core/mem/fn.size_of.html
-
-Then we pass a pointer to our `ptr` structure to the `lidt` function, which calls the `lidt` assembly instruction in order to reload the IDT register. We need an unsafe block here, because the `lidt` assumes that the specified handler addresses are valid.
 
 #### Safety
 But can we really guarantee that handler addresses are always valid? Let's see:

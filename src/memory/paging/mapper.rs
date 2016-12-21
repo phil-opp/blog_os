@@ -111,7 +111,7 @@ impl Mapper {
             .expect("mapping code does not support huge pages");
         let frame = p1[page.p1_index()].pointed_frame().unwrap();
         p1[page.p1_index()].set_unused();
-        unsafe { ::x86::tlb::flush(page.start_address()) };
+        unsafe { ::x86::shared::tlb::flush(page.start_address()) };
         // TODO free p(1,2,3) table if empty
         // allocator.deallocate_frame(frame);
     }

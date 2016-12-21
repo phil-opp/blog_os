@@ -904,7 +904,7 @@ So to fix our `unmap` function, we need to remove the cached translation from th
 
 ```toml
 [dependencies.x86]
-version = "0.7.1"
+version = "0.8.0"
 default-features = false
 ```
 It has a `performance-counter` feature that allows reading the CPU specific [performance counters] but increases compile times. We don't need it right now, so we disable it using `default-features = false`.
@@ -917,7 +917,7 @@ It has a `performance-counter` feature that allows reading the CPU specific [per
 ...
   p1[page.p1_index()].set_unused();
   unsafe {
-      ::x86::tlb::flush(page.start_address());
+      ::x86::shared::tlb::flush(page.start_address());
   }
   // TODO free p(1,2,3) table if empty
   //allocator.deallocate_frame(frame);
