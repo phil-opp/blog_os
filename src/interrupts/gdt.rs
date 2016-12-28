@@ -1,28 +1,42 @@
 use bit_field::BitField;
-use collections::vec::Vec;
 use x86::bits64::task::TaskStateSegment;
+use x86::shared::segmentation::SegmentSelector;
+use x86::shared::PrivilegeLevel;
 
-pub struct Gdt(Vec<u64>);
+pub struct Gdt {
+    table: [u64; 8],
+    current_offset: usize,
+}
 
 impl Gdt {
     pub fn new() -> Gdt {
-        let zero_entry = 0;
-        Gdt(vec![zero_entry])
+        Gdt {
+            table: [0; 8],
+            current_offset: 1,
+        }
     }
 
-    pub fn add_entry(&mut self, entry: Entry) -> Selector {
-        use core::mem::size_of;
-        let index = self.0.len() * size_of::<u64>();
-
-        match entry {
-            Entry::UserSegment(entry) => self.0.push(entry),
-            Entry::SystemSegment(entry_low, entry_high) => {
-                self.0.push(entry_low);
-                self.0.push(entry_high);
-            }
+    fn push(&mut self, value: u64) -> usize {
+        if self.current_offset < self.table.len() {
+            let offset = self.current_offset;
+            self.table[offset] = value;
+            self.current_offset += 1;
+            offset
+        } else {
+            panic!("GDT full");
         }
+    }
 
-        Selector(index as u16)
+    pub fn add_entry(&mut self, entry: Descriptor) -> SegmentSelector {
+        let index = match entry {
+            Descriptor::UserSegment(value) => self.push(value),
+            Descriptor::SystemSegment(value_low, value_high) => {
+                let index = self.push(value_low);
+                self.push(value_high);
+                index
+            }
+        };
+        SegmentSelector::new(index as u16, PrivilegeLevel::Ring0)
     }
 
     pub fn load(&'static self) {
@@ -30,31 +44,26 @@ impl Gdt {
         use core::mem::size_of;
 
         let ptr = DescriptorTablePointer {
-            base: self.0.as_ptr() as *const ::x86::shared::segmentation::SegmentDescriptor,
-            limit: (self.0.len() * size_of::<u64>() - 1) as u16,
+            base: self.table.as_ptr() as *const ::x86::shared::segmentation::SegmentDescriptor,
+            limit: (self.table.len() * size_of::<u64>() - 1) as u16,
         };
 
         unsafe { lgdt(&ptr) };
     }
 }
 
-pub enum Entry {
+pub enum Descriptor {
     UserSegment(u64),
     SystemSegment(u64, u64),
 }
 
-impl Entry {
-    pub fn code_segment() -> Entry {
-        let flags = DESCRIPTOR_TYPE | PRESENT | READ_WRITE | EXECUTABLE | LONG_MODE;
-        Entry::UserSegment(flags.bits())
+impl Descriptor {
+    pub fn kernel_code_segment() -> Descriptor {
+        let flags = USER_SEGMENT | PRESENT | EXECUTABLE | LONG_MODE;
+        Descriptor::UserSegment(flags.bits())
     }
 
-    pub fn data_segment() -> Entry {
-        let flags = DESCRIPTOR_TYPE | PRESENT | READ_WRITE;
-        Entry::UserSegment(flags.bits())
-    }
-
-    pub fn tss_segment(tss: &'static TaskStateSegment) -> Entry {
+    pub fn tss_segment(tss: &'static TaskStateSegment) -> Descriptor {
         use core::mem::size_of;
 
         let ptr = tss as *const _ as u64;
@@ -67,54 +76,16 @@ impl Entry {
         let mut high = 0;
         high.set_range(0..32, ptr.get_range(32..64));
 
-        Entry::SystemSegment(low, high)
+        Descriptor::SystemSegment(low, high)
     }
 }
 
 bitflags! {
-    flags EntryFlags: u64 {
-        const READ_WRITE        = 1 << 41,
+    flags DescriptorFlags: u64 {
         const CONFORMING        = 1 << 42,
         const EXECUTABLE        = 1 << 43,
-        const DESCRIPTOR_TYPE   = 1 << 44,
+        const USER_SEGMENT      = 1 << 44,
         const PRESENT           = 1 << 47,
         const LONG_MODE         = 1 << 53,
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Selector(u16);
-
-impl Selector {
-    pub fn new() -> Selector {
-        Selector(0)
-    }
-}
-
-pub fn reload_segment_registers(code_selector: Selector, data_selector: Selector) {
-
-    let current_code_selector: u16;
-    let current_data_selector: u16;
-
-    unsafe {
-        asm!("mov $0, cs" : "=r" (current_code_selector) ::: "intel");
-        asm!("mov $0, ds" : "=r" (current_data_selector) ::: "intel");
-    }
-    assert_eq!(code_selector.0, current_code_selector);
-    assert_eq!(data_selector.0, current_data_selector);
-
-    // jmp ax:.new_code_segment // TODO
-    // .new_code_segment:
-    // unsafe { asm!("
-    // mov ax, $1
-    // mov ss, ax
-    // mov ds, ax
-    // mov es, ax
-    // ":: "r" (code_selector.0), "r" (data_selector.0) :: "intel")};
-    //
-}
-
-/// Load the task state register.
-pub unsafe fn load_ltr(selector: Selector) {
-    asm!("ltr $0" :: "r" (selector));
 }
