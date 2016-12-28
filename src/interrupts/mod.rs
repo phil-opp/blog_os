@@ -91,52 +91,54 @@ macro_rules! handler_with_error_code {
     }}
 }
 
-static IDT: Once<idt::Idt> = Once::new();
-static TSS: Once<TaskStateSegment> = Once::new();
-static GDT: Once<gdt::Gdt> = Once::new();
-
-pub fn init(memory_controller: &mut MemoryController) {
-    let double_fault_stack = memory_controller.alloc_stack(1)
-        .expect("could not allocate double fault stack");
-
-    const DOUBLE_FAULT_IST_INDEX: u8 = 0;
-
-    let tss = TSS.call_once(|| {
-        let mut tss = TaskStateSegment::new();
-        tss.ist[DOUBLE_FAULT_IST_INDEX as usize] = double_fault_stack.top() as u64;
-        tss
-    });
-
-    let mut code_selector = gdt::Selector::new();
-    let mut data_selector = gdt::Selector::new();
-    let mut tss_selector = gdt::Selector::new();
-    let gdt = GDT.call_once(|| {
-        let mut gdt = gdt::Gdt::new();
-
-        code_selector = gdt.add_entry(gdt::Entry::code_segment());
-        data_selector = gdt.add_entry(gdt::Entry::data_segment());
-        tss_selector = gdt.add_entry(gdt::Entry::tss_segment(tss));
-
-        gdt
-    });
-    gdt.load();
-    gdt::reload_segment_registers(code_selector, data_selector);
-    unsafe { gdt::load_ltr(tss_selector) };
-
-    let idt = IDT.call_once(|| {
+lazy_static! {
+    static ref IDT: idt::Idt = {
         let mut idt = idt::Idt::new();
 
         idt.set_handler(0, handler!(divide_by_zero_handler));
         idt.set_handler(3, handler!(breakpoint_handler));
         idt.set_handler(6, handler!(invalid_opcode_handler));
         idt.set_handler(8, handler_with_error_code!(double_fault_handler))
-            .set_stack_index(DOUBLE_FAULT_IST_INDEX);
+            .set_stack_index(DOUBLE_FAULT_IST_INDEX as u8);
         idt.set_handler(14, handler_with_error_code!(page_fault_handler));
 
         idt
+    };
+}
+
+static TSS: Once<TaskStateSegment> = Once::new();
+static GDT: Once<gdt::Gdt> = Once::new();
+const DOUBLE_FAULT_IST_INDEX: usize = 0;
+
+pub fn init(memory_controller: &mut MemoryController) {
+    use x86::shared::segmentation::{SegmentSelector, set_cs};
+    use x86::shared::task::load_tr;
+
+    let double_fault_stack = memory_controller.alloc_stack(1)
+        .expect("could not allocate double fault stack");
+
+    let tss = TSS.call_once(|| {
+        let mut tss = TaskStateSegment::new();
+        tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
+        tss
     });
 
-    idt.load();
+    let mut code_selector = SegmentSelector::empty();
+    let mut tss_selector = SegmentSelector::empty();
+    let gdt = GDT.call_once(|| {
+        let mut gdt = gdt::Gdt::new();
+        tss_selector = gdt.add_entry(gdt::Descriptor::tss_segment(&tss));
+        code_selector = gdt.add_entry(gdt::Descriptor::kernel_code_segment());
+        gdt
+    });
+    gdt.load();
+
+    unsafe {
+        set_cs(code_selector);
+        load_tr(tss_selector);
+    }
+
+    IDT.load();
 }
 
 #[derive(Debug)]
