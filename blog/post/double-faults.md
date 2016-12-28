@@ -3,9 +3,16 @@ title = "Double Faults"
 date = "2016-11-08"
 +++
 
-In this post we will make our kernel completely exception-proof by catching double faults on a separate kernel stack.
+In this post we explore double faults in detail. We also set up an Interrupt Stack Table to catch double faults on a separate kernel stack. This way, we will be able to completely avoid triple faults in the future, even on kernel stack overflow.
 
 <!--more--><aside id="toc"></aside>
+
+As always, the complete source code is available on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a [comment section] at the end of this page.
+
+[Github]: https://github.com/phil-opp/blog_os/tree/double_faults
+[issues]: https://github.com/phil-opp/blog_os/issues
+[gitter chat]: https://gitter.im/phil-opp/blog_os
+[comment section]: #disqus_thread
 
 ## What is a Double Fault?
 In simplified terms, a double fault is a special exception that occurs when the CPU fails to invoke an exception handler. For example, it occurs when a page fault is triggered but there is no page fault handler registered in the [Interrupt Descriptor Table][IDT] (IDT). So it's kind of similar to catch-all blocks in programming languages with exceptions, e.g. `catch(...)` in C++ or `catch(Exception e)` in Java or C#.
@@ -468,16 +475,388 @@ Let's create a new TSS that contains our double fault stack in its Interrupt Sta
 use x86::task::TaskStateSegment;
 ```
 
-The Global Descriptor Table (again)
-Putting it together
-What’s next?
+Let's create a new TSS in our `interrupts::init` function:
 
-In the previous post, we learned how to return from exceptions correctly. In this post, we will explore a special type of exception: the double fault. The double fault occurs whenever the invokation of an exception handler fails. For example, if we didn't declare any exception hanlder in the IDT.
+{{< highlight rust "hl_lines=3 9 10" >}}
+// in src/interrupts/mod.rs
 
-Let's start by creating a handler function for double faults:
+const DOUBLE_FAULT_IST_INDEX: usize = 0;
+
+pub fn init(memory_controller: &mut MemoryController) {
+    let double_fault_stack = memory_controller.alloc_stack(1)
+        .expect("could not allocate double fault stack");
+
+    let mut tss = TaskStateSegment::new();
+    tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
+
+    IDT.load();
+}
+{{< / highlight >}}
+
+We define that the 0th IST entry is the double fault stack (any other IST index would work too). We create a new TSS through the `TaskStateSegment::new` function and load the top address (stacks grow downwards) of the double fault stack into the 0th entry.
+
+#### Loading the TSS
+Now that we created a new TSS, we need a way to tell the CPU that it should use it. Unfortunately, this is a bit cumbersome, since the TSS is a Task State _Segment_ (for historical reasons). So instead of loading the table directly, we need to add a new segment descriptor to the [Global Descriptor Table] (GDT). Then we can load our TSS invoking the [`ltr` instruction] with the respective GDT index.
+
+[Global Descriptor Table]: http://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
+[`ltr` instruction]: http://x86.renejeschke.de/html/file_module_x86_id_163.html
+
+### The Global Descriptor Table (again)
+The Global Descriptor Table (GDT) is a relict that was used for [memory segmentation] before paging became the de facto standard. It is still needed in 64-bit mode for various things such as kernel/user mode configuration or TSS loading.
+
+[memory segmentation]: https://en.wikipedia.org/wiki/X86_memory_segmentation
+
+We already created a GDT [when switching to long mode]. Back then, we used assembly to create valid code and data segment descriptors, which were required to enter 64-bit mode. We could just edit that assembly file and add an additional TSS descriptor. However, we now have the expressiveness of Rust, so let's do it in Rust instead.
+
+[when switching to long mode]: {{% relref "02-entering-longmode.md#the-global-descriptor-table" %}}
+
+We start by creating a new `interrupts::gdt` submodule:
 
 ```rust
+// in src/interrupts/mod.rs
 
+mod gdt;
 ```
 
-Next, we need to register the double fault handler in our IDT:
+```rust
+// src/interrupts/gdt.rs
+
+pub struct Gdt([u64; 8]);
+
+impl Gdt {
+    pub fn new() -> Gdt {
+        Gdt([0; 8])
+    }
+}
+```
+We create a simple `Gdt` type as a newtype wrapper around `[u64; 8]`. Theoretically, a GDT can have up to 8192 entries, but this doesn't make much sense in long mode. Eight entries should be more than enough for our system.
+
+#### User and System Segments
+There are two types of GDT entries in long mode: user and system segment descriptors. Descriptors for code and data segment segments are user segment descriptors. They contain no addresses since segments always span the complete address space on x86_64 (real segmentation is no longer supported). Thus, user segment descriptors only contain a few flags (e.g. present or user mode) and fit into a single `u64` entry.
+
+System descriptors such as TSS descriptors are different. They often contain a base address and a limit (e.g. TSS start and length) and thus need more than 64 bits. Therefore, system segments are 128 bits. They are stored as two consecutive entries in the GDT.
+
+Consequently, we model a `Descriptor` as an `enum`:
+
+```rust
+pub enum Descriptor {
+    UserSegment(u64),
+    SystemSegment(u64, u64),
+}
+```
+
+The flag bits are common between all descriptor types, so we create a general `DescriptorFlags` type:
+
+```rust
+bitflags! {
+    flags DescriptorFlags: u64 {
+        const CONFORMING        = 1 << 42,
+        const EXECUTABLE        = 1 << 43,
+        const USER_SEGMENT      = 1 << 44,
+        const PRESENT           = 1 << 47,
+        const LONG_MODE         = 1 << 53,
+    }
+}
+```
+
+We only add flags that are relevant in 64-bit mode. For example, we omit the read/write bit, since it is completely ignored by the CPU.
+
+#### Code Segments
+We add a function to create kernel mode code segments:
+
+```rust
+impl Descriptor {
+    pub fn kernel_code_segment() -> Descriptor {
+        let flags = USER_SEGMENT | PRESENT | EXECUTABLE | LONG_MODE;
+        Descriptor::UserSegment(flags.bits())
+    }
+}
+```
+We set the `USER_SEGMENT` bit to indicate a 64 bit descriptor (otherwise the CPU expects a 128 bit system descriptor). The `PRESENT`, `EXECUTABLE`, and `LONG_MODE` bits are also needed for a 64-bit mode code segment.
+
+The data segment registers `ds`, `ss`, and `es` are completely ignored in 64-bit mode, so we don't need any data segment descriptors in our GDT.
+
+#### TSS Segments
+A TSS descriptor has the following format:
+
+Bit(s)                | Name | Meaning
+--------------------- | ------ | ----------------------------------
+0-15 | **limit 0-15** | the first 2 byte of the TSS's limit
+16-39 | **base 0-23** | the first 3 byte of the TSS's base address
+40-43 | **type** | must be `0b1001` for an available 64-bit TSS
+44    | zero | must be 0
+45-46 | privilege | the [ring level]: 0 for kernel, 3 for user
+47 | **present** | must be 1 for valid selectors
+48-51 | limit 16-19 | bits 16 to 19 of the segment's limit
+52 | available | freely available to the OS
+53-54 | ignored |
+55 | granularity | if it's set, the limit is the number of pages, else it's a byte number
+56-63 | **base 24-31** | the fourth byte of the base address
+64-95 | **base 32-63** | the last four bytes of the base address
+96-127 | ignored/must be zero | bits 104-108 must be zero, the rest is ignored
+
+[ring level]: http://wiki.osdev.org/Security#Rings
+
+We only need the bold fields for our TSS descriptor. For example, we don't need the `limit 16-19` field since a TSS has a fixed size that is smaller than `2^16`.
+
+Let's add a function to our descriptor that creates a TSS descriptor for a given TSS:
+
+```rust
+impl Descriptor {
+    pub fn tss_segment(tss: &'static TaskStateSegment) -> Descriptor {
+        use core::mem::size_of;
+
+        let ptr = tss as *const _ as u64;
+
+        let mut low = PRESENT.bits();
+        // base
+        low.set_range(16..40, ptr.get_range(0..24));
+        low.set_range(56..64, ptr.get_range(24..32));
+        // limit (the `-1` in needed since the bound is inclusive)
+        low.set_range(0..16, (size_of::<TaskStateSegment>() - 1) as u64);
+        // type (0b1001 = available 64-bit tss)
+        low.set_range(40..44, 0b1001);
+
+        let mut high = 0;
+        high.set_range(0..32, ptr.get_range(32..64));
+
+        Descriptor::SystemSegment(low, high)
+    }
+}
+```
+We convert the passed `TaskStateSegment` reference to an `u64` and use the methods of the [`BitField` trait] to set the needed fields.
+We require the `'static` lifetime for the `TaskStateSegment` reference, since the hardware might access it on every interrupt as long as the OS runs.
+
+[`BitField` trait]: https://docs.rs/bit_field/0.6.0/bit_field/trait.BitField.html#method.get_bit
+
+#### Adding Descriptors to the GDT
+In order to add descriptors to the GDT, we add a `add_entry` method:
+
+```rust
+impl Gdt {
+    pub fn add_entry(&mut self, entry: Descriptor) -> SegmentSelector {
+        let index = match entry {
+            Descriptor::UserSegment(value) => self.push(value),
+            Descriptor::SystemSegment(value_low, value_high) => {
+                let index = self.push(value_low);
+                self.push(value_high);
+                index
+            }
+        };
+        SegmentSelector::new(index as u16, PrivilegeLevel::Ring0)
+    }
+}
+```
+For an user segment we just push the `u64` and remember the index. For a system segment, we push the low and high `u64` and use the index of the low value. We then use this index to return a new [SegmentSelector].
+
+[SegmentSelector]: https://docs.rs/x86/0.8.0/x86/shared/segmentation/struct.SegmentSelector.html#method.new
+
+The `push` method looks like this:
+
+```rust
+impl Gdt {
+    fn push(&mut self, value: u64) -> usize {
+        for (i, entry) in self.0.iter_mut().enumerate().skip(1) {
+            if *entry == 0 {
+                *entry = value;
+                return i;
+            }
+        }
+        panic!("GDT full");
+    }
+}
+```
+The method iterates over the `[u64; 8]` array and chooses the first free entry (entry is 0). The zero-th entry of valid GDTs needs to be always 0, so we `skip` it in our search. If there is no free entry left, we panic since this likely indicates a programming error (we should never need to create more than two or three GDT entries for our kernel).
+
+#### Loading the GDT
+To load the GDT, we add a new `load` method:
+
+```rust
+impl Gdt {
+    pub fn load(&'static self) {
+        use x86::shared::dtables::{DescriptorTablePointer, lgdt};
+        use x86::shared::segmentation;
+        use core::mem::size_of;
+
+        let ptr = DescriptorTablePointer {
+            base: self.0.as_ptr() as *const segmentation::SegmentDescriptor,
+            limit: (self.0.len() * size_of::<u64>() - 1) as u16,
+        };
+
+        unsafe { lgdt(&ptr) };
+    }
+}
+```
+We use the [`DescriptorTablePointer` struct] and the [`lgdt` function] provided by the `x86` crate to load our GDT. Again, we require a `'static'` reference since the GDT possibly needs to live for the rest of the run time.
+
+[`DescriptorTablePointer` struct]: https://docs.rs/x86/0.8.0/x86/shared/dtables/struct.DescriptorTablePointer.html
+[`lgdt` function]: https://docs.rs/x86/0.8.0/x86/shared/dtables/fn.lgdt.html
+
+### Putting it together
+We now have a double fault stack and are able to create and load a TSS (with an IST). So let's put everything together to catch kernel stack overflows.
+
+We already created a new TSS in our `interrupts::init` function. Now we can load this TSS by creating a new GDT:
+
+{{< highlight rust "hl_lines=11 12 13" >}}
+// in src/interrupts/mod.rs
+
+pub fn init(memory_controller: &mut MemoryController) {
+    let double_fault_stack = memory_controller.alloc_stack(1)
+        .expect("could not allocate double fault stack");
+
+    let mut tss = TaskStateSegment::new();
+    tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
+
+    let mut gdt = gdt::Gdt::new();
+    let code_selector = gdt.add_entry(gdt::Descriptor::kernel_code_segment());
+    let tss_selector = gdt.add_entry(gdt::Descriptor::tss_segment(&tss));
+    gdt.load();
+
+    IDT.load();
+}
+{{< / highlight >}}
+
+However, when we try to compile it, the following error occurs:
+
+```
+error: `tss` does not live long enough
+   --> src/interrupts/mod.rs:108:68
+    |
+108 |    let tss_selector = gdt.add_entry(gdt::Descriptor::tss_segment(&tss));
+    |                                         does not live long enough ^^^
+...
+111 | }
+    | - borrowed value only lives until here
+    |
+    = note: borrowed value must be valid for the static lifetime...
+```
+The problem is that we require that the TSS is valid for the rest of the run time (i.e. for the `'static` lifetime). But our created `tss` lives on the stack and is thus destroyed at the end of the `init` function. So how do we fix this problem?
+
+We could allocate our TSS on the heap using `Box` and use [into_raw] and a bit of `unsafe` to convert it to a `&'static` ([RFC 1233] was closed unfortunately).
+
+Alternatively, we could store it in a `static` somehow. The [`lazy_static` macro] doesn't work here, since we need access to the `MemoryController` for initialization. However, we can use its fundamental building block, the [`spin::Once` type].
+
+[into_raw]: https://doc.rust-lang.org/std/boxed/struct.Box.html#method.into_raw
+[RFC 1233]: https://github.com/rust-lang/rfcs/pull/1233
+[`lazy_static` macro]: https://docs.rs/lazy_static/0.2.2/lazy_static/
+[`spin::Once` type]: https://docs.rs/spin/0.4.5/spin/struct.Once.html
+
+#### spin::Once
+Let's try to solve our problem using `spin::Once`:
+
+```rust
+// in src/interrupts/mod.rs
+
+use spin::Once;
+
+static TSS: Once<TaskStateSegment> = Once::new();
+static GDT: Once<gdt::Gdt> = Once::new();
+```
+The `Once` type allows us to initialize a `static` at runtime. It is safe because the only way to access the static value is through the provided methods ([call_once][Once::call_once], [try][Once::try], and [wait][Once::wait]). Thus, no value can be read before initialization and the value can only be initialized once.
+
+[Once::call_once]: https://docs.rs/spin/0.4.5/spin/struct.Once.html#method.call_once
+[Once::try]: https://docs.rs/spin/0.4.5/spin/struct.Once.html#method.try
+[Once::wait]: https://docs.rs/spin/0.4.5/spin/struct.Once.html#method.wait
+
+So let's rewrite our `interrupts::init` function to use the static `TSS` and `GDT`:
+
+{{< highlight rust "hl_lines=6 9 10 12 17 18" >}}
+pub fn init(memory_controller: &mut MemoryController) {
+    let double_fault_stack = memory_controller.alloc_stack(1)
+        .expect("could not allocate double fault stack");
+
+    let tss = TSS.call_once(|| {
+        let mut tss = TaskStateSegment::new();
+        tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
+        tss
+    });
+
+    let gdt = GDT.call_once(|| {
+        let mut gdt = gdt::Gdt::new();
+        let code_selector = gdt.add_entry(gdt::Descriptor::
+                            kernel_code_segment());
+        let tss_selector = gdt.add_entry(gdt::Descriptor::tss_segment(&tss));
+        gdt
+    });
+    gdt.load();
+
+    IDT.load();
+}
+{{< / highlight >}}
+
+Now it should compile again!
+
+#### The final Steps
+We're almost done. We successfully loaded our new GDT, which contains a TSS descriptor. Now there are just a few steps left:
+
+1. We changed our GDT, so we should reload the `cs`, the code segment register. This required since the old segment selector could point a different GDT descriptor now (e.g. a TSS descriptor).
+2. We loaded a GDT that contains a TSS selector, but we still need to tell the CPU that it should use that TSS.
+3. As soon as our TSS is loaded, the CPU has access to a valid interrupt stack table (IST). Then we can tell the CPU that it should use our new double fault stack by modifying our double fault IDT entry.
+
+For the first two steps, we need access to the `code_selector` and `tss_selector` outside of the closure. We can achieve this by defining them outside of the closure:
+
+{{< highlight rust "hl_lines=3 4 7 8 11 12 19 21" >}}
+// in src/interrupts/mod.rs
+pub fn init(memory_controller: &mut MemoryController) {
+    use x86::shared::segmentation::{SegmentSelector, set_cs};
+    use x86::shared::task::load_tr;
+    ...
+
+    let mut code_selector = SegmentSelector::empty();
+    let mut tss_selector = SegmentSelector::empty();
+    let gdt = GDT.call_once(|| {
+        let mut gdt = gdt::Gdt::new();
+        code_selector = gdt.add_entry(gdt::Descriptor::kernel_code_segment());
+        tss_selector = gdt.add_entry(gdt::Descriptor::tss_segment(&tss));
+        gdt
+    });
+    gdt.load();
+
+    unsafe {
+        // reload code segment register
+        set_cs(code_selector);
+        // load TSS
+        load_tr(tss_selector);
+    }
+
+    IDT.load();
+}
+{{< / highlight >}}
+
+We first set the descriptors to `empty` and then update them from inside the closure. Now we're able to reload the code segment register using [`set_cs`] and to load the TSS using [`load_tr`].
+
+[`set_cs`]: https://docs.rs/x86/0.8.0/x86/shared/segmentation/fn.set_cs.html
+[`load_tr`]: https://docs.rs/x86/0.8.0/x86/shared/task/fn.load_tr.html
+
+Now we that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
+
+{{< highlight rust "hl_lines=8" >}}
+// in src/interrupt/mod.rs
+
+lazy_static! {
+    static ref IDT: idt::Idt = {
+        let mut idt = idt::Idt::new();
+        ...
+        idt.set_handler(8, handler_with_error_code!(double_fault_handler))
+            .set_stack_index(DOUBLE_FAULT_IST_INDEX as u8);
+        ...
+    };
+}
+
+{{< / highlight >}}
+
+TODO `set_stack_index` method?
+
+That's it! Now the CPU should switch to the double fault stack whenever a double fault occurs. Thus, we are able to catch _all_ double faults, including kernel stack overflows:
+
+![QEMU printing `EXCEPTION: DOUBLE FAULT` and a dump of the exception stack frame](images/qemu-double-fault-on-stack-overflow.png)
+
+From now on we should never see a triple fault again!
+
+## What's next?
+Now that we mastered exceptions, it's time to explore another kind of interrupts: interrupts from external devices such as timers, keyboard, or network controllers. These hardware interrupts are very similar to exceptions, e.g. they are also dispatched through the IDT.
+
+However, they don't arise directly on the CPU like exceptions. Instead, an _interrupt controller_ aggregates these interrupts and forwards them to CPU depending on their priority. In the next posts we will explore the two interrupt controller variants on x86: the [Intel 8259] \(“PIC”) and the [APIC]. This will allow us to react to keyboard input.
+
+[Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259
+[APIC]: https://en.wikipedia.org/wiki/Advanced_Programmable_Interrupt_Controller
