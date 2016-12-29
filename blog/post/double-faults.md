@@ -521,15 +521,23 @@ mod gdt;
 ```rust
 // src/interrupts/gdt.rs
 
-pub struct Gdt([u64; 8]);
+pub struct Gdt {
+    table: [u64; 8],
+    next_free: usize,
+}
 
 impl Gdt {
     pub fn new() -> Gdt {
-        Gdt([0; 8])
+        Gdt {
+            table: [0; 8],
+            next_free: 1,
+        }
     }
 }
 ```
-We create a simple `Gdt` type as a newtype wrapper around `[u64; 8]`. Theoretically, a GDT can have up to 8192 entries, but this doesn't make much sense in long mode. Eight entries should be more than enough for our system.
+We create a simple `Gdt` struct with two fields. The `table` field contains the actual GDT modeled as a `[u64; 8]`. Theoretically, a GDT can have up to 8192 entries, but this doesn't make much sense in 64-bit mode (since there is no real segmentation support). Eight entries should be more than enough for our system.
+
+The `next_free` field stores the index of the next free entry. We initialize it with `1` since the 0th entry needs always needs to be 0 in a valid GDT.
 
 #### User and System Segments
 There are two types of GDT entries in long mode: user and system segment descriptors. Descriptors for code and data segment segments are user segment descriptors. They contain no addresses since segments always span the complete address space on x86_64 (real segmentation is no longer supported). Thus, user segment descriptors only contain a few flags (e.g. present or user mode) and fit into a single `u64` entry.
@@ -656,17 +664,18 @@ The `push` method looks like this:
 ```rust
 impl Gdt {
     fn push(&mut self, value: u64) -> usize {
-        for (i, entry) in self.0.iter_mut().enumerate().skip(1) {
-            if *entry == 0 {
-                *entry = value;
-                return i;
-            }
+        if self.next_free < self.table.len() {
+            let index = self.next_free;
+            self.table[index] = value;
+            self.next_free += 1;
+            index
+        } else {
+            panic!("GDT full");
         }
-        panic!("GDT full");
     }
 }
 ```
-The method iterates over the `[u64; 8]` array and chooses the first free entry (entry is 0). The zero-th entry of valid GDTs needs to be always 0, so we `skip` it in our search. If there is no free entry left, we panic since this likely indicates a programming error (we should never need to create more than two or three GDT entries for our kernel).
+The method just writes to the `next_free` entry and returns the corresponding index. If there is no free entry left, we panic since this likely indicates a programming error (we should never need to create more than two or three GDT entries for our kernel).
 
 #### Loading the GDT
 To load the GDT, we add a new `load` method:
