@@ -3,7 +3,7 @@ title = "Double Faults"
 date = "2016-11-08"
 +++
 
-In this post we explore double faults in detail. We also set up an Interrupt Stack Table to catch double faults on a separate kernel stack. This way, we will be able to completely avoid triple faults in the future, even on kernel stack overflow.
+In this post we explore double faults in detail. We also set up an _Interrupt Stack Table_ to catch double faults on a separate kernel stack. This way, we can completely prevent triple faults, even on kernel stack overflow.
 
 <!--more--><aside id="toc"></aside>
 
@@ -65,7 +65,7 @@ The reason for the boot loop is the following:
 
 [int 1]: https://en.wikipedia.org/wiki/INT_(x86_instruction)
 
-So in order to prevent this triple fault, we need to either provide a handler function for `Debug` exceptions or a double fault handler. We will do the latter, since we want to avoid triple faults completely.
+So in order to prevent this triple fault, we need to either provide a handler function for debug exceptions or a double fault handler. We will do the latter, since we want to avoid triple faults in all cases.
 
 ### A Double Fault Handler
 A double fault is a normal exception with an error code, so we can use our `handler_with_error_code` macro to create a wrapper function:
@@ -96,7 +96,7 @@ extern "C" fn double_fault_handler(stack_frame: &ExceptionStackFrame,
 }
 {{< / highlight >}}<!--end_-->
 
-Our handler prints a short error message and dumps the exception stack frame. The error code of the double fault handler is _always zero_, so there's no reason to print it.
+Our handler prints a short error message and dumps the exception stack frame. The error code of the double fault handler is always zero, so there's no reason to print it.
 
 When we start our kernel now, we should see that the double fault handler is invoked:
 
@@ -220,7 +220,6 @@ mod stack_allocator;
 
 ```
 
-#### The `stack_allocator` Module
 First, we create a new `StackAllocator` struct and a constructor function:
 
 ```rust
@@ -242,7 +241,7 @@ We create a simple `StackAllocator` that allocates stacks from a given range of 
 
 [in the kernel heap post]:  {{% relref "08-kernel-heap.md#mapping-the-heap" %}}
 
-In order to allocate new stacks, we add a `alloc_stack` method:
+We add a `alloc_stack` method that allocates a new stack:
 
 ```rust
 // in src/memory/stack_allocator.rs
@@ -293,7 +292,7 @@ impl StackAllocator {
     }
 }
 ```
-The method takes mutable references to the [ActivePageTable] and a [FrameAllocator], since it needs to map the new virtual stack pages to physical frames. The stack size is a multiple of the page size.
+The method takes mutable references to the [ActivePageTable] and a [FrameAllocator], since it needs to map the new virtual stack pages to physical frames. We define that the stack size is a multiple of the page size.
 
 [ActivePageTable]: {{% relref "06-page-tables.md#page-table-ownership" %}}
 [FrameAllocator]: {{% relref "05-allocating-frames.md#a-frame-allocator" %}}
@@ -362,7 +361,7 @@ impl MemoryController {
     }
 }
 ```
-The `MemoryController` struct holds the three types that are required for `alloc_stack` and provides a simpler interface (only one argument). The `alloc_stack` wrapper just takes the tree types as `&mut` through [destructuring] and forwards them to the `stack_allocator`. The [ref mut]-s are needed to take the inner fields by mutable reference. Note that we're re-exporting the `Stack` and `StackPointer` types since they are returned by `alloc_stack`.
+The `MemoryController` struct holds the three types that are required for `alloc_stack` and provides a simpler interface (only one argument). The `alloc_stack` wrapper just takes the tree types as `&mut` through [destructuring] and forwards them to the `stack_allocator`. The [ref mut]-s are needed to take the inner fields by mutable reference. Note that we're re-exporting the `Stack` type since it is returned by `alloc_stack`.
 
 [destructuring]: http://rust-lang.github.io/book/chXX-patterns.html#Destructuring
 [ref mut]: http://rust-lang.github.io/book/chXX-patterns.html#ref-and-ref-mut
@@ -441,7 +440,7 @@ pub fn init(memory_controller: &mut MemoryController) {
 We allocate a 4096 bytes stack (one page) for our double fault handler. Now we just need some way to tell the CPU that it should use this stack for handling double faults.
 
 ### The IST and TSS
-The Interrupt Stack Table (IST) is part of an old legacy structure called [Task State Segment] \(TSS). The TSS used to hold various information (e.g. processor register state) about a task in 32-bit x86 and was for example used for [hardware context switching]. However, hardware context switching is no longer supported in 64-bit mode and the format of the TSS changed completely.
+The Interrupt Stack Table (IST) is part of an old legacy structure called _[Task State Segment]_ \(TSS). The TSS used to hold various information (e.g. processor register state) about a task in 32-bit mode and was for example used for [hardware context switching]. However, hardware context switching is no longer supported in 64-bit mode and the format of the TSS changed completely.
 
 [Task State Segment]: https://en.wikipedia.org/wiki/Task_state_segment
 [hardware context switching]: http://wiki.osdev.org/Context_Switching#Hardware_Context_Switching
@@ -465,7 +464,7 @@ I/O Map Base Address | `u16`
 The _Privilege Stack Table_ is used by the CPU when the privilege level changes. For example, if an exception occurs while the CPU is in user mode (privilege level 3), the CPU normally switches to kernel mode (privilege level 0) before invoking the exception handler. In that case, the CPU would switch to the 0th stack in the Privilege Stack Table (since 0 is the target privilege level). We don't have any user mode programs yet, so we ignore this table for now.
 
 #### Creating a TSS
-Let's create a new TSS that contains our double fault stack in its Interrupt Stack Table. For that we need a TSS struct. Fortunately, the `x86` crate already contains a [`TaskStateSegment` struct] that we can use:
+Let's create a new TSS that contains our double fault stack in its interrupt stack table. For that we need a TSS struct. Fortunately, the `x86` crate already contains a [`TaskStateSegment` struct] that we can use:
 
 [`TaskStateSegment` struct]: https://docs.rs/x86/0.7.1/x86/task/struct.TaskStateSegment.html
 
@@ -567,7 +566,7 @@ bitflags! {
 }
 ```
 
-We only add flags that are relevant in 64-bit mode. For example, we omit the read/write bit, since it is completely ignored by the CPU.
+We only add flags that are relevant in 64-bit mode. For example, we omit the read/write bit, since it is completely ignored by the CPU in 64-bit mode.
 
 #### Code Segments
 We add a function to create kernel mode code segments:
@@ -580,12 +579,12 @@ impl Descriptor {
     }
 }
 ```
-We set the `USER_SEGMENT` bit to indicate a 64 bit descriptor (otherwise the CPU expects a 128 bit system descriptor). The `PRESENT`, `EXECUTABLE`, and `LONG_MODE` bits are also needed for a 64-bit mode code segment.
+We set the `USER_SEGMENT` bit to indicate a 64 bit user segment descriptor (otherwise the CPU expects a 128 bit system segment descriptor). The `PRESENT`, `EXECUTABLE`, and `LONG_MODE` bits are also needed for a 64-bit mode code segment.
 
 The data segment registers `ds`, `ss`, and `es` are completely ignored in 64-bit mode, so we don't need any data segment descriptors in our GDT.
 
 #### TSS Segments
-A TSS descriptor has the following format:
+A TSS descriptor is a system segment descriptor with the following format:
 
 Bit(s)                | Name | Meaning
 --------------------- | ------ | ----------------------------------
@@ -688,25 +687,26 @@ impl Gdt {
         use core::mem::size_of;
 
         let ptr = DescriptorTablePointer {
-            base: self.0.as_ptr() as *const segmentation::SegmentDescriptor,
-            limit: (self.0.len() * size_of::<u64>() - 1) as u16,
+            base: self.table.as_ptr() as
+                *const segmentation::SegmentDescriptor,
+            limit: (self.table.len() * size_of::<u64>() - 1) as u16,
         };
 
         unsafe { lgdt(&ptr) };
     }
 }
 ```
-We use the [`DescriptorTablePointer` struct] and the [`lgdt` function] provided by the `x86` crate to load our GDT. Again, we require a `'static'` reference since the GDT possibly needs to live for the rest of the run time.
+We use the [`DescriptorTablePointer` struct] and the [`lgdt` function] provided by the `x86` crate to load our GDT. Again, we require a `'static` reference since the GDT possibly needs to live for the rest of the run time.
 
 [`DescriptorTablePointer` struct]: https://docs.rs/x86/0.8.0/x86/shared/dtables/struct.DescriptorTablePointer.html
 [`lgdt` function]: https://docs.rs/x86/0.8.0/x86/shared/dtables/fn.lgdt.html
 
 ### Putting it together
-We now have a double fault stack and are able to create and load a TSS (with an IST). So let's put everything together to catch kernel stack overflows.
+We now have a double fault stack and are able to create and load a TSS (which contains an IST). So let's put everything together to catch kernel stack overflows.
 
 We already created a new TSS in our `interrupts::init` function. Now we can load this TSS by creating a new GDT:
 
-{{< highlight rust "hl_lines=11 12 13" >}}
+{{< highlight rust "hl_lines=10 11 12 13" >}}
 // in src/interrupts/mod.rs
 
 pub fn init(memory_controller: &mut MemoryController) {
@@ -751,7 +751,7 @@ Alternatively, we could store it in a `static` somehow. The [`lazy_static` macro
 [`spin::Once` type]: https://docs.rs/spin/0.4.5/spin/struct.Once.html
 
 #### spin::Once
-Let's try to solve our problem using `spin::Once`:
+Let's try to solve our problem using [`spin::Once`][`spin::Once` type]:
 
 ```rust
 // in src/interrupts/mod.rs
@@ -769,7 +769,7 @@ The `Once` type allows us to initialize a `static` at runtime. It is safe becaus
 
 So let's rewrite our `interrupts::init` function to use the static `TSS` and `GDT`:
 
-{{< highlight rust "hl_lines=6 9 10 12 17 18" >}}
+{{< highlight rust "hl_lines=5 8 9 11 16 17" >}}
 pub fn init(memory_controller: &mut MemoryController) {
     let double_fault_stack = memory_controller.alloc_stack(1)
         .expect("could not allocate double fault stack");
@@ -802,7 +802,7 @@ We're almost done. We successfully loaded our new GDT, which contains a TSS desc
 2. We loaded a GDT that contains a TSS selector, but we still need to tell the CPU that it should use that TSS.
 3. As soon as our TSS is loaded, the CPU has access to a valid interrupt stack table (IST). Then we can tell the CPU that it should use our new double fault stack by modifying our double fault IDT entry.
 
-For the first two steps, we need access to the `code_selector` and `tss_selector` outside of the closure. We can achieve this by defining them outside of the closure:
+For the first two steps, we need access to the `code_selector` and `tss_selector` variables outside of the closure. We can achieve this by moving the `let` declarations out of the closure:
 
 {{< highlight rust "hl_lines=3 4 7 8 11 12 19 21" >}}
 // in src/interrupts/mod.rs
@@ -832,12 +832,12 @@ pub fn init(memory_controller: &mut MemoryController) {
 }
 {{< / highlight >}}
 
-We first set the descriptors to `empty` and then update them from inside the closure. Now we're able to reload the code segment register using [`set_cs`] and to load the TSS using [`load_tr`].
+We first set the descriptors to `empty` and then update them from inside the closure (which implicitly borrows them as `&mut`). Now we're able to reload the code segment register using [`set_cs`] and to load the TSS using [`load_tr`].
 
 [`set_cs`]: https://docs.rs/x86/0.8.0/x86/shared/segmentation/fn.set_cs.html
 [`load_tr`]: https://docs.rs/x86/0.8.0/x86/shared/task/fn.load_tr.html
 
-Now we that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
+Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 
 {{< highlight rust "hl_lines=8" >}}
 // in src/interrupt/mod.rs
@@ -863,9 +863,9 @@ That's it! Now the CPU should switch to the double fault stack whenever a double
 From now on we should never see a triple fault again!
 
 ## What's next?
-Now that we mastered exceptions, it's time to explore another kind of interrupts: interrupts from external devices such as timers, keyboard, or network controllers. These hardware interrupts are very similar to exceptions, e.g. they are also dispatched through the IDT.
+Now that we mastered exceptions, it's time to explore another kind of interrupts: interrupts from external devices such as timers, keyboards, or network controllers. These hardware interrupts are very similar to exceptions, e.g. they are also dispatched through the IDT.
 
-However, they don't arise directly on the CPU like exceptions. Instead, an _interrupt controller_ aggregates these interrupts and forwards them to CPU depending on their priority. In the next posts we will explore the two interrupt controller variants on x86: the [Intel 8259] \(“PIC”) and the [APIC]. This will allow us to react to keyboard input.
+However, unlike exceptions, they don't arise directly on the CPU. Instead, an _interrupt controller_ aggregates these interrupts and forwards them to CPU depending on their priority. In the next posts we will explore the two interrupt controller variants on x86: the [Intel 8259] \(“PIC”) and the [APIC]. This will allow us to react to keyboard and mouse input.
 
 [Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259
 [APIC]: https://en.wikipedia.org/wiki/Advanced_Programmable_Interrupt_Controller
