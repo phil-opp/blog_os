@@ -31,6 +31,8 @@ This repository contains the source code for the _Writing an OS in Rust_ series 
       ([source code](https://github.com/phil-opp/blog_os/tree/better_exception_messages))
 - [Returning from Exceptions](http://os.phil-opp.com/returning-from-exceptions.html)
       ([source code](https://github.com/phil-opp/blog_os/tree/returning_from_exceptions))
+- [Double Faults](http://os.phil-opp.com/double-faults.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/double_faults))
 
 ## Additional Resources
 - [Cross Compile Binutils](http://os.phil-opp.com/cross-compile-binutils.html)
