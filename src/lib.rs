@@ -13,7 +13,6 @@
 #![feature(asm)]
 #![feature(naked_functions)]
 #![feature(core_intrinsics)]
-#![feature(drop_types_in_const)]
 #![no_std]
 
 extern crate rlibc;
@@ -52,30 +51,13 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     enable_write_protect_bit();
 
     // set up guard page and map the heap pages
-    let mut memory_controller = memory::init(boot_info);
+    memory::init(boot_info);
 
     // initialize our IDT
-    interrupts::init(&mut memory_controller);
+    interrupts::init();
 
+    // trigger a breakpoint exception
     unsafe { int!(3) };
-
-    stack_overflow();
-    // trigger a debug exception
-    unsafe { int!(1) };
-
-    fn divide_by_zero() {
-        unsafe { asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel") }
-    }
-
-    fn int_overflow() {
-        unsafe { asm!("mov al, 0xf0; add al, 0x10; into" ::: "ax", "dx" : "volatile", "intel") }
-    }
-
-    fn stack_overflow() {
-        stack_overflow();
-    }
-
-    int_overflow();
 
     println!("It did not crash!");
     loop {}
