@@ -8,6 +8,7 @@
 // except according to those terms.
 
 use memory::MemoryController;
+use x86::bits64::task::TaskStateSegment;
 
 mod idt;
 
@@ -102,9 +103,14 @@ lazy_static! {
     };
 }
 
+const DOUBLE_FAULT_IST_INDEX: usize = 0;
+
 pub fn init(memory_controller: &mut MemoryController) {
     let double_fault_stack = memory_controller.alloc_stack(1)
         .expect("could not allocate double fault stack");
+
+    let mut tss = TaskStateSegment::new();
+    tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
 
     IDT.load();
 }
