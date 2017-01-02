@@ -14,6 +14,7 @@ use multiboot2::BootInformation;
 
 mod area_frame_allocator;
 mod paging;
+mod stack_allocator;
 
 pub const PAGE_SIZE: usize = 4096;
 
