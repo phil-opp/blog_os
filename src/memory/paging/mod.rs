@@ -11,7 +11,7 @@ pub use self::entry::*;
 use memory::{PAGE_SIZE, Frame, FrameAllocator};
 use self::temporary_page::TemporaryPage;
 pub use self::mapper::Mapper;
-use core::ops::{Deref, DerefMut};
+use core::ops::{Add, Deref, DerefMut};
 use multiboot2::BootInformation;
 
 mod entry;
@@ -59,6 +59,14 @@ impl Page {
             start: start,
             end: end,
         }
+    }
+}
+
+impl Add<usize> for Page {
+    type Output = Page;
+
+    fn add(self, rhs: usize) -> Page {
+        Page { number: self.number + rhs }
     }
 }
 
