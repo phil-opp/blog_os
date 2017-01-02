@@ -100,7 +100,8 @@ lazy_static! {
         idt.set_handler(0, handler!(divide_by_zero_handler));
         idt.set_handler(3, handler!(breakpoint_handler));
         idt.set_handler(6, handler!(invalid_opcode_handler));
-        idt.set_handler(8, handler_with_error_code!(double_fault_handler));
+        idt.set_handler(8, handler_with_error_code!(double_fault_handler))
+            .set_stack_index(DOUBLE_FAULT_IST_INDEX as u16);
         idt.set_handler(14, handler_with_error_code!(page_fault_handler));
 
         idt
