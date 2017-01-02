@@ -56,8 +56,8 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // initialize our IDT
     interrupts::init();
 
-    // trigger a breakpoint exception
-    unsafe { int!(3) };
+    // trigger a debug exception
+    unsafe { int!(1) };
 
     println!("It did not crash!");
     loop {}
