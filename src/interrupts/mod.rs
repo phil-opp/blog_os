@@ -7,6 +7,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use memory::MemoryController;
+
 mod idt;
 
 macro_rules! save_scratch_registers {
@@ -100,7 +102,10 @@ lazy_static! {
     };
 }
 
-pub fn init() {
+pub fn init(memory_controller: &mut MemoryController) {
+    let double_fault_stack = memory_controller.alloc_stack(1)
+        .expect("could not allocate double fault stack");
+
     IDT.load();
 }
 
