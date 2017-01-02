@@ -11,6 +11,7 @@ use memory::MemoryController;
 use x86::bits64::task::TaskStateSegment;
 
 mod idt;
+mod gdt;
 
 macro_rules! save_scratch_registers {
     () => {
