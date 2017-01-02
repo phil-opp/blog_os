@@ -9,6 +9,7 @@
 
 use memory::MemoryController;
 use x86::bits64::task::TaskStateSegment;
+use spin::Once;
 
 mod idt;
 mod gdt;
@@ -90,6 +91,8 @@ macro_rules! handler_with_error_code {
     }}
 }
 
+const DOUBLE_FAULT_IST_INDEX: usize = 0;
+
 lazy_static! {
     static ref IDT: idt::Idt = {
         let mut idt = idt::Idt::new();
@@ -104,14 +107,26 @@ lazy_static! {
     };
 }
 
-const DOUBLE_FAULT_IST_INDEX: usize = 0;
+static TSS: Once<TaskStateSegment> = Once::new();
+static GDT: Once<gdt::Gdt> = Once::new();
 
 pub fn init(memory_controller: &mut MemoryController) {
     let double_fault_stack = memory_controller.alloc_stack(1)
         .expect("could not allocate double fault stack");
 
-    let mut tss = TaskStateSegment::new();
-    tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
+    let tss = TSS.call_once(|| {
+        let mut tss = TaskStateSegment::new();
+        tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
+        tss
+    });
+
+    let gdt = GDT.call_once(|| {
+        let mut gdt = gdt::Gdt::new();
+        let code_selector = gdt.add_entry(gdt::Descriptor::kernel_code_segment());
+        let tss_selector = gdt.add_entry(gdt::Descriptor::tss_segment(&tss));
+        gdt
+    });
+    gdt.load();
 
     IDT.load();
 }
