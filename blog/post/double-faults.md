@@ -912,6 +912,61 @@ That's it! Now the CPU should switch to the double fault stack whenever a double
 
 From now on we should never see a triple fault again!
 
+## Safety Problems
+In this post, we needed a few `unsafe` blocks to load the GDT and TSS structures. We always used `'static` references, so the passed addresses should be always valid.
+
+However, the IST entries (stored in the TSS) are used as stack pointers by the CPU. This can lead to various memory safety violations:
+
+- The CPU writes to any address that we store in the IST. This way, we can easily circumvent Rust's safety guarantees and e.g. overwrite a `&mut` reference on some random stack space.
+- If we use the same stack index for multiple exceptions, memory safety might be violated too. For example, imagine that the double fault hander and the breakpoint handler use the same IST index. If the double fault handler causes a breakpoint exception, the breakpoint overwrites the stack frame of the double fault handler. When the breakpoint returns, the CPU jumps back to the double fault handler and undefined behavior occurs.
+- If we accidentally use an empty IST entry, the CPU uses the stack pointer `0`. This is really bad, since we overwrite our [recursively mapped] page tables this way.
+
+[recursively mapped]: {{% relref "06-page-tables.md#recursive-mapping" %}}
+
+Let's try the last case (empty IST entry) as an example:
+
+```rust
+// in src/interrups/mod.rs
+
+lazy_static! {
+    static ref IDT: idt::Idt = {
+        ...
+        idt.set_handler(8, handler_with_error_code!(double_fault_handler))
+            .set_stack_index(5);
+        ...
+    }
+}
+```
+Instead of using the `DOUBLE_FAULT_IST_INDEX`, we use the IST index 5. However the entry at index 5 is still empty.
+
+In oder to see the effect, we print the exception stack frame pointer in our `double_fault_handler`:
+
+```rust
+// in src/interrupts/mod.rs
+
+extern "C" fn double_fault_handler(stack_frame: &ExceptionStackFrame,
+    _error_code: u64)
+{
+    println!("\nEXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
+    println!("exception stack frame at {:#p}", stack_frame); // new
+    loop {}
+}
+```
+When we start our kernel now, we see that the exception stack frame was written to `0xffffffffffffffd8`:
+
+![QEMU printing `exception stack frame at 0xffffffffffffffd8](images/qemu-empty-IST-entry.png)
+
+This address is part of the [recursive mapping][recursively mapped], so the CPU just overwrote some random page table entries.
+
+### Possible Solutions?
+Normally, the type system allows us to make things safer. Unfortunately, there are many difficulties in this case. For example, we need to be able to create multiple task state segments since we have multiple CPUs (each CPU has its own TSS). Each IST index is only valid if the corresponding TSS is loaded in the CPU. This makes compile-time abstractions very difficult.
+
+So this might be a case where we have to tolerate the safety dangers [^fn-ideas]. At least, they are limited to the `interrupts` module, where we already have lots of dangerous inline assembly. From outside, only the safe `interrupts::init` function is visible, so it is similar to an [unsafe abstraction]. We only need to be aware of the safety dangers when we edit the `interrupts` module in the future.
+
+[unsafe abstraction]: http://smallcultfollowing.com/babysteps/blog/2016/05/23/unsafe-abstractions/
+
+[^fn-ideas]: If somebody has a good solution for this problem, please tell me :).
+
 ## What's next?
 Now that we mastered exceptions, it's time to explore another kind of interrupts: interrupts from external devices such as timers, keyboards, or network controllers. These hardware interrupts are very similar to exceptions, e.g. they are also dispatched through the IDT.
 
