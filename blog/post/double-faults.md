@@ -70,7 +70,7 @@ So in order to prevent this triple fault, we need to either provide a handler fu
 ### A Double Fault Handler
 A double fault is a normal exception with an error code, so we can use our `handler_with_error_code` macro to create a wrapper function:
 
-{{< highlight rust "hl_lines=10 17" >}}
+{{< highlight rust "hl_lines=11 18" >}}
 // in src/interrupts/mod.rs
 
 lazy_static! {
@@ -80,6 +80,7 @@ lazy_static! {
         idt.set_handler(0, handler!(divide_by_zero_handler));
         idt.set_handler(3, handler!(breakpoint_handler));
         idt.set_handler(6, handler!(invalid_opcode_handler));
+        // new double fault handler
         idt.set_handler(8, handler_with_error_code!(double_fault_handler));
         idt.set_handler(14, handler_with_error_code!(page_fault_handler));
 
@@ -297,7 +298,9 @@ The method takes mutable references to the [ActivePageTable] and a [FrameAllocat
 [ActivePageTable]: {{% relref "06-page-tables.md#page-table-ownership" %}}
 [FrameAllocator]: {{% relref "05-allocating-frames.md#a-frame-allocator" %}}
 
-Instead of operating directly on `self.range`, we [clone] it and only write it back on success. This way, subsequent stack allocations can still succeed if there are pages left (e.g., a call with `size_in_pages = 3` can still succeed after a failed call with `size_in_pages = 100`). In order to be able to clone `PageIter`, we add a `#[derive(Clone)]` to its definition in `src/memory/paging/mod.rs`.
+Instead of operating directly on `self.range`, we [clone] it and only write it back on success. This way, subsequent stack allocations can still succeed if there are pages left (e.g., a call with `size_in_pages = 3` can still succeed after a failed call with `size_in_pages = 100`).
+
+In order to be able to clone `PageIter`, we add a `#[derive(Clone)]` to its definition in `src/memory/paging/mod.rs`. We also need to make the `start_address` method of the `Page` type public (in the same file).
 
 [clone]: https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone
 
@@ -326,11 +329,11 @@ impl Stack {
         }
     }
 
-    pub fn top(&self) -> StackPointer {
+    pub fn top(&self) -> usize {
         self.top
     }
 
-    pub fn bottom(&self) -> StackPointer {
+    pub fn bottom(&self) -> usize {
         self.bottom
     }
 }
@@ -379,7 +382,7 @@ pub fn init(boot_info: &BootInformation) -> MemoryController {
         let stack_alloc_end = stack_alloc_start + 100;
         let stack_alloc_range = Page::range_inclusive(stack_alloc_start,
                                                       stack_alloc_end);
-        stack_allocator::new_stack_allocator(stack_alloc_range)
+        stack_allocator::StackAllocator::new(stack_alloc_range)
     };
 
     MemoryController {
@@ -395,6 +398,8 @@ In order to do arithmetic on pages (e.g. calculate the hundredth page after `sta
 
 ```rust
 // in src/memory/paging/mod.rs
+
+use core::ops::Add;
 
 impl Add<usize> for Page {
     type Output = Page;
@@ -466,12 +471,12 @@ The _Privilege Stack Table_ is used by the CPU when the privilege level changes.
 #### Creating a TSS
 Let's create a new TSS that contains our double fault stack in its interrupt stack table. For that we need a TSS struct. Fortunately, the `x86` crate already contains a [`TaskStateSegment` struct] that we can use:
 
-[`TaskStateSegment` struct]: https://docs.rs/x86/0.7.1/x86/task/struct.TaskStateSegment.html
+[`TaskStateSegment` struct]: https://docs.rs/x86/0.8.0/x86/bits64/task/struct.TaskStateSegment.html
 
 ```rust
 // in src/interrupts/mod.rs
 
-use x86::task::TaskStateSegment;
+use x86::bits64::task::TaskStateSegment;
 ```
 
 Let's create a new TSS in our `interrupts::init` function:
@@ -546,15 +551,21 @@ System descriptors such as TSS descriptors are different. They often contain a b
 Consequently, we model a `Descriptor` as an `enum`:
 
 ```rust
+// in src/interrupts/gdt.rs
+
 pub enum Descriptor {
     UserSegment(u64),
     SystemSegment(u64, u64),
 }
 ```
 
-The flag bits are common between all descriptor types, so we create a general `DescriptorFlags` type:
+The flag bits are common between all descriptor types, so we create a general `DescriptorFlags` type (using the [bitflags] macro):
+
+[bitflags]: https://doc.rust-lang.org/bitflags/bitflags/macro.bitflags.html
 
 ```rust
+// in src/interrupts/gdt.rs
+
 bitflags! {
     flags DescriptorFlags: u64 {
         const CONFORMING        = 1 << 42,
@@ -572,6 +583,8 @@ We only add flags that are relevant in 64-bit mode. For example, we omit the rea
 We add a function to create kernel mode code segments:
 
 ```rust
+// in src/interrupts/gdt.rs
+
 impl Descriptor {
     pub fn kernel_code_segment() -> Descriptor {
         let flags = USER_SEGMENT | PRESENT | EXECUTABLE | LONG_MODE;
@@ -609,9 +622,14 @@ We only need the bold fields for our TSS descriptor. For example, we don't need 
 Let's add a function to our descriptor that creates a TSS descriptor for a given TSS:
 
 ```rust
+// in src/interrupts/gdt.rs
+
+use x86::bits64::task::TaskStateSegment;
+
 impl Descriptor {
     pub fn tss_segment(tss: &'static TaskStateSegment) -> Descriptor {
         use core::mem::size_of;
+        use bit_field::BitField;
 
         let ptr = tss as *const _ as u64;
 
@@ -640,6 +658,11 @@ We require the `'static` lifetime for the `TaskStateSegment` reference, since th
 In order to add descriptors to the GDT, we add a `add_entry` method:
 
 ```rust
+// in src/interrupts/gdt.rs
+
+use x86::shared::segmentation::SegmentSelector;
+use x86::shared::PrivilegeLevel;
+
 impl Gdt {
     pub fn add_entry(&mut self, entry: Descriptor) -> SegmentSelector {
         let index = match entry {
@@ -661,6 +684,8 @@ For an user segment we just push the `u64` and remember the index. For a system 
 The `push` method looks like this:
 
 ```rust
+// in src/interrupts/gdt.rs
+
 impl Gdt {
     fn push(&mut self, value: u64) -> usize {
         if self.next_free < self.table.len() {
@@ -680,6 +705,8 @@ The method just writes to the `next_free` entry and returns the corresponding in
 To load the GDT, we add a new `load` method:
 
 ```rust
+// in src/interrupts/gdt.rs
+
 impl Gdt {
     pub fn load(&'static self) {
         use x86::shared::dtables::{DescriptorTablePointer, lgdt};
@@ -725,25 +752,36 @@ pub fn init(memory_controller: &mut MemoryController) {
 }
 {{< / highlight >}}
 
-However, when we try to compile it, the following error occurs:
+However, when we try to compile it, the following errors occur:
 
 ```
 error: `tss` does not live long enough
-   --> src/interrupts/mod.rs:108:68
+   --> src/interrupts/mod.rs:118:68
     |
-108 |    let tss_selector = gdt.add_entry(gdt::Descriptor::tss_segment(&tss));
+118 |    let tss_selector = gdt.add_entry(gdt::Descriptor::tss_segment(&tss));
     |                                         does not live long enough ^^^
 ...
-111 | }
+122 | }
+    | - borrowed value only lives until here
+    |
+    = note: borrowed value must be valid for the static lifetime...
+
+error: `gdt` does not live long enough
+   --> src/interrupts/mod.rs:119:5
+    |
+119 |    gdt.load();
+    |    ^^^ does not live long enough
+...
+122 | }
     | - borrowed value only lives until here
     |
     = note: borrowed value must be valid for the static lifetime...
 ```
-The problem is that we require that the TSS is valid for the rest of the run time (i.e. for the `'static` lifetime). But our created `tss` lives on the stack and is thus destroyed at the end of the `init` function. So how do we fix this problem?
+The problem is that we require that the TSS and GDT are valid for the rest of the run time (i.e. for the `'static` lifetime). But our created `tss` and `gdt` live on the stack and are thus destroyed at the end of the `init` function. So how do we fix this problem?
 
-We could allocate our TSS on the heap using `Box` and use [into_raw] and a bit of `unsafe` to convert it to a `&'static` ([RFC 1233] was closed unfortunately).
+We could allocate our TSS and GDT on the heap using `Box` and use [into_raw] and a bit of `unsafe` to convert it to `&'static` references ([RFC 1233] was closed unfortunately).
 
-Alternatively, we could store it in a `static` somehow. The [`lazy_static` macro] doesn't work here, since we need access to the `MemoryController` for initialization. However, we can use its fundamental building block, the [`spin::Once` type].
+Alternatively, we could store them in a `static` somehow. The [`lazy_static` macro] doesn't work here, since we need access to the `MemoryController` for initialization. However, we can use its fundamental building block, the [`spin::Once` type].
 
 [into_raw]: https://doc.rust-lang.org/std/boxed/struct.Box.html#method.into_raw
 [RFC 1233]: https://github.com/rust-lang/rfcs/pull/1233
@@ -766,6 +804,8 @@ The `Once` type allows us to initialize a `static` at runtime. It is safe becaus
 [Once::call_once]: https://docs.rs/spin/0.4.5/spin/struct.Once.html#method.call_once
 [Once::try]: https://docs.rs/spin/0.4.5/spin/struct.Once.html#method.try
 [Once::wait]: https://docs.rs/spin/0.4.5/spin/struct.Once.html#method.wait
+
+(The `Once` was added in spin 0.4, so you're probably need to update your spin dependency.)
 
 So let's rewrite our `interrupts::init` function to use the static `TSS` and `GDT`:
 
@@ -847,14 +887,24 @@ lazy_static! {
         let mut idt = idt::Idt::new();
         ...
         idt.set_handler(8, handler_with_error_code!(double_fault_handler))
-            .set_stack_index(DOUBLE_FAULT_IST_INDEX as u8);
+            .set_stack_index(DOUBLE_FAULT_IST_INDEX as u16);
         ...
     };
 }
 
 {{< / highlight >}}
 
-TODO `set_stack_index` method?
+We also rewrite the `set_stack_index` method in `src/interrupts/idt.rs`:
+
+```rust
+pub fn set_stack_index(&mut self, index: u16) -> &mut Self {
+    // The hardware IST index starts at 1, but our software IST index
+    // starts at 0. Therefore we need to add 1 here.
+    self.0.set_range(0..3, index + 1);
+    self
+}
+```
+The only change is that we're now adding `1` to the passed `index`, because the hardware expects an index between _one_ and seven. A zero means “no stack switch”.
 
 That's it! Now the CPU should switch to the double fault stack whenever a double fault occurs. Thus, we are able to catch _all_ double faults, including kernel stack overflows:
 
