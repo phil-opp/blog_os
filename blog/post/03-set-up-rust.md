@@ -57,7 +57,7 @@ Now we place our root source file in `src/lib.rs`:
 pub extern fn rust_main() {}
 
 #[lang = "eh_personality"] extern fn eh_personality() {}
-#[lang = "panic_fmt"] #[no_mangle] extern fn panic_fmt() -> ! {loop{}}
+#[lang = "panic_fmt"] #[no_mangle] pub extern fn panic_fmt() -> ! {loop{}}
 ```
 Let's break it down:
 
