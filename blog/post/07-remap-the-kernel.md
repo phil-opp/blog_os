@@ -1072,4 +1072,4 @@ Now that we have a (mostly) safe kernel stack and a working page table module, w
 [next post]: {{% relref "08-kernel-heap.md" %}}
 [Box]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html
 [Vec]: https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html
-[BTreeMap]: https://doc.rust-lang.org/nightly/collections/struct.BTreeMap.html
+[BTreeMap]: https://doc.rust-lang.org/nightly/collections/btree_map/struct.BTreeMap.html

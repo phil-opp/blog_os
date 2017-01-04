@@ -330,7 +330,7 @@ check_exception old: 0xffffffff new 0xe
         SP=0010:0000000000116af0 CR2=0000000040000000
 …
 ```
-Aha! It's a [page fault] (`v=0e`) and was caused by the code at `0x102860`. The code tried to write (`e=0002`) to address `0x40000000`. This address is `0o_000_001_000_000_0000` in octal, which is the `HEAP_START` address defined above. Of course it page-faults: We have forgotten to map the heap memory to some physical memory.
+Aha! It's a [page fault] \(`v=0e`) and was caused by the code at `0x102860`. The code tried to write (`e=0002`) to address `0x40000000`. This address is `0o_000_001_000_000_0000` in octal, which is the `HEAP_START` address defined above. Of course it page-faults: We have forgotten to map the heap memory to some physical memory.
 
 [page fault]: http://wiki.osdev.org/Exceptions#Page_Fault
 
@@ -428,7 +428,7 @@ extern crate once;
 
 The crate provides an [assert_has_not_been_called!] macro (sorry for the long name :D). We can use it to fix the safety problem easily:
 
-[assert_has_not_been_called!]: https://phil-opp.rustdocs.org/once/macro.assert_has_not_been_called!.html
+[assert_has_not_been_called!]: https://docs.rs/once/0.3.2/once/macro.assert_has_not_been_called!.html
 
 ``` rust
 // in src/memory/mod.rs

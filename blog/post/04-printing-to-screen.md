@@ -486,7 +486,7 @@ pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
 
 Now we can easily print from our main function:
 
-[Mutex::new]: https://mvdnes.github.io/rust-docs/spinlock-rs/spin/struct.Mutex.html#method.new
+[Mutex::new]: https://docs.rs/spin/0.4.5/spin/struct.Mutex.html#method.new
 
 ```rust
 // in src/lib.rs

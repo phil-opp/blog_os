@@ -385,7 +385,7 @@ The base pointer is initialized directly from the stack pointer (`rsp`) after pu
 The reason is that our exception handler is defined as `extern "C" function`, which specifies that it's using the C [calling convention]. On x86_64 Linux, the C calling convention is specified by the System V AMD64 ABI ([PDF][system v abi]). Section 3.2.2 defines the following:
 
 [calling convention]: https://en.wikipedia.org/wiki/X86_calling_conventions
-[system v abi]: http://www.x86-64.org/documentation/abi.pdf
+[system v abi]: http://web.archive.org/web/20160801075139/http://www.x86-64.org/documentation/abi.pdf
 
 > The end of the input argument area shall be aligned on a 16 byte boundary. In other words, the value (%rsp + 8) is always a multiple of 16 when control is transferred to the function entry point.
 
