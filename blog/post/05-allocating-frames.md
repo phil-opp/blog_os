@@ -104,7 +104,7 @@ We used `expect` in the code above, which will panic if there is no memory map t
 ```rust
 #[lang = "panic_fmt"]
 #[no_mangle]
-extern fn panic_fmt() -> ! {
+pub extern fn panic_fmt() -> ! {
     println!("PANIC");
     loop{}
 }
@@ -114,7 +114,7 @@ Now we get a `PANIC` message. But we can do even better. The `panic_fmt` functio
 ```rust
 #[lang = "panic_fmt"]
 #[no_mangle]
-extern fn panic_fmt(fmt: core::fmt::Arguments, file: &'static str,
+pub extern fn panic_fmt(fmt: core::fmt::Arguments, file: &'static str,
     line: u32) -> !
 {
     println!("\n\nPANIC in {} at line {}:", file, line);
