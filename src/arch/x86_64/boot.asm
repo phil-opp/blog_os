@@ -29,12 +29,6 @@ start:
     ; load the 64-bit GDT
     lgdt [gdt64.pointer]
 
-    ; update selectors
-    mov ax, gdt64.data
-    mov ss, ax
-    mov ds, ax
-    mov es, ax
-
     jmp gdt64.code:long_mode_start
 
 set_up_page_tables:
@@ -203,8 +197,6 @@ gdt64:
     dq 0 ; zero entry
 .code: equ $ - gdt64 ; new
     dq (1<<44) | (1<<47) | (1<<41) | (1<<43) | (1<<53) ; code segment
-.data: equ $ - gdt64 ; new
-    dq (1<<44) | (1<<47) | (1<<41) ; data segment
 .pointer:
     dw $ - gdt64 - 1
     dq gdt64

@@ -383,45 +383,39 @@ start:
 To test it we execute `make run`. If the green OK is still printed, we have successfully enabled paging!
 
 ## The Global Descriptor Table
-After enabling Paging, the processor is in long mode. So we can use 64-bit instructions now, right? Wrong. The processor is still in some 32-bit compatibility submode. To actually execute 64-bit code, we need to set up a new Global Descriptor Table.
+After enabling Paging, the processor is in long mode. So we can use 64-bit instructions now, right? Wrong. The processor is still in a 32-bit compatibility submode. To actually execute 64-bit code, we need to set up a new Global Descriptor Table.
 The Global Descriptor Table (GDT) was used for _Segmentation_ in old operating systems. I won't explain Segmentation but the [Three Easy Pieces] OS book has good introduction ([PDF][Segmentation chapter]) again.
 
 [Segmentation chapter]: http://pages.cs.wisc.edu/~remzi/OSTEP/vm-segmentation.pdf
 
 Today almost everyone uses Paging instead of Segmentation (and so do we). But on x86, a GDT is always required, even when you're not using Segmentation. GRUB has set up a valid 32-bit GDT for us but now we need to switch to a long mode GDT.
 
-A GDT always starts with a 0-entry and contains an arbitrary number of segment entries afterwards. An entry has the following format:
+A GDT always starts with a 0-entry and contains an arbitrary number of segment entries afterwards. A 64-bit entry has the following format:
 
 Bit(s)                | Name | Meaning
 --------------------- | ------ | ----------------------------------
-0-15 | limit 0-15 | the first 2 byte of the segment's limit
-16-39 | base 0-23 | the first 3 byte of the segment's base address
-40 | accessed | set by the CPU when the segment is accessed
-41 | read/write | reads allowed for code segments / writes allowed for data segments
-42 | direction/conforming | the segment grows down (i.e. base>limit) for data segments / the current privilege level can be higher than the specified level for code segments (else it must match exactly)
+0-41 | ignored | ignored in 64-bit mode
+42 | conforming | the current privilege level can be higher than the specified level for code segments (else it must match exactly)
 43 | executable | if set, it's a code segment, else it's a data segment
 44 | descriptor type | should be 1 for code and data segments
 45-46 | privilege | the [ring level]: 0 for kernel, 3 for user
 47 | present | must be 1 for valid selectors
-48-51 | limit 16-19 | bits 16 to 19 of the segment's limit
-52 | available | freely available to the OS
+48-52 | ignored | ignored in 64-bit mode
 53 | 64-bit | should be set for 64-bit code segments
-54 | 32-bit | should be set for 32-bit segments
-55 | granularity | if it's set, the limit is the number of pages, else it's a byte number
-56-63 | base 24-31 | the last byte of the base address
+54 | 32-bit | must be 0 for 64-bit segments
+55-63 | ignored | ignored in 64-bit mode
 
 [ring level]: http://wiki.osdev.org/Security#Rings
 
-We need one code and one data segment. They have the following bits set: _descriptor type_, _present_, and _read/write_. The code segment has additionally the _executable_ and the _64-bit_ flag. In Long mode, it's not possible to actually use the GDT entries for Segmentation and thus the base and limit fields must be 0. Translated to assembly the long mode GDT looks like this:
+We need one code segment, a data segment is not necessary in 64-bit mode. Code segments have the following bits set: _descriptor type_, _present_, _executable_ and the _64-bit_ flag. Translated to assembly the long mode GDT looks like this:
 
 ```nasm
 section .rodata
 gdt64:
     dq 0 ; zero entry
-    dq (1<<44) | (1<<47) | (1<<41) | (1<<43) | (1<<53) ; code segment
-    dq (1<<44) | (1<<47) | (1<<41) ; data segment
+    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; code segment
 ```
-We chose the `.rodata` section here because it's initialized read-only data. The `dq` command stands for `define quad` and outputs a 64-bit constant (similar to `dw` and `dd`). And the `(1<<44)` is a [bit shift] that sets bit 44.
+We chose the `.rodata` section here because it's initialized read-only data. The `dq` command stands for `define quad` and outputs a 64-bit constant (similar to `dw` and `dd`). And the `(1<<43)` is a [bit shift] that sets bit 43.
 
 [bit shift]: http://www.cs.umd.edu/class/sum2003/cmsc311/Notes/BitOp/bitshift.html
 
@@ -430,8 +424,8 @@ To load our new 64-bit GDT, we have to tell the CPU its address and length. We d
 
 ```nasm
 gdt64:
-    ...
-    dq (1<<44) | (1<<47) | (1<<41) ; data segment
+    dq 0 ; zero entry
+    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; code segment
 .pointer:
     dw $ - gdt64 - 1
     dq gdt64
@@ -451,22 +445,7 @@ start:
     ; print `OK` to screen
     ...
 ```
-When you still see the green `OK`, everything went fine and the new GDT is loaded. But we still can't execute 64-bit code: The selector registers such as the code selector `cs` and the data selector `ds` still have the values from the old GDT. To update them, we need to load them with the GDT offset (in bytes) of the desired segment. In our case the code segment starts at byte 8 of the GDT and the data segment at byte 16. Let's try it:
-
-```nasm
-    ...
-    lgdt [gdt64.pointer]
-
-    ; update selectors
-    mov ax, 16
-    mov ss, ax  ; stack selector
-    mov ds, ax  ; data selector
-    mov es, ax  ; extra selector
-
-    ; print `OK` to screen
-    ...
-```
-It should still work. The segment selectors are only 16-bits large, so we use the 16-bit `ax` subregister. Notice that we didn't update the code selector `cs`. We will do that later. First we should replace this hardcoded `16` by adding some labels to our GDT:
+When you still see the green `OK`, everything went fine and the new GDT is loaded. But we still can't execute 64-bit code: The code selector register `cs` still has the values from the old GDT. To update it, we need to load it with the GDT offset (in bytes) of the desired segment. In our case the code segment starts at byte 8 of the GDT, but we don't want to hardcode that 8 (in case we modify our GDT later). Instead, we add a `.code` label to our GDT, that calculates the offset directly from the GDT:
 
 ```nasm
 section .rodata
@@ -474,16 +453,14 @@ gdt64:
     dq 0 ; zero entry
 .code: equ $ - gdt64 ; new
     dq (1<<44) | (1<<47) | (1<<41) | (1<<43) | (1<<53) ; code segment
-.data: equ $ - gdt64 ; new
-    dq (1<<44) | (1<<47) | (1<<41) ; data segment
 .pointer:
     ...
 ```
-We can't just use normal labels here, as we need the table offset. We calculate this offset using the current address `$` and set the labels to this value using [equ]. Now we can use `gdt64.data` instead of 16 and `gdt64.code` instead of 8 and these labels will still work if we modify the GDT.
+We can't just use a normal label here, since we need the table _offset_. We calculate this offset using the current address `$` and set the label to this value using [equ]. Now we can use `gdt64.code` instead of 8 and this label will still work if we modify the GDT.
 
 [equ]: http://www.nasm.us/doc/nasmdoc3.html#section-3.2.4
 
-Now there is just one last step left to enter the true 64-bit mode: We need to load `cs` with `gdt64.code`. But we can't do it through `mov`. The only way to reload the code selector is a _far jump_ or a _far return_. These instructions work like a normal jump/return but change the code selector. We use a far jump to a long mode label:
+In order to finally enter the true 64-bit mode, we need to load `cs` with `gdt64.code`. But we can't do it through `mov`. The only way to reload the code selector is a _far jump_ or a _far return_. These instructions work like a normal jump/return but change the code selector. We use a far jump to a long mode label:
 
 ```nasm
 global start
@@ -492,12 +469,6 @@ extern long_mode_start
 start:
     ...
     lgdt [gdt64.pointer]
-
-    ; update selectors
-    mov ax, gdt64.data
-    mov ss, ax
-    mov ds, ax
-    mov es, ax
 
     jmp gdt64.code:long_mode_start
 ...
@@ -525,10 +496,30 @@ You should see a green `OKAY` on the screen. Some notes on this last step:
 
 _Congratulations_! You have successfully wrestled through this CPU configuration and compatibility mode mess :).
 
-## What's next?
-It's time to finally leave assembly behind[^leave_assembly_behind] and switch to some higher level language. We won't use C or C++ (not even a single line). Instead we will use the relatively new [Rust] language. It's a systems language without garbage collections but with guaranteed memory safety. Through a real type system and many abstractions it feels like a high-level language but can still be low-level enough for OS development. The [next post] describes the Rust setup.
+#### One Last Thing
+Above, we reloaded the code segment register `cs` with the new GDT offset. However, the data segment registers `ss`, `ds`, `es`, `fs`, and `gs` still contain the data segment offsets of the old GDT. This isn't necessarily bad, since they're ignored by almost all instructions in 64-bit mode. However, there are a few instructions that expect a valid data segment descriptor _or the null descriptor_ in those registers. An example is the the [iretq] instruction that we'll need in the [_Returning from Exceptions_] post.
 
-[^leave_assembly_behind]: Actually we will still need some assembly in the future, but I'll try to minimize it.
+[iretq]: {{% relref "11-returning-from-exceptions.md#the-iretq-instruction" %}}
+[_Returning from Exceptions_]: {{% relref "11-returning-from-exceptions.md" %}}
+
+To avoid future problems, we reload all data segment registers with null:
+
+```nasm
+long_mode_start:
+    ; load 0 into all data segment registers
+    mov ax, 0
+    mov ss, ax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; print `OKAY` to screen
+    ...
+```
+
+## What's next?
+It's time to finally leave assembly behind and switch to [Rust]. Rust is a systems language without garbage collections that guarantees memory safety. Through a real type system and many abstractions it feels like a high-level language but can still be low-level enough for OS development. The [next post] describes the Rust setup.
 
 [Rust]: https://www.rust-lang.org/
 [next post]: {{% relref "03-set-up-rust.md" %}}
