@@ -635,15 +635,15 @@ impl Descriptor {
 
         let mut low = PRESENT.bits();
         // base
-        low.set_range(16..40, ptr.get_range(0..24));
-        low.set_range(56..64, ptr.get_range(24..32));
+        low.set_bits(16..40, ptr.get_bits(0..24));
+        low.set_bits(56..64, ptr.get_bits(24..32));
         // limit (the `-1` in needed since the bound is inclusive)
-        low.set_range(0..16, (size_of::<TaskStateSegment>() - 1) as u64);
+        low.set_bits(0..16, (size_of::<TaskStateSegment>() - 1) as u64);
         // type (0b1001 = available 64-bit tss)
-        low.set_range(40..44, 0b1001);
+        low.set_bits(40..44, 0b1001);
 
         let mut high = 0;
-        high.set_range(0..32, ptr.get_range(32..64));
+        high.set_bits(0..32, ptr.get_bits(32..64));
 
         Descriptor::SystemSegment(low, high)
     }
@@ -900,7 +900,7 @@ We also rewrite the `set_stack_index` method in `src/interrupts/idt.rs`:
 pub fn set_stack_index(&mut self, index: u16) -> &mut Self {
     // The hardware IST index starts at 1, but our software IST index
     // starts at 0. Therefore we need to add 1 here.
-    self.0.set_range(0..3, index + 1);
+    self.0.set_bits(0..3, index + 1);
     self
 }
 ```
