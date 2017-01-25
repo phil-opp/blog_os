@@ -81,7 +81,7 @@ pub struct EntryOptions(u16);
 impl EntryOptions {
     fn minimal() -> Self {
         let mut options = 0;
-        options.set_range(9..12, 0b111); // 'must-be-one' bits
+        options.set_bits(9..12, 0b111); // 'must-be-one' bits
         EntryOptions(options)
     }
 
@@ -103,14 +103,14 @@ impl EntryOptions {
 
     #[allow(dead_code)]
     pub fn set_privilege_level(&mut self, dpl: u16) -> &mut Self {
-        self.0.set_range(13..15, dpl);
+        self.0.set_bits(13..15, dpl);
         self
     }
 
     pub fn set_stack_index(&mut self, index: u16) -> &mut Self {
         // The hardware IST index starts at 1, but our software IST index
         // starts at 0. Therefore we need to add 1 here.
-        self.0.set_range(0..3, index + 1);
+        self.0.set_bits(0..3, index + 1);
         self
     }
 }
