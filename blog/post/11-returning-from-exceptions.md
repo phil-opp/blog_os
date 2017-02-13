@@ -121,7 +121,7 @@ The `iretq` instruction is the one and only way to return from exceptions and is
 
 [amd-manual]: https://support.amd.com/TechDocs/24594.pdf
 
-IRETQ restores `rip`, `cs`, `rflags`, `rsp`, and `cs` from the values saved on the stack and thus continues the interrupted program. The instruction does not handle the optional error code, so it must be popped from the stack before.
+IRETQ restores `rip`, `cs`, `rflags`, `rsp`, and `ss` from the values saved on the stack and thus continues the interrupted program. The instruction does not handle the optional error code, so it must be popped from the stack before.
 
 We see that `iretq` treats the stored instruction pointer as return address. For most exceptions, the stored `rip` points to the instruction that caused the fault. So by executing `iretq`, we restart the failing instruction. This makes sense because we should have resolved the exception when returning from it, so the instruction should no longer fail (e.g. the accessed part of the memory mapped file is now present in memory).
 
