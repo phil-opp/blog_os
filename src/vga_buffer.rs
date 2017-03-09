@@ -16,10 +16,11 @@ const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
 
 pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
-    column_position: 0,
-    color_code: ColorCode::new(Color::LightGreen, Color::Black),
-    buffer: unsafe { Unique::new(0xb8000 as *mut _) },
-});
+                                                  column_position: 0,
+                                                  color_code: ColorCode::new(Color::LightGreen,
+                                                                             Color::Black),
+                                                  buffer: unsafe { Unique::new(0xb8000 as *mut _) },
+                                              });
 
 macro_rules! println {
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
@@ -85,9 +86,9 @@ impl Writer {
                 let color_code = self.color_code;
 
                 self.buffer().chars[row][col].write(ScreenChar {
-                    ascii_character: byte,
-                    color_code: color_code,
-                });
+                                                        ascii_character: byte,
+                                                        color_code: color_code,
+                                                    });
                 self.column_position += 1;
             }
         }

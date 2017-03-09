@@ -115,14 +115,14 @@ pub fn init(memory_controller: &mut MemoryController) {
     use x86::shared::segmentation::{SegmentSelector, set_cs};
     use x86::shared::task::load_tr;
 
-    let double_fault_stack = memory_controller.alloc_stack(1)
-        .expect("could not allocate double fault stack");
+    let double_fault_stack =
+        memory_controller.alloc_stack(1).expect("could not allocate double fault stack");
 
     let tss = TSS.call_once(|| {
-        let mut tss = TaskStateSegment::new();
-        tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
-        tss
-    });
+                                let mut tss = TaskStateSegment::new();
+                                tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
+                                tss
+                            });
 
     let mut code_selector = SegmentSelector::empty();
     let mut tss_selector = SegmentSelector::empty();

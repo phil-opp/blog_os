@@ -32,8 +32,11 @@ impl Mapper {
 
     pub fn translate(&self, virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
         let offset = virtual_address % PAGE_SIZE;
-        self.translate_page(Page::containing_address(virtual_address))
-            .map(|frame| frame.number * PAGE_SIZE + offset)
+        self.translate_page(Page::containing_address(virtual_address)).map(|frame| {
+                                                                               frame.number *
+                                                                               PAGE_SIZE +
+                                                                               offset
+                                                                           })
     }
 
     pub fn translate_page(&self, page: Page) -> Option<Frame> {
@@ -48,9 +51,9 @@ impl Mapper {
                         // address must be 1GiB aligned
                         assert!(start_frame.number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
                         return Some(Frame {
-                            number: start_frame.number + page.p2_index() * ENTRY_COUNT +
-                                    page.p1_index(),
-                        });
+                                        number: start_frame.number + page.p2_index() * ENTRY_COUNT +
+                                                page.p1_index(),
+                                    });
                     }
                 }
                 if let Some(p2) = p3.next_table(page.p3_index()) {
