@@ -9,6 +9,8 @@ pygmentsuseclasses = true
 
 uglyurls = true
 
+disableKinds = ["section", "taxonomy", "taxonomyTerm"]
+
 [author]
   name = "Philipp Oppermann"
   email = "dev@phil-opp.com"
