@@ -1,0 +1,53 @@
+{{ partial "header.html" . }}
+
+<div class="front-page-introduction"><p>
+  This blog series creates a small operating system in the
+  <a href="https://www.rust-lang.org/">Rust programming language</a>. Each post
+  is a small tutorial and includes all needed code, so you can follow along if
+  you like. The source code is also available in the corresponding
+  <a href="https://github.com/phil-opp/blog_os">Github repository</a>.
+</p>
+<p>Latest post: {{ range first 1 (where .Site.Pages "Section" "post") }}
+  <strong><a href="{{ .RelPermalink }}">{{ .Title }}</a></strong>
+  {{ end }}
+</p></div>
+
+<div id="bare-bones" class="post-category bare-bones">Bare Bones</div>
+<div class="posts bare-bones">
+  {{ range first 4 (where .Site.Pages.ByDate "Section" "post") }}
+    {{ .Render "teaser" }}
+  {{ end }}
+</div>
+
+<div id="memory-management" class="post-category memory-management">Memory Management</div>
+<div class="posts memory-management">
+  {{ range first 4 (after 4 (where .Site.Pages.ByDate "Section" "post")) }}
+    {{ .Render "teaser" }}
+  {{ end }}
+</div>
+
+<div id="interrupts" class="post-category exceptions">Exceptions</div>
+<div class="posts exceptions">
+  {{ range first 4 (after 8 (where .Site.Pages.ByDate "Section" "post")) }}
+    {{ .Render "teaser" }}
+  {{ end }}
+</div>
+
+<hr>
+<h1>Additional Resources</h1>
+
+<ul>
+  {{ range (where .Site.Pages.ByDate "Section" "additional-resource") }}
+    <li>{{ .Render "link" }}
+  {{ end }}
+</ul>
+
+<hr>
+<aside id="recent-updates">
+  <h1>Recent Updates</h1>
+  {{ partial "recent-updates.html" . }}
+</aside>
+
+<hr>
+
+{{ partial "footer.html" . }}
