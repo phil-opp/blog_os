@@ -12,7 +12,7 @@
 #![feature(alloc, collections)]
 #![feature(asm)]
 #![feature(naked_functions)]
-#![feature(core_intrinsics)]
+#![feature(abi_x86_interrupt)]
 #![no_std]
 
 extern crate rlibc;
@@ -21,8 +21,7 @@ extern crate spin;
 extern crate multiboot2;
 #[macro_use]
 extern crate bitflags;
-#[macro_use]
-extern crate x86;
+extern crate x86_64;
 #[macro_use]
 extern crate once;
 extern crate bit_field;
@@ -68,7 +67,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 }
 
 fn enable_nxe_bit() {
-    use x86::shared::msr::{IA32_EFER, rdmsr, wrmsr};
+    use x86_64::registers::msr::{IA32_EFER, rdmsr, wrmsr};
 
     let nxe_bit = 1 << 11;
     unsafe {
@@ -78,9 +77,9 @@ fn enable_nxe_bit() {
 }
 
 fn enable_write_protect_bit() {
-    use x86::shared::control_regs::{cr0, cr0_write, CR0_WRITE_PROTECT};
+    use x86_64::registers::control_regs::{cr0, cr0_write, Cr0};
 
-    unsafe { cr0_write(cr0() | CR0_WRITE_PROTECT) };
+    unsafe { cr0_write(cr0() | Cr0::WRITE_PROTECT) };
 }
 
 #[cfg(not(test))]
