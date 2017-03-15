@@ -898,18 +898,15 @@ An x86 processor has many different caches because always accessing the main mem
 
 The translation lookaside buffer, or TLB, caches the translation of virtual to physical addresses. It's filled automatically when a page is accessed. But it's not updated transparently when the mapping of a page changes. This is the reason that we still can access the page even through we unmapped it in the page table.
 
-So to fix our `unmap` function, we need to remove the cached translation from the TLB. We can use Gerd Zellweger's [x86][x86 crate] crate to do this easily. To add it, we append the following to our `Cargo.toml`:
+So to fix our `unmap` function, we need to remove the cached translation from the TLB. We can use the [x86_64][x86_64 crate] crate to do this easily. To add it, we append the following to our `Cargo.toml`:
 
-[x86 crate]: https://github.com/gz/rust-x86
+[x86_64 crate]: https://docs.rs/x86_64
 
 ```toml
-[dependencies.x86]
-version = "0.8.0"
-default-features = false
+[dependencies]
+...
+x86_64 = "0.1.0"
 ```
-It has a `performance-counter` feature that allows reading the CPU specific [performance counters] but increases compile times. We don't need it right now, so we disable it using `default-features = false`.
-
-[performance counters]: http://gz.github.io/rust-x86/x86/perfcnt/index.html
 
  Now we can use it to fix `unmap`:
 
@@ -917,7 +914,9 @@ It has a `performance-counter` feature that allows reading the CPU specific [per
 ...
   p1[page.p1_index()].set_unused();
   unsafe {
-      ::x86::shared::tlb::flush(page.start_address());
+      use x86_64::instructions::tlb;
+      use x86_64::VirtualAddress;
+      tlb::flush(VirtualAddress(page.start_address()));
   }
   // TODO free p(1,2,3) table if empty
   //allocator.deallocate_frame(frame);

@@ -79,7 +79,7 @@ In order to test it, we insert an `int3` instruction in our `rust_main`:
 // in src/lib.rs
 ...
 #[macro_use] // needed for the `int!` macro
-extern crate x86;
+extern crate x86_64;
 ...
 
 #[no_mangle]
