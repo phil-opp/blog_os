@@ -28,4 +28,3 @@ addons:
 
 script:
   - make
-  - cargo fmt -- --write-mode=diff

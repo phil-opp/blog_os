@@ -41,10 +41,9 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 }
 {{< / highlight >}}
 
-We use the [int! macro] of the [x86 crate] to trigger the exception with vector number `1`, which is the [debug exception]. The debug exception occurs for example when a breakpoint defined in the [debug registers] is hit. Like the [breakpoint exception], it is mainly used for [implementing debuggers].
+We use the [int! macro] of the `x86_64` crate to trigger the exception with vector number `1`, which is the [debug exception]. The debug exception occurs for example when a breakpoint defined in the [debug registers] is hit. Like the [breakpoint exception], it is mainly used for [implementing debuggers].
 
-[int! macro]: https://docs.rs/x86/0.8.0/x86/macro.int!.html
-[x86 crate]: https://github.com/gz/rust-x86
+[int! macro]: https://docs.rs/x86_64/0.1.0/x86_64/macro.int!.html
 [debug exception]: http://wiki.osdev.org/Exceptions#Debug
 [debug registers]: https://en.wikipedia.org/wiki/X86_debug_register
 [breakpoint exception]: http://wiki.osdev.org/Exceptions#Breakpoint
@@ -476,7 +475,7 @@ Let's create a new TSS that contains our double fault stack in its interrupt sta
 ```rust
 // in src/interrupts/mod.rs
 
-use x86::bits64::task::TaskStateSegment;
+use x86_64::structures::tss::TaskStateSegment;
 ```
 
 Let's create a new TSS in our `interrupts::init` function:
@@ -624,7 +623,7 @@ Let's add a function to our descriptor that creates a TSS descriptor for a given
 ```rust
 // in src/interrupts/gdt.rs
 
-use x86::bits64::task::TaskStateSegment;
+use x86_64::structures::tss::TaskStateSegment;
 
 impl Descriptor {
     pub fn tss_segment(tss: &'static TaskStateSegment) -> Descriptor {
@@ -660,8 +659,8 @@ In order to add descriptors to the GDT, we add a `add_entry` method:
 ```rust
 // in src/interrupts/gdt.rs
 
-use x86::shared::segmentation::SegmentSelector;
-use x86::shared::PrivilegeLevel;
+use x86_64::structures::gdt::SegmentSelector;
+use x86_64::PrivilegeLevel;
 
 impl Gdt {
     pub fn add_entry(&mut self, entry: Descriptor) -> SegmentSelector {
@@ -709,8 +708,8 @@ To load the GDT, we add a new `load` method:
 
 impl Gdt {
     pub fn load(&'static self) {
-        use x86::shared::dtables::{DescriptorTablePointer, lgdt};
-        use x86::shared::segmentation;
+        use x86_64::instructions::tables::{DescriptorTablePointer, lgdt};
+        use x86_64::instructions::segmentation;
         use core::mem::size_of;
 
         let ptr = DescriptorTablePointer {
@@ -847,8 +846,9 @@ For the first two steps, we need access to the `code_selector` and `tss_selector
 {{< highlight rust "hl_lines=3 4 7 8 11 12 19 21" >}}
 // in src/interrupts/mod.rs
 pub fn init(memory_controller: &mut MemoryController) {
-    use x86::shared::segmentation::{SegmentSelector, set_cs};
-    use x86::shared::task::load_tr;
+    use x86_64::structures::gdt::SegmentSelector;
+    use x86_64::instructions::segmentation::set_cs;
+    use x86_64::instructions::tables::load_tss;
     ...
 
     let mut code_selector = SegmentSelector::empty();
@@ -865,17 +865,17 @@ pub fn init(memory_controller: &mut MemoryController) {
         // reload code segment register
         set_cs(code_selector);
         // load TSS
-        load_tr(tss_selector);
+        load_tss(tss_selector);
     }
 
     IDT.load();
 }
 {{< / highlight >}}
 
-We first set the descriptors to `empty` and then update them from inside the closure (which implicitly borrows them as `&mut`). Now we're able to reload the code segment register using [`set_cs`] and to load the TSS using [`load_tr`].
+We first set the descriptors to `empty` and then update them from inside the closure (which implicitly borrows them as `&mut`). Now we're able to reload the code segment register using [`set_cs`] and to load the TSS using [`load_tss`].
 
 [`set_cs`]: https://docs.rs/x86/0.8.0/x86/shared/segmentation/fn.set_cs.html
-[`load_tr`]: https://docs.rs/x86/0.8.0/x86/shared/task/fn.load_tr.html
+[`load_tss`]: https://docs.rs/x86/0.8.0/x86/shared/task/fn.load_tss.html
 
 Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 

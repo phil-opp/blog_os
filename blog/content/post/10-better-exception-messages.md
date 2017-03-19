@@ -148,7 +148,7 @@ If you want to try it, insert it in `src/lib.rs` and call it from `rust_main`. W
 [...]
 000000000010df90 <_ZN7blog_os22naked_function_example17ha9f733dfe42b595dE>:
   10df90:	48 c7 c0 2a 00 00 00 	mov    $0x42,%rax
-  10df97:	c3                   	retq   
+  10df97:	c3                   	retq
   10df98:	0f 1f 84 00 00 00 00 	nopl   0x0(%rax,%rax,1)
   10df9f:	00
 ```
@@ -629,7 +629,7 @@ Now we can improve our page fault error message by using the new `PageFaultError
 extern "C" fn page_fault_handler(stack_frame: &ExceptionStackFrame,
                                  error_code: u64) -> !
 {
-    use x86::shared::control_regs;
+    use x86_64::registers::control_regs;
     println!(
         "\nEXCEPTION: PAGE FAULT while accessing {:#x}\
         \nerror code: {:?}\n{:#?}",

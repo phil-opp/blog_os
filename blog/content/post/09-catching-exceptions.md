@@ -84,8 +84,9 @@ Now we create types for the IDT and its entries:
 ```rust
 // src/interrupts/idt.rs
 
-use x86::shared::segmentation::{self, SegmentSelector};
-use x86::shared::PrivilegeLevel;
+use x86_64::instructions::segmentation;
+use x86_64::structures::gdt::SegmentSelector;
+use x86_64::PrivilegeLevel;
 
 pub struct Idt([Entry; 16]);
 
@@ -279,10 +280,9 @@ impl Idt {
     }
 }
 ```
-The method overwrites the specified entry with the given handler function. We use the `segmentation::cs`[^fn-segmentation-cs] function of the [x86 crate] to get the current code segment descriptor. There's no need for different kernel code segments in long mode, so the current `cs` value should be always the right choice.
+The method overwrites the specified entry with the given handler function. We use the `segmentation::cs` function of the [x86_64 crate] to get the current code segment descriptor. There's no need for different kernel code segments in long mode, so the current `cs` value should be always the right choice.
 
-[x86 crate]: https://github.com/gz/rust-x86
-[^fn-segmentation-cs]: The `segmentation::cs` function was [added](https://github.com/gz/rust-x86/pull/12) in version 0.7.0, so you might need to update your `x86` version in your `Cargo.toml`.
+[x86_64 crate]: https://docs.rs/x86_64
 
 By returning a mutual reference to the entry's options, we allow the caller to override the default settings. For example, the caller could add a non-present entry by executing: `idt.set_handler(11, handler_fn).set_present(false)`.
 
@@ -299,19 +299,19 @@ Type    | Name    | Description
 u16     | Limit   | The maximum addressable byte in the table. Equal to the table size in bytes minus 1.
 u64     | Offset  | Virtual start address of the table.
 
-This structure is already contained [in the x86 crate], so we don't need to create it ourselves. The same is true for the [lidt function]. So we just need to put the pieces together to create a `load`  method:
+This structure is already contained [in the x86_64 crate], so we don't need to create it ourselves. The same is true for the [lidt function]. So we just need to put the pieces together to create a `load`  method:
 
-[in the x86 crate]: http://gz.github.io/rust-x86/x86/dtables/struct.DescriptorTablePointer.html
-[lidt function]: http://gz.github.io/rust-x86/x86/dtables/fn.lidt.html
+[in the x86_64 crate]: http://docs.rs/x86_64/0.1.0/x86_64/instructions/tables/struct.DescriptorTablePointer.html
+[lidt function]: http://docs.rs/x86_64/0.1.0/x86_64/instructions/tables/fn.lidt.html
 
 ```rust
 impl Idt {
     pub fn load(&self) {
-        use x86::shared::dtables::{DescriptorTablePointer, lidt};
+        use x86_64::instructions::tables::{DescriptorTablePointer, lidt};
         use core::mem::size_of;
 
         let ptr = DescriptorTablePointer {
-            base: self as *const _ as *const ::x86::bits64::irq::IdtEntry,
+            base: self as *const _ as u64,
             limit: (size_of::<Self>() - 1) as u16,
         };
 
@@ -319,9 +319,7 @@ impl Idt {
     }
 }
 ```
-The method does not need to modify the IDT, so it takes `self` by immutable reference. First, we create a `DescriptorTablePointer` and then we pass it to `lidt`. The `lidt` function expects that the `base` field has the type `x86::bits64::irq::IdtEntry`[^fn-x86-idt-entry], therefore we need to cast the `self` pointer. For calculating the `limit` we use [mem::size_of]. The additional `-1` is needed because the limit field has to be the maximum addressable byte (inclusive bound). We need an unsafe block around `lidt`, because the function assumes that the specified handler addresses are valid.
-
-[^fn-x86-idt-entry]: The `x86` crate has its own `IdtEntry` type, but it is a bit incomplete. Therefore we created our own IDT types.
+The method does not need to modify the IDT, so it takes `self` by immutable reference. First, we create a `DescriptorTablePointer` and then we pass it to `lidt`. The `lidt` function expects that the `base` field has the type `u64`, therefore we need to cast the `self` pointer. For calculating the `limit` we use [mem::size_of]. The additional `-1` is needed because the limit field has to be the maximum addressable byte (inclusive bound). We need an unsafe block around `lidt`, because the function assumes that the specified handler addresses are valid.
 
 [mem::size_of]: https://doc.rust-lang.org/nightly/core/mem/fn.size_of.html
 
