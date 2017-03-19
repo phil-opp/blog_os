@@ -192,3 +192,7 @@ aside#toc {
 aside#recent-updates time {
   color: #9a9a9a;
 }
+
+a code {
+  color: #268bd2;
+}
