@@ -129,7 +129,7 @@ aside#toc {
     margin-left: -15rem;
     font-size: 90%;
     line-height: 1.2;
-    opacity: .2;
+    opacity: .5;
     transition: opacity .5s;
   }
 
