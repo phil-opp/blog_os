@@ -835,4 +835,4 @@ Now we're able to use heap storage in our kernel without leaking memory. This al
 ## What's next?
 This post concludes the section about memory management for now. We will revisit this topic eventually, but now it's time to explore other topics. The upcoming posts will be about CPU exceptions and interrupts. We will catch all page, double, and triple faults and create a driver to read keyboard input. The [next post] starts by setting up a so-called _Interrupt Descriptor Table_.
 
-[next post]: {{% relref "09-catching-exceptions.md" %}}
+[next post]: {{% relref "09-handling-exceptions.md" %}}

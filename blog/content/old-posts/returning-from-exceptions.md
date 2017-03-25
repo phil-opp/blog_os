@@ -295,7 +295,7 @@ Unfortunately, Rust does not support such a calling convention. It was [proposed
 
 [interrupt calling conventions]: https://github.com/rust-lang/rfcs/pull/1275
 [Naked functions]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
-[naked fn post]: {{% relref "10-better-exception-messages.md#naked-functions" %}}
+[naked fn post]: {{% relref "better-exception-messages.md#naked-functions" %}}
 
 ### A naked wrapper function
 
