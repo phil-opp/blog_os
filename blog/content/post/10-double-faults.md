@@ -33,23 +33,17 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // initialize our IDT
     interrupts::init();
 
-    // trigger a debug exception
-    unsafe { int!(1) };
+    // trigger a page fault
+    unsafe {
+        *(0xdeadbeaf as *mut u64) = 42;
+    };
 
     println!("It did not crash!");
     loop {}
 }
 {{< / highlight >}}
 
-We use the [int! macro] of the `x86_64` crate to trigger the exception with vector number `1`, which is the [debug exception]. The debug exception occurs for example when a breakpoint defined in the [debug registers] is hit. Like the [breakpoint exception], it is mainly used for [implementing debuggers].
-
-[int! macro]: https://docs.rs/x86_64/0.1.0/x86_64/macro.int!.html
-[debug exception]: http://wiki.osdev.org/Exceptions#Debug
-[debug registers]: https://en.wikipedia.org/wiki/X86_debug_register
-[breakpoint exception]: http://wiki.osdev.org/Exceptions#Breakpoint
-[implementing debuggers]: http://www.ksyash.com/2011/01/210/
-
-We haven't registered a handler function for the debug exception in our [IDT], so the `int!(1)` line should cause a double fault in the CPU.
+We try to write to address `0xdeadbeaf`, but the corresponding page is not present in the page tables. Thus, a page fault occurs. We haven't registered a page fault handler in our [IDT], so a double fault occurs.
 
 When we start our kernel now, we see that it enters an endless boot loop:
 
@@ -57,39 +51,33 @@ When we start our kernel now, we see that it enters an endless boot loop:
 
 The reason for the boot loop is the following:
 
-1. The CPU executes the [int 1] instruction, which causes a software-invoked `Debug` exception.
-2. The CPU looks at the corresponding entry in the IDT and sees that the present bit isn't set. Thus, it can't call the debug exception handler and a double fault occurs.
+1. The CPU tries to write to `0xdeadbeaf`, which causes a page fault.
+2. The CPU looks at the corresponding entry in the IDT and sees that the present bit isn't set. Thus, it can't call the page fault handler and a double fault occurs.
 3. The CPU looks at the IDT entry of the double fault handler, but this entry is also non-present. Thus, a _triple_ fault occurs.
 4. A triple fault is fatal. QEMU reacts to it like most real hardware and issues a system reset.
 
-[int 1]: https://en.wikipedia.org/wiki/INT_(x86_instruction)
-
-So in order to prevent this triple fault, we need to either provide a handler function for debug exceptions or a double fault handler. We will do the latter, since we want to avoid triple faults in all cases.
+So in order to prevent this triple fault, we need to either provide a handler function for page faults or a double fault handler. Let's start with the latter, since we want to avoid triple faults in all cases.
 
 ### A Double Fault Handler
 A double fault is a normal exception with an error code, so we can use our `handler_with_error_code` macro to create a wrapper function:
 
-{{< highlight rust "hl_lines=11 18" >}}
+{{< highlight rust "hl_lines=8 14" >}}
 // in src/interrupts/mod.rs
 
 lazy_static! {
     static ref IDT: idt::Idt = {
         let mut idt = idt::Idt::new();
 
-        idt.set_handler(0, handler!(divide_by_zero_handler));
-        idt.set_handler(3, handler!(breakpoint_handler));
-        idt.set_handler(6, handler!(invalid_opcode_handler));
-        // new double fault handler
-        idt.set_handler(8, handler_with_error_code!(double_fault_handler));
-        idt.set_handler(14, handler_with_error_code!(page_fault_handler));
+        idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt.double_fault.set_handler_fn(double_fault_handler)
 
         idt
     };
 }
 
 // our new double fault handler
-extern "C" fn double_fault_handler(stack_frame: &ExceptionStackFrame,
-    _error_code: u64)
+extern "x86-interrupt" fn double_fault_handler(
+    stack_frame: &mut ExceptionStackFrame, _error_code: u64)
 {
     println!("\nEXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
     loop {}
@@ -104,8 +92,8 @@ When we start our kernel now, we should see that the double fault handler is inv
 
 It worked! Here is what happens this time:
 
-1. The CPU executes the `int 1` instruction macro, which causes a software-invoked `Debug` exception.
-2. Like before, the CPU looks at the corresponding entry in the IDT and sees that the present bit isn't set. Thus, it can't call the debug exception handler and a double fault occurs.
+1. The CPU executes tries to write to `0xdeadbeaf`, which causes a page fault.
+2. Like before, the CPU looks at the corresponding entry in the IDT and sees that the present bit isn't set. Thus, a double fault occurs.
 3. The CPU jumps to the – now present – double fault handler.
 
 The triple fault (and the boot-loop) no longer occurs, since the CPU can now call the double fault handler.
@@ -468,9 +456,9 @@ I/O Map Base Address | `u16`
 The _Privilege Stack Table_ is used by the CPU when the privilege level changes. For example, if an exception occurs while the CPU is in user mode (privilege level 3), the CPU normally switches to kernel mode (privilege level 0) before invoking the exception handler. In that case, the CPU would switch to the 0th stack in the Privilege Stack Table (since 0 is the target privilege level). We don't have any user mode programs yet, so we ignore this table for now.
 
 #### Creating a TSS
-Let's create a new TSS that contains our double fault stack in its interrupt stack table. For that we need a TSS struct. Fortunately, the `x86` crate already contains a [`TaskStateSegment` struct] that we can use:
+Let's create a new TSS that contains our double fault stack in its interrupt stack table. For that we need a TSS struct. Fortunately, the `x86_64` crate already contains a [`TaskStateSegment` struct] that we can use:
 
-[`TaskStateSegment` struct]: https://docs.rs/x86/0.8.0/x86/bits64/task/struct.TaskStateSegment.html
+[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.1.1/x86_64/structures/tss/struct.TaskStateSegment.html
 
 ```rust
 // in src/interrupts/mod.rs
@@ -483,6 +471,8 @@ Let's create a new TSS in our `interrupts::init` function:
 {{< highlight rust "hl_lines=3 9 10" >}}
 // in src/interrupts/mod.rs
 
+use x86_64::VirtualAddress;
+
 const DOUBLE_FAULT_IST_INDEX: usize = 0;
 
 pub fn init(memory_controller: &mut MemoryController) {
@@ -490,7 +480,8 @@ pub fn init(memory_controller: &mut MemoryController) {
         .expect("could not allocate double fault stack");
 
     let mut tss = TaskStateSegment::new();
-    tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
+    tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX] = VirtualAddress(
+        double_fault_stack.top());
 
     IDT.load();
 }
@@ -709,12 +700,10 @@ To load the GDT, we add a new `load` method:
 impl Gdt {
     pub fn load(&'static self) {
         use x86_64::instructions::tables::{DescriptorTablePointer, lgdt};
-        use x86_64::instructions::segmentation;
         use core::mem::size_of;
 
         let ptr = DescriptorTablePointer {
-            base: self.table.as_ptr() as
-                *const segmentation::SegmentDescriptor,
+            base: self.table.as_ptr() as u64,
             limit: (self.table.len() * size_of::<u64>() - 1) as u16,
         };
 
@@ -722,10 +711,10 @@ impl Gdt {
     }
 }
 ```
-We use the [`DescriptorTablePointer` struct] and the [`lgdt` function] provided by the `x86` crate to load our GDT. Again, we require a `'static` reference since the GDT possibly needs to live for the rest of the run time.
+We use the [`DescriptorTablePointer` struct] and the [`lgdt` function] provided by the `x86_64` crate to load our GDT. Again, we require a `'static` reference since the GDT possibly needs to live for the rest of the run time.
 
-[`DescriptorTablePointer` struct]: https://docs.rs/x86/0.8.0/x86/shared/dtables/struct.DescriptorTablePointer.html
-[`lgdt` function]: https://docs.rs/x86/0.8.0/x86/shared/dtables/fn.lgdt.html
+[`DescriptorTablePointer` struct]: https://docs.rs/x86_64/0.1.1/x86_64/instructions/tables/struct.DescriptorTablePointer.html
+[`lgdt` function]: https://docs.rs/x86_64/0.1.1/x86_64/instructions/tables/fn.lgdt.html
 
 ### Putting it together
 We now have a double fault stack and are able to create and load a TSS (which contains an IST). So let's put everything together to catch kernel stack overflows.
@@ -740,7 +729,8 @@ pub fn init(memory_controller: &mut MemoryController) {
         .expect("could not allocate double fault stack");
 
     let mut tss = TaskStateSegment::new();
-    tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
+    tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX] = VirtualAddress(
+        double_fault_stack.top());
 
     let mut gdt = gdt::Gdt::new();
     let code_selector = gdt.add_entry(gdt::Descriptor::kernel_code_segment());
@@ -808,14 +798,15 @@ The `Once` type allows us to initialize a `static` at runtime. It is safe becaus
 
 So let's rewrite our `interrupts::init` function to use the static `TSS` and `GDT`:
 
-{{< highlight rust "hl_lines=5 8 9 11 16 17" >}}
+{{< highlight rust "hl_lines=5 9 10 12 17 18" >}}
 pub fn init(memory_controller: &mut MemoryController) {
     let double_fault_stack = memory_controller.alloc_stack(1)
         .expect("could not allocate double fault stack");
 
     let tss = TSS.call_once(|| {
         let mut tss = TaskStateSegment::new();
-        tss.ist[DOUBLE_FAULT_IST_INDEX] = double_fault_stack.top() as u64;
+        tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX] = VirtualAddress(
+            double_fault_stack.top());
         tss
     });
 
@@ -879,93 +870,29 @@ We first set the descriptors to `empty` and then update them from inside the clo
 
 Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 
-{{< highlight rust "hl_lines=8" >}}
+{{< highlight rust "hl_lines=7 9" >}}
 // in src/interrupt/mod.rs
 
 lazy_static! {
     static ref IDT: idt::Idt = {
         let mut idt = idt::Idt::new();
         ...
-        idt.set_handler(8, handler_with_error_code!(double_fault_handler))
-            .set_stack_index(DOUBLE_FAULT_IST_INDEX as u16);
+        unsafe {
+            idt.double_fault.set_handler_fn(double_fault_handler)
+                .set_stack_index(DOUBLE_FAULT_IST_INDEX as u16);
+        }
         ...
     };
 }
-
 {{< / highlight >}}
 
-We also rewrite the `set_stack_index` method in `src/interrupts/idt.rs`:
-
-```rust
-pub fn set_stack_index(&mut self, index: u16) -> &mut Self {
-    // The hardware IST index starts at 1, but our software IST index
-    // starts at 0. Therefore we need to add 1 here.
-    self.0.set_bits(0..3, index + 1);
-    self
-}
-```
-The only change is that we're now adding `1` to the passed `index`, because the hardware expects an index between _one_ and seven. A zero means “no stack switch”.
+The `set_stack_index` method is unsafe because the the caller must ensure that the used index is valid and not already used for another exception.
 
 That's it! Now the CPU should switch to the double fault stack whenever a double fault occurs. Thus, we are able to catch _all_ double faults, including kernel stack overflows:
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` and a dump of the exception stack frame](images/qemu-double-fault-on-stack-overflow.png)
 
 From now on we should never see a triple fault again!
-
-## Safety Problems
-In this post, we needed a few `unsafe` blocks to load the GDT and TSS structures. We always used `'static` references, so the passed addresses should be always valid.
-
-However, the IST entries (stored in the TSS) are used as stack pointers by the CPU. This can lead to various memory safety violations:
-
-- The CPU writes to any address that we store in the IST. This way, we can easily circumvent Rust's safety guarantees and e.g. overwrite a `&mut` reference on some random stack space.
-- If we use the same stack index for multiple exceptions, memory safety might be violated too. For example, imagine that the double fault hander and the breakpoint handler use the same IST index. If the double fault handler causes a breakpoint exception, the breakpoint overwrites the stack frame of the double fault handler. When the breakpoint returns, the CPU jumps back to the double fault handler and undefined behavior occurs.
-- If we accidentally use an empty IST entry, the CPU uses the stack pointer `0`. This is really bad, since we overwrite our [recursively mapped] page tables this way.
-
-[recursively mapped]: {{% relref "06-page-tables.md#recursive-mapping" %}}
-
-Let's try the last case (empty IST entry) as an example:
-
-```rust
-// in src/interrups/mod.rs
-
-lazy_static! {
-    static ref IDT: idt::Idt = {
-        ...
-        idt.set_handler(8, handler_with_error_code!(double_fault_handler))
-            .set_stack_index(5);
-        ...
-    }
-}
-```
-Instead of using the `DOUBLE_FAULT_IST_INDEX`, we use the IST index 5. However the entry at index 5 is still empty.
-
-In oder to see the effect, we print the exception stack frame pointer in our `double_fault_handler`:
-
-```rust
-// in src/interrupts/mod.rs
-
-extern "C" fn double_fault_handler(stack_frame: &ExceptionStackFrame,
-    _error_code: u64)
-{
-    println!("\nEXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
-    println!("exception stack frame at {:#p}", stack_frame); // new
-    loop {}
-}
-```
-When we start our kernel now, we see that the exception stack frame was written to `0xffffffffffffffd8`:
-
-![QEMU printing `exception stack frame at 0xffffffffffffffd8](images/qemu-empty-IST-entry.png)
-
-This address is part of the [recursive mapping][recursively mapped], so the CPU just overwrote some random page table entries.
-
-### Possible Solutions?
-Normally, the type system allows us to make things safer. Unfortunately, there are many difficulties in this case. For example, we need to be able to create multiple task state segments since we have multiple CPUs (each CPU has its own TSS). Each IST index is only valid if the corresponding TSS is loaded in the CPU. This makes compile-time abstractions very difficult.
-
-So this might be a case where we have to tolerate the safety dangers [^fn-ideas]. At least, they are limited to the `interrupts` module, where we already have lots of dangerous inline assembly. From outside, only the safe `interrupts::init` function is visible, so it is similar to an [unsafe abstraction]. We only need to be aware of the safety dangers when we edit the `interrupts` module in the future.
-
-[unsafe abstraction]: http://smallcultfollowing.com/babysteps/blog/2016/05/23/unsafe-abstractions/
-
-[^fn-ideas]: If somebody has a good solution for this problem, please tell me :).
 
 ## What's next?
 Now that we mastered exceptions, it's time to explore another kind of interrupts: interrupts from external devices such as timers, keyboards, or network controllers. These hardware interrupts are very similar to exceptions, e.g. they are also dispatched through the IDT.
