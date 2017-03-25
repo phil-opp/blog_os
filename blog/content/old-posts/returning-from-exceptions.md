@@ -15,6 +15,8 @@ As always, the complete source code is on [Github]. Please file [issues] for any
 [gitter chat]: https://gitter.im/phil-opp/blog_os
 [comment section]: #disqus_thread
 
+> **Note**: This post describes how to handle exceptions using naked functions (see <a href="/handling-exceptions-with-naked-fns.html">“Handling Exceptions with Naked Functions”</a> for an overview). Our new way of handling exceptions can be found in the <a href="/handling-exceptions.html">“Handling Exceptions”</a> post.
+
 ## Introduction
 Most exceptions are fatal and can't be resolved. For example, we can't return from a divide-by-zero exception in a reasonable way. However, there are some exceptions that we can resolve:
 

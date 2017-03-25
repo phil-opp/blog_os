@@ -15,6 +15,8 @@ As always, the complete source code is on [Github]. Please file [issues] for any
 [gitter chat]: https://gitter.im/phil-opp/blog_os
 [comment section]: #disqus_thread
 
+> **Note**: This post describes how to handle exceptions using naked functions (see <a href="/handling-exceptions-with-naked-fns.html">“Handling Exceptions with Naked Functions”</a> for an overview). Our new way of handling exceptions can be found in the <a href="/handling-exceptions.html">“Handling Exceptions”</a> post.
+
 ## Exceptions in Detail
 An exception signals that something is wrong with the currently-executed instruction. Whenever an exception occurs, the CPU interrupts its current work and starts an internal exception routine.
 
