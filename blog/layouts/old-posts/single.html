@@ -1,0 +1,28 @@
+{{ partial "header.html" . }}
+
+<article class="post">
+  <h1 class="post-title">{{ .Title }}</h1>
+  <time datetime="{{ .Date.Format "2006-01-02" }}" class="post-date">
+    {{ .Date.Format .Site.Params.date_format }}
+    {{ if isset .Params "updated" }}
+      (updated on {{ .Params.updated | dateFormat .Site.Params.date_format }})
+    {{ end }}
+  </time>
+
+  {{ .Content }}
+</article>
+
+<hr>
+<div class="PageNavigation">
+  {{ if .PrevInSection }}
+    <a class="prev" href="{{ .PrevInSection.RelPermalink }}">&laquo; {{ .PrevInSection.Title }}</a>
+  {{ end }}
+  {{ if .NextInSection }}
+    <a class="next" href="{{ .NextInSection.RelPermalink }}">{{ .NextInSection.Title }} &raquo;</a>
+  {{ end }}
+</div>
+<hr>
+
+{{ partial "disqus.html" . }}
+{{ partial "anchorjs.html" . }}
+{{ partial "footer.html" . }}
