@@ -17,7 +17,7 @@ As always, the complete source code is available on [Github]. Please file [issue
 ## What is a Double Fault?
 In simplified terms, a double fault is a special exception that occurs when the CPU fails to invoke an exception handler. For example, it occurs when a page fault is triggered but there is no page fault handler registered in the [Interrupt Descriptor Table][IDT] (IDT). So it's kind of similar to catch-all blocks in programming languages with exceptions, e.g. `catch(...)` in C++ or `catch(Exception e)` in Java or C#.
 
-[IDT]: {{% relref "09-catching-exceptions.md#the-interrupt-descriptor-table" %}}
+[IDT]: {{% relref "09-handling-exceptions.md#the-interrupt-descriptor-table" %}}
 
 A double fault behaves like a normal exception. It has the vector number `8` and we can define a normal handler function for it in the IDT. It is really important to provide a double fault handler, because if a double fault is unhandled a fatal _triple fault_ occurs. Triple faults can't be caught and most hardware reacts with a system reset.
 
@@ -208,7 +208,7 @@ struct InterruptStackTable {
 
 For each exception handler, we can choose an stack from the IST through the `options` field in the corresponding [IDT entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack whenever a double fault occurs. This switch would happen before anything is pushed, so it would prevent the triple fault.
 
-[IDT entry]: {{% relref "09-catching-exceptions.md#the-interrupt-descriptor-table" %}}
+[IDT entry]: {{% relref "09-handling-exceptions.md#the-interrupt-descriptor-table" %}}
 
 ### Allocating a new Stack
 In order to fill an Interrupt Stack Table later, we need a way to allocate new stacks. Therefore we extend our `memory` module with a new `stack_allocator` submodule:
