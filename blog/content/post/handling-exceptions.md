@@ -389,6 +389,8 @@ When we run it in QEMU now (using `make run`), we see the following:
 
 It works! The CPU successfully invokes our breakpoint handler, which prints the message, and then returns back to the `rust_main` function, where the `It did not crash!` message is printed.
 
+> **Aside**: If it doesn't work and a boot loop occurs, this might be caused by a kernel stack overflow. Try increasing the stack size to at least 16kB (4096 * 4 bytes) in the `boot.asm` file.
+
 We see that the exception stack frame tells us the instruction and stack pointers at the time when the exception occured. This information is very useful when debugging unexpected exceptions. For example, we can look at the corresponding assembly line using `objdump`:
 
 ```
