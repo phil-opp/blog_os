@@ -21,6 +21,7 @@ disableKinds = ["section", "taxonomy", "taxonomyTerm"]
 
 [permalinks]
   post = "/:slug.html"
+  old-posts = "/:slug.html"
   additional-resource = "/:filename.html"
   page = "/:filename.html"
 
