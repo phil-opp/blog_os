@@ -15,6 +15,8 @@ As always, the complete source code is on [Github]. Please file [issues] for any
 [gitter chat]: https://gitter.im/phil-opp/blog_os
 [comment section]: #disqus_thread
 
+> **Note**: This post describes how to handle exceptions using naked functions (see <a href="/handling-exceptions-with-naked-fns.html">“Handling Exceptions with Naked Functions”</a> for an overview). Our new way of handling exceptions can be found in the <a href="/handling-exceptions.html">“Handling Exceptions”</a> post.
+
 ## Introduction
 Most exceptions are fatal and can't be resolved. For example, we can't return from a divide-by-zero exception in a reasonable way. However, there are some exceptions that we can resolve:
 
@@ -295,7 +297,7 @@ Unfortunately, Rust does not support such a calling convention. It was [proposed
 
 [interrupt calling conventions]: https://github.com/rust-lang/rfcs/pull/1275
 [Naked functions]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
-[naked fn post]: {{% relref "10-better-exception-messages.md#naked-functions" %}}
+[naked fn post]: {{% relref "better-exception-messages.md#naked-functions" %}}
 
 ### A naked wrapper function
 
