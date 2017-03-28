@@ -448,7 +448,7 @@ Right now, the `with` function overwrites the recursive mapping and calls the cl
 To backup the physical P4 frame of the active table, we can either read it from the 511th P4 entry (before we change it) or from the CR3 control register directly. We will do the latter as it should be faster and we already have a external crate that makes it easy:
 
 ```rust
-use x86_64::shared::control_regs;
+use x86_64::registers::control_regs;
 let backup = Frame::containing_address(
     unsafe { control_regs::cr3() } as usize
 );
@@ -482,11 +482,11 @@ pub fn with<F>(&mut self,
     where F: FnOnce(&mut Mapper)
 {
     use x86_64::instructions::tlb;
-    use x86_64::shared::{control_regs, tlb};
+    use x86_64::registers::{control_regs, tlb};
 
     {
         let backup = Frame::containing_address(
-            unsafe { control_regs::cr3() } as usize);
+            control_regs::cr3() as usize);
 
         // map temporary_page to current p4 table
         let p4_table = temporary_page.map_table_frame(backup.clone(), self);
@@ -754,11 +754,11 @@ We do this in a new `ActivePageTable::switch` method:
 // in `impl ActivePageTable` in src/memory/paging/mod.rs
 
 pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
-    use x86_64::shared::control_regs;
+    use x86_64::registers::control_regs;
 
     let old_table = InactivePageTable {
         p4_frame: Frame::containing_address(
-            unsafe { control_regs::cr3() } as usize
+            control_regs::cr3() as usize
         ),
     };
     unsafe {
@@ -975,7 +975,7 @@ So we need to enable the `NXE` bit. For that we use the awesome [x86][rust-x86] 
 // in lib.rs
 
 fn enable_nxe_bit() {
-    use x86_64::shared::msr::{IA32_EFER, rdmsr, wrmsr};
+    use x86_64::registers::msr::{IA32_EFER, rdmsr, wrmsr};
 
     let nxe_bit = 1 << 11;
     unsafe {
@@ -995,9 +995,9 @@ Right now, we are still able to modify the `.code` and `.rodata` sections, even 
 // in lib.rs
 
 fn enable_write_protect_bit() {
-    use x86_64::shared::control_regs::{cr0, cr0_write, CR0_WRITE_PROTECT};
+    use x86_64::registers::control_regs::{cr0, cr0_write, Cr0};
 
-    unsafe { cr0_write(cr0() | CR0_WRITE_PROTECT) };
+    unsafe { cr0_write(cr0() | Cr0::WRITE_PROTECT) };
 }
 ```
 The `cr0` functions are unsafe because accessing the `CR0` register is only allowed in kernel mode.
