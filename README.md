@@ -43,7 +43,7 @@ This repository contains the source code for the _Writing an OS in Rust_ series 
           ([source code](https://github.com/phil-opp/blog_os/tree/returning_from_exceptions))
 
 ## Building
-You need to have `nasm`, `grub-mkrescue`, `mformat` (included in `mtools`), `xorriso`, `qemu`, a nighly Rust compiler, and [xargo] installed. Then you can run it using `make run`.
+You need to have `nasm`, `grub-mkrescue`, `mformat` (included in `mtools`), `xorriso`, `qemu`, a nightly Rust compiler, and [xargo] installed. Then you can run it using `make run`.
 
 [xargo]: https://github.com/japaric/xargo
 
