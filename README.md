@@ -25,12 +25,8 @@ This repository contains the source code for the _Writing an OS in Rust_ series 
       ([source code](https://github.com/phil-opp/blog_os/tree/kernel_heap))
 
 ## Exceptions
-- [Catching Exceptions](http://os.phil-opp.com/catching-exceptions.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/catching_exceptions))
-- [Better Exception Messages](http://os.phil-opp.com/better-exception-messages.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/better_exception_messages))
-- [Returning from Exceptions](http://os.phil-opp.com/returning-from-exceptions.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/returning_from_exceptions))
+- [Handling Exceptions](http://os.phil-opp.com/handling-exceptions.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/handling_exceptions))
 - [Double Faults](http://os.phil-opp.com/double-faults.html)
       ([source code](https://github.com/phil-opp/blog_os/tree/double_faults))
 
@@ -38,6 +34,13 @@ This repository contains the source code for the _Writing an OS in Rust_ series 
 - [Cross Compile Binutils](http://os.phil-opp.com/cross-compile-binutils.html)
 - [Cross Compile libcore](http://os.phil-opp.com/cross-compile-libcore.html)
 - [Set Up GDB](http://os.phil-opp.com/set-up-gdb.html)
+- [Handling Exceptions using Naked Functions](http://os.phil-opp.com/handling-exceptions-with-naked-fns.html)
+    - [Catching Exceptions](http://os.phil-opp.com/catching-exceptions.html)
+          ([source code](https://github.com/phil-opp/blog_os/tree/catching_exceptions))
+    - [Better Exception Messages](http://os.phil-opp.com/better-exception-messages.html)
+          ([source code](https://github.com/phil-opp/blog_os/tree/better_exception_messages))
+    - [Returning from Exceptions](http://os.phil-opp.com/returning-from-exceptions.html)
+          ([source code](https://github.com/phil-opp/blog_os/tree/returning_from_exceptions))
 
 ## Building
 You need to have `nasm`, `grub-mkrescue`, `mformat` (included in `mtools`), `xorriso`, `qemu`, a nighly Rust compiler, and [xargo] installed. Then you can run it using `make run`.
