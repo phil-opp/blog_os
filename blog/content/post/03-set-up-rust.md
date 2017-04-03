@@ -78,38 +78,168 @@ Let's break it down:
 [unwinding]: https://doc.rust-lang.org/nomicon/unwinding.html
 
 ## Building Rust
-We can now build it using `cargo build`. To make sure that we build it for the x86_64 architecture and that we use a Linux compatible format, we pass an explicit [target triple]:
+We can now build it using `cargo build`. This command creates a static library at `target/debug/libblog_os.a`, which can be linked with our assembly kernel. However, the resulting library is specific to our _host_ operating system. This is undesirable, because our target system might be very different.
 
-[target triple]: https://github.com/japaric/rust-cross#the-target-triple
+Let's define some properties of our target system:
+
+- **x86_64**: Our target CPU is a recent `x86_64` CPU.
+- **No operating system**: Our target does not run any operating system (we're currently writing it), so the compiler should not assume any OS-specific functionality.
+- **Handles hardware interrupts**: We're writing a kernel, so we'll need to handle asynchronous hardware interrupts at some point. This means that we have to disable a certain stack pointer optimization (the so-called [red zone]), because it would cause stack corruptions otherwise.
+- **No SSE**: Our target might not have [SSE] support. Even if it does, we probably don't want to use SSE instructions in our kernel, because it makes interrupt handling much slower. We will explain this in detail in the [“Handling Exceptions”] post.
+- **No hardware floats**: The `x86_64` architecture uses SSE instructions for floating point operations, which we don't want to use (see the previous point). So we also need to avoid hardware floating point operations in our kernel. Instead, we will use _soft floats_, which are basically software functions that emulate floating point operations using normal integers.
+
+### Target Specifications
+Rust allows us to define [custom targets] through a JSON configuration file. A minimal target specification equal to `x86_64-unknown-linux-gnu` (the default 64-bit Linux target) looks like this:
+
+```json
+{
+  "llvm-target": "x86_64-unknown-linux-gnu",
+  "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+  "target-endian": "little",
+  "target-pointer-width": "64",
+  "arch": "x86_64",
+  "os": "none" TODO
+}
+```
+
+The `llvm-target` field specifies the target triple that is passed to LLVM. [Target triples] are a naming convention that define the CPU architecture (e.g., `x86_64` or `arm`), the vendor (e.g., `apple` or `unknown`), the operating system (e.g., `windows` or `linux`), and the [ABI] \(e.g., `gnu` or `msvc`). For example, the target triple for 64-bit Linux is `x86_64-unknown-linux-gnu` and for 32-bit Windows the target triple is `i686-pc-windows-msvc`.
+
+The `data-layout` field is also passed to LLVM and specifies how data should be laid out in memory. It consists of various specifications seperated by a `-` character. For example, the `e` means little endian and `S128` specifies that the stack should be 128 bits (= 16 byte) aligned. The format is described in detail in the [LLVM documentation][data layout] but there shouldn't be a reason to change this string.
+
+The other fields are used for conditional compilation. This allows crate authors to use `cfg` variables to write special code for depending on the OS or the architecture. There isn't any up-to-date documentation about these fields but the [corresponding source code][target specification] is quite readable.
+
+[data layout]: http://llvm.org/docs/LangRef.html#data-layout
+[target specification]: https://github.com/rust-lang/rust/blob/c772948b687488a087356cb91432425662e034b9/src/librustc_back/target/mod.rs#L194-L214
+
+### A Kernel Target Specification
+For our target system, we define the following JSON configuration in a file named `x86_64-blog_os.json`:
+
+```json
+{
+  "llvm-target": "x86_64-unknown-none",
+  "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+  "target-endian": "little",
+  "target-pointer-width": "64",
+  "arch": "x86_64",
+  "os": "none",
+  "disable-redzone": true,
+  "features": "-mmx,-sse,+soft-float"
+}
+```
+
+As `llvm-target` we use `x86_64-unknown-none`, which defines the `x86_64` architecture, an `unknown` vendor, and no operating system (`none`). The ABI doesn't matter for us, so we just leave it off. The `data-layout` field is just copied from the `x86_64-unknown-linux-gnu` target. We also use the same values for the `target-endian`, `target-pointer-width`, and `arch` fields. For the `os` field we choose `none`, since our kernel runs on bare metal.
+
+#### The Red Zone
+The [red zone] is an optimization of the [System V ABI] that allows functions to temporary use the 128 bytes below its stack frame without adjusting the stack pointer:
+
+[red zone]: http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
+
+![stack frame with red zone](images/red-zone.svg)
+
+The image shows the stack frame of a function with `n` local variables. On function entry, the stack pointer is adjusted to make room on the stack for the local variables.
+
+The red zone is defined as the 128 bytes below the adjusted stack pointer. The function can use this area for temporary data that's not needed across function calls. Thus, the two instructions for adjusting the stack pointer can be avoided in some cases (e.g. in small leaf functions).
+
+However, this optimization leads to huge problems with exceptions or hardware interrupts. Let's assume that an exception occurs while a function uses the red zone:
+
+![red zone overwritten by exception handler](images/red-zone-overwrite.svg)
+
+The CPU and the exception handler overwrite the data in red zone. But this data is still needed by the interrupted function. So the function won't work correctly anymore when we return from the exception handler. This might lead to strange bugs that [take weeks to debug].
+
+[take weeks to debug]: http://forum.osdev.org/viewtopic.php?t=21720
+
+To avoid such bugs when we implement exception handling in the future, we disable the red zone right from the beginning. This is achieved by adding the `"disable-redzone": true` line to our target configuration file.
+
+#### SIMD Extensions
+The `features` field enables/disables target features. We disable the `mmx` and `sse` features by prefixing them with a minus and enable the `soft-float` feature by prefixing it with a plus.  The `mmx` and `sse` features determine support for [Single Instruction Multiple Data (SIMD)] instructions, which simultaneously perform an operation (e.g. addition) on multiple data words. The `x86` architecture supports the following standards:
+
+[Single Instruction Multiple Data (SIMD)]: https://en.wikipedia.org/wiki/SIMD
+
+- [MMX]: The _Multi Media Extension_ instruction set was introduced in 1997 and defines eight 64 bit registers called `mm0` through `mm7`. These registers are just aliases for the registers of the [x87 floating point unit].
+- [SSE]: The _Streaming SIMD Extensions_ instruction set was introduced in 1999. Instead of re-using the floating point registers, it adds a completely new register set. The sixteen new registers are called `xmm0` through `xmm15` and are 128 bits each.
+- [AVX]: The _Advanced Vector Extensions_ are extensions that further increase the size of the multimedia registers. The new registers are called `ymm0` through `ymm15` and are 256 bits each. They extend the `xmm` registers, so e.g. `xmm0` is the lower (or upper?) half of `ymm0`.
+
+[MMX]: https://en.wikipedia.org/wiki/MMX_(instruction_set)
+[x87 floating point unit]: https://en.wikipedia.org/wiki/X87
+[SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
+[AVX]: https://en.wikipedia.org/wiki/Advanced_Vector_Extensions
+
+By using such SIMD standards, programs can often speed up significantly. Good compilers are able to transform normal loops into such SIMD code automatically through a process called [auto-vectorization].
+
+[auto-vectorization]: https://en.wikipedia.org/wiki/Automatic_vectorization
+
+However, the large SIMD registers lead to problems in OS kernels. The reason is that the kernel has to backup all registers that it uses on each hardware interrupt (we will look into this in the [“Handling Exceptions”] post). So if the kernel uses SIMD registers, it has to backup a lot more data, which noticably decreases performance. To avoid this performance loss, we disable the `sse` and `mmx` features (the `avx` feature is disabled by default).
+
+As noted above, floating point operations on `x86_64` use SSE registers, so floats are no longer usable without SSE. Unfortunately, the Rust core library already uses floats (e.g., it implements traits for `f32` and `f64`), so we need an alternative way to implement float operations. The `soft-float` feature solves this problem by emulating all floating point operations through software functions based on normal integers.
+
+### Compiling
+To build our kernel for our new target, we pass the configuration file's name as `target` argument:
 
 ```bash
-cargo build --target=x86_64-unknown-linux-gnu
+cargo build --target=x86_64-blog_os
 ```
-This command creates a static library at `target/x86_64-unknown-linux-gnu/debug/libblog_os.a`, which can be linked with our assembly kernel.
 
-(If you're getting an error about a missing `core` crate, you're probably using a host system with a different target triple. You can easily resolve this by executing `rustup target add x86_64-unknown-linux-gnu`. This command will install the pre-compiled standard libraries for this target, including the missing `core` crate.)
+However, the following error occurs:
 
+```
+error[E0463]: can't find crate for `core`
+  |
+  = note: the `x86_64-blog_os` target may not be installed
+```
+
+The error tells us that the Rust compiler no longer finds the core library. The [core library] is implicitly linked to all `no_std` crates and contains things such as `Result`, `Option`, and iterators.
+
+[core library]: https://doc.rust-lang.org/nightly/core/index.html
+
+The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for the host triple (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for other targets, we need to recompile `core` for these targets first.
+
+#### Xargo
+That's where [xargo] comes in. It is a wrapper for cargo that eases cross compilation. We can install it by executing:
+
+[xargo]: https://github.com/japaric/xargo
+
+```
+cargo install xargo
+```
+
+Xargo depends on the rust source code, which we can install with `rustup component add rust-src`.
+
+Xargo is “a drop-in replacement for cargo”, so every cargo command also works with `xargo`. You can do e.g. `xargo --help`, `xargo clean`, or `xargo doc`. However, the `build` command gains additional functionality: `xargo build` will automatically cross compile the `core` library when compiling for custom targets.
+
+Let's try it:
+
+```bash
+> xargo build --target=x86_64-blog_os
+   Compiling core v0.0.0 (file:///…/rust/src/libcore)
+TODO
+```
+
+It worked! We just successfully cross-compiled our kernel for our new custom target. We can now find a static library at `target/x86_64-blog_os/debug/libblog_os.a`, which can be linked with our assembly kernel.
+
+## Linking Rust
+
+### Adjusting the Makefile
 To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
 
 ```make
 # ...
-target ?= $(arch)-unknown-linux-gnu
+target ?= $(arch)-blog_os
 rust_os := target/$(target)/debug/libblog_os.a
 # ...
-$(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
+$(kernel): kernel $(rust_os) $(assembly_object_files) $(linker_script)
 	@ld -n -T $(linker_script) -o $(kernel) \
 		$(assembly_object_files) $(rust_os)
 
-cargo:
-       @cargo build --target $(target)
+kernel:
+       @xargo build --target $(target)
 ```
-We added a new `cargo` target that just executes `cargo build` and modified the `$(kernel)` target to link the created static lib .
+We added a new `kernel` target that just executes `xargo build` and modified the `$(kernel)` target to link the created static lib .
 
-But now `cargo build` is executed on every `make`, even if no source file was changed. And the ISO is recreated on every `make iso`/`make run`, too. We could try to avoid this by adding dependencies on all rust source and cargo configuration files to the `cargo` target, but the ISO creation takes only half a second on my machine and most of the time we will have changed a Rust file when we run `make`. So we keep it simple for now and let cargo do the bookkeeping of changed files (it does it anyway).
+But now `xargo build` is executed on every `make`, even if no source file was changed. And the ISO is recreated on every `make iso`/`make run`, too. We could try to avoid this by adding dependencies on all rust source and cargo configuration files to the `kernel` target, but the ISO creation takes only half a second on my machine and most of the time we will have changed a Rust file when we run `make`. So we keep it simple for now and let cargo do the bookkeeping of changed files (it does it anyway).
 
 [github makefile]: https://github.com/phil-opp/blog_os/blob/set_up_rust/Makefile
 
-## Calling Rust
+### Calling Rust
 Now we can call the main method in `long_mode_start`:
 
 ```nasm
@@ -128,7 +258,7 @@ By defining `rust_main` as `extern` we tell nasm that the function is defined in
 
 If we've done everything right, we should still see the green `OKAY` when executing `make run`. That means that we successfully called the Rust function and returned back to assembly.
 
-## Fixing Linker Errors
+### Fixing Linker Errors
 Now we can try some Rust code:
 
 ```rust
@@ -141,7 +271,7 @@ When we test it using `make run`, it fails with `undefined reference to 'memcpy'
 
 [libc crate]: https://doc.rust-lang.org/nightly/libc/index.html
 
-### rlibc
+#### rlibc
 Fortunately there already is a crate for that: [rlibc]. When we look at its [source code][rlibc source] we see that it contains no magic, just some [raw pointer] operations in a while loop. To add `rlibc` as a dependency we just need to add two lines to the `Cargo.toml`:
 
 ```toml
@@ -178,7 +308,7 @@ target/debug/libblog_os.a(core-35017696.0.o):
 [raw pointer]: https://doc.rust-lang.org/book/raw-pointers.html
 [crates.io]: https://crates.io
 
-### --gc-sections
+#### --gc-sections
 The new errors are linker errors about missing `fmod` and `fmodf` functions. These functions are used for the modulo operation (`%`) on floating point numbers in [libcore]. The core library is added implicitly when using `#![no_std]` and provides basic standard library features like `Option` or `Iterator`. According to the documentation it is “dependency-free”. But it actually has some dependencies, for example on `fmod` and `fmodf`.
 
 [libcore]: https://doc.rust-lang.org/core/
@@ -206,7 +336,7 @@ What happened? Well, the linker removed unused sections. And since we don't use 
 ```
 Now everything should work again (the green `OKAY`). But there is another linking issue, which is triggered by some other example code.
 
-### panic = "abort"
+#### panic = "abort"
 
 The following snippet still fails:
 
@@ -262,109 +392,7 @@ pub extern "C" fn _Unwind_Resume() -> ! {
 }
 ```
 
-Now we fixed all linking issues and our kernel builds again. But instead of displaying `Hello World`, it constantly reboots itself when we start it.
-
-## Debugging the Boot Loop
-Such a boot loop is most likely caused by some [CPU exception][exception table]. When these exceptions aren't handled, a [Triple Fault] occurs and the processor resets itself. We can look at generated CPU interrupts/exceptions using QEMU:
-
-[exception table]: http://wiki.osdev.org/Exceptions
-[Triple Fault]: http://wiki.osdev.org/Triple_Fault
-
-```
-> qemu-system-x86_64 -d int -no-reboot -cdrom build/os-x86_64.iso
-SMM: enter
-...
-SMM: after RSM
-...
-check_exception old: 0xffffffff new 0x6
-     0: v=06 e=0000 i=0 cpl=0 IP=0008:000000000010018a pc=000000000010018a
-     SP=0010:0000000000102f70 env->regs[R_EAX]=0000000080010010
-...
-check_exception old: 0xffffffff new 0xd
-     1: v=0d e=0062 i=0 cpl=0 IP=0008:000000000010018a pc=000000000010018a
-     SP=0010:0000000000102f70 env->regs[R_EAX]=0000000080010010
-...
-check_exception old: 0xd new 0xd
-     2: v=08 e=0000 i=0 cpl=0 IP=0008:000000000010018a pc=000000000010018a
-     SP=0010:0000000000102f70 env->regs[R_EAX]=0000000080010010
-...
-check_exception old: 0x8 new 0xd
-```
-Let me first explain the QEMU arguments: The `-d int` logs CPU interrupts to the console and the `-no-reboot` flag closes QEMU instead of constant rebooting. But what does the cryptical output mean? I already omitted most of it as we don't need it here. Let's break down the rest:
-
-- The `SMM: enter` and `SMM: after RSM` blocks are created before our OS boots, so we just ignore them.
-- The `check_exception old: 0xffffffff new 0x6` block is the interesting one. It says: “a new CPU exception with number `0x6` occurred“.
-- The last blocks indicate further exceptions. They were thrown because we didn't handle the `0x6` exception, so we're going to ignore them, too.
-
-So let's look at the first exception: `old:0xffffffff` means that the CPU wasn't handling an interrupt when the exception occurred. The new exception has number `0x6`. By looking at an [exception table] we learn that `0x6` indicates a [Invalid Opcode] fault. So the lastly executed instruction was invalid. The register dump tells us that the current instruction was `0x10018a` (through `IP`  (instruction pointer) or `pc` (program counter)). Therefore the instruction at `0x10018a` seems to be invalid. We can look at it using `objdump`:
-
-[Invalid Opcode]: http://wiki.osdev.org/Exceptions#Invalid_Opcode
-
-```
-> objdump -D build/kernel-x86_64.bin | grep "10018a:"
-10018a:	0f 10 05 c7 01 00 00 	movups 0x1c7(%rip),%xmm0 ...
-```
-Through `objdump -D` we disassemble our whole kernel and `grep` picks the relevant line. The instruction at `0x10018a` seems to be a valid `movups` instruction. It's a [SSE] instruction that moves 128 bit between memory and SSE-registers (e.g. `xmm0`). But why the `Invalid Opcode` exception? The answer is hidden behind the [movups documentation][movups]: The section _Protected Mode Exceptions_ lists the conditions for the various exceptions. The short code of the `Invalid Opcode` is `#UD`. An `#UD` exception occurs:
-
-> If an unmasked SIMD floating-point exception and OSXMMEXCPT in CR4 is 0. If EM in CR0 is set. If OSFXSR in CR4 is 0. If CPUID feature flag SSE is 0.
-
-[SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
-[movups]: http://www.c3se.chalmers.se/Common/VTUNE-9.1/doc/users_guide/mergedProjects/analyzer_ec/mergedProjects/reference_olh/mergedProjects/instructions/instruct32_hh/vc206.htm
-
-The rough translation of this cryptic definition is: _If SSE isn't enabled_. So apparently Rust uses SSE instructions by default and we didn't enable SSE before. To fix this, we can either disable SSE instructions in the compiler or enable SSE in our kernel. We do the latter, as it's easier.
-
-### Enabling SSE
-To enable SSE, assembly code is needed again. We want to add a function that tests if SSE is available and enables it then. Else we want to print an error message.
-
-We add it to the `boot.asm` file:
-
-```nasm
-; Check for SSE and enable it. If it's not supported throw error "a".
-set_up_SSE:
-    ; check for SSE
-    mov eax, 0x1
-    cpuid
-    test edx, 1<<25
-    jz .no_SSE
-
-    ; enable SSE
-    mov eax, cr0
-    and ax, 0xFFFB      ; clear coprocessor emulation CR0.EM
-    or ax, 0x2          ; set coprocessor monitoring  CR0.MP
-    mov cr0, eax
-    mov eax, cr4
-    or ax, 3 << 9       ; set CR4.OSFXSR and CR4.OSXMMEXCPT at the same time
-    mov cr4, eax
-
-    ret
-.no_SSE:
-    mov al, "a"
-    jmp error
-```
-The code is from the great [OSDev Wiki][osdev sse] again. Notice that it sets/unsets exactly the bits that can cause the `Invalid Opcode` exception.
-
-When we insert a `call set_up_SSE` somewhere in the `start` function (for example after `call enable_paging`), our Rust code will finally work.
-
-[osdev sse]: http://wiki.osdev.org/SSE#Checking_for_SSE
-
-### “OS returned!”
-Now that we're editing assembly anyway, we should change the `OKAY` message to something more meaningful. My suggestion is a red `OS returned!`:
-
-```nasm
-...
-call rust_main
-
-.os_returned:
-    ; rust main returned, print `OS returned!`
-    mov rax, 0x4f724f204f534f4f
-    mov [0xb8000], rax
-    mov rax, 0x4f724f754f744f65
-    mov [0xb8008], rax
-    mov rax, 0x4f214f644f654f6e
-    mov [0xb8010], rax
-    hlt
-```
-Ok, that's enough assembly for now. Let's switch back to Rust.
+Now we fixed all linking issues and our kernel builds again. But instead of displaying `Hello World`, it constantly reboots itself when we start it. TODO
 
 ## Hello World!
 Finally, it's time for a `Hello World!` from Rust:
