@@ -30,7 +30,7 @@ We need a nightly compiler, as we will use many unstable features. To manage Rus
 The code from this post (and all following) is [automatically tested](https://travis-ci.org/phil-opp/blog_os) every day and should always work for the newest nightly. If it doesn't, please [file an issue](https://github.com/phil-opp/blog_os/issues).
 
 ## Creating a Cargo project
-[Cargo] is Rust excellent package manager. Normally you would call `cargo new` when you want to create a new project folder. We can't use it because our folder already exists, so we need to do it manually. Fortunately we only need to add a cargo configuration file named `Cargo.toml`:
+[Cargo] is Rust's excellent package manager. Normally you would call `cargo new` when you want to create a new project folder. We can't use it because our folder already exists, so we need to do it manually. Fortunately we only need to add a cargo configuration file named `Cargo.toml`:
 
 [Cargo]: http://doc.crates.io/guide.html
 
@@ -61,7 +61,7 @@ pub extern fn rust_main() {}
 ```
 Let's break it down:
 
-- `#!` defines an [attribute] of the current module. Since we are at the root module, they apply to the crate itself.
+- `#!` defines an [attribute] of the current module. Since we are at the root module, the attributes apply to the crate itself.
 - The `feature` attribute is used to allow the specified _feature-gated_ attributes in this crate. You can't do that in a stable/beta compiler, so this is one reason we need a Rust nighly.
 - The `no_std` attribute prevents the automatic linking of the standard library. We can't use `std` because it relies on operating system features like files, system calls, and various device drivers. Remember that currently the only “feature” of our OS is printing `OKAY` :).
 - A `#` without a `!` afterwards defines an attribute for the _following_ item (a function in our case).
@@ -78,7 +78,7 @@ Let's break it down:
 [unwinding]: https://doc.rust-lang.org/nomicon/unwinding.html
 
 ## Building Rust
-We can now build it using `cargo build`. This command creates a static library at `target/debug/libblog_os.a`, which can be linked with our assembly kernel. However, the resulting library is specific to our _host_ operating system. This is undesirable, because our target system might be very different.
+We can now build it using `cargo build`, which creates a static library at `target/debug/libblog_os.a`. However, the resulting library is specific to our _host_ operating system. This is undesirable, because our target system might be different.
 
 Let's define some properties of our target system:
 
@@ -157,7 +157,7 @@ The `features` field enables/disables target features. We disable the `mmx` and 
 
 - [MMX]: The _Multi Media Extension_ instruction set was introduced in 1997 and defines eight 64 bit registers called `mm0` through `mm7`. These registers are just aliases for the registers of the [x87 floating point unit].
 - [SSE]: The _Streaming SIMD Extensions_ instruction set was introduced in 1999. Instead of re-using the floating point registers, it adds a completely new register set. The sixteen new registers are called `xmm0` through `xmm15` and are 128 bits each.
-- [AVX]: The _Advanced Vector Extensions_ are extensions that further increase the size of the multimedia registers. The new registers are called `ymm0` through `ymm15` and are 256 bits each. They extend the `xmm` registers, so e.g. `xmm0` is the lower (or upper?) half of `ymm0`.
+- [AVX]: The _Advanced Vector Extensions_ are extensions that further increase the size of the multimedia registers. The new registers are called `ymm0` through `ymm15` and are 256 bits each. They extend the `xmm` registers, so e.g. `xmm0` is the lower half of `ymm0`.
 
 [MMX]: https://en.wikipedia.org/wiki/MMX_(instruction_set)
 [x87 floating point unit]: https://en.wikipedia.org/wiki/X87
@@ -217,6 +217,7 @@ TODO
 It worked! We just successfully cross-compiled our kernel for our new custom target. We can now find a static library at `target/x86_64-blog_os/debug/libblog_os.a`, which can be linked with our assembly kernel.
 
 ## Linking Rust
+TODO
 
 ### Adjusting the Makefile
 To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
