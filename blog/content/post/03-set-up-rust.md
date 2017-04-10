@@ -88,6 +88,8 @@ Let's define some properties of our target system:
 - **No SSE**: Our target might not have [SSE] support. Even if it does, we probably don't want to use SSE instructions in our kernel, because it makes interrupt handling much slower. We will explain this in detail in the [“Handling Exceptions”] post.
 - **No hardware floats**: The `x86_64` architecture uses SSE instructions for floating point operations, which we don't want to use (see the previous point). So we also need to avoid hardware floating point operations in our kernel. Instead, we will use _soft floats_, which are basically software functions that emulate floating point operations using normal integers.
 
+[“Handling Exceptions”]: {{% relref "09-handling-exceptions.md" %}}
+
 ### Target Specifications
 Rust allows us to define [custom targets] through a JSON configuration file. A minimal target specification equal to `x86_64-unknown-linux-gnu` (the default 64-bit Linux target) looks like this:
 
@@ -102,7 +104,12 @@ Rust allows us to define [custom targets] through a JSON configuration file. A m
 }
 ```
 
+[custom targets]: https://doc.rust-lang.org/1.1.0/rustc_back/target/
+
 The `llvm-target` field specifies the target triple that is passed to LLVM. [Target triples] are a naming convention that define the CPU architecture (e.g., `x86_64` or `arm`), the vendor (e.g., `apple` or `unknown`), the operating system (e.g., `windows` or `linux`), and the [ABI] \(e.g., `gnu` or `msvc`). For example, the target triple for 64-bit Linux is `x86_64-unknown-linux-gnu` and for 32-bit Windows the target triple is `i686-pc-windows-msvc`.
+
+[Target triples]: http://llvm.org/docs/LangRef.html#target-triple
+[ABI]: https://en.wikipedia.org/wiki/Application_binary_interface
 
 The `data-layout` field is also passed to LLVM and specifies how data should be laid out in memory. It consists of various specifications seperated by a `-` character. For example, the `e` means little endian and `S128` specifies that the stack should be 128 bits (= 16 byte) aligned. The format is described in detail in the [LLVM documentation][data layout] but there shouldn't be a reason to change this string.
 
@@ -133,6 +140,7 @@ As `llvm-target` we use `x86_64-unknown-none`, which defines the `x86_64` archit
 The [red zone] is an optimization of the [System V ABI] that allows functions to temporary use the 128 bytes below its stack frame without adjusting the stack pointer:
 
 [red zone]: http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
+[System V ABI]: http://wiki.osdev.org/System_V_ABI
 
 ![stack frame with red zone](images/red-zone.svg)
 
