@@ -20,14 +20,5 @@ path = "libs/hole_list_allocator"
 features = ["spin_no_std"]
 version = "0.2.1"
 
-
 [lib]
 crate-type = ["staticlib"]
-
-[profile]
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"

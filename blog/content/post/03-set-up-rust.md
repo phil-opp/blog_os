@@ -395,34 +395,41 @@ By default, the destructors of all stack variables are run when a `panic` occurs
 
 [recover from panics]: https://doc.rust-lang.org/book/concurrency.html#panics
 
-Fortunately, Rust allows us to disable unwinding. We just need to add some entries in our `Cargo.toml`:
+Fortunately, Rust allows us to disable unwinding for our target. For that we add the following line to our `x86_64-blog_os.json` file:
 
-```toml
-# The development profile, used for `cargo build`.
-[profile.dev]
-panic = "abort"
+```json
+{
+  "...",
+  "panic-strategy": "abort"
+}
 
-# The release profile, used for `cargo build --release`.
-[profile.release]
-panic = "abort"
 ```
 
-These [profile sections] specify options for `cargo build` and `cargo release`. By setting the `panic` option to `abort`, we disable all unwinding in our kernel.
+By setting the [panic strategy] to `abort` instead of the default `unwind`, we disable all unwinding in our kernel. Let's try `make run` again:
 
-[profile sections]: http://doc.crates.io/manifest.html#the-profile-sections
+[panic strategy]: https://github.com/nox/rust-rfcs/blob/master/text/1513-less-unwinding.md
 
-However, there are still references to `_Unwind_Resume` in the precompiled standard libraries. This might lead to linker errors when we use specific parts of `libcore`. To avoid this, we create a dummy `_Unwind_Resume` function that loops indefinitely[^fn-libcore-unwind]:
+```
+   Compiling core v0.0.0 (file:///…/rust/src/libcore)
+    Finished release [optimized] target(s) in 22.24 secs
+    Finished dev [unoptimized + debuginfo] target(s) in 0.5 secs
+target/x86_64-blog_os/debug/libblog_os.a(blog_os-b5a29f28b14f1f1f.0.o):
+    In function `core::ptr::drop_in_place<…>':
+    /…/src/libcore/ptr.rs:66:
+    undefined reference to `_Unwind_Resume'
+...
+```
 
-[^fn-libcore-unwind]: A better solution is to recompile `libcore` with `panic="abort"`. We will do this in a future post.
+We see that `xargo` recompiles the `core` crate, but the `_Unwind_Resume` error still occurs. This is because our `blog_os` crate was not recompiled somehow and thus still references the unwinding function. To fix this, we need to force a recompile using `cargo clean`:
 
-```rust
-// in src/lib.rs
+```
+> cargo clean
+> make run
+   Compiling rlibc v1.0.0
+   Compiling blog_os v0.1.0 (file:///home/philipp/Documents/blog_os/tags)
+warning: unused variable: `test` […]
 
-#[allow(non_snake_case)]
-#[no_mangle]
-pub extern "C" fn _Unwind_Resume() -> ! {
-    loop {}
-}
+    Finished dev [unoptimized + debuginfo] target(s) in 0.60 secs
 ```
 
 It worked! We no longer see linker errors and our kernel prints `OKAY` again.
