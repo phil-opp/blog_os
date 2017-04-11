@@ -100,7 +100,7 @@ Rust allows us to define [custom targets] through a JSON configuration file. A m
   "target-endian": "little",
   "target-pointer-width": "64",
   "arch": "x86_64",
-  "os": "none" TODO
+  "os": "linux"
 }
 ```
 
@@ -219,13 +219,15 @@ Let's try it:
 ```bash
 > xargo build --target=x86_64-blog_os
    Compiling core v0.0.0 (file:///…/rust/src/libcore)
-TODO
+    Finished release [optimized] target(s) in 22.87 secs
+   Compiling blog_os v0.1.0 (file:///…/blog_os/tags)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-It worked! We just successfully cross-compiled our kernel for our new custom target. We can now find a static library at `target/x86_64-blog_os/debug/libblog_os.a`, which can be linked with our assembly kernel.
+It worked! We see that `xargo` cross-compiled the `core` library for our new custom target and then continued to compile our `blog_os` crate. After compilation, we can find a static library at `target/x86_64-blog_os/debug/libblog_os.a`, which can be linked with our assembly kernel.
 
-## Linking Rust
-TODO
+## Integrating Rust
+Let's try to integrate our Rust library into our assembly kernel so that we can call the `rust_main` function. For that we need to pass the `libblog_os.a` file to the linker, together with the assembly object files.
 
 ### Adjusting the Makefile
 To build and link the rust library on `make`, we extend our `Makefile`([full file][github makefile]):
@@ -235,18 +237,20 @@ To build and link the rust library on `make`, we extend our `Makefile`([full fil
 target ?= $(arch)-blog_os
 rust_os := target/$(target)/debug/libblog_os.a
 # ...
+.PHONY: all clean run iso kernel
+# ...
 $(kernel): kernel $(rust_os) $(assembly_object_files) $(linker_script)
 	@ld -n -T $(linker_script) -o $(kernel) \
 		$(assembly_object_files) $(rust_os)
 
 kernel:
-       @xargo build --target $(target)
+	@xargo build --target $(target)
 ```
-We added a new `kernel` target that just executes `xargo build` and modified the `$(kernel)` target to link the created static lib .
+We add a new `kernel` target that just executes `xargo build` and modify the `$(kernel)` target to link the created static lib. We also add the new `kernel` target to the `.PHONY` list, since it does not belong to a file with that name.
 
 But now `xargo build` is executed on every `make`, even if no source file was changed. And the ISO is recreated on every `make iso`/`make run`, too. We could try to avoid this by adding dependencies on all rust source and cargo configuration files to the `kernel` target, but the ISO creation takes only half a second on my machine and most of the time we will have changed a Rust file when we run `make`. So we keep it simple for now and let cargo do the bookkeeping of changed files (it does it anyway).
 
-[github makefile]: https://github.com/phil-opp/blog_os/blob/set_up_rust/Makefile
+[github makefile]: https://github.com/phil-opp/blog_os/blob/post_3/Makefile
 
 ### Calling Rust
 Now we can call the main method in `long_mode_start`:
@@ -254,6 +258,8 @@ Now we can call the main method in `long_mode_start`:
 ```nasm
 bits 64
 long_mode_start:
+    ...
+
     ; call the rust main
     extern rust_main     ; new
     call rust_main       ; new
@@ -298,17 +304,26 @@ extern crate rlibc;
 pub extern fn rust_main() {
 ...
 ```
-Now `make run` doesn't complain about `memcpy` anymore. Instead it will show a pile of new errors:
+Now `make run` doesn't complain about `memcpy` anymore. Instead it will show a pile of new ugly linker errors:
 
 ```
-target/debug/libblog_os.a(core-35017696.0.o):
-    In function `ops::f32.Rem::rem::hfcbbcbe5711a6e6emxm':
-    core.0.rs:(.text._ZN3ops7f32.Rem3rem20hfcbbcbe5711a6e6emxmE+0x1):
-    undefined reference to `fmodf'
-target/debug/libblog_os.a(core-35017696.0.o):
-    In function `ops::f64.Rem::rem::hbf225030671c7a35Txm':
-    core.0.rs:(.text._ZN3ops7f64.Rem3rem20hbf225030671c7a35TxmE+0x1):
-    undefined reference to `fmod'
+target/x86_64-blog_os/debug/libblog_os.a(core-92335f822fa6c9a6.0.o):
+    In function `_$LT$f32$u20$as$u20$core..num..dec2flt..
+        rawfp..RawFloat$GT$::from_int::h50f7952efac3fdca':
+    core.cgu-0.rs:(.text._ZN59_$LT$f32$u20$as$u20$core..num..dec2flt..
+        rawfp..RawFloat$GT$8from_int17h50f7952efac3fdcaE+0x2):
+    undefined reference to `__floatundisf'
+target/x86_64-blog_os/debug/libblog_os.a(core-92335f822fa6c9a6.0.o):
+    In function `_$LT$f64$u20$as$u20$core..num..dec2flt..rawfp..
+        RawFloat$GT$::from_int::h12a81f175246914a':
+    core.cgu-0.rs:(.text._ZN59_$LT$f64$u20$as$u20$core..num..dec2flt..rawfp..
+        RawFloat$GT$8from_int17h12a81f175246914aE+0x2):
+    undefined reference to `__floatundidf'
+target/x86_64-blog_os/debug/libblog_os.a(core-92335f822fa6c9a6.0.o):
+    In function `core::num::from_str_radix::h09b12650704e0508':
+    core.cgu-0.rs:(.text._ZN4core3num14from_str_radix
+        17h09b12650704e0508E+0xcf):
+    undefined reference to `__muloti4'
 ...
 ```
 
@@ -318,18 +333,19 @@ target/debug/libblog_os.a(core-35017696.0.o):
 [crates.io]: https://crates.io
 
 #### --gc-sections
-The new errors are linker errors about missing `fmod` and `fmodf` functions. These functions are used for the modulo operation (`%`) on floating point numbers in [libcore]. The core library is added implicitly when using `#![no_std]` and provides basic standard library features like `Option` or `Iterator`. According to the documentation it is “dependency-free”. But it actually has some dependencies, for example on `fmod` and `fmodf`.
+The new errors are linker errors about various missing functions such as `__floatundisf` or `__muloti4`. These functions are part of LLVM's [`compiler-rt` builtins] and are normally linked by the standard library. For `no_std` crates like ours, one has to link the `compiler-rt` library manually. Unfortunatly, this library is implemented in C and the build process is a bit cumbersome. Alternatively, there is the [compiler-builtins] crate that tries to port the library to Rust, but it isn't complete yet.
 
-[libcore]: https://doc.rust-lang.org/core/
+[`compiler-rt` builtins]: https://compiler-rt.llvm.org/
+[compiler-builtins]: https://github.com/rust-lang-nursery/compiler-builtins
 
-So how do we fix this problem? We don't use any floating point operations, so we could just provide our own implementations of `fmod` and `fmodf` that just do a `loop{}`. But there's a better way that doesn't fail silently when we use float modulo some day: We tell the linker to remove unused sections. That's generally a good idea as it reduces kernel size. And we don't have any references to `fmod` and `fmodf` anymore until we use floating point modulo. The magic linker flag is `--gc-sections`, which stands for “garbage collect sections”. Let's add it to the `$(kernel)` target in our `Makefile`:
+In our case, there is a much simpler solution, since our kernel doesn't really need any of those functions yet. So we can just tell the linker to remove unused program sections and hopefully all references to these functions will disappear. Removing unused sections is generally a good idea as it reduces kernel size. The magic linker flag for this is `--gc-sections`, which stands for “garbage collect sections”. Let's add it to the `$(kernel)` target in our `Makefile`:
 
 ```make
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
 	@ld -n --gc-sections -T $(linker_script) -o $(kernel) \
 		$(assembly_object_files) $(rust_os)
 ```
-Now we can do a `make run` again and… it doesn't boot anymore:
+Now we can do a `make run` again and it compiles without errors again. However, it doesn't boot anymore:
 
 ```
 GRUB error: no multiboot header found.
@@ -356,16 +372,24 @@ The following snippet still fails:
 The error is a linker error again (hence the ugly error message):
 
 ```
-target/debug/libblog_os.a(blog_os.0.o):
-    In function `blog_os::iter::Iterator::zip<core::iter::FlatMap<
+target/x86_64-blog_os/debug/libblog_os.a(blog_os-b5a29f28b14f1f1f.0.o):
+    In function `core::ptr::drop_in_place<core::iter::Zip<
+        core::iter::FlatMap<core::ops::Range<i32>, core::ops::Range<i32>,
+        closure>, core::ops::RangeFrom<i32>>>':
+        /…/rust/src/libcore/ptr.rs:66:
+    undefined reference to `_Unwind_Resume'
+target/x86_64-blog_os/debug/libblog_os.a(blog_os-b5a29f28b14f1f1f.0.o):
+    In function `core::iter::iterator::Iterator::zip<core::iter::FlatMap<
         core::ops::Range<i32>, core::ops::Range<i32>, closure>,
         core::ops::RangeFrom<i32>>':
-    /home/.../src/libcore/iter.rs:654:
+        /…/rust/src/libcore/iter/iterator.rs:389:
     undefined reference to `_Unwind_Resume'
+...
 ```
-So the linker can't find a function named `_Unwind_Resume` that is referenced in `iter.rs:654` in libcore. This reference is not really there at [line 654 of libcore's `iter.rs`][iter.rs:654]. Instead, it is a compiler inserted _landing pad_, which is used for panic handling.
 
-[iter.rs:654]: https://github.com/rust-lang/rust/blob/b0ca03923359afc8df92a802b7cc1476a72fb2d0/src/libcore/iter.rs#L654
+So the linker can't find a function named `_Unwind_Resume` that is referenced e.g. in `iter/iterator.rs:389` in libcore. This reference is not really there at [line 389][iterator.rs:389] of libcore's `iterator.rs`. Instead, it is a compiler inserted _landing pad_, which is used for panic handling.
+
+[iterator.rs:389]: https://github.com/rust-lang/rust/blob/c58c928e658d2e45f816fd05796a964aa83759da/src/libcore/iter/iterator.rs#L389
 
 By default, the destructors of all stack variables are run when a `panic` occurs. This is called _unwinding_ and allows parent threads to [recover from panics]. However, it requires a platform specific gcc library, which isn't available in our kernel.
 
@@ -401,12 +425,13 @@ pub extern "C" fn _Unwind_Resume() -> ! {
 }
 ```
 
-Now we fixed all linking issues and our kernel builds again. But instead of displaying `Hello World`, it constantly reboots itself when we start it. TODO
+It worked! We no longer see linker errors and our kernel prints `OKAY` again.
 
 ## Hello World!
 Finally, it's time for a `Hello World!` from Rust:
 
 ```rust
+#[no_mangle]
 pub extern fn rust_main() {
     // ATTENTION: we have a very small stack and no guard page
 
