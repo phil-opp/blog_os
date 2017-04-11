@@ -292,7 +292,7 @@ Fortunately there already is a crate for that: [rlibc]. When we look at its [sou
 ```toml
 ...
 [dependencies]
-rlibc = "0.1.4"
+rlibc = "1.0"
 ```
 and an `extern crate` definition in our `src/lib.rs`:
 
