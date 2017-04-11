@@ -1,7 +1,7 @@
-# Blog OS (A Minimal x86 Kernel)
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post_1)](https://travis-ci.org/phil-opp/blog_os/branches)
+# Blog OS (Entering Longmode)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post_2)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [A Minimal x86 Kernel](http://os.phil-opp.com/multiboot-kernel.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
+This repository contains the source code for the [Entering Longmode](http://os.phil-opp.com/entering-longmode.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
