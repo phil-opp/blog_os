@@ -8,5 +8,6 @@
   "arch": "x86_64",
   "os": "none",
   "disable-redzone": true,
-  "features": "-mmx,-sse,+soft-float"
+  "features": "-mmx,-sse,+soft-float",
+  "panic-strategy": "abort"
 }
