@@ -4,6 +4,7 @@
 #![no_std]
 
 extern crate rlibc;
+extern crate volatile;
 
 mod vga_buffer;
 

@@ -8,3 +8,4 @@ crate-type = ["staticlib"]
 
 [dependencies]
 rlibc = "1.0"
+volatile = "0.1.0"
