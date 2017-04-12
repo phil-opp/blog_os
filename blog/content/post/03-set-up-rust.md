@@ -97,6 +97,7 @@ Rust allows us to define [custom targets] through a JSON configuration file. A m
 {
   "llvm-target": "x86_64-unknown-linux-gnu",
   "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+  "linker-flavor": "gcc",
   "target-endian": "little",
   "target-pointer-width": "64",
   "arch": "x86_64",
@@ -112,6 +113,11 @@ The `llvm-target` field specifies the target triple that is passed to LLVM. [Tar
 [ABI]: https://en.wikipedia.org/wiki/Application_binary_interface
 
 The `data-layout` field is also passed to LLVM and specifies how data should be laid out in memory. It consists of various specifications seperated by a `-` character. For example, the `e` means little endian and `S128` specifies that the stack should be 128 bits (= 16 byte) aligned. The format is described in detail in the [LLVM documentation][data layout] but there shouldn't be a reason to change this string.
+
+The `linker-flavor` field was recently introduced in [#40018] with the intention to add support for the LLVM linker [LLD], which is platform independent. In the future, this might allow easy cross compilation without the need to install a gcc cross compiler for linking.
+
+[#40018]: https://github.com/rust-lang/rust/pull/40018
+[LLD]: https://lld.llvm.org/
 
 The other fields are used for conditional compilation. This allows crate authors to use `cfg` variables to write special code for depending on the OS or the architecture. There isn't any up-to-date documentation about these fields but the [corresponding source code][target specification] is quite readable.
 
