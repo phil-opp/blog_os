@@ -79,3 +79,13 @@ impl Writer {
 
     fn new_line(&mut self) {/* TODO */}
 }
+
+pub fn print_something() {
+    let mut writer = Writer {
+        column_position: 0,
+        color_code: ColorCode::new(Color::LightGreen, Color::Black),
+        buffer: unsafe { Unique::new(0xb8000 as *mut _) },
+    };
+
+    writer.write_byte(b'H');
+}
