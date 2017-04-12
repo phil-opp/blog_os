@@ -1,6 +1,13 @@
 use core::fmt;
 use core::ptr::Unique;
+use spin::Mutex;
 use volatile::Volatile;
+
+pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
+    column_position: 0,
+    color_code: ColorCode::new(Color::LightGreen, Color::Black),
+    buffer: unsafe { Unique::new_unchecked(0xb8000 as *mut _) },
+});
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
@@ -115,18 +122,4 @@ impl fmt::Write for Writer {
         }
         Ok(())
     }
-}
-
-
-pub fn print_something() {
-    use core::fmt::Write;
-
-    let mut writer = Writer {
-        column_position: 0,
-        color_code: ColorCode::new(Color::LightGreen, Color::Black),
-        buffer: unsafe { Unique::new(0xb8000 as *mut _) },
-    };
-
-    writeln!(writer, "Hello!");
-    writeln!(writer, "The numbers are {} and {}", 42, 1.0/3.0);
 }
