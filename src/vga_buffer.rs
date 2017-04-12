@@ -126,15 +126,18 @@ impl fmt::Write for Writer {
 
 macro_rules! print {
     ($($arg:tt)*) => ({
-        use core::fmt::Write;
-        let mut writer = $crate::vga_buffer::WRITER.lock();
-        writer.write_fmt(format_args!($($arg)*)).unwrap();
+        $crate::vga_buffer::print(format_args!($($arg)*));
     });
 }
 
 macro_rules! println {
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+}
+
+pub fn print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
 }
 
 pub fn clear_screen() {
