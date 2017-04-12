@@ -1,7 +1,7 @@
 +++
 title = "Set Up Rust"
 date = "2015-09-02"
-updated = "2016-05-29"
+updated = "2017-04-12"
 aliases = [
     "/2015/09/02/setup-rust/",
     "/setup-rust.html",
