@@ -1,7 +1,7 @@
-# Blog OS (Printing To Screen)
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post_4)](https://travis-ci.org/phil-opp/blog_os/branches)
+# Blog OS (Allocating Frames)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post_5)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [Printing To Screen](http://os.phil-opp.com/printing-to-screen.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
+This repository contains the source code for the [Allocating Frames](http://os.phil-opp.com/allocating-frames.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
