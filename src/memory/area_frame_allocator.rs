@@ -50,7 +50,7 @@ impl FrameAllocator for AreaFrameAllocator {
     }
 
     fn deallocate_frame(&mut self, _frame: Frame) {
-        //unimplemented!()
+        unimplemented!()
     }
 }
 
