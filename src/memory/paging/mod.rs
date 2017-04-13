@@ -151,3 +151,20 @@ impl ActivePageTable {
         allocator.deallocate_frame(frame);
     }
 }
+
+
+pub fn test_paging<A>(allocator: &mut A)
+    where A: FrameAllocator
+{
+    let mut page_table = unsafe { ActivePageTable::new() };
+
+    let addr = 42 * 512 * 512 * 4096; // 42th P3 entry
+    let page = Page::containing_address(addr);
+    let frame = allocator.allocate_frame().expect("no more frames");
+    println!("None = {:?}, map to {:?}",
+            page_table.translate(addr),
+            frame);
+    page_table.map_to(page, frame, EntryFlags::empty(), allocator);
+    println!("Some = {:?}", page_table.translate(addr));
+    println!("next free frame: {:?}", allocator.allocate_frame());
+}
