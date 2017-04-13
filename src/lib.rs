@@ -12,7 +12,7 @@ extern crate spin;
 mod vga_buffer;
 
 #[no_mangle]
-pub extern fn rust_main() {
+pub extern fn rust_main(multiboot_information_address: usize) {
     vga_buffer::clear_screen();
     println!("Hello World{}", "!");
 
