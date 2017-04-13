@@ -36,6 +36,13 @@ pub extern fn rust_main(multiboot_information_address: usize) {
             section.addr, section.size, section.flags);
     }
 
+    let kernel_start = elf_sections_tag.sections().map(|s| s.addr)
+        .min().unwrap();
+    let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size)
+        .max().unwrap();
+    let multiboot_start = multiboot_information_address;
+    let multiboot_end = multiboot_start + (boot_info.total_size as usize);
+
     loop{}
 }
 
