@@ -1,5 +1,7 @@
-use memory::{PAGE_SIZE, Frame, FrameAllocator};
 pub use self::entry::*;
+use core::ptr::Unique;
+use memory::{PAGE_SIZE, Frame, FrameAllocator};
+use self::table::{Table, Level4};
 
 mod entry;
 mod table;
@@ -37,66 +39,85 @@ impl Page {
     fn p1_index(&self) -> usize {
         (self.number >> 0) & 0o777
     }
-
 }
 
-pub fn translate(virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
-    let offset = virtual_address % PAGE_SIZE;
-    translate_page(Page::containing_address(virtual_address))
-        .map(|frame| frame.number * PAGE_SIZE + offset)
+pub struct ActivePageTable {
+    p4: Unique<Table<Level4>>,
 }
 
-fn translate_page(page: Page) -> Option<Frame> {
-    use self::entry::HUGE_PAGE;
+impl ActivePageTable {
+    pub unsafe fn new() -> ActivePageTable {
+        ActivePageTable {
+            p4: Unique::new_unchecked(table::P4),
+        }
+    }
 
-    let p3 = unsafe { &*table::P4 }.next_table(page.p4_index());
+    fn p4(&self) -> &Table<Level4> {
+        unsafe { self.p4.as_ref() }
+    }
 
-    let huge_page = || {
-        p3.and_then(|p3| {
-            let p3_entry = &p3[page.p3_index()];
-            // 1GiB page?
-            if let Some(start_frame) = p3_entry.pointed_frame() {
-                if p3_entry.flags().contains(HUGE_PAGE) {
-                    // address must be 1GiB aligned
-                    assert!(start_frame.number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
-                    return Some(Frame {
-                        number: start_frame.number + page.p2_index() *
-                                ENTRY_COUNT + page.p1_index(),
-                    });
-                }
-            }
-            if let Some(p2) = p3.next_table(page.p3_index()) {
-                let p2_entry = &p2[page.p2_index()];
-                // 2MiB page?
-                if let Some(start_frame) = p2_entry.pointed_frame() {
-                    if p2_entry.flags().contains(HUGE_PAGE) {
-                        // address must be 2MiB aligned
-                        assert!(start_frame.number % ENTRY_COUNT == 0);
+    fn p4_mut(&mut self) -> &mut Table<Level4> {
+        unsafe { self.p4.as_mut() }
+    }
+
+    pub fn translate(&self, virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
+        let offset = virtual_address % PAGE_SIZE;
+        self.translate_page(Page::containing_address(virtual_address))
+            .map(|frame| frame.number * PAGE_SIZE + offset)
+    }
+
+    fn translate_page(&self, page: Page) -> Option<Frame> {
+        use self::entry::HUGE_PAGE;
+
+        let p3 = self.p4().next_table(page.p4_index());
+
+        let huge_page = || {
+            p3.and_then(|p3| {
+                let p3_entry = &p3[page.p3_index()];
+                // 1GiB page?
+                if let Some(start_frame) = p3_entry.pointed_frame() {
+                    if p3_entry.flags().contains(HUGE_PAGE) {
+                        // address must be 1GiB aligned
+                        assert!(start_frame.number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
                         return Some(Frame {
-                            number: start_frame.number + page.p1_index()
+                            number: start_frame.number + page.p2_index() *
+                                    ENTRY_COUNT + page.p1_index(),
                         });
                     }
                 }
-            }
-            None
-        })
-    };
+                if let Some(p2) = p3.next_table(page.p3_index()) {
+                    let p2_entry = &p2[page.p2_index()];
+                    // 2MiB page?
+                    if let Some(start_frame) = p2_entry.pointed_frame() {
+                        if p2_entry.flags().contains(HUGE_PAGE) {
+                            // address must be 2MiB aligned
+                            assert!(start_frame.number % ENTRY_COUNT == 0);
+                            return Some(Frame {
+                                number: start_frame.number + page.p1_index()
+                            });
+                        }
+                    }
+                }
+                None
+            })
+        };
 
-    p3.and_then(|p3| p3.next_table(page.p3_index()))
-      .and_then(|p2| p2.next_table(page.p2_index()))
-      .and_then(|p1| p1[page.p1_index()].pointed_frame())
-      .or_else(huge_page)
-}
+        p3.and_then(|p3| p3.next_table(page.p3_index()))
+        .and_then(|p2| p2.next_table(page.p2_index()))
+        .and_then(|p1| p1[page.p1_index()].pointed_frame())
+        .or_else(huge_page)
+    }
 
-pub fn map_to<A>(page: Page, frame: Frame, flags: EntryFlags,
-                 allocator: &mut A)
-    where A: FrameAllocator
-{
-    let p4 = unsafe { &mut *table::P4 };
-    let mut p3 = p4.next_table_create(page.p4_index(), allocator);
-    let mut p2 = p3.next_table_create(page.p3_index(), allocator);
-    let mut p1 = p2.next_table_create(page.p2_index(), allocator);
+    pub fn map_to<A>(&mut self, page: Page, frame: Frame, flags: EntryFlags,
+                    allocator: &mut A)
+        where A: FrameAllocator
+    {
+        let p4 = self.p4_mut();
+        let mut p3 = p4.next_table_create(page.p4_index(), allocator);
+        let mut p2 = p3.next_table_create(page.p3_index(), allocator);
+        let mut p1 = p2.next_table_create(page.p2_index(), allocator);
 
-    assert!(p1[page.p1_index()].is_unused());
-    p1[page.p1_index()].set(frame, flags | PRESENT);
+        assert!(p1[page.p1_index()].is_unused());
+        p1[page.p1_index()].set(frame, flags | PRESENT);
+    }
 }
