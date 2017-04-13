@@ -24,6 +24,16 @@ impl Table {
             None
         }
     }
+
+    pub fn next_table(&self, index: usize) -> Option<&Table> {
+        self.next_table_address(index)
+            .map(|address| unsafe { &*(address as *const _) })
+    }
+
+    pub fn next_table_mut(&mut self, index: usize) -> Option<&mut Table> {
+        self.next_table_address(index)
+            .map(|address| unsafe { &mut *(address as *mut _) })
+    }
 }
 
 impl Index<usize> for Table {
