@@ -134,4 +134,20 @@ impl ActivePageTable {
         let page = Page::containing_address(frame.start_address());
         self.map_to(page, frame, flags, allocator)
     }
+
+    fn unmap<A>(&mut self, page: Page, allocator: &mut A)
+        where A: FrameAllocator
+    {
+        assert!(self.translate(page.start_address()).is_some());
+
+        let p1 = self.p4_mut()
+                    .next_table_mut(page.p4_index())
+                    .and_then(|p3| p3.next_table_mut(page.p3_index()))
+                    .and_then(|p2| p2.next_table_mut(page.p2_index()))
+                    .expect("mapping code does not support huge pages");
+        let frame = p1[page.p1_index()].pointed_frame().unwrap();
+        p1[page.p1_index()].set_unused();
+        // TODO free p(1,2,3) table if empty
+        allocator.deallocate_frame(frame);
+    }
 }
