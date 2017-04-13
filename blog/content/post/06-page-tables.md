@@ -848,7 +848,7 @@ So to fix our `unmap` function, we need to remove the cached translation from th
 ```toml
 [dependencies]
 ...
-x86_64 = "0.1.0"
+x86_64 = "0.1.2"
 ```
 
  Now we can use it to fix `unmap`:
