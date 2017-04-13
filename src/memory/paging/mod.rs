@@ -1,4 +1,5 @@
-use memory::{PAGE_SIZE, Frame};
+use memory::{PAGE_SIZE, Frame, FrameAllocator};
+pub use self::entry::*;
 
 mod entry;
 mod table;
@@ -85,4 +86,17 @@ fn translate_page(page: Page) -> Option<Frame> {
       .and_then(|p2| p2.next_table(page.p2_index()))
       .and_then(|p1| p1[page.p1_index()].pointed_frame())
       .or_else(huge_page)
+}
+
+pub fn map_to<A>(page: Page, frame: Frame, flags: EntryFlags,
+                 allocator: &mut A)
+    where A: FrameAllocator
+{
+    let p4 = unsafe { &mut *table::P4 };
+    let mut p3 = p4.next_table_create(page.p4_index(), allocator);
+    let mut p2 = p3.next_table_create(page.p3_index(), allocator);
+    let mut p1 = p2.next_table_create(page.p2_index(), allocator);
+
+    assert!(p1[page.p1_index()].is_unused());
+    p1[page.p1_index()].set(frame, flags | PRESENT);
 }
