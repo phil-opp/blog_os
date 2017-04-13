@@ -138,6 +138,9 @@ impl ActivePageTable {
     fn unmap<A>(&mut self, page: Page, allocator: &mut A)
         where A: FrameAllocator
     {
+        use x86_64::instructions::tlb;
+        use x86_64::VirtualAddress;
+
         assert!(self.translate(page.start_address()).is_some());
 
         let p1 = self.p4_mut()
@@ -147,11 +150,11 @@ impl ActivePageTable {
                     .expect("mapping code does not support huge pages");
         let frame = p1[page.p1_index()].pointed_frame().unwrap();
         p1[page.p1_index()].set_unused();
+        tlb::flush(VirtualAddress(page.start_address()));
         // TODO free p(1,2,3) table if empty
-        allocator.deallocate_frame(frame);
+        //allocator.deallocate_frame(frame);
     }
 }
-
 
 pub fn test_paging<A>(allocator: &mut A)
     where A: FrameAllocator
