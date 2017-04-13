@@ -1,7 +1,7 @@
-# Blog OS (Allocating Frames)
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post_5)](https://travis-ci.org/phil-opp/blog_os/branches)
+# Blog OS (Page Tables)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post_6)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [Allocating Frames](http://os.phil-opp.com/allocating-frames.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
+This repository contains the source code for the [Page Tables](http://os.phil-opp.com/modifying-page-tables.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
