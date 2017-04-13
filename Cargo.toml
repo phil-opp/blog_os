@@ -10,3 +10,4 @@ crate-type = ["staticlib"]
 rlibc = "1.0"
 volatile = "0.1.0"
 spin = "0.4.5"
+multiboot2 = "0.1.0"
