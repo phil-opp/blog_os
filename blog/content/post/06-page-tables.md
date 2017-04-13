@@ -776,7 +776,7 @@ To test it, we add a `test_paging` function in `memory/paging/mod.rs`:
 pub fn test_paging<A>(allocator: &mut A)
     where A: FrameAllocator
 {
-    let page_table = unsafe { ActivePageTable::new() };
+    let mut page_table = unsafe { ActivePageTable::new() };
 
     // test it
 }
@@ -791,63 +791,6 @@ pub use self::paging::test_paging;
 let mut frame_allocator = ...;
 memory::test_paging(&mut frame_allocator);
 ```
-
-### translate
-First, we translate some addresses:
-
-```rust
-// address 0 is mapped
-println!("Some = {:?}", page_table.translate(0));
- // second P1 entry
-println!("Some = {:?}", page_table.translate(4096));
-// second P2 entry
-println!("Some = {:?}", page_table.translate(512 * 4096));
-// 300th P2 entry
-println!("Some = {:?}", page_table.translate(300 * 512 * 4096));
-// second P3 entry
-println!("None = {:?}", page_table.translate(512 * 512 * 4096));
-// last mapped byte
-println!("Some = {:?}", page_table.translate(512 * 512 * 4096 - 1));
-```
-Currently, the first GiB of the address space is identity-mapped. Thus all addresses in this area should translate to `Some(x)`, where `x` is the virtual address. Only the second last address, `512 * 512 * 4096`, is not in that area and should resolve to `None`.
-
-But the output shows two `None` lines:
-
-```
-Some = Some(0)
-Some = Some(4096)
-Some = Some(2097152)
-Some = Some(629145600)
-None = None
-Some = None
-```
-The last line is wrong. But why?
-
-In fact, all addresses above `344 * 512 * 4096` seem to get translated to `None`. But even worse, there are some wrong translations, too. For example, on my machine `357 * 512 * 4096` translates to roughly `255TiB`:
-
-```
-Some(280735973961728)
-```
-Something is terribly wrong here. But it's not our code.
-
-The reason for this bug is a silent stack overflow. Remember, our `.bss` section in the `boot.asm` file looks like this:
-
-```nasm
-section .bss
-align 4096
-p4_table:
-    resb 4096
-p3_table:
-    resb 4096
-p2_table:
-    resb 4096
-stack_bottom:
-    resb 4096
-stack_top:
-```
-So a stack overflow overwrites the P2 table, starting at the last entry. But the CPU still uses the memory as page table entries. And if the stack bytes contain the present byte, it seems to point to a frame and `translate` returns a (wrong) `Some`.
-
-To fix it, we double the stack size to `4096 * 2`. Now the last byte gets translated to `Some(1073741823)` correctly. To avoid this kind of bug in the future, we need to add a guard page to the stack, which causes an exception on stack overflow.  We will do that in the next post when we remap the kernel.
 
 ### map_to
 Let's test the `map_to` function:
@@ -905,21 +848,21 @@ So to fix our `unmap` function, we need to remove the cached translation from th
 ```toml
 [dependencies]
 ...
-x86_64 = "0.1.0"
+x86_64 = "0.1.2"
 ```
 
  Now we can use it to fix `unmap`:
 
 ```rust
 ...
-  p1[page.p1_index()].set_unused();
-  unsafe {
-      use x86_64::instructions::tlb;
-      use x86_64::VirtualAddress;
-      tlb::flush(VirtualAddress(page.start_address()));
-  }
-  // TODO free p(1,2,3) table if empty
-  //allocator.deallocate_frame(frame);
+    p1[page.p1_index()].set_unused();
+
+    use x86_64::instructions::tlb;
+    use x86_64::VirtualAddress;
+    tlb::flush(VirtualAddress(page.start_address()));
+
+    // TODO free p(1,2,3) table if empty
+    //allocator.deallocate_frame(frame);
 }
 ```
 Now the desired page fault occurs even when we access the page before.
