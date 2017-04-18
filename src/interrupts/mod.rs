@@ -3,6 +3,8 @@ use x86_64::structures::idt::{Idt, ExceptionStackFrame};
 use x86_64::structures::tss::TaskStateSegment;
 use memory::MemoryController;
 
+mod gdt;
+
 lazy_static! {
     static ref IDT: Idt = {
         let mut idt = Idt::new();
