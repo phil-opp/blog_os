@@ -21,10 +21,10 @@ extern crate x86_64;
 #[macro_use]
 extern crate once;
 extern crate linked_list_allocator;
-
 #[macro_use]
 mod vga_buffer;
 mod memory;
+mod interrupts;
 
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_information_address: usize) {
