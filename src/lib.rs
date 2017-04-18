@@ -48,12 +48,17 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
         HEAP_ALLOCATOR.lock().init(HEAP_START, HEAP_START + HEAP_SIZE);
     }
 
+    // initialize our IDT
+    interrupts::init();
+
     for i in 0..10000 {
         format!("Some String");
     }
 
-    println!("It did not crash!");
+    // invoke a breakpoint exception
+    x86_64::instructions::interrupts::int3();
 
+    println!("It did not crash!");
     loop {}
 }
 
