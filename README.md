@@ -1,7 +1,7 @@
-# Blog OS (Kernel Heap)
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post_8)](https://travis-ci.org/phil-opp/blog_os/branches)
+# Blog OS (Handling Exceptions)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post_9)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [Kernel Heap](http://os.phil-opp.com/kernel-heap.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
+This repository contains the source code for the [Handling Exceptions](http://os.phil-opp.com/handling-exceptions.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
