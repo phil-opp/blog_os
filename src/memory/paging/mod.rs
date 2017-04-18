@@ -156,3 +156,14 @@ impl ActivePageTable {
         //allocator.deallocate_frame(frame);
     }
 }
+
+pub struct InactivePageTable {
+    p4_frame: Frame,
+}
+
+impl InactivePageTable {
+    pub fn new(frame: Frame) -> InactivePageTable {
+        // TODO zero and recursive map the frame
+        InactivePageTable { p4_frame: frame }
+    }
+}
