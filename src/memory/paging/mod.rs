@@ -3,6 +3,7 @@ pub use self::mapper::Mapper;
 use core::ops::{Deref, DerefMut};
 use core::ptr::Unique;
 use memory::{PAGE_SIZE, Frame, FrameAllocator};
+use multiboot2::BootInformation;
 use self::table::{Table, Level4};
 use self::temporary_page::TemporaryPage;
 
@@ -126,4 +127,44 @@ impl InactivePageTable {
 
         InactivePageTable { p4_frame: frame }
     }
+}
+
+pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
+    where A: FrameAllocator
+{
+    let mut temporary_page = TemporaryPage::new(Page { number: 0xcafebabe },
+        allocator);
+
+    let mut active_table = unsafe { ActivePageTable::new() };
+    let mut new_table = {
+        let frame = allocator.allocate_frame().expect("no more frames");
+        InactivePageTable::new(frame, &mut active_table, &mut temporary_page)
+    };
+
+    active_table.with(&mut new_table, &mut temporary_page, |mapper| {
+        let elf_sections_tag = boot_info.elf_sections_tag()
+            .expect("Memory map tag required");
+
+        for section in elf_sections_tag.sections() {
+            use self::entry::WRITABLE;
+
+            if !section.is_allocated() {
+                // section is not loaded to memory
+                continue;
+            }
+            assert!(section.start_address() % PAGE_SIZE == 0,
+                    "sections need to be page aligned");
+
+            println!("mapping section at addr: {:#x}, size: {:#x}",
+                section.addr, section.size);
+
+            let flags = WRITABLE; // TODO use real section flags
+
+            let start_frame = Frame::containing_address(section.start_address());
+            let end_frame = Frame::containing_address(section.end_address() - 1);
+            for frame in Frame::range_inclusive(start_frame, end_frame) {
+                mapper.identity_map(frame, flags, allocator);
+            }
+        }
+    });
 }
