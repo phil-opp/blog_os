@@ -1,7 +1,7 @@
-# Blog OS (Remap the Kernel)
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post_7)](https://travis-ci.org/phil-opp/blog_os/branches)
+# Blog OS (Kernel Heap)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post_8)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [Remap the Kernel](http://os.phil-opp.com/remap-the-kernel.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
+This repository contains the source code for the [Kernel Heap](http://os.phil-opp.com/kernel-heap.html) post of the [Writing an OS in Rust](http://os.phil-opp.com) series.
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
