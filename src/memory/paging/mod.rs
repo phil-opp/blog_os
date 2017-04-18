@@ -181,6 +181,10 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
                 mapper.identity_map(frame, flags, allocator);
             }
         }
+
+        // identity map the VGA text buffer
+        let vga_buffer_frame = Frame::containing_address(0xb8000);
+        mapper.identity_map(vga_buffer_frame, WRITABLE, allocator);
     });
 
     let old_table = active_table.switch(new_table);
