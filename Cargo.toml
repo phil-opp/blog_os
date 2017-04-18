@@ -15,3 +15,7 @@ bitflags = "0.7.0"
 x86_64 = "0.1.2"
 once = "0.3.3"
 linked_list_allocator = "0.4.2"
+
+[dependencies.lazy_static]
+version = "0.2.4"
+features = ["spin_no_std"]

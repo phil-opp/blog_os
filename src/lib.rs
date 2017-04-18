@@ -23,6 +23,8 @@ extern crate x86_64;
 extern crate once;
 extern crate linked_list_allocator;
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 mod vga_buffer;
 mod memory;
 mod interrupts;
