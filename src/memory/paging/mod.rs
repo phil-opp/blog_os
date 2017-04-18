@@ -173,7 +173,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
             println!("mapping section at addr: {:#x}, size: {:#x}",
                 section.addr, section.size);
 
-            let flags = WRITABLE; // TODO use real section flags
+            let flags = EntryFlags::from_elf_section_flags(section);
 
             let start_frame = Frame::containing_address(section.start_address());
             let end_frame = Frame::containing_address(section.end_address() - 1);
