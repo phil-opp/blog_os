@@ -53,7 +53,10 @@ pub extern fn rust_main(multiboot_information_address: usize) {
         kernel_start as usize, kernel_end as usize, multiboot_start,
         multiboot_end, memory_map_tag.memory_areas());
 
-    loop{}
+    memory::remap_the_kernel(&mut frame_allocator, boot_info);
+    println!("It did not crash!");
+
+    loop {}
 }
 
 #[lang = "eh_personality"] extern fn eh_personality() {}
