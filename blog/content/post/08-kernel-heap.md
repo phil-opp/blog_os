@@ -307,6 +307,27 @@ The `collections` crate provides the [format!] and [vec!] macros, so we use `#[m
 [format!]: //doc.rust-lang.org/nightly/collections/macro.format!.html
 [vec!]: https://doc.rust-lang.org/nightly/collections/macro.vec!.html
 
+When we try to compile it, the following error occurs:
+
+```
+error[E0463]: can't find crate for `alloc`
+  --> src/lib.rs:16:1
+   |
+16 | extern crate alloc;
+   | ^^^^^^^^^^^^^^^^^^^ can't find crate
+```
+
+The problem is that [`xargo`] only cross compiles `libcore` by default. To also cross compile the `alloc` and `collections` crates, we need to create a file named `Xargo.toml` in our project root (right next to the `Cargo.toml`) with the following content:
+
+[`xargo`]: https://github.com/japaric/xargo
+
+```toml
+[target.x86_64-blog_os.dependencies]
+collections = {}
+```
+
+This instructs `xargo` that we also need `collections` and `alloc` (a dependency of `collections`). Now it should compile again.
+
 ### Testing
 
 Now we should be able to allocate memory on the heap. Let's try it in our `rust_main`:
