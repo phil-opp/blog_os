@@ -1,4 +1,6 @@
 pub use self::entry::*;
+pub use self::mapper::Mapper;
+use core::ops::{Deref, DerefMut};
 use core::ptr::Unique;
 use memory::{PAGE_SIZE, Frame, FrameAllocator};
 use self::table::{Table, Level4};
@@ -42,6 +44,32 @@ impl Page {
     }
     fn p1_index(&self) -> usize {
         (self.number >> 0) & 0o777
+    }
+}
+
+pub struct ActivePageTable {
+    mapper: Mapper,
+}
+
+impl Deref for ActivePageTable {
+    type Target = Mapper;
+
+    fn deref(&self) -> &Mapper {
+        &self.mapper
+    }
+}
+
+impl DerefMut for ActivePageTable {
+    fn deref_mut(&mut self) -> &mut Mapper {
+        &mut self.mapper
+    }
+}
+
+impl ActivePageTable {
+    unsafe fn new() -> ActivePageTable {
+        ActivePageTable {
+            mapper: Mapper::new(),
+        }
     }
 }
 
