@@ -639,10 +639,24 @@ impl Descriptor {
     }
 }
 ```
-We convert the passed `TaskStateSegment` reference to an `u64` and use the methods of the [`BitField` trait] to set the needed fields.
-We require the `'static` lifetime for the `TaskStateSegment` reference, since the hardware might access it on every interrupt as long as the OS runs.
+
+The `set_bits` and `get_bits` methods are provided by the [`BitField` trait] of the `bit_fields` crate. They allow us to easily get or set specific bits in an integer without using bit masks or shift operations. For example, we can do `x.set_bits(8..12, 42)` instead of `x = (x & 0xfffff0ff) | (42 << 8)`.
 
 [`BitField` trait]: https://docs.rs/bit_field/0.6.0/bit_field/trait.BitField.html#method.get_bit
+
+To link the `bit_fields` crate, we modify our `Cargo.toml` and our `src/lib.rs`:
+
+```toml
+[dependencies]
+bit_field = "0.7.0"
+```
+
+```rust
+extern crate bit_field;
+```
+
+We require the `'static` lifetime for the `TaskStateSegment` reference, since the hardware might access it on every interrupt as long as the OS runs.
+
 
 #### Adding Descriptors to the GDT
 In order to add descriptors to the GDT, we add a `add_entry` method:
