@@ -58,6 +58,11 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // invoke a breakpoint exception
     x86_64::instructions::interrupts::int3();
 
+    // trigger a page fault
+    unsafe {
+        *(0xdeadbeaf as *mut u64) = 42;
+    };
+
     println!("It did not crash!");
     loop {}
 }
