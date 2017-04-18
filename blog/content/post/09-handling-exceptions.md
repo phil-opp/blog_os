@@ -248,6 +248,25 @@ extern "x86-interrupt" fn breakpoint_handler(
 
 Our handler just outputs a message and pretty-prints the exception stack frame.
 
+When we try to compile it, the following error occurs:
+
+```
+error: x86-interrupt ABI is experimental and subject to change (see issue #40180)
+  --> src/interrupts.rs:8:1
+   |
+8  |   extern "x86-interrupt" fn breakpoint_handler(
+   |  _^ starting here...
+9  | |     stack_frame: &mut ExceptionStackFrame)
+10 | | {
+11 | |     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+12 | | }
+   | |_^ ...ending here
+   |
+   = help: add #![feature(abi_x86_interrupt)] to the crate attributes to enable
+```
+
+This error occurs because the `x86-interrupt` calling convention is still unstable. To use it anyway, we have to explicitly enable it by adding `#![feature(abi_x86_interrupt)]` on the top of our `lib.rs`.
+
 ### Loading the IDT
 In order that the CPU uses our new interrupt descriptor table, we need to load it using the [`lidt`] instruction. The `Idt` struct of the `x86_64` provides a [`load`][Idt::load] method function for that. Let's try to use it:
 
