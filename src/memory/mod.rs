@@ -1,5 +1,6 @@
 pub use self::area_frame_allocator::AreaFrameAllocator;
 pub use self::paging::remap_the_kernel;
+pub use self::stack_allocator::Stack;
 use self::paging::PhysicalAddress;
 use multiboot2::BootInformation;
 
@@ -99,4 +100,20 @@ impl Iterator for FrameIter {
 pub trait FrameAllocator {
     fn allocate_frame(&mut self) -> Option<Frame>;
     fn deallocate_frame(&mut self, frame: Frame);
+}
+
+pub struct MemoryController {
+    active_table: paging::ActivePageTable,
+    frame_allocator: AreaFrameAllocator,
+    stack_allocator: stack_allocator::StackAllocator,
+}
+
+impl MemoryController {
+    pub fn alloc_stack(&mut self, size_in_pages: usize) -> Option<Stack> {
+        let &mut MemoryController { ref mut active_table,
+                                    ref mut frame_allocator,
+                                    ref mut stack_allocator } = self;
+        stack_allocator.alloc_stack(active_table, frame_allocator,
+                                    size_in_pages)
+    }
 }
