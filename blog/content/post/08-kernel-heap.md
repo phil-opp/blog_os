@@ -715,7 +715,9 @@ extern crate linked_list_allocator;
 pub const HEAP_START: usize = 0o_000_001_000_000_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 
-static HEAP: Mutex<Heap> = Mutex::new(Heap::new(HEAP_START, HEAP_SIZE));
+static HEAP: Mutex<Heap> = Mutex::new(unsafe {
+    Heap::new(HEAP_START, HEAP_SIZE)
+});
 ```
 Note that we use the same values for `HEAP_START` and `HEAP_SIZE` as in the `bump_allocator`.
 
@@ -729,10 +731,12 @@ We need to add the extern crates to our `Cargo.toml`:
 However, we get an error when we try to compile it:
 
 ```
-error: function calls in statics are limited to constant functions,
-   struct and enum constructors [E0015]
-static HEAP: Mutex<Heap> = Mutex::new(Heap::new(HEAP_START, HEAP_SIZE));
-                                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+error[E0015]: calls in statics are limited to constant functions,
+              struct and enum constructors
+  --> src/lib.rs:17:5
+   |
+17 |     Heap::new(HEAP_START, HEAP_SIZE)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ```
 The reason is that the `Heap::new` function needs to initialize the first hole (like described [above](#initialization)). This can't be done at compile time, so the function can't be a `const` function. Therefore we can't use it to initialize a static.
 
