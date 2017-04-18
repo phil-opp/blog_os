@@ -482,11 +482,11 @@ pub fn with<F>(&mut self,
     where F: FnOnce(&mut Mapper)
 {
     use x86_64::instructions::tlb;
-    use x86_64::registers::{control_regs, tlb};
+    use x86_64::registers::control_regs;
 
     {
         let backup = Frame::containing_address(
-            control_regs::cr3() as usize);
+            control_regs::cr3().0 as usize);
 
         // map temporary_page to current p4 table
         let p4_table = temporary_page.map_table_frame(backup.clone(), self);
@@ -554,7 +554,7 @@ for section in elf_sections_tag.sections() {
         // section is not loaded to memory
         continue;
     }
-    assert!(address % PAGE_SIZE == 0,
+    assert!(section.start_address() % PAGE_SIZE == 0,
             "sections need to be page aligned");
 
     println!("mapping section at addr: {:#x}, size: {:#x}",
@@ -754,15 +754,17 @@ We do this in a new `ActivePageTable::switch` method:
 // in `impl ActivePageTable` in src/memory/paging/mod.rs
 
 pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
+    use x86_64::PhysicalAddress;
     use x86_64::registers::control_regs;
 
     let old_table = InactivePageTable {
         p4_frame: Frame::containing_address(
-            control_regs::cr3() as usize
+            control_regs::cr3().0 as usize
         ),
     };
     unsafe {
-        control_regs::cr3_write(new_table.p4_frame.start_address());
+        control_regs::cr3_write(PhysicalAddress(
+            new_table.p4_frame.start_address() as u64));
     }
     old_table
 }
@@ -968,8 +970,9 @@ This time the responsible function is `control_regs::cr3_write()` itself. From t
 The reason is that the `NO_EXECUTE` bit must only be used when the `NXE` bit in the [Extended Feature Enable Register] \(EFER) is set. That register is similar to Rust's feature gating and can be used to enable all sorts of advanced CPU features. Since the `NXE` bit is off by default, we caused a page fault when we added the `NO_EXECUTE` bit to the page table.
 [Extended Feature Enable Register]: https://en.wikipedia.org/wiki/Control_register#EFER
 
-So we need to enable the `NXE` bit. For that we use the awesome [x86][rust-x86] crate again:
-[rust-x86]: https://github.com/gz/rust-x86
+So we need to enable the `NXE` bit. For that we use the [x86_64 crate] again:
+
+[x86_64 crate]: https://docs.rs/x86_64
 
 ```rust
 // in lib.rs
