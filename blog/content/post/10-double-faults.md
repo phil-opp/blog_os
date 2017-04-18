@@ -62,7 +62,7 @@ So in order to prevent this triple fault, we need to either provide a handler fu
 A double fault is a normal exception with an error code, so we can use our `handler_with_error_code` macro to create a wrapper function:
 
 {{< highlight rust "hl_lines=8 14" >}}
-// in src/interrupts/mod.rs
+// in src/interrupts.rs
 
 lazy_static! {
     static ref IDT: idt::Idt = {
@@ -417,7 +417,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 }
 
 
-// in src/interrupts/mod.rs
+// in src/interrupts.rs
 
 use memory::MemoryController;
 
@@ -461,7 +461,7 @@ Let's create a new TSS that contains our double fault stack in its interrupt sta
 [`TaskStateSegment` struct]: https://docs.rs/x86_64/0.1.1/x86_64/structures/tss/struct.TaskStateSegment.html
 
 ```rust
-// in src/interrupts/mod.rs
+// in src/interrupts.rs
 
 use x86_64::structures::tss::TaskStateSegment;
 ```
@@ -469,7 +469,7 @@ use x86_64::structures::tss::TaskStateSegment;
 Let's create a new TSS in our `interrupts::init` function:
 
 {{< highlight rust "hl_lines=3 9 10" >}}
-// in src/interrupts/mod.rs
+// in src/interrupts.rs
 
 use x86_64::VirtualAddress;
 
@@ -504,7 +504,7 @@ We already created a GDT [when switching to long mode]. Back then, we used assem
 
 [when switching to long mode]: {{% relref "02-entering-longmode.md#the-global-descriptor-table" %}}
 
-We start by creating a new `interrupts::gdt` submodule:
+We start by creating a new `interrupts::gdt` submodule. For that we need to rename the `src/interrupts.rs` file to `src/interrupts/mod.rs`. Then we can create a new submodule:
 
 ```rust
 // in src/interrupts/mod.rs
