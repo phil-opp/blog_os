@@ -5,6 +5,7 @@
 #![feature(unique)]
 #![feature(allocator_api)]
 #![feature(global_allocator)]
+#![feature(abi_x86_interrupt)]
 #![no_std]
 
 
