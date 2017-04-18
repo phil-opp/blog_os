@@ -5,6 +5,7 @@ use self::table::{Table, Level4};
 
 mod entry;
 mod table;
+mod temporary_page;
 
 const ENTRY_COUNT: usize = 512;
 
