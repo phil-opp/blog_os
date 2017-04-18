@@ -157,6 +157,23 @@ impl ActivePageTable {
         // TODO free p(1,2,3) table if empty
         //allocator.deallocate_frame(frame);
     }
+
+    pub fn with<F>(&mut self,
+                table: &mut InactivePageTable,
+                f: F)
+        where F: FnOnce(&mut ActivePageTable)
+    {
+        use x86_64::instructions::tlb;
+
+        // overwrite recursive mapping
+        self.p4_mut()[511].set(table.p4_frame.clone(), PRESENT | WRITABLE);
+        tlb::flush_all();
+
+        // execute f in the new context
+        f(self);
+
+        // TODO restore recursive mapping to original p4 table
+    }
 }
 
 pub struct InactivePageTable {
