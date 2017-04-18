@@ -307,6 +307,27 @@ The `collections` crate provides the [format!] and [vec!] macros, so we use `#[m
 [format!]: //doc.rust-lang.org/nightly/collections/macro.format!.html
 [vec!]: https://doc.rust-lang.org/nightly/collections/macro.vec!.html
 
+When we try to compile it, the following error occurs:
+
+```
+error[E0463]: can't find crate for `alloc`
+  --> src/lib.rs:16:1
+   |
+16 | extern crate alloc;
+   | ^^^^^^^^^^^^^^^^^^^ can't find crate
+```
+
+The problem is that [`xargo`] only cross compiles `libcore` by default. To also cross compile the `alloc` and `collections` crates, we need to create a file named `Xargo.toml` in our project root (right next to the `Cargo.toml`) with the following content:
+
+[`xargo`]: https://github.com/japaric/xargo
+
+```toml
+[target.x86_64-blog_os.dependencies]
+collections = {}
+```
+
+This instructs `xargo` that we also need `collections` and `alloc` (a dependency of `collections`). Now it should compile again.
+
 ### Testing
 
 Now we should be able to allocate memory on the heap. Let's try it in our `rust_main`:
@@ -694,7 +715,9 @@ extern crate linked_list_allocator;
 pub const HEAP_START: usize = 0o_000_001_000_000_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 
-static HEAP: Mutex<Heap> = Mutex::new(Heap::new(HEAP_START, HEAP_SIZE));
+static HEAP: Mutex<Heap> = Mutex::new(unsafe {
+    Heap::new(HEAP_START, HEAP_SIZE)
+});
 ```
 Note that we use the same values for `HEAP_START` and `HEAP_SIZE` as in the `bump_allocator`.
 
@@ -708,10 +731,12 @@ We need to add the extern crates to our `Cargo.toml`:
 However, we get an error when we try to compile it:
 
 ```
-error: function calls in statics are limited to constant functions,
-   struct and enum constructors [E0015]
-static HEAP: Mutex<Heap> = Mutex::new(Heap::new(HEAP_START, HEAP_SIZE));
-                                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+error[E0015]: calls in statics are limited to constant functions,
+              struct and enum constructors
+  --> src/lib.rs:17:5
+   |
+17 |     Heap::new(HEAP_START, HEAP_SIZE)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ```
 The reason is that the `Heap::new` function needs to initialize the first hole (like described [above](#initialization)). This can't be done at compile time, so the function can't be a `const` function. Therefore we can't use it to initialize a static.
 
