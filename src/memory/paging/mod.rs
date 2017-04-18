@@ -185,6 +185,13 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
         // identity map the VGA text buffer
         let vga_buffer_frame = Frame::containing_address(0xb8000);
         mapper.identity_map(vga_buffer_frame, WRITABLE, allocator);
+
+        // identity map the multiboot info structure
+        let multiboot_start = Frame::containing_address(boot_info.start_address());
+        let multiboot_end = Frame::containing_address(boot_info.end_address() - 1);
+        for frame in Frame::range_inclusive(multiboot_start, multiboot_end) {
+            mapper.identity_map(frame, PRESENT, allocator);
+        }
     });
 
     let old_table = active_table.switch(new_table);
