@@ -24,6 +24,7 @@ extern crate once;
 extern crate linked_list_allocator;
 #[macro_use]
 extern crate lazy_static;
+extern crate bit_field;
 #[macro_use]
 mod vga_buffer;
 mod memory;
