@@ -14,7 +14,7 @@ In the previous posts we have created a [frame allocator] and a [page table modu
 
 As always, you can find the complete source code on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a comment section at the end of this page.
 
-[Github]: https://github.com/phil-opp/blog_os/tree/kernel_heap
+[Github]: https://github.com/phil-opp/blog_os/tree/post_8
 [issues]: https://github.com/phil-opp/blog_os/issues
 
 ## Introduction
