@@ -27,6 +27,18 @@ impl Gdt {
         SegmentSelector::new(index as u16, PrivilegeLevel::Ring0)
     }
 
+    pub fn load(&'static self) {
+        use x86_64::instructions::tables::{DescriptorTablePointer, lgdt};
+        use core::mem::size_of;
+
+        let ptr = DescriptorTablePointer {
+            base: self.table.as_ptr() as u64,
+            limit: (self.table.len() * size_of::<u64>() - 1) as u16,
+        };
+
+        unsafe { lgdt(&ptr) };
+    }
+
     fn push(&mut self, value: u64) -> usize {
         if self.next_free < self.table.len() {
             let index = self.next_free;
