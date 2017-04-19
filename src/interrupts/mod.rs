@@ -21,6 +21,10 @@ static GDT: Once<gdt::Gdt> = Once::new();
 const DOUBLE_FAULT_IST_INDEX: usize = 0;
 
 pub fn init(memory_controller: &mut MemoryController) {
+    use x86_64::structures::gdt::SegmentSelector;
+    use x86_64::instructions::segmentation::set_cs;
+    use x86_64::instructions::tables::load_tss;
+
     let double_fault_stack = memory_controller.alloc_stack(1)
         .expect("could not allocate double fault stack");
 
@@ -31,14 +35,22 @@ pub fn init(memory_controller: &mut MemoryController) {
         tss
     });
 
+    let mut code_selector = SegmentSelector(0);
+    let mut tss_selector = SegmentSelector(0);
     let gdt = GDT.call_once(|| {
         let mut gdt = gdt::Gdt::new();
-        let code_selector = gdt.add_entry(gdt::Descriptor::
-                            kernel_code_segment());
-        let tss_selector = gdt.add_entry(gdt::Descriptor::tss_segment(&tss));
+        code_selector = gdt.add_entry(gdt::Descriptor::kernel_code_segment());
+        tss_selector = gdt.add_entry(gdt::Descriptor::tss_segment(&tss));
         gdt
     });
     gdt.load();
+
+     unsafe {
+        // reload code segment register
+        set_cs(code_selector);
+        // load TSS
+        load_tss(tss_selector);
+    }
 
     IDT.load();
 }
