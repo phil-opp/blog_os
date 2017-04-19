@@ -6,29 +6,29 @@ This repository contains the source code for the _Writing an OS in Rust_ series 
 
 ## Bare Bones
 - [A Minimal x86 Kernel](http://os.phil-opp.com/multiboot-kernel.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/multiboot_bootstrap))
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_1))
 - [Entering Long Mode](http://os.phil-opp.com/entering-longmode.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/entering_longmode))
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_2))
 - [Set Up Rust](http://os.phil-opp.com/set-up-rust.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/set_up_rust))
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_3))
 - [Printing to Screen](http://os.phil-opp.com/printing-to-screen.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/printing_to_screen))
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_4))
 
 ## Memory Management
 - [Allocating Frames](http://os.phil-opp.com/allocating-frames.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/allocating_frames))
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_5))
 - [Page Tables](http://os.phil-opp.com/modifying-page-tables.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/page_tables))
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_6))
 - [Remap the Kernel](http://os.phil-opp.com/remap-the-kernel.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/remap_the_kernel))
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_7))
 - [Kernel Heap](http://os.phil-opp.com/kernel-heap.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/kernel_heap))
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_8))
 
 ## Exceptions
 - [Handling Exceptions](http://os.phil-opp.com/handling-exceptions.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/handling_exceptions))
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_9))
 - [Double Faults](http://os.phil-opp.com/double-faults.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/double_faults))
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_10))
 
 ## Additional Resources
 - [Cross Compile Binutils](http://os.phil-opp.com/cross-compile-binutils.html)
