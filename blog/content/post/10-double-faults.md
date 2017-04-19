@@ -62,7 +62,7 @@ So in order to prevent this triple fault, we need to either provide a handler fu
 A double fault is a normal exception with an error code, so we can use our `handler_with_error_code` macro to create a wrapper function:
 
 {{< highlight rust "hl_lines=8 14" >}}
-// in src/interrupts/mod.rs
+// in src/interrupts.rs
 
 lazy_static! {
     static ref IDT: idt::Idt = {
@@ -417,7 +417,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 }
 
 
-// in src/interrupts/mod.rs
+// in src/interrupts.rs
 
 use memory::MemoryController;
 
@@ -461,7 +461,7 @@ Let's create a new TSS that contains our double fault stack in its interrupt sta
 [`TaskStateSegment` struct]: https://docs.rs/x86_64/0.1.1/x86_64/structures/tss/struct.TaskStateSegment.html
 
 ```rust
-// in src/interrupts/mod.rs
+// in src/interrupts.rs
 
 use x86_64::structures::tss::TaskStateSegment;
 ```
@@ -469,7 +469,7 @@ use x86_64::structures::tss::TaskStateSegment;
 Let's create a new TSS in our `interrupts::init` function:
 
 {{< highlight rust "hl_lines=3 9 10" >}}
-// in src/interrupts/mod.rs
+// in src/interrupts.rs
 
 use x86_64::VirtualAddress;
 
@@ -504,7 +504,7 @@ We already created a GDT [when switching to long mode]. Back then, we used assem
 
 [when switching to long mode]: {{% relref "02-entering-longmode.md#the-global-descriptor-table" %}}
 
-We start by creating a new `interrupts::gdt` submodule:
+We start by creating a new `interrupts::gdt` submodule. For that we need to rename the `src/interrupts.rs` file to `src/interrupts/mod.rs`. Then we can create a new submodule:
 
 ```rust
 // in src/interrupts/mod.rs
@@ -639,10 +639,24 @@ impl Descriptor {
     }
 }
 ```
-We convert the passed `TaskStateSegment` reference to an `u64` and use the methods of the [`BitField` trait] to set the needed fields.
-We require the `'static` lifetime for the `TaskStateSegment` reference, since the hardware might access it on every interrupt as long as the OS runs.
+
+The `set_bits` and `get_bits` methods are provided by the [`BitField` trait] of the `bit_fields` crate. They allow us to easily get or set specific bits in an integer without using bit masks or shift operations. For example, we can do `x.set_bits(8..12, 42)` instead of `x = (x & 0xfffff0ff) | (42 << 8)`.
 
 [`BitField` trait]: https://docs.rs/bit_field/0.6.0/bit_field/trait.BitField.html#method.get_bit
+
+To link the `bit_fields` crate, we modify our `Cargo.toml` and our `src/lib.rs`:
+
+```toml
+[dependencies]
+bit_field = "0.7.0"
+```
+
+```rust
+extern crate bit_field;
+```
+
+We require the `'static` lifetime for the `TaskStateSegment` reference, since the hardware might access it on every interrupt as long as the OS runs.
+
 
 #### Adding Descriptors to the GDT
 In order to add descriptors to the GDT, we add a `add_entry` method:
@@ -834,7 +848,7 @@ We're almost done. We successfully loaded our new GDT, which contains a TSS desc
 
 For the first two steps, we need access to the `code_selector` and `tss_selector` variables outside of the closure. We can achieve this by moving the `let` declarations out of the closure:
 
-{{< highlight rust "hl_lines=3 4 7 8 11 12 19 21" >}}
+{{< highlight rust "hl_lines=3 4 5 8 9 12 13 20 22" >}}
 // in src/interrupts/mod.rs
 pub fn init(memory_controller: &mut MemoryController) {
     use x86_64::structures::gdt::SegmentSelector;
