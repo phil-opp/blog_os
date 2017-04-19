@@ -848,7 +848,7 @@ We're almost done. We successfully loaded our new GDT, which contains a TSS desc
 
 For the first two steps, we need access to the `code_selector` and `tss_selector` variables outside of the closure. We can achieve this by moving the `let` declarations out of the closure:
 
-{{< highlight rust "hl_lines=3 4 7 8 11 12 19 21" >}}
+{{< highlight rust "hl_lines=3 4 5 8 9 12 13 20 22" >}}
 // in src/interrupts/mod.rs
 pub fn init(memory_controller: &mut MemoryController) {
     use x86_64::structures::gdt::SegmentSelector;
