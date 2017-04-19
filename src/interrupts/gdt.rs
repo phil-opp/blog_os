@@ -1,4 +1,6 @@
 use x86_64::structures::tss::TaskStateSegment;
+use x86_64::structures::gdt::SegmentSelector;
+use x86_64::PrivilegeLevel;
 
 pub struct Gdt {
     table: [u64; 8],
@@ -10,6 +12,29 @@ impl Gdt {
         Gdt {
             table: [0; 8],
             next_free: 1,
+        }
+    }
+
+    pub fn add_entry(&mut self, entry: Descriptor) -> SegmentSelector {
+        let index = match entry {
+            Descriptor::UserSegment(value) => self.push(value),
+            Descriptor::SystemSegment(value_low, value_high) => {
+                let index = self.push(value_low);
+                self.push(value_high);
+                index
+            }
+        };
+        SegmentSelector::new(index as u16, PrivilegeLevel::Ring0)
+    }
+
+    fn push(&mut self, value: u64) -> usize {
+        if self.next_free < self.table.len() {
+            let index = self.next_free;
+            self.table[index] = value;
+            self.next_free += 1;
+            index
+        } else {
+            panic!("GDT full");
         }
     }
 }
