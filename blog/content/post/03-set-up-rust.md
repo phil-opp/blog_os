@@ -131,6 +131,7 @@ For our target system, we define the following JSON configuration in a file name
 {
   "llvm-target": "x86_64-unknown-none",
   "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+  "linker-flavor": "gcc",
   "target-endian": "little",
   "target-pointer-width": "64",
   "arch": "x86_64",
