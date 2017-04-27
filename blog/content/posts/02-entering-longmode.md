@@ -1,6 +1,7 @@
 +++
 title = "Entering Long Mode"
-slug = "entering-longmode"
+description = ""
+url = "entering-longmode"
 date = "2015-08-25"
 updated = "2015-10-29"
 aliases = [

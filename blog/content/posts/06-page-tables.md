@@ -1,6 +1,7 @@
 +++
 title = "Page Tables"
-slug = "modifying-page-tables"
+description = ""
+slug = "page-tables"
 date = "2015-12-09"
 +++
 

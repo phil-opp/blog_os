@@ -1,5 +1,7 @@
 +++
 title = "Printing to Screen"
+description = ""
+slug = "printing-to-screen"
 date = "2015-10-23"
 updated = "2016-10-31"
 aliases = [
