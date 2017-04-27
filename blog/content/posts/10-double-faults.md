@@ -7,7 +7,7 @@ date = "2017-01-02"
 
 In this post we explore double faults in detail. We also set up an _Interrupt Stack Table_ to catch double faults on a separate kernel stack. This way, we can completely prevent triple faults, even on kernel stack overflow.
 
-<!--more--><aside id="toc"></aside>
+<!-- more --><aside id="toc"></aside>
 
 As always, the complete source code is available on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a [comment section] at the end of this page.
 

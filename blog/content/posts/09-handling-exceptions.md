@@ -9,7 +9,7 @@ In this post, we start exploring CPU exceptions. Exceptions occur in various err
 
 [breakpoint exceptions]: http://wiki.osdev.org/Exceptions#Breakpoint
 
-<!--more--><aside id="toc"></aside>
+<!-- more --><aside id="toc"></aside>
 
 As always, the complete source code is available on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a comment section at the end of this page.
 

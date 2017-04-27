@@ -17,7 +17,7 @@ In the [previous post] we created a minimal multiboot kernel. It just prints `OK
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
 
-<!--more--><aside id="toc"></aside>
+<!-- more --><aside id="toc"></aside>
 
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions, or issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
