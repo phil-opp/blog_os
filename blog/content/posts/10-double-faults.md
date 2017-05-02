@@ -1,5 +1,6 @@
 +++
 title = "Double Faults"
+order = 10
 slug = "double-faults"
 date = "2017-01-02"
 +++

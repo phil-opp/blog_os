@@ -1,5 +1,6 @@
 +++
 title = "Set Up Rust"
+order = 3
 url = "set-up-rust"
 date = "2015-09-02"
 updated = "2017-04-12"

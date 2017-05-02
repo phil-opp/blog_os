@@ -1,5 +1,6 @@
 +++
 title = "Kernel Heap"
+order = 8
 slug = "kernel-heap"
 date = "2016-04-11"
 +++

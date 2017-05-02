@@ -1,5 +1,6 @@
 +++
 title = "Allocating Frames"
+order = 5
 slug = "allocating-frames"
 date = "2015-11-15"
 +++
