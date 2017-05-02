@@ -1,5 +1,6 @@
 +++
 title = "Contact"
+slug = "contact"
 +++
 
 Philipp Oppermann
