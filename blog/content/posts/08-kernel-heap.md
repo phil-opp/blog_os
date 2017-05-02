@@ -1,6 +1,5 @@
 +++
 title = "Kernel Heap"
-description = ""
 slug = "kernel-heap"
 date = "2016-04-11"
 +++

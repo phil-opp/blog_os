@@ -1,6 +1,5 @@
 +++
 title = "Handling Exceptions"
-description = ""
 slug = "handling-exceptions"
 date = "2017-03-26"
 +++

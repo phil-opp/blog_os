@@ -1,6 +1,5 @@
 +++
 title = "Page Tables"
-description = ""
 slug = "page-tables"
 date = "2015-12-09"
 +++

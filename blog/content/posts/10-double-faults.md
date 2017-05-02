@@ -1,6 +1,5 @@
 +++
 title = "Double Faults"
-description = ""
 slug = "double-faults"
 date = "2017-01-02"
 +++

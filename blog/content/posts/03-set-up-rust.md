@@ -1,6 +1,5 @@
 +++
 title = "Set Up Rust"
-description = ""
 url = "set-up-rust"
 date = "2015-09-02"
 updated = "2017-04-12"

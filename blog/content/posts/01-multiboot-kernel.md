@@ -1,6 +1,5 @@
 +++
 title = "A minimal x86 kernel"
-description = ""
 url = "multiboot-kernel"
 date = "2015-08-18"
 aliases = [

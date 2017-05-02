@@ -1,6 +1,5 @@
 +++
 title = "Allocating Frames"
-description = ""
 slug = "allocating-frames"
 date = "2015-11-15"
 +++

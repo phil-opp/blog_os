@@ -1,6 +1,5 @@
 +++
 title = "Remap the Kernel"
-description = ""
 slug = "remap-the-kernel"
 date = "2016-01-01"
 updated = "2016-03-06"
