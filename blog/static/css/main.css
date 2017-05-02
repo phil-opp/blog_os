@@ -41,6 +41,10 @@ main img {
   margin-right: -0.5rem;
 }
 
+.posts.neutral {
+  border: 2px solid #999;
+}
+
 .posts.bare-bones {
   border: 2px solid #66f;
 }
