@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% import "macros.html" as macros %}
+
+{% block title %}{{ config.title }}{% endblock title %}
+
+{% block main %}
+<div class="front-page-introduction">
+    <p>
+        This blog series creates a small operating system in the
+        <a href="https://www.rust-lang.org/">Rust programming language</a>. Each post is a small tutorial and includes all
+        needed code, so you can follow along if you like. The source code is also available in the corresponding
+        <a href="https://github.com/phil-opp/blog_os">Github repository</a>.
+    </p>
+    <p>Latest post:
+        <strong>{{ macros::latest_post_link(page=pages|reverse|last) }}</strong>
+    </p>
+</div>
+
+<div id="bare-bones" class="post-category bare-bones">Bare Bones</div>
+<div class="posts bare-bones">
+    {{ macros::post_link(page=pages.9) }}
+    {{ macros::post_link(page=pages.8) }}
+    {{ macros::post_link(page=pages.7) }}
+    {{ macros::post_link(page=pages.6) }}
+</div>
+
+<div id="memory-management" class="post-category memory-management">Memory Management</div>
+<div class="posts memory-management">
+    {{ macros::post_link(page=pages.5) }}
+    {{ macros::post_link(page=pages.4) }}
+    {{ macros::post_link(page=pages.3) }}
+    {{ macros::post_link(page=pages.2) }}
+</div>
+
+<div id="interrupts" class="post-category exceptions">Exceptions</div>
+<div class="posts exceptions">
+    {{ macros::post_link(page=pages.1) }}
+    {{ macros::post_link(page=pages.0) }}
+</div>
+
+<hr>
+<h1>Additional Resources</h1>
+
+<ul>
+</ul>
+
+<hr>
+<aside id="recent-updates">
+    <h1>Recent Updates</h1>
+    TODO
+</aside>
+
+{% endblock main %}

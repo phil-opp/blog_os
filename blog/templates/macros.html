@@ -1,0 +1,10 @@
+{% macro post_link(page) %}
+    <article>
+        <h2 class="post-title"><a href="{{ page.path }}">{{ page.title }}</a></h2>
+        {{ page.summary | safe }}
+    </article>
+{% endmacro post_link %}
+
+{% macro latest_post_link(page) %}
+    <a href="{{ page.path }}">{{ page.title }}</a>
+{% endmacro latest_post_link %}

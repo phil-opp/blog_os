@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+
+{% block main %}
+    <h1>{{ page.title }}</h1>
+    {{ page.content | safe }}
+{% endblock main %}
+
+{% block after_main %}
+    <hr>
+    <div class="PageNavigation">
+
+    {% if page.previous %}
+        <a class="prev" href="{{ page.previous.path }}">&laquo; {{ page.previous.title }}</a>
+    {% endif %}
+    {% if page.next %}
+        <a class="next" href="{{ page.next.path }}">{{ page.next.title }} &raquo;</a>
+    {% endif %}
+</div>
+{% endblock after_main %}
+
+

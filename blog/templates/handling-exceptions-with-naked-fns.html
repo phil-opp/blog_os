@@ -1,0 +1,11 @@
+{% extends "section.html" %}
+
+{% block title %}{{ super() }}{% endblock title %}
+
+{% block main %}{{ super() }}{% endblock main %}
+
+{% block introduction %}
+
+    <p>These posts explain how to handle CPU exceptions using naked functions. Historically, these posts were the main exception handling posts before the <code>x86-interrupt</code> calling convention and the <code>x86_64</code> crate existed. Our new way of handling exceptions can be found in the <a href="/handling-exceptions.html">“Handling Exceptions”</a> post.</p>
+
+{% endblock introduction %}
