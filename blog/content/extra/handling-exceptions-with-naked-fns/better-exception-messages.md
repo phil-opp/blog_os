@@ -1,12 +1,14 @@
 +++
 title = "Better Exception Messages"
+description = ""
+slug = "better-exception-messages"
 date = "2016-08-03"
 updated = "2016-11-01"
 +++
 
 In this post, we explore exceptions in more detail. Our goal is to print additional information when an exception occurs, for example the values of the instruction and stack pointer. In the course of this, we will explore inline assembly and naked functions. We will also add a handler function for page faults and read the associated error code.
 
-<!--more--><aside id="toc"></aside>
+<!-- more --><aside id="toc"></aside>
 
 As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a [comment section] at the end of this page.
 

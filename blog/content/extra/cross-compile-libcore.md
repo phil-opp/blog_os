@@ -1,5 +1,7 @@
 +++
 title = "Cross Compiling: libcore"
+description = ""
+slug = "cross-compile-libcore"
 +++
 
 If you get an `error: can't find crate for 'core'`, you're probably compiling for a different target (e.g. you're passing the `target` option to `cargo build`). Now the compiler complains that it can't find the `core` library. This document gives a quick overview how to fix this problem. For more details, see the [rust-cross] project.

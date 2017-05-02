@@ -1,12 +1,14 @@
 +++
 title = "Catching Exceptions"
+description = ""
+slug = "catching-exceptions"
 date = "2016-05-28"
 updated = "2016-06-25"
 +++
 
 In this post, we start exploring exceptions. We set up an interrupt descriptor table and add handler functions. At the end of this post, our kernel will be able to catch divide-by-zero faults.
 
-<!--more--><aside id="toc"></aside>
+<!-- more --><aside id="toc"></aside>
 
 As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a comment section at the end of this page.
 

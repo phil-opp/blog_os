@@ -1,12 +1,14 @@
 +++
 title = "Returning from Exceptions"
+description = ""
+slug = "returning-from-exceptions"
 date = "2016-09-21"
 updated = "2016-11-01"
 +++
 
 In this post, we learn how to return from exceptions correctly. In the course of this, we will explore the `iretq` instruction, the C calling convention, multimedia registers, and the red zone.
 
-<!--more--><aside id="toc"></aside>
+<!-- more --><aside id="toc"></aside>
 
 As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a [comment section] at the end of this page.
 
