@@ -346,8 +346,6 @@ _What happens if we call them on a P1 table?_
 
 Well, they would calculate the address of the next table (which does not exist) and treat it as a page table. Either they construct an invalid address (if `XXX < 400`)[^fn-invalid-address] or access the mapped page itself. That way, we could easily corrupt memory or cause CPU exceptions by accident. So these two functions are not _safe_ in Rust terms. Thus we need to make them `unsafe` functions unless we find some clever solution.
 
-[^fn-invalid-address]: If the `XXX` part of the address is smaller than `0o400`, it's binary representation doesn't start with `1`. But the sign extension bits, which should be a copy of that bit, are `1` instead of `0`. Thus the address is not valid.
-
 ## Some Clever Solution
 We can use Rust's type system to statically guarantee that the `next_table` methods can only be called on P4, P3, and P2 tables, but not on a P1 table. The idea is to add a `Level` parameter to the `Table` type and implement the `next_table` methods only for level 4, 3, and 2.
 
@@ -886,5 +884,8 @@ In the [next post] we will extend this module and add a function to modify inact
 Afterwards, we will use this paging module to build a heap allocator. This will allow us to use allocation and collection types such as `Box` and `Vec`.
 
 <small>Image sources: [^virtual_physical_translation_source]</small>
+
+## Footnotes
+[^fn-invalid-address]: If the `XXX` part of the address is smaller than `0o400`, it's binary representation doesn't start with `1`. But the sign extension bits, which should be a copy of that bit, are `1` instead of `0`. Thus the address is not valid.
 
 [^virtual_physical_translation_source]: Image sources: Modified versions of an image from  [Wikipedia](https://commons.wikimedia.org/wiki/File:X86_Paging_64bit.svg). The modified files are licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.

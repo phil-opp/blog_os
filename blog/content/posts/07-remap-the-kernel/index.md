@@ -27,7 +27,6 @@ Also, we will use the [information about kernel sections] to map the various sec
 ## Preparation
 There are many things that can go wrong when we switch to a new table. Therefore it's a good idea to [set up a debugger][set up gdb]. You should not need it when you follow this post, but it's good to know how to debug a problem when it occurs[^fn-debug-notes].
 [set up gdb]: {{% relref "set-up-gdb.md" %}}
-[^fn-debug-notes]: For this post the most useful GDB command is probably `p/x *((long int*)0xfffffffffffff000)@512`. It prints all entries of the recursively mapped P4 table by interpreting it as an array of 512 long ints (the `@512` is GDB's array syntax). Of course you can also print other tables by adjusting the address.
 
 We also update the `Page` and `Frame` types to make our lives easier. The `Page` struct gets some derived traits:
 
@@ -64,9 +63,7 @@ We can't do that for a `Frame`. If we wanted to be sure that a given frame is un
 ## Recap: The Paging Module
 This post builds upon the post about [page tables][previous post], so let's start by quickly recapitulating what we've done there.
 
-We created a `memory::paging` module, which reads and modifies the hierarchical page table through recursive mapping. The owner of the active P4 table and thus all subtables is an `ActivePageTable`[^fn-apt-renamed] struct, which must be instantiated only once.
-
-[^fn-apt-renamed]: It was renamed in [#88](https://github.com/phil-opp/blog_os/pull/88). The previous name was `RecursivePageTable`.
+We created a `memory::paging` module, which reads and modifies the hierarchical page table through recursive mapping. The owner of the active P4 table and thus all subtables is an `ActivePageTable` struct, which must be instantiated only once.
 
 The `ActivePageTable` struct provides the following interface:
 
@@ -1077,3 +1074,6 @@ Now that we have a (mostly) safe kernel stack and a working page table module, w
 [Box]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html
 [Vec]: https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html
 [BTreeMap]: https://doc.rust-lang.org/nightly/collections/btree_map/struct.BTreeMap.html
+
+## Footnotes
+[^fn-debug-notes]: For this post the most useful GDB command is probably `p/x *((long int*)0xfffffffffffff000)@512`. It prints all entries of the recursively mapped P4 table by interpreting it as an array of 512 long ints (the `@512` is GDB's array syntax). Of course you can also print other tables by adjusting the address.

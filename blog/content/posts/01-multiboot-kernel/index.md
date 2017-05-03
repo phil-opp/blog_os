@@ -81,8 +81,6 @@ If you don't know x86 assembly, here is some quick guide:
 - `dd` stands for `define double` (32bit) and `dw` stands for `define word` (16bit). They just output the specified 32bit/16bit constant.
 - the additional `0x100000000` in the checksum calculation is a small hack[^fn-checksum_hack] to avoid a compiler warning
 
-[^fn-checksum_hack]: The formula from the table, `-(magic + architecture + header_length)`, creates a negative value that doesn't fit into 32bit. By subtracting from `0x100000000` (= 2^(32)) instead, we keep the value positive without changing its truncated value. Without the additional sign bit(s) the result fits into 32bit and the compiler is happy :).
-
 We can already _assemble_ this file (which I called `multiboot_header.asm`) using `nasm`. It produces a flat binary by default, so the resulting file just contains our 24 bytes (in little endian if you work on a x86 machine):
 
 ```
@@ -166,8 +164,6 @@ Let's translate it:
 - the executable will have two sections: `.boot` at the beginning and `.text` afterwards
 - the `.text` output section contains all input sections named `.text`
 - Sections named `.multiboot_header` are added to the first output section (`.boot`) to ensure they are at the beginning of the executable. This is necessary because GRUB expects to find the Multiboot header very early in the file.
-
-[^Linker 1M]: We don't want to load the kernel to e.g. `0x0` because there are many special memory areas below the 1MB mark (for example the so-called VGA buffer at `0xb8000`, that we use to print `OK` to the screen).
 
 So let's create the ELF object files and link them using our new linker script:
 
@@ -324,3 +320,8 @@ In the [next post] we will create a page table and do some CPU configuration to 
 
 [next post]: {{% relref "02-entering-longmode.md" %}}
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
+
+## Footnotes
+[^fn-checksum_hack]: The formula from the table, `-(magic + architecture + header_length)`, creates a negative value that doesn't fit into 32bit. By subtracting from `0x100000000` (= 2^(32)) instead, we keep the value positive without changing its truncated value. Without the additional sign bit(s) the result fits into 32bit and the compiler is happy :).
+
+[^Linker 1M]: We don't want to load the kernel to e.g. `0x0` because there are many special memory areas below the 1MB mark (for example the so-called VGA buffer at `0xb8000`, that we use to print `OK` to the screen).

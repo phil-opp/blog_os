@@ -215,10 +215,6 @@ As I don't like these names, I will call them P4, P3, P2, and P1 from now on.
 
 Each page table contains 512 entries and one entry is 8 bytes, so they fit exactly in one page (`512*8 = 4096`). To translate a virtual address to a physical address the CPU[^hardware_lookup] will do the following[^virtual_physical_translation_source]:
 
-[^hardware_lookup]: In the x86 architecture, the page tables are _hardware walked_, so the CPU will look at the table on its own when it needs a translation. Other architectures, for example MIPS, just throw an exception and let the OS translate the virtual address.
-
-[^virtual_physical_translation_source]: Image source: [Wikipedia](https://commons.wikimedia.org/wiki/File:X86_Paging_64bit.svg), with modified font size, page table naming, and removed sign extended bits. The modified file is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.
-
 ![translation of virtual to physical addresses in 64 bit mode](/images/X86_Paging_64bit.svg)
 
 1. Get the address of the P4 table from the CR3 register
@@ -258,8 +254,6 @@ The `huge page` bit is now very useful to us. It creates a 2MiB (when used in P2
 To identity map the first gigabyte of our kernel with 512 2MiB pages, we need one P4, one P3, and one P2 table. Of course we will replace them with finer-grained tables later. But now that we're stuck with assembly, we choose the easiest way.
 
 We can add these two tables at the beginning[^page_table_alignment] of the `.bss` section:
-
-[^page_table_alignment]: Page tables need to be page-aligned as the bits 0-11 are used for flags. By putting these tables at the beginning of `.bss`, the linker can just page align the whole section and we don't have unused padding bytes in between.
 
 ```nasm
 ...
@@ -524,3 +518,10 @@ It's time to finally leave assembly behind and switch to [Rust]. Rust is a syste
 
 [Rust]: https://www.rust-lang.org/
 [next post]: {{% relref "03-set-up-rust.md" %}}
+
+## Footnotes
+[^hardware_lookup]: In the x86 architecture, the page tables are _hardware walked_, so the CPU will look at the table on its own when it needs a translation. Other architectures, for example MIPS, just throw an exception and let the OS translate the virtual address.
+
+[^virtual_physical_translation_source]: Image source: [Wikipedia](https://commons.wikimedia.org/wiki/File:X86_Paging_64bit.svg), with modified font size, page table naming, and removed sign extended bits. The modified file is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.
+
+[^page_table_alignment]: Page tables need to be page-aligned as the bits 0-11 are used for flags. By putting these tables at the beginning of `.bss`, the linker can just page align the whole section and we don't have unused padding bytes in between.

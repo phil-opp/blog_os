@@ -444,8 +444,6 @@ The answer is that the stored instruction pointer only points to the causing ins
 
 The reason for the diffent instruction pointer values is that the stored value is also the return address. So for faults, the instruction that caused the exception is restarted and might cause the same exception again if it's not resolved. This would not make much sense for traps, since invoking the breakpoint exception again would just cause another breakpoint exception[^fn-breakpoint-restart-use-cases]. Thus the instruction pointer points to the _next_ instruction for these exceptions.
 
-[^fn-breakpoint-restart-use-cases]: There are valid use cases for restarting an instruction that caused a breakpoint. The most common use case is a debugger: When setting a breakpoint on some code line, the debugger overwrites the corresponding instruction with an `int3` instruction, so that the CPU traps when that line is executed. When the user continues execution, the debugger swaps in the original instruction and continues the program from the replaced instruction.
-
 In some cases, the distinction between faults and traps is vague. For example, the [debug exception] behaves like a fault in some cases, but like a trap in others. So to find out the meaning of the saved instruction pointer, it is a good idea to read the official documentation for the exception, which can be found in the [AMD64 manual] in Section 8.2. For example, for the breakpoint exception it says:
 
 [debug exception]: http://wiki.osdev.org/Exceptions#Debug
@@ -468,3 +466,6 @@ We've successfully caught our first exception and returned from it! The next ste
 
 [triple fault]: http://wiki.osdev.org/Triple_Fault
 [double faults]: http://wiki.osdev.org/Double_Fault#Double_Fault
+
+## Footnotes
+[^fn-breakpoint-restart-use-cases]: There are valid use cases for restarting an instruction that caused a breakpoint. The most common use case is a debugger: When setting a breakpoint on some code line, the debugger overwrites the corresponding instruction with an `int3` instruction, so that the CPU traps when that line is executed. When the user continues execution, the debugger swaps in the original instruction and continues the program from the replaced instruction.

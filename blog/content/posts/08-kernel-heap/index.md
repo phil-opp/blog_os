@@ -680,9 +680,7 @@ I created the [linked_list_allocator] crate to handle all of these cases. It con
 [Heap struct]: http://phil-opp.github.io/linked-list-allocator/linked_list_allocator/struct.Heap.html
 [linked_list_allocator source]: https://github.com/phil-opp/linked-list-allocator
 
-So we just need to implement Rust's allocation modules and integrate it into our kernel. We start by creating a new `hole_list_allocator`[^1] crate inside the `libs` directory:
-
-[^1]: The name `linked_list_allocator` is already taken, sorry :P.
+So we just need to implement Rust's allocation modules and integrate it into our kernel. We start by creating a new `hole_list_allocator` crate inside the `libs` directory:
 
 ```shell
 > cd libs
