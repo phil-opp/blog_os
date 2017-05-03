@@ -213,4 +213,9 @@ a.anchor {
 
 :hover>a.anchor {
   opacity: 1;
+  text-decoration: none;
+}
+
+a.anchor:hover {
+  text-decoration: none;
 }
