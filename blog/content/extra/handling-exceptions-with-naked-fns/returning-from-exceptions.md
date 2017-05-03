@@ -37,7 +37,7 @@ The breakpoint exception is commonly used in debuggers: When the user sets a bre
 
 For our use case, we don't need to overwrite any instructions (it wouldn't even be possible since we [set the page table flags] to read-only). Instead, we just want to print a message when the breakpoint instruction is executed and then continue the program.
 
-[set the page table flags]: {{% relref "07-remap-the-kernel.md#using-the-correct-flags" %}}
+[set the page table flags]: ./posts/07-remap-the-kernel/index.md#using-the-correct-flags
 
 ### Catching Breakpoints
 Let's start by defining a handler function for the breakpoint exception:
@@ -211,7 +211,7 @@ Instead of the expected _“It did not crash”_ message after the breakpoint ex
 ### Debugging
 Let's debug it using GDB. For that we execute `make debug` in one terminal (which starts QEMU with the `-s -S` flags) and then `make gdb` (which starts and connects GDB) in a second terminal. For more information about GDB debugging, check out our [Set Up GDB] guide.
 
-[Set Up GDB]: {{% relref "set-up-gdb.md" %}}
+[Set Up GDB]: ./extra/set-up-gdb.md
 
 First we want to check if our `iretq` was successful. Therefore we set a breakpoint on the `println!("It did not crash line!")` statement in `src/lib.rs`. Let's assume that it's on line 61:
 
@@ -299,7 +299,7 @@ Unfortunately, Rust does not support such a calling convention. It was [proposed
 
 [interrupt calling conventions]: https://github.com/rust-lang/rfcs/pull/1275
 [Naked functions]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
-[naked fn post]: {{% relref "better-exception-messages.md#naked-functions" %}}
+[naked fn post]: ./extra/handling-exceptions-with-naked-fns/better-exception-messages.md#naked-functions
 
 ### A naked wrapper function
 
@@ -567,7 +567,7 @@ It doesn't compile anymore. The error tells us that the Rust compiler no longer 
 The [core library] is implicitly linked to all `no_std` crates and contains things such as `Result`, `Option`, and iterators. We've used that library without problems since [the very beginning], so why is it no longer available?
 
 [core library]: https://doc.rust-lang.org/nightly/core/index.html
-[the very beginning]: {{% relref "03-set-up-rust.md" %}}
+[the very beginning]: ./posts/03-set-up-rust/index.md
 
 The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for the host triple, which is `x86_64-unknown-linux-gnu` in our case. If we want to compile code for other targets, we need to recompile `core` for these targets first.
 

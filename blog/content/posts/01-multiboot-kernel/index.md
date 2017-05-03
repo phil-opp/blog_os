@@ -188,7 +188,7 @@ Idx Name      Size      VMA               LMA               File off  Algn
               CONTENTS, ALLOC, LOAD, READONLY, CODE
 ```
 _Note_: The `ld` and `objdump` commands are platform specific. If you're _not_ working on x86_64 architecture, you will need to [cross compile binutils]. Then use `x86_64‑elf‑ld` and `x86_64‑elf‑objdump` instead of `ld` and `objdump`.
-[cross compile binutils]: {{% relref "cross-compile-binutils.md" %}}
+[cross compile binutils]: ./extra/cross-compile-binutils.md
 
 ## Creating the ISO
 The last step is to create a bootable ISO image with GRUB. We need to create the following directory structure and copy the `kernel.bin` to the right place:
@@ -318,7 +318,7 @@ Now we can invoke `make` and all updated assembly files are compiled and linked.
 
 In the [next post] we will create a page table and do some CPU configuration to switch to the 64-bit [long mode].
 
-[next post]: {{% relref "02-entering-longmode.md" %}}
+[next post]: ./posts/02-entering-longmode/index.md
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
 
 ## Footnotes

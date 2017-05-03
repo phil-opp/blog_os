@@ -12,7 +12,7 @@ aliases = [
 
 In the [previous post] we created a minimal multiboot kernel. It just prints `OK` and hangs. The goal is to extend it and call 64-bit [Rust] code. But the CPU is currently in [protected mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to set up _Paging_ and switch to the 64-bit [long mode] first.
 
-[previous post]: {{% relref "01-multiboot-kernel.md" %}}
+[previous post]: ./posts/01-multiboot-kernel/index.md
 [Rust]: http://www.rust-lang.org/
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
@@ -40,7 +40,7 @@ error:
 At address `0xb8000` begins the so-called [VGA text buffer]. It's an array of screen characters that are displayed by the graphics card. A [future post] will cover the VGA buffer in detail and create a Rust interface to it. But for now, manual bit-fiddling is the easiest option.
 
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
-[future post]: {{% relref "04-printing-to-screen.md" %}}
+[future post]: ./posts/04-printing-to-screen/index.md
 
 A screen character consists of a 8 bit color code and a 8 bit [ASCII] character. We used the color code `4f` for all characters, which means white text on red background. `0x52` is an ASCII `R`, `0x45` is an `E`, `0x3a` is a `:`, and `0x20` is a space. The second space is overwritten by the given ASCII byte. Finally the CPU is stopped with the `hlt` instruction.
 
@@ -494,8 +494,8 @@ _Congratulations_! You have successfully wrestled through this CPU configuration
 #### One Last Thing
 Above, we reloaded the code segment register `cs` with the new GDT offset. However, the data segment registers `ss`, `ds`, `es`, `fs`, and `gs` still contain the data segment offsets of the old GDT. This isn't necessarily bad, since they're ignored by almost all instructions in 64-bit mode. However, there are a few instructions that expect a valid data segment descriptor _or the null descriptor_ in those registers. An example is the the [iretq] instruction that we'll need in the [_Returning from Exceptions_] post.
 
-[iretq]: {{% relref "returning-from-exceptions.md#the-iretq-instruction" %}}
-[_Returning from Exceptions_]: {{% relref "returning-from-exceptions.md" %}}
+[iretq]: ./extra/handling-exceptions-with-naked-fns/returning-from-exceptions.md#the-iretq-instruct/indexion
+[_Returning from Exceptions_]: ./extra/handling-exceptions-with-naked-fns/returning-from-exceptions.md
 
 To avoid future problems, we reload all data segment registers with null:
 
@@ -517,7 +517,7 @@ long_mode_start:
 It's time to finally leave assembly behind and switch to [Rust]. Rust is a systems language without garbage collections that guarantees memory safety. Through a real type system and many abstractions it feels like a high-level language but can still be low-level enough for OS development. The [next post] describes the Rust setup.
 
 [Rust]: https://www.rust-lang.org/
-[next post]: {{% relref "03-set-up-rust.md" %}}
+[next post]: ./posts/03-set-up-rust/index.md
 
 ## Footnotes
 [^hardware_lookup]: In the x86 architecture, the page tables are _hardware walked_, so the CPU will look at the table on its own when it needs a translation. Other architectures, for example MIPS, just throw an exception and let the OS translate the virtual address.
