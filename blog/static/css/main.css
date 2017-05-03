@@ -200,3 +200,17 @@ aside#recent-updates time {
 a code {
   color: #268bd2;
 }
+
+a.anchor {
+  opacity: 0;
+  position: absolute;
+  margin-left: -1.5em;
+  padding-right: 1em;
+  font-size: 0.6em;
+  vertical-align: baseline;
+  line-height: 2em;
+}
+
+:hover>a.anchor {
+  opacity: 1;
+}
