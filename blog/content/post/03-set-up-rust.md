@@ -348,7 +348,7 @@ The new errors are linker errors about various missing functions such as `__floa
 In our case, there is a much simpler solution, since our kernel doesn't really need any of those functions yet. So we can just tell the linker to remove unused program sections and hopefully all references to these functions will disappear. Removing unused sections is generally a good idea as it reduces kernel size. The magic linker flag for this is `--gc-sections`, which stands for “garbage collect sections”. Let's add it to the `$(kernel)` target in our `Makefile`:
 
 ```make
-$(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
+$(kernel): xargo $(rust_os) $(assembly_object_files) $(linker_script)
 	@ld -n --gc-sections -T $(linker_script) -o $(kernel) \
 		$(assembly_object_files) $(rust_os)
 ```
