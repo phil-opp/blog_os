@@ -199,4 +199,7 @@ gdt64:
     dq (1<<44) | (1<<47) | (1<<43) | (1<<53) ; code segment
 .pointer:
     dw $ - gdt64 - 1
-    dq gdt64
+    ; we actually need `dq` but it would throw a warning because of zero extension
+    dd gdt64
+    ; so we extend ourselves
+    dd 0
