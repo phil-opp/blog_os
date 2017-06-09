@@ -214,10 +214,10 @@ To fix it, we can implement the [Copy] trait for the `ColorCode` type. The easie
 [Copy]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [derive macro]: http://rustbyexample.com/trait/derive.html
 
-{{< highlight rust "hl_lines=1" >}}
+```rust
 #[derive(Debug, Clone, Copy)]
 struct ColorCode(u8);
-{{< / highlight >}}
+```
 
 We also derive the [Clone] trait, since it's a requirement for `Copy`, and the [Debug] trait, which allows us to print this field for debugging purposes.
 
@@ -230,7 +230,7 @@ However, the [documentation for Copy] says: _“if your type can implement Copy,
 
 [documentation for Copy]: https://doc.rust-lang.org/core/marker/trait.Copy.html#when-should-my-type-be-copy
 
-{{< highlight rust "hl_lines=2 6" >}}
+```rust
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
@@ -239,7 +239,7 @@ pub enum Color {...}
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 struct ScreenChar {...}
-{{< / highlight >}}
+```
 
 ### Try it out!
 To write some characters to the screen, you can create a temporary function:
@@ -315,7 +315,7 @@ Instead of a `ScreenChar`, we're now using a `Volatile<ScreenChar>`. (The `Volat
 
 This means that we have to update our `Writer::write_byte` method:
 
-{{< highlight rust "hl_lines=8 11" >}}
+```rust
 impl Writer {
     pub fn write_byte(&mut self, byte: u8) {
         match byte {
@@ -333,7 +333,7 @@ impl Writer {
     }
     ...
 }
-{{< / highlight >}}
+```
 
 Instead of a normal assignment using `=`, we're now using the `write` method. This guarantees that the compiler will never optimize away this write.
 
@@ -375,14 +375,14 @@ The `Ok(())` is just a `Ok` Result containing the `()` type. We can drop the `pu
 
 Now we can use Rust's built-in `write!`/`writeln!` formatting macros:
 
-{{< highlight rust "hl_lines=2 4 5 6" >}}
+```rust
 // in the `print_something` function
 use core::fmt::Write;
 let mut writer = Writer {...};
 writer.write_byte(b'H');
 writer.write_str("ello! ");
 write!(writer, "The numbers are {} and {}", 42, 1.0/3.0);
-{{< / highlight >}}
+```
 
 Now you should see a `Hello! The numbers are 42 and 0.3333333333333333` at the bottom of the screen.
 
@@ -563,7 +563,7 @@ pub fn clear_screen() {
 ### Hello World using `println`
 To use `println` in `lib.rs`, we need to import the macros of the VGA buffer module first. Therefore we add a `#[macro_use]` attribute to the module declaration:
 
-{{< highlight rust "hl_lines=3 9 10" >}}
+```rust
 // in src/lib.rs
 
 #[macro_use]
@@ -577,7 +577,7 @@ pub extern fn rust_main() {
 
     loop{}
 }
-{{< / highlight >}}
+```
 
 Since we imported the macros at crate level, they are available in all modules and thus provide an easy and safe interface to the VGA buffer.
 

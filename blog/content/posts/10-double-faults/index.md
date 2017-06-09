@@ -26,7 +26,7 @@ A double fault behaves like a normal exception. It has the vector number `8` and
 ### Triggering a Double Fault
 Let's provoke a double fault by triggering an exception for that we didn't define a handler function:
 
-{{< highlight rust "hl_lines=10" >}}
+```rust
 // in src/lib.rs
 
 #[no_mangle]
@@ -43,7 +43,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     println!("It did not crash!");
     loop {}
 }
-{{< / highlight >}}
+```
 
 We try to write to address `0xdeadbeaf`, but the corresponding page is not present in the page tables. Thus, a page fault occurs. We haven't registered a page fault handler in our [IDT], so a double fault occurs.
 
@@ -63,7 +63,7 @@ So in order to prevent this triple fault, we need to either provide a handler fu
 ### A Double Fault Handler
 A double fault is a normal exception with an error code, so we can use our `handler_with_error_code` macro to create a wrapper function:
 
-{{< highlight rust "hl_lines=8 14" >}}
+```rust
 // in src/interrupts.rs
 
 lazy_static! {
@@ -84,7 +84,7 @@ extern "x86-interrupt" fn double_fault_handler(
     println!("\nEXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
     loop {}
 }
-{{< / highlight >}}<!--end_-->
+```
 
 Our handler prints a short error message and dumps the exception stack frame. The error code of the double fault handler is always zero, so there's no reason to print it.
 
@@ -160,7 +160,7 @@ So the CPU tries to call our _double fault handler_ now. However, on a double fa
 
 Let's try it ourselves! We can easily provoke a kernel stack overflow by calling a function that recurses endlessly:
 
-{{< highlight rust "hl_lines=9 10 11 14" >}}
+```rust
 // in src/lib.rs
 
 #[no_mangle]
@@ -179,7 +179,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     println!("It did not crash!");
     loop {}
 }
-{{< / highlight >}}
+```
 
 When we try this code in QEMU, we see that the system enters a boot-loop again.
 
@@ -402,7 +402,7 @@ impl Add<usize> for Page {
 #### Allocating a Double Fault Stack
 Now we can allocate a new double fault stack by passing the memory controller to our `interrupts::init` function:
 
-{{< highlight rust "hl_lines=8 11 12 21 22 23" >}}
+```rust
 // in src/lib.rs
 
 #[no_mangle]
@@ -429,7 +429,7 @@ pub fn init(memory_controller: &mut MemoryController) {
 
     IDT.load();
 }
-{{< / highlight >}}
+```
 
 We allocate a 4096 bytes stack (one page) for our double fault handler. Now we just need some way to tell the CPU that it should use this stack for handling double faults.
 
@@ -470,7 +470,7 @@ use x86_64::structures::tss::TaskStateSegment;
 
 Let's create a new TSS in our `interrupts::init` function:
 
-{{< highlight rust "hl_lines=3 9 10" >}}
+```rust
 // in src/interrupts.rs
 
 use x86_64::VirtualAddress;
@@ -487,7 +487,7 @@ pub fn init(memory_controller: &mut MemoryController) {
 
     IDT.load();
 }
-{{< / highlight >}}
+```
 
 We define that the 0th IST entry is the double fault stack (any other IST index would work too). We create a new TSS through the `TaskStateSegment::new` function and load the top address (stacks grow downwards) of the double fault stack into the 0th entry.
 
@@ -737,7 +737,7 @@ We now have a double fault stack and are able to create and load a TSS (which co
 
 We already created a new TSS in our `interrupts::init` function. Now we can load this TSS by creating a new GDT:
 
-{{< highlight rust "hl_lines=10 11 12 13" >}}
+```rust
 // in src/interrupts/mod.rs
 
 pub fn init(memory_controller: &mut MemoryController) {
@@ -755,7 +755,7 @@ pub fn init(memory_controller: &mut MemoryController) {
 
     IDT.load();
 }
-{{< / highlight >}}
+```
 
 However, when we try to compile it, the following errors occur:
 
@@ -814,7 +814,7 @@ The `Once` type allows us to initialize a `static` at runtime. It is safe becaus
 
 So let's rewrite our `interrupts::init` function to use the static `TSS` and `GDT`:
 
-{{< highlight rust "hl_lines=5 9 10 12 17 18" >}}
+```rust
 pub fn init(memory_controller: &mut MemoryController) {
     let double_fault_stack = memory_controller.alloc_stack(1)
         .expect("could not allocate double fault stack");
@@ -837,7 +837,7 @@ pub fn init(memory_controller: &mut MemoryController) {
 
     IDT.load();
 }
-{{< / highlight >}}
+```
 
 Now it should compile again!
 
@@ -850,7 +850,7 @@ We're almost done. We successfully loaded our new GDT, which contains a TSS desc
 
 For the first two steps, we need access to the `code_selector` and `tss_selector` variables outside of the closure. We can achieve this by moving the `let` declarations out of the closure:
 
-{{< highlight rust "hl_lines=3 4 5 8 9 12 13 20 22" >}}
+```rust
 // in src/interrupts/mod.rs
 pub fn init(memory_controller: &mut MemoryController) {
     use x86_64::structures::gdt::SegmentSelector;
@@ -877,7 +877,7 @@ pub fn init(memory_controller: &mut MemoryController) {
 
     IDT.load();
 }
-{{< / highlight >}}
+```
 
 We first set the descriptors to `empty` and then update them from inside the closure (which implicitly borrows them as `&mut`). Now we're able to reload the code segment register using [`set_cs`] and to load the TSS using [`load_tss`].
 
@@ -886,7 +886,7 @@ We first set the descriptors to `empty` and then update them from inside the clo
 
 Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 
-{{< highlight rust "hl_lines=7 9" >}}
+```rust
 // in src/interrupt/mod.rs
 
 lazy_static! {
@@ -900,7 +900,7 @@ lazy_static! {
         ...
     };
 }
-{{< / highlight >}}
+```
 
 The `set_stack_index` method is unsafe because the the caller must ensure that the used index is valid and not already used for another exception.
 

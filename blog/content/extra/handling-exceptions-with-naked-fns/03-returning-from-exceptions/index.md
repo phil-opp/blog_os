@@ -57,7 +57,7 @@ We print an error message and also output the instruction pointer and the rest o
 
 We need to register our new handler function in the interrupt descriptor table (IDT):
 
-{{< highlight rust "hl_lines=8" >}}
+```rust
 // in src/interrupts/mod.rs
 
 lazy_static! {
@@ -72,14 +72,14 @@ lazy_static! {
         idt
     };
 }
-{{< / highlight >}}
+```
 
 We set the IDT entry with number 3 since it's the vector number of the breakpoint exception.
 
 #### Testing it
 In order to test it, we insert an `int3` instruction in our `rust_main`:
 
-{{< highlight rust "hl_lines=3 12 13" >}}
+```rust
 // in src/lib.rs
 ...
 #[macro_use] // needed for the `int!` macro
@@ -97,7 +97,7 @@ pub extern "C" fn rust_main(...) {
     println!("It did not crash!");
     loop {}
 }
-{{< / highlight >}}
+```
 
 When we execute `make run`, we see the following:
 
@@ -139,18 +139,18 @@ EXCEPTION: BREAKPOINT at 0x110970
 
 So let's disassemble the instruction at `0x110970` and its predecessor:
 
-{{< highlight shell "hl_lines=3" >}}
+```shell
 > objdump -d build/kernel-x86_64.bin | grep -B1 "110970:"
 11096f:	cc                   	int3
 110970:	48 c7 01 2a 00 00 00 	movq   $0x2a,(%rcx)
-{{< / highlight >}}
+```
 
 We see that `0x110970` indeed points to the next instruction after `int3`. So we can simply jump to the stored instruction pointer when we want to return from the breakpoint exception.
 
 ### Implementation
 Let's update our `handler!` macro to support non-diverging exception handlers:
 
-{{< highlight rust "hl_lines=12 16 17 18" >}}
+```rust
 // in src/interrupts/mod.rs
 
 macro_rules! handler {
@@ -175,7 +175,7 @@ macro_rules! handler {
         wrapper
     }}
 }
-{{< / highlight >}}<!--end*-->
+```
 
 When an exception handler returns from the `call` instruction, we use the `iretq` instruction to continue the interrupted program. Note that we need to undo the stack pointer alignment before, so that `rsp` points to the end of the exception stack frame again.
 
@@ -377,7 +377,7 @@ We need to declare these macros _above_ our `handler` macro, since macros are on
 
 Now we can use these macros to fix our `handler!` macro:
 
-{{< highlight rust "hl_lines=8 10 11 17 19" >}}
+```rust
 // in src/interrupts/mod.rs
 
 macro_rules! handler {
@@ -405,7 +405,7 @@ macro_rules! handler {
         wrapper
     }}
 }
-{{< / highlight >}}<!--end*-->
+```
 
 It's important that we save the registers first, before we modify any of them. After the `call` instruction (but before `iretq`) we restore the registers again. Because we're now changing `rsp` (by pushing the register values) before we load it into `rdi`, we would get a wrong exception stack frame pointer. Therefore we need to adjust it by adding the number of bytes we push. We push 9 registers that are 8 bytes each, so `9 * 8` bytes in total.
 
@@ -518,7 +518,7 @@ The other fields are used for conditional compilation. This allows crate authors
 #### Disabling MMX and SSE
 In order to disable the multimedia extensions, we create a new target named `x86_64-blog_os`. To describe this target, we create a file named `x86_64-blog_os.json` in the project root with the following content:
 
-{{< highlight json "hl_lines=8" >}}
+```json
 {
   "llvm-target": "x86_64-unknown-linux-gnu",
   "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
@@ -528,7 +528,7 @@ In order to disable the multimedia extensions, we create a new target named `x86
   "os": "none",
   "features": "-mmx,-sse"
 }
-{{< / highlight >}}
+```
 
 It's equal to `x86_64-unknown-linux-gnu` target but has one additional option: `"features": "-mmx,-sse"`. So we added two target _features_: `-mmx` and `-sse`. The minus prefix defines that our target does _not_ support this feature. So by specifying `-mmx` and `-sse`, we disable the default `mmx` and `sse` features.
 
@@ -611,13 +611,13 @@ Remember when we discussed calling conventions above? The calling convention def
 
 In order to fix this problem, we need to change our float ABI. The idea is to avoid normal hardware-supported floats and use a pure software implementation instead. We can do so by enabling the `soft-float` feature for our target. For that, we edit `x86_64-blog_os.json`:
 
-{{< highlight json "hl_lines=4" >}}
+```json
 {
   "llvm-target": "x86_64-unknown-linux-gnu",
   ...
   "features": "-mmx,-sse,+soft-float"
 }
-{{< / highlight >}}
+```
 
 The plus prefix tells LLVM to enable the `soft-float` feature.
 
@@ -724,14 +724,14 @@ _This will not work._ The problem is that the CPU pushes the exception stack fra
 ### Disabling the Red Zone
 The red zone is a property of our target, so in order to disable it we edit our `x86_64-blog_os.json` a last time:
 
-{{< highlight json "hl_lines=5" >}}
+```json
 {
   "llvm-target": "x86_64-unknown-linux-gnu",
   ...
   "features": "-mmx,-sse,+soft-float",
   "disable-redzone": true
 }
-{{< / highlight >}}
+```
 
 We add one additional option at the end: `"disable-redzone": true`. As you might guess, this option disables the red zone optimization.
 
@@ -740,7 +740,7 @@ Now we have a red zone free kernel!
 ## Exceptions with Error Codes
 We're now able to correctly return from exceptions without error codes. However, we still can't return from exceptions that push an error code (e.g. page faults). Let's fix that by updating our `handler_with_error_code` macro:
 
-{{< highlight rust "hl_lines=13 15" >}}
+```rust
 // in src/interrupts/mod.rs
 
 macro_rules! handler_with_error_code {
@@ -762,7 +762,7 @@ macro_rules! handler_with_error_code {
         wrapper
     }}
 }
-{{< / highlight >}}<!--end*-->
+```
 
 First, we change the type of the handler function: no more `-> !`, so it no longer needs to diverge. We also add an `iretq` instruction at the end.
 
@@ -778,7 +778,7 @@ Now we can make our `page_fault_handler` non-diverging:
 
 However, now we have the same problem as above: The handler function will overwrite the scratch registers and cause bugs when returning. Let's fix this by invoking `save_scratch_registers` at the beginning:
 
-{{< highlight rust "hl_lines=8 11 14 18" >}}
+```rust
 // in src/interrupts/mod.rs
 
 macro_rules! handler_with_error_code {
@@ -804,14 +804,15 @@ macro_rules! handler_with_error_code {
         wrapper
     }}
 }
-{{< / highlight >}}<!--end*-->
+```
+
 Now we backup the scratch registers to the stack right at the beginning and restore them just before the `iretq`. Like in the `handler` macro, we now need to add `10*8` to `rdi` in order to get the correct exception stack frame pointer (`save_scratch_registers` pushes nine 8 byte registers, plus the error code). We also need to undo the stack pointer alignment after the `call` [^fn-stack-alignment].
 
 [^fn-stack-alignment]: The stack alignment is actually wrong here, since we additionally pushed an uneven number of registers. However, the `pop rsi` is wrong too, since the error code is no longer at the top of the stack. When we fix that problem, the stack alignment becomes correct again. So I left it in to keep things simple.
 
 Now we have one last bug: We `pop` the error code into `rsi`, but the error code is no longer at the top of the stack (since `save_scratch_registers` pushed 9 registers on top of it). So we need to do it differently:
 
-{{< highlight rust "hl_lines=9 19" >}}
+```rust
 // in src/interrupts/mod.rs
 
 macro_rules! handler_with_error_code {
@@ -838,7 +839,7 @@ macro_rules! handler_with_error_code {
         wrapper
     }}
 }
-{{< / highlight >}}<!--end*-->
+```
 
 Instead of using `pop`, we're calculating the error code address manually (`save_scratch_registers` pushes nine 8 byte registers) and load it into `rsi` using a `mov`. So now the error code stays on the stack. But `iretq` doesn't handle the error code, so we need to pop it before invoking `iretq`.
 

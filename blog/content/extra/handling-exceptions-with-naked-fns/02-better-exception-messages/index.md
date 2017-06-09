@@ -196,7 +196,7 @@ call divide_by_zero_handler
 ```
 It moves the exception stack frame pointer from `rsp` to `rdi`, where the first argument is expected, and then calls the main handler. Let's create the corresponding inline assembly to complete our wrapper function:
 
-{{< highlight rust "hl_lines=4 5 6" >}}
+```rust
 #[naked]
 extern "C" fn divide_by_zero_wrapper() -> ! {
     unsafe {
@@ -205,7 +205,7 @@ extern "C" fn divide_by_zero_wrapper() -> ! {
              : "rdi" : "intel");
     }
 }
-{{< / highlight >}}<!--end_-->
+```
 
 Instead of `call divide_by_zero_handler`, we use a placeholder again. The reason is Rust's name mangling, which changes the name of the `divide_by_zero_handler` function. To circumvent this, we pass a function pointer as input parameter (after the second colon). The `"i"` tells the compiler that it is an immediate value, which can be directly inserted for the placeholder. We also specify a clobber after the third colon, which tells the compiler that we change the value of the `rdi` register.
 
@@ -221,7 +221,7 @@ error: computation may converge in a function marked as diverging
 ```
 The reason is that we marked our `divide_by_zero_wrapper` function as diverging (the `!`). We call another diverging function in inline assembly, so it is clear that the function diverges. However, the Rust compiler doesn't understand inline assembly, so it doesn't know that. To fix this, we tell the compiler that all code after the `asm!` macro is unreachable:
 
-{{< highlight rust "hl_lines=7" >}}
+```rust
 #[naked]
 extern "C" fn divide_by_zero_wrapper() -> ! {
     unsafe {
@@ -231,7 +231,7 @@ extern "C" fn divide_by_zero_wrapper() -> ! {
         ::core::intrinsics::unreachable();
     }
 }
-{{< / highlight >}}<!--end_-->
+```
 
 The [intrinsics::unreachable] function is unstable, so we need to add `#![feature(core_intrinsics)]` to our `src/lib.rs`. It is just an annotation for the compiler and produces no real code. (Not to be confused with the [unreachable!] macro, which is completely different!)
 
@@ -241,7 +241,7 @@ The [intrinsics::unreachable] function is unstable, so we need to add `#![featur
 ### It works!
 The last step is to update the interrupt descriptor table (IDT) to use our new wrapper function:
 
-{{< highlight rust "hl_lines=6" >}}
+```rust
 // in src/interrupts/mod.rs
 
 lazy_static! {
@@ -251,7 +251,7 @@ lazy_static! {
         idt
     };
 }
-{{< / highlight >}}
+```
 
 Now we see a correct exception stack frame when we execute `make run`:
 
@@ -272,7 +272,7 @@ Now we should be able to boot from this USB stick. When we do it, we see that it
 
 However, this section wouldn't exist if there weren't a problem. To trigger this problem, we add some example code to the start of our `divide_by_zero_handler`:
 
-{{< highlight rust "hl_lines=4 5 6" >}}
+```rust
 // in src/interrupts/mod.rs
 
 extern "C" fn divide_by_zero_handler(...) {
@@ -283,7 +283,7 @@ extern "C" fn divide_by_zero_handler(...) {
     println!(...);
     loop {}
 }
-{{< / highlight >}}
+```
 
 This is just some garbage code that doesn't do anything useful. When we try it in QEMU using `make run`, it still works fine. However, when we burn it to an USB stick again and boot from it on real hardware, we see that our computer reboots just before printing the exception message.
 
@@ -406,7 +406,7 @@ In order to fix this bug, we need to make sure that the stack pointer is correct
 
 The problem is that we're pushing an uneven number of 8 byte registers. Thus we need to align the stack pointer again before the `call` instruction:
 
-{{< highlight rust "hl_lines=5" >}}
+```rust
 #[naked]
 extern "C" fn divide_by_zero_wrapper() -> ! {
     unsafe {
@@ -418,7 +418,7 @@ extern "C" fn divide_by_zero_wrapper() -> ! {
         ::core::intrinsics::unreachable();
     }
 }
-{{< / highlight >}}<!--end_-->
+```
 
 The additional `sub rsp, 8` instruction aligns the stack pointer to a 16 byte boundary. Now it should work on real hardware (and in QEMU KVM mode) again.
 
@@ -450,7 +450,7 @@ The macro takes a single Rust identifier (`ident`) as argument and expands to a 
 
 Now we can remove the `divide_by_zero_wrapper` and use our new `handler!` macro instead:
 
-{{< highlight rust "hl_lines=6" >}}
+```rust
 // in src/interrupts/mod.rs
 
 lazy_static! {
@@ -460,7 +460,7 @@ lazy_static! {
         idt
     };
 }
-{{< / highlight >}}
+```
 
 Note that the `handler!` macro needs to be defined above the static `IDT`, because macros are only available after their definition.
 
@@ -560,7 +560,7 @@ extern "C" fn page_fault_handler(stack_frame: &ExceptionStackFrame,
 
 We need to register our new handler function in the static interrupt descriptor table (IDT):
 
-{{< highlight rust "hl_lines=10" >}}
+```rust
 // in src/interrupts/mod.rs
 
 lazy_static! {
@@ -575,7 +575,7 @@ lazy_static! {
         idt
     };
 }
-{{< / highlight >}}
+```
 
 Page faults have the vector number 14, so we set the 14th IDT entry.
 

@@ -139,7 +139,7 @@ To create the ELF _executable_, we need to [link] the object files together. We 
 [link]: https://en.wikipedia.org/wiki/Linker_(computing)
 [linker script]: https://sourceware.org/binutils/docs/ld/Scripts.html
 
-```
+```ld
 ENTRY(start)
 
 SECTIONS {
