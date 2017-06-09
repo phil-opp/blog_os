@@ -1,7 +1,7 @@
 +++
 title = "Better Exception Messages"
 order = 2
-slug = "better-exception-messages"
+url = "better-exception-messages"
 date = "2016-08-03"
 updated = "2016-11-01"
 +++

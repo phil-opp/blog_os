@@ -1,7 +1,7 @@
 +++
 title = "Printing to Screen"
 order = 4
-slug = "printing-to-screen"
+url = "printing-to-screen"
 date = "2015-10-23"
 updated = "2016-10-31"
 aliases = [

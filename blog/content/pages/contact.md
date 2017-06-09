@@ -1,6 +1,6 @@
 +++
 title = "Contact"
-slug = "contact"
+url = "contact"
 +++
 
 Philipp Oppermann

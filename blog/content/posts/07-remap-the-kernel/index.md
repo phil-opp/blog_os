@@ -1,7 +1,7 @@
 +++
 title = "Remap the Kernel"
 order = 7
-slug = "remap-the-kernel"
+url = "remap-the-kernel"
 date = "2016-01-01"
 updated = "2016-03-06"
 +++

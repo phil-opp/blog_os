@@ -1,7 +1,7 @@
 +++
 title = "Handling Exceptions"
 order = 9
-slug = "handling-exceptions"
+url = "handling-exceptions"
 date = "2017-03-26"
 +++
 

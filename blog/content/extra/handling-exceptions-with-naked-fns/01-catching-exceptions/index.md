@@ -1,7 +1,7 @@
 +++
 title = "Catching Exceptions"
 order = 1
-slug = "catching-exceptions"
+url = "catching-exceptions"
 date = "2016-05-28"
 updated = "2016-06-25"
 +++
