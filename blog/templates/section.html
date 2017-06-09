@@ -11,7 +11,7 @@
 {% block introduction %}{% endblock introduction %}
 
 <div class="posts neutral">
-    {% for page in section.pages %}
+    {% for page in section.pages|reverse %}
         {{ macros::post_link(page=page) }}
     {% endfor %}
 </div>
