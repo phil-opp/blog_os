@@ -1,13 +1,10 @@
 title = "Writing an OS in Rust"
-description = "test"
-base_url = "https://os.phil-opp.com.com"
+base_url = "https://os.phil-opp.com"
 
 highlight_code = true
 highlight_theme = "monokai"
-insert_anchor_links = true
 generate_rss = true
 
 [extra]
-# Put all your custom variables here
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }
