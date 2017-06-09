@@ -1,6 +1,6 @@
 +++
 title = "Returning from Exceptions"
-description = ""
+order = 3
 slug = "returning-from-exceptions"
 date = "2016-09-21"
 updated = "2016-11-01"

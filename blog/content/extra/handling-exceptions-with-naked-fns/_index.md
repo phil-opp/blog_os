@@ -1,5 +1,6 @@
 +++
 title = "Handling Exceptions using naked Functions"
-description = ""
+sort_by = "order"
 template = "handling-exceptions-with-naked-fns.html"
+insert_anchor = "left"
 +++

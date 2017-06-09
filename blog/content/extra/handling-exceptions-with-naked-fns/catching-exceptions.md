@@ -1,6 +1,6 @@
 +++
 title = "Catching Exceptions"
-description = ""
+order = 1
 slug = "catching-exceptions"
 date = "2016-05-28"
 updated = "2016-06-25"

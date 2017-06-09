@@ -1,6 +1,6 @@
 +++
 title = "Better Exception Messages"
-description = ""
+order = 2
 slug = "better-exception-messages"
 date = "2016-08-03"
 updated = "2016-11-01"
