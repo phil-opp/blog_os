@@ -1,3 +1,4 @@
 +++
 title = "Pages"
+render = false
 +++
