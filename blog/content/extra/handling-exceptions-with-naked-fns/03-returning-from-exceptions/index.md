@@ -211,7 +211,7 @@ Instead of the expected _“It did not crash”_ message after the breakpoint ex
 ### Debugging
 Let's debug it using GDB. For that we execute `make debug` in one terminal (which starts QEMU with the `-s -S` flags) and then `make gdb` (which starts and connects GDB) in a second terminal. For more information about GDB debugging, check out our [Set Up GDB] guide.
 
-[Set Up GDB]: ./extra/set-up-gdb.md
+[Set Up GDB]: ./extra/set-up-gdb/index.md
 
 First we want to check if our `iretq` was successful. Therefore we set a breakpoint on the `println!("It did not crash line!")` statement in `src/lib.rs`. Let's assume that it's on line 61:
 
@@ -299,7 +299,7 @@ Unfortunately, Rust does not support such a calling convention. It was [proposed
 
 [interrupt calling conventions]: https://github.com/rust-lang/rfcs/pull/1275
 [Naked functions]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
-[naked fn post]: ./extra/handling-exceptions-with-naked-fns/better-exception-messages.md#naked-functions
+[naked fn post]: ./extra/handling-exceptions-with-naked-fns/02-better-exception-messages/index.md#naked-functions
 
 ### A naked wrapper function
 

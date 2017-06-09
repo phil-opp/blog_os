@@ -28,7 +28,7 @@ Also, we will use the [information about kernel sections] to map the various sec
 
 ## Preparation
 There are many things that can go wrong when we switch to a new table. Therefore it's a good idea to [set up a debugger][set up gdb]. You should not need it when you follow this post, but it's good to know how to debug a problem when it occurs[^fn-debug-notes].
-[set up gdb]: ./extra/set-up-gdb.md
+[set up gdb]: ./extra/set-up-gdb/index.md
 
 We also update the `Page` and `Frame` types to make our lives easier. The `Page` struct gets some derived traits:
 
