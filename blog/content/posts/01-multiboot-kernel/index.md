@@ -232,7 +232,7 @@ Now it's time to boot our OS. We will use [QEMU]:
 ```
 qemu-system-x86_64 -cdrom os.iso
 ```
-![qemu output](/images/qemu-ok.png)
+![qemu output](qemu-ok.png)
 
 Notice the green `OK` in the upper left corner. If it does not work for you, take a look at the comment section.
 

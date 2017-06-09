@@ -329,11 +329,11 @@ Recursive mapping works by mapping the last P4 entry to the P4 table itself. Thu
 
 For example, accessing a P3 table requires lopping three times:
 
-![access active P3 table through recursive mapping](/images/recursive_mapping_access_p3.svg)
+![access active P3 table through recursive mapping](recursive_mapping_access_p3.svg)
 
 We can use the same mechanism to access inactive tables. The trick is to change the recursive mapping of the active P4 table to point to the inactive P4 table:
 
-![access inactive P3 table through recursive mapping](/images/recursive_mapping_access_p3_inactive_table.svg)
+![access inactive P3 table through recursive mapping](recursive_mapping_access_p3_inactive_table.svg)
 
 Now the inactive table can be accessed exactly as the active table, even the magic addresses are the same. This allows us to use the `ActivePageTable` interface and the existing mapping methods for inactive tables, too. Note that everything besides the recursive mapping continues to work exactly as before since we've never changed the active table in the CPU.
 
@@ -364,7 +364,7 @@ It overwrites the 511th P4 entry and points it to the inactive table frame. Then
 
 Now that the recursive mapping points to the given inactive table, we execute the closure in the new context. The closure can call all active table methods such as `translate` or `map_to`. It could even call `with` again and chain another inactive table! Wait… that would not work:
 
-![access inactive P3 table through recursive mapping](/images/recursive_mapping_access_p1_invalid_chaining.svg)
+![access inactive P3 table through recursive mapping](recursive_mapping_access_p1_invalid_chaining.svg)
 
 Here the closure called `with` again and thus changed the recursive mapping of the inactive table to point to a second inactive table. Now we want to modify the P1 of the _second_ inactive table, but instead we land on the P1 of the _first_ inactive table since we never follow the pointer to the second table. Only when modifying the P2, P3, or P4 table we really access the second inactive table. This inconsistency would break our mapping functions completely.
 
@@ -460,13 +460,13 @@ Why is it unsafe? Because reading the CR3 register leads to a CPU exception if t
 
 Now that we have a backup of the original P4 frame, we need a way to restore it after the closure has run. So we need to somehow modify the 511th entry of the original P4 frame, which is still the active table in the CPU. But we can't access it because the recursive mapping now points to the inactive table:
 
-![it's not possible to access the original P4 through recursive mapping anymore](/images/recursive_mapping_inactive_table_scheme.svg)
+![it's not possible to access the original P4 through recursive mapping anymore](recursive_mapping_inactive_table_scheme.svg)
 
 It's just not possible to access the active P4 entry in 4 steps, so we can't reach it through the 4-level page table.
 
 We could try to overwrite the recursive mapping of the _inactive_ P4 table and point it back to the original P4 frame:
 
-![cyclic map active and inactive P4 tables](/images/cyclic_mapping_inactive_tables.svg)
+![cyclic map active and inactive P4 tables](cyclic_mapping_inactive_tables.svg)
 
 Now we can reach the active P4 entry in 4 steps and could restore the original mapping in the active table. But this hack has a drawback: The inactive table is now invalid since it is no longer recursive mapped. We would need to fix it by using a temporary page again (as above).
 

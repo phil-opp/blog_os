@@ -177,7 +177,7 @@ These lines are taken from the default linker script of `ld`, which can be obtai
 
 Now there are only 12 sections left and we get a much more useful output:
 
-![qemu output](/images/qemu-memory-areas-and-kernel-sections.png)
+![qemu output](qemu-memory-areas-and-kernel-sections.png)
 
 If you like, you can compare this output to the `objdump -h build/kernel-x86_64.bin` output. You will see that the start addresses and sizes match exactly for each section. The sections with flags `0x0` are mostly debug sections, so they don't need to be loaded. And the last few sections of the QEMU output aren't in the `objdump` output because they are special sections such as string tables.
 

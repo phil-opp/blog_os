@@ -241,7 +241,7 @@ It is important that the function is [diverging], i.e. it must never return. The
 
 [diverging]: https://doc.rust-lang.org/book/functions.html#diverging-functions
 
-![normal function return vs interrupt function return](/images/normal-vs-interrupt-function-return.svg)
+![normal function return vs interrupt function return](normal-vs-interrupt-function-return.svg)
 
 If our handler function returned normally, it would try to pop the return address from the stack. But it might get some completely different value then. For example, the CPU pushes an error code for some exceptions. Bad things would happen if we interpreted this error code as return address and jumped to it. Therefore interrupt handler functions must diverge[^fn-must-diverge].
 
@@ -550,7 +550,7 @@ pub extern "C" fn rust_main(...) {
 
 It works! We see a `EXCEPTION: DIVIDE BY ZERO` message at the bottom of our screen:
 
-![QEMU screenshot with `EXCEPTION: DIVIDE BY ZERO` message](images/qemu-divide-error-println.png)
+![QEMU screenshot with `EXCEPTION: DIVIDE BY ZERO` message](qemu-divide-error-println.png)
 
 ## What's next?
 We've successfully caught our first exception! However, our `EXCEPTION: DIVIDE BY ZERO` message doesn't contain much information about the cause of the exception. The next post improves the situation by printing i.a. the current stack pointer and address of the causing instruction. We will also explore other exceptions such as page faults, for which the CPU pushes an _error code_ on the stack.

@@ -68,7 +68,7 @@ After connecting to QEMU, you can use various gdb commands to control execution 
 - `print` or `p`: Prints the value of a variable. You can use Cs `*` and `&` operators. To print in hexadecimal, use `p/x`.
 - `tui enable`: Enables the text user interface, which provides a graphical interface (see below). To disable it again, run `tui disable`.
 
-![gdb text user interface](images/gdb-tui-screenshot.png)
+![gdb text user interface](gdb-tui-screenshot.png)
 
 Of course there are many more commands. Feel free to send a PR if you think this list is missing something important. For a more complete GDB overview, check out [Beej's Quick Guide][bggdb] or the [website for Harvard's CS161 course][CS161].
 

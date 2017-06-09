@@ -215,7 +215,7 @@ As I don't like these names, I will call them P4, P3, P2, and P1 from now on.
 
 Each page table contains 512 entries and one entry is 8 bytes, so they fit exactly in one page (`512*8 = 4096`). To translate a virtual address to a physical address the CPU[^hardware_lookup] will do the following[^virtual_physical_translation_source]:
 
-![translation of virtual to physical addresses in 64 bit mode](/images/X86_Paging_64bit.svg)
+![translation of virtual to physical addresses in 64 bit mode](X86_Paging_64bit.svg)
 
 1. Get the address of the P4 table from the CR3 register
 2. Use bits 39-47 (9 bits) as an index into P4 (`2^9 = 512 = number of entries`)

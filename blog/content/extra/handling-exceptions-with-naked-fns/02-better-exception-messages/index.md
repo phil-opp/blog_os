@@ -24,7 +24,7 @@ An exception signals that something is wrong with the currently-executed instruc
 
 This routine involves reading the interrupt descriptor table and invoking the registered handler function. But first, the CPU pushes various information onto the stack, which describe the current state and provide information about the cause of the exception:
 
-![exception stack frame](images/exception-stack-frame.svg)
+![exception stack frame](exception-stack-frame.svg)
 
 The pushed information contain the instruction and stack pointer, the current CPU flags, and (for some exceptions) an error code, which contains further information about the cause of the exception. Let's look at the fields in detail:
 
@@ -86,7 +86,7 @@ So the inline assembly loads the stack pointer value to `stack_frame` at the ver
 ### Testing it
 Let's try it by executing `make run`:
 
-![qemu printing an ExceptionStackFrame with strange values](images/qemu-print-stack-frame-try.png)
+![qemu printing an ExceptionStackFrame with strange values](qemu-print-stack-frame-try.png)
 
 Those `ExceptionStackFrame` values look very wrong. The instruction pointer definitely shouldn't be 1 and the code segment should be `0x8` instead of some big number. So what's going on here?
 
@@ -255,7 +255,7 @@ lazy_static! {
 
 Now we see a correct exception stack frame when we execute `make run`:
 
-![QEMU showing correct divide by zero stack frame](images/qemu-divide-by-zero-stack-frame.png)
+![QEMU showing correct divide by zero stack frame](qemu-divide-by-zero-stack-frame.png)
 
 ## Testing on real Hardware
 Virtual machines such as QEMU are very convenient to quickly test our kernel. However, they might behave a bit different than real hardware in some situations. So we should test our kernel on real hardware, too.
@@ -602,7 +602,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 
 We get the following output:
 
-![QEMU: page fault with error code 2 and stack frame dump](images/qemu-page-fault-handler.png)
+![QEMU: page fault with error code 2 and stack frame dump](qemu-page-fault-handler.png)
 
 ### The Page Fault Error Code
 “Error code 2” is not really an useful error message. Let's improve this by creating a `PageFaultErrorCode` type:
@@ -647,7 +647,7 @@ The `from_bits` function tries to convert the `u64` into a `PageFaultErrorCode`.
 
 Now we get a useful error message when a page fault occurs, which allows us to debug it more easily:
 
-![QEMU: output is now `PAGE FAULT with error code CAUSED_BY_WRITE`](images/qemu-page-fault-error-code.png)
+![QEMU: output is now `PAGE FAULT with error code CAUSED_BY_WRITE`](qemu-page-fault-error-code.png)
 
 As expected, the page fault was caused by write to `0xdeadbeaf`. The `PROTECTION_VIOLATION` flag is not set, so the accessed page was not present.
 

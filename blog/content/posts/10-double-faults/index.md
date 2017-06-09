@@ -49,7 +49,7 @@ We try to write to address `0xdeadbeaf`, but the corresponding page is not prese
 
 When we start our kernel now, we see that it enters an endless boot loop:
 
-![boot loop](images/boot-loop.gif)
+![boot loop](boot-loop.gif)
 
 The reason for the boot loop is the following:
 
@@ -90,7 +90,7 @@ Our handler prints a short error message and dumps the exception stack frame. Th
 
 When we start our kernel now, we should see that the double fault handler is invoked:
 
-![QEMU printing `EXCEPTION: DOUBLE FAULT` and the exception stack frame](images/qemu-catch-double-fault.png)
+![QEMU printing `EXCEPTION: DOUBLE FAULT` and the exception stack frame](qemu-catch-double-fault.png)
 
 It worked! Here is what happens this time:
 
@@ -906,7 +906,7 @@ The `set_stack_index` method is unsafe because the the caller must ensure that t
 
 That's it! Now the CPU should switch to the double fault stack whenever a double fault occurs. Thus, we are able to catch _all_ double faults, including kernel stack overflows:
 
-![QEMU printing `EXCEPTION: DOUBLE FAULT` and a dump of the exception stack frame](images/qemu-double-fault-on-stack-overflow.png)
+![QEMU printing `EXCEPTION: DOUBLE FAULT` and a dump of the exception stack frame](qemu-double-fault-on-stack-overflow.png)
 
 From now on we should never see a triple fault again!
 

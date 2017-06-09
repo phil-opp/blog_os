@@ -151,7 +151,7 @@ The [red zone] is an optimization of the [System V ABI] that allows functions to
 [red zone]: http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
 [System V ABI]: http://wiki.osdev.org/System_V_ABI
 
-![stack frame with red zone](images/red-zone.svg)
+![stack frame with red zone](red-zone.svg)
 
 The image shows the stack frame of a function with `n` local variables. On function entry, the stack pointer is adjusted to make room on the stack for the local variables.
 
@@ -159,7 +159,7 @@ The red zone is defined as the 128 bytes below the adjusted stack pointer. The f
 
 However, this optimization leads to huge problems with exceptions or hardware interrupts. Let's assume that an exception occurs while a function uses the red zone:
 
-![red zone overwritten by exception handler](images/red-zone-overwrite.svg)
+![red zone overwritten by exception handler](red-zone-overwrite.svg)
 
 The CPU and the exception handler overwrite the data in red zone. But this data is still needed by the interrupted function. So the function won't work correctly anymore when we return from the exception handler. This might lead to strange bugs that [take weeks to debug].
 

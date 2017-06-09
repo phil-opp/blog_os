@@ -101,20 +101,20 @@ pub extern "C" fn rust_main(...) {
 
 When we execute `make run`, we see the following:
 
-![QEMU showing `EXCEPTION: BREAKPOINT at 0x110970` and a dump of the exception stack frame](images/qemu-breakpoint-handler.png)
+![QEMU showing `EXCEPTION: BREAKPOINT at 0x110970` and a dump of the exception stack frame](qemu-breakpoint-handler.png)
 
 It works! Now we “just” need to return from the breakpoint handler somehow so that we see the `It did not crash` message again.
 
 ## Returning from Exceptions
 So how do we return from exceptions? To make it easier, we look at a normal function return first:
 
-![function stack frame](images/function-stack-frame.svg)
+![function stack frame](function-stack-frame.svg)
 
 When calling a function, the `call` instruction pushes the return address on the stack. When the called function is finished, it can return to the parent function through the `ret` instruction, which pops the return address from the stack and then jumps to it.
 
 The exception stack frame, in contrast, looks a bit different:
 
-![exception stack frame](images/exception-stack-frame.svg)
+![exception stack frame](exception-stack-frame.svg)
 
 Instead of pushing a return address, the CPU pushes the stack and instruction pointers (with their segment descriptors), the RFLAGS register, and an optional error code. It also aligns the stack pointer to a 16 byte boundary before pushing values.
 
@@ -204,7 +204,7 @@ Note that we also removed the `loop {}` at the end of our `breakpoint_handler` s
 ### Testing
 Let's try our new `iretq` logic:
 
-![QEMU output with `EXCEPTION BREAKPOINT` and `EXCEPTION PAGE FAULT` but no `It did not crash`](images/qemu-breakpoint-return-page-fault.png)
+![QEMU output with `EXCEPTION BREAKPOINT` and `EXCEPTION PAGE FAULT` but no `It did not crash`](qemu-breakpoint-return-page-fault.png)
 
 Instead of the expected _“It did not crash”_ message after the breakpoint exception, we get a page fault. The strange thing is that our kernel tried to access address `0x1`, which should never happen. So it seems like we messed up something important.
 
@@ -414,7 +414,7 @@ Note that we no longer need to manually align the stack pointer, because we're p
 ### Testing it again
 Let's test it again with our corrected `handler!` macro:
 
-![QEMU output with `EXCEPTION BREAKPOINT` and `It did not crash`](images/qemu-breakpoint-return.png)
+![QEMU output with `EXCEPTION BREAKPOINT` and `It did not crash`](qemu-breakpoint-return.png)
 
 The page fault is gone and we see the _“It did not crash”_ message again!
 
@@ -436,7 +436,7 @@ However, auto-vectorization causes a problem for us: Most of the multimedia regi
 
 We don't use any multimedia registers explicitly, but the Rust compiler might auto-vectorize our code (including the exception handlers). Thus we could silently clobber the multimedia registers, which leads to the same problems as above:
 
-![example: program uses mm0, mm1, and mm2. Then the exception handler clobbers mm1.](images/xmm-overwrite.svg)
+![example: program uses mm0, mm1, and mm2. Then the exception handler clobbers mm1.](xmm-overwrite.svg)
 
 This example shows a program that is using the first three multimedia registers (`mm0` to `mm2`). At some point, an exception occurs and control is transfered to the exception handler. The exception handler uses `mm1` for its own data and thus overwrites the previous value. When the exception is resolved, the CPU continues the interrupted program again. However, the program is now corrupt since it relies on the original `mm1` value.
 
@@ -691,7 +691,7 @@ The [red zone] is an optimization of the [System V ABI] that allows functions to
 
 [red zone]: http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
 
-![stack frame with red zone](images/red-zone.svg)
+![stack frame with red zone](red-zone.svg)
 
 The image shows the stack frame of a function with `n` local variables. On function entry, the stack pointer is adjusted to make room on the stack for the local variables.
 
@@ -699,7 +699,7 @@ The red zone is defined as the 128 bytes below the adjusted stack pointer. The f
 
 However, this optimization leads to huge problems with exceptions. Let's assume that an exception occurs while a function uses the red zone:
 
-![red zone overwritten by exception handler](images/red-zone-overwrite.svg)
+![red zone overwritten by exception handler](red-zone-overwrite.svg)
 
 The CPU and the exception handler overwrite the data in red zone. But this data is still needed by the interrupted function. So the function won't work correctly anymore when we return from the exception handler. It might fail or cause another exception, but it could also lead to strange bugs that [take weeks to debug].
 
@@ -878,7 +878,7 @@ The error code should still be `CAUSED_BY_WRITE` and the exception stack frame v
 #### Returning from Page Faults
 Let's see what happens if we comment out the trailing `loop` in our page fault handler:
 
-![QEMU printing the same page fault message again and again](images/qemu-page-fault-return.png)
+![QEMU printing the same page fault message again and again](qemu-page-fault-return.png)
 
 We see that the same error message is printed over and over again. Here is what happens:
 

@@ -259,7 +259,7 @@ It just creates a new Writer that points to the VGA buffer at `0xb8000`. Then it
 
 [byte character]: https://doc.rust-lang.org/reference.html#characters-and-strings
 
-![QEMU output with a green `H` in the lower left corner](images/vga-H-lower-left.png)
+![QEMU output with a green `H` in the lower left corner](vga-H-lower-left.png)
 
 ### Volatile
 We just saw that our `H` was printed correctly. However, it might not work with future Rust compilers that optimize more aggressively.
@@ -583,7 +583,7 @@ Since we imported the macros at crate level, they are available in all modules a
 
 As expected, we now see a _“Hello World!”_ on a cleared screen:
 
-![QEMU printing “Hello World!” on a cleared screen](images/vga-hello-world.png)
+![QEMU printing “Hello World!” on a cleared screen](vga-hello-world.png)
 
 ### Deadlocks
 Whenever we use locks, we must be careful to not accidentally introduce _deadlocks_. A [deadlock] occurs when a thread/program waits for a lock that will never be released. Normally, this happens when multiple threads access multiple locks. For example, when thread A holds lock 1 and tries to acquire lock 2 and -- at the same time -- thread B holds lock 2 and tries to acquire lock 1.
@@ -633,7 +633,7 @@ Now the macro only evaluates the arguments (through `format_args!`) and passes t
 
 Thus, we fixed the deadlock:
 
-![QEMU printing “inner” and then “outer”](images/fixed-println-deadlock.png)
+![QEMU printing “inner” and then “outer”](fixed-println-deadlock.png)
 
 We see that both “inner” and “outer” are printed.
 

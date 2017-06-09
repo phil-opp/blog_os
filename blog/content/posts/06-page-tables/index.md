@@ -21,7 +21,7 @@ _Paging_ is a memory management scheme that separates virtual and physical memor
 
 The x86 architecture uses a 4-level page table in 64-bit mode. A virtual address has the following structure:
 
-![structure of a virtual address on x86](/images/x86_address_structure.svg)
+![structure of a virtual address on x86](x86_address_structure.svg)
 
 The bits 48–63 are so-called _sign extension_ bits and must be copies of bit 47. The following 36 bits define the page table indexes (9 bits per table) and the last 12 bits specify the offset in the 4KiB page.
 
@@ -29,7 +29,7 @@ Each table has 2^9 = 512 entries and each entry is 8 byte. Thus a page table fit
 
 To translate an address, the CPU reads the P4 address from the CR3 register. Then it uses the indexes to walk the tables:
 
-![translation of virtual to physical addresses in 64 bit mode](/images/X86_Paging_64bit.svg)
+![translation of virtual to physical addresses in 64 bit mode](X86_Paging_64bit.svg)
 
 The P4 entry points to a P3 table, where the next 9 bits of the address are used to select an entry. The P3 entry then points to a P2 table and the P2 entry points to a P1 table. The P1 entry, which is specified through bits 12–20, finally points to the physical frame.
 
@@ -233,19 +233,19 @@ We will solve the problem in another way using a trick called _recursive mapping
 ### Recursive Mapping
 The trick is to map the P4 table recursively: The last entry doesn't point to a P3 table, but to the P4 table itself. We can use this entry to remove a translation level so that we land on a page table instead. For example, we can “loop” once to access a P1 table:
 
-![access P1 table through recursive paging](/images/recursive_mapping_access_p1.svg)
+![access P1 table through recursive paging](recursive_mapping_access_p1.svg)
 
 By selecting the 511th P4 entry, which points points to the P4 table itself, the P4 table is used as the P3 table. Similarly, the P3 table is used as a P2 table and the P2 table is treated like a P1 table. Thus the P1 table becomes the target page and can be accessed through the offset.
 
 It's also possible to access P2 tables by looping twice. And if we select the 511th entry three times, we can access and modify P3 tables:
 
-![access P3 table through recursive paging](/images/recursive_mapping_access_p3.svg)
+![access P3 table through recursive paging](recursive_mapping_access_p3.svg)
 
 So we just need to specify the desired P3 table in the address through the P1 index. By choosing the 511th entry multiple times, we stay on the P4 table until the address's P1 index becomes the actual P4 index.
 
 To access the P4 table itself, we loop once more and thus never leave the frame:
 
-![access P4 table through recursive paging](/images/recursive_mapping_access_p4.svg)
+![access P4 table through recursive paging](recursive_mapping_access_p4.svg)
 
 So we can access and modify page tables of all levels by just setting one P4 entry once. Most work is done by the CPU, we just the recursive entry to remove one or more translation levels. It may seem a bit strange at first, but it's a clean and simple solution once you wrapped your head around it.
 

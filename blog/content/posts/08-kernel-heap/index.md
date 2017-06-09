@@ -622,25 +622,25 @@ We will choose another solution with different tradoffs. It's not clearly “bet
 
 A freed memory block is not used anymore and no one needs the stored information. It is still mapped to a virtual address and backed by a physical page. So we just store the information about the freed block _in the block itself_.  We keep a pointer to the first block and store a pointer to the next block in each block. Thus, we create a single linked list:
 
-![Linked List Allocator](/images/linked-list-allocator/overview.svg)
+![Linked List Allocator](overview.svg)
 
 In the following, we call a freed block a _hole_. Each hole stores its size and a pointer to the next hole. If a hole is larger than needed, we leave the remaining memory unused. By storing a pointer to the first hole, we are able to traverse the complete list.
 
 #### Initialization
 When the heap is created, all of its memory is unused. Thus, it forms a single large hole:
 
-![Heap Initialization](/images/linked-list-allocator/initialization.svg)
+![Heap Initialization](initialization.svg)
 
 The optional pointer to the next hole is set to `None`.
 
 #### Allocation
 In order to allocate a block of memory, we need to find a hole that satisfies the size and alignment requirements. If the found hole is larger than required, we split it into two smaller holes. For example, when we allocate a 24 byte block right after initialization, we split the single hole into a hole of size 24 and a hole with the remaining size:
 
-![split hole](/images/linked-list-allocator/split-hole.svg)
+![split hole](split-hole.svg)
 
 Then we use the new 24 byte hole to perform the allocation:
 
-![24 bytes allocated](/images/linked-list-allocator/allocate.svg)
+![24 bytes allocated](allocate.svg)
 
 To find a suitable hole, we can use several search strategies:
 
@@ -659,11 +659,11 @@ However, both best fit and worst fit have a significant problem: They need to sc
 #### Deallocation
 To deallocate a block of memory, we can just insert its corresponding hole somewhere into the list. However, we need to merge adjacent holes. Otherwise, we are unable to reuse the freed memory for larger allocations. For example:
 
-![deallocate memory, which leads to adjacent holes](/images/linked-list-allocator/deallocate.svg)
+![deallocate memory, which leads to adjacent holes](deallocate.svg)
 
 In order to use these adjacent holes for a large allocation, we need to merge them to a single large hole first:
 
-![merge adjacent holes and allocate large block](/images/linked-list-allocator/merge-holes-and-allocate.svg)
+![merge adjacent holes and allocate large block](merge-holes-and-allocate.svg)
 
 The easiest way to ensure that adjacent holes are always merged, is to keep the hole list sorted by address. Thus, we only need to check the predecessor and the successor in the list when we free a memory block. If they are adjacent to the freed block, we merge the corresponding holes. Else, we insert the freed block as a new hole at the correct position.
 
@@ -677,7 +677,7 @@ The detailed implementation would go beyond the scope of this post, since it con
 I created the [linked_list_allocator] crate to handle all of these cases. It consists of a [Heap struct] that provides an `allocate_first_fit` and a `deallocate` method. If you are interested in the implementation details, check out the [source code][linked_list_allocator source].
 
 [linked_list_allocator]: https://crates.io/crates/linked_list_allocator
-[Heap struct]: http://phil-opp.github.io/linked-list-allocator/linked_list_allocator/struct.Heap.html
+[Heap struct]: http://phil-opp.github.io/linked_list_allocator/struct.Heap.html
 [linked_list_allocator source]: https://github.com/phil-opp/linked-list-allocator
 
 So we just need to implement Rust's allocation modules and integrate it into our kernel. We start by creating a new `hole_list_allocator` crate inside the `libs` directory:

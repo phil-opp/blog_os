@@ -160,7 +160,7 @@ Since we don't know when an exception occurs, we can't backup any registers befo
 ### The Exception Stack Frame
 On a normal function call (using the `call` instruction), the CPU pushes the return address before jumping to the target function. On function return (using the `ret` instruction), the CPU pops this return address and jumps to it. So the stack frame of a normal function call looks like this:
 
-![function stack frame](images/function-stack-frame.svg)
+![function stack frame](function-stack-frame.svg)
 
 For exception and interrupt handlers, however, pushing a return address would not suffice, since interrupt handlers often run in a different context (stack pointer, CPU flags, etc.). Instead, the CPU performs the following steps when an interrupt occurs:
 
@@ -176,7 +176,7 @@ For exception and interrupt handlers, however, pushing a return address would no
 
 So the _exception stack frame_ looks like this:
 
-![exception stack frame](images/exception-stack-frame.svg)
+![exception stack frame](exception-stack-frame.svg)
 
 In the `x86_64` crate, the exception stack frame is represented by the [`ExceptionStackFrame`] struct. It is passed to interrupt handlers as `&mut` and can be used to retrieve additional information about the exception's cause. The struct contains no error code field, since only some few exceptions push an error code. These exceptions use the separate [`HandlerFuncWithErrCode`] function type, which has an additional `error_code` argument.
 
@@ -406,7 +406,7 @@ pub extern "C" fn rust_main(...) {
 
 When we run it in QEMU now (using `make run`), we see the following:
 
-![QEMU printing `EXCEPTION: BREAKPOINT` and the exception stack frame](images/qemu-breakpoint-exception.png)
+![QEMU printing `EXCEPTION: BREAKPOINT` and the exception stack frame](qemu-breakpoint-exception.png)
 
 It works! The CPU successfully invokes our breakpoint handler, which prints the message, and then returns back to the `rust_main` function, where the `It did not crash!` message is printed.
 
