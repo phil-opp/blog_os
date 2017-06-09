@@ -3,10 +3,6 @@ title = "A minimal x86 kernel"
 order = 1
 url = "multiboot-kernel"
 date = "2015-08-18"
-aliases = [
-    "/2015/08/18/multiboot-kernel/",
-    "/rust-os/multiboot-kernel.html",
-]
 +++
 
 This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and print `OK` to the screen. The following blog posts we will extend it using the [Rust] programming language.

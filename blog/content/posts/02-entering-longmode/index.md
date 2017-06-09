@@ -4,10 +4,6 @@ order = 2
 url = "entering-longmode"
 date = "2015-08-25"
 updated = "2015-10-29"
-aliases = [
-    "/2015/08/25/entering-longmode/",
-    "/rust-os/entering-longmode.html",
-]
 +++
 
 In the [previous post] we created a minimal multiboot kernel. It just prints `OK` and hangs. The goal is to extend it and call 64-bit [Rust] code. But the CPU is currently in [protected mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to set up _Paging_ and switch to the 64-bit [long mode] first.

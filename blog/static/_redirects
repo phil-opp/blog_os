@@ -1,0 +1,10 @@
+# Redirects from what the browser requests to what we serve
+/2015/08/18/multiboot-kernel/               /multiboot-kernel/
+/rust-os/multiboot-kernel.html              /multiboot-kernel/
+/2015/08/25/entering-longmode/              /entering-longmode/
+/rust-os/entering-longmode.html             /entering-longmode/
+/2015/09/02/setup-rust/                     /set-up-rust/
+/setup-rust.html                            /set-up-rust/
+/rust-os/setup-rust.html                    /set-up-rust/
+/2015/10/23/printing-to-screen/             /printing-to-screen/
+/rust-os/printing-to-screen.html            /printing-to-screen/
