@@ -494,7 +494,7 @@ _Congratulations_! You have successfully wrestled through this CPU configuration
 #### One Last Thing
 Above, we reloaded the code segment register `cs` with the new GDT offset. However, the data segment registers `ss`, `ds`, `es`, `fs`, and `gs` still contain the data segment offsets of the old GDT. This isn't necessarily bad, since they're ignored by almost all instructions in 64-bit mode. However, there are a few instructions that expect a valid data segment descriptor _or the null descriptor_ in those registers. An example is the the [iretq] instruction that we'll need in the [_Returning from Exceptions_] post.
 
-[iretq]: ./extra/handling-exceptions-with-naked-fns/03-returning-from-exceptions/index.md#the-iretq-instruction
+[iretq]: ./extra/handling-exceptions-with-naked-fns/03-returning-from-exceptions/index.md#the
 [_Returning from Exceptions_]: ./extra/handling-exceptions-with-naked-fns/03-returning-from-exceptions/index.md
 
 To avoid future problems, we reload all data segment registers with null:

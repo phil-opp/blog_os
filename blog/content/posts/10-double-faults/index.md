@@ -9,12 +9,11 @@ In this post we explore double faults in detail. We also set up an _Interrupt St
 
 <!-- more --><aside id="toc"></aside>
 
-As always, the complete source code is available on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a [comment section] at the end of this page.
+As always, the complete source code is available on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a comment section at the end of this page.
 
 [Github]: https://github.com/phil-opp/blog_os/tree/post_10
 [issues]: https://github.com/phil-opp/blog_os/issues
 [gitter chat]: https://gitter.im/phil-opp/blog_os
-[comment section]: #disqus_thread
 
 ## What is a Double Fault?
 In simplified terms, a double fault is a special exception that occurs when the CPU fails to invoke an exception handler. For example, it occurs when a page fault is triggered but there is no page fault handler registered in the [Interrupt Descriptor Table][IDT] (IDT). So it's kind of similar to catch-all blocks in programming languages with exceptions, e.g. `catch(...)` in C++ or `catch(Exception e)` in Java or C#.

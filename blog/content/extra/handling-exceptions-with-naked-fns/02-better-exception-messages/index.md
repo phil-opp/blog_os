@@ -10,14 +10,16 @@ In this post, we explore exceptions in more detail. Our goal is to print additio
 
 <!-- more --><aside id="toc"></aside>
 
-As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a [comment section] at the end of this page.
+As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a comment section at the end of this page.
 
 [Github]: https://github.com/phil-opp/blog_os/tree/better_exception_messages
 [issues]: https://github.com/phil-opp/blog_os/issues
 [gitter chat]: https://gitter.im/phil-opp/blog_os
-[comment section]: #disqus_thread
 
-> **Note**: This post describes how to handle exceptions using naked functions (see <a href="/handling-exceptions-with-naked-fns.html">“Handling Exceptions with Naked Functions”</a> for an overview). Our new way of handling exceptions can be found in the <a href="/handling-exceptions.html">“Handling Exceptions”</a> post.
+> **Note**: This post describes how to handle exceptions using naked functions (see [“Handling Exceptions with Naked Functions”] for an overview). Our new way of handling exceptions can be found in the [“Handling Exceptions”] post.
+
+[“Handling Exceptions with Naked Functions”]: ./extra/handling-exceptions-with-naked-fns/_index.md
+[“Handling Exceptions”]: ./posts/09-handling-exceptions/index.md
 
 ## Exceptions in Detail
 An exception signals that something is wrong with the currently-executed instruction. Whenever an exception occurs, the CPU interrupts its current work and starts an internal exception routine.

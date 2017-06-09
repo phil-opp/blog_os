@@ -15,7 +15,10 @@ As always, the complete source code is on [Github]. Please file [issues] for any
 [Github]: https://github.com/phil-opp/blog_os/tree/catching_exceptions
 [issues]: https://github.com/phil-opp/blog_os/issues
 
-> **Note**: This post describes how to handle exceptions using naked functions (see <a href="/handling-exceptions-with-naked-fns.html">“Handling Exceptions with Naked Functions”</a> for an overview). Our new way of handling exceptions can be found in the <a href="/handling-exceptions.html">“Handling Exceptions”</a> post.
+> **Note**: This post describes how to handle exceptions using naked functions (see [“Handling Exceptions with Naked Functions”] for an overview). Our new way of handling exceptions can be found in the [“Handling Exceptions”] post.
+
+[“Handling Exceptions with Naked Functions”]: ./extra/handling-exceptions-with-naked-fns/_index.md
+[“Handling Exceptions”]: ./posts/09-handling-exceptions/index.md
 
 ## Exceptions
 An exception signals that something is wrong with the current instruction. For example, the CPU issues an exception if the current instruction tries to divide by 0. When an exception occurs, the CPU interrupts its current work and immediately calls a specific exception handler function, depending on the exception type.
