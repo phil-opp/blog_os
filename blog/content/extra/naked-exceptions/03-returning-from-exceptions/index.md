@@ -18,7 +18,7 @@ As always, the complete source code is on [Github]. Please file [issues] for any
 
 > **Note**: This post describes how to handle exceptions using naked functions (see [“Handling Exceptions with Naked Functions”] for an overview). Our new way of handling exceptions can be found in the [“Handling Exceptions”] post.
 
-[“Handling Exceptions with Naked Functions”]: ./extra/handling-exceptions-with-naked-fns/_index.md
+[“Handling Exceptions with Naked Functions”]: ./extra/naked-exceptions/_index.md
 [“Handling Exceptions”]: ./posts/09-handling-exceptions/index.md
 
 ## Introduction
@@ -301,7 +301,7 @@ Unfortunately, Rust does not support such a calling convention. It was [proposed
 
 [interrupt calling conventions]: https://github.com/rust-lang/rfcs/pull/1275
 [Naked functions]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
-[naked fn post]: ./extra/handling-exceptions-with-naked-fns/02-better-exception-messages/index.md#naked-functions
+[naked fn post]: ./extra/naked-exceptions/02-better-exception-messages/index.md#naked-functions
 
 ### A naked wrapper function
 

@@ -18,7 +18,7 @@ As always, the complete source code is on [Github]. Please file [issues] for any
 
 > **Note**: This post describes how to handle exceptions using naked functions (see [“Handling Exceptions with Naked Functions”] for an overview). Our new way of handling exceptions can be found in the [“Handling Exceptions”] post.
 
-[“Handling Exceptions with Naked Functions”]: ./extra/handling-exceptions-with-naked-fns/_index.md
+[“Handling Exceptions with Naked Functions”]: ./extra/naked-exceptions/_index.md
 [“Handling Exceptions”]: ./posts/09-handling-exceptions/index.md
 
 ## Exceptions in Detail
