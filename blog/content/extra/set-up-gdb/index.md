@@ -1,6 +1,6 @@
 +++
 title = "Set Up GDB"
-description = ""
+template = "plain.html"
 url = "set-up-gdb"
 +++
 

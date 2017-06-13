@@ -1,6 +1,6 @@
 +++
 title = "Cross Compile Binutils"
-description = ""
+template = "plain.html"
 url = "cross-compile-binutils"
 +++
 

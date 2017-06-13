@@ -1,6 +1,6 @@
 +++
 title = "Cross Compiling: libcore"
-description = ""
+template = "plain.html"
 url = "cross-compile-libcore"
 +++
 

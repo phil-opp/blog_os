@@ -1,6 +1,7 @@
 +++
 title = "Contact"
 url = "contact"
+template = "plain.html"
 +++
 
 Philipp Oppermann
