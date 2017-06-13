@@ -4,7 +4,10 @@
 
 {% block main %}
     <h1>{{ page.title }}</h1>
-    <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">{{ page.date | date(format="%b %d, %Y") }}</time>
+    <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
+        {{ page.date | date(format="%b %d, %Y") }}
+        {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
+    </time>
     {{ page.content | safe }}
 {% endblock main %}
 

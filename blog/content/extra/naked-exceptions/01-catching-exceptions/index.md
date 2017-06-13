@@ -3,6 +3,7 @@ title = "Catching Exceptions"
 order = 1
 url = "catching-exceptions"
 date = "2016-05-28"
+[extra]
 updated = "2016-06-25"
 +++
 
