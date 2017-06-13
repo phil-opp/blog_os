@@ -2,6 +2,7 @@
 title = "Set Up GDB"
 template = "plain.html"
 url = "set-up-gdb"
+order = 4
 +++
 
 There are a lot of things that can go wrong when developing an OS. So it's a good idea to add a debugger to our toolset, which allows us to set breakpoints and examine variables. We will use [GDB](https://www.gnu.org/software/gdb/) as QEMU supports it out of the box.
