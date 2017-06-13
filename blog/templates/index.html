@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% import "macros.html" as macros %}
+
+{% block title %}{{ config.title }}{% endblock title %}
+
+{% block main %}
+{% set posts = sections.posts %}
+<div class="front-page-introduction">
+    <p>
+        This blog series creates a small operating system in the
+        <a href="https://www.rust-lang.org/">Rust programming language</a>. Each post is a small tutorial and includes all
+        needed code, so you can follow along if you like. The source code is also available in the corresponding
+        <a href="https://github.com/phil-opp/blog_os">Github repository</a>.
+    </p>
+    <p>Latest post:
+        {% set latest_post = posts.pages|reverse|last %}
+        <strong><a href="{{ latest_post.path }}">{{ latest_post.title }}</a></strong>
+    </p>
+</div>
+
+<div id="bare-bones" class="post-category bare-bones">Bare Bones</div>
+<div class="posts bare-bones">
+    {{ macros::post_link(page=posts.pages.9) }}
+    {{ macros::post_link(page=posts.pages.8) }}
+    {{ macros::post_link(page=posts.pages.7) }}
+    {{ macros::post_link(page=posts.pages.6) }}
+</div>
+
+<div id="memory-management" class="post-category memory-management">Memory Management</div>
+<div class="posts memory-management">
+    {{ macros::post_link(page=posts.pages.5) }}
+    {{ macros::post_link(page=posts.pages.4) }}
+    {{ macros::post_link(page=posts.pages.3) }}
+    {{ macros::post_link(page=posts.pages.2) }}
+</div>
+
+<div id="interrupts" class="post-category exceptions">Exceptions</div>
+<div class="posts exceptions">
+    {{ macros::post_link(page=posts.pages.1) }}
+    {{ macros::post_link(page=posts.pages.0) }}
+</div>
+
+<hr>
+{% set extra = sections.extra %}
+<h1>{{ extra.title }}</h1>
+<ul>
+    {% for subsection in extra.subsections|reverse %}
+        <li><a href="{{ subsection.path }}">{{ subsection.title }}</a></li>
+    {% endfor %}
+    {% for page in extra.pages|reverse %}
+        <li><a href="{{ page.path }}">{{ page.title }}</a></li>
+    {% endfor %}
+</ul>
+
+<aside id="recent-updates">
+    <h1>Recent Updates</h1>
+    {% include "recent-updates.html" %}
+</aside>
+
+{% endblock main %}

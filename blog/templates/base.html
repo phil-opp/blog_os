@@ -1,0 +1,60 @@
+<!doctype html>
+
+<html lang="{{ config.language_code }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{{ config.description }}">
+    <meta name="author" content="{{ config.extra.author.name }}">
+
+    <link href="/css/poole.css" rel="stylesheet">
+    <link href="/css/main.css" rel="stylesheet">
+
+    <script src="/js/toc.min.js"></script>
+    <script src="/js/main.js"></script>
+
+    <title>{% block title %}{% endblock title %}</title>
+</head>
+
+<body>
+    <div class="container content">
+        <header class="masthead">
+            <h3 class="masthead-title">
+                <a href="/" title="Home">{{ config.title }}</a>
+                <small>{{ config.extra.subtitle }}</small>
+            </h3>
+        </header>
+
+        <main>{% block main %}{% endblock main %}</main>
+
+        <div>{% block after_main %}{% endblock after_main %}</div>
+
+        <footer class="footer">
+            <hr>
+            <small>
+                &copy; <time datetime="2017">2017</time>. All rights reserved.
+                <a href="{{ get_url(link="pages/contact.md") }}">Contact</a>
+            </small>
+        </footer>
+    </div>
+
+    <!-- Piwik -->
+    <script type="text/javascript">
+    var _paq = _paq || [];
+    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+    _paq.push(['trackPageView']);
+    _paq.push(['enableLinkTracking']);
+    (function() {
+        var u="//analytics.phil-opp.com/";
+        _paq.push(['setTrackerUrl', u+'piwik.php']);
+        _paq.push(['setSiteId', '1']);
+        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+        g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
+    })();
+    </script>
+    <!-- End Piwik Code -->
+</body>
+
+</html>

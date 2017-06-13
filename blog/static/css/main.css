@@ -41,6 +41,10 @@ main img {
   margin-right: -0.5rem;
 }
 
+.posts.neutral {
+  border: 2px solid #999;
+}
+
 .posts.bare-bones {
   border: 2px solid #66f;
 }
@@ -195,4 +199,23 @@ aside#recent-updates time {
 
 a code {
   color: #268bd2;
+}
+
+a.gutenberg-anchor {
+  opacity: 0;
+  position: absolute;
+  margin-left: -1.5em;
+  padding-right: 1em;
+  font-size: 0.6em;
+  vertical-align: baseline;
+  line-height: 2em;
+}
+
+:hover>a.gutenberg-anchor {
+  opacity: 1;
+  text-decoration: none;
+}
+
+a.gutenberg-anchor:hover {
+  text-decoration: none;
 }

@@ -1,29 +1,10 @@
-baseurl = "http://os.phil-opp.com/"
-languageCode = "en-us"
 title = "Writing an OS in Rust"
-rssURI = "atom.xml"
-copyright = "&copy; 2016. All rights reserved."
+base_url = "https://os.phil-opp.com"
 
-PygmentsCodeFences = true
-pygmentsuseclasses = true
+highlight_code = true
+highlight_theme = "monokai"
+generate_rss = true
 
-uglyurls = true
-
-disableKinds = ["section", "taxonomy", "taxonomyTerm"]
-
-[author]
-  name = "Philipp Oppermann"
-  email = "dev@phil-opp.com"
-
-[params]
-  subtitle = "Philipp Oppermann's blog"
-  date_format = "Jan 2, 2006"
-
-[permalinks]
-  post = "/:slug.html"
-  old-posts = "/:slug.html"
-  additional-resource = "/:filename.html"
-  page = "/:filename.html"
-
-[blackfriday]
-  plainIDAnchors = true
+[extra]
+subtitle = "Philipp Oppermann's blog"
+author = { name = "Philipp Oppermann" }

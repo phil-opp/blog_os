@@ -4,9 +4,9 @@
 import io
 from github import Github
 
-g = Github("e62e298b2a46ca5cf474cb9a4c0c1bc950b09d46")
+g = Github()
 
-with io.open("layouts/partials/recent-updates.html", 'w', encoding='utf8') as recent_updates:
+with io.open("templates/recent-updates.html", 'w', encoding='utf8') as recent_updates:
     recent_updates.truncate()
 
     recent_updates.write(u"<ul>\n")

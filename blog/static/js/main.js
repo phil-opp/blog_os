@@ -4,10 +4,12 @@ window.onload = function() {
   if (container != null) {
     var toc = initTOC({
         selector: 'h2, h3',
-        scope: '.post',
+        scope: 'main',
         overwrite: false,
         prefix: 'toc'
     });
+
+    toc.innerHTML = toc.innerHTML.split("🔗\n").join("");
 
     var heading = document.createElement("H2");
     var heading_text = document.createTextNode("Table of Contents");
