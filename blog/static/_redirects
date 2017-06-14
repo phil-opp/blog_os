@@ -10,3 +10,4 @@
 /rust-os/printing-to-screen.html            /printing-to-screen/
 /atom.xml                                   /rss.xml
 /modifying-page-tables.html                 /page-tables/
+/handling-exceptions-with-naked-fns.html    /extra/naked-exceptions/
