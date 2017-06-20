@@ -31,9 +31,11 @@ pub struct Page {
 
 impl Page {
     pub fn containing_address(address: VirtualAddress) -> Page {
-        assert!(address < 0x0000_8000_0000_0000 || address >= 0xffff_8000_0000_0000,
-                "invalid address: 0x{:x}",
-                address);
+        assert!(
+            address < 0x0000_8000_0000_0000 || address >= 0xffff_8000_0000_0000,
+            "invalid address: 0x{:x}",
+            address
+        );
         Page { number: address / PAGE_SIZE }
     }
 
@@ -113,11 +115,13 @@ impl ActivePageTable {
         ActivePageTable { mapper: Mapper::new() }
     }
 
-    pub fn with<F>(&mut self,
-                   table: &mut InactivePageTable,
-                   temporary_page: &mut temporary_page::TemporaryPage, // new
-                   f: F)
-        where F: FnOnce(&mut Mapper)
+    pub fn with<F>(
+        &mut self,
+        table: &mut InactivePageTable,
+        temporary_page: &mut temporary_page::TemporaryPage, // new
+        f: F,
+    ) where
+        F: FnOnce(&mut Mapper),
     {
         use x86_64::registers::control_regs;
         use x86_64::instructions::tlb;
@@ -162,10 +166,11 @@ pub struct InactivePageTable {
 }
 
 impl InactivePageTable {
-    pub fn new(frame: Frame,
-               active_table: &mut ActivePageTable,
-               temporary_page: &mut TemporaryPage)
-               -> InactivePageTable {
+    pub fn new(
+        frame: Frame,
+        active_table: &mut ActivePageTable,
+        temporary_page: &mut TemporaryPage,
+    ) -> InactivePageTable {
         {
             let table = temporary_page.map_table_frame(frame.clone(), active_table);
             table.zero();
@@ -178,7 +183,8 @@ impl InactivePageTable {
 }
 
 pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation) -> ActivePageTable
-    where A: FrameAllocator
+where
+    A: FrameAllocator,
 {
     let mut temporary_page = TemporaryPage::new(Page { number: 0xcafebabe }, allocator);
 
@@ -189,7 +195,9 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation) -> Ac
     };
 
     active_table.with(&mut new_table, &mut temporary_page, |mapper| {
-        let elf_sections_tag = boot_info.elf_sections_tag().expect("Memory map tag required");
+        let elf_sections_tag = boot_info
+            .elf_sections_tag()
+            .expect("Memory map tag required");
 
         // identity map the allocated kernel sections
         for section in elf_sections_tag.sections() {
@@ -198,11 +206,15 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation) -> Ac
                 continue;
             }
 
-            assert!(section.addr as usize % PAGE_SIZE == 0,
-                    "sections need to be page aligned");
-            println!("mapping section at addr: {:#x}, size: {:#x}",
-                     section.addr,
-                     section.size);
+            assert!(
+                section.addr as usize % PAGE_SIZE == 0,
+                "sections need to be page aligned"
+            );
+            println!(
+                "mapping section at addr: {:#x}, size: {:#x}",
+                section.addr,
+                section.size
+            );
 
             let flags = EntryFlags::from_elf_section_flags(section);
 

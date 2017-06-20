@@ -43,14 +43,16 @@ pub fn init(memory_controller: &mut MemoryController) {
     use x86_64::instructions::tables::load_tss;
     use x86_64::VirtualAddress;
 
-    let double_fault_stack =
-        memory_controller.alloc_stack(1).expect("could not allocate double fault stack");
+    let double_fault_stack = memory_controller
+        .alloc_stack(1)
+        .expect("could not allocate double fault stack");
 
     let tss = TSS.call_once(|| {
-                                let mut tss = TaskStateSegment::new();
-                                tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX] = VirtualAddress(double_fault_stack.top());
-                                tss
-                            });
+        let mut tss = TaskStateSegment::new();
+        tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX] =
+            VirtualAddress(double_fault_stack.top());
+        tss
+    });
 
     let mut code_selector = SegmentSelector(0);
     let mut tss_selector = SegmentSelector(0);
@@ -78,29 +80,41 @@ extern "x86-interrupt" fn divide_by_zero_handler(stack_frame: &mut ExceptionStac
 }
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut ExceptionStackFrame) {
-    println!("\nEXCEPTION: BREAKPOINT at {:#x}\n{:#?}",
-             stack_frame.instruction_pointer,
-             stack_frame);
+    println!(
+        "\nEXCEPTION: BREAKPOINT at {:#x}\n{:#?}",
+        stack_frame.instruction_pointer,
+        stack_frame
+    );
 }
 
 extern "x86-interrupt" fn invalid_opcode_handler(stack_frame: &mut ExceptionStackFrame) {
-    println!("\nEXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
-             stack_frame.instruction_pointer,
-             stack_frame);
+    println!(
+        "\nEXCEPTION: INVALID OPCODE at {:#x}\n{:#?}",
+        stack_frame.instruction_pointer,
+        stack_frame
+    );
     loop {}
 }
 
-extern "x86-interrupt" fn page_fault_handler(stack_frame: &mut ExceptionStackFrame, error_code: PageFaultErrorCode) {
+extern "x86-interrupt" fn page_fault_handler(
+    stack_frame: &mut ExceptionStackFrame,
+    error_code: PageFaultErrorCode,
+) {
     use x86_64::registers::control_regs;
-    println!("\nEXCEPTION: PAGE FAULT while accessing {:#x}\nerror code: \
-                                  {:?}\n{:#?}",
-             control_regs::cr2(),
-             error_code,
-             stack_frame);
+    println!(
+        "\nEXCEPTION: PAGE FAULT while accessing {:#x}\nerror code: \
+         {:?}\n{:#?}",
+        control_regs::cr2(),
+        error_code,
+        stack_frame
+    );
     loop {}
 }
 
-extern "x86-interrupt" fn double_fault_handler(stack_frame: &mut ExceptionStackFrame, _error_code: u64) {
+extern "x86-interrupt" fn double_fault_handler(
+    stack_frame: &mut ExceptionStackFrame,
+    _error_code: u64,
+) {
     println!("\nEXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
     loop {}
 }

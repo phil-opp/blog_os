@@ -32,11 +32,8 @@ impl Mapper {
 
     pub fn translate(&self, virtual_address: VirtualAddress) -> Option<PhysicalAddress> {
         let offset = virtual_address % PAGE_SIZE;
-        self.translate_page(Page::containing_address(virtual_address)).map(|frame| {
-                                                                               frame.number *
-                                                                               PAGE_SIZE +
-                                                                               offset
-                                                                           })
+        self.translate_page(Page::containing_address(virtual_address))
+            .map(|frame| frame.number * PAGE_SIZE + offset)
     }
 
     pub fn translate_page(&self, page: Page) -> Option<Frame> {
@@ -51,9 +48,9 @@ impl Mapper {
                         // address must be 1GiB aligned
                         assert!(start_frame.number % (ENTRY_COUNT * ENTRY_COUNT) == 0);
                         return Some(Frame {
-                                        number: start_frame.number + page.p2_index() * ENTRY_COUNT +
-                                                page.p1_index(),
-                                    });
+                            number: start_frame.number + page.p2_index() * ENTRY_COUNT +
+                                page.p1_index(),
+                        });
                     }
                 }
                 if let Some(p2) = p3.next_table(page.p3_index()) {
@@ -78,7 +75,8 @@ impl Mapper {
     }
 
     pub fn map_to<A>(&mut self, page: Page, frame: Frame, flags: EntryFlags, allocator: &mut A)
-        where A: FrameAllocator
+    where
+        A: FrameAllocator,
     {
         let mut p3 = self.p4_mut().next_table_create(page.p4_index(), allocator);
         let mut p2 = p3.next_table_create(page.p3_index(), allocator);
@@ -89,21 +87,24 @@ impl Mapper {
     }
 
     pub fn map<A>(&mut self, page: Page, flags: EntryFlags, allocator: &mut A)
-        where A: FrameAllocator
+    where
+        A: FrameAllocator,
     {
         let frame = allocator.allocate_frame().expect("out of memory");
         self.map_to(page, frame, flags, allocator)
     }
 
     pub fn identity_map<A>(&mut self, frame: Frame, flags: EntryFlags, allocator: &mut A)
-        where A: FrameAllocator
+    where
+        A: FrameAllocator,
     {
         let page = Page::containing_address(frame.start_address());
         self.map_to(page, frame, flags, allocator)
     }
 
     pub fn unmap<A>(&mut self, page: Page, allocator: &mut A)
-        where A: FrameAllocator
+    where
+        A: FrameAllocator,
     {
         use x86_64::VirtualAddress;
         use x86_64::instructions::tlb;
