@@ -23,31 +23,41 @@ pub fn init(boot_info: &BootInformation) -> MemoryController {
     assert_has_not_been_called!("memory::init must be called only once");
 
     let memory_map_tag = boot_info.memory_map_tag().expect("Memory map tag required");
-    let elf_sections_tag = boot_info.elf_sections_tag().expect("Elf sections tag required");
+    let elf_sections_tag = boot_info
+        .elf_sections_tag()
+        .expect("Elf sections tag required");
 
-    let kernel_start = elf_sections_tag.sections()
+    let kernel_start = elf_sections_tag
+        .sections()
         .filter(|s| s.is_allocated())
         .map(|s| s.addr)
         .min()
         .unwrap();
-    let kernel_end = elf_sections_tag.sections()
+    let kernel_end = elf_sections_tag
+        .sections()
         .filter(|s| s.is_allocated())
         .map(|s| s.addr + s.size)
         .max()
         .unwrap();
 
-    println!("kernel start: {:#x}, kernel end: {:#x}",
-             kernel_start,
-             kernel_end);
-    println!("multiboot start: {:#x}, multiboot end: {:#x}",
-             boot_info.start_address(),
-             boot_info.end_address());
+    println!(
+        "kernel start: {:#x}, kernel end: {:#x}",
+        kernel_start,
+        kernel_end
+    );
+    println!(
+        "multiboot start: {:#x}, multiboot end: {:#x}",
+        boot_info.start_address(),
+        boot_info.end_address()
+    );
 
-    let mut frame_allocator = AreaFrameAllocator::new(kernel_start as usize,
-                                                      kernel_end as usize,
-                                                      boot_info.start_address(),
-                                                      boot_info.end_address(),
-                                                      memory_map_tag.memory_areas());
+    let mut frame_allocator = AreaFrameAllocator::new(
+        kernel_start as usize,
+        kernel_end as usize,
+        boot_info.start_address(),
+        boot_info.end_address(),
+        memory_map_tag.memory_areas(),
+    );
 
     let mut active_table = paging::remap_the_kernel(&mut frame_allocator, boot_info);
 
@@ -83,9 +93,11 @@ pub struct MemoryController {
 
 impl MemoryController {
     pub fn alloc_stack(&mut self, size_in_pages: usize) -> Option<Stack> {
-        let &mut MemoryController { ref mut active_table,
-                                    ref mut frame_allocator,
-                                    ref mut stack_allocator } = self;
+        let &mut MemoryController {
+            ref mut active_table,
+            ref mut frame_allocator,
+            ref mut stack_allocator,
+        } = self;
         stack_allocator.alloc_stack(active_table, frame_allocator, size_in_pages)
     }
 }

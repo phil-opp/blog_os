@@ -12,11 +12,12 @@ impl StackAllocator {
 }
 
 impl StackAllocator {
-    pub fn alloc_stack<FA: FrameAllocator>(&mut self,
-                                           active_table: &mut ActivePageTable,
-                                           frame_allocator: &mut FA,
-                                           size_in_pages: usize)
-                                           -> Option<Stack> {
+    pub fn alloc_stack<FA: FrameAllocator>(
+        &mut self,
+        active_table: &mut ActivePageTable,
+        frame_allocator: &mut FA,
+        size_in_pages: usize,
+    ) -> Option<Stack> {
         if size_in_pages == 0 {
             return None; /* a zero sized stack makes no sense */
         }
