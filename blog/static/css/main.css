@@ -1,6 +1,7 @@
 
 .masthead-title small {
-   margin-left: 1rem;
+  margin-left: 1rem;
+  white-space: nowrap;
 }
 
 .front-page-introduction {
