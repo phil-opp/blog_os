@@ -655,23 +655,22 @@ error: aborting due to previous error
 ```
 We see that `xargo` now compiles the `core` crate in release mode. Then it starts the normal cargo build. Cargo then recompiles all dependencies, since it needs to generate different code for the new target.
 
-However, the build still fails. The reason is that xargo only installs `core` by default, but we also need the `alloc` and `collections` crates. We can enable them by creating a file named `Xargo.toml` with the following contents:
+However, the build still fails. The reason is that xargo only installs `core` by default, but we also need the `alloc` crate. We can enable it by creating a file named `Xargo.toml` with the following contents:
 
 ```toml
 # Xargo.toml
 
 [target.x86_64-blog_os.dependencies]
-collections = {}
+alloc = {}
 ```
 
-Now xargo compiles `alloc` and `collections`, too:
+Now xargo compiles `alloc`, too:
 
 ```
 > make run
    Compiling core v0.0.0 (file:///…/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src/libcore)
    Compiling std_unicode v0.0.0 (file:///…/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src/libstd_unicode)
    Compiling alloc v0.0.0 (file:///…/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src/liballoc)
-   Compiling collections v0.0.0 (file:///…/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src/libcollections)
     Finished release [optimized] target(s) in 28.84 secs
    Compiling blog_os v0.1.0 (file:///…/Documents/blog_os/master)
 warning: unused variable: `allocator` […]

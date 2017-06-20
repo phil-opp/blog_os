@@ -9,7 +9,7 @@
 
 #![feature(lang_items)]
 #![feature(const_fn, unique)]
-#![feature(alloc, collections)]
+#![feature(alloc)]
 #![feature(asm)]
 #![feature(naked_functions)]
 #![feature(abi_x86_interrupt)]
@@ -29,9 +29,8 @@ extern crate bit_field;
 extern crate lazy_static;
 
 extern crate hole_list_allocator;
-extern crate alloc;
 #[macro_use]
-extern crate collections;
+extern crate alloc;
 
 #[macro_use]
 mod vga_buffer;

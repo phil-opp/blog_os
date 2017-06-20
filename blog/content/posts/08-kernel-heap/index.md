@@ -5,12 +5,11 @@ url = "kernel-heap"
 date = "2016-04-11"
 +++
 
-In the previous posts we have created a [frame allocator] and a [page table module]. Now we are ready to create a kernel heap and a memory allocator. Thus, we will unlock `Box`, `Vec`, `BTreeMap`, and the rest of the [alloc] and [collections] crates.
+In the previous posts we have created a [frame allocator] and a [page table module]. Now we are ready to create a kernel heap and a memory allocator. Thus, we will unlock `Box`, `Vec`, `BTreeMap`, and the rest of the [alloc] crate.
 
 [frame allocator]: ./posts/05-allocating-frames/index.md
 [page table module]: ./posts/06-page-tables/index.md
 [alloc]: https://doc.rust-lang.org/nightly/alloc/index.html
-[collections]: https://doc.rust-lang.org/nightly/collections/index.html
 
 <!-- more --><aside id="toc"></aside>
 
@@ -292,19 +291,18 @@ Additionally, we need to tell cargo where our `bump_allocator` crate lives:
 path = "libs/bump_allocator"
 ```
 
-Now we're able to import the `alloc` and `collections` crates in order to unlock `Box`, `Vec`, `BTreeMap`, and friends:
+Now we're able to import the `alloc` crate in order to unlock `Box`, `Vec`, `BTreeMap`, and friends:
 
 ```rust
 // in src/lib.rs of our main project
 
-#![feature(alloc, collections)]
+#![feature(alloc)]
 
 extern crate bump_allocator;
-extern crate alloc;
 #[macro_use]
-extern crate collections;
+extern crate alloc;
 ```
-The `collections` crate provides the [format!] and [vec!] macros, so we use `#[macro_use]` to import them.
+The `alloc` crate provides the [format!] and [vec!] macros, so we use `#[macro_use]` to import them.
 
 [format!]: //doc.rust-lang.org/nightly/collections/macro.format!.html
 [vec!]: https://doc.rust-lang.org/nightly/collections/macro.vec!.html
@@ -319,16 +317,16 @@ error[E0463]: can't find crate for `alloc`
    | ^^^^^^^^^^^^^^^^^^^ can't find crate
 ```
 
-The problem is that [`xargo`] only cross compiles `libcore` by default. To also cross compile the `alloc` and `collections` crates, we need to create a file named `Xargo.toml` in our project root (right next to the `Cargo.toml`) with the following content:
+The problem is that [`xargo`] only cross compiles `libcore` by default. To also cross compile the `alloc` crate, we need to create a file named `Xargo.toml` in our project root (right next to the `Cargo.toml`) with the following content:
 
 [`xargo`]: https://github.com/japaric/xargo
 
 ```toml
 [target.x86_64-blog_os.dependencies]
-collections = {}
+alloc = {}
 ```
 
-This instructs `xargo` that we also need `collections` and `alloc` (a dependency of `collections`). Now it should compile again.
+This instructs `xargo` that we also need `alloc`. Now it should compile again.
 
 ### Testing
 
@@ -573,7 +571,7 @@ for i in &vec_test {
 }
 ```
 
-We can also use all other types of the `alloc` and `collections` crates, including:
+We can also use all other types of the `alloc` crate, including:
 
 - the reference counted pointers [Rc] and [Arc]
 - the owned string type [String] and the [format!] macro
