@@ -8,7 +8,6 @@ cache: cargo
 before_script:
   - rustup component add rust-src
   - (test -x $HOME/.cargo/bin/cargo-install-update || cargo install cargo-update)
-  - (test -x $HOME/.cargo/bin/rustfmt || cargo install rustfmt)
   - (test -x $HOME/.cargo/bin/xargo || cargo install xargo)
   - cargo install-update -a
 
