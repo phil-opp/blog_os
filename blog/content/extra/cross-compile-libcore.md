@@ -29,7 +29,7 @@ If the installation fails, make sure that you have `cmake` and the OpenSSL heade
 [xargo]: https://github.com/japaric/xargo
 [dependency section]: https://github.com/japaric/xargo#dependencies
 
-Xargo is “a drop-in replacement for cargo”, so every cargo command also works with `xargo`. You can do e.g. `xargo --help`, `xargo clean`, or `xargo doc`. However, the `build` command gains additional functionality: `xargo build` will automatically cross compile the `core` library (and a few other libraries such as `alloc` and `collections`) when compiling for custom targets.
+Xargo is “a drop-in replacement for cargo”, so every cargo command also works with `xargo`. You can do e.g. `xargo --help`, `xargo clean`, or `xargo doc`. However, the `build` command gains additional functionality: `xargo build` will automatically cross compile the `core` library (and a few other libraries such as `alloc`) when compiling for custom targets.
 
 [xargo]: https://github.com/japaric/xargo
 
