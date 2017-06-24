@@ -234,7 +234,7 @@ Notice the green `OK` in the upper left corner. If it does not work for you, tak
 
 Let's summarize what happens:
 
-1. the BIOS loads the bootloader (GRUB) from the virtual hard drive (the ISO)
+1. the BIOS loads the bootloader (GRUB) from the virtual CD-ROM (the ISO)
 2. the bootloader reads the kernel executable and finds the Multiboot header
 3. it copies the `.boot` and `.text` sections to memory (to addresses `0x100000` and `0x100020`)
 4. it jumps to the entry point (`0x100020`, you can obtain it through `objdump -f`)
