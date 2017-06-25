@@ -650,7 +650,7 @@ _Note_: You need to [cross compile binutils] to build it (or you create some sym
 
 [Rust Bare-Bones Kernel]: https://github.com/thepowersgang/rust-barebones-kernel
 [higher half]: http://wiki.osdev.org/Higher_Half_Kernel
-[cross compile binutils]: ./posts/cross-compile-binutils/index.md
+[cross compile binutils]: ./extra/cross-compile-binutils.md
 
 - [RustOS]: More advanced kernel that supports allocation, keyboard inputs, and threads. It also has a scheduler and a basic network driver.
 
