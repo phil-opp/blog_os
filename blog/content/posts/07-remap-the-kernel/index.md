@@ -818,21 +818,18 @@ These lines are the important ones. We can read many useful information from the
 
 - `v=0e`: An exception with number `0xe` occurred, which is a page fault according to the [OSDev Wiki][osdev exception overview].
 
-[osdev exception overview]: http://wiki.osdev.org/Exceptions
-[page fault]: http://wiki.osdev.org/Exceptions#Page_Fault
-
 - `e=0002`: The CPU set an [error code][page fault error code], which tells us why the exception occurred. The `0x2` bit tells us that it was caused by a write operation. And since the `0x1` bit is not set, the target page was not present.
 
-[page fault error code]: http://wiki.osdev.org/Exceptions#Error_code
-
 - `IP=0008:000000000010ab97` or `pc=000000000010ab97`: The program counter register tells us that the exception occurred when the CPU tried to execute the instruction at `0x10ab97`. We can disassemble this address to see the corresponding function. The `0008:` prefix in `IP` indicates the code [GDT segment].
-
-[GDT segment]: ./posts/02-entering-longmode/index.md#loading-the-gdt
 
 - `SP=0010:00000000001182d0`: The stack pointer was `0x1182d0` (the `0010:` prefix indicates the data [GDT segment]). This tells us if it the stack overflowed.
 
 - `CR2=00000000000b8f00`: Finally the most useful register. It tells us which virtual address caused the page fault. In our case it's `0xb8f00`, which is part of the [VGA text buffer].
 
+[osdev exception overview]: http://wiki.osdev.org/Exceptions
+[page fault]: http://wiki.osdev.org/Exceptions#Page_Fault
+[page fault error code]: http://wiki.osdev.org/Exceptions#Error_code
+[GDT segment]: ./posts/02-entering-longmode/index.md#loading-the-gdt
 [VGA text buffer]: ./posts/04-printing-to-screen/index.md#the-vga-text-buffer
 
 So let's find out which function caused the exception:

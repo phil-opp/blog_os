@@ -648,20 +648,17 @@ Now that you know the very basics of OS development in Rust, you should also che
 - [Rust Bare-Bones Kernel]: A basic kernel with roughly the same functionality as ours. Writes output to the serial port instead of the VGA buffer and maps the kernel to the [higher half] \(instead of our identity mapping).
 _Note_: You need to [cross compile binutils] to build it (or you create some symbolic links[^fn-symlink] if you're on x86_64).
 
-[Rust Bare-Bones Kernel]: https://github.com/thepowersgang/rust-barebones-kernel
-[higher half]: http://wiki.osdev.org/Higher_Half_Kernel
-[cross compile binutils]: ./extra/cross-compile-binutils.md
-
 - [RustOS]: More advanced kernel that supports allocation, keyboard inputs, and threads. It also has a scheduler and a basic network driver.
-
-[RustOS]: https://github.com/RustOS-Fork-Holding-Ground/RustOS
 
 - ["Tifflin" Experimental Kernel]: Big kernel project by thepowersgang, that is actively developed and has over 650 commits. It has a separate userspace and supports multiple file systems, even a GUI is included. Needs a cross compiler.
 
-["Tifflin" Experimental Kernel]:https://github.com/thepowersgang/rust_os
-
 - [Redox]: Probably the most complete Rust OS today. It has an active community and over 1000 Github stars. File systems, network, an audio player, a picture viewer, and much more. Just take a look at the [screenshots][redox screenshots].
 
+[Rust Bare-Bones Kernel]: https://github.com/thepowersgang/rust-barebones-kernel
+[higher half]: http://wiki.osdev.org/Higher_Half_Kernel
+[cross compile binutils]: ./extra/cross-compile-binutils.md
+[RustOS]: https://github.com/RustOS-Fork-Holding-Ground/RustOS
+["Tifflin" Experimental Kernel]:https://github.com/thepowersgang/rust_os
 [Redox]: https://github.com/redox-os/redox
 [redox screenshots]: https://github.com/redox-os/redox#what-it-looks-like
 
