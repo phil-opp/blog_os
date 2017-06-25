@@ -29,6 +29,7 @@ Also, we will use the [information about kernel sections] to map the various sec
 
 ## Preparation
 There are many things that can go wrong when we switch to a new table. Therefore it's a good idea to [set up a debugger][set up gdb]. You should not need it when you follow this post, but it's good to know how to debug a problem when it occurs[^fn-debug-notes].
+
 [set up gdb]: ./extra/set-up-gdb/index.md
 
 We also update the `Page` and `Frame` types to make our lives easier. The `Page` struct gets some derived traits:
@@ -42,9 +43,11 @@ pub struct Page {
 }
 ```
 By making it [Copy][Copy trait], we can still use it after passing it to functions such as `map_to`. We also make the `Page::containing_address` public (if it isn't already).
+
 [Copy trait]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 
 The `Frame` type gets a `clone` method too, but it does not implement the [Clone trait]:
+
 [Clone trait]: https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html
 
 ```rust
@@ -275,6 +278,7 @@ pub fn map_table_frame(&mut self,
 }
 ```
 This function interprets the given frame as a page table frame and returns a `Table` reference. We return a table of level 1 because it [forbids calling the `next_table` methods][some clever solution]. Calling `next_table` must not be possible since it's not a page of the recursive mapping. To be able to return a `Table<Level1>`, we need to make the `Level1` enum in `memory/paging/table.rs` public.
+
 [some clever solution]: ./posts/06-page-tables/index.md#some-clever-solution
 
 
@@ -321,6 +325,7 @@ impl InactivePageTable {
 }
 ```
 We added two new arguments, `active_table` and `temporary_page`. We need an [inner scope] to ensure that the `table` variable is dropped before we try to unmap the temporary page again. This is required since the `table` variable exclusively borrows `temporary_page` as long as it's alive.
+
 [inner scope]: http://rustbyexample.com/variable_bindings/scope.html
 
 Now we are able to create valid inactive page tables, which are zeroed and recursively mapped. But we still can't modify them. To resolve this problem, we need to look at recursive mapping again.
@@ -360,6 +365,7 @@ pub fn with<F>(&mut self,
 }
 ```
 It overwrites the 511th P4 entry and points it to the inactive table frame. Then it flushes the [translation lookaside buffer (TLB)][TLB], which still contains some old translations. We need to flush all pages that are part of the recursive mapping, so the easiest way is to flush the TLB completely.
+
 [TLB]: http://wiki.osdev.org/TLB
 
 
@@ -440,6 +446,7 @@ impl ActivePageTable {
 }
 ```
 The [Deref] and [DerefMut] implementations allow us to use the `ActivePageTable` exactly as before, for example we still can call `map_to` on it (because of [deref coercions]). But the closure called in the `with` function can no longer invoke `with` again. The reason is that we changed the type of the generic `F` parameter a bit: Instead of an `ActivePageTable`, the closure just gets a `Mapper` as argument.
+
 [Deref]: https://doc.rust-lang.org/nightly/core/ops/trait.Deref.html
 [DerefMut]: https://doc.rust-lang.org/nightly/core/ops/trait.DerefMut.html
 [deref coercions]: https://doc.rust-lang.org/nightly/book/deref-coercions.html
@@ -544,6 +551,7 @@ pub fn remap_the_kernel<A>(allocator: &mut A, boot_info: &BootInformation)
 First, we create a temporary page at page number `0xcafebabe`. We could use `0xdeadbeaf` or `0x123456789` as well, as long as the page is unused. The `active_table` and the `new_table` are created using their constructor functions.
 
 Then we use the `with` function to temporary change the recursive mapping and execute the closure as if the `new_table` were active. This allows us to map the sections in the new table without changing the active mapping. To get the kernel sections, we use the [Multiboot information structure].
+
 [Multiboot information structure]: ./posts/05-allocating-frames/index.md#the-multiboot-information-structure
 
 Let's resolve the above `TODO` by identity mapping the sections:
@@ -630,6 +638,7 @@ SECTIONS {
 }
 ```
 The `.` is the “current location counter” and represents the current virtual address. At the beginning of the `SECTIONS` tag we set it to `1M`, so our kernel starts at 1MiB. We use the [ALIGN][linker align] function to align the current location counter to the next `4K` boundary (`4K` is the page size). Thus the end of the `.text` section – and the beginning of the next section – are page aligned.
+
 [linker align]: http://www.math.utah.edu/docs/info/ld_3.html#SEC12
 
 To put all sections on their own page, we add the `ALIGN` statement to all of them:
@@ -772,6 +781,7 @@ pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
 }
 ```
 This function activates the given inactive table and returns the previous active table as a `InactivePageTable`. We don't need to flush the TLB here, as the CPU does it automatically when the P4 table is switched. In fact, the `tlb::flush_all` function, which we used above, does nothing more than [reloading the CR3 register].
+
 [reloading the CR3 register]: https://github.com/gz/rust-x86/blob/master/src/shared/tlb.rs#L19
 
 Now we are finally able to switch to the new table. We do it by adding the following lines to our `remap_the_kernel` function:
@@ -793,6 +803,7 @@ Let's cross our fingers and run it…
 
 ### Debugging
 A QEMU boot loop indicates that some CPU exception occured. We can see all thrown CPU exception by starting QEMU with `-d int` (as described [here][qemu debugging]):
+
 [qemu debugging]: ./posts/03-set-up-rust/index.md#debugging
 
 ```bash
@@ -806,18 +817,22 @@ check_exception old: 0xffffffff new 0xe
 These lines are the important ones. We can read many useful information from them:
 
 - `v=0e`: An exception with number `0xe` occurred, which is a page fault according to the [OSDev Wiki][osdev exception overview].
+
 [osdev exception overview]: http://wiki.osdev.org/Exceptions
 [page fault]: http://wiki.osdev.org/Exceptions#Page_Fault
 
 - `e=0002`: The CPU set an [error code][page fault error code], which tells us why the exception occurred. The `0x2` bit tells us that it was caused by a write operation. And since the `0x1` bit is not set, the target page was not present.
+
 [page fault error code]: http://wiki.osdev.org/Exceptions#Error_code
 
 - `IP=0008:000000000010ab97` or `pc=000000000010ab97`: The program counter register tells us that the exception occurred when the CPU tried to execute the instruction at `0x10ab97`. We can disassemble this address to see the corresponding function. The `0008:` prefix in `IP` indicates the code [GDT segment].
+
 [GDT segment]: ./posts/02-entering-longmode/index.md#loading-the-gdt
 
 - `SP=0010:00000000001182d0`: The stack pointer was `0x1182d0` (the `0010:` prefix indicates the data [GDT segment]). This tells us if it the stack overflowed.
 
 - `CR2=00000000000b8f00`: Finally the most useful register. It tells us which virtual address caused the page fault. In our case it's `0xb8f00`, which is part of the [VGA text buffer].
+
 [VGA text buffer]: ./posts/04-printing-to-screen/index.md#the-vga-text-buffer
 
 So let's find out which function caused the exception:
@@ -836,6 +851,7 @@ We disassemble our kernel and search for `10ab97`. The `-B100` option prints the
   10ab97:	66 89 14 48          	mov    %dx,(%rax,%rcx,2)
 ```
 The reason for the cryptical function name is Rust's [name mangling]. But we can identity the `vga_buffer::Writer::write_byte` function nonetheless.
+
 [name mangling]: https://en.wikipedia.org/wiki/Name_mangling
 
 So the reason for the page fault is that the `write_byte` function tried to write to the VGA text buffer at `0xb8f00`. Of course this provokes a page fault: We forgot to identity map the VGA buffer in the new page table.
@@ -970,6 +986,7 @@ This time the responsible function is `control_regs::cr3_write()` itself. From t
 
 ### The NXE Bit
 The reason is that the `NO_EXECUTE` bit must only be used when the `NXE` bit in the [Extended Feature Enable Register] \(EFER) is set. That register is similar to Rust's feature gating and can be used to enable all sorts of advanced CPU features. Since the `NXE` bit is off by default, we caused a page fault when we added the `NO_EXECUTE` bit to the page table.
+
 [Extended Feature Enable Register]: https://en.wikipedia.org/wiki/Control_register#EFER
 
 So we need to enable the `NXE` bit. For that we use the [x86_64 crate] again:
@@ -1013,6 +1030,7 @@ If we haven't forgotten to set the `WRITABLE` flag somewhere, it should still wo
 The final step is to create a guard page for our kernel stack.
 
 The decision to place the kernel stack right above the page tables was already useful to detect a silent stack overflow in the [previous post][silent stack overflow]. Now we profit from it again. Let's look at our assembly `.bss` section again to understand why:
+
 [silent stack overflow]: ./posts/06-page-tables/index.md#translate
 
 ```nasm
@@ -1073,6 +1091,7 @@ Unfortunately stack probes require compiler support. They already work on Window
 
 ## What's next?
 Now that we have a (mostly) safe kernel stack and a working page table module, we can add a virtual memory allocator. The [next post] will explore Rust's allocator API and create a very basic allocator. At the end of that post, we will be able to use Rust's allocation and collections types such as [Box], [Vec], or even [BTreeMap].
+
 [next post]: ./posts/08-kernel-heap/index.md
 [Box]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html
 [Vec]: https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html
