@@ -28,7 +28,7 @@ When you turn on a computer, it loads the [BIOS] from some special flash memory.
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [real mode]: http://wiki.osdev.org/Real_Mode
 
-We won't write a bootloader because that would be a complex project on its own (if you really want to do it, check out [_Rolling Your Own Bootloader_]). Instead we will use one of the [many well-tested bootloaders][bootloader comparison] out there. But which one?
+We won't write a bootloader because that would be a complex project on its own (if you really want to do it, check out [_Rolling Your Own Bootloader_]). Instead we will use one of the [many well-tested bootloaders][bootloader comparison] out there to boot our kernel from a CD-ROM. But which one?
 
 [_Rolling Your Own Bootloader_]: http://wiki.osdev.org/Rolling_Your_Own_Bootloader
 [bootloader comparison]: https://en.wikipedia.org/wiki/Comparison_of_boot_loaders
@@ -187,7 +187,7 @@ _Note_: The `ld` and `objdump` commands are platform specific. If you're _not_ w
 [cross compile binutils]: ./extra/cross-compile-binutils.md
 
 ## Creating the ISO
-The last step is to create a bootable ISO image with GRUB. We need to create the following directory structure and copy the `kernel.bin` to the right place:
+All PC BIOSes know how to boot from a CD-ROM, so we want to create a bootable CD-ROM image, containing our kernel and the GRUB bootloader's files, in a single file called an [ISO](https://en.wikipedia.org/wiki/ISO_image). Make the following directory structure and copy the `kernel.bin` to the right place:
 
 ```
 isofiles
