@@ -5,7 +5,7 @@ url = "multiboot-kernel/"
 date = "2015-08-18"
 +++
 
-This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and print `OK` to the screen. The following blog posts we will extend it using the [Rust] programming language.
+This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and print `OK` to the screen. In subsequent blog posts we will extend it using the [Rust] programming language.
 
 [Rust]: http://www.rust-lang.org/
 
@@ -244,7 +244,7 @@ You can test it on real hardware, too. Just burn the ISO to a disk or USB stick 
 
 ## Build Automation
 
-Right now we need to execute 4 commands in the right order everytime we change a file. That's bad. So let's automate the build using a [Makefile][Makefile tutorial]. But first we should create some clean directory structure for our source files to separate the architecture specific files:
+Right now we need to execute 4 commands in the right order every time we change a file. That's bad. So let's automate the build using a [Makefile][Makefile tutorial]. But first we should create some clean directory structure for our source files to separate the architecture specific files:
 
 [Makefile tutorial]: http://mrbook.org/blog/tutorials/make/
 
