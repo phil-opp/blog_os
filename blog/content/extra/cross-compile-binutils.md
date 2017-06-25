@@ -6,10 +6,12 @@ order = 2
 +++
 
 The [GNU Binutils] are a collection of various binary tools such as `ld`, `as`, `objdump`, or `readelf`. These tools are platform-specific, so you need to compile them again if your host system and target system are different. In our case, we need `ld` and `objdump` for the x86_64 architecture.
+
 [GNU Binutils]: https://www.gnu.org/software/binutils/
 
 ## Building Setup
 First, you need to download a current binutils version from [here][download] \(the latest one is near the bottom). After extracting, you should have a folder named `binutils-2.X` where `X` is for example `25.1`. Now can create and switch to a new folder for building (recommended):
+
 [download]: ftp://sourceware.org/pub/binutils/snapshots
 
 ```bash

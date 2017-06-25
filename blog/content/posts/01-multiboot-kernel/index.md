@@ -184,6 +184,7 @@ Idx Name      Size      VMA               LMA               File off  Algn
               CONTENTS, ALLOC, LOAD, READONLY, CODE
 ```
 _Note_: The `ld` and `objdump` commands are platform specific. If you're _not_ working on x86_64 architecture, you will need to [cross compile binutils]. Then use `x86_64‑elf‑ld` and `x86_64‑elf‑objdump` instead of `ld` and `objdump`.
+
 [cross compile binutils]: ./extra/cross-compile-binutils.md
 
 ## Creating the ISO
