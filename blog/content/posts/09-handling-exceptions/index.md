@@ -459,7 +459,7 @@ The documentation of the [`Idt`] struct and the [OSDev Wiki][osdev wiki exceptio
 ## Too much Magic?
 The `x86-interrupt` calling convention and the [`Idt`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own `Idt` type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed.
 
-[“Handling Exceptions with Naked Functions”]: /extra/handling-exceptions-with-naked-fns
+[“Handling Exceptions with Naked Functions”]: ./extra/naked-exceptions/_index.md
 
 ## What's next?
 We've successfully caught our first exception and returned from it! The next step is to add handlers for other common exceptions such as page faults. We also need to make sure that we never cause a [triple fault], since it causes a complete system reset. The next post explains how we can avoid this by correctly catching [double faults].
