@@ -19,7 +19,7 @@ pub struct Mapper {
 
 impl Mapper {
     pub unsafe fn new() -> Mapper {
-        Mapper { p4: Unique::new(table::P4) }
+        Mapper { p4: Unique::new_unchecked(table::P4) }
     }
 
     pub fn p4(&self) -> &Table<Level4> {
