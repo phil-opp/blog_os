@@ -97,7 +97,7 @@ To model the various flags, we will use the [bitflags] crate. To add it as a dep
 ```toml
 [dependencies]
 ...
-bitflags = "0.7.0"
+bitflags = "0.9.1"
 ```
 
 To import the macro, we need to use `#[macro_use]` above the `extern crate` definition:
@@ -112,23 +112,23 @@ Now we can model the various flags:
 
 ```rust
 bitflags! {
-    pub flags EntryFlags: u64 {
-        const PRESENT =         1 << 0,
-        const WRITABLE =        1 << 1,
-        const USER_ACCESSIBLE = 1 << 2,
-        const WRITE_THROUGH =   1 << 3,
-        const NO_CACHE =        1 << 4,
-        const ACCESSED =        1 << 5,
-        const DIRTY =           1 << 6,
-        const HUGE_PAGE =       1 << 7,
-        const GLOBAL =          1 << 8,
-        const NO_EXECUTE =      1 << 63,
+    pub struct EntryFlags: u64 {
+        const PRESENT =         1 << 0;
+        const WRITABLE =        1 << 1;
+        const USER_ACCESSIBLE = 1 << 2;
+        const WRITE_THROUGH =   1 << 3;
+        const NO_CACHE =        1 << 4;
+        const ACCESSED =        1 << 5;
+        const DIRTY =           1 << 6;
+        const HUGE_PAGE =       1 << 7;
+        const GLOBAL =          1 << 8;
+        const NO_EXECUTE =      1 << 63;
     }
 }
 ```
 To extract the flags from the entry we create an `Entry::flags` method that uses [from_bits_truncate]:
 
-[from_bits_truncate]: https://doc.rust-lang.org/bitflags/bitflags/macro.bitflags!.html#methods
+[from_bits_truncate]: https://doc.rust-lang.org/bitflags/bitflags/index.html#methods-1
 
 ```rust
 pub fn flags(&self) -> EntryFlags {

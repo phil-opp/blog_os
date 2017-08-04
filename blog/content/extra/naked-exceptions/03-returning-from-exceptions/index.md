@@ -633,7 +633,7 @@ Let's try `make run` again:
    Compiling spin v0.4.5
    Compiling once v0.3.2
    Compiling x86 v0.8.0
-   Compiling bitflags v0.7.0
+   Compiling bitflags v0.9.1
    Compiling raw-cpuid v2.0.1
    Compiling rlibc v0.1.5
    Compiling linked_list_allocator v0.2.3

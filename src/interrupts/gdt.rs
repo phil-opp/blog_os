@@ -85,11 +85,11 @@ impl Descriptor {
 }
 
 bitflags! {
-    flags DescriptorFlags: u64 {
-        const CONFORMING        = 1 << 42,
-        const EXECUTABLE        = 1 << 43,
-        const USER_SEGMENT      = 1 << 44,
-        const PRESENT           = 1 << 47,
-        const LONG_MODE         = 1 << 53,
+    struct DescriptorFlags: u64 {
+        const CONFORMING        = 1 << 42;
+        const EXECUTABLE        = 1 << 43;
+        const USER_SEGMENT      = 1 << 44;
+        const PRESENT           = 1 << 47;
+        const LONG_MODE         = 1 << 53;
     }
 }
