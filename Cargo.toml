@@ -5,7 +5,7 @@ version = "0.1.0"
 
 [dependencies]
 bit_field = "0.7.0"
-bitflags = "0.7.0"
+bitflags = "0.9.1"
 multiboot2 = "0.1.0"
 once = "0.3.2"
 rlibc = "1.0"
