@@ -7,62 +7,51 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![feature(allocator)]
 #![feature(const_fn)]
-
-#![allocator]
+#![feature(allocator_api)
+#![feature(alloc)]
+#![feature(global_allocator)]
 #![no_std]
+#![deny(warnings)]
 
-use spin::Mutex;
-use linked_list_allocator::Heap;
-
+extern crate alloc;
 extern crate spin;
 extern crate linked_list_allocator;
-#[macro_use]
-extern crate lazy_static;
+
+use alloc::heap::{Alloc, AllocErr, Layout};
+use spin::Mutex;
+use linked_list_allocator::Heap;
 
 pub const HEAP_START: usize = 0o_000_001_000_000_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 
-lazy_static! {
-    static ref HEAP: Mutex<Heap> = Mutex::new(unsafe {
-        Heap::new(HEAP_START, HEAP_SIZE)
-    });
+static HEAP: Mutex<Option<Heap>> = Mutex::new(None);
+
+//Set up the heap
+pub unsafe fn init(offset: usize, size: usize) {
+    *HEAP.lock() = Some(Heap::new(offset, usize));
 }
 
-#[no_mangle]
-pub extern fn __rust_allocate(size: usize, align: usize) -> *mut u8 {
-    HEAP.lock().allocate_first_fit(size, align).expect("out of memory")
+pub struct Allocator;
+
+unsafe impl<'a> Alloc for &'a Allocator {
+    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
+        if let Some(ref mut heap) = *HEAP.lock() {
+            heap.allocate_first_fit(layout)   
+        } else {
+            panic!("Heap not initialized!");
+        }
+    }
+
+    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
+        if let Some(ref mut heap) = *HEAP.lock() {
+            heap.deallocate(ptr, layout)
+        } else {
+            panic!("heap not initalized");
+        }
+    }
 }
 
-#[no_mangle]
-pub extern fn __rust_deallocate(ptr: *mut u8, size: usize, align: usize) {
-    unsafe { HEAP.lock().deallocate(ptr, size, align) };
-}
-
-#[no_mangle]
-pub extern fn __rust_usable_size(size: usize, _align: usize) -> usize {
-    size
-}
-
-#[no_mangle]
-pub extern fn __rust_reallocate_inplace(_ptr: *mut u8, size: usize,
-    _new_size: usize, _align: usize) -> usize
-{
-    size
-}
-
-#[no_mangle]
-pub extern fn __rust_reallocate(ptr: *mut u8, size: usize, new_size: usize,
-                                align: usize) -> *mut u8 {
-    use core::{ptr, cmp};
-
-    // from: https://github.com/rust-lang/rust/blob/
-    //     c66d2380a810c9a2b3dbb4f93a830b101ee49cc2/
-    //     src/liballoc_system/lib.rs#L98-L101
-
-    let new_ptr = __rust_allocate(new_size, align);
-    unsafe { ptr::copy(ptr, new_ptr, cmp::min(size, new_size)) };
-    __rust_deallocate(ptr, size, align);
-    new_ptr
-}
+//Our allocator static
+#[global_allocator]
+static GLOBAL_ALLOC: Allocator = Allocator;
