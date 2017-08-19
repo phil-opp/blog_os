@@ -8,7 +8,7 @@
 // except according to those terms.
 
 #![feature(const_fn)]
-#![feature(allocator_api)
+#![feature(allocator_api)]
 #![feature(alloc)]
 #![feature(global_allocator)]
 #![no_std]
@@ -29,7 +29,7 @@ static HEAP: Mutex<Option<Heap>> = Mutex::new(None);
 
 //Set up the heap
 pub unsafe fn init(offset: usize, size: usize) {
-    *HEAP.lock() = Some(Heap::new(offset, usize));
+    *HEAP.lock() = Some(Heap::new(offset, size));
 }
 
 pub struct Allocator;

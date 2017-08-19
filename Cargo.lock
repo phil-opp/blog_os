@@ -34,7 +34,7 @@ name = "hole_list_allocator"
 version = "0.1.0"
 dependencies = [
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "linked_list_allocator 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linked_list_allocator 0.4.1 (git+https://github.com/phil-opp/linked-list-allocator.git)",
  "spin 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -48,8 +48,11 @@ dependencies = [
 
 [[package]]
 name = "linked_list_allocator"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+version = "0.4.1"
+source = "git+https://github.com/phil-opp/linked-list-allocator.git#ce7b045f3154be64053706632ce82ce944945458"
+dependencies = [
+ "spin 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "multiboot2"
@@ -92,7 +95,7 @@ dependencies = [
 "checksum bitflags 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8dead7461c1127cf637931a1e50934eb6eee8bff2f74433ac7909e9afcee04a3"
 "checksum bitflags 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4efd02e230a02e18f92fc2735f44597385ed02ad8f831e7c1c1156ee5e1ab3a5"
 "checksum lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "3b37545ab726dd833ec6420aaba8231c5b320814b9029ad585555d2a03e94fbf"
-"checksum linked_list_allocator 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)" = "4025b00ae181abe3027ec4216e26d8d719724d32392112592f0ecb2b4ac6953c"
+"checksum linked_list_allocator 0.4.1 (git+https://github.com/phil-opp/linked-list-allocator.git)" = "<none>"
 "checksum multiboot2 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b209a4456a3cc81fb69ad318ed6d47af81a90b829701f151354e3994d8b216d4"
 "checksum once 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "931fb7a4cf34610cf6cbe58d52a8ca5ef4c726d4e2e178abd0dc13a6551c6d73"
 "checksum rlibc 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
