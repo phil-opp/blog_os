@@ -54,12 +54,6 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // initialize our IDT
     interrupts::init(&mut memory_controller);
     
-    use alloc::boxed::Box;
-
-    let test = Box::new(32);
-
-    println!("Number on the heap is {}", test);
-
     fn stack_overflow() {
         stack_overflow(); // for each recursion, the return address is pushed
     }
