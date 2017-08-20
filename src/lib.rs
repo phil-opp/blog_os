@@ -28,7 +28,7 @@ extern crate bit_field;
 #[macro_use]
 extern crate lazy_static;
 
-extern crate hole_list_allocator;
+extern crate hole_list_allocator as allocator;
 #[macro_use]
 extern crate alloc;
 
@@ -53,7 +53,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
 
     // initialize our IDT
     interrupts::init(&mut memory_controller);
-
+    
     fn stack_overflow() {
         stack_overflow(); // for each recursion, the return address is pushed
     }
