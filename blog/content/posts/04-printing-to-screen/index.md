@@ -253,7 +253,9 @@ pub fn print_something() {
     writer.write_byte(b'H');
 }
 ```
-It just creates a new Writer that points to the VGA buffer at `0xb8000`. Then it writes the byte `b'H'` to it. The `b` prefix creates a [byte character], which represents an ASCII code point. When we call `vga_buffer::print_something` in main, a `H` should be printed in the _lower_ left corner of the screen in light green:
+It just creates a new Writer that points to the VGA buffer at `0xb8000`. To use the unstable `Unique::new_unchecked` function, we need to add the feature flag `#![feature(const_unique_new)]` to the top of our `src/lib.rs`.
+
+Then it writes the byte `b'H'` to it. The `b` prefix creates a [byte character], which represents an ASCII code point. When we call `vga_buffer::print_something` in main, a `H` should be printed in the _lower_ left corner of the screen in light green:
 
 [byte character]: https://doc.rust-lang.org/reference.html#characters-and-strings
 
