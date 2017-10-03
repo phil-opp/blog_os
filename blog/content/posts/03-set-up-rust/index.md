@@ -98,6 +98,7 @@ Rust allows us to define [custom targets] through a JSON configuration file. A m
   "linker-flavor": "gcc",
   "target-endian": "little",
   "target-pointer-width": "64",
+  "target-c-int-width": "32",
   "arch": "x86_64",
   "os": "linux"
 }
@@ -132,6 +133,7 @@ For our target system, we define the following JSON configuration in a file name
   "linker-flavor": "gcc",
   "target-endian": "little",
   "target-pointer-width": "64",
+  "target-c-int-width": "32",
   "arch": "x86_64",
   "os": "none",
   "disable-redzone": true,
@@ -139,7 +141,7 @@ For our target system, we define the following JSON configuration in a file name
 }
 ```
 
-As `llvm-target` we use `x86_64-unknown-none`, which defines the `x86_64` architecture, an `unknown` vendor, and no operating system (`none`). The ABI doesn't matter for us, so we just leave it off. The `data-layout` field is just copied from the `x86_64-unknown-linux-gnu` target. We also use the same values for the `target-endian`, `target-pointer-width`, and `arch` fields. For the `os` field we choose `none`, since our kernel runs on bare metal.
+As `llvm-target` we use `x86_64-unknown-none`, which defines the `x86_64` architecture, an `unknown` vendor, and no operating system (`none`). The ABI doesn't matter for us, so we just leave it off. The `data-layout` field is just copied from the `x86_64-unknown-linux-gnu` target. We also use the same values for the `target-endian`, `target-pointer-width`, `target-c-int-width`, and `arch` fields. For the `os` field we choose `none`, since our kernel runs on bare metal.
 
 #### The Red Zone
 The [red zone] is an optimization of the [System V ABI] that allows functions to temporary use the 128 bytes below its stack frame without adjusting the stack pointer:
