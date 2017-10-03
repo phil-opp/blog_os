@@ -506,6 +506,7 @@ A minimal target specification that describes the `x86_64-unknown-linux-gnu` tar
   "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
   "target-endian": "little",
   "target-pointer-width": "64",
+  "target-c-int-width": "32",
   "arch": "x86_64",
   "os": "none"
 }
@@ -527,6 +528,7 @@ In order to disable the multimedia extensions, we create a new target named `x86
   "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
   "target-endian": "little",
   "target-pointer-width": "64",
+  "target-c-int-width": "32",
   "arch": "x86_64",
   "os": "none",
   "features": "-mmx,-sse"
