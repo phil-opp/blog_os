@@ -11,7 +11,7 @@ In the previous posts we have created a [frame allocator] and a [page table modu
 [page table module]: ./posts/06-page-tables/index.md
 [alloc]: https://doc.rust-lang.org/nightly/alloc/index.html
 
-<!-- more --><aside id="toc"></aside>
+<!-- more -->
 
 As always, you can find the complete source code on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a comment section at the end of this page.
 

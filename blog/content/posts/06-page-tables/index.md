@@ -7,7 +7,7 @@ date = "2015-12-09"
 
 In this post we will create a paging module, which allows us to access and modify the 4-level page table. We will explore recursive page table mapping and use some Rust features to make it safe. Finally we will create functions to translate virtual addresses and to map and unmap pages.
 
-<!-- more --><aside id="toc"></aside>
+<!-- more -->
 
 You can find the source code and this post itself on [Github][source repository]. Please file an issue there if you have any problems or improvement suggestions. There is also a comment section at the end of this page. Note that this post requires a current Rust nightly.
 
