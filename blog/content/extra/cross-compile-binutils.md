@@ -1,7 +1,7 @@
 +++
 title = "Cross Compile Binutils"
 template = "plain.html"
-url = "cross-compile-binutils"
+path = "cross-compile-binutils"
 order = 2
 +++
 

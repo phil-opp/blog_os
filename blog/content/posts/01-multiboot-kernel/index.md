@@ -1,7 +1,7 @@
 +++
 title = "A minimal x86 kernel"
 order = 1
-url = "multiboot-kernel/"
+path = "multiboot-kernel/"
 date = "2015-08-18"
 +++
 

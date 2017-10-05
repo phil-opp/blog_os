@@ -1,7 +1,7 @@
 +++
 title = "Kernel Heap"
 order = 8
-url = "kernel-heap"
+path = "kernel-heap"
 date = "2016-04-11"
 +++
 

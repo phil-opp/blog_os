@@ -1,7 +1,7 @@
 +++
 title = "Allocating Frames"
 order = 5
-url = "allocating-frames"
+path = "allocating-frames"
 date = "2015-11-15"
 +++
 

@@ -1,7 +1,7 @@
 +++
 title = "Cross Compiling: libcore"
 template = "plain.html"
-url = "cross-compile-libcore"
+path = "cross-compile-libcore"
 order = 3
 +++
 

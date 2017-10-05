@@ -1,6 +1,6 @@
 +++
 title = "Talks"
-url = "talks"
+path = "talks"
 template = "plain.html"
 order = 1
 +++

@@ -1,7 +1,7 @@
 +++
 title = "Page Tables"
 order = 6
-url = "page-tables"
+path = "page-tables"
 date = "2015-12-09"
 +++
 

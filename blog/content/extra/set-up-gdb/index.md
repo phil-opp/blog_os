@@ -1,7 +1,7 @@
 +++
 title = "Set Up GDB"
 template = "plain.html"
-url = "set-up-gdb"
+path = "set-up-gdb"
 order = 4
 +++
 

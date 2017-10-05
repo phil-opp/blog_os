@@ -1,6 +1,6 @@
 +++
 title = "Contact"
-url = "contact"
+path = "contact"
 template = "plain.html"
 +++
 
