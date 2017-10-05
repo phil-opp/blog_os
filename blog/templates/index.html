@@ -5,7 +5,7 @@
 {% block title %}{{ config.title }}{% endblock title %}
 
 {% block main %}
-{% set posts = sections.posts %}
+{% set posts = get_section(path = "posts/_index.md") %}
 <div class="front-page-introduction">
     <p>
         This blog series creates a small operating system in the
@@ -42,7 +42,7 @@
 </div>
 
 <hr>
-{% set extra = sections.extra %}
+{% set extra = get_section(path = "extra/_index.md") %}
 <h1>{{ extra.title }}</h1>
 <ul>
     {% for subsection in extra.subsections|reverse %}
