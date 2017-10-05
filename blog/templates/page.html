@@ -11,22 +11,16 @@
     <aside id="toc">
         <h2>Table of Contents</h2>
         <ol>
-            {% for h2 in page.toc %}
-                <li>
-                    <a href="{{h2.permalink | safe}}">{{ h2.title }}</a>
-                    {% if h2.children %}
-                        <ol>
-                            {% for h3 in h2.children %}
-                                <li>
-                                    <a href="{{h3.permalink | safe}}">{{ h3.title }}</a>
-                                </li>
-                            {% endfor %}
-                        </ol>
-                    {% endif %}
-                </li>
-            {% endfor %}
-            </ol>
-        </aside>
+            {% for h2 in page.toc %}<li>
+                <a href="{{h2.permalink | safe}}">{{ h2.title }}</a>
+                {% if h2.children %}<ol>
+                    {% for h3 in h2.children %}<li>
+                        <a href="{{h3.permalink | safe}}">{{ h3.title }}</a>
+                    </li>{% endfor %}
+                </ol>{% endif %}
+            </li>{% endfor %}
+        </ol>
+    </aside>
     {{ page.content | safe }}
 {% endblock main %}
 
