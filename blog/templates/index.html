@@ -5,7 +5,8 @@
 {% block title %}{{ config.title }}{% endblock title %}
 
 {% block main %}
-{% set posts = get_section(path = "posts/_index.md") %}
+{% set posts_section = get_section(path = "posts/_index.md") %}
+{% set posts = posts_section.pages | reverse %}
 <div class="front-page-introduction">
     <p>
         This blog series creates a small operating system in the
@@ -14,31 +15,31 @@
         <a href="https://github.com/phil-opp/blog_os">Github repository</a>.
     </p>
     <p>Latest post:
-        {% set latest_post = posts.pages|reverse|last %}
+        {% set latest_post = posts|last %}
         <strong><a href="{{ latest_post.path }}">{{ latest_post.title }}</a></strong>
     </p>
 </div>
 
 <div id="bare-bones" class="post-category bare-bones">Bare Bones</div>
 <div class="posts bare-bones">
-    {{ macros::post_link(page=posts.pages.9) }}
-    {{ macros::post_link(page=posts.pages.8) }}
-    {{ macros::post_link(page=posts.pages.7) }}
-    {{ macros::post_link(page=posts.pages.6) }}
+    {{ macros::post_link(page=posts.0) }}
+    {{ macros::post_link(page=posts.1) }}
+    {{ macros::post_link(page=posts.2) }}
+    {{ macros::post_link(page=posts.3) }}
 </div>
 
 <div id="memory-management" class="post-category memory-management">Memory Management</div>
 <div class="posts memory-management">
-    {{ macros::post_link(page=posts.pages.5) }}
-    {{ macros::post_link(page=posts.pages.4) }}
-    {{ macros::post_link(page=posts.pages.3) }}
-    {{ macros::post_link(page=posts.pages.2) }}
+    {{ macros::post_link(page=posts.4) }}
+    {{ macros::post_link(page=posts.5) }}
+    {{ macros::post_link(page=posts.6) }}
+    {{ macros::post_link(page=posts.7) }}
 </div>
 
 <div id="interrupts" class="post-category exceptions">Exceptions</div>
 <div class="posts exceptions">
-    {{ macros::post_link(page=posts.pages.1) }}
-    {{ macros::post_link(page=posts.pages.0) }}
+    {{ macros::post_link(page=posts.8) }}
+    {{ macros::post_link(page=posts.9) }}
 </div>
 
 <hr>
