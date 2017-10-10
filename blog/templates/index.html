@@ -16,7 +16,7 @@
     </p>
     <p>Latest post:
         {% set latest_post = posts|last %}
-        <strong><a href="{{ latest_post.path }}">{{ latest_post.title }}</a></strong>
+        <strong><a href="{{ latest_post.permalink | safe }}">{{ latest_post.title }}</a></strong>
     </p>
 </div>
 
@@ -47,10 +47,10 @@
 <h1>{{ extra.title }}</h1>
 <ul>
     {% for subsection in extra.subsections|reverse %}
-        <li><a href="{{ subsection.path }}">{{ subsection.title }}</a></li>
+        <li><a href="{{ subsection.permalink | safe }}">{{ subsection.title }}</a></li>
     {% endfor %}
     {% for page in extra.pages|reverse %}
-        <li><a href="{{ page.path }}">{{ page.title }}</a></li>
+        <li><a href="{{ page.permalink | safe }}">{{ page.title }}</a></li>
     {% endfor %}
 </ul>
 

@@ -1,6 +1,6 @@
 {% macro post_link(page) %}
     <article>
-        <h2 class="post-title"><a href="{{ page.path }}">{{ page.title }}</a></h2>
+        <h2 class="post-title"><a href="{{ page.permalink | safe }}">{{ page.title }}</a></h2>
         {{ page.summary | safe }}
     </article>
 {% endmacro post_link %}
