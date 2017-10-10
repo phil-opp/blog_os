@@ -1,7 +1,15 @@
+.masthead-title {
+  font-size: 1.25rem;
+  display: inline;
+}
 
-.masthead-title small {
+.masthead p {
+  font-size: 1.25rem;
+  display: inline;
+  margin: 0;
   margin-left: 1rem;
-  white-space: nowrap;
+  padding: 0;
+  line-height: 1;
 }
 
 .front-page-introduction {
