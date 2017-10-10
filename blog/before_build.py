@@ -15,7 +15,7 @@ with io.open("templates/recent-updates.html", 'w', encoding='utf8') as recent_up
         link = '<a href="' + pr.html_url + '">' + pr.title + "</a> "
         iso_date = pr.closed_at.isoformat()
         readable_date = pr.closed_at.strftime("%b&nbsp;%d")
-        datetime = '<time datetime="' + iso_date + '">' + readable_date + '</datetime>'
+        datetime = '<time datetime="' + iso_date + '">' + readable_date + '</time>'
         recent_updates.write(u"  <li>" + link + datetime + "</li>\n")
 
     recent_updates.write(u"</ul>")
