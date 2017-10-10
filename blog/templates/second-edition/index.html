@@ -1,0 +1,38 @@
+{% extends "second-edition/base.html" %}
+
+{% import "macros.html" as macros %}
+
+{% block title %}{{ config.title }}{% endblock title %}
+
+{% block main %}
+{% set posts_section = get_section(path = "second-edition/posts/_index.md") %}
+{% set posts = posts_section.pages | reverse %}
+<div class="warning">
+    <b>Note:</b> You are viewing the upcoming second edition of “Writing an OS in Rust”, which is still under construction. To read the first edition, go <a href="{{ get_url(path = "/") }}">here</a>.
+</div>
+<div class="front-page-introduction">
+    <p>
+        This blog series creates a small operating system in the
+        <a href="https://www.rust-lang.org/">Rust programming language</a>. Each post is a small tutorial and includes all
+        needed code, so you can follow along if you like. The source code is also available in the corresponding
+        <a href="https://github.com/phil-opp/blog_os">Github repository</a>.
+    </p>
+    <p>Latest post:
+        {% set latest_post = posts|last %}
+        <strong><a href="{{ latest_post.permalink | safe }}">{{ latest_post.title }}</a></strong>
+    </p>
+</div>
+
+<div id="bare-bones" class="post-category bare-bones">Bare Bones</div>
+<div class="posts bare-bones">
+    {{ macros::post_link(page=posts.0) }}
+    {{ macros::post_link(page=posts.1) }}
+    {{ macros::post_link(page=posts.2) }}
+</div>
+
+<aside id="recent-updates">
+    <h2>Recent Updates</h2>
+    {% include "recent-updates.html" %}
+</aside>
+
+{% endblock main %}

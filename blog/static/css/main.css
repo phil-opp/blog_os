@@ -228,3 +228,11 @@ a.gutenberg-anchor {
 a.gutenberg-anchor:hover {
   text-decoration: none;
 }
+
+div.warning {
+  padding: .7rem 1rem;
+  margin: 1rem .2rem;
+  border: 2px solid orange;
+  border-radius: 5px;
+  background-color: #ffa50022;
+}

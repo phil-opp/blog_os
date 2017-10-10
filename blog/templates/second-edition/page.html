@@ -1,0 +1,51 @@
+{% extends "second-edition/base.html" %}
+
+{% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+
+{% block main %}
+    <h1>{{ page.title }}</h1>
+    <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
+        {{ page.date | date(format="%b %d, %Y") }}
+        {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
+    </time>
+    <aside id="toc">
+        <h2>Table of Contents</h2>
+        <ol>
+            {% for h2 in page.toc %}<li>
+                <a href="{{h2.permalink | safe}}">{{ h2.title | safe }}</a>
+                {% if h2.children %}<ol>
+                    {% for h3 in h2.children %}<li>
+                        <a href="{{h3.permalink | safe}}">{{ h3.title | safe }}</a>
+                    </li>{% endfor %}
+                </ol>{% endif %}
+            </li>{% endfor %}
+        </ol>
+    </aside>
+    <div class="warning">
+        <b>Note:</b> This post is part of the upcoming <a href="{{ get_url(path = "./second-edition/_index.md") }}">second edition</a> of “Writing an OS in Rust”, which is still under construction. To read the first edition, go <a href="{{ get_url(path = "/") }}">here</a>.
+    </div>
+    {{ page.content | safe }}
+{% endblock main %}
+
+{% block after_main %}
+    <hr>
+    <div class="PageNavigation">
+        {% if page.previous %}
+            <a class="prev" href="{{ page.previous.permalink | safe }}">&laquo; {{ page.previous.title }}</a>
+        {% endif %}
+        {% if page.next %}
+            <a class="next" href="{{ page.next.permalink | safe }}">{{ page.next.title }} &raquo;</a>
+        {% endif %}
+    </div>
+
+    <hr>
+    <script data-isso="//comments.phil-opp.com/fcgi-bin/isso"
+        src="//comments.phil-opp.com/fcgi-bin/isso/js/embed.min.js"></script>
+    <section>
+        <h2>Comments</h2>
+        <section id="isso-thread"></section>
+    </section>
+
+{% endblock after_main %}
+
+
