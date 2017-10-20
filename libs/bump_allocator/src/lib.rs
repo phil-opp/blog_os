@@ -8,52 +8,74 @@
 // except according to those terms.
 
 #![feature(const_fn)]
-#![feature(allocator)]
+#![feature(allocator_api)]
+#![feature(alloc)]
+#![feature(global_allocator)]
 
-#![allocator]
 #![no_std]
 
+use alloc::heap::{Alloc, AllocErr, Layout};
 use spin::Mutex;
 
+extern crate alloc;
 extern crate spin;
+
 
 pub const HEAP_START: usize = 0o_000_001_000_000_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 
-static BUMP_ALLOCATOR: Mutex<BumpAllocator> = Mutex::new(
-    BumpAllocator::new(HEAP_START, HEAP_SIZE));
+static HEAP: Mutex<Option<Heap>> = Mutex::new(None);
+
+//Set up the heap
+pub unsafe fn init(offset: usize, size: usize) {
+    *HEAP.lock() = Some(Heap::new(offset, size));
+}
 
 #[derive(Debug)]
-struct BumpAllocator {
-    heap_start: usize,
-    heap_size: usize,
+struct Heap {
+    start: usize,
+    end: usize,
     next: usize,
 }
 
-impl BumpAllocator {
-    /// Create a new allocator, which uses the memory in the
-    /// range [heap_start, heap_start + heap_size).
-    const fn new(heap_start: usize, heap_size: usize) -> BumpAllocator {
-        BumpAllocator {
-            heap_start: heap_start,
-            heap_size: heap_size,
-            next: heap_start,
-        }
-    }
 
-    /// Allocates a block of memory with the given size and alignment.
-    fn allocate(&mut self, size: usize, align: usize) -> Option<*mut u8> {
-        let alloc_start = align_up(self.next, align);
-        let alloc_end = alloc_start.saturating_add(size);
-
-        if alloc_end <= self.heap_start + self.heap_size {
-            self.next = alloc_end;
-            Some(alloc_start as *mut u8)
-        } else {
-            None
+impl Heap {
+    /// Initialisation of the heap to use the 
+    /// range [start, start + size).
+    fn new(start: usize, size: usize) -> Heap {
+        Heap {
+            start: start,
+            end: start + size,
+            next: start,
         }
     }
 }
+
+pub struct Allocator;
+
+unsafe impl<'a> Alloc for &'a Allocator {
+
+    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
+        if let Some(ref mut heap) = *HEAP.lock() {
+            let alloc_start = align_up(heap.next, layout.align());
+            let alloc_end = alloc_start.saturating_add(layout.size());
+
+            if alloc_end <= heap.end {
+                heap.next =  alloc_end;
+                Ok(alloc_start as *mut u8)
+            } else {
+                Err(AllocErr::Exhausted{request: layout})
+            }        
+        } else {
+            panic!("Heap not initialized!");
+        }
+    }
+
+    unsafe fn dealloc(&mut self, _ptr: *mut u8, _layout: Layout) {
+        // Sofar nothing - don't worry, RAM is cheap
+    }
+}
+
 
 /// Align downwards. Returns the greatest x with alignment `align`
 /// so that x <= addr. The alignment must be a power of 2.
@@ -73,42 +95,6 @@ pub fn align_up(addr: usize, align: usize) -> usize {
     align_down(addr + align - 1, align)
 }
 
-#[no_mangle]
-pub extern fn __rust_allocate(size: usize, align: usize) -> *mut u8 {
-    BUMP_ALLOCATOR.lock().allocate(size, align).expect("out of memory")
-}
-
-#[no_mangle]
-pub extern fn __rust_deallocate(_ptr: *mut u8, _size: usize,
-    _align: usize)
-{
-    // just leak it
-}
-
-#[no_mangle]
-pub extern fn __rust_usable_size(size: usize, _align: usize) -> usize {
-    size
-}
-
-#[no_mangle]
-pub extern fn __rust_reallocate_inplace(_ptr: *mut u8, size: usize,
-    _new_size: usize, _align: usize) -> usize
-{
-    size
-}
-
-#[no_mangle]
-pub extern fn __rust_reallocate(ptr: *mut u8, size: usize, new_size: usize,
-                                align: usize) -> *mut u8 {
-    use core::{ptr, cmp};
-
-    // from: https://github.com/rust-lang/rust/blob/
-    //     c66d2380a810c9a2b3dbb4f93a830b101ee49cc2/
-    //     src/liballoc_system/lib.rs#L98-L101
-
-    let new_ptr = __rust_allocate(new_size, align);
-    unsafe { ptr::copy(ptr, new_ptr, cmp::min(size, new_size)) };
-    __rust_deallocate(ptr, size, align);
-    new_ptr
-}
+#[global_allocator]
+static GLOBAL_ALLOC: Allocator = Allocator;
 
