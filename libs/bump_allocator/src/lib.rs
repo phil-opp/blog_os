@@ -24,11 +24,11 @@ extern crate spin;
 pub const HEAP_START: usize = 0o_000_001_000_000_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 
-static HEAP: Mutex<Option<Heap>> = Mutex::new(None);
+static HEAP: Mutex<Heap> = Mutex::new(Heap::new(0, 0));
 
 //Set up the heap
 pub unsafe fn init(offset: usize, size: usize) {
-    *HEAP.lock() = Some(Heap::new(offset, size));
+    *HEAP.lock() = Heap::new(offset, size);
 }
 
 #[derive(Debug)]
@@ -42,7 +42,7 @@ struct Heap {
 impl Heap {
     /// Initialisation of the heap to use the 
     /// range [start, start + size).
-    fn new(start: usize, size: usize) -> Heap {
+    const fn new(start: usize, size: usize) -> Heap {
         Heap {
             start: start,
             end: start + size,
@@ -56,19 +56,16 @@ pub struct Allocator;
 unsafe impl<'a> Alloc for &'a Allocator {
 
     unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
-        if let Some(ref mut heap) = *HEAP.lock() {
-            let alloc_start = align_up(heap.next, layout.align());
-            let alloc_end = alloc_start.saturating_add(layout.size());
+        let ref mut heap = HEAP.lock();
+        let alloc_start = align_up(heap.next, layout.align());
+        let alloc_end = alloc_start.saturating_add(layout.size());
 
-            if alloc_end <= heap.end {
-                heap.next =  alloc_end;
-                Ok(alloc_start as *mut u8)
-            } else {
-                Err(AllocErr::Exhausted{request: layout})
-            }        
+        if alloc_end <= heap.end {
+            heap.next =  alloc_end;
+            Ok(alloc_start as *mut u8)
         } else {
-            panic!("Heap not initialized!");
-        }
+            Err(AllocErr::Exhausted{request: layout})
+        }        
     }
 
     unsafe fn dealloc(&mut self, _ptr: *mut u8, _layout: Layout) {
