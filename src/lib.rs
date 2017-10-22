@@ -39,6 +39,11 @@ mod memory;
 
 mod interrupts;
 
+
+pub const HEAP_START: usize = 0o_000_001_000_000_0000;
+pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
+
+
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // ATTENTION: we have a very small stack and no guard page

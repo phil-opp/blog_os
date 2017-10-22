@@ -21,9 +21,6 @@ extern crate alloc;
 extern crate spin;
 
 
-pub const HEAP_START: usize = 0o_000_001_000_000_0000;
-pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
-
 static HEAP: Mutex<Heap> = Mutex::new(Heap::new(0, 0));
 
 //Set up the heap
