@@ -89,7 +89,8 @@ fn enable_write_protect_bit() {
 
 #[cfg(not(test))]
 #[lang = "eh_personality"]
-extern "C" fn eh_personality() {}
+#[no_mangle]
+pub extern "C" fn eh_personality() {}
 
 #[cfg(not(test))]
 #[lang = "panic_fmt"]
