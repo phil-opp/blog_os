@@ -4,6 +4,7 @@
 #![feature(const_unique_new, const_atomic_usize_new)]
 #![feature(unique)]
 #![feature(allocator_api)]
+#![feature(global_allocator)]
 #![no_std]
 
 
@@ -84,3 +85,12 @@ pub extern fn panic_fmt(fmt: core::fmt::Arguments, file: &'static str, line: u32
     println!("    {}", fmt);
     loop{}
 }
+
+use memory::heap_allocator::BumpAllocator;
+
+pub const HEAP_START: usize = 0o_000_001_000_000_0000;
+pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
+
+#[global_allocator]
+static HEAP_ALLOCATOR: BumpAllocator = BumpAllocator::new(HEAP_START,
+    HEAP_START + HEAP_SIZE);
