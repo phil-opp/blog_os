@@ -1,0 +1,2 @@
+[target.x86_64-blog_os.dependencies]
+alloc = {}

@@ -1,8 +1,13 @@
 #![feature(lang_items)]
 #![feature(const_fn)]
+#![feature(alloc)]
 #![feature(const_unique_new)]
 #![feature(unique)]
 #![no_std]
+
+
+#[macro_use]
+extern crate alloc;
 
 extern crate rlibc;
 extern crate volatile;
