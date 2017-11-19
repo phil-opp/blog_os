@@ -3,6 +3,7 @@
 #![feature(alloc)]
 #![feature(const_unique_new)]
 #![feature(unique)]
+#![feature(allocator_api)]
 #![no_std]
 
 
