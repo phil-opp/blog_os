@@ -3,9 +3,10 @@ title = "Kernel Heap"
 order = 8
 path = "kernel-heap"
 date = "2016-04-11"
+updated = "2017-11-19"
 +++
 
-In the previous posts we have created a [frame allocator] and a [page table module]. Now we are ready to create a kernel heap and a memory allocator. Thus, we will unlock `Box`, `Vec`, `BTreeMap`, and the rest of the [alloc] crate.
+In the previous posts we created a [frame allocator] and a [page table module]. Now we are ready to create a kernel heap and a memory allocator. Thus, we will unlock `Box`, `Vec`, `BTreeMap`, and the rest of the [alloc] crate.
 
 [frame allocator]: ./posts/05-allocating-frames/index.md
 [page table module]: ./posts/06-page-tables/index.md
@@ -33,65 +34,134 @@ A good allocator is fast and reliable. It also effectively utilizes the availabl
 [fragmentation]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
 [false sharing]: http://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 
-These requirements make good allocators pretty complex. For example, [jemalloc] has over 30.000 lines of code. This complexity is out of scope for our kernel, so we will create a much simpler allocator. However, it should suffice for the foreseeable future, since we'll allocate only when it's absolutely necessary.
+These requirements make good allocators pretty complex. For example, [jemalloc] has over 30.000 lines of code. This complexity is out of scope for our kernel, so we will create a much simpler allocator. Nevertheless, it should suffice for the foreseeable future, since we'll allocate only when it's absolutely necessary.
+
+## The Allocator Interface
+
+The allocator interface in Rust is defined through the [`Alloc` trait], which looks like this:
+
+[`Alloc` trait]: https://doc.rust-lang.org/nightly/alloc/allocator/trait.Alloc.html
+
+```rust
+pub unsafe trait Alloc {
+    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr>;
+    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout);
+    […] // about 13 methods with default implementations
+}
+```
+
+The `alloc` method should allocate a memory block with the size and alignment given through `Layout` parameter. The `deallocate` method should free such memory blocks again. Both methods are `unsafe`, as is the trait itself. This has different reasons:
+
+- Implementing the `Alloc` trait is unsafe, because the implementation must satisfy a set of contracts. Among other things, pointers returned by `alloc` must point to valid memory and adhere to the `Layout` requirements.
+- Calling `alloc` is unsafe because the caller must ensure that the passed layout does not have size zero. I think this is because of compatibility reasons with existing C-allocators, where zero-sized allocations are undefined behavior.
+- Calling `dealloc` is unsafe because the caller must guarantee that the passed parameters adhere to the contract. For example, `ptr` must denote a valid memory block allocated via this allocator.
+
+To set the system allocator, the `global_allocator` attribute can be added to a `static` that implements `Alloc` for a shared reference of itself. For example:
+
+```rust
+#[global_allocator]
+static MY_ALLOCATOR: MyAllocator = MyAllocator {...};
+
+impl<'a> Alloc for &'a MyAllocator {
+    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {...}
+    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {...}
+}
+```
+
+Note that `Alloc` needs to be implemented for `&MyAllocator`, not for `MyAllocator`. The reason is that the `alloc` and `dealloc` methods require mutable `self` references, but there's no way to get such a reference safely from a `static`. By requiring implementations for `&MyAllocator`, the global allocator interface avoids this problem and pushes the burden of synchronization onto the user.
+
+## Including the alloc crate
+The `Alloc` trait is part of the `alloc` crate, which like `core` is a subset of Rust's standard library. Apart from the trait, the crate also contains the standard types that require allocations such as `Box`, `Vec` and `Arc`. We can include it through a simple `extern crate`:
+
+```rust
+// in src/lib.rs
+#![feature(alloc)] // the alloc crate is still unstable
+
+[...]
+
+#[macro_use]
+extern crate alloc;
+```
+
+We don't need to add anything to our Cargo.toml, since the `alloc` crate is part of the standard library and shipped with the Rust compiler. The `alloc` crate provides the [format!] and [vec!] macros, so we use `#[macro_use]` to import them.
+
+[format!]: //doc.rust-lang.org/nightly/collections/macro.format!.html
+[vec!]: https://doc.rust-lang.org/nightly/collections/macro.vec!.html
+
+When we try to compile our crate now, the following error occurs:
+
+```
+error[E0463]: can't find crate for `alloc`
+  --> src/lib.rs:10:1
+   |
+16 | extern crate alloc;
+   | ^^^^^^^^^^^^^^^^^^^ can't find crate
+```
+
+The problem is that [`xargo`] only cross compiles `libcore` by default. To also cross compile the `alloc` crate, we need to create a file named `Xargo.toml` in our project root (right next to the `Cargo.toml`) with the following content:
+
+[`xargo`]: https://github.com/japaric/xargo
+
+```toml
+[target.x86_64-blog_os.dependencies]
+alloc = {}
+```
+
+This instructs `xargo` that we also need `alloc`. It still doesn't compile, since we need to define a global allocator in order to use the `alloc` crate:
+
+```
+error: no #[default_lib_allocator] found but one is required; is libstd not linked?
+```
 
 ## A Bump Allocator
 
-For our own allocator, we start simple. We create an allocator crate in a new `libs` subfolder:
+For our first allocator, we start simple. We create a `memory::heap_allocator` module containing a so-called _bump allocator_:
 
-``` shell
-> mkdir libs
-> cd libs
-> cargo new bump_allocator
-> cd bump_allocator
-```
+```rust
+// in src/memory/mod.rs
 
-### Implementation
-Our allocator is very basic. It only keeps track of the next free address:
+mod heap_allocator;
 
-``` rust
-// in libs/bump_allocator/src/lib.rs
+// in src/memory/heap_allocator.rs
 
-#![feature(const_fn)]
+use alloc::heap::{Alloc, AllocErr, Layout};
 
+/// A simple allocator that allocates memory linearly and ignores freed memory.
 #[derive(Debug)]
-struct BumpAllocator {
+pub struct BumpAllocator {
     heap_start: usize,
-    heap_size: usize,
+    heap_end: usize,
     next: usize,
 }
 
 impl BumpAllocator {
-    /// Create a new allocator, which uses the memory in the
-    /// range [heap_start, heap_start + heap_size).
-    const fn new(heap_start: usize, heap_size: usize) -> BumpAllocator {
-        BumpAllocator {
-            heap_start: heap_start,
-            heap_size: heap_size,
-            next: heap_start,
+    pub const fn new(heap_start: usize, heap_end: usize) -> Self {
+        Self { heap_start, heap_end, next: heap_start }
+    }
+}
+
+unsafe impl Alloc for BumpAllocator {
+    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
+        let alloc_start = align_up(self.next, layout.align());
+        let alloc_end = alloc_start.saturating_add(layout.size());
+
+        if alloc_end <= self.heap_end {
+            self.next = alloc_end;
+            Ok(alloc_start as *mut u8)
+        } else {
+            Err(AllocErr::Exhausted{ request: layout })
         }
     }
 
-    /// Allocates a block of memory with the given size and alignment.
-    fn allocate(&mut self, size: usize, align: usize) -> Option<*mut u8> {
-        let alloc_start = align_up(self.next, align);
-        let alloc_end = alloc_start.saturating_add(size);
-
-        if alloc_end <= self.heap_start + self.heap_size {
-            self.next = alloc_end;
-            Some(alloc_start as *mut u8)
-        } else {
-            None
-        }
+    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
+        // do nothing, leak memory
     }
 }
 ```
 
-The `heap_start` and `heap_size` fields just contain the start address and size of our kernel heap. The `next` field contains the next free address and is increased after every allocation. To `allocate` a memory block we align the `next` address using the `align_up` function (described below). Then we add up the desired `size` and make sure that we don't exceed the end of the heap. We use a saturating add so that the `alloc_end` cannot overflow, which would cause undefined behaviour. If everything goes well, we update the `next` address and return a pointer to the start address of the allocation. Else, we return `None`.
+We also need to add `#![feature(allocator_api)]` to our `lib.rs`, since the allocator API is still unstable.
 
-Note that we need to add a feature flag at the beginning of the file, because we've marked the `new` function as `const`. [Const functions] are unstable, so we need to add the `#![feature(const_fn)]` flag.
-
-[Const functions]: https://github.com/rust-lang/rust/issues/24111
+The `heap_start` and `heap_end` fields contain the start and end address of our kernel heap. The `next` field contains the next free address and is increased after every allocation. To `allocate` a memory block we align the `next` address using the `align_up` function (described below). Then we add up the desired `size` and make sure that we don't exceed the end of the heap. We use a saturating add so that the `alloc_end` cannot overflow, which could lead to an invalid allocation. If everything goes well, we update the `next` address and return a pointer to the start address of the allocation. Else, we return `None`.
 
 ### Alignment
 In order to simplify alignment, we add `align_down` and `align_up` functions:
@@ -116,7 +186,7 @@ pub fn align_up(addr: usize, align: usize) -> usize {
 }
 ```
 
-Let's start with `align_down`: If the alignment is a valid power of two (i.e. in `{1,2,4,8,…}`), we use some bit-fiddling to return the aligned address. It works because every power of two has exactly one bit set in its binary representation. For example, the numbers `{1,2,4,8,…}` are `{1,10,100,1000,…}` in binary. By subtracting 1 we get `{0,01,011,0111,…}`. These binary numbers have a `1` at exactly the positions that need to be zeroed in `addr`. For example, the last 3 bits need to be zeroed for a alignment of 8.
+Let's start with `align_down`: If the alignment is a valid power of two (i.e. in `{1,2,4,8,…}`), we use some bitwise operations to return the aligned address. It works because every power of two has exactly one bit set in its binary representation. For example, the numbers `{1,2,4,8,…}` are `{1,10,100,1000,…}` in binary. By subtracting 1 we get `{0,01,011,0111,…}`. These binary numbers have a `1` at exactly the positions that need to be zeroed in `addr`. For example, the last 3 bits need to be zeroed for a alignment of 8.
 
 To align `addr`, we create a [bitmask] from `align-1`. We want a `0` at the position of each `1`, so we invert it using `!`. After that, the binary numbers look like this: `{…11111,…11110,…11100,…11000,…}`. Finally, we zero the correct bits using a binary `AND`.
 
@@ -124,213 +194,132 @@ To align `addr`, we create a [bitmask] from `align-1`. We want a `0` at the posi
 
 Aligning upwards is simple now. We just increase `addr` by `align-1` and call `align_down`. We add `align-1` instead of `align` because we would otherwise waste `align` bytes for already aligned addresses.
 
-### Deallocate
-But how do we deallocate memory in our bump allocator? Well, we don't ;). We just leak all freed memory for now. Thus our allocator quickly runs out of memory in a real system. On the other hand, it's as fast as an allocator can get: It just increases a single variable when allocating and does nothing at all when deallocating. And RAM is cheap nowadays, right? :)
+### Reusing Freed Memory
+The heap memory is limited, so we should reuse freed memory for new allocations. This sounds simple, but is not so easy in practice since allocations can live arbitrarily long (and can be freed in an arbitrary order). This means that we need some kind of data structure to keep track of which memory areas are free and which are in use. This data structure should be very optimized since it causes overheads in both space (i.e. it needs backing memory) and time (i.e. accessing and organizing it needs CPU cycles).
 
-(Don't worry, we will introduce a better allocator later in this post.)
+Our bump allocator only keeps track of the next free memory address, which doesn't suffice to keep track of freed memory areas. So our only choice is to ignore deallocations and leak the corresponding memory. Thus our allocator quickly runs out of memory in a real system, but it suffices for simple testing. Later in this post, we will introduce a better allocator that does not leak freed memory.
 
-## Custom Allocators in Rust
-In order to use our crate as system allocator, we add some attributes at the beginning of the file:
+### Using it as System Allocator
 
-``` rust
-// in libs/bump_allocator/src/lib.rs
+Above we saw that we can use a static allocator as system allocator through the `global_allocator` attribute:
 
-#![feature(allocator)]
-
-#![allocator]
-#![no_std]
-```
-The `#![allocator]` attribute tells the compiler that it should not link a default allocator when this crate is linked. The attribute is unstable and feature-gated, so we need to add `#![feature(allocator)]` as well. Allocator crates must not depend on [liballoc], because this would introduce a circular dependency. Thus, allocator crates can't use the standard library either (as it depends on `liballoc`). Therefore all allocator crates must be marked as `#![no_std]`.
-
-[liballoc]: https://doc.rust-lang.org/nightly/alloc/index.html
-
-According to [the book][custom-allocators], an allocator crate needs to implement the following five functions:
-
-[custom-allocators]: https://doc.rust-lang.org/book/custom-allocators.html
-
-``` rust
-#[no_mangle]
-pub extern fn __rust_allocate(size: usize, align: usize) -> *mut u8 {}
-
-#[no_mangle]
-pub extern fn __rust_usable_size(size: usize, align: usize) -> usize {}
-
-#[no_mangle]
-pub extern fn __rust_deallocate(ptr: *mut u8, size: usize, align: usize) {}
-
-#[no_mangle]
-pub extern fn __rust_reallocate(ptr: *mut u8, size: usize, new_size: usize,
-                                align: usize) -> *mut u8 {}
-
-#[no_mangle]
-pub extern fn __rust_reallocate_inplace(ptr: *mut u8, size: usize,
-                                        new_size: usize, align: usize)
-                                        -> usize {}
+```rust
+#[global_allocator]
+static ALLOCATOR: MyAllocator = MyAllocator {...};
 ```
 
-These functions are highly unstable and the compiler does not check their types. So make sure that the type, number, and order of parameters are correct when you implement it.
+This requires an implementation of `Alloc` for `&MyAllocator`, i.e. a shared reference. If we try to add such an implementation for our bump allocator (`unsafe impl<'a> Alloc for &'a BumpAllocator`), we have a problem: Our `alloc` method requires updating the `next` field, which is not possible for a shared reference.
 
-Let's look at each function individually:
+One solution could be to put the bump allocator behind a Mutex and wrap it into a new type, for which we can implement `Alloc` for a shared reference:
 
-- The `__rust_allocate` function allocates a block of memory with the given size (in bytes) and alignment. _Alignment_ means that the start address of the allocation needs to be a multiple of the `align` parameter. This is required because some CPUs can only access e.g. 4 byte aligned addresses. The alignment is always a power of 2.
-- The `__rust_usable_size` returns the usable size of an allocation created with the specified size and alignment. The usable size is at least `size`, but might be larger if the allocator uses fixed block sizes. For example, a [buddy allocator] rounds the size of each allocation to the next power of two.
-- The `__rust_deallocate` function frees the memory block referenced `ptr` again. The `size` and `align` parameters contain the values that were used to create the allocation. Thus the allocator knows exactly how much memory it needs to free. In constrast, the [free function] of C only has a single `ptr` argument. So a C allocator needs to [maintain information][c free info] about the size of each block itself. In Rust, the compiler maintains this information for us.
-- The `__rust_reallocate` function changes the size of the block referenced by `ptr` from `size` to `new_size`. If it's possible to do in in-place, the function resizes the block and returns `ptr` again. Else, it allocates a new block of `new_size` and copies the memory contents from the old block. Then it frees the old block and returns the pointer to the new block.
-- The `__rust_reallocate_inplace` function tries to change the size of the block referenced by `ptr` from `size` to `new_size` without relocating the memory block. If it succeeds, it returns `usable_size(new_size, align)`, else it returns `usable_size(size, align)`.
+```rust
+struct LockedBumpAllocator(Mutex<BumpAllocator>);
 
-[buddy allocator]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
-[free function]: http://www.cplusplus.com/reference/cstdlib/free/
-[c free info]: http://stackoverflow.com/questions/1518711/how-does-free-know-how-much-to-free
+impl<'a> Alloc for &'a LockedBumpAllocator {
+    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
+        self.0.lock().alloc(layout)
+    }
 
-A more detailed documentation for these functions can be found in the [API docs for alloc::heap][alloc::heap]. Note that all of these functions and custom allocators in general are _unstable_ (as indicated by the `allocator` feature gate).
+    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
+        self.0.lock().dealloc(ptr, layout)
+    }
+}
+```
 
-[alloc::heap]: https://doc.rust-lang.org/nightly/alloc/heap/
+However, there is a more interesting solution for our bump allocator that avoids locking alltogether. The idea is to exploit that we only need to update a single `usize` field byusing an `AtomicUsize` type. This type uses special synchronized hardware instructions to ensure data race freedom without requiring locks.
 
-### Implementation
-Let's implement the allocation functions using our new allocator. First we need a way to access the allocator. The functions do not know anything about our allocator, so we can only access it through a `static`:
+#### A lock-free Bump Allocator
+A lock-free implementation looks like this:
 
-``` rust
-// in libs/bump_allocator/src/lib.rs
+```rust
+use core::sync::atomic::{AtomicUsize, Ordering};
 
-use spin::Mutex;
+/// A simple allocator that allocates memory linearly and ignores freed memory.
+#[derive(Debug)]
+pub struct BumpAllocator {
+    heap_start: usize,
+    heap_end: usize,
+    next: AtomicUsize,
+}
 
-extern crate spin;
+impl BumpAllocator {
+    pub const fn new(heap_start: usize, heap_end: usize) -> Self {
+        // NOTE: requires adding #![feature(const_atomic_usize_new)] to lib.rs
+        Self { heap_start, heap_end, next: AtomicUsize::new(heap_start) }
+    }
+}
 
+unsafe impl<'a> Alloc for &'a BumpAllocator {
+    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
+        loop {
+            // load current state of the `next` field
+            let current_next = self.next.load(Ordering::Relaxed);
+            let alloc_start = align_up(current_next, layout.align());
+            let alloc_end = alloc_start.saturating_add(layout.size());
+
+            if alloc_end <= self.heap_end {
+                // update the `next` pointer if it still has the value `current_next`
+                let next_now = self.next.compare_and_swap(current_next, alloc_end,
+                    Ordering::Relaxed);
+                if next_now == current_next {
+                    // next address was successfully updated, allocation succeeded
+                    return Ok(alloc_start as *mut u8);
+                }
+            } else {
+                return Err(AllocErr::Exhausted{ request: layout })
+            }
+        }
+    }
+
+    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
+        // do nothing, leak memory
+    }
+}
+```
+
+The implementation is a bit more complicated now. First, there is now a `loop` around the whole method body, since we might need multiple tries until we succeed (e.g. if multiple threads try to allocate at the same time). Also, the loads operation is an explicit method call now, i.e. `self.next.load(Ordering::Relaxed)` instead of just `self.next`. The ordering parameter makes it possible to restrict the automatic instruction reordering performed by both the compiler and the CPU itself. For example, it is used when implementing locks to ensure that no write to the locked variable happens before the lock is acquired. We don't have such requirements, so we use the less restrictive `Relaxed` ordering.
+
+The heart of this lock-free method is the `compare_and_swap` call that updates the `next` address:
+
+```rust
+...
+let next_now = self.next.compare_and_swap(current_next, alloc_end,
+    Ordering::Relaxed);
+if next_now == current_next {
+    // next address was successfully updated, allocation succeeded
+    return Ok(alloc_start as *mut u8);
+}
+...
+```
+
+Compare-and-swap is a special CPU instruction that updates a variable with a given value if it still contains the value we expect. If it doesn't, it means that another thread updated the value simultaneously, so we need to try again. The important feature is that this happens in a single uninteruptible operation (thus the name `atomic`), so no partial updates or intermediate states are possible.
+
+In detail, `compare_and_swap` works by comparing `next` with the first argument and, in case they're equal, updates `next` with the second parameter (the previous value is returned). To find out whether a switch happened, we check the returned previous value of `next`. If it is equal to the first parameter, the values were swapped. Otherwise, we try again in the next loop iteration.
+
+#### Setting the Global Allocator
+
+Now we can define a static bump allocator, that we can set as system allocator:
+
+```rust
 pub const HEAP_START: usize = 0o_000_001_000_000_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 
-static BUMP_ALLOCATOR: Mutex<BumpAllocator> = Mutex::new(
-    BumpAllocator::new(HEAP_START, HEAP_SIZE));
+#[global_allocator]
+static HEAP_ALLOCATOR: BumpAllocator = BumpAllocator::new(HEAP_START,
+    HEAP_START + HEAP_SIZE);
 ```
 
-We use `0o_000_001_000_000_0000` as heap start address, which is the address starting at the second `P3` entry. It doesn't really matter which address we choose here as long as it's unused. We use a heap size of 100 KiB, which should be large enough for the near future. The static allocator is protected by a spinlock since we need to able to modify it. Our allocator crate is distinct from our main crate, so we need to add the `spin` dependency to its `Cargo.toml` as well. The easiest way is to run `cargo add spin` (using the [cargo-edit] crate).
+We use `0o_000_001_000_000_0000` as heap start address, which is the address starting at the second `P3` entry. It doesn't really matter which address we choose here as long as it's unused. We use a heap size of 100 KiB, which should be large enough for the near future.
 
-[cargo-edit]: https://github.com/killercup/cargo-edit
+Putting the above in the `memory::heap_allocator` module would make most sense, but unfortunately there is currently a [weird bug][global allocator bug] in the global allocator implementation that requires putting the global allocator in the root module. I hope it's fixed soon, but until then we need to put the above lines in `src/lib.rs`. For that, we need to make the `memory::heap_allocator` module public and add an import for `BumpAllocator`. We also need to add the `#![feature(global_allocator)]` at the top of our `lib.rs`, since the `global_allocator` attribute is still unstable.
 
-Now we can easily implement the `__rust_allocate` and `__rust_deallocate` functions:
+[global allocator bug]: https://github.com/rust-lang/rust/issues/44113
 
-```rust
-// in libs/bump_allocator/src/lib.rs
-
-#[no_mangle]
-pub extern fn __rust_allocate(size: usize, align: usize) -> *mut u8 {
-    BUMP_ALLOCATOR.lock().allocate(size, align).expect("out of memory")
-}
-
-#[no_mangle]
-pub extern fn __rust_deallocate(_ptr: *mut u8, _size: usize,
-    _align: usize)
-{
-    // just leak it
-}
-```
-We use `expect` to panic in out of memory (OOM) situations. We could alternatively return a null pointer, which indicates an OOM situation to the Rust runtime. However, the runtime would react by aborting the process. On Linux, the abort function intentionally raises an [invalid opcode] exception, which would lead to a boot loop for our kernel. So panickying is a better solution for our kernel.
-
-[invalid opcode]: http://wiki.osdev.org/Exceptions#Invalid_Opcode
-
-We never allocate more memory than requested, so the `__rust_usable_size` function is simple:
-
-```rust
-#[no_mangle]
-pub extern fn __rust_usable_size(size: usize, _align: usize) -> usize {
-    size
-}
-```
-
-In order to keep things simple, we don't support the `__rust_reallocate_inplace` function and always return the old size:
-
-```rust
-#[no_mangle]
-pub extern fn __rust_reallocate_inplace(_ptr: *mut u8, size: usize,
-    _new_size: usize, _align: usize) -> usize
-{
-    size
-}
-```
-
-Now only `__rust_reallocate` is left. It's a bit more difficult, since we need to copy the contents of the old allocation to the new allocation. However, we can just steal some code from the official [reallocate implementation for unix][unix realloc]:
-
-[unix realloc]: https://github.com/rust-lang/rust/blob/c66d2380a810c9a2b3dbb4f93a830b101ee49cc2/src/liballoc_system/lib.rs#L98-L101
-
-
-``` rust
-#[no_mangle]
-pub extern fn __rust_reallocate(ptr: *mut u8, size: usize, new_size: usize,
-                                align: usize) -> *mut u8 {
-    use core::{ptr, cmp};
-
-    // from: https://github.com/rust-lang/rust/blob/
-    //     c66d2380a810c9a2b3dbb4f93a830b101ee49cc2/
-    //     src/liballoc_system/lib.rs#L98-L101
-
-    let new_ptr = __rust_allocate(new_size, align);
-    unsafe { ptr::copy(ptr, new_ptr, cmp::min(size, new_size)) };
-    __rust_deallocate(ptr, size, align);
-    new_ptr
-}
-```
-
-That's it! We have successfully created a custom allocator. Now we're ready to test it.
-
-## Box, Vec, and Friends
-
-In order to use our new allocator we import it in our main project:
-
-```rust
-// in src/lib.rs of our main project
-
-extern crate bump_allocator;
-```
-
-Additionally, we need to tell cargo where our `bump_allocator` crate lives:
-
-``` toml
-# in Cargo.toml of our main project
-
-[dependencies.bump_allocator]
-path = "libs/bump_allocator"
-```
-
-Now we're able to import the `alloc` crate in order to unlock `Box`, `Vec`, `BTreeMap`, and friends:
-
-```rust
-// in src/lib.rs of our main project
-
-#![feature(alloc)]
-
-extern crate bump_allocator;
-#[macro_use]
-extern crate alloc;
-```
-The `alloc` crate provides the [format!] and [vec!] macros, so we use `#[macro_use]` to import them.
-
-[format!]: //doc.rust-lang.org/nightly/collections/macro.format!.html
-[vec!]: https://doc.rust-lang.org/nightly/collections/macro.vec!.html
-
-When we try to compile it, the following error occurs:
-
-```
-error[E0463]: can't find crate for `alloc`
-  --> src/lib.rs:16:1
-   |
-16 | extern crate alloc;
-   | ^^^^^^^^^^^^^^^^^^^ can't find crate
-```
-
-The problem is that [`xargo`] only cross compiles `libcore` by default. To also cross compile the `alloc` crate, we need to create a file named `Xargo.toml` in our project root (right next to the `Cargo.toml`) with the following content:
-
-[`xargo`]: https://github.com/japaric/xargo
-
-```toml
-[target.x86_64-blog_os.dependencies]
-alloc = {}
-```
-
-This instructs `xargo` that we also need `alloc`. Now it should compile again.
+That's it! We have successfully created and linked a custom system allocator. Now we're ready to test it.
 
 ### Testing
 
-Now we should be able to allocate memory on the heap. Let's try it in our `rust_main`:
+We should be able to allocate memory on the heap now. Let's try it in our `rust_main`:
 
 ```rust
 // in rust_main in src/lib.rs
@@ -361,6 +350,7 @@ In order to map the heap cleanly, we do a bit of refactoring first. We move all 
 ```rust
 // in src/lib.rs
 
+#[no_mangle]
 pub extern "C" fn rust_main(multiboot_information_address: usize) {
     // ATTENTION: we have a very small stack and no guard page
     vga_buffer::clear_screen();
@@ -466,7 +456,7 @@ That's it. Now our `memory::init` function can only be called once. The macro wo
 [AtomicBool]: https://doc.rust-lang.org/nightly/core/sync/atomic/struct.AtomicBool.html
 
 ### Mapping the Heap
-Now we're ready to map the heap pages. In order to do it, we need access to the `ActivePageTable` or `Mapper` instance (see the [page table] and [kernel remapping] posts). Therefore we return it from the `paging::remap_the_kernel` function:
+Now we're ready to map the heap pages. In order to do it, we need access to the `ActivePageTable` or `Mapper` instance (see the [page table] and [kernel remapping] posts). For that we return it from the `paging::remap_the_kernel` function:
 
 [page table]: ./posts/06-page-tables/index.md
 [kernel remapping]: ./posts/07-remap-the-kernel/index.md
@@ -501,7 +491,7 @@ pub fn init(boot_info: &BootInformation) {
         boot_info);
 
     use self::paging::Page;
-    use bump_allocator::{HEAP_START, HEAP_SIZE};
+    use {HEAP_START, HEAP_SIZE};
 
     let heap_start_page = Page::containing_address(HEAP_START);
     let heap_end_page = Page::containing_address(HEAP_START + HEAP_SIZE-1);
@@ -509,6 +499,7 @@ pub fn init(boot_info: &BootInformation) {
     for page in Page::range_inclusive(heap_start_page, heap_end_page) {
         active_table.map(page, paging::WRITABLE, &mut frame_allocator);
     }
+}
 ```
 
 The `Page::range_inclusive` function is just a copy of the `Frame::range_inclusive` function:
@@ -672,169 +663,54 @@ The detailed implementation would go beyond the scope of this post, since it con
 - We need to satisfy the alignment requirements, which requires additional splitting logic.
 - The minimal hole size of 16 bytes: We must not create smaller holes when splitting a hole.
 
-I created the [linked_list_allocator] crate to handle all of these cases. It consists of a [Heap struct] that provides an `allocate_first_fit` and a `deallocate` method. If you are interested in the implementation details, check out the [source code][linked_list_allocator source].
+I created the [linked_list_allocator] crate to handle all of these cases. It consists of a [Heap struct] that provides an `allocate_first_fit` and a `deallocate` method. It also contains a [LockedHeap] type that wraps `Heap` into spinlock so that it's usable as a static system allocator. If you are interested in the implementation details, check out the [source code][linked_list_allocator source].
 
-[linked_list_allocator]: https://crates.io/crates/linked_list_allocator
-[Heap struct]: http://phil-opp.github.io/linked_list_allocator/struct.Heap.html
+[linked_list_allocator]: https://docs.rs/crate/linked_list_allocator/0.4.1
+[Heap struct]: https://docs.rs/linked_list_allocator/0.4.1/linked_list_allocator/struct.Heap.html
+[LockedHeap]: https://docs.rs/linked_list_allocator/0.4.1/linked_list_allocator/struct.LockedHeap.html
 [linked_list_allocator source]: https://github.com/phil-opp/linked-list-allocator
 
-So we just need to implement Rust's allocation modules and integrate it into our kernel. We start by creating a new `hole_list_allocator` crate inside the `libs` directory:
-
-```shell
-> cd libs
-> cargo new hole_list_allocator
-> cd hole_list_allocator
-```
-
-We add the `allocator` and `no_std` attributes to `src/lib.rs` like described above:
-
-```rust
-// in libs/hole_list_allocator/src/lib.rs
-
-#![feature(allocator)]
-
-#![allocator]
-#![no_std]
-```
-
-We also add a static allocator protected by a spinlock, but this time we use the `Heap` type of the `linked_list_allocator` crate:
-
-```rust
-// in libs/hole_list_allocator/src/lib.rs
-
-#![feature(const_fn)]
-
-use spin::Mutex;
-use linked_list_allocator::Heap;
-
-extern crate spin;
-extern crate linked_list_allocator;
-
-pub const HEAP_START: usize = 0o_000_001_000_000_0000;
-pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
-
-static HEAP: Mutex<Heap> = Mutex::new(unsafe {
-    Heap::new(HEAP_START, HEAP_SIZE)
-});
-```
-Note that we use the same values for `HEAP_START` and `HEAP_SIZE` as in the `bump_allocator`.
-
-We need to add the extern crates to our `Cargo.toml`:
+We need to add the extern crate to our `Cargo.toml` and our `lib.rs`:
 
 ``` shell
-> cargo add spin
 > cargo add linked_list_allocator
 ```
 
-However, we get an error when we try to compile it:
-
+```rust
+// in src/lib.rs
+extern crate linked_list_allocator;
 ```
-error[E0015]: calls in statics are limited to constant functions,
-              struct and enum constructors
-  --> src/lib.rs:17:5
-   |
-17 |     Heap::new(HEAP_START, HEAP_SIZE)
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-```
-The reason is that the `Heap::new` function needs to initialize the first hole (like described [above](#initialization)). This can't be done at compile time, so the function can't be a `const` function. Therefore we can't use it to initialize a static.
 
-There is an easy solution for crates with access to the standard library: [lazy_static]. It automatically initializes the static when it's used the first time. By default, it relies on the `std::sync::once` module and is thus unusable in our kernel. Fortunately it has a `spin_no_std` feature for `no_std` projects.
-
-[lazy_static]: https://github.com/rust-lang-nursery/lazy-static.rs
-
-So let's use the `lazy_static!` macro to fix our `hole_list_allocator`:
-
-```toml
-# in libs/hole_list_allocator/Cargo.toml
-
-[dependencies.lazy_static]
-version = "0.2.1"
-features = ["spin_no_std"]
-```
+Now we can change our global allocator:
 
 ```rust
-// in libs/hole_list_allocator/src/lib.rs
+use linked_list_allocator::LockedHeap;
 
-#[macro_use]
-extern crate lazy_static;
-
-lazy_static! {
-    static ref HEAP: Mutex<Heap> = Mutex::new(unsafe {
-        Heap::new(HEAP_START, HEAP_SIZE)
-    });
-}
+#[global_allocator]
+static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
 ```
-The `unsafe` block is required since `Heap::new` is `unsafe`. It's unsafe because it assumes that `HEAP_START` is a valid and unused address.
 
-Now we can implement the allocation functions:
+We can't initialize the linked list allocator statically, since it needs to initialize the first hole (like described [above](#initialization)). This can't be done at compile time, so the function can't be a `const` function. Therefore we can only create an empty heap and initialize it later at runtime. For that, we add the following lines to our `rust_main` function:
 
 ```rust
-// in libs/hole_list_allocator/src/lib.rs
+// in src/lib.rs
 
 #[no_mangle]
-pub extern fn __rust_allocate(size: usize, align: usize) -> *mut u8 {
-    HEAP.lock().allocate_first_fit(size, align).expect("out of memory")
-}
+pub extern "C" fn rust_main(multiboot_information_address: usize) {
+    […]
 
-#[no_mangle]
-pub extern fn __rust_deallocate(ptr: *mut u8, size: usize, align: usize) {
-    unsafe { HEAP.lock().deallocate(ptr, size, align) };
-}
-```
+    // set up guard page and map the heap pages
+    memory::init(boot_info);
 
-The remaining functions are implemented like above:
-
-```rust
-// in libs/hole_list_allocator/src/lib.rs
-
-#[no_mangle]
-pub extern fn __rust_usable_size(size: usize, _align: usize) -> usize {
-    size
-}
-
-#[no_mangle]
-pub extern fn __rust_reallocate_inplace(_ptr: *mut u8, size: usize,
-    _new_size: usize, _align: usize) -> usize
-{
-    size
-}
-
-#[no_mangle]
-pub extern fn __rust_reallocate(ptr: *mut u8, size: usize, new_size: usize,
-                                align: usize) -> *mut u8 {
-    use core::{ptr, cmp};
-
-    // from: https://github.com/rust-lang/rust/blob/
-    //     c66d2380a810c9a2b3dbb4f93a830b101ee49cc2/
-    //     src/liballoc_system/lib.rs#L98-L101
-
-    let new_ptr = __rust_allocate(new_size, align);
-    unsafe { ptr::copy(ptr, new_ptr, cmp::min(size, new_size)) };
-    __rust_deallocate(ptr, size, align);
-    new_ptr
+    // initialize the heap allocator
+    unsafe {
+        HEAP_ALLOCATOR.lock().init(HEAP_START, HEAP_START + HEAP_SIZE);
+    }
+    […]
 }
 ```
 
-Now we just need to replace every use of `bump_allocator` with `hole_list_allocator` in our kernel:
-
-```toml
-# in Cargo.toml
-
-[dependencies.hole_list_allocator]
-path = "libs/hole_list_allocator"
-```
-
-```diff
-in src/lib.rs:
-
--extern crate bump_allocator;
-+extern crate hole_list_allocator;
-
-in memory::init in src/memory/mod.rs:
-
--use bump_allocator::{HEAP_START, HEAP_SIZE};
-+use hole_list_allocator::{HEAP_START, HEAP_SIZE};
-```
+It is important that we initialize the heap _after_ mapping the heap pages, since the init function writes to the heap memory (the first hole).
 
 Our kernel uses the new allocator now, so we can deallocate memory without leaking it. The example from above should work now without causing an OOM situation:
 
