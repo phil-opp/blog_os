@@ -1,29 +1,40 @@
 use alloc::heap::{Alloc, AllocErr, Layout};
 
+use core::sync::atomic::{AtomicUsize, Ordering};
+
 /// A simple allocator that allocates memory linearly and ignores freed memory.
 #[derive(Debug)]
 pub struct BumpAllocator {
     heap_start: usize,
     heap_end: usize,
-    next: usize,
+    next: AtomicUsize,
 }
 
 impl BumpAllocator {
     pub const fn new(heap_start: usize, heap_end: usize) -> Self {
-        Self { heap_start, heap_end, next: heap_start }
+        Self { heap_start, heap_end, next: AtomicUsize::new(heap_start) }
     }
 }
 
-unsafe impl Alloc for BumpAllocator {
+unsafe impl<'a> Alloc for &'a BumpAllocator {
     unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
-        let alloc_start = align_up(self.next, layout.align());
-        let alloc_end = alloc_start.saturating_add(layout.size());
+        loop {
+            // load current state of the `next` field
+            let current_next = self.next.load(Ordering::Relaxed);
+            let alloc_start = align_up(current_next, layout.align());
+            let alloc_end = alloc_start.saturating_add(layout.size());
 
-        if alloc_end <= self.heap_end {
-            self.next = alloc_end;
-            Ok(alloc_start as *mut u8)
-        } else {
-            Err(AllocErr::Exhausted{ request: layout })
+            if alloc_end <= self.heap_end {
+                // update the `next` pointer if it still has the value `current_next`
+                let next_now = self.next.compare_and_swap(current_next, alloc_end,
+                    Ordering::Relaxed);
+                if next_now == current_next {
+                    // next address was successfully updated, allocation succeeded
+                    return Ok(alloc_start as *mut u8);
+                }
+            } else {
+                return Err(AllocErr::Exhausted{ request: layout })
+            }
         }
     }
 

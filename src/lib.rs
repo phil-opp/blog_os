@@ -1,7 +1,7 @@
 #![feature(lang_items)]
 #![feature(const_fn)]
 #![feature(alloc)]
-#![feature(const_unique_new)]
+#![feature(const_unique_new, const_atomic_usize_new)]
 #![feature(unique)]
 #![feature(allocator_api)]
 #![no_std]
