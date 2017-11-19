@@ -24,37 +24,23 @@ mod vga_buffer;
 mod memory;
 
 #[no_mangle]
-pub extern fn rust_main(multiboot_information_address: usize) {
-    use memory::FrameAllocator;
-
+pub extern "C" fn rust_main(multiboot_information_address: usize) {
+    // ATTENTION: we have a very small stack and no guard page
     vga_buffer::clear_screen();
     println!("Hello World{}", "!");
 
-    let boot_info = unsafe{ multiboot2::load(multiboot_information_address) };
-    let memory_map_tag = boot_info.memory_map_tag()
-        .expect("Memory map tag required");
-    let elf_sections_tag = boot_info.elf_sections_tag()
-        .expect("Elf sections tag required");
-
-    let kernel_start = elf_sections_tag.sections().map(|s| s.addr)
-        .min().unwrap();
-    let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size)
-        .max().unwrap();
-    let multiboot_start = multiboot_information_address;
-    let multiboot_end = multiboot_start + (boot_info.total_size as usize);
-
-    println!("kernel start: 0x{:x}, kernel end: 0x{:x}",
-        kernel_start, kernel_end);
-    println!("multiboot start: 0x{:x}, multiboot end: 0x{:x}",
-        multiboot_start, multiboot_end);
-
-    let mut frame_allocator = memory::AreaFrameAllocator::new(
-        kernel_start as usize, kernel_end as usize, multiboot_start,
-        multiboot_end, memory_map_tag.memory_areas());
-
+    let boot_info = unsafe {
+        multiboot2::load(multiboot_information_address)
+    };
     enable_nxe_bit();
     enable_write_protect_bit();
-    memory::remap_the_kernel(&mut frame_allocator, boot_info);
+
+    // set up guard page and map the heap pages
+    memory::init(boot_info);
+
+    use alloc::boxed::Box;
+    let heap_test = Box::new(42);
+
     println!("It did not crash!");
 
     loop {}
