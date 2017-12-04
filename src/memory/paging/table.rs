@@ -39,7 +39,8 @@ where
         let entry_flags = self[index].flags();
         if entry_flags.contains(PRESENT) && !entry_flags.contains(HUGE_PAGE) {
             let table_address = self as *const _ as usize;
-            Some((table_address << 9) | (index << 12))
+            let sign_extension = 0o177777_000_000_000_000_0000 * ((table_address >> 47) & 0b1);
+            Some(((table_address << 9) | (index << 12)) & ((1 << 48) - 1) | sign_extension)
         } else {
             None
         }
