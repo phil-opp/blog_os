@@ -49,5 +49,11 @@ You need to have `nasm`, `grub-mkrescue`, `mformat` (included in `mtools`), `xor
 
 Please file an issue if you run into any problems.
 
+## Building with Docker
+Inspired by [redox].
+You need to have `docker` installed. Then you can build the docker image using `make docker_build` and run it using `make docker_run`.
+
+[redox]: https://github.com/redox-os/redox
+
 ## License
 The source code is dual-licensed under MIT or the Apache License (Version 2.0). This excludes the `blog` directory.
