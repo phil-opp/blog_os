@@ -1,5 +1,6 @@
 FROM rustlang/rust:nightly
 
+ENV IMAGE_NAME=blog_os-docker
 
 RUN apt-get update && \
     apt-get install -q -y --no-install-recommends \
@@ -33,6 +34,7 @@ RUN set -ex; \
 	gosu nobody true; 
 
 COPY entrypoint.sh /usr/local/bin/
+COPY .bash_aliases /etc/skel/
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/bin/bash"]
