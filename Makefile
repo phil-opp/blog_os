@@ -19,7 +19,7 @@ assembly_source_files := $(wildcard src/arch/$(arch)/*.asm)
 assembly_object_files := $(patsubst src/arch/$(arch)/%.asm, \
 	build/arch/$(arch)/%.o, $(assembly_source_files))
 
-docker_image ?= rust_os
+docker_image ?= blog_os
 tag ?= 0.1
 docker_args ?= -e LOCAL_UID=$(shell id -u) -e LOCAL_GID=$(shell id -g) -v rustos-$(shell id -u)-$(shell id -g)-cargo:/usr/local/cargo -v rustos-$(shell id -u)-$(shell id -g)-rustup:/usr/local/rustup -v $(shell pwd):$(shell pwd) -w $(shell pwd)
 .PHONY: all clean run debug iso cargo gdb
