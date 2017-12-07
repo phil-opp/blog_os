@@ -1,5 +1,5 @@
 #!/bin/sh
-USER_NAME=rustos
+USER_NAME=blogos
 USER_UID=${LOCAL_UID:-9001}
 USER_GID=${LOCAL_GID:-9001}
 
