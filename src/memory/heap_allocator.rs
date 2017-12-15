@@ -41,6 +41,10 @@ unsafe impl<'a> Alloc for &'a BumpAllocator {
     unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
         // do nothing, leak memory
     }
+
+    fn oom(&mut self, _: AllocErr) -> ! {
+        panic!("Out of memory");
+    }
 }
 
 /// Align downwards. Returns the greatest x with alignment `align`
