@@ -52,7 +52,7 @@ pub extern "C" fn rust_main(multiboot_information_address: usize) {
     let mut memory_controller = memory::init(boot_info);
 
     unsafe {
-        HEAP_ALLOCATOR.lock().init(HEAP_START, HEAP_START + HEAP_SIZE);
+        HEAP_ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
     }
 
     // initialize our IDT
