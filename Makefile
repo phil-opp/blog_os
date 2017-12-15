@@ -19,6 +19,14 @@ assembly_source_files := $(wildcard src/arch/$(arch)/*.asm)
 assembly_object_files := $(patsubst src/arch/$(arch)/%.asm, \
 	build/arch/$(arch)/%.o, $(assembly_source_files))
 
+# used by docker_* targets
+docker_image ?= blog_os
+tag ?= 0.1
+docker_cargo_volume ?=  blogos-$(shell id -u)-$(shell id -g)-cargo
+docker_rustup_volume ?=  blogos-$(shell id -u)-$(shell id -g)-rustup
+docker_args ?= -e LOCAL_UID=$(shell id -u) -e LOCAL_GID=$(shell id -g) -v $(docker_cargo_volume):/usr/local/cargo -v $(docker_rustup_volume):/usr/local/rustup -v $(shell pwd):$(shell pwd) -w $(shell pwd)
+docker_clean_args ?= $(docker_cargo_volume) $(docker_rustup_volume)
+
 .PHONY: all clean run debug iso cargo gdb
 
 all: $(kernel)
@@ -32,6 +40,23 @@ run: $(iso)
 
 debug: $(iso)
 	@qemu-system-x86_64 -cdrom $(iso) -s -S
+
+# docker_* targets 
+
+docker_build:
+	@docker build docker/ -t $(docker_image):$(tag)
+
+docker_iso: 
+	@docker run --rm $(docker_args) $(docker_image):$(tag) make iso
+
+docker_run: docker_iso
+	@qemu-system-x86_64 -cdrom $(iso) -s
+
+docker_interactive:
+	@docker run -it --rm $(docker_args) $(docker_image):$(tag) 
+
+docker_clean:
+	@docker volume rm $(docker_clean_args)
 
 gdb:
 	@rust-os-gdb/bin/rust-gdb "build/kernel-x86_64.bin" -ex "target remote :1234"
