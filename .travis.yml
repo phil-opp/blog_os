@@ -26,4 +26,4 @@ addons:
       - nasm
 
 script:
-  - make
+  - make RUST_TARGET_PATH=`pwd`
