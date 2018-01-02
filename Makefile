@@ -74,7 +74,7 @@ $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
 	@ld -n --gc-sections -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
 
 cargo:
-	@xargo build --target $(target)
+	@RUST_TARGET_PATH="$(shell pwd)" xargo build --target $(target)
 
 # compile assembly files
 build/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
