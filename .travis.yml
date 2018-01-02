@@ -3,7 +3,9 @@ language: rust
 rust:
     - nightly
 
-cache: cargo
+cache:
+  directories:
+    - $HOME/.cargo
 
 before_script:
   - rustup component add rust-src
