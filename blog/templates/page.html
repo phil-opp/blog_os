@@ -12,10 +12,10 @@
         <h2>Table of Contents</h2>
         <ol>
             {% for h2 in page.toc %}<li>
-                <a href="{{h2.permalink | safe}}">{{ h2.title | safe }}</a>
+                <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
                 {% if h2.children %}<ol>
                     {% for h3 in h2.children %}<li>
-                        <a href="{{h3.permalink | safe}}">{{ h3.title | safe }}</a>
+                        <a href="#{{h3.id | safe}}">{{ h3.title | safe }}</a>
                     </li>{% endfor %}
                 </ol>{% endif %}
             </li>{% endfor %}
