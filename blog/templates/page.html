@@ -28,10 +28,10 @@
     <hr>
     <div class="PageNavigation">
         {% if page.previous %}
-            <a class="prev" href="{{ page.previous.permalink | safe }}">&laquo; {{ page.previous.title }}</a>
+            <a class="prev" href="/{{ page.previous.path | safe }}">&laquo; {{ page.previous.title }}</a>
         {% endif %}
         {% if page.next %}
-            <a class="next" href="{{ page.next.permalink | safe }}">{{ page.next.title }} &raquo;</a>
+            <a class="next" href="/{{ page.next.path | safe }}">{{ page.next.title }} &raquo;</a>
         {% endif %}
     </div>
 

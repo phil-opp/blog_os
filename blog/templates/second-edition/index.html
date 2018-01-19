@@ -19,7 +19,7 @@
     </p>
     <p>Latest post:
         {% set latest_post = posts|last %}
-        <strong><a href="{{ latest_post.permalink | safe }}">{{ latest_post.title }}</a></strong>
+        <strong><a href="/{{ latest_post.path | safe }}">{{ latest_post.title }}</a></strong>
     </p>
 </div>
 
