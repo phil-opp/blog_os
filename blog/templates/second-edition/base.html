@@ -1,6 +1,6 @@
 <!doctype html>
 
-<html lang="{{ config.language_code }}">
+<html lang="{{ config.default_language }}">
 
 <head>
     <meta charset="UTF-8">
@@ -21,7 +21,7 @@
     <div class="container content">
         <header class="masthead">
             <h1 class="masthead-title">
-                <a href="/" title="Home">{{ config.title }}</a>
+                    <a href="{{ get_url(path="./second-edition/_index.md") }}" title="Home">{{ config.title }} (Second Edition)</a>
             </h1>
             <p><small>{{ config.extra.subtitle }}</small></p>
         </header>

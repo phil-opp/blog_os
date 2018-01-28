@@ -2,7 +2,7 @@
 title = "Allocating Frames"
 order = 5
 path = "allocating-frames"
-date = "2015-11-15"
+date  = 2015-11-15
 +++
 
 In this post we create an allocator that provides free physical frames for a future paging module. To get the required information about available and used memory we use the Multiboot information structure. Additionally, we improve the `panic` handler to print the corresponding message and source line.

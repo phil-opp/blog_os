@@ -2,7 +2,7 @@
 title = "A Freestanding Rust Binary"
 order = 3
 path = "freestanding-rust-binary"
-date = "0000-01-01"
+date  = 0000-01-01
 template = "second-edition/page.html"
 +++
 

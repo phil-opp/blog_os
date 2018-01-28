@@ -2,7 +2,7 @@
 title = "Set Up Rust"
 order = 3
 path = "set-up-rust"
-date = "2015-09-02"
+date  = 2015-09-02
 [extra]
 updated = "2017-04-12"
 +++

@@ -2,7 +2,7 @@
 title = "Kernel Heap"
 order = 8
 path = "kernel-heap"
-date = "2016-04-11"
+date  = 2016-04-11
 updated = "2017-11-19"
 +++
 

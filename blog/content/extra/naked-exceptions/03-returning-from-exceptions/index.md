@@ -2,7 +2,7 @@
 title = "Returning from Exceptions"
 order = 3
 path = "returning-from-exceptions"
-date = "2016-09-21"
+date  = 2016-09-21
 [extra]
 updated = "2016-11-01"
 +++
