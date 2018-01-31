@@ -14,6 +14,8 @@ This post describes how to create a Rust executable that does not link the stand
 
 TODO github, issues, comments, etc
 
+TODO build for x86_64-unknown-linux-gnu? Or use platform specific binary inspection tools (e.g. objdump on linux, xxx on Windows and yyy on Mac)?
+
 ## Introduction
 To write an operating system kernel, we need code that does not depend on any operating system features. This means that we can't use threads, files, heap memory, the network, random numbers, standard output, or any other features requiring OS abstractions or specific hardware. Which makes sense, since we're trying to write our own OS and our own drivers.
 
@@ -396,4 +398,4 @@ Note that this is just a minimal example of a freestanding Rust binary. This bin
 
 The [next post] build upon our minimal freestanding binary by explaining the steps needed for creating a minimal operating system kernel. It explains how to configure the kernel for the target system, how to start it using a bootloader, and how to print something to the screen.
 
-[next post]: TODO
+[next post]: ./second-edition/posts/04-minimal-rust-kernel/index.md
