@@ -1,0 +1,77 @@
+# Appveyor configuration template for Rust using rustup for Rust installation
+# https://github.com/starkat99/appveyor-rust
+
+## Operating System (VM environment) ##
+
+# Rust needs at least Visual Studio 2013 Appveyor OS for MSVC targets.
+os: Visual Studio 2015
+
+## Build Matrix ##
+environment:
+  matrix:
+
+### MSVC Toolchains ###
+  # Nightly 64-bit MSVC
+    - channel: nightly
+      target: x86_64-pc-windows-msvc
+      MSYS_BITS: 64
+  # Nightly 32-bit MSVC
+    - channel: nightly
+      target: i686-pc-windows-msvc
+      MSYS_BITS: 32
+
+### GNU Toolchains ###
+  # Nightly 64-bit GNU
+    - channel: nightly
+      target: x86_64-pc-windows-gnu
+      MSYS_BITS: 64
+  # Nightly 32-bit GNU
+    - channel: nightly
+      target: i686-pc-windows-gnu
+      MSYS_BITS: 32
+
+cache:
+  - '%USERPROFILE%\.cargo\bin'
+  - '%USERPROFILE%\.cargo\config'
+  - '%USERPROFILE%\.cargo\env'
+  - '%USERPROFILE%\.cargo\.crates.toml'
+  - '%USERPROFILE%\.xargo'
+  - target
+
+## Install Script ##
+
+# This is the most important part of the Appveyor configuration. This installs the version of Rust
+# specified by the 'channel' and 'target' environment variables from the build matrix. This uses
+# rustup to install Rust.
+#
+# For simple configurations, instead of using the build matrix, you can simply set the
+# default-toolchain and default-host manually here.
+install:
+  - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
+  - rustup-init -yv --default-toolchain %channel% --default-host %target%
+  - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
+  - rustc -vV
+  - cargo -vV
+
+## Build Script ##
+
+# 'cargo test' takes care of building for us, so disable Appveyor's build stage. This prevents
+# the "directory does not contain a project or solution file" error.
+build: false
+
+before_test:
+  - mkdir bin
+  - mklink "bin\ld.exe" "C:\Program Files\LLVM\bin\lld.exe"
+  - set PATH=%CD%\bin;C:\msys64\mingw%MSYS_BITS%\bin;C:\msys64\usr\bin;%PATH%
+  - rustup component add rust-src
+  - set RUST_BACKTRACE=1
+  - if not exist %USERPROFILE%\.cargo\bin\cargo-install-update.exe cargo install cargo-update
+  - if not exist %USERPROFILE%\.cargo\bin\xargo.exe cargo install xargo
+  - if not exist %USERPROFILE%\.cargo\bin\bootimage.exe cargo install bootimage
+  - cargo install-update -a
+
+# Uses 'cargo test' to run tests and build. Alternatively, the project may call compiled programs
+# directly or perform other testing commands. Rust will automatically be placed in the PATH
+# environment variable.
+test_script:
+  - bootimage --target x86_64-blog_os
