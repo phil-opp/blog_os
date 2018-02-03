@@ -142,9 +142,11 @@ pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
 }
 ```
 
-The function signature is taken from the [unstable Rust book]. The signature isn't verified by the compiler, so implement it carefully. TODO: https://github.com/rust-lang/rust/issues/44489
+The function signature is taken from the [unstable Rust book]. The signature isn't verified by the compiler, so implement it carefully.
 
 [unstable Rust book]: https://doc.rust-lang.org/unstable-book/language-features/lang-items.html#writing-an-executable-without-stdlib
+
+TODO: Implement the stable panic mechanism once <https://github.com/rust-lang/rust/issues/44489> is implemented
 
 Instead of implementing the second language item, `eh_personality`, we remove the need for it by disabling unwinding.
 
@@ -187,18 +189,45 @@ In a typical Rust binary that links the standard library, execution starts in a 
 
 [rt::lang_start]: https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73
 
-Our freestanding executable does not have access to the standard library and the Rust runtime, so we need to define the `start` language item ourselves:
+Our freestanding executable does not have access to the Rust runtime and `crt0`, so we need to define our own entry point. Implementing the `start` language item wouldn't help, since it would still require `crt0`. Instead, we need to overwrite the `crt0` entry point directly.
+
+### Overwriting the Entry Point
+To tell the Rust compiler that we don't want to use the normal entry point chain, we add the `#![no_main]` attribute.
 
 ```rust
-#[lang = "start"]
-fn lang_start(main: fn(), argc: isize, argv: *const *const u8) -> isize { 1 }
+#![feature(lang_items)]
+#![no_std]
+#![no_main]
+
+#[lang = "panic_fmt"]
+#[no_mangle]
+pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
+    _file: &'static str, _line: u32, _column: u32) -> !
+{
+    loop {}
+}
 ```
 
-The signature is copied [from the standard library][rt::lang_start]. We should probably call `main` from this function at some point, but for now we just try to get it to compile.
+You might notice that we removed the `main` function. The reason is that a `main` doesn't make sense without an underlying runtime that calls it. Instead, we now to overwrite the operating system entry point.
 
-TODO #[start]
+The entry point convention depends on your operating system. I recommend you to read the Linux section even if you're on a different OS because it is the target we will derive to build our kernel in the next post.
 
-### `-nostartfiles`
+#### Linux
+On Linux, the default entry point is called `_start`. The linker just looks for a function with that name and sets this function as entry point the executable. So to overwrite the entry point, we define our own `_start` function:
+
+```rust
+#[no_mangle]
+pub fn _start() -> ! {
+    loop {}
+}
+```
+
+It's important that we disable the [name mangling][mangling] through the `no_mangle` attribute, otherwise the compiler would generate some cryptic `_ZN3blog_os4_start7hb173fedf945531caE` symbol that the linker wouldn't recognize.
+
+The `!` return type means that the function is diverging, i.e. not allowed to ever return. This is required because the entry point is not called by any function, but invoked directly by the operating system or bootloader. So instead of returning, the entry point should e.g. invoke the [`exit` system call] of the operating system. In our case, shutting down the machine could be a reasonable action, since there's nothing left to do if a freestanding binary returns. For now, we fulfil the requirement by looping endlessly.
+
+[`exit` system call]: https://en.wikipedia.org/wiki/Exit_(system_call)
+
 If we try to build it now, an ugly linker error occurs:
 
 ```
@@ -232,114 +261,27 @@ One way to pass linker attributes via cargo is the `cargo rustc` command. The co
 > cargo rustc -- -Z pre-link-arg=-nostartfiles
 ```
 
-With this command, our crate builds again. However, it won't work in its current state.
+With this command, our crate builds again as a freestanding executable!
 
-## Setting the Entry Point
-
-TODO: use elfkit instead of objdump? https://github.com/aep/elfkit
-
-Let's take a look at the compiled binary using the [`objdump` tool]:
-
-[`objdump` tool]: http://sourceware.org/binutils/docs/binutils/objdump.html
-
-```
-> objdump --disassemble target/debug/blog_os
-
-target/debug/blog_os_test:     file format elf64-x86-64
-```
-
-The `--disassemble` flag should output all the assembly instructions in our binary, but the output is empty. So our binary does not contain any code. That's bad. Let's look at the file headers of the [ELF] binary to see what's wrong:
-
-[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
-
-```
-> objdump --file-headers target/debug/blog_os
-
-target/debug/blog_os:     file format elf64-x86-64
-architecture: i386:x86-64, flags 0x00000150:
-HAS_SYMS, DYNAMIC, D_PAGED
-start address 0x0000000000000000
-```
-
-The start address should point to the entry point, but it is zero. So what's going wrong here? To understand what's happening, we have to look at the three layers of entry points again:
-
-- We saw above that the `main` function is not the real entry point of a Rust binary. In fact, the compiler [mangles its name][mangling] to something like `_ZN3blog_os4main17hb173fedf945531caE`.
-- The `start` language item (which can be overridden by the `start` attribute), defines the Rust-level entry point and normally points to the Rust runtime. The compiler generates a C-compatible, unmangled `main` function for this entry point.
-- The C runtime defines the real entry point for the binary through a function named `_start`. The linker looks for a function of this name for setting the entry point in the [ELF] binary.
-
-[mangling]: https://en.wikipedia.org/wiki/Name_mangling
-
-Each layer is invoked by the layer below. So the `start` language item is called by the C runtime (which thinks that it's calling a normal C `main` function) and the `main` function is called by the Rust runtime. The problem is that we removed the lowest layer through the `-nostartfiles` linker argument, so no `_start` symbol exist anymore.
-
-### A `_start` Function
-
-The solution to this problem is to define our own `_start` function:
+#### Windows
+On Windows, the linker requires two entry points: `WinMain` and `WinMainCRTStartup`. The one that actually is called is `WinMainCRTStartup`. Like on Linux, we overwrite the entry points by defining `no_mangle` functions:
 
 ```rust
 #[no_mangle]
-pub fn _start() -> ! {
+pub fn WinMainCRTStartup() -> ! {
+    WinMain();
+}
+
+#[no_mangle]
+pub fn WinMain() -> ! {
     loop {}
 }
 ```
 
-It's important that we disable the [name mangling][mangling] through the `no_mangle` attribute, otherwise the compiler would generate some cryptic `_ZN3blog_os4_start7hb173fedf945531caE` symbol that the linker wouldn't recognize.
+We just call `WinMain` from `WinMainCRTStartup` to avoid any ambiguity which function is called.
 
-The `!` return type means that the function is diverging, i.e. not allowed to ever return. This is required because the entry point is not called by any function, but invoked directly by the operating system or bootloader. So instead of returning, the entry point should e.g. invoke the [`exit` system call] of the operating system. In our case, shutting down the machine could be a reasonable action, since there's nothing left to do if a freestanding binary returns. For now, we fulfil the requirement by looping endlessly.
-
-[`exit` system call]: https://en.wikipedia.org/wiki/Exit_(system_call)
-
-If we build our crate now (by running `cargo rustc -- -Z pre-link-arg=-nostartfiles`), the resulting binary has a valid entry point and contains code:
-
-```
-> objdump -fd target/debug/blog_os
-
-target/debug/blog_os:     file format elf64-x86-64
-architecture: i386:x86-64, flags 0x00000150:
-HAS_SYMS, DYNAMIC, D_PAGED
-start address 0x0000000000000340
-
-
-Disassembly of section .text:
-
-0000000000000340 <_start>:
- 340:	55                   	push   %rbp
- 341:	48 89 e5             	mov    %rsp,%rbp
- 344:	eb 00                	jmp    346 <_start+0x6>
- 346:	eb fe                	jmp    346 <_start+0x6>
-```
-
-The `-fd` argument to `objdump` is a combination of the short forms of the `--file-headers` (`-f`) and `--disassemble` (`-d`) arguments we saw above.
-
-We see that our binary contains very few instructions, which is expected since our `_start` function is just an endless loop. The `jmp` instruction at address `346`, which jumps to itself forever, is the translation of this endless loop. The other instructions are just there because the build is unoptimized. If we compile with optimizations using the `--release` flag (`cargo rustc --release -- -Z pre-link-arg=-nostartfiles`), only one `jmp` instruction is left:
-
-```
-> objdump -d target/release/blog_os_test
-
-target/release/blog_os_test:     file format elf64-x86-64
-
-
-Disassembly of section .text:
-
-0000000000000310 <_start>:
- 310:	eb fe                	jmp    310 <_start>
-```
-
-### Cleaning up: `no_main`
-
-Our `main.rs` now contains multiple entry points, but only the `_start` entry point is actually used. To remove the unused entry points (`main` and `start`), we can use the `no_main` attribute. This attribute disables the Rust-level entry points, so we can remove the `main` function and the `start` language item completely:
-
-```rust
-#![feature(lang_items)]
-#![no_std]
-#![no_main]
-
-#[no_mangle]
-pub fn _start() -> ! {
-    loop {}
-}
-
-// [panic_fmt language item]
-```
+#### OS X
+TODO: I don't have access to a Mac at the moment. In case you know the entry point procedure on Mac and would like to help, please send a pull request!
 
 ## Summary
 
@@ -352,6 +294,15 @@ A minimal freestanding Rust binary looks like this:
 #![no_std] // don't link the Rust standard library
 #![no_main] // disable all Rust-level entry points
 
+#[lang = "panic_fmt"] // define a function that should be called on panic
+#[no_mangle] // TODO required?
+pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
+    _file: &'static str, _line: u32, _column: u32) -> !
+{
+    loop {}
+}
+
+// On Linux:
 #[no_mangle] // don't mangle the name of this function
 pub fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
@@ -359,14 +310,19 @@ pub fn _start() -> ! {
     loop {}
 }
 
-#[lang = "panic_fmt"] // define a function that should be called on panic
-#[no_mangle] // TODO required?
-pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
-                               _file: &'static str,
-                               _line: u32,
-                               _column: u32) -> ! {
+// On Windows:
+#[no_mangle]
+pub fn WinMainCRTStartup() -> ! {
+    WinMain();
+}
+
+#[no_mangle]
+pub fn WinMain() -> ! {
     loop {}
 }
+
+// On Mac:
+// TODO
 ```
 
 `Cargo.toml`:
