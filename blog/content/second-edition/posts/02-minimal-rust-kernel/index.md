@@ -76,7 +76,7 @@ pub fn _start(boot_info: &'static mut BootInfo) -> ! {
     unsafe {
         *vga_buffer.offset(0) = b'O';
         *vga_buffer.offset(1) = 0xa; // foreground color green
-        *vga_buffer.offset(0) = b'K';
+        *vga_buffer.offset(2) = b'K';
         *vga_buffer.offset(3) = 0xa; // foreground color green
     }
 
