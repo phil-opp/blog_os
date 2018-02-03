@@ -54,7 +54,7 @@ If you are interested in building your own bootloader, check out our “[Booting
 ### UEFI
 
 ## A Minimal Kernel
-Now that we know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a bootable disk image that prints a green “OK” to the screen when booted. For that we build upon the [freestanding Rust binary] we created in the previous post.
+Now that we know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a bootable disk image that prints a green “Hello” to the screen when booted. For that we build upon the [freestanding Rust binary] we created in the previous post.
 
 We already have our `_start` entry point, which will be called by the boot loader. So let's output something to screen from it.
 
@@ -65,26 +65,32 @@ The easiest way to print text to the screen at this stage is the [VGA text buffe
 
 ![screen output for common ASCII characters](https://upload.wikimedia.org/wikipedia/commons/6/6d/Codepage-737.png)
 
-We will discuss the exact layout of the VGA buffer in the next post, where we write a first small driver for it. For printing “OK”, we just need to know that the buffer is located at address `0xb8000` and that each character cell consists of an ASCII byte and a color byte.
+We will discuss the exact layout of the VGA buffer in the next post, where we write a first small driver for it. For printing “Hello”, we just need to know that the buffer is located at address `0xb8000` and that each character cell consists of an ASCII byte and a color byte.
 
-So let's extend our `main.rs` to write `OK` to the screen:
+The implementation looks like this:
 
 ```rust
 #[no_mangle]
 pub fn _start(boot_info: &'static mut BootInfo) -> ! {
 	let vga_buffer = 0xb8000 as *const u8 as *mut u8;
     unsafe {
-        *vga_buffer.offset(0) = b'O';
+        *vga_buffer.offset(0) = b'H';
         *vga_buffer.offset(1) = 0xa; // foreground color green
-        *vga_buffer.offset(2) = b'K';
+        *vga_buffer.offset(2) = b'e';
         *vga_buffer.offset(3) = 0xa; // foreground color green
+        *vga_buffer.offset(4) = b'l';
+        *vga_buffer.offset(5) = 0xa;
+        *vga_buffer.offset(6) = b'l';
+        *vga_buffer.offset(7) = 0xa;
+        *vga_buffer.offset(8) = b'o';
+        *vga_buffer.offset(9) = 0xa;
     }
 
 	loop {}
 }
 ```
 
-First, we cast the integer `0xb8000` into a [raw pointer]. Then we use the [`offset`] method to write the first four bytes individually. We write the ASCII character `b'O'` (the `b` prefix creates an single-byte ASCII character instead of a four-byte Unicode character), then we write the color `0xa` (which translates to “green foreground, black background”). We repeat the same for the second character.
+First, we cast the integer `0xb8000` into a [raw pointer]. Then we use the [`offset`] method to write the first ten bytes individually. We write the ASCII character `b'H'` (the `b` prefix creates an single-byte ASCII character instead of a four-byte Unicode character), then we write the color `0xa` (which translates to “green foreground, black background”). We repeat the same for the other four characters.
 
 [raw pointer]: https://doc.rust-lang.org/stable/book/second-edition/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
