@@ -8,7 +8,7 @@ template = "second-edition/page.html"
 
 In this post we create a minimal 64-bit Rust kernel. We built upon the [freestanding Rust binary] from the previous post to create a bootable disk image, that prints something to the screen.
 
-[freestanding Rust binary]: ./second-edition/posts/03-freestanding-rust-binary/index.md
+[freestanding Rust binary]: ./second-edition/posts/01-freestanding-rust-binary/index.md
 
 <!-- more -->
 

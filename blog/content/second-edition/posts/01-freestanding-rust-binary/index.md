@@ -398,4 +398,4 @@ Note that this is just a minimal example of a freestanding Rust binary. This bin
 
 The [next post] build upon our minimal freestanding binary by explaining the steps needed for creating a minimal operating system kernel. It explains how to configure the kernel for the target system, how to start it using a bootloader, and how to print something to the screen.
 
-[next post]: ./second-edition/posts/04-minimal-rust-kernel/index.md
+[next post]: ./second-edition/posts/02-minimal-rust-kernel/index.md
