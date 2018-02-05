@@ -1,0 +1,24 @@
+{% extends "second-edition/base.html" %}
+
+{% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+
+{% block main %}
+    <h1>{{ page.title }}</h1>
+    <div class="warning">
+        <b>Note:</b> This post is part of the upcoming <a href="{{ get_url(path = "./second-edition/_index.md") }}">second edition</a> of “Writing an OS in Rust”, which is still under construction. To read the first edition, go <a href="{{ get_url(path = "/") }}">here</a>.
+    </div>
+    {{ page.content | safe }}
+{% endblock main %}
+
+{% block after_main %}
+    <hr>
+    <section>
+        <h2>Comments</h2>
+        <script src="https://utteranc.es/client.js"
+            repo="phil-opp/blog_os"
+            branch="master"
+            issue-term="pathname"
+            async>
+        </script>
+    </section>
+{% endblock after_main %}

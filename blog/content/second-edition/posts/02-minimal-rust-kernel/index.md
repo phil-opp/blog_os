@@ -243,7 +243,9 @@ Let's try it:
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-TODO linker error LLD
+(If you're getting a linking error because LLD could not be found, see our “[Installing LLD]” guide.)
+
+[Installing LLD]: ./second-edition/extra/installing-lld/index.md
 
 It worked! We see that `xargo` cross-compiled the `core` library for our new custom target and then continued to compile our `blog_os` crate.
 
