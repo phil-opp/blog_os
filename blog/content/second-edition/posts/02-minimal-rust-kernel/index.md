@@ -12,7 +12,10 @@ In this post we create a minimal 64-bit Rust kernel. We built upon the [freestan
 
 <!-- more -->
 
-TODO github, issues, comments, etc
+This blog is openly developed on [Github]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].
+
+[Github]: https://github.com/phil-opp/blog_os
+[at the bottom]: #comments
 
 ## The Boot Process
 When you turn on a computer, it begins executing firmware code that is stored in motherboard [ROM]. This code performs a [power-on self-test], detects available RAM, and pre-initializes the CPU and hardware. Afterwards it looks for a bootable disk and starts booting the operating system kernel.
@@ -51,12 +54,200 @@ If you are interested in building your own bootloader, check out our “[Booting
 
 ### The Multiboot Standard
 
+TODO
+
 ### UEFI
 
-## A Minimal Kernel
-Now that we know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a bootable disk image that prints a green “Hello” to the screen when booted. For that we build upon the [freestanding Rust binary] we created in the previous post.
+TODO
 
-We already have our `_start` entry point, which will be called by the boot loader. So let's output something to screen from it.
+## A Minimal Kernel
+Now that we roughly know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a disk image that prints a green “Hello” to the screen when booted. For that we build upon the [freestanding Rust binary] from the previous post.
+
+As you may remember, we built the freestanding binary through `cargo`, but depending on the operating system we needed different entry point names and compile flags. That's because `cargo` builds for the _host system_ by default, i.e. the system you're running on. This isn't something we want for our kernel, because a kernel that runs on top of e.g. Windows does not make much sense. Instead, we want to compile for a clearly defined _target system_.
+
+### Target Specification
+Cargo supports different target systems through the `--target` parameter. The target is decribed by a so-called _[target triple]_, which describes the CPU architecture, the vendor, the operating system, and the [ABI]. For example, the `x86_64-unknown-linux-gnu` means a `x86_64` CPU, no clear vendor and a Linux operating system with the GNU ABI. Rust supports [many different target triples][platform-support], including `arm-linux-androideabi` for Android or [`wasm32-unknown-unknown` for WebAssembly](https://www.hellorust.com/setup/wasm-target/).
+
+[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[ABI]: https://stackoverflow.com/a/2456882
+[platform-support]: https://forge.rust-lang.org/platform-support.html
+
+For our target system, however, we require some special configuration parameters (e.g. no underlying OS), so none of the [existing target triples][platform-support] fits. Fortunately Rust allows us to define our own target through a JSON file. For example, a JSON file that describes the `x86_64-unknown-linux-gnu` target looks like this:
+
+```json
+{
+    "llvm-target": "x86_64-unknown-linux-gnu",
+    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+    "arch": "x86_64",
+    "target-endian": "little",
+    "target-pointer-width": "64",
+    "target-c-int-width": "32",
+    "os": "linux",
+    "executables": true,
+    "linker-flavor": "gcc",
+    "pre-link-args": ["-m64"],
+    "morestack": false
+}
+```
+
+Most fields are required by LLVM to generate code for that platform. For example, the `data-layout` field defines the size of various integer, floating point, and pointer types. Then there are fields that Rust uses for conditional compilation, such as `target-pointer-width`. The third kind of fields define how the crate should be built. For example, the `pre-link-args` field specifies arguments passed to the [linker].
+
+[linker]: https://en.wikipedia.org/wiki/Linker_(computing)
+
+We also target `x86_64` systems with our kernel, so our target specification will look very similar to the above. Let's start by creating a `x86_64-blog_os.json` file (choose any name you like) with the common content:
+
+```json
+{
+    "llvm-target": "x86_64-unknown-none",
+    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+    "arch": "x86_64",
+    "target-endian": "little",
+    "target-pointer-width": "64",
+    "target-c-int-width": "32",
+    "os": "none",
+    "executables": true,
+}
+```
+
+Note that we changed the OS in the `llvm-target` and the `os` field to `none`, because we will run on bare metal.
+
+We add the following build-related entries:
+
+
+```json
+"linker-flavor": "ld",
+"linker": "ld.lld",
+```
+
+Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker for linking our kernel.
+
+[LLD]: https://lld.llvm.org/
+
+```json
+"panic": "abort",
+```
+
+This setting specifies that the target doesn't support [stack unwinding] on panic, so instead the program should abort directly. This has the same effect as the `panic = "abort"` option in our Cargo.toml, so we can remove it from there.
+
+[stack unwinding]: http://www.bogotobogo.com/cplusplus/stackunwinding.php
+
+```json
+"disable-redzone": true,
+```
+
+We're writing a kernel, so we'll need to handle interrupts at some point. To do that safely, we have to disable a certain stack pointer optimization called the _“red zone”_, because it would cause stack corruptions otherwise. For more information, see our separate post about [disabling the red zone].
+
+[disabling the red zone]: ./second-edition/extra/disable-red-zone/index.md
+
+```json
+"features": "-mmx,-sse,+soft-float",
+```
+
+The `features` field enables/disables target features. We disable the `mmx` and `sse` features by prefixing them with a minus and enable the `soft-float` feature by prefixing it with a plus.
+
+The `mmx` and `sse` features determine support for [Single Instruction Multiple Data (SIMD)] instructions, which can often speed up programs significantly. However, the large SIMD registers lead to performance problems in OS kernels, because the kernel has to back them up on each hardware interrupt. To avoid this, we disable SIMD for our kernel (not for applications running on top!).
+
+[Single Instruction Multiple Data (SIMD)]: https://en.wikipedia.org/wiki/SIMD
+
+A problem with disabling SIMD is that floating point operations on `x86_64` require SIMD registers by default. To solve this problem, we add the `soft-float` feature, which emulates all floating point operations through software functions based on normal integers.
+
+For more information, see our post on [disabling SIMD](./second-edition/extra/disable-simd/index.md).
+
+#### Putting it Together
+Our target specification file now looks like this:
+
+```json
+{
+  "llvm-target": "x86_64-unknown-linux-gnu",
+  "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+  "arch": "x86_64",
+  "target-endian": "little",
+  "target-pointer-width": "64",
+  "target-c-int-width": "32",
+  "os": "none",
+  "linker-flavor": "ld",
+  "linker": "ld.lld",
+  "executables": true,
+  "features": "-mmx,-sse,+soft-float",
+  "disable-redzone": true,
+  "panic": "abort"
+}
+```
+
+### Building our Kernel
+Compiling for our new target will use Linux conventions. I'm not quite sure why, but I assume that it's just LLVM's default. This means that we need an entry point named `_start` as described in the [previous post]:
+
+[previous post]: ./second-edition/posts/01-freestanding-rust-binary/index.md
+
+```rust
+// src/main.rs
+
+#![feature(lang_items)] // required for defining the panic handler
+#![no_std] // don't link the Rust standard library
+#![no_main] // disable all Rust-level entry points
+
+#[lang = "panic_fmt"] // define a function that should be called on panic
+#[no_mangle] // TODO required?
+pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
+    _file: &'static str, _line: u32, _column: u32) -> !
+{
+    loop {}
+}
+
+#[no_mangle] // don't mangle the name of this function
+pub fn _start() -> ! {
+    // this function is the entry point, since the linker looks for a function
+    // named `_start_` by default
+    loop {}
+}
+```
+
+We can now build the kernel for our new target by passing the name of the JSON file (without the `.json` extension) as `--target`. There's is currently an [open bug][custom-target-bug] with custom target, so you also need to set the `RUST_TARGET_PATH` environment variable to the current directory, otherwise Rust might not be able to find your target. The full command is:
+
+[custom-target-bug]: https://github.com/rust-lang/cargo/issues/4905
+
+```
+> RUST_TARGET_PATH=(pwd) cargo build --target x86_64-unknown-blog_os
+
+error[E0463]: can't find crate for `core`
+  |
+  = note: the `x86_64-blog_os` target may not be installed
+```
+
+It failed! The error tells us that the Rust compiler no longer finds the core library. The [core library] is implicitly linked to all `no_std` crates and contains things such as `Result`, `Option`, and iterators.
+
+[core library]: https://doc.rust-lang.org/nightly/core/index.html
+
+The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for the host triple (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for other targets, we need to recompile `core` for these targets first.
+
+#### Xargo
+That's where [xargo] comes in. It is a wrapper for cargo that eases cross compilation. We can install it by executing:
+
+[xargo]: https://github.com/japaric/xargo
+
+```
+cargo install xargo
+```
+
+Xargo depends on the rust source code, which we can install with `rustup component add rust-src`.
+
+Xargo is “a drop-in replacement for cargo”, so every cargo command also works with `xargo`. You can do e.g. `xargo --help`, `xargo clean`, or `xargo doc`. The only difference is that the build command has additional functionality: `xargo build` will automatically cross compile the `core` library when compiling for custom targets.
+
+Let's try it:
+
+```bash
+> RUST_TARGET_PATH=(pwd) xargo build --target x86_64-unknown-blog_os
+   Compiling core v0.0.0 (file:///…/rust/src/libcore)
+    Finished release [optimized] target(s) in 22.87 secs
+   Compiling blog_os v0.1.0 (file:///…/blog_os)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
+```
+
+TODO linker error LLD
+
+It worked! We see that `xargo` cross-compiled the `core` library for our new custom target and then continued to compile our `blog_os` crate.
+
+Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
 
 ### Printing to Screen
 The easiest way to print text to the screen at this stage is the [VGA text buffer]. It is a special memory area mapped to the VGA hardware that contains the contents displayed on screen. It normally consists of 50 lines that each contain 80 character cells. Each character cell displays an ASCII character with some foreground and background colors. The screen output looks like this:
@@ -106,70 +297,16 @@ So we want to minimize the use of `unsafe` as much as possible. Rust gives us th
 
 [memory safety]: https://en.wikipedia.org/wiki/Memory_safety
 
-We will create such a safe VGA buffer abstraction in the next post. For the remainder of post, we stick to our unsafe version to keep things simple.
-
-Now that we have an executable that does something perceptible, it is time to turn it into a bootable disk image. However, in order to be able do that, we need to cross-compile our kernel to our target system.
-
-### Target Specification
-Until now, we compiled our kernel for the host system, that means the system you're currently running on. This could be a Windows machine with an ARM processor. Or a Mac with a 32-bit x86 processor. Or any other of the [many targets that Rust supports][platform-support]. Independent of the host system, we want to compile an executable for a bare-metal x86_64 system, which is our target system.
-
-[platform-support]: https://forge.rust-lang.org/platform-support.html
-
-
-TODO rewrite
-
-We require some special configuration parameters for our target system (e.g. no underlying OS), so none of the [existing target triples][platform-support] fits. (A target triple describes the CPU architecture, the vendor, the operating system, and sometimes additionally the calling convention; “unknown” means that there is no reasonable value). Luckily Rust allows us to define our own target in a JSON file. For example, a JSON file that describes the `x86_64-unknown-linux-gnu` target looks like this:
-
-```json
-TODO
-```
-
-Most fields are required by LLVM to generate code for that platform. For example, the `data-layout` field defines the size of various integer, floating point, and pointer types. Then there are fields that Rust uses for conditional compilation, such as max_atomic_width. The third kind of fields are the most interesting: They define how the crate should be built. For example, features?
-
-We also target `x86_64` systems with our kernel, so our target specification will look very similar to the `x86_64-unknown-linux-gnu` specification. Let's start by creating a `x86_64-unknown-blog_os.json` file (choose any name you like) with the common content:
-
-```json
-
-```
-
-We add the following entries, where we changed the values:
-
-```json
-
-```
-
-The reason for the change…
-
-Finally, we add some additional entries:
-
-```json
-
-```
-
-The xxx does yyy…
-
-Our target specification file now looks like this:
-
-```json
-
-```
-
-We can now build the kernel for our new target by passing the name of the JSON file (without extension) as `--target`. There's is currently an open bug with custom targets, so you also need to set the `RUST_TARGET_PATH` environment variable to the current directory, otherwise Rust might not be able to find your target. The full command is:
-
-```
-> RUST_TARGET_PATH=(pwd) cargo build --target x86_64-unknown-blog_os
-```
+We will create such a safe VGA buffer abstraction in the next post. For the rest of this post, we stick to our unsafe version to keep things simple.
 
 ### Creating a Bootimage
 Now that we have an executable that does something perceptible, it is time to turn it into a bootable disk image. As we learned in the [section about booting], we need a bootloader for that, which initializes the CPU and loads our kernel.
 
 [section about booting]: #the-boot-process
 
-To make things easy, we created a tool named `bootimage` that automatically downloads and builds our bootloader, and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal.
+To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal. After installing, creating a bootimage is as easy as executing `bootimage --target x86_64-unknown-blog_os`. The tool also recompiles your kernel using `xargo`, so it will automatically pick up any changes you make.
 
-After installing, creating a bootimage is as easy as executing `bootimage --target x86_64-unknown-blog_os`.
-
-You should now see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image, so can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image (they have a different format), so burning to disk doesn't work).
+You should now see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image, so can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
 ## Booting it!
 
@@ -177,4 +314,5 @@ You should now see a file named `bootimage.bin` in your crate root directory. Th
 - bochs? virtualbox?
 - makefile? cargo-make?
 
-## Summary & What's next?
+## What's next?
+In the next post, we will explore the VGA text buffer in more detail and write a safe interface for it. We will also add support for the `println` macro.
