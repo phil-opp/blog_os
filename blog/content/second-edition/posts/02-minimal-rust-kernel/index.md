@@ -48,9 +48,8 @@ Writing a bootloader is a bit cumbersome as it requires assembly language and a 
 
 [bootimage]: https://github.com/phil-opp/bootimage
 
-If you are interested in building your own bootloader, check out our “[Booting]” posts, where we explain in detail how a bootloader is built.
+If you are interested in building your own bootloader: Stay tuned, a set of posts on this topic is already planned! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
 
-[Booting]: TODO
 
 ### The Multiboot Standard
 

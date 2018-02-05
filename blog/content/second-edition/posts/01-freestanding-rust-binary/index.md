@@ -12,10 +12,6 @@ This post describes how to create a Rust executable that does not link the stand
 
 <!-- more -->
 
-TODO github, issues, comments, etc
-
-TODO build for x86_64-unknown-linux-gnu? Or use platform specific binary inspection tools (e.g. objdump on linux, xxx on Windows and yyy on Mac)?
-
 ## Introduction
 To write an operating system kernel, we need code that does not depend on any operating system features. This means that we can't use threads, files, heap memory, the network, random numbers, standard output, or any other features requiring OS abstractions or specific hardware. Which makes sense, since we're trying to write our own OS and our own drivers.
 
@@ -146,7 +142,7 @@ The function signature is taken from the [unstable Rust book]. The signature isn
 
 [unstable Rust book]: https://doc.rust-lang.org/unstable-book/language-features/lang-items.html#writing-an-executable-without-stdlib
 
-TODO: Implement the stable panic mechanism once <https://github.com/rust-lang/rust/issues/44489> is implemented
+Note that there is already an accepted RFC for a stable panic mechnism, which is only waiting for an implementation. See the [tracking issue](https://github.com/rust-lang/rust/issues/44489) for more information.
 
 Instead of implementing the second language item, `eh_personality`, we remove the need for it by disabling unwinding.
 
@@ -295,7 +291,7 @@ A minimal freestanding Rust binary looks like this:
 #![no_main] // disable all Rust-level entry points
 
 #[lang = "panic_fmt"] // define a function that should be called on panic
-#[no_mangle] // TODO required?
+#[no_mangle]
 pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
     _file: &'static str, _line: u32, _column: u32) -> !
 {
