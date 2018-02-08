@@ -186,7 +186,7 @@ Compiling for our new target will use Linux conventions. I'm not quite sure why,
 #![no_main] // disable all Rust-level entry points
 
 #[lang = "panic_fmt"] // define a function that should be called on panic
-#[no_mangle] // TODO required?
+#[no_mangle]
 pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
     _file: &'static str, _line: u32, _column: u32) -> !
 {
@@ -314,10 +314,30 @@ To make things easy, we created a tool named `bootimage` that automatically down
 You should now see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image, so can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
 ## Booting it!
+We can now boot our kernel in a virtual machine. To boot it in [QEMU], execute the following command:
 
-- qemu
-- bochs? virtualbox?
-- makefile? cargo-make?
+[QEMU]: https://www.qemu.org/
+
+```
+> qemu-system-x86_64 -drive format=raw,file=bootimage.bin
+warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
+```
+
+![QEMU showing "Hello World!"](qemu.png)
+
+You can also [convert the raw disk image to a VDI] to load it in [VirtualBox].
+
+[convert the raw disk image to a VDI]: https://blog.sleeplessbeastie.eu/2012/04/29/virtualbox-convert-raw-image-to-vdi-and-otherwise/
+[VirtualBox]: https://www.virtualbox.org/
+
+It is also possible to write it to an USB stick and boot it on a real machine:
+
+```
+> dd if=bootimage.bin of=/dev/sdX && sync
+```
+
+Where `sdX` is the device name of your USB stick. It overwrites everything on that device, so be careful to choose the correct device name.
 
 ## What's next?
 In the next post, we will explore the VGA text buffer in more detail and write a safe interface for it. We will also add support for the `println` macro.
+TODO
