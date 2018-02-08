@@ -262,43 +262,47 @@ We will discuss the exact layout of the VGA buffer in the next post, where we wr
 The implementation looks like this:
 
 ```rust
+static HELLO: &[u8] = b"Hello World!";
+
 #[no_mangle]
 pub fn _start(boot_info: &'static mut BootInfo) -> ! {
 	let vga_buffer = 0xb8000 as *const u8 as *mut u8;
-    unsafe {
-        *vga_buffer.offset(0) = b'H';
-        *vga_buffer.offset(1) = 0xa; // foreground color green
-        *vga_buffer.offset(2) = b'e';
-        *vga_buffer.offset(3) = 0xa; // foreground color green
-        *vga_buffer.offset(4) = b'l';
-        *vga_buffer.offset(5) = 0xa;
-        *vga_buffer.offset(6) = b'l';
-        *vga_buffer.offset(7) = 0xa;
-        *vga_buffer.offset(8) = b'o';
-        *vga_buffer.offset(9) = 0xa;
+
+    for (i, &byte) in HELLO.iter().enumerate() {
+        unsafe {
+            *vga_buffer.offset(i as isize * 2) = byte;
+            *vga_buffer.offset(i as isize * 2 + 1) = 0xb;
+        }
     }
 
 	loop {}
 }
 ```
 
-First, we cast the integer `0xb8000` into a [raw pointer]. Then we use the [`offset`] method to write the first ten bytes individually. We write the ASCII character `b'H'` (the `b` prefix creates an single-byte ASCII character instead of a four-byte Unicode character), then we write the color `0xa` (which translates to “green foreground, black background”). We repeat the same for the other four characters.
+First, we cast the integer `0xb8000` into a [raw pointer]. Then we [iterate] over the bytes of the [static] `HELLO` [byte string]. We use the [`enumerate`] method to additionally get a running variable `i`. In the body of the for loop, we use the [`offset`] method to write the string byte and the corresponding color byte.
 
+[iterate]: https://doc.rust-lang.org/book/second-edition/ch13-02-iterators.html
+[static]: https://doc.rust-lang.org/book/first-edition/const-and-static.html#static
+[`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
+[byte string]: https://doc.rust-lang.org/reference/tokens.html#byte-string-literals
 [raw pointer]: https://doc.rust-lang.org/stable/book/second-edition/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
-Note that there's a big [`unsafe`] block around all memory writes. The reason is that the Rust compiler can't prove that the raw pointers we create are valid. They could point anywhere and lead to data corruption. By putting them into an `unsafe` block we're basically telling the compiler that we are absolutely sure that the operations are valid. Note that an `unsafe` block does not turn off Rust's safety checks. It only allows you to do [four additional things].
+Note that there's an [`unsafe`] block around all memory writes. The reason is that the Rust compiler can't prove that the raw pointers we create are valid. They could point anywhere and lead to data corruption. By putting them into an `unsafe` block we're basically telling the compiler that we are absolutely sure that the operations are valid. Note that an `unsafe` block does not turn off Rust's safety checks. It only allows you to do [four additional things].
 
 [`unsafe`]: https://doc.rust-lang.org/stable/book/second-edition/ch19-01-unsafe-rust.html
 [four additional things]: https://doc.rust-lang.org/stable/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 I want to emphasize that **this is not the way we want to do things in Rust!** It's very easy to mess up when working with raw pointers inside unsafe blocks, for example, we could easily write behind the buffer's end if we're not careful.
 
-So we want to minimize the use of `unsafe` as much as possible. Rust gives us the ability to do this by creating safe abstractions. For example, we could create a VGA buffer type that encapsulates all unsafety and ensures that it is _impossible_ to do anything wrong from the outside. This way, we would only need minimal amounts of `unsafe` and can be sure that we don't violate [memory safety].
+So we want to minimize the use of `unsafe` as much as possible. Rust gives us the ability to do this by creating safe abstractions. For example, we could create a VGA buffer type that encapsulates all unsafety and ensures that it is _impossible_ to do anything wrong from the outside. This way, we would only need minimal amounts of `unsafe` and can be sure that we don't violate [memory safety]. We will create such a safe VGA buffer abstraction in the next post.
 
 [memory safety]: https://en.wikipedia.org/wiki/Memory_safety
 
-We will create such a safe VGA buffer abstraction in the next post. For the rest of this post, we stick to our unsafe version to keep things simple.
+We now have a simple “Hello World!” kernel. It should be noted though that a more advanced kernel might still produce linker faults because the compiler tries to use some function normally provided by `libc`. For this case, there are two crates you should keep in mind: [`rlibc`] and [`compiler_builtins`]. The former provides implementations for `memcpy`, `memclear`, etc. and the latter provides various other builtin functions.
+
+[`rlibc`]: https://docs.rs/crate/rlibc
+[`compiler_builtins`]: https://docs.rs/crate/compiler-builtins-snapshot
 
 ### Creating a Bootimage
 Now that we have an executable that does something perceptible, it is time to turn it into a bootable disk image. As we learned in the [section about booting], we need a bootloader for that, which initializes the CPU and loads our kernel.
