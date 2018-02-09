@@ -131,9 +131,8 @@ fn main() {}
 #[lang = "panic_fmt"]
 #[no_mangle]
 pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
-                               _file: &'static str,
-                               _line: u32,
-                               _column: u32) -> ! {
+    _file: &'static str, _line: u32, _column: u32) -> !
+{
     loop {}
 }
 ```
@@ -213,7 +212,7 @@ On Linux, the default entry point is called `_start`. The linker just looks for 
 
 ```rust
 #[no_mangle]
-pub fn _start() -> ! {
+pub extern fn _start() -> ! {
     loop {}
 }
 ```
@@ -260,16 +259,16 @@ One way to pass linker attributes via cargo is the `cargo rustc` command. The co
 With this command, our crate builds again as a freestanding executable!
 
 #### Windows
-On Windows, the linker requires two entry points: `WinMain` and `WinMainCRTStartup`. The one that actually is called is `WinMainCRTStartup`. Like on Linux, we overwrite the entry points by defining `no_mangle` functions:
+On Windows, the linker requires two entry points: `WinMain` and `WinMainCRTStartup`, [depending on the used subsystem](https://msdn.microsoft.com/en-us/library/f9t8842e.aspx). Like on Linux, we overwrite the entry points by defining `no_mangle` functions:
 
 ```rust
 #[no_mangle]
-pub fn WinMainCRTStartup() -> ! {
+pub extern fn WinMainCRTStartup() -> ! {
     WinMain();
 }
 
 #[no_mangle]
-pub fn WinMain() -> ! {
+pub extern fn WinMain() -> ! {
     loop {}
 }
 ```
@@ -277,7 +276,23 @@ pub fn WinMain() -> ! {
 We just call `WinMain` from `WinMainCRTStartup` to avoid any ambiguity which function is called.
 
 #### OS X
-TODO: I don't have access to a Mac at the moment. In case you know the entry point procedure on Mac and would like to help, please send a pull request!
+Mac OS X [does not support statically linked binaries], so we have to link the `libSystem` library. The entry point is the called `main`:
+
+[does not support statically linked binaries]: https://developer.apple.com/library/content/qa/qa1118/_index.html
+
+```rust
+#[no_mangle]
+pub extern fn main() -> ! {
+    loop {}
+}
+```
+
+To build it and link `libSystem`, we execute:
+
+```
+> cargo rustc -- -Z pre-link-arg=-lSystem
+```
+
 
 ## Summary
 
@@ -300,7 +315,7 @@ pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
 
 // On Linux:
 #[no_mangle] // don't mangle the name of this function
-pub fn _start() -> ! {
+pub extern fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
     // named `_start_` by default
     loop {}
@@ -308,17 +323,21 @@ pub fn _start() -> ! {
 
 // On Windows:
 #[no_mangle]
-pub fn WinMainCRTStartup() -> ! {
+pub extern fn WinMainCRTStartup() -> ! {
     WinMain();
 }
 
 #[no_mangle]
-pub fn WinMain() -> ! {
+pub extern fn WinMain() -> ! {
     loop {}
 }
 
 // On Mac:
-// TODO
+
+#[no_mangle]
+pub extern fn main() -> ! {
+    loop {}
+}
 ```
 
 `Cargo.toml`:
@@ -340,8 +359,13 @@ panic = "abort" # disable stack unwinding on panic
 
 It can be compiled with:
 
-```
-cargo rustc -- -Z pre-link-arg=-nostartfiles
+```bash
+# Linux
+> cargo rustc -- -Z pre-link-arg=-nostartfiles
+# Windows
+> cargo build
+# Mac
+> cargo rustc -- -Z pre-link-arg=-lSystem
 ```
 
 Note that this is just a minimal example of a freestanding Rust binary. This binary expects various things, for example that a stack is initialized when the `_start` function is called. **So for any real use of such a binary, more steps are required**.
