@@ -11,5 +11,4 @@
 /target/
 Cargo.lock
 
-# Build directory
-/build/
+bootimage.bin
