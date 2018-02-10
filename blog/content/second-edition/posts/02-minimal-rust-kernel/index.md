@@ -2,7 +2,7 @@
 title = "A Minimal Rust Kernel"
 order = 4
 path = "minimal-rust-kernel"
-date  = 0000-01-01
+date = 2018-02-10
 template = "second-edition/page.html"
 +++
 
