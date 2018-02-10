@@ -2,7 +2,7 @@
 title = "Double Faults"
 order = 10
 path = "double-faults"
-date = "2017-01-02"
+date  = 2017-01-02
 +++
 
 In this post we explore double faults in detail. We also set up an _Interrupt Stack Table_ to catch double faults on a separate kernel stack. This way, we can completely prevent triple faults, even on kernel stack overflow.

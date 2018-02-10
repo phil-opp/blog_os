@@ -1,7 +1,15 @@
+.masthead-title {
+  font-size: 1.25rem;
+  display: inline;
+}
 
-.masthead-title small {
+.masthead p {
+  font-size: 1.25rem;
+  display: inline;
+  margin: 0;
   margin-left: 1rem;
-  white-space: nowrap;
+  padding: 0;
+  line-height: 1;
 }
 
 .front-page-introduction {
@@ -219,4 +227,12 @@ a.gutenberg-anchor {
 
 a.gutenberg-anchor:hover {
   text-decoration: none;
+}
+
+div.warning {
+  padding: .7rem 1rem;
+  margin: 1rem .2rem;
+  border: 2px solid orange;
+  border-radius: 5px;
+  background-color: #ffa50022;
 }

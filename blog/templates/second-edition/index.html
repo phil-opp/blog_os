@@ -1,12 +1,15 @@
-{% extends "base.html" %}
+{% extends "second-edition/base.html" %}
 
 {% import "macros.html" as macros %}
 
 {% block title %}{{ config.title }}{% endblock title %}
 
 {% block main %}
-{% set posts_section = get_section(path = "posts/_index.md") %}
+{% set posts_section = get_section(path = "second-edition/posts/_index.md") %}
 {% set posts = posts_section.pages | reverse %}
+<div class="warning">
+    <b>Note:</b> You are viewing the upcoming second edition of “Writing an OS in Rust”, which is still under construction. To read the first edition, go <a href="{{ get_url(path = "/") }}">here</a>.
+</div>
 <div class="front-page-introduction">
     <p>
         This blog series creates a small operating system in the
@@ -24,35 +27,7 @@
 <div class="posts bare-bones">
     {{ macros::post_link(page=posts.0) }}
     {{ macros::post_link(page=posts.1) }}
-    {{ macros::post_link(page=posts.2) }}
-    {{ macros::post_link(page=posts.3) }}
 </div>
-
-<div id="memory-management" class="post-category memory-management">Memory Management</div>
-<div class="posts memory-management">
-    {{ macros::post_link(page=posts.4) }}
-    {{ macros::post_link(page=posts.5) }}
-    {{ macros::post_link(page=posts.6) }}
-    {{ macros::post_link(page=posts.7) }}
-</div>
-
-<div id="interrupts" class="post-category exceptions">Exceptions</div>
-<div class="posts exceptions">
-    {{ macros::post_link(page=posts.8) }}
-    {{ macros::post_link(page=posts.9) }}
-</div>
-
-<hr>
-{% set extra = get_section(path = "extra/_index.md") %}
-<h1>{{ extra.title }}</h1>
-<ul>
-    {% for subsection in extra.subsections|reverse %}
-        <li><a href="/{{ subsection.path | safe }}">{{ subsection.title }}</a></li>
-    {% endfor %}
-    {% for page in extra.pages|reverse %}
-        <li><a href="/{{ page.path | safe }}">{{ page.title }}</a></li>
-    {% endfor %}
-</ul>
 
 <aside id="recent-updates">
     <h2>Recent Updates</h2>

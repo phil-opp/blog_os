@@ -1,22 +1,14 @@
 [package]
 authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 name = "blog_os"
-version = "0.1.0"
+version = "0.2.0"
 
 [dependencies]
-bit_field = "0.7.0"
-bitflags = "0.9.1"
-multiboot2 = "0.1.0"
-once = "0.3.2"
-rlibc = "1.0"
-spin = "0.4.5"
-volatile = "0.1.0"
-x86_64 = "0.1.2"
-linked_list_allocator = "0.4.2"
 
-[dependencies.lazy_static]
-features = ["spin_no_std"]
-version = "0.2.1"
+# the profile used for `cargo build`
+[profile.dev]
+panic = "abort" # disable stack unwinding on panic
 
-[lib]
-crate-type = ["staticlib"]
+# the profile used for `cargo build --release`
+[profile.release]
+panic = "abort" # disable stack unwinding on panic

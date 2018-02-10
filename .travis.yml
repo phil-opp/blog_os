@@ -1,20 +1,5 @@
 language: rust
 
-rust:
-    - nightly
-
-cache:
-  directories:
-     - $HOME/.cargo
-     - $HOME/.xargo
-     - $TRAVIS_BUILD_DIR/target
-
-before_script:
-  - rustup component add rust-src
-  - (test -x $HOME/.cargo/bin/cargo-install-update || cargo install cargo-update)
-  - (test -x $HOME/.cargo/bin/xargo || cargo install xargo)
-  - cargo install-update -a
-
 sudo: false
 
 notifications:
@@ -22,10 +7,47 @@ notifications:
         on_success: never
         on_failure: change
 
+branches:
+  except:
+    # Used by bors
+    - staging.tmp
+
+rust:
+    - nightly
+
+os:
+  - linux
+  - osx
+
 addons:
   apt:
+    sources:
+      - llvm-toolchain-trusty-5.0
     packages:
-      - nasm
+      - lld-5.0
+
+cache:
+  directories:
+    - $HOME/.cargo
+    - $HOME/.xargo
+    - $TRAVIS_BUILD_DIR/target
+
+before_install:
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      set -e
+      LLVM_URL="https://releases.llvm.org/5.0.1/clang+llvm-5.0.1-x86_64-apple-darwin.tar.xz"
+      travis_retry wget -O llvm.tar.xz -nv ${LLVM_URL}
+      tar -xJ -f llvm.tar.xz
+      export PATH="`pwd`/clang+llvm-5.0.1-final-x86_64-apple-darwin/bin:$PATH"
+    fi
+
+before_script:
+  - rustup component add rust-src
+  - (test -x $HOME/.cargo/bin/cargo-install-update || cargo install cargo-update)
+  - (test -x $HOME/.cargo/bin/xargo || cargo install xargo)
+  - (test -x $HOME/.cargo/bin/bootimage || cargo install bootimage)
+  - cargo install-update -a
 
 script:
-  - make
+  - bootimage --target x86_64-blog_os

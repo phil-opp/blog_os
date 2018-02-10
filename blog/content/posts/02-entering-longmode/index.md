@@ -2,7 +2,7 @@
 title = "Entering Long Mode"
 order = 2
 path = "entering-longmode"
-date = "2015-08-25"
+date  = 2015-08-25
 [extra]
 updated = "2015-10-29"
 +++
