@@ -285,7 +285,7 @@ The implementation looks like this:
 static HELLO: &[u8] = b"Hello World!";
 
 #[no_mangle]
-pub fn _start(boot_info: &'static mut BootInfo) -> ! {
+pub fn _start() -> ! {
 	let vga_buffer = 0xb8000 as *const u8 as *mut u8;
 
     for (i, &byte) in HELLO.iter().enumerate() {
