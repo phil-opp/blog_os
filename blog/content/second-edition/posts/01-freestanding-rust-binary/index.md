@@ -30,10 +30,10 @@ This means that we can't use most of the [Rust standard library], but there are 
 
 In order to create an OS kernel in Rust, we need to create an executable that can be run without an underlying operating system. Such an executable is often called a “freestanding” or “bare-metal” executable.
 
-This post describes the necessary steps to get a freestanding Rust binary and explains why the steps are needed. If you're just interested in a minimal example, you can **[jump to the summary](#summary)**.
+This post describes the necessary steps to create a freestanding Rust binary and explains why the steps are needed. If you're just interested in a minimal example, you can **[jump to the summary](#summary)**.
 
 ## Disabling the Standard Library
-By default, all Rust crates link the [standard library], which dependends on the operating system for features such as threads, files, or networking. It also depends on the C standard library `libc`, which closely interacts with OS services. Since our plan is to write an operating system, we can not use any OS-dependent libraries. So we have to disable the automatic inclusion of the standard library through the [`no_std` attribute].
+By default, all Rust crates link the [standard library], which depends on the operating system for features such as threads, files, or networking. It also depends on the C standard library `libc`, which closely interacts with OS services. Since our plan is to write an operating system, we can not use any OS-dependent libraries. So we have to disable the automatic inclusion of the standard library through the [`no_std` attribute].
 
 [standard library]: https://doc.rust-lang.org/std/
 [`no_std` attribute]: https://doc.rust-lang.org/book/first-edition/using-rust-without-the-standard-library.html
@@ -108,7 +108,7 @@ Now the compiler is missing some _language items_. Language items are special pl
 
 ### Enabling Unstable Features
 
-Implementing language items is unstable and protected by a so-called _feature gate_. A feature gate is a special attribute that you have to specify at the top of your `main.rs` in order to use the corresponding feature. By doing this you basically say: “I know that this feature is unstable and that it might stop working without warning. I want to use it anyway.”
+Implementing language items is unstable and protected by a so-called _feature gate_. A feature gate is a special attribute that you have to specify at the top of your `main.rs` in order to use the corresponding feature. By doing this you basically say: “I know that this feature is unstable and that it might stop working without any warnings. I want to use it anyway.”
 
 To limit the use of unstable features, the feature gates are not available in the stable or beta Rust compilers, only [nightly Rust] makes it possible to opt-in. This means that you have to use a nightly compiler for OS development for the near future (since we need to implement unstable language items). To install a nightly compiler using [rustup], you just need to run `rustup default nightly` (for more information check out [rustup's documentation]).
 
@@ -120,7 +120,7 @@ After installing a nightly Rust compiler, you can enable the unstable `lang_item
 
 ### Implementing the Language Items
 
-To create a `no_std` binary, we have to implement the `panic_fmt` and the `eh_personality` language items. The `panic_fmt` items specifies a function that should be invoked when a panic occurs. This function should format an error message (hence the `_fmt` suffix) and then invoke the panic routine. In our case, there is not much we can do, since we can neither print anything nor do we have a panic routine. So we just loop indefinitely:
+To create a `no_std` binary, we have to implement the `panic_fmt` and the `eh_personality` language items. The `panic_fmt` item specifies a function that should be invoked when a panic occurs. This function should format an error message (hence the `_fmt` suffix) and then invoke the panic routine. In our case, there is not much we can do, since we can neither print anything nor do we have a panic routine. So we just loop indefinitely:
 
 ```rust
 #![feature(lang_items)]
@@ -141,19 +141,19 @@ The function signature is taken from the [unstable Rust book]. The signature isn
 
 [unstable Rust book]: https://doc.rust-lang.org/unstable-book/language-features/lang-items.html#writing-an-executable-without-stdlib
 
-Note that there is already an accepted RFC for a stable panic mechnism, which is only waiting for an implementation. See the [tracking issue](https://github.com/rust-lang/rust/issues/44489) for more information.
+Note that there is already an accepted RFC for a stable panic mechanism, which is only waiting for an implementation. See the [tracking issue](https://github.com/rust-lang/rust/issues/44489) for more information.
 
 Instead of implementing the second language item, `eh_personality`, we remove the need for it by disabling unwinding.
 
 ### Disabling Unwinding
 
-The `eh_personality` language item is used for implementing [stack unwinding]. By default, Rust uses unwinding to run the destructors of all live stack variables in case of panic. This ensures that all used memory is freed and allows the parent thread to catch the panic and continue execution. Unwinding, however, is a complicated process and requires some OS specific libraries (e.g. [libunwind] on Linux or [structured exception handling] on Windows), so we don't want to use it for our operating system.
+The `eh_personality` language item is used for implementing [stack unwinding]. By default, Rust uses unwinding to run the destructors of all live stack variables in case of a panic. This ensures that all used memory is freed and allows the parent thread to catch the panic and continue execution. Unwinding, however, is a complicated process and requires some OS specific libraries (e.g. [libunwind] on Linux or [structured exception handling] on Windows), so we don't want to use it for our operating system.
 
 [stack unwinding]: http://www.bogotobogo.com/cplusplus/stackunwinding.php
 [libunwind]: http://www.nongnu.org/libunwind/
 [structured exception handling]: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx
 
-There are other use cases as well for which unwinding is undesireable, so Rust provides an option to [abort on panic] instead. This disables the generation of unwinding symbol and thus considerably reduces binary size. There are multiple places where we can disable unwinding. The easiest way is to add the following lines to our `Cargo.toml`:
+There are other use cases as well for which unwinding is undesirable, so Rust provides an option to [abort on panic] instead. This disables the generation of unwinding symbol information and thus considerably reduces binary size. There are multiple places where we can disable unwinding. The easiest way is to add the following lines to our `Cargo.toml`:
 
 ```toml
 [profile.dev]
@@ -203,7 +203,7 @@ pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
 }
 ```
 
-You might notice that we removed the `main` function. The reason is that a `main` doesn't make sense without an underlying runtime that calls it. Instead, we now to overwrite the operating system entry point.
+You might notice that we removed the `main` function. The reason is that a `main` doesn't make sense without an underlying runtime that calls it. Instead, we are now overwriting the operating system entry point.
 
 The entry point convention depends on your operating system. I recommend you to read the Linux section even if you're on a different OS because it is the target we will derive to build our kernel in the next post.
 
@@ -219,7 +219,7 @@ pub extern fn _start() -> ! {
 
 It's important that we disable the [name mangling][mangling] through the `no_mangle` attribute, otherwise the compiler would generate some cryptic `_ZN3blog_os4_start7hb173fedf945531caE` symbol that the linker wouldn't recognize.
 
-The `!` return type means that the function is diverging, i.e. not allowed to ever return. This is required because the entry point is not called by any function, but invoked directly by the operating system or bootloader. So instead of returning, the entry point should e.g. invoke the [`exit` system call] of the operating system. In our case, shutting down the machine could be a reasonable action, since there's nothing left to do if a freestanding binary returns. For now, we fulfil the requirement by looping endlessly.
+The `!` return type means that the function is diverging, i.e. not allowed to ever return. This is required because the entry point is not called by any function, but invoked directly by the operating system or bootloader. So instead of returning, the entry point should e.g. invoke the [`exit` system call] of the operating system. In our case, shutting down the machine could be a reasonable action, since there's nothing left to do if a freestanding binary returns. For now, we fulfill the requirement by looping endlessly.
 
 [`exit` system call]: https://en.wikipedia.org/wiki/Exit_(system_call)
 
@@ -256,7 +256,7 @@ One way to pass linker attributes via cargo is the `cargo rustc` command. The co
 > cargo rustc -- -Z pre-link-arg=-nostartfiles
 ```
 
-With this command, our crate builds again as a freestanding executable!
+With this command, our crate finally builds as a freestanding executable!
 
 #### Windows
 On Windows, the linker requires two entry points: `WinMain` and `WinMainCRTStartup`, [depending on the used subsystem](https://msdn.microsoft.com/en-us/library/f9t8842e.aspx). Like on Linux, we overwrite the entry points by defining `no_mangle` functions:
@@ -275,8 +275,8 @@ pub extern fn WinMain() -> ! {
 
 We just call `WinMain` from `WinMainCRTStartup` to avoid any ambiguity which function is called.
 
-#### OS X
-Mac OS X [does not support statically linked binaries], so we have to link the `libSystem` library. The entry point is the called `main`:
+#### macOS
+macOS [does not support statically linked binaries], so we have to link the `libSystem` library. The entry point is the called `main`:
 
 [does not support statically linked binaries]: https://developer.apple.com/library/content/qa/qa1118/_index.html
 
@@ -317,7 +317,7 @@ pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
 #[no_mangle] // don't mangle the name of this function
 pub extern fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
-    // named `_start_` by default
+    // named `_start` by default
     loop {}
 }
 
@@ -332,7 +332,7 @@ pub extern fn WinMain() -> ! {
     loop {}
 }
 
-// On Mac:
+// On macOS:
 
 #[no_mangle]
 pub extern fn main() -> ! {
@@ -364,7 +364,7 @@ It can be compiled with:
 > cargo rustc -- -Z pre-link-arg=-nostartfiles
 # Windows
 > cargo build
-# Mac
+# macOS
 > cargo rustc -- -Z pre-link-arg=-lSystem
 ```
 
@@ -372,6 +372,6 @@ Note that this is just a minimal example of a freestanding Rust binary. This bin
 
 ## What's next?
 
-The [next post] build upon our minimal freestanding binary by explaining the steps needed for creating a minimal operating system kernel. It explains how to configure the kernel for the target system, how to start it using a bootloader, and how to print something to the screen.
+The [next post] builds upon our minimal freestanding binary by explaining the steps needed for creating a minimal operating system kernel. It explains how to configure the kernel for the target system, how to start it using a bootloader, and how to print something to the screen.
 
 [next post]: ./second-edition/posts/02-minimal-rust-kernel/index.md
