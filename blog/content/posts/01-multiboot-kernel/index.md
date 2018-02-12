@@ -1,11 +1,11 @@
 +++
-title = "A minimal x86 kernel"
+title = "A minimal Multiboot Kernel"
 order = 1
 path = "multiboot-kernel/"
 date  = 2015-08-18
 +++
 
-This post explains how to create a minimal x86 operating system kernel. In fact, it will just boot and print `OK` to the screen. In subsequent blog posts we will extend it using the [Rust] programming language.
+This post explains how to create a minimal x86 operating system kernel using the Multiboot standard. In fact, it will just boot and print `OK` to the screen. In subsequent blog posts we will extend it using the [Rust] programming language.
 
 [Rust]: http://www.rust-lang.org/
 
