@@ -31,7 +31,7 @@ On x86, there are two firmware standards: the “Basic Input/Output System“ (*
 Currently, we only provide BIOS support, but support for UEFI is planned, too. If you'd like to help us with this, check out the [Github issue](https://github.com/phil-opp/blog_os/issues/349).
 
 ### BIOS Boot
-Almost all x86 systems have support for BIOS booting, even newer UEFI-based machines (they include an emulated BIOS). This is great, because you can use the same boot logic across all machines from the last centuries. But this wide compatibility is at the same time the biggest disadvantage of BIOS booting, because it means that the CPU is put into a 16-bit compability mode called [real mode] before booting so that that arcane bootloaders from the 1980s would still work.
+Almost all x86 systems have support for BIOS booting, even newer UEFI-based machines (they include an emulated BIOS). This is great, because you can use the same boot logic across all machines from the last centuries. But this wide compatibility is at the same time the biggest disadvantage of BIOS booting, because it means that the CPU is put into a 16-bit compatibility mode called [real mode] before booting so that arcane bootloaders from the 1980s would still work.
 
 But let's start from the beginning:
 
@@ -56,14 +56,14 @@ To avoid that every operating system implements its own bootloader, which is onl
 [Multiboot]: https://wiki.osdev.org/Multiboot
 [GNU GRUB]: https://en.wikipedia.org/wiki/GNU_GRUB
 
-To make a kernel Multiboot compliant, one just need to insert a so-called [Multiboot header] at the beginning of the kernel file. This makes it very easy to boot an OS in GRUB. However, GRUB and the the Multiboot standard have some problems too:
+To make a kernel Multiboot compliant, one just needs to insert a so-called [Multiboot header] at the beginning of the kernel file. This makes it very easy to boot an OS in GRUB. However, GRUB and the the Multiboot standard have some problems too:
 
 [Multiboot header]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
 
 - They support only the 32-bit protected mode. This means that you still have to do the CPU configuration to switch to the 64-bit long mode.
-- The newest version of the standard, [Multiboot 2.0], supports kernels in the 64-bit ELF format, but requires a [adjusting the default page size].
-- The development of the standard and GRUB is highly interleaved. For example, I'm not aware of an other bootloader that is Multiboot compliant. As a result, one often has to look into the GRUB source code when the standard is not clear enough.
-- The standard is written for the C programming language. That means lots of C-typical structures such as linked lists in the [boot information].
+- The newest version of the standard, [Multiboot 2.0], supports kernels in the 64-bit ELF format, but requires [adjusting the default page size].
+- The development of the standard and GRUB is highly interleaved. For example, I'm not aware of another bootloader that is Multiboot compliant. As a result, one often has to look into the GRUB source code when the standard is not clear enough.
+- The standard is written for the C programming language. That means lots of C-typical structures are present, such as linked lists in the [boot information].
 - Both GRUB and the Multiboot standard are only sparsely documented.
 - GRUB needs to be installed on the host system to create a bootable disk image from the kernel file. This makes development on Windows or Mac more difficult.
 
@@ -80,18 +80,18 @@ Because of these drawbacks we decided to not use GRUB or the Multiboot standard.
 (We don't provide UEFI support at the moment, but we would love to! If you'd like to help, please tell us in the [Github issue](https://github.com/phil-opp/blog_os/issues/349).)
 
 ## A Minimal Kernel
-Now that we roughly know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a disk image that prints a green “Hello” to the screen when booted. For that we build upon the [freestanding Rust binary] from the previous post.
+Now that we roughly know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a disk image that prints a teal “Hello World!” to the screen when booted. For that we build upon the [freestanding Rust binary] from the previous post.
 
 As you may remember, we built the freestanding binary through `cargo`, but depending on the operating system we needed different entry point names and compile flags. That's because `cargo` builds for the _host system_ by default, i.e. the system you're running on. This isn't something we want for our kernel, because a kernel that runs on top of e.g. Windows does not make much sense. Instead, we want to compile for a clearly defined _target system_.
 
 ### Target Specification
-Cargo supports different target systems through the `--target` parameter. The target is decribed by a so-called _[target triple]_, which describes the CPU architecture, the vendor, the operating system, and the [ABI]. For example, the `x86_64-unknown-linux-gnu` means a `x86_64` CPU, no clear vendor and a Linux operating system with the GNU ABI. Rust supports [many different target triples][platform-support], including `arm-linux-androideabi` for Android or [`wasm32-unknown-unknown` for WebAssembly](https://www.hellorust.com/setup/wasm-target/).
+Cargo supports different target systems through the `--target` parameter. The target is described by a so-called _[target triple]_, which describes the CPU architecture, the vendor, the operating system, and the [ABI]. For example, the `x86_64-unknown-linux-gnu` means a `x86_64` CPU, no clear vendor and a Linux operating system with the GNU ABI. Rust supports [many different target triples][platform-support], including `arm-linux-androideabi` for Android or [`wasm32-unknown-unknown` for WebAssembly](https://www.hellorust.com/setup/wasm-target/).
 
 [target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [ABI]: https://stackoverflow.com/a/2456882
 [platform-support]: https://forge.rust-lang.org/platform-support.html
 
-For our target system, however, we require some special configuration parameters (e.g. no underlying OS), so none of the [existing target triples][platform-support] fits. Fortunately Rust allows us to define our own target through a JSON file. For example, a JSON file that describes the `x86_64-unknown-linux-gnu` target looks like this:
+For our target system, however, we require some special configuration parameters (e.g. no underlying OS), so none of the [existing target triples][platform-support] fits. Fortunately, Rust allows us to define our own target through a JSON file. For example, a JSON file that describes the `x86_64-unknown-linux-gnu` target looks like this:
 
 ```json
 {
@@ -113,7 +113,7 @@ Most fields are required by LLVM to generate code for that platform. For example
 
 [linker]: https://en.wikipedia.org/wiki/Linker_(computing)
 
-We also target `x86_64` systems with our kernel, so our target specification will look very similar to the above. Let's start by creating a `x86_64-blog_os.json` file (choose any name you like) with the common content:
+We also target `x86_64` systems with our kernel, so our target specification will look very similar to the one above. Let's start by creating a `x86_64-blog_os.json` file (choose any name you like) with the common content:
 
 ```json
 {
@@ -216,12 +216,12 @@ pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
 #[no_mangle] // don't mangle the name of this function
 pub fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
-    // named `_start_` by default
+    // named `_start` by default
     loop {}
 }
 ```
 
-We can now build the kernel for our new target by passing the name of the JSON file (without the `.json` extension) as `--target`. There's is currently an [open bug][custom-target-bug] with custom target, so you also need to set the `RUST_TARGET_PATH` environment variable to the current directory, otherwise Rust might not be able to find your target. The full command is:
+We can now build the kernel for our new target by passing the name of the JSON file (without the `.json` extension) as `--target`. There is currently an [open bug][custom-target-bug] for custom target specifications, so you also need to set the `RUST_TARGET_PATH` environment variable to the current directory, otherwise Rust might not be able to find your target. The full command is:
 
 [custom-target-bug]: https://github.com/rust-lang/cargo/issues/4905
 
@@ -237,7 +237,7 @@ It failed! The error tells us that the Rust compiler no longer finds the core li
 
 [core library]: https://doc.rust-lang.org/nightly/core/index.html
 
-The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for the host triple (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for other targets, we need to recompile `core` for these targets first.
+The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for supported host triples (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for other targets, we need to recompile `core` for these targets first.
 
 #### Xargo
 That's where [xargo] comes in. It is a wrapper for cargo that eases cross compilation. We can install it by executing:
@@ -277,7 +277,7 @@ The easiest way to print text to the screen at this stage is the [VGA text buffe
 
 ![screen output for common ASCII characters](https://upload.wikimedia.org/wikipedia/commons/6/6d/Codepage-737.png)
 
-We will discuss the exact layout of the VGA buffer in the next post, where we write a first small driver for it. For printing “Hello”, we just need to know that the buffer is located at address `0xb8000` and that each character cell consists of an ASCII byte and a color byte.
+We will discuss the exact layout of the VGA buffer in the next post, where we write a first small driver for it. For printing “Hello World!”, we just need to know that the buffer is located at address `0xb8000` and that each character cell consists of an ASCII byte and a color byte.
 
 The implementation looks like this:
 
@@ -331,7 +331,7 @@ Now that we have an executable that does something perceptible, it is time to tu
 
 To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal. After installing, creating a bootimage is as easy as executing `bootimage --target x86_64-unknown-blog_os`. The tool also recompiles your kernel using `xargo`, so it will automatically pick up any changes you make.
 
-You should now see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image, so can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
+You should now see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
 ## Booting it!
 We can now boot our kernel in a virtual machine. To boot it in [QEMU], execute the following command:
@@ -360,4 +360,3 @@ Where `sdX` is the device name of your USB stick. It overwrites everything on th
 
 ## What's next?
 In the next post, we will explore the VGA text buffer in more detail and write a safe interface for it. We will also add support for the `println` macro.
-TODO
