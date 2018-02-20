@@ -143,7 +143,7 @@ Instead of using the platform's default linker (which might not support Linux ta
 [LLD]: https://lld.llvm.org/
 
 ```json
-"panic": "abort",
+"panic-strategy": "abort",
 ```
 
 This setting specifies that the target doesn't support [stack unwinding] on panic, so instead the program should abort directly. This has the same effect as the `panic = "abort"` option in our Cargo.toml, so we can remove it from there.
@@ -189,7 +189,7 @@ Our target specification file now looks like this:
   "executables": true,
   "features": "-mmx,-sse,+soft-float",
   "disable-redzone": true,
-  "panic": "abort"
+  "panic-strategy": "abort"
 }
 ```
 
