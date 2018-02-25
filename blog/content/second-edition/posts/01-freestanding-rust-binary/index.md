@@ -205,7 +205,7 @@ pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
 
 You might notice that we removed the `main` function. The reason is that a `main` doesn't make sense without an underlying runtime that calls it. Instead, we are now overwriting the operating system entry point.
 
-The entry point convention depends on your operating system. I recommend you to read the Linux section even if you're on a different OS because it is the target we will derive to build our kernel in the next post.
+The entry point convention depends on your operating system. I recommend you to read the Linux section even if you're on a different OS because we will use this convention for our kernel.
 
 #### Linux
 On Linux, the default entry point is called `_start`. The linker just looks for a function with that name and sets this function as entry point the executable. So to overwrite the entry point, we define our own `_start` function:
