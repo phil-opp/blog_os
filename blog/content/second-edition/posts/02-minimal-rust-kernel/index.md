@@ -331,6 +331,18 @@ To make things easy, we created a tool named `bootimage` that automatically down
 
 After executing the command, you should see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
+#### How does it work?
+The `bootimage` tool performs the following steps behind the scenes:
+
+- It compiles our kernel to an [ELF] file.
+- It downloads a pre-compiled bootloader release from [rust-osdev/bootloader]. The file is already a bootable image that only requires that a kernel is appended.
+- It appends the bytes of the kernel ELF file to the bootloader (without any modifications).
+
+[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+[rust-osdev/bootloader]: https://github.com/rust-osdev/bootloader
+
+When booted, the bootloader reads and parses the appended ELF file. It then maps the program segments to virtual addresses in the page tables, zeroes the `.bss` section, and sets up a stack. Finally, it reads the entry point address (our `_start` function) and jumps to it.
+
 ## Booting it!
 We can now boot our kernel in a virtual machine. To boot it in [QEMU], execute the following command:
 
