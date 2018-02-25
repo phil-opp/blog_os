@@ -78,12 +78,12 @@ Because of these drawbacks we decided to not use GRUB or the Multiboot standard.
 (We don't provide UEFI support at the moment, but we would love to! If you'd like to help, please tell us in the [Github issue](https://github.com/phil-opp/blog_os/issues/349).)
 
 ## A Minimal Kernel
-Now that we roughly know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a disk image that prints a teal “Hello World!” to the screen when booted. For that we build upon the [freestanding Rust binary] from the previous post.
+Now that we roughly know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a disk image that prints a “Hello World!” to the screen when booted. For that we build upon the [freestanding Rust binary] from the previous post.
 
 As you may remember, we built the freestanding binary through `cargo`, but depending on the operating system we needed different entry point names and compile flags. That's because `cargo` builds for the _host system_ by default, i.e. the system you're running on. This isn't something we want for our kernel, because a kernel that runs on top of e.g. Windows does not make much sense. Instead, we want to compile for a clearly defined _target system_.
 
 ### Target Specification
-Cargo supports different target systems through the `--target` parameter. The target is described by a so-called _[target triple]_, which describes the CPU architecture, the vendor, the operating system, and the [ABI]. For example, the `x86_64-unknown-linux-gnu` means a `x86_64` CPU, no clear vendor and a Linux operating system with the GNU ABI. Rust supports [many different target triples][platform-support], including `arm-linux-androideabi` for Android or [`wasm32-unknown-unknown` for WebAssembly](https://www.hellorust.com/setup/wasm-target/).
+Cargo supports different target systems through the `--target` parameter. The target is described by a so-called _[target triple]_, which describes the CPU architecture, the vendor, the operating system, and the [ABI]. For example, the `x86_64-unknown-linux-gnu` target triple describes a system with a `x86_64` CPU, no clear vendor and a Linux operating system with the GNU ABI. Rust supports [many different target triples][platform-support], including `arm-linux-androideabi` for Android or [`wasm32-unknown-unknown` for WebAssembly](https://www.hellorust.com/setup/wasm-target/).
 
 [target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [ABI]: https://stackoverflow.com/a/2456882
@@ -175,24 +175,24 @@ Our target specification file now looks like this:
 
 ```json
 {
-  "llvm-target": "x86_64-unknown-linux-gnu",
+  "llvm-target": "x86_64-unknown-none",
   "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
   "arch": "x86_64",
   "target-endian": "little",
   "target-pointer-width": "64",
   "target-c-int-width": "32",
   "os": "none",
+  "executables": true,
   "linker-flavor": "ld",
   "linker": "ld.lld",
-  "executables": true,
-  "features": "-mmx,-sse,+soft-float",
+  "panic-strategy": "abort",
   "disable-redzone": true,
-  "panic-strategy": "abort"
+  "features": "-mmx,-sse,+soft-float"
 }
 ```
 
 ### Building our Kernel
-Compiling for our new target will use Linux conventions. I'm not quite sure why, but I assume that it's just LLVM's default. This means that we need an entry point named `_start` as described in the [previous post]:
+Compiling for our new target will use Linux conventions (I'm not quite sure why, I assume that it's just LLVM's default). This means that we need an entry point named `_start` as described in the [previous post]:
 
 [previous post]: ./second-edition/posts/01-freestanding-rust-binary/index.md
 
@@ -219,7 +219,7 @@ pub fn _start() -> ! {
 }
 ```
 
-We can now build the kernel for our new target by passing the name of the JSON file (without the `.json` extension) as `--target`. There is currently an [open bug][custom-target-bug] for custom target specifications, so you also need to set the `RUST_TARGET_PATH` environment variable to the current directory, otherwise Rust might not be able to find your target. The full command is:
+We can now build the kernel for our new target by passing the name of the JSON file (without the `.json` extension) as `--target`. There is currently an [open bug][custom-target-bug] for custom target specifications, so you also need to set the `RUST_TARGET_PATH` environment variable to the current directory, otherwise Rust doesn't find your target. The full command is:
 
 [custom-target-bug]: https://github.com/rust-lang/cargo/issues/4905
 
@@ -297,7 +297,7 @@ pub fn _start() -> ! {
 }
 ```
 
-First, we cast the integer `0xb8000` into a [raw pointer]. Then we [iterate] over the bytes of the [static] `HELLO` [byte string]. We use the [`enumerate`] method to additionally get a running variable `i`. In the body of the for loop, we use the [`offset`] method to write the string byte and the corresponding color byte.
+First, we cast the integer `0xb8000` into a [raw pointer]. Then we [iterate] over the bytes of the [static] `HELLO` [byte string]. We use the [`enumerate`] method to additionally get a running variable `i`. In the body of the for loop, we use the [`offset`] method to write the string byte and the corresponding color byte (`0xb` is a light cyan).
 
 [iterate]: https://doc.rust-lang.org/book/second-edition/ch13-02-iterators.html
 [static]: https://doc.rust-lang.org/book/first-edition/const-and-static.html#static
@@ -329,7 +329,7 @@ Now that we have an executable that does something perceptible, it is time to tu
 
 To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal. After installing, creating a bootimage is as easy as executing `bootimage --target x86_64-unknown-blog_os`. The tool also recompiles your kernel using `xargo`, so it will automatically pick up any changes you make.
 
-You should now see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
+After executing the command, you should see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
 ## Booting it!
 We can now boot our kernel in a virtual machine. To boot it in [QEMU], execute the following command:
@@ -354,7 +354,7 @@ It is also possible to write it to an USB stick and boot it on a real machine:
 > dd if=bootimage.bin of=/dev/sdX && sync
 ```
 
-Where `sdX` is the device name of your USB stick. It overwrites everything on that device, so be careful to choose the correct device name.
+Where `sdX` is the device name of your USB stick. **Be careful** to choose the correct device name, because everything on that device is overwritten.
 
 ## What's next?
 In the next post, we will explore the VGA text buffer in more detail and write a safe interface for it. We will also add support for the `println` macro.
