@@ -51,8 +51,9 @@ Writing a bootloader is a bit cumbersome as it requires assembly language and a 
 If you are interested in building your own bootloader: Stay tuned, a set of posts on this topic is already planned! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
 
 #### The Multiboot Standard
-To avoid that every operating system implements its own bootloader, which is only compatible with a single OS, the Free Software Foundation created an open bootloader standard called [Multiboot] in 1995. The standard defines an interface between the bootloader and operating system, so that any Multiboot compliant bootloader can load any Multiboot compliant operating system. The reference implementation is [GNU GRUB], which is the most popular bootloader for Linux systems.
+To avoid that every operating system implements its own bootloader, which is only compatible with a single OS, the [Free Software Foundation] created an open bootloader standard called [Multiboot] in 1995. The standard defines an interface between the bootloader and operating system, so that any Multiboot compliant bootloader can load any Multiboot compliant operating system. The reference implementation is [GNU GRUB], which is the most popular bootloader for Linux systems.
 
+[Free Software Foundation]: https://en.wikipedia.org/wiki/Free_Software_Foundation
 [Multiboot]: https://wiki.osdev.org/Multiboot
 [GNU GRUB]: https://en.wikipedia.org/wiki/GNU_GRUB
 
@@ -61,15 +62,12 @@ To make a kernel Multiboot compliant, one just needs to insert a so-called [Mult
 [Multiboot header]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
 
 - They support only the 32-bit protected mode. This means that you still have to do the CPU configuration to switch to the 64-bit long mode.
-- The newest version of the standard, [Multiboot 2.0], supports kernels in the 64-bit ELF format, but requires [adjusting the default page size].
-- The development of the standard and GRUB is highly interleaved. For example, I'm not aware of another bootloader that is Multiboot compliant. As a result, one often has to look into the GRUB source code when the standard is not clear enough.
-- The standard is written for the C programming language. That means lots of C-typical structures are present, such as linked lists in the [boot information].
+- They are designed to make the bootloader simple instead of the kernel. For example, the kernel needs to be linked with an [adjusted default page size], because GRUB can't find the Multiboot header otherwise. Another example is that the [boot information], which is passed to the kernel, contains lots of architecture dependent structures instead of providing clean abstractions.
 - Both GRUB and the Multiboot standard are only sparsely documented.
 - GRUB needs to be installed on the host system to create a bootable disk image from the kernel file. This makes development on Windows or Mac more difficult.
 
+[adjusted default page size]: https://wiki.osdev.org/Multiboot#Multiboot_2
 [boot information]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
-[Multiboot 2.0]: https://www.gnu.org/software/grub/manual/multiboot2/multiboot.html
-[adjusting the default page size]: https://wiki.osdev.org/Multiboot#Multiboot_2
 
 Because of these drawbacks we decided to not use GRUB or the Multiboot standard. However, we plan to add Multiboot support to our [bootimage] tool, so that it's possible to load your kernel on a GRUB system too. If you're interested in writing a Multiboot compliant kernel, check out the [first edition] of this blog series.
 
