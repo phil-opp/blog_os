@@ -1,6 +1,6 @@
 +++
 title = "A Minimal Rust Kernel"
-order = 4
+order = 2
 path = "minimal-rust-kernel"
 date = 2018-02-10
 template = "second-edition/page.html"
