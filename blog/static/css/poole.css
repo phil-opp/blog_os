@@ -204,6 +204,8 @@ img {
   margin: 0 0 1rem;
   border-radius: 5px;
   max-width: 100%;
+  color: grey;
+  font-style: italic;
 }
 
 /* Tables */
