@@ -70,6 +70,18 @@ main img {
   margin: 2rem 0;
 }
 
+.post-summary {
+  margin-bottom: 1rem;
+}
+
+.post-summary p {
+  display: inline;
+}
+
+.read-more {
+  margin-left: 5px;
+}
+
 .post-category {
   margin-right: 0.5rem;
   text-transform: uppercase;
