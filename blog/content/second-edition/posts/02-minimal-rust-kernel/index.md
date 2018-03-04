@@ -317,9 +317,25 @@ So we want to minimize the use of `unsafe` as much as possible. Rust gives us th
 
 [memory safety]: https://en.wikipedia.org/wiki/Memory_safety
 
-We now have a simple “Hello World!” kernel. It should be noted though that a more advanced kernel might still produce linker faults because the compiler tries to use some function normally provided by `libc`. For this case, there are two crates you should keep in mind: [`rlibc`] and [`compiler_builtins`]. The former provides implementations for `memcpy`, `memclear`, etc. and the latter provides various other builtin functions.
+We now have a simple “Hello World!” kernel. However, a more advanced kernel will still produce linker faults because the compiler tries to use some function normally provided by `libc`, most commonly `memcpy` and `memset`. To prevent these faults, we add an dependency on the [`rlibc`] crate, which provides implementations for the common `mem*` functions:
 
 [`rlibc`]: https://docs.rs/crate/rlibc
+
+```toml
+# in Cargo.toml
+
+[dependencies]
+rlibc = "1.0"
+```
+
+```rust
+// in src/main.rs
+
+extern crate rlibc;
+```
+
+There is also the [`compiler_builtins`] crate that you should keep in mind. It provides Rust implementations for various other builtin functions, such as special floating point intrinsics.
+
 [`compiler_builtins`]: https://docs.rs/crate/compiler-builtins-snapshot
 
 ### Creating a Bootimage
