@@ -65,9 +65,7 @@ install:
 build: false
 
 before_test:
-  - mkdir bin
-  - mklink "bin\ld.exe" "C:\Program Files\LLVM\bin\lld.exe"
-  - set PATH=%CD%\bin;C:\msys64\mingw%MSYS_BITS%\bin;C:\msys64\usr\bin;%PATH%
+  - set PATH=C:\msys64\mingw%MSYS_BITS%\bin;C:\msys64\usr\bin;%PATH%
   - rustup component add rust-src
   - set RUST_BACKTRACE=1
   - if not exist %USERPROFILE%\.cargo\bin\cargo-install-update.exe cargo install cargo-update
