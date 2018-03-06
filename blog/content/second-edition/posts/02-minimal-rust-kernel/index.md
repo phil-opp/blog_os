@@ -182,8 +182,7 @@ Our target specification file now looks like this:
   "target-c-int-width": "32",
   "os": "none",
   "executables": true,
-  "linker-flavor": "ld",
-  "linker": "ld.lld",
+  "linker-flavor": "ld.lld",
   "panic-strategy": "abort",
   "disable-redzone": true,
   "features": "-mmx,-sse,+soft-float"
