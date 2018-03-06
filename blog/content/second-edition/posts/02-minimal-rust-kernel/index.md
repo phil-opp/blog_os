@@ -132,10 +132,11 @@ We add the following build-related entries:
 
 
 ```json
-"linker-flavor": "ld.lld",
+"linker-flavor": "ld",
+"linker": "ld.lld",
 ```
 
-Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker for linking our kernel. LLD is shipped with Rust since the `2018-03-05` nightly.
+Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker for linking our kernel.
 
 [LLD]: https://lld.llvm.org/
 
@@ -258,6 +259,10 @@ Let's try it:
    Compiling blog_os v0.1.0 (file:///…/blog_os)
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
+
+(If you're getting a linking error because LLD could not be found, see our “[Installing LLD]” guide.)
+
+[Installing LLD]: ./second-edition/extra/installing-lld/index.md
 
 It worked! We see that `xargo` cross-compiled the `core` library for our new custom target and then continued to compile our `blog_os` crate.
 
