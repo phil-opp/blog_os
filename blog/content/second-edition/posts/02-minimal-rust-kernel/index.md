@@ -132,11 +132,10 @@ We add the following build-related entries:
 
 
 ```json
-"linker-flavor": "ld",
-"linker": "ld.lld",
+"linker-flavor": "ld.lld",
 ```
 
-Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker for linking our kernel.
+Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker for linking our kernel. LLD is shipped with Rust since the `2018-03-05` nightly.
 
 [LLD]: https://lld.llvm.org/
 
