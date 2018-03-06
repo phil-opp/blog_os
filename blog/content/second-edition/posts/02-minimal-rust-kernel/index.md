@@ -174,19 +174,18 @@ Our target specification file now looks like this:
 
 ```json
 {
-  "llvm-target": "x86_64-unknown-none",
+  "llvm-target": "x86_64-unknown-linux-gnu",
   "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
   "arch": "x86_64",
   "target-endian": "little",
   "target-pointer-width": "64",
   "target-c-int-width": "32",
   "os": "none",
+  "linker-flavor": "ld.lld",
   "executables": true,
-  "linker-flavor": "ld",
-  "linker": "ld.lld",
-  "panic-strategy": "abort",
+  "features": "-mmx,-sse,+soft-float",
   "disable-redzone": true,
-  "features": "-mmx,-sse,+soft-float"
+  "panic-strategy": "abort"
 }
 ```
 
