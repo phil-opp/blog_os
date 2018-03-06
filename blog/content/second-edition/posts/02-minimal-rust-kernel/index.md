@@ -259,10 +259,6 @@ Let's try it:
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-(If you're getting a linking error because LLD could not be found, see our “[Installing LLD]” guide.)
-
-[Installing LLD]: ./second-edition/extra/installing-lld/index.md
-
 It worked! We see that `xargo` cross-compiled the `core` library for our new custom target and then continued to compile our `blog_os` crate.
 
 Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
