@@ -30,6 +30,24 @@
     {{ macros::post_link(page=posts.2) }}
 </div>
 
+<div class="posts subscribe">
+    <h2 class="post-title">Subscribe</h2>
+    Receive notifications about new posts and other major changes.
+    <form
+    action="https://buttondown.email/api/emails/embed-subscribe/phil-opp"
+    method="post"
+    target="popupwindow"
+    onsubmit="window.open('https://buttondown.email/phil-opp', 'popupwindow')"
+    class="embeddable-buttondown-form subscribe"
+    >
+    <div class="subscribe-fields">
+        <input type="email" name="email" id="bd-email" placeholder="Enter your email">
+        <input type="hidden" value="1" name="embed"/>
+        <input type="submit" value="Subscribe" />
+    </div>
+    </form>
+</div>
+
 <aside id="recent-updates">
     <h2>Recent Updates</h2>
     {% include "recent-updates.html" %}
