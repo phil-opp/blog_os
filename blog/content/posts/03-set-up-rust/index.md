@@ -21,7 +21,11 @@ This blog post tries to set up Rust step-by-step and point out the different pro
 [Github repository]: https://github.com/phil-opp/blog_os/tree/post_3
 
 ## Installing Rust
-We need a nightly compiler, as we will use many unstable features. To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `rustup override add nightly`.
+We need a nightly compiler, as we will use many unstable features. To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` to the project's root directory:
+
+```
+nightly
+```
 
 [rustup]: https://www.rustup.rs/
 
