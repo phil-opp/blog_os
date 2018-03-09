@@ -135,7 +135,7 @@ We add the following build-related entries:
 "linker-flavor": "ld.lld",
 ```
 
-Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker for linking our kernel. LLD is shipped with Rust since the `2018-03-05` nightly and supported by cargo since version `0.3.11`.
+Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker for linking our kernel. LLD is shipped with Rust since the `2018-03-05` nightly and supported by xargo (see below) since version `0.3.11`.
 
 [LLD]: https://lld.llvm.org/
 
