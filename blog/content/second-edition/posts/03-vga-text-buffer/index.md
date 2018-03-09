@@ -47,7 +47,9 @@ The VGA text buffer is accessible via [memory-mapped I/O] to the address `0xb800
 
 [memory-mapped I/O]: https://en.wikipedia.org/wiki/Memory-mapped_I/O
 
-Note that memory-mapped hardware might not support all normal RAM operations. For example, a device could only support byte-wise reads and return junk when an `u64` is read. Fortunately, the text buffer supports normal reads and writes (and also bitwise operations), so that we don't have to treat it in special way.
+Note that memory-mapped hardware might not support all normal RAM operations. For example, a device could only support byte-wise reads and return junk when an `u64` is read. Fortunately, the text buffer [supports normal reads and writes], so that we don't have to treat it in special way.
+
+[supports normal reads and writes]: https://web.stanford.edu/class/cs140/projects/pintos/specs/freevga/vga/vgamem.htm#manip
 
 ## A Rust Module
 Now that we know how the VGA buffer works, we can create a Rust module to handle printing:
@@ -161,7 +163,7 @@ The writer will always write to the last line and shift lines up when a line is 
 [`'static`]: https://doc.rust-lang.org/book/first-edition/lifetimes.html#static
 
 ### Printing
-Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte (it doesn't compile yet):
+Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte:
 
 ```rust
 impl Writer {
@@ -298,7 +300,7 @@ impl Writer {
             byte => {
                 ...
 
-                self.buffer().chars[row][col].write(ScreenChar {
+                self.buffer.chars[row][col].write(ScreenChar {
                     ascii_character: byte,
                     color_code: color_code,
                 });
