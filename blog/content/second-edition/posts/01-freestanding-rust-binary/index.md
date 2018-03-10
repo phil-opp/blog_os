@@ -278,7 +278,7 @@ pub extern fn WinMain() -> ! {
 We just call `WinMain` from `WinMainCRTStartup` to avoid any ambiguity which function is called.
 
 #### macOS
-macOS [does not support statically linked binaries], so we have to link the `libSystem` library. The entry point is the called `main`:
+macOS [does not support statically linked binaries], so we have to link the `libSystem` library. The entry point is called `main`:
 
 [does not support statically linked binaries]: https://developer.apple.com/library/content/qa/qa1118/_index.html
 
