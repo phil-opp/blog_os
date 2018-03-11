@@ -222,7 +222,7 @@ We can now build the kernel for our new target by passing the name of the JSON f
 [custom-target-bug]: https://github.com/rust-lang/cargo/issues/4905
 
 ```
-> RUST_TARGET_PATH=(pwd) cargo build --target x86_64-blog_os
+> RUST_TARGET_PATH=$(pwd) cargo build --target x86_64-blog_os
 
 error[E0463]: can't find crate for `core`
   |
@@ -251,7 +251,7 @@ Xargo is “a drop-in replacement for cargo”, so every cargo command also work
 Let's try it:
 
 ```bash
-> RUST_TARGET_PATH=(pwd) xargo build --target x86_64-blog_os
+> RUST_TARGET_PATH=$(pwd) xargo build --target x86_64-blog_os
    Compiling core v0.0.0 (file:///…/rust/src/libcore)
     Finished release [optimized] target(s) in 22.87 secs
    Compiling blog_os v0.1.0 (file:///…/blog_os)
