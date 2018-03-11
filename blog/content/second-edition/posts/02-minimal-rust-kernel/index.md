@@ -222,7 +222,7 @@ We can now build the kernel for our new target by passing the name of the JSON f
 [custom-target-bug]: https://github.com/rust-lang/cargo/issues/4905
 
 ```
-> RUST_TARGET_PATH=(pwd) cargo build --target x86_64-unknown-blog_os
+> RUST_TARGET_PATH=(pwd) cargo build --target x86_64-blog_os
 
 error[E0463]: can't find crate for `core`
   |
@@ -251,7 +251,7 @@ Xargo is “a drop-in replacement for cargo”, so every cargo command also work
 Let's try it:
 
 ```bash
-> RUST_TARGET_PATH=(pwd) xargo build --target x86_64-unknown-blog_os
+> RUST_TARGET_PATH=(pwd) xargo build --target x86_64-blog_os
    Compiling core v0.0.0 (file:///…/rust/src/libcore)
     Finished release [optimized] target(s) in 22.87 secs
    Compiling blog_os v0.1.0 (file:///…/blog_os)
@@ -337,7 +337,7 @@ Now that we have an executable that does something perceptible, it is time to tu
 
 [section about booting]: #the-boot-process
 
-To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal. After installing, creating a bootimage is as easy as executing `bootimage --target x86_64-unknown-blog_os`. The tool also recompiles your kernel using `xargo`, so it will automatically pick up any changes you make.
+To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal. After installing, creating a bootimage is as easy as executing `bootimage --target x86_64-blog_os`. The tool also recompiles your kernel using `xargo`, so it will automatically pick up any changes you make.
 
 After executing the command, you should see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
