@@ -192,10 +192,12 @@ However, the large SIMD registers lead to problems in OS kernels. The reason is 
 As noted above, floating point operations on `x86_64` use SSE registers, so floats are no longer usable without SSE. Unfortunately, the Rust core library already uses floats (e.g., it implements traits for `f32` and `f64`), so we need an alternative way to implement float operations. The `soft-float` feature solves this problem by emulating all floating point operations through software functions based on normal integers.
 
 ### Compiling
-To build our kernel for our new target, we pass the configuration file's name as `target` argument:
+To build our kernel for our new target, we pass the configuration file's name as `--target` argument. There is currently an [open bug][custom-target-bug] for custom target specifications, so you also need to set the `RUST_TARGET_PATH` environment variable to the current directory, otherwise Rust doesn't find your target. The full command is:
 
-```bash
-cargo build --target=x86_64-blog_os
+[custom-target-bug]: https://github.com/rust-lang/cargo/issues/4905
+
+```
+RUST_TARGET_PATH=$(pwd) cargo build --target x86_64-blog_os
 ```
 
 However, the following error occurs:
@@ -228,7 +230,7 @@ Xargo is “a drop-in replacement for cargo”, so every cargo command also work
 Let's try it:
 
 ```bash
-> xargo build --target=x86_64-blog_os
+> RUST_TARGET_PATH=$(pwd) xargo build --target=x86_64-blog_os
    Compiling core v0.0.0 (file:///…/rust/src/libcore)
     Finished release [optimized] target(s) in 22.87 secs
    Compiling blog_os v0.1.0 (file:///…/blog_os/tags)
@@ -255,7 +257,7 @@ $(kernel): kernel $(rust_os) $(assembly_object_files) $(linker_script)
 		$(assembly_object_files) $(rust_os)
 
 kernel:
-	@xargo build --target $(target)
+	@RUST_TARGET_PATH=$(pwd) xargo build --target $(target)
 ```
 We add a new `kernel` target that just executes `xargo build` and modify the `$(kernel)` target to link the created static lib. We also add the new `kernel` target to the `.PHONY` list, since it does not belong to a file with that name.
 
