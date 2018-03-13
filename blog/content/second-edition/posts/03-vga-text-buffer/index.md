@@ -315,7 +315,7 @@ impl Writer {
 Instead of a normal assignment using `=`, we're now using the `write` method. This guarantees that the compiler will never optimize away this write.
 
 ### Formatting Macros
-It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_str` method. To implement the trait, we just need to move it into an `impl fmt::Write for Writer` block and add a return type:
+It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_byte` method. To implement the trait, we just need to move it into an `impl fmt::Write for Writer` block and add a return type:
 
 [core::fmt::Write]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
