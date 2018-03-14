@@ -261,16 +261,18 @@ One way to pass linker attributes via cargo is the `cargo rustc` command. The co
 With this command, our crate finally builds as a freestanding executable!
 
 #### Windows
-On Windows, the linker requires two entry points: `WinMain` and `WinMainCRTStartup`, [depending on the used subsystem](https://msdn.microsoft.com/en-us/library/f9t8842e.aspx). Like on Linux, we overwrite the entry points by defining `no_mangle` functions:
+On Windows, the linker requires two entry points [depending on the used subsystem]. For the `CONSOLE` subsystem, we need a function called `mainCRTStartup`, which calls a function called `main`. Like on Linux, we overwrite the entry points by defining `no_mangle` functions:
+
+[depending on the used subsystem]: https://docs.microsoft.com/en-us/cpp/build/reference/entry-entry-point-symbol
 
 ```rust
 #[no_mangle]
-pub extern fn WinMainCRTStartup() -> ! {
-    WinMain();
+pub extern fn mainCRTStartup() -> ! {
+    main();
 }
 
 #[no_mangle]
-pub extern fn WinMain() -> ! {
+pub extern fn main() -> ! {
     loop {}
 }
 ```
