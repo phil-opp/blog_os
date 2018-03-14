@@ -201,7 +201,7 @@ To print whole strings, we can convert them to bytes and print them one-by-one:
 
 ```rust
 impl Writer {
-    pub fn write_str(&mut self, s: &str) {
+    pub fn write_string(&mut self, s: &str) {
         for byte in s.bytes() {
             self.write_byte(byte)
         }
@@ -221,7 +221,7 @@ pub fn print_something() {
     };
 
     writer.write_byte(b'H');
-    writer.write_str("ello");
+    writer.write_string("ello");
 }
 ```
 It first creates a new Writer that points to the VGA buffer at `0xb8000`. The syntax for this might seem a bit strange: First, we cast the integer `0xb8000` as an mutable [raw pointer]. Then we convert it to a mutable reference by dereferencing it (through `*`) and immediately borrowing it again (through `&mut`). This conversion requires an [`unsafe` block], since the compiler can't guarantee that the raw pointer is valid.
@@ -315,23 +315,21 @@ impl Writer {
 Instead of a normal assignment using `=`, we're now using the `write` method. This guarantees that the compiler will never optimize away this write.
 
 ### Formatting Macros
-It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_str` method. To implement the trait, we just need to move it into an `impl fmt::Write for Writer` block and add a return type:
+It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [`core::fmt::Write`] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_string` method, just with a `fmt::Result` return type:
 
-[core::fmt::Write]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
+[`core::fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
 ```rust
 use core::fmt;
 
 impl fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        for byte in s.bytes() {
-          self.write_byte(byte)
-        }
+        self.write_string(s);
         Ok(())
     }
 }
 ```
-The `Ok(())` is just a `Ok` Result containing the `()` type. We can drop the `pub` because trait methods are always public.
+The `Ok(())` is just a `Ok` Result containing the `()` type.
 
 Now we can use Rust's built-in `write!`/`writeln!` formatting macros:
 

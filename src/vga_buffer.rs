@@ -100,6 +100,17 @@ impl Writer {
         }
     }
 
+    /// Writes the given ASCII string to the buffer.
+    ///
+    /// Wraps lines at `BUFFER_WIDTH`. Supports the `\n` newline character. Does **not**
+    /// support strings with non-ASCII characters, since they can't be printed in the VGA text
+    /// mode.
+    fn write_string(&mut self, s: &str) {
+        for byte in s.bytes() {
+          self.write_byte(byte)
+        }
+    }
+
     /// Shifts all lines one line up and clears the last row.
     fn new_line(&mut self) {
         for row in 1..BUFFER_HEIGHT {
@@ -125,15 +136,8 @@ impl Writer {
 }
 
 impl fmt::Write for Writer {
-    /// Writes the given ASCII string to the buffer.
-    ///
-    /// Wraps lines at `BUFFER_WIDTH`. Supports the `\n` newline character. Does **not**
-    /// support strings with non-ASCII characters, since they can't be printed in the VGA text
-    /// mode.
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        for byte in s.bytes() {
-          self.write_byte(byte)
-        }
+        self.write_string(s);
         Ok(())
     }
 }
