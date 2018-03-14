@@ -257,7 +257,7 @@ $(kernel): kernel $(rust_os) $(assembly_object_files) $(linker_script)
 		$(assembly_object_files) $(rust_os)
 
 kernel:
-	@RUST_TARGET_PATH=$(pwd) xargo build --target $(target)
+	@RUST_TARGET_PATH=$(shell pwd) xargo build --target $(target)
 ```
 We add a new `kernel` target that just executes `xargo build` and modify the `$(kernel)` target to link the created static lib. We also add the new `kernel` target to the `.PHONY` list, since it does not belong to a file with that name.
 
