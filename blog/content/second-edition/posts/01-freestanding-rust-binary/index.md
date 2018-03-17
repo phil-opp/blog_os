@@ -110,11 +110,13 @@ Now the compiler is missing some _language items_. Language items are special pl
 
 Implementing language items is unstable and protected by a so-called _feature gate_. A feature gate is a special attribute that you have to specify at the top of your `main.rs` in order to use the corresponding feature. By doing this you basically say: “I know that this feature is unstable and that it might stop working without any warnings. I want to use it anyway.”
 
-To limit the use of unstable features, the feature gates are not available in the stable or beta Rust compilers, only [nightly Rust] makes it possible to opt-in. This means that you have to use a nightly compiler for OS development for the near future (since we need to implement unstable language items). As we are only going to be using the nightly compiler for this project, simply run `rustup override set nightly` in the project directory to add a nightly toolchain to it.
+Feature gates are not available in the stable or beta Rust compilers, only [nightly Rust] makes it possible to opt-in. This means that you have to use a nightly compiler for OS development for the near future (since we need to implement unstable language items).
 
 [nightly Rust]: https://doc.rust-lang.org/book/first-edition/release-channels.html
-[rustup]: https://rustup.rs/
-[rustup's documentation]: https://github.com/rust-lang-nursery/rustup.rs#rustup-the-rust-toolchain-installer
+
+To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory.
+
+[rustup]: https://www.rustup.rs/
 
 After installing a nightly Rust compiler, you can enable the unstable `lang_items` feature by inserting `#![feature(lang_items)]` right at the top of `main.rs`.
 
