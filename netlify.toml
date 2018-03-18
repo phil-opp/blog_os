@@ -1,0 +1,62 @@
+[build]
+    base    = "blog"
+    publish = "blog/public"
+    command = "python before_build.py && gutenberg build"
+
+[build.environment]
+    GUTENBERG_VERSION = "0.3.0"
+
+[context.deploy-preview]
+    command = "python before_build.py && gutenberg build --base-url $DEPLOY_PRIME_URL"
+
+[context.branch-deploy]
+    command = "python before_build.py && gutenberg build --base-url $DEPLOY_PRIME_URL"
+
+
+[[redirects]]
+from = "/2015/08/18/multiboot-kernel/"
+to = "/multiboot-kernel/"
+
+[[redirects]]
+from = "/rust-os/multiboot-kernel.html"
+to = "/multiboot-kernel/"
+
+[[redirects]]
+from = "/2015/08/25/entering-longmode/"
+to = "/entering-longmode/"
+
+[[redirects]]
+from = "/rust-os/entering-longmode.html"
+to = "/entering-longmode/"
+
+[[redirects]]
+from = "/2015/09/02/setup-rust/"
+to = "/set-up-rust/"
+
+[[redirects]]
+from = "/setup-rust.html"
+to = "/set-up-rust/"
+
+[[redirects]]
+from = "/rust-os/setup-rust.html"
+to = "/set-up-rust/"
+
+[[redirects]]
+from = "/2015/10/23/printing-to-screen/"
+to = "/printing-to-screen/"
+
+[[redirects]]
+from = "/rust-os/printing-to-screen.html"
+to = "/printing-to-screen/"
+
+[[redirects]]
+from = "/atom.xml"
+to = "/rss.xml"
+
+[[redirects]]
+from = "/modifying-page-tables.html"
+to = "/page-tables/"
+
+[[redirects]]
+from = "/handling-exceptions-with-naked-fns.html"
+to = "/extra/naked-exceptions/"
