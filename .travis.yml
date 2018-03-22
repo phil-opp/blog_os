@@ -30,7 +30,7 @@ before_script:
   - (test -x $HOME/.cargo/bin/cargo-install-update || cargo install cargo-update)
   - (test -x $HOME/.cargo/bin/xargo || cargo install xargo)
   - (test -x $HOME/.cargo/bin/bootimage || cargo install bootimage)
-  - cargo install-update -a
+  - cargo-install-update install-update -a
 
 script:
   - bootimage --target x86_64-blog_os
