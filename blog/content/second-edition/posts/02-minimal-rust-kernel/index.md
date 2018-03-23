@@ -337,7 +337,9 @@ Now that we have an executable that does something perceptible, it is time to tu
 
 [section about booting]: #the-boot-process
 
-To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal. After installing, creating a bootimage is as easy as executing `bootimage --target x86_64-blog_os`. The tool also recompiles your kernel using `xargo`, so it will automatically pick up any changes you make.
+To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal. If you're on Linux, you probably need to install the `libssl-dev` package before (execute `sudo apt-get install libssl-dev`).
+
+After installing, creating a bootimage is as easy as executing `bootimage --target x86_64-blog_os`. The tool also recompiles your kernel using `xargo`, so it will automatically pick up any changes you make.
 
 After executing the command, you should see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
