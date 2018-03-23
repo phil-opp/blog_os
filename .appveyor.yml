@@ -71,7 +71,7 @@ before_test:
   - if not exist %USERPROFILE%\.cargo\bin\cargo-install-update.exe cargo install cargo-update
   - if not exist %USERPROFILE%\.cargo\bin\xargo.exe cargo install xargo
   - if not exist %USERPROFILE%\.cargo\bin\bootimage.exe cargo install bootimage
-  - cargo install-update -a
+  - cargo-install-update install-update -a
 
 # Uses 'cargo test' to run tests and build. Alternatively, the project may call compiled programs
 # directly or perform other testing commands. Rust will automatically be placed in the PATH
