@@ -533,7 +533,7 @@ macro_rules! println {
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
 ```
-Macros are defined through one or more rules, which are similar to `match` arms. The `println` macro has three rules: The first rule for is invocations without arguments (e.g `println!()`), the second rule is for invocations with a single argument (e.g. `println!("Hello")`) and the second rule is for invocations with additional parameters (e.g. `println!("{}{}", 4, 2)`).
+Macros are defined through one or more rules, which are similar to `match` arms. The `println` macro has three rules: The first rule for is invocations without arguments (e.g `println!()`), the second rule is for invocations with a single argument (e.g. `println!("Hello")`) and the third rule is for invocations with additional parameters (e.g. `println!("{}{}", 4, 2)`).
 
 First line just prints a `\n` symbol which literally means "don't print anything, just break the line".
 Last two rules simply append a newline character (`\n`) to the format string and then invoke the [`print!` macro], which is defined as:
