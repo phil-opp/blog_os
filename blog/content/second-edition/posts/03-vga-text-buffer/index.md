@@ -528,13 +528,15 @@ Now that we have a global writer, we can add a `println` macro that can be used 
 
 ```rust
 macro_rules! println {
+    () => (print!("\n"));
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
 ```
-Macros are defined through one or more rules, which are similar to `match` arms. The `println` macro has two rules: The first rule is for invocations with a single argument (e.g. `println!("Hello")`) and the second rule is for invocations with additional parameters (e.g. `println!("{}{}", 4, 2)`).
+Macros are defined through one or more rules, which are similar to `match` arms. The `println` macro has three rules: The first rule for is invocations without arguments (e.g `println!()`), the second rule is for invocations with a single argument (e.g. `println!("Hello")`) and the second rule is for invocations with additional parameters (e.g. `println!("{}{}", 4, 2)`).
 
-Both rules simply append a newline character (`\n`) to the format string and then invoke the [`print!` macro], which is defined as:
+First line just prints a `\n` symbol which literally means "don't print anything, just break the line".
+Last two rules simply append a newline character (`\n`) to the format string and then invoke the [`print!` macro], which is defined as:
 
 [`print!` macro]: https://doc.rust-lang.org/nightly/std/macro.print!.html
 
@@ -562,6 +564,7 @@ macro_rules! print {
 }
 
 macro_rules! println {
+    () => (print!("\n"));
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
