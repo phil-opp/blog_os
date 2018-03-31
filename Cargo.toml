@@ -19,3 +19,6 @@ panic = "abort" # disable stack unwinding on panic
 # the profile used for `cargo build --release`
 [profile.release]
 panic = "abort" # disable stack unwinding on panic
+
+[package.metadata.bootimage]
+default-target = "x86_64-blog_os"
