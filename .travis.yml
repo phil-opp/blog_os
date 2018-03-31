@@ -33,4 +33,4 @@ before_script:
   - cargo install-update -a
 
 script:
-  - bootimage --target x86_64-blog_os
+  - bootimage build

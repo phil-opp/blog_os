@@ -46,7 +46,7 @@ The bootloader has to determine the location of the kernel image on the disk and
 
 Writing a bootloader is a bit cumbersome as it requires assembly language and a lot of non insightful steps like “write this magic value to this processor register”. Therefore we don't cover bootloader creation in this post and instead provide a tool named [bootimage] that automatically appends a bootloader to your kernel.
 
-[bootimage]: https://github.com/phil-opp/bootimage
+[bootimage]: https://github.com/rust-osdev/bootimage
 
 If you are interested in building your own bootloader: Stay tuned, a set of posts on this topic is already planned! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
 
@@ -337,9 +337,9 @@ Now that we have an executable that does something perceptible, it is time to tu
 
 [section about booting]: #the-boot-process
 
-To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal. If you're on Linux, you probably need to install the `libssl-dev` package before (execute `sudo apt-get install libssl-dev`).
+To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal.
 
-After installing, creating a bootimage is as easy as executing `bootimage --target x86_64-blog_os`. The tool also recompiles your kernel using `xargo`, so it will automatically pick up any changes you make.
+After installing, creating a bootimage is as easy as executing `bootimage build --target x86_64-blog_os`. The tool also recompiles your kernel using `xargo`, so it will automatically pick up any changes you make.
 
 After executing the command, you should see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
@@ -355,8 +355,20 @@ The `bootimage` tool performs the following steps behind the scenes:
 
 When booted, the bootloader reads and parses the appended ELF file. It then maps the program segments to virtual addresses in the page tables, zeroes the `.bss` section, and sets up a stack. Finally, it reads the entry point address (our `_start` function) and jumps to it.
 
+#### Bootimage Configuration
+The `bootimage` tool can be configured through a `[package.metadata.bootimage]` table in the `Cargo.toml` file. We can add a `default-target` option so that we no longer need to pass the `--target` argument:
+
+```toml
+# in Cargo.toml
+
+[package.metadata.bootimage]
+default-target = "x86_64-blog_os"
+```
+
+Now we can omit the `--target` argument and just run `bootimage build`.
+
 ## Booting it!
-We can now boot our kernel in a virtual machine. To boot it in [QEMU], execute the following command:
+We can now boot the disk image in a virtual machine. To boot it in [QEMU], execute the following command:
 
 [QEMU]: https://www.qemu.org/
 

@@ -77,4 +77,4 @@ before_test:
 # directly or perform other testing commands. Rust will automatically be placed in the PATH
 # environment variable.
 test_script:
-  - bootimage --target x86_64-blog_os
+  - bootimage build
