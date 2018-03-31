@@ -149,6 +149,7 @@ macro_rules! print {
 
 /// Like the `print!` macro in the standard library, but prints to the VGA text buffer.
 macro_rules! println {
+    () => (print!("\n"));
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
