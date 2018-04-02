@@ -203,11 +203,22 @@ To print whole strings, we can convert them to bytes and print them one-by-one:
 impl Writer {
     pub fn write_string(&mut self, s: &str) {
         for byte in s.bytes() {
-            self.write_byte(byte)
+            match byte {
+                // printable ASCII byte or newline
+                0x20...0x7e | b'\n' => self.write_byte(byte),
+                // not part of printable ASCII range
+                _ => self.write_byte(0xfe),
+            }
+
         }
     }
 }
 ```
+
+The VGA text buffer only supports ASCII and the additional bytes of [code page 437]. Rust strings are [UTF-8] by default, so they might contain bytes that are not supported by the VGA text buffer. We use a match to differentiate printable ASCII bytes (a newline or anything in between a space character and a `~` character) and unprintable bytes. For unprintable bytes, we print a `■` character, which has the hex code `0xfe` on the VGA hardware.
+
+[code page 437]: https://en.wikipedia.org/wiki/Code_page_437
+[UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
 
 #### Try it out!
 To write some characters to the screen, you can create a temporary function:
@@ -221,7 +232,8 @@ pub fn print_something() {
     };
 
     writer.write_byte(b'H');
-    writer.write_string("ello");
+    writer.write_string("ello ");
+    writer.write_string("Wörld!");
 }
 ```
 It first creates a new Writer that points to the VGA buffer at `0xb8000`. The syntax for this might seem a bit strange: First, we cast the integer `0xb8000` as an mutable [raw pointer]. Then we convert it to a mutable reference by dereferencing it (through `*`) and immediately borrowing it again (through `&mut`). This conversion requires an [`unsafe` block], since the compiler can't guarantee that the raw pointer is valid.
@@ -229,19 +241,16 @@ It first creates a new Writer that points to the VGA buffer at `0xb8000`. The sy
 [raw pointer]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`unsafe` block]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#unsafe-rust
 
-Secondly, it writes the bytes `b'H'` and the string `"ello"'` to it. The `b` prefix creates a [byte literal], which represents an ASCII character. When we call `vga_buffer::print_something` in our `_start` function (in `src/main.rs`), a `Hello` should be printed in the _lower_ left corner of the screen in yellow:
+Then it writes the byte `b'H'` to it. The `b` prefix creates a [byte literal], which represents an ASCII character. By writing the strings `"ello "'` and `"Wörld!"`, we test our `write_string` method and the handling of unprintable characters.  When we call `vga_buffer::print_something` in our `_start` function (in `src/main.rs`), a `Hello W■■rld!` should be printed in the _lower_ left corner of the screen in yellow:
 
 [byte literal]: https://doc.rust-lang.org/reference/tokens.html#byte-literals
 
-![QEMU output with a blue `Hello` in the lower left corner](vga-hello.png)
+![QEMU output with a yellow `Hello W■■rld!` in the lower left corner](vga-hello.png)
 
-When printing strings with some special characters like `ä` or `λ`, you'll notice that they cause weird symbols on screen. That's because they are represented by multiple bytes in [UTF-8]. By converting them to bytes, we of course get strange results. But since the VGA buffer doesn't support UTF-8, it's not possible to display these characters anyway.
-
-[core tracking issue]: https://github.com/rust-lang/rust/issues/27701
-[UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
+Notice that the `ö` is printed as two `■` characters. That's because `ö` is represented by two bytes in [UTF-8], which both don't fall into the printable ASCII range. In fact, this is a fundamental property of UTF-8: the individual bytes of multi-byte values are never valid ASCII.
 
 ### Volatile
-We just saw that our `Hello` was printed correctly. However, it might not work with future Rust compilers that optimize more aggressively.
+We just saw that our message was printed correctly. However, it might not work with future Rust compilers that optimize more aggressively.
 
 The problem is that we only write to the `Buffer` and never read from it again. The compiler doesn't know that we really access VGA buffer memory (instead of normal RAM) and knows nothing about the side effect that some characters appear on the screen. So it might decide that these writes are unnecessary and can be omitted. To avoid this erroneous optimization, we need to specify these writes as _[volatile]_. This tells the compiler that the write has side effects and should not be optimized away.
 
