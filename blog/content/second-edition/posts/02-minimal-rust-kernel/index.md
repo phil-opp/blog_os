@@ -203,14 +203,14 @@ Compiling for our new target will use Linux conventions (I'm not quite sure why,
 
 #[lang = "panic_fmt"] // define a function that should be called on panic
 #[no_mangle]
-pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
+pub extern "C" fn rust_begin_panic(_msg: core::fmt::Arguments,
     _file: &'static str, _line: u32, _column: u32) -> !
 {
     loop {}
 }
 
 #[no_mangle] // don't mangle the name of this function
-pub extern fn _start() -> ! {
+pub extern "C" fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
     // named `_start` by default
     loop {}
@@ -277,7 +277,7 @@ The implementation looks like this:
 static HELLO: &[u8] = b"Hello World!";
 
 #[no_mangle]
-pub extern fn _start() -> ! {
+pub extern "C" fn _start() -> ! {
 	let vga_buffer = 0xb8000 as *const u8 as *mut u8;
 
     for (i, &byte) in HELLO.iter().enumerate() {

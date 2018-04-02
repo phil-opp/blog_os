@@ -15,7 +15,7 @@ mod vga_buffer;
 /// This function is the entry point, since the linker looks for a function
 /// named `_start_` by default.
 #[no_mangle] // don't mangle the name of this function
-pub extern fn _start() -> ! {
+pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
     loop {}
@@ -24,7 +24,7 @@ pub extern fn _start() -> ! {
 /// This function is called on panic.
 #[lang = "panic_fmt"]
 #[no_mangle]
-pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
+pub extern "C" fn rust_begin_panic(_msg: core::fmt::Arguments,
                                _file: &'static str,
                                _line: u32,
                                _column: u32) -> ! {

@@ -507,7 +507,7 @@ Now we can delete the `print_something` function and print directly from our `_s
 ```rust
 // in src/main.rs
 #[no_mangle]
-pub extern fn _start() -> ! {
+pub extern "C" fn _start() -> ! {
     use core::fmt::Write;
     vga_buffer::WRITER.lock().write_str("Hello again").unwrap();
     write!(vga_buffer::WRITER.lock(), ", some numbers: {} {}", 42, 1.337).unwrap();
@@ -586,7 +586,7 @@ To use `println` in `main.rs`, we need to import the macros of the VGA buffer mo
 mod vga_buffer;
 
 #[no_mangle]
-pub extern fn _start() {
+pub extern "C" fn _start() {
     println!("Hello World{}", "!");
 
     loop {}

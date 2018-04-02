@@ -132,7 +132,7 @@ fn main() {}
 
 #[lang = "panic_fmt"]
 #[no_mangle]
-pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
+pub extern "C" fn rust_begin_panic(_msg: core::fmt::Arguments,
     _file: &'static str, _line: u32, _column: u32) -> !
 {
     loop {}
@@ -198,7 +198,7 @@ To tell the Rust compiler that we don't want to use the normal entry point chain
 
 #[lang = "panic_fmt"]
 #[no_mangle]
-pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
+pub extern "C" fn rust_begin_panic(_msg: core::fmt::Arguments,
     _file: &'static str, _line: u32, _column: u32) -> !
 {
     loop {}
@@ -214,14 +214,15 @@ On Linux, the default entry point is called `_start`. The linker just looks for 
 
 ```rust
 #[no_mangle]
-pub extern fn _start() -> ! {
+pub extern "C" fn _start() -> ! {
     loop {}
 }
 ```
 
-It's important that we disable the [name mangling] through the `no_mangle` attribute, otherwise the compiler would generate some cryptic `_ZN3blog_os4_start7hb173fedf945531caE` symbol that the linker wouldn't recognize.
+It's important that we disable the [name mangling] through the `no_mangle` attribute, otherwise the compiler would generate some cryptic `_ZN3blog_os4_start7hb173fedf945531caE` symbol that the linker wouldn't recognize. We also have to mark the function as `extern "C"` to tell the compiler that it should use the [C calling convention] for this function (instead of the unspecified Rust calling convention).
 
 [name mangling]: https://en.wikipedia.org/wiki/Name_mangling
+[C calling convention]: https://en.wikipedia.org/wiki/Calling_convention
 
 The `!` return type means that the function is diverging, i.e. not allowed to ever return. This is required because the entry point is not called by any function, but invoked directly by the operating system or bootloader. So instead of returning, the entry point should e.g. invoke the [`exit` system call] of the operating system. In our case, shutting down the machine could be a reasonable action, since there's nothing left to do if a freestanding binary returns. For now, we fulfill the requirement by looping endlessly.
 
@@ -269,12 +270,12 @@ On Windows, the linker requires two entry points [depending on the used subsyste
 
 ```rust
 #[no_mangle]
-pub extern fn mainCRTStartup() -> ! {
+pub extern "C" fn mainCRTStartup() -> ! {
     main();
 }
 
 #[no_mangle]
-pub extern fn main() -> ! {
+pub extern "C" fn main() -> ! {
     loop {}
 }
 ```
@@ -288,7 +289,7 @@ macOS [does not support statically linked binaries], so we have to link the `lib
 
 ```rust
 #[no_mangle]
-pub extern fn main() -> ! {
+pub extern "C" fn main() -> ! {
     loop {}
 }
 ```
@@ -313,7 +314,7 @@ A minimal freestanding Rust binary looks like this:
 
 #[lang = "panic_fmt"] // define a function that should be called on panic
 #[no_mangle]
-pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
+pub extern "C" fn rust_begin_panic(_msg: core::fmt::Arguments,
     _file: &'static str, _line: u32, _column: u32) -> !
 {
     loop {}
@@ -321,7 +322,7 @@ pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
 
 // On Linux:
 #[no_mangle] // don't mangle the name of this function
-pub extern fn _start() -> ! {
+pub extern "C" fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
     // named `_start` by default
     loop {}
@@ -329,19 +330,19 @@ pub extern fn _start() -> ! {
 
 // On Windows:
 #[no_mangle]
-pub extern fn WinMainCRTStartup() -> ! {
+pub extern "C" fn WinMainCRTStartup() -> ! {
     WinMain();
 }
 
 #[no_mangle]
-pub extern fn WinMain() -> ! {
+pub extern "C" fn WinMain() -> ! {
     loop {}
 }
 
 // On macOS:
 
 #[no_mangle]
-pub extern fn main() -> ! {
+pub extern "C" fn main() -> ! {
     loop {}
 }
 ```
