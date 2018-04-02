@@ -203,9 +203,12 @@ Compiling for our new target will use Linux conventions (I'm not quite sure why,
 
 #[lang = "panic_fmt"] // define a function that should be called on panic
 #[no_mangle]
-pub extern "C" fn rust_begin_panic(_msg: core::fmt::Arguments,
-    _file: &'static str, _line: u32, _column: u32) -> !
-{
+pub extern "C" fn rust_begin_panic(
+    _msg: core::fmt::Arguments,
+    _file: &'static str,
+    _line: u32,
+    _column: u32,
+) -> ! {
     loop {}
 }
 
