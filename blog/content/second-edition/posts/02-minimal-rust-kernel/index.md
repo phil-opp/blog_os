@@ -210,7 +210,7 @@ pub extern fn rust_begin_panic(_msg: core::fmt::Arguments,
 }
 
 #[no_mangle] // don't mangle the name of this function
-pub fn _start() -> ! {
+pub extern fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
     // named `_start` by default
     loop {}
@@ -277,7 +277,7 @@ The implementation looks like this:
 static HELLO: &[u8] = b"Hello World!";
 
 #[no_mangle]
-pub fn _start() -> ! {
+pub extern fn _start() -> ! {
 	let vga_buffer = 0xb8000 as *const u8 as *mut u8;
 
     for (i, &byte) in HELLO.iter().enumerate() {

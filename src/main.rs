@@ -15,7 +15,7 @@ mod vga_buffer;
 /// This function is the entry point, since the linker looks for a function
 /// named `_start_` by default.
 #[no_mangle] // don't mangle the name of this function
-pub fn _start() -> ! {
+pub extern fn _start() -> ! {
     println!("Hello World{}", "!");
 
     loop {}
