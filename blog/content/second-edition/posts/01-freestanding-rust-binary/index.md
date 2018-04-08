@@ -280,8 +280,6 @@ pub extern "C" fn main() -> ! {
 }
 ```
 
-We just call `WinMain` from `WinMainCRTStartup` to avoid any ambiguity which function is called.
-
 #### macOS
 macOS [does not support statically linked binaries], so we have to link the `libSystem` library. The entry point is called `main`:
 
@@ -330,12 +328,12 @@ pub extern "C" fn _start() -> ! {
 
 // On Windows:
 #[no_mangle]
-pub extern "C" fn WinMainCRTStartup() -> ! {
-    WinMain();
+pub extern "C" fn mainCRTStartup() -> ! {
+    main();
 }
 
 #[no_mangle]
-pub extern "C" fn WinMain() -> ! {
+pub extern "C" fn main() -> ! {
     loop {}
 }
 
