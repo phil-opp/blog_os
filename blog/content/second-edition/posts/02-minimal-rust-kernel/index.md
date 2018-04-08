@@ -247,20 +247,9 @@ That's where [xargo] comes in. It is a wrapper for cargo that eases cross compil
 cargo install xargo
 ```
 
-Xargo depends on the rust source code, which we can install with `rustup component add rust-src`. It also requires a file named `Xargo.toml` in our project directory that specifies which crates of the so-called _“sysroot”_ it should build. To build just the required `core` and `compiler_builtins` crates, we create the following `Xargo.toml`:
+Xargo depends on the rust source code, which we can install with `rustup component add rust-src`.
 
-```toml
-[dependencies.core]
-stage = 0
-
-[dependencies.compiler_builtins]
-features = ["mem"]
-stage = 1
-```
-
-The `stage` fields tell `Xargo` the order in which it should build things. The `compiler_builtins` crate requires the `core` crate itself, so it can only built in a second step after `core` has been compiled. So `core` is built in stage 0 and `compiler_builtins` is built in stage 1. The `mem` feature of `compiler_builtins` is required so that implementations for `memcpy`, `memset`, etc. are created.
-
-Xargo is “a drop-in replacement for cargo”, so every cargo command also works with `xargo`. You can do e.g. `xargo --help`, `xargo clean`, or `xargo doc`. The only difference is that the build command has additional functionality: `xargo build` will automatically cross compile the `core` library when compiling for custom targets.
+Xargo is “a drop-in replacement for cargo”, so every cargo command also works with `xargo`. You can do e.g. `xargo --help`, `xargo clean`, or `xargo doc`. The only difference is that the build command has additional functionality: `xargo build` will automatically cross compile the `core` and `compiler_rt` libraries when compiling for custom targets.
 
 Let's try it:
 
