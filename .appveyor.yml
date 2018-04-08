@@ -64,6 +64,8 @@ build: false
 
 before_test:
   - set PATH=C:\msys64\mingw%MSYS_BITS%\bin;C:\msys64\usr\bin;%PATH%
+  # Fix undefined references to __acrt_iob_func()
+  - sed -rie "s/#define std([[:alpha:]]+)[[:space:]]+\(__acrt_iob_func\(([[:digit:]]+)\)\)/#define std\1 (\&__iob_func()[\2])/" "C:\msys64\mingw64\x86_64-w64-mingw32\include\stdio.h"
   - rustup component add rust-src
   - set RUST_BACKTRACE=1
   - if not exist %USERPROFILE%\.cargo\bin\cargo-install-update.exe cargo install cargo-update
