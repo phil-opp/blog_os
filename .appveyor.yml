@@ -37,8 +37,6 @@ environment:
 
 cache:
   - '%USERPROFILE%\.cargo\bin'
-  - '%USERPROFILE%\.cargo\config'
-  - '%USERPROFILE%\.cargo\env'
   - '%USERPROFILE%\.cargo\.crates.toml'
   - '%USERPROFILE%\.xargo'
   - target
