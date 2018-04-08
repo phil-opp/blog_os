@@ -227,14 +227,14 @@ We can now build the kernel for our new target by passing the name of the JSON f
 ```
 > RUST_TARGET_PATH=$(pwd) cargo build --target x86_64-blog_os
 
-error[E0463]: can't find crate for `core`
-  |
-  = note: the `x86_64-blog_os` target may not be installed
+error[E0463]: can't find crate for `core` OR
+error[E0463]: can't find crate for `compiler_builtins`
 ```
 
-It failed! The error tells us that the Rust compiler no longer finds the core library. The [core library] is implicitly linked to all `no_std` crates and contains things such as `Result`, `Option`, and iterators.
+It fails! The error tells us that the Rust compiler no longer finds the `core` or the `compiler_builtins` library. Both libraries are implicitly linked to all `no_std` crates. The [`core` library] contains basic Rust types such as `Result`, `Option`, and iterators, whereas the [`compiler_builtins` library] provides various lower level functions expected by LLVM, such as `memcpy`.
 
-[core library]: https://doc.rust-lang.org/nightly/core/index.html
+[`core` library]: https://doc.rust-lang.org/nightly/core/index.html
+[`compiler_builtins` library]: https://github.com/rust-lang-nursery/compiler-builtins
 
 The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for supported host triples (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for other targets, we need to recompile `core` for these targets first.
 
@@ -247,7 +247,18 @@ That's where [xargo] comes in. It is a wrapper for cargo that eases cross compil
 cargo install xargo
 ```
 
-Xargo depends on the rust source code, which we can install with `rustup component add rust-src`.
+Xargo depends on the rust source code, which we can install with `rustup component add rust-src`. It also requires a file named `Xargo.toml` in our project directory that specifies which crates of the so-called _“sysroot”_ it should build. To build just the required `core` and `compiler_builtins` crates, we create the following `Xargo.toml`:
+
+```toml
+[dependencies.core]
+stage = 0
+
+[dependencies.compiler_builtins]
+features = ["mem"]
+stage = 1
+```
+
+The `stage` fields tell `Xargo` the order in which it should build things. The `compiler_builtins` crate requires the `core` crate itself, so it can only built in a second step after `core` has been compiled. So `core` is built in stage 0 and `compiler_builtins` is built in stage 1. The `mem` feature of `compiler_builtins` is required so that implementations for `memcpy`, `memset`, etc. are created.
 
 Xargo is “a drop-in replacement for cargo”, so every cargo command also works with `xargo`. You can do e.g. `xargo --help`, `xargo clean`, or `xargo doc`. The only difference is that the build command has additional functionality: `xargo build` will automatically cross compile the `core` library when compiling for custom targets.
 
@@ -256,12 +267,14 @@ Let's try it:
 ```bash
 > RUST_TARGET_PATH=$(pwd) xargo build --target x86_64-blog_os
    Compiling core v0.0.0 (file:///…/rust/src/libcore)
-    Finished release [optimized] target(s) in 22.87 secs
+    Finished release [optimized] target(s) in 52.75 secs
+   Compiling compiler_builtins v0.1.0 (file:///…/rust/src/libcompiler_builtins)
+    Finished release [optimized] target(s) in 3.92 secs
    Compiling blog_os v0.1.0 (file:///…/blog_os)
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-It worked! We see that `xargo` cross-compiled the `core` library for our new custom target and then continued to compile our `blog_os` crate.
+It worked! We see that `xargo` cross-compiled the `core` and `compiler_builtin` libraries for our new custom target and then continued to compile our `blog_os` crate.
 
 Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
 
@@ -313,27 +326,6 @@ I want to emphasize that **this is not the way we want to do things in Rust!** I
 So we want to minimize the use of `unsafe` as much as possible. Rust gives us the ability to do this by creating safe abstractions. For example, we could create a VGA buffer type that encapsulates all unsafety and ensures that it is _impossible_ to do anything wrong from the outside. This way, we would only need minimal amounts of `unsafe` and can be sure that we don't violate [memory safety]. We will create such a safe VGA buffer abstraction in the next post.
 
 [memory safety]: https://en.wikipedia.org/wiki/Memory_safety
-
-We now have a simple “Hello World!” kernel. However, a more advanced kernel will still produce linker faults because the compiler tries to use some function normally provided by `libc`, most commonly `memcpy` and `memset`. To prevent these faults, we add an dependency on the [`rlibc`] crate, which provides implementations for the common `mem*` functions:
-
-[`rlibc`]: https://docs.rs/crate/rlibc
-
-```toml
-# in Cargo.toml
-
-[dependencies]
-rlibc = "1.0"
-```
-
-```rust
-// in src/main.rs
-
-extern crate rlibc;
-```
-
-There is also the [`compiler_builtins`] crate that you should keep in mind. It provides Rust implementations for various other builtin functions, such as special floating point intrinsics.
-
-[`compiler_builtins`]: https://docs.rs/crate/compiler-builtins-snapshot
 
 ### Creating a Bootimage
 Now that we have an executable that does something perceptible, it is time to turn it into a bootable disk image. As we learned in the [section about booting], we need a bootloader for that, which initializes the CPU and loads our kernel.

@@ -3,7 +3,6 @@
 #![no_std] // don't link the Rust standard library
 #![no_main] // disable all Rust-level entry points
 
-extern crate rlibc;
 extern crate spin;
 extern crate volatile;
 #[macro_use]
