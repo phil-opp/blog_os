@@ -363,11 +363,23 @@ warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 
 ![QEMU showing "Hello World!"](qemu.png)
 
+Alternatively, you can invoke the `run` subcommand of the `bootimage` tool:
+
+```
+> bootimage run
+```
+
+By default it invokes the exact same QEMU command as above. Additional QEMU options can be passed after a `--`. For example, `bootimage run -- --help` will show the QEMU help. It's also possible to change the default command through an `run-command` key in the `package.metadata.bootimage` table in the `Cargo.toml`. For more information see the `--help` output or the [Readme file].
+
+[Readme file]: https://github.com/rust-osdev/bootimage/blob/master/Readme.md
+
+### VirtualBox
 You can also [convert the raw disk image to a VDI] to load it in [VirtualBox].
 
 [convert the raw disk image to a VDI]: https://blog.sleeplessbeastie.eu/2012/04/29/virtualbox-convert-raw-image-to-vdi-and-otherwise/
 [VirtualBox]: https://www.virtualbox.org/
 
+### Real Machine
 It is also possible to write it to an USB stick and boot it on a real machine:
 
 ```
