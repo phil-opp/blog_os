@@ -11,6 +11,9 @@ volatile = "0.2.3"
 version = "1.0"
 features = ["spin_no_std"]
 
+[dev-dependencies]
+array-init = { git = "https://github.com/Manishearth/array-init.git" } # "0.0.2"
+
 # the profile used for `cargo build`
 [profile.dev]
 panic = "abort" # disable stack unwinding on panic
