@@ -68,7 +68,7 @@ First, we represent the different colors using an enum:
 
 ```rust
 #[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Color {
     Black = 0,
@@ -95,12 +95,14 @@ We use a [C-like enum] here to explicitly specify the number for each color. Bec
 
 Normally the compiler would issue a warning for each unused variant. By using the `#[allow(dead_code)]` attribute we disable these warnings for the `Color` enum.
 
-By [deriving] the [`Copy`], [`Clone`] and [`Debug`] traits, we enable [copy semantics] for the type and make it printable.
+By [deriving] the [`Copy`], [`Clone`], [`Debug`], [`PartialEq`], and [`Eq`] traits, we enable [copy semantics] for the type and make it printable and comparable.
 
 [deriving]: http://rustbyexample.com/trait/derive.html
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [`Clone`]: https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html
 [`Debug`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html
+[`PartialEq`]: https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html
+[`Eq`]: https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html
 [copy semantics]: https://doc.rust-lang.org/book/first-edition/ownership.html#copy-types
 
 To represent a full color code that specifies foreground and background color, we create a [newtype] on top of `u8`:
@@ -108,7 +110,7 @@ To represent a full color code that specifies foreground and background color, w
 [newtype]: https://rustbyexample.com/generics/new_types.html
 
 ```rust
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ColorCode(u8);
 
 impl ColorCode {
@@ -130,7 +132,7 @@ The `ColorCode` contains the full color byte, containing foreground and backgrou
 Now we can add structures to represent a screen character and the text buffer:
 
 ```rust
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 struct ScreenChar {
     ascii_character: u8,
