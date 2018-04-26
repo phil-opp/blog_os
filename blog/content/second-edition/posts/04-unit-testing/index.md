@@ -236,7 +236,7 @@ error[E0277]: the trait bound `volatile::Volatile<vga_buffer::ScreenChar>: core:
     = note: the `Copy` trait is required because the repeated element will be copied
 ```
 
-The problem is that array construction in Rust requires that the contained type is [`Copy`]. The `ScreenChar` is `Copy`, but the `Volatile` wrapper is not. There is currently no easy way to circumvent this without usinge [`unsafe`], but fortunatly there is the [`array_init`] crate that provides a safe interface for such operations.
+The problem is that array construction in Rust requires that the contained type is [`Copy`]. The `ScreenChar` is `Copy`, but the `Volatile` wrapper is not. There is currently no easy way to circumvent this without using [`unsafe`], but fortunately there is the [`array_init`] crate that provides a safe interface for such operations.
 
 [`Copy`]: https://doc.rust-lang.org/core/marker/trait.Copy.html
 [`unsafe`]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html
@@ -249,7 +249,7 @@ To use that crate, we add the following to our `Cargo.toml`:
 array-init = "0.0.2"
 ```
 
-Note that we're using the [`dev-dependencies`] table instead of the `dependencies` table, because we only need the crate for `cargo test` and not for a normal build. Consequently, we also add a `#[cfg(test)]` attribute to the `extern crate` declacation in `main.rs`:
+Note that we're using the [`dev-dependencies`] table instead of the `dependencies` table, because we only need the crate for `cargo test` and not for a normal build. Consequently, we also add a `#[cfg(test)]` attribute to the `extern crate` declaration in `main.rs`:
 
 [`dev-dependencies`]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#development-dependencies
 
@@ -379,7 +379,7 @@ In this test we're using the [`writeln!`] macro to print strings with newlines t
 We only present two basic tests here as an example, but of course many more tests are possible. For example a test that changes the writer color in between writes. Or a test that checks that the top line is correctly shifted off the screen on a newline. Or a test that checks that non-ASCII characters are handled correctly.
 
 ## Summary
-Unit testing is a very useful technique to ensure that certain components have a desired behavior. Even if they cannot show the absense of bugs, they're still an useful tool for finding them and especially for avoiding regressions.
+Unit testing is a very useful technique to ensure that certain components have a desired behavior. Even if they cannot show the absence of bugs, they're still an useful tool for finding them and especially for avoiding regressions.
 
 This post explained how to set up unit testing in a Rust kernel. We now have a functioning test framework and can easily add tests by adding functions with a `#[test]` attribute. To run them, a short `cargo test` suffices. We also added a few basic tests for our VGA buffer as an example how unit tests could look like.
 
