@@ -68,7 +68,7 @@ First, we represent the different colors using an enum:
 
 ```rust
 #[allow(dead_code)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Color {
     Black = 0,
@@ -95,12 +95,14 @@ We use a [C-like enum] here to explicitly specify the number for each color. Bec
 
 Normally the compiler would issue a warning for each unused variant. By using the `#[allow(dead_code)]` attribute we disable these warnings for the `Color` enum.
 
-By [deriving] the [`Copy`], [`Clone`] and [`Debug`] traits, we enable [copy semantics] for the type and make it printable.
+By [deriving] the [`Copy`], [`Clone`], [`Debug`], [`PartialEq`], and [`Eq`] traits, we enable [copy semantics] for the type and make it printable and comparable.
 
 [deriving]: http://rustbyexample.com/trait/derive.html
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [`Clone`]: https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html
 [`Debug`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html
+[`PartialEq`]: https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html
+[`Eq`]: https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html
 [copy semantics]: https://doc.rust-lang.org/book/first-edition/ownership.html#copy-types
 
 To represent a full color code that specifies foreground and background color, we create a [newtype] on top of `u8`:
@@ -108,7 +110,7 @@ To represent a full color code that specifies foreground and background color, w
 [newtype]: https://rustbyexample.com/generics/new_types.html
 
 ```rust
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ColorCode(u8);
 
 impl ColorCode {
@@ -130,7 +132,7 @@ The `ColorCode` contains the full color byte, containing foreground and backgrou
 Now we can add structures to represent a screen character and the text buffer:
 
 ```rust
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 struct ScreenChar {
     ascii_character: u8,
@@ -614,4 +616,4 @@ In this post we learned about the structure of the VGA text buffer and how it ca
 We also saw how easy it is to add dependencies on third-party libraries, thanks to cargo. The two dependencies that we added, `lazy_static` and `spin`, are very useful in OS development and we will use them in more places in future posts.
 
 ## What's next?
-In the next post, we will explore _CPU exceptions_. These exceptions are thrown by the CPU when something illegal happens, such as a division by zero or an access to an unmapped memory page (a so-called “page fault”). Being able to catch and examine these exceptions is very important for debugging future errors. Exception handling is also very similar to the handling of hardware interrupts, which is required for keyboard support.
+The next post explains how to set up Rust's built in unit test framework. We will then create some basic unit tests for the VGA buffer module from this post.
