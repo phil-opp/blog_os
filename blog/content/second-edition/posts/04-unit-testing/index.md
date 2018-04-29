@@ -2,7 +2,7 @@
 title = "Unit Testing"
 order = 4
 path = "unit-testing"
-date  = 2018-04-14
+date  = 2018-04-29
 template = "second-edition/page.html"
 +++
 
@@ -392,6 +392,3 @@ We also learned a bit about conditional compilation, Rust's [lint system], how t
 We now have a working unit testing framework, which gives us the ability to test individual components. However, unit tests have the disadvantage that they run on the host machine and are thus unable to test how components interact with platform specific parts. For example, we can't test the `println!` macro with an unit test because it wants to write at the VGA text buffer at address `0xb8000`, which only exists in the bare metal environment.
 
 The next post will close this gap by creating a basic _integration test_ framework, which runs the tests in QEMU and thus has access to platform specific components. This will allow us to test the full system, for example that our kernel boots correctly or that no deadlock occurs on nested `println!` invocations.
-
-## NOTES
-TODO update date
