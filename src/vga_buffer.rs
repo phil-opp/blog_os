@@ -42,7 +42,7 @@ struct ColorCode(u8);
 
 impl ColorCode {
     /// Create a new `ColorCode` with the given foreground and background colors.
-    const fn new(foreground: Color, background: Color) -> ColorCode {
+    fn new(foreground: Color, background: Color) -> ColorCode {
         ColorCode((background as u8) << 4 | (foreground as u8))
     }
 }

@@ -114,19 +114,12 @@ To represent a full color code that specifies foreground and background color, w
 struct ColorCode(u8);
 
 impl ColorCode {
-    const fn new(foreground: Color, background: Color) -> ColorCode {
+    fn new(foreground: Color, background: Color) -> ColorCode {
         ColorCode((background as u8) << 4 | (foreground as u8))
     }
 }
 ```
-The `ColorCode` contains the full color byte, containing foreground and background color. Like before, we derive the `Copy` and `Debug` traits for it. The `new` function is a [const function] to allow it in static initializers. As `const` functions are unstable we need to add the `const_fn` feature in `src/main.rs`:
-
-[const function]: https://doc.rust-lang.org/unstable-book/language-features/const-fn.html
-
-```rust
-// in src/main.rs
-#![feature(const_fn)]
-```
+The `ColorCode` contains the full color byte, containing foreground and background color. Like before, we derive the `Copy` and `Debug` traits for it.
 
 ### Text Buffer
 Now we can add structures to represent a screen character and the text buffer:
@@ -415,6 +408,12 @@ pub static WRITER: Writer = Writer {
 However, if we try to compile it now, the following errors occur:
 
 ```
+error[E0015]: calls in statics are limited to constant functions, tuple structs and tuple variants
+ --> src/vga_buffer.rs:7:17
+  |
+7 |     color_code: ColorCode::new(Color::Yellow, Color::Black),
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 error[E0396]: raw pointers cannot be dereferenced in statics
  --> src/vga_buffer.rs:8:22
   |
@@ -434,7 +433,14 @@ error[E0017]: references in statics may only refer to immutable values
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ statics require immutable values
 ```
 
-The problem is that Rust's const evaluator is not able to convert raw pointers to references at compile time. Maybe it will work someday when `const` functions become more powerful. But until then, we have to find another solution.
+To understand what's happening here, we need to know that statics are initialized at compile time, in constrast to normal variables that are initialized at run time. The component of the Rust compiler that evaluates such initialization expressions is called the “[const evaluator]”. Its functionality is still limited, but there is ongoing work to expand it, for example in the “[Allow panicking in constants]” RFC.
+
+[const evaluator]: https://rust-lang-nursery.github.io/rustc-guide/const-eval.html
+[Allow panicking in constants]: https://github.com/rust-lang/rfcs/pull/2345
+
+The issue about `ColorCode::new` would be solvable by using [`const` functions], but the fundamental problem here is that Rust's const evaluator is not able to convert raw pointers to references at compile time. Maybe it will work someday, but until then, we have to find another solution.
+
+[`const` functions]: https://doc.rust-lang.org/unstable-book/language-features/const-fn.html
 
 ### Lazy Statics
 Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values.
