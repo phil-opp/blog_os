@@ -246,7 +246,7 @@ To use that crate, we add the following to our `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-array-init = "0.0.2"
+array-init = "0.0.3"
 ```
 
 Note that we're using the [`dev-dependencies`] table instead of the `dependencies` table, because we only need the crate for `cargo test` and not for a normal build. Consequently, we also add a `#[cfg(test)]` attribute to the `extern crate` declaration in `main.rs`:
