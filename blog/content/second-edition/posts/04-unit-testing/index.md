@@ -214,12 +214,15 @@ So how do we create a `Buffer` instance? The naive approach does not work unfort
 
 ```rust
 fn construct_buffer() -> Buffer {
-    let empty_char = ScreenChar {
-        ascii_character: b' ',
-        color_code: ColorCode::new(Color)
-    }
     Buffer {
-        chars: [[Volatile::new(empty_char); BUFFER_WIDTH]; BUFFER_HEIGHT],
+        chars: [[Volatile::new(empty_char()); BUFFER_WIDTH]; BUFFER_HEIGHT],
+    }
+}
+
+fn empty_char() -> ScreenChar {
+    ScreenChar {
+        ascii_character: b' ',
+        color_code: ColorCode::new(Color::Green, Color::Brown),
     }
 }
 ```
@@ -269,13 +272,6 @@ fn construct_buffer() -> Buffer {
 
     Buffer {
         chars: array_init(|_| array_init(|_| Volatile::new(empty_char()))),
-    }
-}
-
-fn empty_char() -> ScreenChar {
-    ScreenChar {
-        ascii_character: b' ',
-        color_code: ColorCode::new(Color::Green, Color::Brown),
     }
 }
 ```
