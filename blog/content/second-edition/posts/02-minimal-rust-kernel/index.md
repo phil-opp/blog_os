@@ -317,9 +317,13 @@ Now that we have an executable that does something perceptible, it is time to tu
 
 [section about booting]: #the-boot-process
 
-To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal.
+To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal. After installing, creating a bootimage is as easy as executing:
 
-After installing, creating a bootimage is as easy as executing `bootimage build --target x86_64-blog_os.json`. The tool also recompiles your kernel using `cargo xbuild`, so it will automatically pick up any changes you make.
+```
+> bootimage build --target x86_64-blog_os.json
+```
+
+The tool also recompiles your kernel using `cargo xbuild`, so it will automatically pick up any changes you make.
 
 After executing the command, you should see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
