@@ -135,7 +135,7 @@ We add the following build-related entries:
 "linker-flavor": "ld.lld",
 ```
 
-Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker for linking our kernel. LLD is shipped with Rust since the `2018-03-05` nightly and supported by xargo (see below) since version `0.3.11`.
+Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker for linking our kernel. LLD is shipped with Rust since the `2018-03-05` nightly.
 
 [LLD]: https://lld.llvm.org/
 
@@ -220,12 +220,10 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-We can now build the kernel for our new target by passing the name of the JSON file (without the `.json` extension) as `--target`. There is currently an [open bug][custom-target-bug] for custom target specifications, so you also need to set the `RUST_TARGET_PATH` environment variable to the current directory, otherwise Rust doesn't find your target. The full command is:
-
-[custom-target-bug]: https://github.com/rust-lang/cargo/issues/4905
+We can now build the kernel for our new target by passing the name of the JSON file as `--target`:
 
 ```
-> RUST_TARGET_PATH=$(pwd) cargo build --target x86_64-blog_os
+> cargo build --target x86_64-blog_os.json
 
 error[E0463]: can't find crate for `core` OR
 error[E0463]: can't find crate for `compiler_builtins`
@@ -238,23 +236,21 @@ It fails! The error tells us that the Rust compiler no longer finds the `core` o
 
 The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for supported host triples (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for other targets, we need to recompile `core` for these targets first.
 
-#### Xargo
-That's where [xargo] comes in. It is a wrapper for cargo that eases cross compilation. We can install it by executing:
+#### Cargo xbuild
+That's where [`cargo xbuild`] comes in. It is a wrapper for `cargo build` that automatically cross-compiles the built-in libraries. We can install it by executing:
 
-[xargo]: https://github.com/japaric/xargo
+[`cargo xbuild`]: https://github.com/rust-osdev/cargo-xbuild
 
 ```
-cargo install xargo
+cargo install cargo-xbuild
 ```
 
-Xargo depends on the rust source code, which we can install with `rustup component add rust-src`.
+The command depends on the rust source code, which we can install with `rustup component add rust-src`.
 
-Xargo is “a drop-in replacement for cargo”, so every cargo command also works with `xargo`. You can do e.g. `xargo --help`, `xargo clean`, or `xargo doc`. The only difference is that the build command has additional functionality: `xargo build` will automatically cross compile the `core` and `compiler_rt` libraries when compiling for custom targets.
+We now can rerun the above command with `xbuild` instead of `build`:
 
-Let's try it:
-
-```bash
-> RUST_TARGET_PATH=$(pwd) xargo build --target x86_64-blog_os
+```
+> cargo xbuild --target x86_64-blog_os.json
    Compiling core v0.0.0 (file:///…/rust/src/libcore)
     Finished release [optimized] target(s) in 52.75 secs
    Compiling compiler_builtins v0.1.0 (file:///…/rust/src/libcompiler_builtins)
@@ -263,7 +259,7 @@ Let's try it:
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-It worked! We see that `xargo` cross-compiled the `core` and `compiler_builtin` libraries for our new custom target and then continued to compile our `blog_os` crate.
+It worked! We see that `cargo xbuild` cross-compiled the `core`, `compiler_builtin`, and `alloc` libraries for our new custom target and then continued to compile our `blog_os` crate.
 
 Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
 
@@ -323,7 +319,7 @@ Now that we have an executable that does something perceptible, it is time to tu
 
 To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal.
 
-After installing, creating a bootimage is as easy as executing `bootimage build --target x86_64-blog_os`. The tool also recompiles your kernel using `xargo`, so it will automatically pick up any changes you make.
+After installing, creating a bootimage is as easy as executing `bootimage build --target x86_64-blog_os.json`. The tool also recompiles your kernel using `cargo xbuild`, so it will automatically pick up any changes you make.
 
 After executing the command, you should see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
@@ -346,7 +342,7 @@ The `bootimage` tool can be configured through a `[package.metadata.bootimage]` 
 # in Cargo.toml
 
 [package.metadata.bootimage]
-default-target = "x86_64-blog_os"
+default-target = "x86_64-blog_os.json"
 ```
 
 Now we can omit the `--target` argument and just run `bootimage build`.
