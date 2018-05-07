@@ -23,4 +23,4 @@ panic = "abort" # disable stack unwinding on panic
 panic = "abort" # disable stack unwinding on panic
 
 [package.metadata.bootimage]
-default-target = "x86_64-blog_os"
+default-target = "x86_64-blog_os.json"
