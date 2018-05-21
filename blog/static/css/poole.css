@@ -49,13 +49,7 @@ body {
 
 html {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 16px;
   line-height: 1.5;
-}
-@media (min-width: 38rem) {
-  html {
-    font-size: 17px;
-  }
 }
 
 body {
@@ -161,7 +155,7 @@ pre {
   margin-top: 0;
   margin-bottom: 1rem;
   padding: .5rem;
-  font-size: .8rem;
+  font-size: .85rem;
   line-height: 1.4;
   white-space: pre;
   overflow: auto;
@@ -260,7 +254,7 @@ tbody tr:nth-child(odd) th {
  */
 
 .container {
-  max-width: 42rem;
+  max-width: 45rem;
   padding-left:  1rem;
   padding-right: 1rem;
   margin-left:  auto;
