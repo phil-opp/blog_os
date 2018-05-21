@@ -313,7 +313,13 @@ Now that we have an executable that does something perceptible, it is time to tu
 
 [section about booting]: #the-boot-process
 
-To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute `cargo install bootimage` in your terminal. After installing, creating a bootimage is as easy as executing:
+To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute the following command in your terminal:
+
+```
+cargo install bootimage --version 0.4.0
+```
+
+After installing, creating a bootimage is as easy as executing:
 
 ```
 > bootimage build --target x86_64-blog_os.json
@@ -321,7 +327,7 @@ To make things easy, we created a tool named `bootimage` that automatically down
 
 The tool also recompiles your kernel using `cargo xbuild`, so it will automatically pick up any changes you make.
 
-After executing the command, you should see a file named `bootimage.bin` in your crate root directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
+After executing the command, you should see a file named `bootimage.bin` in your `target/x86_64-blog_os/debug` directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
 #### How does it work?
 The `bootimage` tool performs the following steps behind the scenes:
@@ -373,7 +379,7 @@ By default it invokes the exact same QEMU command as above. Additional QEMU opti
 It is also possible to write it to an USB stick and boot it on a real machine:
 
 ```
-> dd if=bootimage.bin of=/dev/sdX && sync
+> dd if=target/x86_64-blog_os/debug/bootimage.bin of=/dev/sdX && sync
 ```
 
 Where `sdX` is the device name of your USB stick. **Be careful** to choose the correct device name, because everything on that device is overwritten.
