@@ -369,12 +369,6 @@ By default it invokes the exact same QEMU command as above. Additional QEMU opti
 
 [Readme file]: https://github.com/rust-osdev/bootimage/blob/master/Readme.md
 
-### VirtualBox
-You can also [convert the raw disk image to a VDI] to load it in [VirtualBox].
-
-[convert the raw disk image to a VDI]: https://blog.sleeplessbeastie.eu/2012/04/29/virtualbox-convert-raw-image-to-vdi-and-otherwise/
-[VirtualBox]: https://www.virtualbox.org/
-
 ### Real Machine
 It is also possible to write it to an USB stick and boot it on a real machine:
 
