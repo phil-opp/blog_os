@@ -17,16 +17,16 @@ This blog is openly developed on [Github]. If you have any problems or questions
 
 ## Overview
 
-In the previous post we added support for unit tests. The goal of unit tests is to test small components in isolation to ensure that all of them work as intended. They are run on the host machine and thus shouldn't rely on architecture specific functionality.
+In the previous post we added support for unit tests. The goal of unit tests is to test small components in isolation to ensure that all of them work as intended. The tests are run on the host machine and thus shouldn't rely on architecture specific functionality.
 
-To test the interaction of the components, both with each other and the system environment, we can write _integration tests_. Compared to unit tests, ìntegration tests are more complex, because they need to run in a realistic environment. What this means depends on the application type. For example, for webserver applications it often means to set up a database instance. For an operating system kernel like ours, it means that we run the tests on the target hardware.
+To test the interaction of the components, both with each other and the system environment, we can write _integration tests_. Compared to unit tests, ìntegration tests are more complex, because they need to run in a realistic environment. What this means depends on the application type. For example, for webserver applications it often means to set up a database instance. For an operating system kernel like ours, it means that we run the tests on the target hardware without an underlying operating system.
 
-Running on the target architecture allows us to test all hardware specific code such as the VGA buffer or the effects of [page table] modifications. It also allows us to verify that our kernel boots without problems and that no [CPU exception] occurs. To achieve these goals reliably, test instances need to be independent. For example, if one tests misconfigures the system by loading an invalid page table, it should not influence the result of other tests.
+Running on the target architecture allows us to test all hardware specific code such as the VGA buffer or the effects of [page table] modifications. It also allows us to verify that our kernel boots without problems and that no [CPU exception] occurs.
 
 [page table]: https://en.wikipedia.org/wiki/Page_table
 [CPU exception]: https://wiki.osdev.org/Exceptions
 
-In this post we will implement a very basic test framework that runs integration tests inside instances of the [QEMU] virtual machine. It is not as realistic as running them on real hardware, but it requires no addional hardware and makes the implementation simpler. Also, most hardware properties we use at this early stage are supported pretty well in QEMU, so it should be good enough for now.
+In this post we will implement a very basic test framework that runs integration tests inside instances of the [QEMU] virtual machine. It is not as realistic as running them on real hardware, but it is much simpler and should be suffient as long as we only use standard hardware that is well supported in QEMU.
 
 [QEMU]: https://www.qemu.org/
 
@@ -51,6 +51,11 @@ TODO
 ## Test Organization
 
 TODO
+
+To achieve these goals reliably, test instances need to be independent. For example, if one tests misconfigures the system by loading an invalid page table, it should not influence the result of other tests.
+
+ This allows us to send "ok" or "failed" from our kernel to the host system.
+
 
 - split into lib.rs and main.rs
 - add tests as src/bin/test-*
