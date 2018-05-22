@@ -638,6 +638,10 @@ When we now insert `panic!("Some panic message");` in our `_start` function, we 
 
 So we know not only that a panic has occurred, but also the panic message and where in the code it happened.
 
+### Panic Messages
+
+TODO
+
 ## Summary
 In this post we learned about the structure of the VGA text buffer and how it can be written through the memory mapping at address `0xb8000`. We created a Rust module that encapsulates the unsafety of writing to this memory mapped buffer and presents a safe and convenient interface to the outside.
 
