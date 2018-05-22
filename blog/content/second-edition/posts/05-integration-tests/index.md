@@ -257,15 +257,274 @@ Now QEMU runs completely in the background and no window is opened anymore. This
 
 ## Test Organization
 
-TODO
+Right now we're doing the serial output and the QEMU exit from the `_start` function in our `main.rs` and can no longer run our kernel in a normal way. We could try to fix this by adding an `integration-test` [cargo feature] and using [conditional compilation]:
 
-To achieve these goals reliably, test instances need to be independent. For example, if one tests misconfigures the system by loading an invalid page table, it should not influence the result of other tests.
+[cargo feature]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section
+[conditional compilation]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
 
- This allows us to send "ok" or "failed" from our kernel to the host system.
+```toml
+# in Cargo.toml
 
+[features]
+integration-test = []
+```
 
-- split into lib.rs and main.rs
-- add tests as src/bin/test-*
+```rust
+// in src/main.rs
+
+#[cfg(not(feature = "integration-test"))] // new
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    println!("Hello World{}", "!"); // prints to vga buffer
+
+    // normal execution
+
+    loop {}
+}
+
+#[cfg(feature = "integration-test")] // new
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    println!("Hello Host{}", "!"); // prints to serial
+
+    run_test_1();
+    run_test_2();
+    // run more tests
+
+    unsafe { exit_qemu(); }
+
+    loop {}
+}
+```
+
+However, this approach has a big problem: All tests run in the same kernel instance, which means that they can influence each other. For example, if `run_test_1` misconfigures the system by loading an invalid [page table], it can cause `run_test_2` to fail. This isn't something that we want because it makes it very difficult to find the actual cause of an error.
+
+[page table]: https://en.wikipedia.org/wiki/Page_table
+
+Instead, we want our test instances to be as independent as possible. If a test wants to destroy most of the system configuration to ensure that some property still holds in catastrophic situations, it should be able to do so without needing to restore a correct system state afterwards. This means that we need to launch a separate QEMU instance for each test.
+
+With the above conditional compilation we only have two modes: Run the kernel normally or execute _all_ integration tests. To run each test in isolation we would need a separate cargo feature for each test with that approach, which would result in very complex conditional compilation bounds and confusing code.
+
+A better solution is to create an additional executable for each test.
+
+### Additional Test Executables
+
+Cargo allows to add [additional executables] to a project by putting them inside `src/bin`. This allows us to create a separate executable for each unit tests. For example, let's create the skeleton for a `test-something` executable:
+
+[additional executables]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-project-layout
+
+```rust
+// in src/bin/test-something.rs
+
+#![feature(lang_items)] // required for defining the panic handler
+#![no_std] // don't link the Rust standard library
+#![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
+
+/// This function is the entry point, since the linker looks for a function
+/// named `_start_` by default.
+#[cfg(not(test))]
+#[no_mangle] // don't mangle the name of this function
+pub extern "C" fn _start() -> ! {
+    // TODO run tests
+    loop {}
+}
+
+/// This function is called on panic.
+#[cfg(not(test))]
+#[lang = "panic_fmt"]
+#[no_mangle]
+pub extern "C" fn rust_begin_panic(
+    _msg: core::fmt::Arguments,
+    _file: &'static str,
+    _line: u32,
+    _column: u32,
+) -> ! {
+    loop {}
+}
+```
+
+By providing a new implementation for `_start` we can create a minimal test case that only tests one specific thing and is independent of the rest. For example, if we don't print anything to the VGA buffer, the test still succeeds even if the `vga_buffer` module is broken.
+
+We can now run this executable in QEMU by passing a `--bin` argument to `bootimage`:
+
+```
+bootimage run --bin test-something
+```
+
+It should build the `test-something.rs` executable instead of `main.rs` and launch an empty QEMU window (since we don't print anything). So this approach allows us to create completely independent executables without cargo features or conditional compilation, and without cluttering our `main.rs`.
+
+However, there is a problem: This is a completely separate executable, which means that we can't access any functions from our `main.rs`, including `hprintln`, `exit_qemu`, and the `serial` module. Duplicating the code would work, but we would also need to copy everything we want to test. This would mean that we no longer test the original function but only a possibly outdated copy.
+
+Fortunately there is a way to share most of the code between our `main.rs` and the testing binaries: We move most of the code from our `main.rs` to a library that we can include from all executables.
+
+### Split Off A Library
+
+Cargo supports hybrid projects that are both a library and a binary. We only need to create a `src/lib.rs` file and split the contents of our `main.rs` in the following way:
+
+```rust
+// src/lib.rs
+
+#![feature(const_fn)]
+#![no_std] // don't link the Rust standard library
+
+extern crate spin;
+extern crate volatile;
+#[macro_use]
+extern crate lazy_static;
+extern crate uart_16550;
+extern crate x86_64;
+
+#[cfg(test)]
+extern crate array_init;
+#[cfg(test)]
+extern crate std;
+
+// NEW: We need to add `pub` here to make them accessible from the outside
+pub mod vga_buffer;
+pub mod serial;
+
+pub unsafe fn exit_qemu() {
+    use x86_64::instructions::port::Port;
+
+    let mut port = Port::<u32>::new(0xf4);
+    port.write(0);
+}
+```
+
+```rust
+// src/main.rs
+
+#![feature(lang_items)] // required for defining the panic handler
+#![no_std] // don't link the Rust standard library
+#![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
+#![cfg_attr(test, allow(dead_code, unused_macros))] // allow unused code in test mode
+
+// NEW: Add the library as dependency (same crate name as executable)
+#[macro_use]
+extern crate blog_os;
+
+/// This function is the entry point, since the linker looks for a function
+/// named `_start_` by default.
+#[cfg(not(test))]
+#[no_mangle] // don't mangle the name of this function
+pub extern "C" fn _start() -> ! {
+    println!("Hello World{}", "!");
+
+    loop {}
+}
+
+/// This function is called on panic.
+#[cfg(not(test))]
+#[lang = "panic_fmt"]
+#[no_mangle]
+pub extern "C" fn rust_begin_panic(
+    _msg: core::fmt::Arguments,
+    _file: &'static str,
+    _line: u32,
+    _column: u32,
+) -> ! {
+    loop {}
+}
+```
+
+So we move everything except `_start` and `rust_begin_panic` to `lib.rs`, make the `vga_buffer` and `serial` modules public, and add an `extern crate` definition to our `main.rs`.
+
+This doesn't compile yet, because Rust's macros are not exported over crate boundaries by default. To export our printing macros, we need to add the `#[macro_export]` attribute to them:
+
+```rust
+// in src/vga_buffer.rs
+
+#[macro_export]
+macro_rules! print {…}
+
+#[macro_export]
+macro_rules! println {…}
+
+// in src/serial.rs
+
+#[macro_export]
+macro_rules! hprint {…}
+
+#[macro_export]
+macro_rules! hprintln {…}
+```
+
+Now everything should work exactly as before, including `bootimage run` and `cargo test`.
+
+### Test Basic Boot
+
+We are finally able to create our first integration test executable. We start simple and only test that the basic boot sequence works and the `_start` function is called:
+
+```rust
+// in src/bin/test-basic-boot.rs
+
+#![feature(lang_items)] // required for defining the panic handler
+#![feature(const_fn)]
+#![no_std] // don't link the Rust standard library
+#![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
+
+#[macro_use]
+extern crate blog_os;
+
+use blog_os::exit_qemu;
+
+/// This function is the entry point, since the linker looks for a function
+/// named `_start_` by default.
+#[cfg(not(test))]
+#[no_mangle] // don't mangle the name of this function
+pub extern "C" fn _start() -> ! {
+    hprintln!("ok");
+
+    unsafe { exit_qemu(); }
+    loop {}
+}
+
+/// This function is called on panic.
+#[cfg(not(test))]
+#[lang = "panic_fmt"]
+#[no_mangle]
+pub extern "C" fn rust_begin_panic(
+    msg: core::fmt::Arguments,
+    file: &'static str,
+    line: u32,
+    column: u32,
+) -> ! {
+    hprintln!("failed");
+
+    hprintln!("panic: {} at {}:{}:{}", msg, file, line, column);
+
+    unsafe { exit_qemu(); }
+    loop {}
+}
+```
+
+We don't do something special here, we just print `ok` if `_start` is called and `failed` with the panic message when a panic occurs. Let's try it:
+
+```
+> bootimage run --bin test-basic-boot -- \
+    -serial mon:stdio -display none \
+    -device isa-debug-exit,iobase=0xf4,iosize=0x04
+Building kernel
+   Compiling blog_os v0.2.0 (file:///…/blog_os)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.19s
+    Updating registry `https://github.com/rust-lang/crates.io-index`
+Creating disk image at target/x86_64-blog_os/debug/bootimage-test-basic-boot.bin
+warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
+ok
+```
+
+We got our `ok`, so it worked! Try inserting a `panic!()` before the `ok` printing, you should see output like this:
+
+```
+failed
+panic: explicit panic at src/bin/test-basic-boot.rs:16:5
+```
+
+But what happens when we remove all printing and just `loop` endlessly? The QEMU process doesn't exit and keeps running forever. Our test runner must handle this case somehow, for example using a timeout.
+
+(If you try the endless loop, remember that you can exit QEMU via `Ctrl+a` and then `x`.)
 
 ## Bootimage Test
 
