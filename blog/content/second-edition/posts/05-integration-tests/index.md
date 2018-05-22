@@ -38,12 +38,18 @@ Such an automated test framework needs to know whether a test succeeded or faile
 
 [serial port]: https://en.wikipedia.org/wiki/Serial_port
 
+The chips implementing a serial interface are called [UARTs]. There are [lots of UART models] on x86, but fortunately the only differences between them are some advanced features we don't need. The common UARTs today are all compatible to the [16550 UART], so we will use that model for our testing framework.
+
+[UARTs]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
+[lots of UART models]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
+[16550 UART]: https://en.wikipedia.org/wiki/16550_UART
+
 ### Port I/O
  TODO
 
 ### Implementation
 
-We can use the [`uart_16550`] crate for accessing serial ports:
+There is already the [`uart_16550`] crate, so we don't need to write our own driver for it. To add it as a dependency, we update our `Cargo.toml` and `main.rs`:
 
 [`uart_16550`]: https://docs.rs/uart_16550
 
@@ -60,7 +66,7 @@ uart_16550 = "0.1.0"
 extern crate uart_16550;
 ```
 
-For our implementation we create a new `serial` module with the following content:
+The `uart_16550` crate contains a `SerialPort` struct that represents the UART registers, but we still need to construct an instance of it ourselves. For that we create a new `serial` module with the following content:
 
 ```rust
 // in src/main.rs
@@ -83,7 +89,7 @@ lazy_static! {
 }
 ```
 
-Like with the [VGA text buffer], we use a spinlock and `lazy_static` to create a `static`. However, this time we use it to ensure that the `init` method is called before first use. We're using the port address `0x3F8`, which is standard for the first serial interface.
+Like with the [VGA text buffer], we use a spinlock and `lazy_static` to create a `static`. However, this time we use `lazy_static` to ensure that the `init` method is called before first use. We're using the port address `0x3F8`, which is standard for the first serial interface.
 
 [VGA text buffer]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
 
@@ -117,15 +123,22 @@ The `SerialPort` type already implements the [`fmt::Write`] trait, so we don't n
 Now we can print to the serial interface in our `main.rs`:
 
 ```rust
+// in src/main.rs
+
+#[macro_use]
+mod serial;
+
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!"); // prints to vga buffer
-    println!("Hello Host{}", "!"); // prints to serial
+    hprintln!("Hello Host{}", "!"); // prints to serial
 
     loop {}
 }
 ```
+
+Note that we need to add the `#[macro_use]` attribute to the `mod serial` declaration, because otherwise the `hprintln` macro is not imported.
 
 ### QEMU Arguments
 
@@ -206,7 +219,8 @@ We can now test the QEMU shutdown by calling `exit_qemu` from our `_start` funct
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    println!("Hello World{}", "!");
+    println!("Hello World{}", "!"); // prints to vga buffer
+    println!("Hello Host{}", "!"); // prints to serial
 
     unsafe { exit_qemu(); }
 
@@ -218,7 +232,7 @@ You should see that QEMU immediately closes after booting.
 
 ## Hiding QEMU
 
-We are now able to launch a QEMU instance that writes its output to the serial port and automatically exits itself when it's done. So we no longer need the VGA buffer output or the graphical representation that still pops up. We can disable it by passing the `-display none` parameter to QEMU. The full command now looks like this:
+We are now able to launch a QEMU instance that writes its output to the serial port and automatically exits itself when it's done. So we no longer need the VGA buffer output or the graphical representation that still pops up. We can disable it by passing the `-display none` parameter to QEMU. The full command looks like this:
 
 ```
 qemu-system-x86_64 \
