@@ -2,7 +2,7 @@ title = "Writing an OS in Rust"
 base_url = "https://os.phil-opp.com"
 
 highlight_code = true
-highlight_theme = "monokai"
+highlight_theme = "visual-studio-dark"
 generate_rss = true
 
 [extra]
