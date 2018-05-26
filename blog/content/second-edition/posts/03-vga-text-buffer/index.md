@@ -375,7 +375,7 @@ impl Writer {
     fn clear_row(&mut self, row: usize) {/* TODO */}
 }
 ```
-We iterate over all screen characters and move each characters one row up. Note that the range notation (`..`) is exclusive the upper bound. We also omit the 0th row (the first range starts at `1`) because it's the row that is shifted off screen.
+We iterate over all screen characters and move each character one row up. Note that the range notation (`..`) is exclusive the upper bound. We also omit the 0th row (the first range starts at `1`) because it's the row that is shifted off screen.
 
 To finish the newline code, we add the `clear_row` method:
 
