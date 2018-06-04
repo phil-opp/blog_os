@@ -1,4 +1,4 @@
-#![feature(lang_items)] // required for defining the panic handler
+#![feature(panic_implementation)] // required for defining the panic handler
 #![no_std] // don't link the Rust standard library
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
 #![cfg_attr(test, allow(dead_code, unused_macros))] // allow unused code in test mode
@@ -12,6 +12,8 @@ extern crate lazy_static;
 extern crate array_init;
 #[cfg(test)]
 extern crate std;
+
+use core::panic::PanicInfo;
 
 #[macro_use]
 mod vga_buffer;
@@ -27,14 +29,8 @@ pub extern "C" fn _start() -> ! {
 }
 
 /// This function is called on panic.
-#[cfg(not(test))]
-#[lang = "panic_fmt"]
+#[panic_implementation]
 #[no_mangle]
-pub extern "C" fn rust_begin_panic(
-    _msg: core::fmt::Arguments,
-    _file: &'static str,
-    _line: u32,
-    _column: u32,
-) -> ! {
+pub fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }

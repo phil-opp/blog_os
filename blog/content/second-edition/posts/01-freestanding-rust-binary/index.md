@@ -98,58 +98,21 @@ fn main() {}
 
 ```
 > cargo build
-error: language item required, but not found: `panic_fmt`
+error: language item required, but not found: `panic_impl`
 error: language item required, but not found: `eh_personality`
 ```
 
-Now the compiler is missing some _language items_. Language items are special pluggable functions that the compiler invokes on certain conditions, for example when the application [panics]. Normally, these items are provided by the standard library, but we disabled it. So we need to provide our own implementations.
+Now the compiler is missing some _language items_. Language items are special pluggable functions that the compiler invokes on certain conditions, for example when the application [panics][panic]. Normally, these items are provided by the standard library, but we disabled it.
 
-[panics]: https://doc.rust-lang.org/stable/book/second-edition/ch09-01-unrecoverable-errors-with-panic.html
+[panic]: https://doc.rust-lang.org/stable/book/second-edition/ch09-01-unrecoverable-errors-with-panic.html
 
-### Enabling Unstable Features
+Providing our own implementation of the language items would be possible, but this should only be done as a last resort. The reason is that language items are highly unstable implementation details and not even type checked (so the compiler doesn't even check if it has the right argument types).
 
-Implementing language items is unstable and protected by a so-called _feature gate_. A feature gate is a special attribute that you have to specify at the top of your `main.rs` in order to use the corresponding feature. By doing this you basically say: “I know that this feature is unstable and that it might stop working without any warnings. I want to use it anyway.”
-
-Feature gates are not available in the stable or beta Rust compilers, only [nightly Rust] makes it possible to opt-in. This means that you have to use a nightly compiler for OS development for the near future (since we need to implement unstable language items).
-
-[nightly Rust]: https://doc.rust-lang.org/book/first-edition/release-channels.html
-
-To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory.
-
-[rustup]: https://www.rustup.rs/
-
-After installing a nightly Rust compiler, you can enable the unstable `lang_items` feature by inserting `#![feature(lang_items)]` right at the top of `main.rs`.
-
-### Implementing the Language Items
-
-To create a `no_std` binary, we have to implement the `panic_fmt` and the `eh_personality` language items. The `panic_fmt` item specifies a function that should be invoked when a panic occurs. This function should format an error message (hence the `_fmt` suffix) and then invoke the panic routine. In our case, there is not much we can do, since we can neither print anything nor do we have a panic routine. So we just loop indefinitely:
-
-```rust
-#![feature(lang_items)]
-#![no_std]
-
-fn main() {}
-
-#[lang = "panic_fmt"]
-#[no_mangle]
-pub extern "C" fn rust_begin_panic(_msg: core::fmt::Arguments,
-    _file: &'static str, _line: u32, _column: u32) -> !
-{
-    loop {}
-}
-```
-
-The function signature is taken from the [unstable Rust book]. The signature isn't verified by the compiler, so implement it carefully.
-
-[unstable Rust book]: https://doc.rust-lang.org/unstable-book/language-features/lang-items.html#writing-an-executable-without-stdlib
-
-Note that there is already an accepted RFC for a stable panic mechanism, which is only waiting for an implementation. See the [tracking issue](https://github.com/rust-lang/rust/issues/44489) for more information.
-
-Instead of implementing the second language item, `eh_personality`, we remove the need for it by disabling unwinding.
+Fortunately, there are more stable ways to fix these language item error.
 
 ### Disabling Unwinding
 
-The `eh_personality` language item is used for implementing [stack unwinding]. By default, Rust uses unwinding to run the destructors of all live stack variables in case of a panic. This ensures that all used memory is freed and allows the parent thread to catch the panic and continue execution. Unwinding, however, is a complicated process and requires some OS specific libraries (e.g. [libunwind] on Linux or [structured exception handling] on Windows), so we don't want to use it for our operating system.
+The `eh_personality` language item is used for implementing [stack unwinding]. By default, Rust uses unwinding to run the destructors of all live stack variables in case of a [panic]. This ensures that all used memory is freed and allows the parent thread to catch the panic and continue execution. Unwinding, however, is a complicated process and requires some OS specific libraries (e.g. [libunwind] on Linux or [structured exception handling] on Windows), so we don't want to use it for our operating system.
 
 [stack unwinding]: http://www.bogotobogo.com/cplusplus/stackunwinding.php
 [libunwind]: http://www.nongnu.org/libunwind/
@@ -169,7 +132,48 @@ This sets the panic strategy to `abort` for both the `dev` profile (used for `ca
 
 [abort on panic]: https://github.com/rust-lang/rust/pull/32900
 
-However, if we try to compile it now, another language item is required:
+### Panic Implemenation
+
+The `panic_impl` language item defines the function that the compiler should invoke when a [panic] occurs. Instead of providing the language item directly, we can use the [`panic_implementation`] attribute to create a `panic` function:
+
+[`panic_implementation`]: https://github.com/rust-lang/rfcs/blob/master/text/2070-panic-implementation.md#panic_implementation
+
+```rust
+// in main.rs
+
+use core::panic::PanicInfo;
+
+/// This function is called on panic.
+#[panic_implementation]
+#[no_mangle]
+pub fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+```
+
+The [`PanicInfo` parameter][PanicInfo] contains the file and line where the panic happened and the optional panic message. The function should never return, so it is marked as a [diverging function] by returning the [“never” type] `!`. There is not much we can do in this function for now, so we just loop indefinitely.
+
+[PanicInfo]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
+[diverging function]: https://doc.rust-lang.org/book/first-edition/functions.html#diverging-functions
+[“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
+
+When we try `cargo build` now, we get an error that “#[panic_implementation] is an unstable feature”.
+
+#### Enabling Unstable Features
+
+The `panic_implementation` attribute was recently added and is thus still unstable and protected by a so-called _feature gate_. A feature gate is a special attribute that you have to specify at the top of your `main.rs` in order to use the corresponding feature. By doing this you basically say: “I know that this feature is unstable and that it might stop working without any warnings. I want to use it anyway.”
+
+Feature gates are not available in the stable or beta Rust compilers, only [nightly Rust] makes it possible to opt-in. This means that you have to use a nightly compiler for OS development for the near future (until all unstable features that we need are added are stabilized).
+
+[nightly Rust]: https://doc.rust-lang.org/book/first-edition/release-channels.html
+
+To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory.
+
+[rustup]: https://www.rustup.rs/
+
+After installing a nightly Rust compiler, you can enable the unstable `panic_implementation` feature by inserting `#![feature(panic_implementation)]` right at the top of `main.rs`.
+
+Now we fixed both language item errors. However, if we try to compile it now, another language item is required:
 
 ```
 > cargo build
@@ -192,15 +196,14 @@ Our freestanding executable does not have access to the Rust runtime and `crt0`,
 To tell the Rust compiler that we don't want to use the normal entry point chain, we add the `#![no_main]` attribute.
 
 ```rust
-#![feature(lang_items)]
+#![feature(panic_implementation)]
 #![no_std]
 #![no_main]
 
-#[lang = "panic_fmt"]
+/// This function is called on panic.
+#[panic_implementation]
 #[no_mangle]
-pub extern "C" fn rust_begin_panic(_msg: core::fmt::Arguments,
-    _file: &'static str, _line: u32, _column: u32) -> !
-{
+pub fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 ```
@@ -306,15 +309,14 @@ A minimal freestanding Rust binary looks like this:
 `src/main.rs`:
 
 ```rust
-#![feature(lang_items)] // required for defining the panic handler
+#![feature(panic_implementation)] // required for defining the panic handler
 #![no_std] // don't link the Rust standard library
 #![no_main] // disable all Rust-level entry points
 
-#[lang = "panic_fmt"] // define a function that should be called on panic
+/// This function is called on panic.
+#[panic_implementation]
 #[no_mangle]
-pub extern "C" fn rust_begin_panic(_msg: core::fmt::Arguments,
-    _file: &'static str, _line: u32, _column: u32) -> !
-{
+pub fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
