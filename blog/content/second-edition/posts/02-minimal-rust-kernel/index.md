@@ -197,18 +197,14 @@ Compiling for our new target will use Linux conventions (I'm not quite sure why,
 ```rust
 // src/main.rs
 
-#![feature(lang_items)] // required for defining the panic handler
+#![feature(panic_implementation)] // required for defining the panic handler
 #![no_std] // don't link the Rust standard library
 #![no_main] // disable all Rust-level entry points
 
-#[lang = "panic_fmt"] // define a function that should be called on panic
+/// This function is called on panic.
+#[panic_implementation]
 #[no_mangle]
-pub extern "C" fn rust_begin_panic(
-    _msg: core::fmt::Arguments,
-    _file: &'static str,
-    _line: u32,
-    _column: u32,
-) -> ! {
+pub fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
