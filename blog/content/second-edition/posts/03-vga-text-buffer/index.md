@@ -433,7 +433,7 @@ error[E0017]: references in statics may only refer to immutable values
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ statics require immutable values
 ```
 
-To understand what's happening here, we need to know that statics are initialized at compile time, in constrast to normal variables that are initialized at run time. The component of the Rust compiler that evaluates such initialization expressions is called the “[const evaluator]”. Its functionality is still limited, but there is ongoing work to expand it, for example in the “[Allow panicking in constants]” RFC.
+To understand what's happening here, we need to know that statics are initialized at compile time, in contrast to normal variables that are initialized at run time. The component of the Rust compiler that evaluates such initialization expressions is called the “[const evaluator]”. Its functionality is still limited, but there is ongoing work to expand it, for example in the “[Allow panicking in constants]” RFC.
 
 [const evaluator]: https://rust-lang-nursery.github.io/rustc-guide/const-eval.html
 [Allow panicking in constants]: https://github.com/rust-lang/rfcs/pull/2345

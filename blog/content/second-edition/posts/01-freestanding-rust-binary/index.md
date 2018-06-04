@@ -132,7 +132,7 @@ This sets the panic strategy to `abort` for both the `dev` profile (used for `ca
 
 [abort on panic]: https://github.com/rust-lang/rust/pull/32900
 
-### Panic Implemenation
+### Panic Implementation
 
 The `panic_impl` language item defines the function that the compiler should invoke when a [panic] occurs. Instead of providing the language item directly, we can use the [`panic_implementation`] attribute to create a `panic` function:
 
