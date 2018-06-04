@@ -616,6 +616,28 @@ As expected, we now see a _“Hello World!”_ on the screen:
 
 ![QEMU printing “Hello World!”](vga-hello-world.png)
 
+### Printing Panic Messages
+
+Now that we have a `println` macro, we can use it in our panic function to print the panic message and the location of the panic:
+
+```rust
+// in main.rs
+
+/// This function is called on panic.
+#[panic_implementation]
+#[no_mangle]
+pub fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
+    loop {}
+}
+```
+
+When we now insert `panic!("Some panic message");` in our `_start` function, we get the following output:
+
+![QEMU printing “panicked at 'Some panic message', src/main.rs:28:5](vga-panic.png)
+
+So we know not only that a panic has occurred, but also the panic message and where in the code it happened.
+
 ## Summary
 In this post we learned about the structure of the VGA text buffer and how it can be written through the memory mapping at address `0xb8000`. We created a Rust module that encapsulates the unsafety of writing to this memory mapped buffer and presents a safe and convenient interface to the outside.
 

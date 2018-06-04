@@ -31,6 +31,7 @@ pub extern "C" fn _start() -> ! {
 /// This function is called on panic.
 #[panic_implementation]
 #[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+pub fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     loop {}
 }
