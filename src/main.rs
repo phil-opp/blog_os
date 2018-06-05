@@ -29,6 +29,7 @@ pub extern "C" fn _start() -> ! {
 }
 
 /// This function is called on panic.
+#[cfg(not(test))]
 #[panic_implementation]
 #[no_mangle]
 pub fn panic(info: &PanicInfo) -> ! {
