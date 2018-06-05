@@ -13,6 +13,7 @@ extern crate array_init;
 #[cfg(test)]
 extern crate std;
 
+#[cfg(not(test))]
 use core::panic::PanicInfo;
 
 #[macro_use]
