@@ -78,3 +78,4 @@ before_test:
 # environment variable.
 test_script:
   - bootimage build
+  - cargo test

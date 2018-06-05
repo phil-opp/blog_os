@@ -30,3 +30,4 @@ before_script:
 
 script:
   - bootimage build
+  - cargo test
