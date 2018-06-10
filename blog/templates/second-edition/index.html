@@ -7,9 +7,7 @@
 {% block main %}
 {% set posts_section = get_section(path = "second-edition/posts/_index.md") %}
 {% set posts = posts_section.pages | reverse %}
-<div class="warning">
-    <b>Note:</b> You are viewing the upcoming second edition of “Writing an OS in Rust”, which is still under construction. To read the first edition, go <a href="{{ get_url(path = "/") }}">here</a>.
-</div>
+
 <div class="front-page-introduction">
     <p>
         This blog series creates a small operating system in the
@@ -47,6 +45,11 @@
         <input type="submit" value="Subscribe" />
     </div>
     </form>
+</div>
+
+<div class="posts first-edition">
+    <h2 class="post-title">First Edition</h2>
+    You are viewing the second edition of “Writing an OS in Rust”, which is still in progress. The <a href="{{ get_url(path = "/first-edition") }}">first edition</a> has more content, but is no longer updated. We try our best to incorporate the missing content soon.
 </div>
 
 <aside id="recent-updates">

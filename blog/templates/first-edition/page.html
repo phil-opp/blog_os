@@ -1,4 +1,4 @@
-{% extends "second-edition/base.html" %}
+{% extends "first-edition/base.html" %}
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 
@@ -8,6 +8,11 @@
         {{ page.date | date(format="%b %d, %Y") }}
         {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
     </time>
+
+    <div class="warning">
+        <b>No longer updated!</b> You are viewing the a post of the first edition of “Writing an OS in Rust”, which is no longer updated. You can find the second edition <a href="{{ get_url(path = "./second-edition/_index.md") }}">here</a>.
+    </div>
+
     <aside id="toc">
         <h2>Table of Contents</h2>
         <ol>
@@ -36,14 +41,11 @@
     </div>
 
     <hr>
+    <script data-isso="//comments.phil-opp.com/fcgi-bin/isso"
+        src="//comments.phil-opp.com/fcgi-bin/isso/js/embed.min.js"></script>
     <section>
-        <h2 id="comments">Comments</h2>
-        <script src="https://utteranc.es/client.js"
-            repo="phil-opp/blog_os"
-            branch="master"
-            issue-term="pathname"
-            async>
-        </script>
+        <h2>Comments</h2>
+        <section id="isso-thread"></section>
     </section>
 
 {% endblock after_main %}
