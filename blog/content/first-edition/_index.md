@@ -1,4 +1,4 @@
 +++
 title = "First Edition"
-template = "index.html"
+template = "first-edition/index.html"
 +++

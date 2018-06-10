@@ -58,6 +58,11 @@ main img {
   border: 2px solid #aaa;
 }
 
+.posts.first-edition {
+  border: 2px solid #aaa;
+  background-color: #99ff0022;
+}
+
 .posts.bare-bones {
   border: 2px solid #66f;
 }

@@ -14,6 +14,10 @@
 
 
 [[redirects]]
+from = "/second-edition/"
+to = "/"
+
+[[redirects]]
 from = "/2015/08/18/multiboot-kernel/"
 to = "/multiboot-kernel/"
 
