@@ -317,12 +317,12 @@ A better solution is to create an additional executable for each test.
 
 ### Additional Test Executables
 
-Cargo allows to add [additional executables] to a project by putting them inside `src/bin`. This allows us to create a separate executable for each unit tests. For example, let's create the skeleton for a `test-something` executable:
+Cargo allows to add [additional executables] to a project by putting them inside `src/bin`. We can use that feature to create a separate executable for each unit tests. For example, a `test-something` executable could be added like this:
 
 [additional executables]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-project-layout
 
 ```rust
-// in src/bin/test-something.rs
+// src/bin/test-something.rs
 
 #![feature(panic_implementation)]
 #![no_std]
@@ -357,7 +357,7 @@ bootimage run --bin test-something
 
 It should build the `test-something.rs` executable instead of `main.rs` and launch an empty QEMU window (since we don't print anything). So this approach allows us to create completely independent executables without cargo features or conditional compilation, and without cluttering our `main.rs`.
 
-However, there is a problem: This is a completely separate executable, which means that we can't access any functions from our `main.rs`, including `serial_println`, `exit_qemu`, and the `serial` module. Duplicating the code would work, but we would also need to copy everything we want to test. This would mean that we no longer test the original function but only a possibly outdated copy.
+However, there is a problem: This is a completely separate executable, which means that we can't access any functions from our `main.rs`, including `serial_println` and `exit_qemu`. Duplicating the code would work, but we would also need to copy everything we want to test. This would mean that we no longer test the original function but only a possibly outdated copy.
 
 Fortunately there is a way to share most of the code between our `main.rs` and the testing binaries: We move most of the code from our `main.rs` to a library that we can include from all executables.
 
