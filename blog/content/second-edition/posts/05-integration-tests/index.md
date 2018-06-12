@@ -138,7 +138,7 @@ mod serial;
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!"); // prints to vga buffer
-    serial_println!("Hello Host{}", "!"); // prints to serial
+    serial_println!("Hello Host{}", "!");
 
     loop {}
 }
@@ -226,7 +226,7 @@ We can now test the QEMU shutdown by calling `exit_qemu` from our `_start` funct
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!"); // prints to vga buffer
-    println!("Hello Host{}", "!"); // prints to serial
+    serial_println!("Hello Host{}", "!");
 
     unsafe { exit_qemu(); }
 
@@ -293,7 +293,7 @@ pub extern "C" fn _start() -> ! {
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    println!("Hello Host{}", "!"); // prints to serial
+    serial_println!("Hello Host{}", "!");
 
     run_test_1();
     run_test_2();
