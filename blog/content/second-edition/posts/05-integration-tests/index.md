@@ -138,13 +138,13 @@ mod serial;
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!"); // prints to vga buffer
-    hprintln!("Hello Host{}", "!"); // prints to serial
+    serial_println!("Hello Host{}", "!"); // prints to serial
 
     loop {}
 }
 ```
 
-Note that we need to add the `#[macro_use]` attribute to the `mod serial` declaration, because otherwise the `hprintln` macro is not imported.
+Note that we need to add the `#[macro_use]` attribute to the `mod serial` declaration, because otherwise the `serial_println` macro is not imported.
 
 ### QEMU Arguments
 
@@ -361,7 +361,7 @@ bootimage run --bin test-something
 
 It should build the `test-something.rs` executable instead of `main.rs` and launch an empty QEMU window (since we don't print anything). So this approach allows us to create completely independent executables without cargo features or conditional compilation, and without cluttering our `main.rs`.
 
-However, there is a problem: This is a completely separate executable, which means that we can't access any functions from our `main.rs`, including `hprintln`, `exit_qemu`, and the `serial` module. Duplicating the code would work, but we would also need to copy everything we want to test. This would mean that we no longer test the original function but only a possibly outdated copy.
+However, there is a problem: This is a completely separate executable, which means that we can't access any functions from our `main.rs`, including `serial_println`, `exit_qemu`, and the `serial` module. Duplicating the code would work, but we would also need to copy everything we want to test. This would mean that we no longer test the original function but only a possibly outdated copy.
 
 Fortunately there is a way to share most of the code between our `main.rs` and the testing binaries: We move most of the code from our `main.rs` to a library that we can include from all executables.
 
@@ -451,10 +451,10 @@ macro_rules! println {…}
 // in src/serial.rs
 
 #[macro_export]
-macro_rules! hprint {…}
+macro_rules! serial_print {…}
 
 #[macro_export]
-macro_rules! hprintln {…}
+macro_rules! serial_println {…}
 ```
 
 Now everything should work exactly as before, including `bootimage run` and `cargo test`.
@@ -481,7 +481,7 @@ use blog_os::exit_qemu;
 #[cfg(not(test))]
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
-    hprintln!("ok");
+    serial_println!("ok");
 
     unsafe { exit_qemu(); }
     loop {}
@@ -497,9 +497,9 @@ pub extern "C" fn rust_begin_panic(
     line: u32,
     column: u32,
 ) -> ! {
-    hprintln!("failed");
+    serial_println!("failed");
 
-    hprintln!("panic: {} at {}:{}:{}", msg, file, line, column);
+    serial_println!("panic: {} at {}:{}:{}", msg, file, line, column);
 
     unsafe { exit_qemu(); }
     loop {}
