@@ -324,29 +324,25 @@ Cargo allows to add [additional executables] to a project by putting them inside
 ```rust
 // in src/bin/test-something.rs
 
-#![feature(lang_items)] // required for defining the panic handler
-#![no_std] // don't link the Rust standard library
-#![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
+#![feature(panic_implementation)]
+#![no_std]
+#![cfg_attr(not(test), no_main)]
 
-/// This function is the entry point, since the linker looks for a function
-/// named `_start_` by default.
 #[cfg(not(test))]
-#[no_mangle] // don't mangle the name of this function
+use core::panic::PanicInfo;
+
+#[cfg(not(test))]
+#[no_mangle]
 pub extern "C" fn _start() -> ! {
-    // TODO run tests
+    // run tests
     loop {}
 }
 
-/// This function is called on panic.
 #[cfg(not(test))]
-#[lang = "panic_fmt"]
+#[panic_implementation]
 #[no_mangle]
-pub extern "C" fn rust_begin_panic(
-    _msg: core::fmt::Arguments,
-    _file: &'static str,
-    _line: u32,
-    _column: u32,
-) -> ! {
+pub fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     loop {}
 }
 ```
@@ -402,7 +398,7 @@ pub unsafe fn exit_qemu() {
 ```rust
 // src/main.rs
 
-#![feature(lang_items)] // required for defining the panic handler
+#![feature(panic_implementation)] // required for defining the panic handler
 #![no_std] // don't link the Rust standard library
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
 #![cfg_attr(test, allow(dead_code, unused_macros))] // allow unused code in test mode
@@ -423,19 +419,15 @@ pub extern "C" fn _start() -> ! {
 
 /// This function is called on panic.
 #[cfg(not(test))]
-#[lang = "panic_fmt"]
+#[panic_implementation]
 #[no_mangle]
-pub extern "C" fn rust_begin_panic(
-    _msg: core::fmt::Arguments,
-    _file: &'static str,
-    _line: u32,
-    _column: u32,
-) -> ! {
+pub fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     loop {}
 }
 ```
 
-So we move everything except `_start` and `rust_begin_panic` to `lib.rs`, make the `vga_buffer` and `serial` modules public, and add an `extern crate` definition to our `main.rs`.
+So we move everything except `_start` and `panic` to `lib.rs`, make the `vga_buffer` and `serial` modules public, and add an `extern crate` definition to our `main.rs`.
 
 This doesn't compile yet, because Rust's macros are not exported over crate boundaries by default. To export our printing macros, we need to add the `#[macro_export]` attribute to them:
 
@@ -466,11 +458,12 @@ We are finally able to create our first integration test executable. We start si
 ```rust
 // in src/bin/test-basic-boot.rs
 
-#![feature(lang_items)] // required for defining the panic handler
+#![feature(panic_implementation)] // required for defining the panic handler
 #![feature(const_fn)]
 #![no_std] // don't link the Rust standard library
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
 
+// add the library as dependency (same crate name as executable)
 #[macro_use]
 extern crate blog_os;
 
@@ -487,19 +480,15 @@ pub extern "C" fn _start() -> ! {
     loop {}
 }
 
+
 /// This function is called on panic.
 #[cfg(not(test))]
-#[lang = "panic_fmt"]
+#[panic_implementation]
 #[no_mangle]
-pub extern "C" fn rust_begin_panic(
-    msg: core::fmt::Arguments,
-    file: &'static str,
-    line: u32,
-    column: u32,
-) -> ! {
+pub fn panic(info: &PanicInfo) -> ! {
     serial_println!("failed");
 
-    serial_println!("panic: {} at {}:{}:{}", msg, file, line, column);
+    serial_println!("{}", info);
 
     unsafe { exit_qemu(); }
     loop {}
