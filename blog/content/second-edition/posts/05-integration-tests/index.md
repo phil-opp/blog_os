@@ -104,7 +104,7 @@ To make the serial port easily usable, we add `serial_print!` and `serial_printl
 ```rust
 pub fn print(args: ::core::fmt::Arguments) {
     use core::fmt::Write;
-    let _ = COM1.lock().write_fmt(args);
+    SERIAL1.lock().write_fmt(args).expect("Printing to serial failed");
 }
 
 /// Prints to the host through the serial interface.
@@ -234,7 +234,11 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-You should see that QEMU immediately closes after booting.
+You should see that QEMU immediately closes after booting when executing:
+
+```
+bootimage run -- -serial mon:stdio -device isa-debug-exit,iobase=0xf4,iosize=0x04
+```
 
 ## Hiding QEMU
 
@@ -341,8 +345,7 @@ pub extern "C" fn _start() -> ! {
 #[cfg(not(test))]
 #[panic_implementation]
 #[no_mangle]
-pub fn panic(info: &PanicInfo) -> ! {
-    println!("{}", info);
+pub fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 ```
@@ -407,6 +410,9 @@ pub unsafe fn exit_qemu() {
 #[macro_use]
 extern crate blog_os;
 
+#[cfg(not(test))]
+use core::panic::PanicInfo;
+
 /// This function is the entry point, since the linker looks for a function
 /// named `_start_` by default.
 #[cfg(not(test))]
@@ -467,6 +473,8 @@ We are finally able to create our first integration test executable. We start si
 #[macro_use]
 extern crate blog_os;
 
+#[cfg(not(test))]
+use core::panic::PanicInfo;
 use blog_os::exit_qemu;
 
 /// This function is the entry point, since the linker looks for a function
@@ -514,7 +522,7 @@ We got our `ok`, so it worked! Try inserting a `panic!()` before the `ok` printi
 
 ```
 failed
-panic: explicit panic at src/bin/test-basic-boot.rs:16:5
+panicked at 'explicit panic', src/bin/test-basic-boot.rs:19:5
 ```
 
 ### Test Panic
@@ -532,6 +540,8 @@ To test that our panic handler is really invoked on a panic, we create a `test-p
 #[macro_use]
 extern crate blog_os;
 
+#[cfg(not(test))]
+use core::panic::PanicInfo;
 use blog_os::exit_qemu;
 
 #[cfg(not(test))]
@@ -576,11 +586,26 @@ The `test-basic-boot` and `test-panic` tests we created above begin with `test-`
 
 ```
 > bootimage test
+test-panic
+    Finished dev [unoptimized + debuginfo] target(s) in 0.01s
+    Updating registry `https://github.com/rust-lang/crates.io-index`
+Ok
 
-TODO output
+test-basic-boot
+    Finished dev [unoptimized + debuginfo] target(s) in 0.01s
+    Updating registry `https://github.com/rust-lang/crates.io-index`
+Ok
+
+test-something
+    Finished dev [unoptimized + debuginfo] target(s) in 0.01s
+    Updating registry `https://github.com/rust-lang/crates.io-index`
+Timed Out
+
+The following tests failed:
+    test-something: TimedOut
 ```
 
-We see that TODO
+We see that our `test-panic` and `test-basic-boot` succeeded and that the `test-something` test timed out after one minute. We no longer need `test-something`, so we delete it (if you haven't done already). Now `bootimage test` should execute successfully.
 
 ## Summary
 
