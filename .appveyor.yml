@@ -79,3 +79,4 @@ before_test:
 test_script:
   - bootimage build
   - cargo test
+  - bootimage test
