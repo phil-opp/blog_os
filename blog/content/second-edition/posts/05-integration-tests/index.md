@@ -517,24 +517,83 @@ failed
 panic: explicit panic at src/bin/test-basic-boot.rs:16:5
 ```
 
-But what happens when we remove all printing and just `loop` endlessly? The QEMU process doesn't exit and keeps running forever. Our test runner must handle this case somehow, for example using a timeout.
+### Test Panic
 
-(If you try the endless loop, remember that you can exit QEMU via `Ctrl+a` and then `x`.)
+To test that our panic handler is really invoked on a panic, we create a `test-panic` test:
 
-## Bootimage Test
+```rust
+// in src/bin/test-panic.rs
 
-TODO
+#![feature(panic_implementation)]
+#![feature(const_fn)]
+#![no_std]
+#![cfg_attr(not(test), no_main)]
 
-- uses cargo metadata to find test-* binaries
-- compiles and executes them, redirects output to file
-- checks file for `ok`
-- prints results
+#[macro_use]
+extern crate blog_os;
+
+use blog_os::exit_qemu;
+
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    panic!();
+}
+
+#[cfg(not(test))]
+#[panic_implementation]
+#[no_mangle]
+pub fn panic(_info: &PanicInfo) -> ! {
+    serial_println!("ok");
+
+    unsafe { exit_qemu(); }
+    loop {}
+}
+```
+
+This executable is almost identical to `test-basic-boot`, the only difference is that we print `ok` from our panic handler and invoke an explicit `panic()` in our `_start` function.
+
+## A Test Runner
+
+The final step is to create a test runner, a program that executes all integration tests and checks their results. The basic steps that it should do are:
+
+- Look for integration tests in the current project, maybe by some convention (e.g. executables starting with `test-`).
+- Run all integration tests and interpret their results.
+    - Use a timeout to ensure that an endless loop does not block the test runner forever.
+- Report the test results to the user and set a successful or failing exit status.
+
+Such a test runner is useful to many projects, so we decided to add one to the `bootimage` tool.
+
+### Bootimage Test
+
+The test runner of the `bootimage` tool can be invoked via `bootimage test`. It uses the following conventions:
+
+- All executables starting with `test-` are treated as unit test.
+- Tests must print either `ok` or `failed` over the serial port. When printing `failed` they can print additional information such as a panic message (in the next lines).
+- Tests are run with a timeout of 1 minute. If the test has not completed in time, it is reported as "timed out".
+
+The `test-basic-boot` and `test-panic` tests we created above begin with `test-` and follow the `ok`/`failed` conventions, so they should work with `bootimage test`:
+
+```
+> bootimage test
+
+TODO output
+```
+
+We see that TODO
 
 ## Summary
 
-TODO
+In this post we learned about the serial port and port-mapped I/O and saw how to configure QEMU to print serial output to the command line. We also learned a trick how to exit QEMU without needing to implement a proper shutdown.
 
-TODO update date
+We then split our crate into a library and binary part in order to create additional executables for integration tests. We added two example tests for testing that the `_start` function is correctly called and that a `panic` invokes our panic handler. Finally, we presented `bootimage test` as a basic test runner for our integration tests.
+
+We now have a working integration test framework and can finally start to implement functionality in our kernel. We will continue to use the test framework over the next posts to test new components we add.
 
 ## What's next?
 In the next post, we will explore _CPU exceptions_. These exceptions are thrown by the CPU when something illegal happens, such as a division by zero or an access to an unmapped memory page (a so-called “page fault”). Being able to catch and examine these exceptions is very important for debugging future errors. Exception handling is also very similar to the handling of hardware interrupts, which is required for keyboard support.
+
+
+TODO update date
+
+TODO update serial panic message
