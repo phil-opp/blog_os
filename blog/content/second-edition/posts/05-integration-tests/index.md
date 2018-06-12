@@ -51,11 +51,11 @@ There are two different approaches for communicating between the CPU and periphe
 
 In contrast, port-mapped I/O uses a separate I/O bus for communication. Each connected peripheral has one or more port numbers. To communicate with such an I/O port there are special CPU instructions called `in` and `out`, which take a port number and a data byte (there are also variations of these commands that allow sending an `u16` or `u32`).
 
-The UART uses port-mapped I/O. Fortunately there are already several crates that provide abstractions for I/O ports, so we don't need to invoke the `in` and `out` assembly commands manually.
+The UART uses port-mapped I/O. Fortunately there are already several crates that provide abstractions for I/O ports and even UARTs, so we don't need to invoke the `in` and `out` assembly commands manually.
 
 ### Implementation
 
-There is already the [`uart_16550`] crate, so we don't need to write our own driver for it. To add it as a dependency, we update our `Cargo.toml` and `main.rs`:
+We will use the [`uart_16550`] crate to initialize the UART and send data over the serial port. To add it as a dependency, we update our `Cargo.toml` and `main.rs`:
 
 [`uart_16550`]: https://docs.rs/uart_16550
 
@@ -95,7 +95,7 @@ lazy_static! {
 }
 ```
 
-Like with the [VGA text buffer], we use a spinlock and `lazy_static` to create a `static`. However, this time we use `lazy_static` to ensure that the `init` method is called before first use. We're using the port address `0x3F8`, which is standard for the first serial interface.
+Like with the [VGA text buffer], we use a spinlock and `lazy_static` to create a `static`. However, this time we use `lazy_static` to ensure that the `init` method is called before first use. We're using the port address `0x3F8`, which is the standard port number for the first serial interface.
 
 [VGA text buffer]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
 
