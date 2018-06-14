@@ -331,8 +331,8 @@ Cargo allows to add [additional executables] to a project by putting them inside
 #![feature(panic_implementation)]
 #![no_std]
 #![cfg_attr(not(test), no_main)]
+#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
-#[cfg(not(test))]
 use core::panic::PanicInfo;
 
 #[cfg(not(test))]
@@ -404,13 +404,12 @@ pub unsafe fn exit_qemu() {
 #![feature(panic_implementation)] // required for defining the panic handler
 #![no_std] // don't link the Rust standard library
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
-#![cfg_attr(test, allow(dead_code, unused_macros))] // allow unused code in test mode
+#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
 // NEW: Add the library as dependency (same crate name as executable)
 #[macro_use]
 extern crate blog_os;
 
-#[cfg(not(test))]
 use core::panic::PanicInfo;
 
 /// This function is the entry point, since the linker looks for a function
@@ -468,12 +467,12 @@ We are finally able to create our first integration test executable. We start si
 #![feature(const_fn)]
 #![no_std] // don't link the Rust standard library
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
+#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
 // add the library as dependency (same crate name as executable)
 #[macro_use]
 extern crate blog_os;
 
-#[cfg(not(test))]
 use core::panic::PanicInfo;
 use blog_os::exit_qemu;
 
@@ -536,11 +535,11 @@ To test that our panic handler is really invoked on a panic, we create a `test-p
 #![feature(const_fn)]
 #![no_std]
 #![cfg_attr(not(test), no_main)]
+#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
 #[macro_use]
 extern crate blog_os;
 
-#[cfg(not(test))]
 use core::panic::PanicInfo;
 use blog_os::exit_qemu;
 

@@ -113,10 +113,10 @@ The test framework seems to work as intended. We don't have any tests yet, but w
 We get a few warnings about unused items, because we no longer compile our `_start` function. To silence such unused code warnings, we can add the following to the top of our `main.rs`:
 
 ```
-#![cfg_attr(test, allow(dead_code, unused_macros))]
+#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 ```
 
-Like before, the `cfg_attr` attribute sets the passed attribute if the passed condition holds. Here, we set the `allow(…)` attribute when compiling in test mode. We use the `allow` attribute to disable warnings for the `dead_code` and `unused_macro` _lints_.
+Like before, the `cfg_attr` attribute sets the passed attribute if the passed condition holds. Here, we set the `allow(…)` attribute when compiling in test mode. We use the `allow` attribute to disable warnings for the `dead_code`, `unused_macro`, and `unused_import` _lints_.
 
 Lints are classes of warnings, for example `dead_code` for unused code or `missing-docs` for missing documentation. Lints can be set to four different states:
 
