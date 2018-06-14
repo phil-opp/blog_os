@@ -2,7 +2,7 @@
 title = "Integration Tests"
 order = 5
 path = "integration-tests"
-date  = 2018-05-18
+date  = 2018-06-15
 template = "second-edition/page.html"
 +++
 
@@ -616,8 +616,3 @@ We now have a working integration test framework and can finally start to implem
 
 ## What's next?
 In the next post, we will explore _CPU exceptions_. These exceptions are thrown by the CPU when something illegal happens, such as a division by zero or an access to an unmapped memory page (a so-called “page fault”). Being able to catch and examine these exceptions is very important for debugging future errors. Exception handling is also very similar to the handling of hardware interrupts, which is required for keyboard support.
-
-
-TODO update date
-
-TODO update serial panic message
