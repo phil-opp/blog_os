@@ -45,6 +45,8 @@ The problem is that unit tests are built for the host machine, with the `std` li
 ```rust
 // in src/main.rs
 
+use core::panic::PanicInfo;
+
 #[cfg(not(test))] // only compile when the test flag is not set
 #[panic_implementation]
 #[no_mangle]
