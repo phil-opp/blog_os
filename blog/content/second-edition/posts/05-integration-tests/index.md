@@ -413,7 +413,7 @@ extern crate blog_os;
 use core::panic::PanicInfo;
 
 /// This function is the entry point, since the linker looks for a function
-/// named `_start_` by default.
+/// named `_start` by default.
 #[cfg(not(test))]
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
@@ -477,7 +477,7 @@ use core::panic::PanicInfo;
 use blog_os::exit_qemu;
 
 /// This function is the entry point, since the linker looks for a function
-/// named `_start_` by default.
+/// named `_start` by default.
 #[cfg(not(test))]
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
