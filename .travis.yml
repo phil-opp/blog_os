@@ -21,6 +21,14 @@ os:
 
 cache: cargo
 
+addons:
+  apt:
+    packages:
+      - qemu-system-x86
+
+install:
+  - if [ $TRAVIS_OS_NAME = osx ]; then brew install qemu; fi
+
 before_script:
   - rustup component add rust-src
   - (test -x $HOME/.cargo/bin/cargo-install-update || cargo install cargo-update)
