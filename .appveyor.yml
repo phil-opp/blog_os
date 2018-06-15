@@ -55,6 +55,18 @@ install:
   - rustc -vV
   - cargo -vV
 
+  # Install qemu
+  - echo %cd%
+  - mkdir "C:\Program Files\qemu"
+  - cd "C:\Program Files\qemu"
+  - if %target%==i686-pc-windows-msvc appveyor DownloadFile "https://qemu.weilnetz.de/w32/qemu-w32-setup-20180519.exe" -FileName "qemu-setup.exe"
+  - if %target%==i686-pc-windows-gnu appveyor DownloadFile "https://qemu.weilnetz.de/w32/qemu-w32-setup-20180519.exe" -FileName "qemu-setup.exe"
+  - if %target%==x86_64-pc-windows-msvc appveyor DownloadFile "https://qemu.weilnetz.de/w64/qemu-w64-setup-20180519.exe" -FileName "qemu-setup.exe"
+  - if %target%==x86_64-pc-windows-gnu appveyor DownloadFile "https://qemu.weilnetz.de/w64/qemu-w64-setup-20180519.exe" -FileName "qemu-setup.exe"
+  - 7z x qemu-setup.exe
+  - set PATH=%PATH%;C:\Program Files\qemu
+  - cd "C:\projects\blog-os"
+
 ## Build Script ##
 
 # 'cargo test' takes care of building for us, so disable Appveyor's build stage. This prevents
@@ -79,3 +91,4 @@ before_test:
 test_script:
   - bootimage build
   - cargo test
+  - bootimage test
