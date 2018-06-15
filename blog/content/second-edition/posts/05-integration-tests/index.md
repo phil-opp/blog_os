@@ -17,7 +17,7 @@ This blog is openly developed on [Github]. If you have any problems or questions
 
 ## Overview
 
-In the previous post we added support for unit tests. The goal of unit tests is to test small components in isolation to ensure that all of them work as intended. The tests are run on the host machine and thus shouldn't rely on architecture specific functionality.
+In the previous post we added support for unit tests. The goal of unit tests is to test small components in isolation to ensure that each of them works as intended. The tests are run on the host machine and thus shouldn't rely on architecture specific functionality.
 
 To test the interaction of the components, both with each other and the system environment, we can write _integration tests_. Compared to unit tests, ìntegration tests are more complex, because they need to run in a realistic environment. What this means depends on the application type. For example, for webserver applications it often means to set up a database instance. For an operating system kernel like ours, it means that we run the tests on the target hardware without an underlying operating system.
 
@@ -51,7 +51,7 @@ There are two different approaches for communicating between the CPU and periphe
 
 In contrast, port-mapped I/O uses a separate I/O bus for communication. Each connected peripheral has one or more port numbers. To communicate with such an I/O port there are special CPU instructions called `in` and `out`, which take a port number and a data byte (there are also variations of these commands that allow sending an `u16` or `u32`).
 
-The UART uses port-mapped I/O. Fortunately there are already several crates that provide abstractions for I/O ports and even UARTs, so we don't need to invoke the `in` and `out` assembly commands manually.
+The UART uses port-mapped I/O. Fortunately there are already several crates that provide abstractions for I/O ports and even UARTs, so we don't need to invoke the `in` and `out` assembly instructions manually.
 
 ### Implementation
 
@@ -95,9 +95,9 @@ lazy_static! {
 }
 ```
 
-Like with the [VGA text buffer], we use a spinlock and `lazy_static` to create a `static`. However, this time we use `lazy_static` to ensure that the `init` method is called before first use. We're using the port address `0x3F8`, which is the standard port number for the first serial interface.
+Like with the [VGA text buffer][vga lazy-static], we use `lazy_static` and a spinlock to create a `static`. However, this time we use `lazy_static` to ensure that the `init` method is called before first use. We're using the port address `0x3F8`, which is the standard port number for the first serial interface.
 
-[VGA text buffer]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
+[vga lazy-static]: ./second-edition/posts/03-vga-text-buffer/index.md#lazy-statics
 
 To make the serial port easily usable, we add `serial_print!` and `serial_println!` macros:
 
