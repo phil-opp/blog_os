@@ -15,6 +15,7 @@ extern crate std;
 
 pub mod serial;
 pub mod vga_buffer;
+pub mod tss;
 
 pub unsafe fn exit_qemu() {
     use x86_64::instructions::port::Port;
