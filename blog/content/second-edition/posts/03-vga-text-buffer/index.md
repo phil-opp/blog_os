@@ -443,7 +443,9 @@ The issue about `ColorCode::new` would be solvable by using [`const` functions],
 [`const` functions]: https://doc.rust-lang.org/unstable-book/language-features/const-fn.html
 
 ### Lazy Statics
-Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values.
+The one-time initialization of statics with non-const functions is a common problem in Rust. Fortunately, there already exists a good solution in a crate named [lazy_static]. This crate provides a `lazy_static!` macro that defines a lazily initialized `static`. Instead of computing its value at compile time, the `static` laziliy initializes itself when it's accessed the first time. Thus, the initialization happens at runtime so that arbitrarily complex initialization code is possible.
+
+[lazy_static]: https://docs.rs/lazy_static/1.0.1/lazy_static/
 
 Let's add the `lazy_static` crate to our project:
 
@@ -461,7 +463,8 @@ extern crate lazy_static;
 version = "1.0"
 features = ["spin_no_std"]
 ```
-We need the `spin_no_std` feature, since we don't link the standard library.
+
+We need the `spin_no_std` feature, since we don't link the standard library. We also need the `#[macro_use]` attribute on the `extern crate` line to import the `lazy_static!` macro.
 
 With `lazy_static`, we can define our static `WRITER` without problems:
 
