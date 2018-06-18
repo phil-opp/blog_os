@@ -454,7 +454,7 @@ The `x86-interrupt` calling convention and the [`Idt`] type made the exception h
 [first edition]: ./first-edition/_index.md
 
 ## What's next?
-We've successfully caught our first exception and returned from it! The next step is to add handlers for other common exceptions such as page faults. We also need to make sure that we never cause a [triple fault], since it causes a complete system reset. The next post explains how we can avoid this by correctly catching [double faults].
+We've successfully caught our first exception and returned from it! The next step is to ensure that we catch all exceptions, because an uncaught exception causes a fatal [triple fault], which leads to a system reset. The next post explains how we can avoid this by correctly catching [double faults].
 
 [triple fault]: http://wiki.osdev.org/Triple_Fault
 [double faults]: http://wiki.osdev.org/Double_Fault#Double_Fault

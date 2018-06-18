@@ -19,7 +19,10 @@ os:
   - linux
   - osx
 
-cache: cargo
+cache:
+  cargo: true
+  directories:
+    - $HOME/Library/Caches/Homebrew
 
 addons:
   apt:
@@ -27,7 +30,7 @@ addons:
       - qemu-system-x86
 
 install:
-  - if [ $TRAVIS_OS_NAME = osx ]; then brew install qemu; fi
+  - if [ $TRAVIS_OS_NAME = osx ]; then brew update; brew install qemu; fi
 
 before_script:
   - rustup component add rust-src
