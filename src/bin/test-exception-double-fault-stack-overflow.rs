@@ -19,7 +19,7 @@ use core::panic::PanicInfo;
 pub extern "C" fn _start() -> ! {
     blog_os::gdt::init();
     init_idt();
-    
+
     fn stack_overflow() {
         stack_overflow(); // for each recursion, the return address is pushed
     }
@@ -52,14 +52,14 @@ pub fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
-
 use x86_64::structures::idt::{ExceptionStackFrame, Idt};
 
 lazy_static! {
     static ref IDT: Idt = {
         let mut idt = Idt::new();
         unsafe {
-            idt.double_fault.set_handler_fn(double_fault_handler)
+            idt.double_fault
+                .set_handler_fn(double_fault_handler)
                 .set_stack_index(blog_os::gdt::DOUBLE_FAULT_IST_INDEX);
         }
 
@@ -72,8 +72,9 @@ pub fn init_idt() {
 }
 
 extern "x86-interrupt" fn double_fault_handler(
-    _stack_frame: &mut ExceptionStackFrame, _error_code: u64)
-{
+    _stack_frame: &mut ExceptionStackFrame,
+    _error_code: u64,
+) {
     serial_println!("ok");
 
     unsafe {
