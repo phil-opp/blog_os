@@ -1,7 +1,8 @@
 branches:
-  except:
-    # Used by bors
-    - staging.tmp
+  only:
+    - staging
+    - trying
+    - master
 
 # Appveyor configuration template for Rust using rustup for Rust installation
 # https://github.com/starkat99/appveyor-rust
