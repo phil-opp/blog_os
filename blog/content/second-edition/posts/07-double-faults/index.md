@@ -45,7 +45,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-We try to write to address `0xdeadbeaf`, but the corresponding page is not present in the page tables. Thus, a page fault occurs. We haven't registered a page fault handler in our [IDT], so a double fault occurs.
+We use `unsafe` to write to the invalid address `0xdeadbeaf`. The virtual address is not mapped to a physical address in the page tables, so a page fault occurs. We haven't registered a page fault handler in our [IDT], so a double fault occurs.
 
 When we start our kernel now, we see that it enters an endless boot loop. The reason for the boot loop is the following:
 
@@ -256,7 +256,7 @@ lazy_static! {
 
 We use `lazy_static` because Rust's const evaluator is not yet powerful enough to do this initialization at compile time. We define that the 0th IST entry is the double fault stack (any other IST index would work too). Then we write the top address of a double fault stack to the 0th entry. We write the top address because stacks on x86 grow downwards, i.e. from high addresses to low addresses.
 
-We don't have implemented memory management yet, so we don't have a proper way to allocate a new stack. Instead, we use a `static` array as stack storage for now. We will replace this with a proper stack allocation in a later post. It is important that it is a `static mut` and not an immutable `static`, because otherwise the bootloader will map it to a read-only page.
+We don't have implemented memory management yet, so we don't have a proper way to allocate a new stack. Instead, we use a `static mut` array as stack storage for now. The `unsafe` is required because because the compiler can't guarantee race freedom when mutable statics are accessed. It is important that it is a `static mut` and not an immutable `static`, because otherwise the bootloader will map it to a read-only page. We will replace this with a proper stack allocation in a later post, then the `unsafe` will be no longer needed at this place.
 
 Note that this double fault stack has no guard page that protects against stack overflow. This means that we should not do anything stack intensive in our double fault handler because a stack overflow might corrupt the memory below the stack.
 
@@ -372,7 +372,7 @@ pub fn init() {
 }
 ```
 
-We reload the code segment register using [`set_cs`] and to load the TSS using [`load_tss`].
+We reload the code segment register using [`set_cs`] and to load the TSS using [`load_tss`]. The functions are marked as `unsafe`, so we need an `unsafe` block to invoke them. The reason is that it might be possible to break memory safety by loading invalid selectors.
 
 [`set_cs`]: https://docs.rs/x86_64/0.2.3/x86_64/instructions/segmentation/fn.set_cs.html
 [`load_tss`]: https://docs.rs/x86_64/0.2.3/x86_64/instructions/tables/fn.load_tss.html
