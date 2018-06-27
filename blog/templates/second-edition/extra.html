@@ -1,5 +1,7 @@
 {% extends "second-edition/base.html" %}
 
+{% import "macros.html" as macros %}
+
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 
 {% block main %}
@@ -14,11 +16,6 @@
     <hr>
     <section>
         <h2>Comments</h2>
-        <script src="https://utteranc.es/client.js"
-            repo="phil-opp/blog_os"
-            branch="master"
-            issue-term="pathname"
-            async>
-        </script>
+        {{ macros::utterances() }}
     </section>
 {% endblock after_main %}
