@@ -26,7 +26,7 @@ Running on the target architecture allows us to test all hardware specific code 
 [page table]: https://en.wikipedia.org/wiki/Page_table
 [CPU exception]: https://wiki.osdev.org/Exceptions
 
-In this post we will implement a very basic test framework that runs integration tests inside instances of the [QEMU] virtual machine. It is not as realistic as running them on real hardware, but it is much simpler and should be suffient as long as we only use standard hardware that is well supported in QEMU.
+In this post we will implement a very basic test framework that runs integration tests inside instances of the [QEMU] virtual machine. It is not as realistic as running them on real hardware, but it is much simpler and should be sufficient as long as we only use standard hardware that is well supported in QEMU.
 
 [QEMU]: https://www.qemu.org/
 
