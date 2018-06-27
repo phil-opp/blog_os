@@ -321,7 +321,7 @@ A better solution is to create an additional executable for each test.
 
 ### Additional Test Executables
 
-Cargo allows to add [additional executables] to a project by putting them inside `src/bin`. We can use that feature to create a separate executable for each unit tests. For example, a `test-something` executable could be added like this:
+Cargo allows to add [additional executables] to a project by putting them inside `src/bin`. We can use that feature to create a separate executable for each integration test. For example, a `test-something` executable could be added like this:
 
 [additional executables]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-project-layout
 
@@ -577,7 +577,7 @@ Such a test runner is useful to many projects, so we decided to add one to the `
 
 The test runner of the `bootimage` tool can be invoked via `bootimage test`. It uses the following conventions:
 
-- All executables starting with `test-` are treated as unit test.
+- All executables starting with `test-` are treated as integration tests.
 - Tests must print either `ok` or `failed` over the serial port. When printing `failed` they can print additional information such as a panic message (in the next lines).
 - Tests are run with a timeout of 1 minute. If the test has not completed in time, it is reported as "timed out".
 
