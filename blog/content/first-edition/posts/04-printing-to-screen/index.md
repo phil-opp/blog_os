@@ -312,7 +312,7 @@ struct Buffer {
 ```
 Instead of a `ScreenChar`, we're now using a `Volatile<ScreenChar>`. (The `Volatile` type is [generic] and can wrap (almost) any type). This ensures that we can't accidentally write to it through a “normal” write. Instead, we have to use the `write` method now.
 
-[generic]: https://doc.rust-lang.org/book/generics.html
+[generic]: https://doc.rust-lang.org/book/second-edition/ch10-00-generics.html
 
 This means that we have to update our `Writer::write_byte` method:
 
@@ -505,7 +505,7 @@ Note that we need to import the `Write` trait if we want to use its functions.
 ## A println macro
 Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead we look at the source of the [`println!` macro] in the standard library:
 
-[macro syntax]: https://doc.rust-lang.org/nightly/book/macros.html
+[macro syntax]: https://doc.rust-lang.org/nightly/reference/macros-by-example.html
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust
