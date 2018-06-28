@@ -187,8 +187,9 @@ Luckily, there is an escape hatch: QEMU supports a special `isa-debug-exit` devi
 -device isa-debug-exit,iobase=0xf4,iosize=0x04
 ```
 
-The `iobase` specifies on which port address the device should live and the `iosize` specifies the port size (`0x04` means four bytes). Now the guest can write a value to the `0xf4` port and QEMU will exit with [exit status] `(passed_value << 1) | 1`.
+The `iobase` specifies on which port address the device should live (`0xf4` is a [generally unused][list of x86 I/O ports] port on the x86's IO bus) and the `iosize` specifies the port size (`0x04` means four bytes). Now the guest can write a value to the `0xf4` port and QEMU will exit with [exit status] `(passed_value << 1) | 1`.
 
+[list of x86 I/O ports]: https://wiki.osdev.org/I/O_Ports#The_list
 [exit status]: https://en.wikipedia.org/wiki/Exit_status
 
 To write to the I/O port, we use the [`x86_64`] crate:
