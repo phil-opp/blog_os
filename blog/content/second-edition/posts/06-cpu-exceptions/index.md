@@ -317,7 +317,7 @@ pub fn init_idt() {
 
 However, there is a problem: Statics are immutable, so we can't modify the breakpoint entry from our `init` function. We could solve this problem by using a [`static mut`]:
 
-[`static mut`]: https://doc.rust-lang.org/book/const-and-static.html#mutability
+[`static mut`]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: Option<Idt> = Idt::new();
@@ -332,7 +332,7 @@ pub fn init_idt() {
 
 This variant compiles without errors but it's far from idiomatic. `static mut`s are very prone to data races, so we need an [`unsafe` block] on each access.
 
-[`unsafe` block]: https://doc.rust-lang.org/book/unsafe.html#unsafe-superpowers
+[`unsafe` block]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### Lazy Statics to the Rescue
 Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values.

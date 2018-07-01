@@ -316,7 +316,7 @@ pub fn init() {
 There are two problems with this. First, statics are immutable, so we can't modify the breakpoint entry from our `init` function. Second, the `Idt::new` function is not a [`const` function], so it can't be used to initialize a `static`. We could solve this problem by using a [`static mut`] of type `Option<Idt>`:
 
 [`const` function]: https://github.com/rust-lang/rfcs/blob/master/text/0911-const-fn.md
-[`static mut`]: https://doc.rust-lang.org/book/const-and-static.html#mutability
+[`static mut`]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: Option<Idt> = None;
@@ -333,7 +333,7 @@ pub fn init() {
 
 This variant compiles without errors but it's far from idiomatic. `static mut`s are very prone to data races, so we need an [`unsafe` block] on each access. Also, we need to explicitly `unwrap` the `IDT` on each use, since might be `None`.
 
-[`unsafe` block]: https://doc.rust-lang.org/book/unsafe.html#unsafe-superpowers
+[`unsafe` block]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### Lazy Statics to the Rescue
 The one-time initialization of statics with non-const functions is a common problem in Rust. Fortunately, there already exists a good solution in a crate named [lazy_static]. This crate provides a `lazy_static!` macro that defines a lazily initialized `static`. Instead of computing its value at compile time, the `static` laziliy initializes itself when it's accessed the first time. Thus, the initialization happens at runtime so that arbitrarily complex initialization code is possible.

@@ -312,7 +312,7 @@ struct Buffer {
 ```
 Instead of a `ScreenChar`, we're now using a `Volatile<ScreenChar>`. (The `Volatile` type is [generic] and can wrap (almost) any type). This ensures that we can't accidentally write to it through a “normal” write. Instead, we have to use the `write` method now.
 
-[generic]: https://doc.rust-lang.org/book/generics.html
+[generic]: https://doc.rust-lang.org/book/second-edition/ch10-00-generics.html
 
 This means that we have to update our `Writer::write_byte` method:
 
@@ -442,7 +442,7 @@ But we can't use it to print anything! You can try it yourself in the `print_som
 
 To resolve it, we could use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged, there are even proposals to [remove it][remove static mut].
 
-[mutable static]: https://doc.rust-lang.org/book/const-and-static.html#mutability
+[mutable static]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
 
 But what are the alternatives? We could try to use a cell type like [RefCell] or even [UnsafeCell] to provide [interior mutability]. But these types aren't [Sync] \(with good reason), so we can't use them in statics.
@@ -505,7 +505,7 @@ Note that we need to import the `Write` trait if we want to use its functions.
 ## A println macro
 Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead we look at the source of the [`println!` macro] in the standard library:
 
-[macro syntax]: https://doc.rust-lang.org/nightly/book/macros.html
+[macro syntax]: https://doc.rust-lang.org/nightly/book/second-edition/appendix-04-macros.html
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust
