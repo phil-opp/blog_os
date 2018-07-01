@@ -1,4 +1,3 @@
-#![feature(const_fn)]
 #![no_std] // don't link the Rust standard library
 
 extern crate spin;

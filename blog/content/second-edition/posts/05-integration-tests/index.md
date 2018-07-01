@@ -372,7 +372,6 @@ Cargo supports hybrid projects that are both a library and a binary. We only nee
 ```rust
 // src/lib.rs
 
-#![feature(const_fn)]
 #![no_std] // don't link the Rust standard library
 
 extern crate spin;
@@ -465,7 +464,6 @@ We are finally able to create our first integration test executable. We start si
 // in src/bin/test-basic-boot.rs
 
 #![feature(panic_implementation)] // required for defining the panic handler
-#![feature(const_fn)]
 #![no_std] // don't link the Rust standard library
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
@@ -533,7 +531,6 @@ To test that our panic handler is really invoked on a panic, we create a `test-p
 // in src/bin/test-panic.rs
 
 #![feature(panic_implementation)]
-#![feature(const_fn)]
 #![no_std]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
