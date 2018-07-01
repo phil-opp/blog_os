@@ -505,7 +505,7 @@ Note that we need to import the `Write` trait if we want to use its functions.
 ## A println macro
 Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead we look at the source of the [`println!` macro] in the standard library:
 
-[macro syntax]: https://doc.rust-lang.org/nightly/reference/macros-by-example.html
+[macro syntax]: https://doc.rust-lang.org/nightly/book/second-edition/appendix-04-macros.html
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust

@@ -543,7 +543,7 @@ Note that we only have a single unsafe block in our code, which is needed to cre
 ### A println Macro
 Now that we have a global writer, we can add a `println` macro that can be used from anywhere in the codebase. Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead we look at the source of the [`println!` macro] in the standard library:
 
-[macro syntax]: https://doc.rust-lang.org/nightly/reference/macros-by-example.html
+[macro syntax]: https://doc.rust-lang.org/nightly/book/second-edition/appendix-04-macros.html
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust
