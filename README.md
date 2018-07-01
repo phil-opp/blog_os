@@ -2,52 +2,83 @@
 
 [![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=master)](https://travis-ci.org/phil-opp/blog_os) [![Join the chat at https://gitter.im/phil-opp/blog_os](https://badges.gitter.im/phil-opp/blog_os.svg)](https://gitter.im/phil-opp/blog_os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-This repository contains the source code for the _Writing an OS in Rust_ series at [os.phil-opp.com](http://os.phil-opp.com).
-
-## Bare Bones
-- [A Minimal x86 Kernel](http://os.phil-opp.com/multiboot-kernel.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_1))
-- [Entering Long Mode](http://os.phil-opp.com/entering-longmode.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_2))
-- [Set Up Rust](http://os.phil-opp.com/set-up-rust.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_3))
-- [Printing to Screen](http://os.phil-opp.com/printing-to-screen.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_4))
-
-## Memory Management
-- [Allocating Frames](http://os.phil-opp.com/allocating-frames.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_5))
-- [Page Tables](http://os.phil-opp.com/modifying-page-tables.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_6))
-- [Remap the Kernel](http://os.phil-opp.com/remap-the-kernel.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_7))
-- [Kernel Heap](http://os.phil-opp.com/kernel-heap.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_8))
-
-## Exceptions
-- [Handling Exceptions](http://os.phil-opp.com/handling-exceptions.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_9))
-- [Double Faults](http://os.phil-opp.com/double-faults.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_10))
-
-## Additional Resources
-- [Cross Compile Binutils](http://os.phil-opp.com/cross-compile-binutils.html)
-- [Cross Compile libcore](http://os.phil-opp.com/cross-compile-libcore.html)
-- [Set Up GDB](http://os.phil-opp.com/set-up-gdb.html)
-- [Handling Exceptions using Naked Functions](http://os.phil-opp.com/handling-exceptions-with-naked-fns.html)
-    - [Catching Exceptions](http://os.phil-opp.com/catching-exceptions.html)
-          ([source code](https://github.com/phil-opp/blog_os/tree/catching_exceptions))
-    - [Better Exception Messages](http://os.phil-opp.com/better-exception-messages.html)
-          ([source code](https://github.com/phil-opp/blog_os/tree/better_exception_messages))
-    - [Returning from Exceptions](http://os.phil-opp.com/returning-from-exceptions.html)
-          ([source code](https://github.com/phil-opp/blog_os/tree/returning_from_exceptions))
+This repository contains the source code for the _Writing an OS in Rust_ series at [os.phil-opp.com](https://os.phil-opp.com).
 
 ## Building
-You need to have `nasm`, `grub-mkrescue`, `mformat` (included in `mtools`), `xorriso`, `qemu`, a nightly Rust compiler, and [xargo] installed. Then you can run it using `make run`.
+You need a nightly Rust compiler and the `cargo-xbuild` and `bootimage` tools. You can install the tools by executing the following command:
 
-[xargo]: https://github.com/japaric/xargo
+```
+cargo install cargo-xbuild bootimage
+```
 
-Please file an issue if you run into any problems.
+Afterwards you can invoke `bootimage build` to produce a bootable disk image. Please file an issue if you run into any problems.
+
+To run the image in [QEMU], you can execute `bootimage run`. Note that you need to have QEMU installed.
+
+[QEMU]: https://www.qemu.org/
+
+## Posts
+
+The goal of this project is to provide step-by-step tutorials in individual blog posts. We currently have the following set of posts:
+
+### Bare Bones
+
+- [A Freestanding Rust Binary](https://os.phil-opp.com/freestanding-rust-binary/)
+- [A Minimal Rust Kernel](https://os.phil-opp.com/minimal-rust-kernel/)
+- [VGA Text Mode](https://os.phil-opp.com/vga-text-mode/)
+
+### Testing
+
+- [Unit Testing](https://os.phil-opp.com/unit-testing/)
+- [Integration Tests](https://os.phil-opp.com/integration-tests/)
+
+### Interrupts
+
+- [CPU Exceptions](https://os.phil-opp.com/cpu-exceptions/)
+- [Double Faults](https://os.phil-opp.com/double-fault-exceptions/)
+
+
+## First Edition Posts
+
+The current version of the blog is already the second edition. The first edition is outdated and no longer maintained, but might still be useful. The posts of the first edition are:
+
+### Bare Bones
+- [A Minimal x86 Kernel](https://os.phil-opp.com/multiboot-kernel.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_1))
+- [Entering Long Mode](https://os.phil-opp.com/entering-longmode.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_2))
+- [Set Up Rust](https://os.phil-opp.com/set-up-rust.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_3))
+- [Printing to Screen](https://os.phil-opp.com/printing-to-screen.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_4))
+
+### Memory Management
+- [Allocating Frames](https://os.phil-opp.com/allocating-frames.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_5))
+- [Page Tables](https://os.phil-opp.com/modifying-page-tables.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_6))
+- [Remap the Kernel](https://os.phil-opp.com/remap-the-kernel.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_7))
+- [Kernel Heap](https://os.phil-opp.com/kernel-heap.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_8))
+
+### Exceptions
+- [Handling Exceptions](https://os.phil-opp.com/handling-exceptions.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_9))
+- [Double Faults](https://os.phil-opp.com/double-faults.html)
+      ([source code](https://github.com/phil-opp/blog_os/tree/post_10))
+
+### Additional Resources
+- [Cross Compile Binutils](https://os.phil-opp.com/cross-compile-binutils.html)
+- [Cross Compile libcore](https://os.phil-opp.com/cross-compile-libcore.html)
+- [Set Up GDB](https://os.phil-opp.com/set-up-gdb.html)
+- [Handling Exceptions using Naked Functions](https://os.phil-opp.com/handling-exceptions-with-naked-fns.html)
+    - [Catching Exceptions](https://os.phil-opp.com/catching-exceptions.html)
+          ([source code](https://github.com/phil-opp/blog_os/tree/catching_exceptions))
+    - [Better Exception Messages](https://os.phil-opp.com/better-exception-messages.html)
+          ([source code](https://github.com/phil-opp/blog_os/tree/better_exception_messages))
+    - [Returning from Exceptions](https://os.phil-opp.com/returning-from-exceptions.html)
+          ([source code](https://github.com/phil-opp/blog_os/tree/returning_from_exceptions))
 
 ## License
 The source code is dual-licensed under MIT or the Apache License (Version 2.0). This excludes the `blog` directory.
