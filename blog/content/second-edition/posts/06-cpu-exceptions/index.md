@@ -249,16 +249,13 @@ Our handler just outputs a message and pretty-prints the exception stack frame.
 When we try to compile it, the following error occurs:
 
 ```
-error: x86-interrupt ABI is experimental and subject to change (see issue #40180)
-  --> src/interrupts.rs:8:1
+error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue #40180)
+  --> src/main.rs:53:1
    |
-8  |   extern "x86-interrupt" fn breakpoint_handler(
-   |  _^ starting here...
-9  | |     stack_frame: &mut ExceptionStackFrame)
-10 | | {
-11 | |     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
-12 | | }
-   | |_^ ...ending here
+53 | / extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut ExceptionStackFrame) {
+54 | |     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+55 | | }
+   | |_^
    |
    = help: add #![feature(abi_x86_interrupt)] to the crate attributes to enable
 ```
