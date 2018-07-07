@@ -77,7 +77,7 @@ The `uart_16550` crate contains a `SerialPort` struct that represents the UART r
 ```rust
 // in src/main.rs
 
-mod serial
+mod serial;
 ```
 
 ```rust
