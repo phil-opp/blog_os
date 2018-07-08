@@ -108,7 +108,7 @@ Now the compiler is missing some _language items_. Language items are special pl
 
 Providing our own implementation of the language items would be possible, but this should only be done as a last resort. The reason is that language items are highly unstable implementation details and not even type checked (so the compiler doesn't even check if it has the right argument types).
 
-Fortunately, there are more stable ways to fix these language item error.
+Fortunately, there are more stable ways to fix these language item errors.
 
 ### Disabling Unwinding
 
