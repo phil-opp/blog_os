@@ -133,9 +133,10 @@ We add the following build-related entries:
 
 ```json
 "linker-flavor": "ld.lld",
+"linker": "rust-lld",
 ```
 
-Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker for linking our kernel. LLD is shipped with Rust since the `2018-03-05` nightly.
+Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker that is shipped with Rust for linking our kernel.
 
 [LLD]: https://lld.llvm.org/
 
@@ -183,6 +184,7 @@ Our target specification file now looks like this:
   "os": "none",
   "executables": true,
   "linker-flavor": "ld.lld",
+  "linker": "rust-lld",
   "panic-strategy": "abort",
   "disable-redzone": true,
   "features": "-mmx,-sse,+soft-float"
