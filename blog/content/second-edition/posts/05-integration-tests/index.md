@@ -200,7 +200,7 @@ To write to the I/O port, we use the [`x86_64`] crate:
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.2.6"
+x86_64 = "0.2.8"
 ```
 
 ```rust
