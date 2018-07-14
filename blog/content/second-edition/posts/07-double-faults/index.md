@@ -404,9 +404,9 @@ That's it! Now the CPU should switch to the double fault stack whenever a double
 
 From now on we should never see a triple fault again!
 
-To ensure that we don't accidentally break the above, we should add a integration test for this. We don't show the code here for space reasons, but you can find it [in this gist][stack overflow test]. The idea is to do a `serial_println!("ok");` from the double fault handler to ensure that it is called. The rest of the file is is very similar to our `main.rs`.
+To ensure that we don't accidentally break the above, we should add a integration test for this. We don't show the code here for space reasons, but you can find it [on Github][stack overflow test]. The idea is to do a `serial_println!("ok");` from the double fault handler to ensure that it is called. The rest of the file is is very similar to our `main.rs`.
 
-[stack overflow test]: https://gist.github.com/phil-opp/9600f367f10615219f3f22110a9a92eb
+[stack overflow test]: https://github.com/phil-opp/blog_os/blob/master/src/bin/test-exception-double-fault-stack-overflow.rs
 
 ## Summary
 In this post we learned what a double fault is and under which conditions it occurs. We added a basic double fault handler that prints an error message and added an integration test for it.
