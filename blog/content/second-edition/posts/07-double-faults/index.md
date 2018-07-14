@@ -63,8 +63,8 @@ A double fault is a normal exception with an error code, so we can specify a han
 // in src/main.rs
 
 lazy_static! {
-    static ref IDT: Idt = {
-        let mut idt = Idt::new();
+    static ref IDT: InterruptDescriptorTable = {
+        let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         idt.double_fault.set_handler_fn(double_fault_handler); // new
         idt
@@ -222,7 +222,7 @@ The _Privilege Stack Table_ is used by the CPU when the privilege level changes.
 ### Creating a TSS
 Let's create a new TSS that contains a separate double fault stack in its interrupt stack table. For that we need a TSS struct. Fortunately, the `x86_64` crate already contains a [`TaskStateSegment` struct] that we can use.
 
-[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.2.3/x86_64/structures/tss/struct.TaskStateSegment.html
+[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.2.8/x86_64/structures/tss/struct.TaskStateSegment.html
 
 We create the TSS in a new `gdt` module (the name will make sense later):
 
@@ -374,8 +374,8 @@ pub fn init() {
 
 We reload the code segment register using [`set_cs`] and to load the TSS using [`load_tss`]. The functions are marked as `unsafe`, so we need an `unsafe` block to invoke them. The reason is that it might be possible to break memory safety by loading invalid selectors.
 
-[`set_cs`]: https://docs.rs/x86_64/0.2.3/x86_64/instructions/segmentation/fn.set_cs.html
-[`load_tss`]: https://docs.rs/x86_64/0.2.3/x86_64/instructions/tables/fn.load_tss.html
+[`set_cs`]: https://docs.rs/x86_64/0.2.8/x86_64/instructions/segmentation/fn.set_cs.html
+[`load_tss`]: https://docs.rs/x86_64/0.2.8/x86_64/instructions/tables/fn.load_tss.html
 
 Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 
@@ -383,8 +383,8 @@ Now that we loaded a valid TSS and interrupt stack table, we can set the stack i
 // in src/main.rs
 
 lazy_static! {
-    static ref IDT: Idt = {
-        let mut idt = Idt::new();
+    static ref IDT: InterruptDescriptorTable = {
+        let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         unsafe {
             idt.double_fault.set_handler_fn(double_fault_handler)
@@ -404,9 +404,9 @@ That's it! Now the CPU should switch to the double fault stack whenever a double
 
 From now on we should never see a triple fault again!
 
-To ensure that we don't accidentally break the above, we should add a integration test for this. We don't show the code here for space reasons, but you can find it [in this gist][stack overflow test]. The idea is to do a `serial_println!("ok");` from the double fault handler to ensure that it is called. The rest of the file is is very similar to our `main.rs`.
+To ensure that we don't accidentally break the above, we should add a integration test for this. We don't show the code here for space reasons, but you can find it [on Github][stack overflow test]. The idea is to do a `serial_println!("ok");` from the double fault handler to ensure that it is called. The rest of the file is is very similar to our `main.rs`.
 
-[stack overflow test]: https://gist.github.com/phil-opp/9600f367f10615219f3f22110a9a92eb
+[stack overflow test]: https://github.com/phil-opp/blog_os/blob/master/src/bin/test-exception-double-fault-stack-overflow.rs
 
 ## Summary
 In this post we learned what a double fault is and under which conditions it occurs. We added a basic double fault handler that prints an error message and added an integration test for it.
