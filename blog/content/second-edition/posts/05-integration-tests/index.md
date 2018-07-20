@@ -585,17 +585,14 @@ The `test-basic-boot` and `test-panic` tests we created above begin with `test-`
 > bootimage test
 test-panic
     Finished dev [unoptimized + debuginfo] target(s) in 0.01s
-    Updating registry `https://github.com/rust-lang/crates.io-index`
 Ok
 
 test-basic-boot
     Finished dev [unoptimized + debuginfo] target(s) in 0.01s
-    Updating registry `https://github.com/rust-lang/crates.io-index`
 Ok
 
 test-something
     Finished dev [unoptimized + debuginfo] target(s) in 0.01s
-    Updating registry `https://github.com/rust-lang/crates.io-index`
 Timed Out
 
 The following tests failed:
