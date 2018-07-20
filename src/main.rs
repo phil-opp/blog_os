@@ -9,6 +9,7 @@ extern crate blog_os;
 extern crate x86_64;
 #[macro_use]
 extern crate lazy_static;
+extern crate bootloader_precompiled;
 
 use core::panic::PanicInfo;
 
