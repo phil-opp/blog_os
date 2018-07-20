@@ -1,5 +1,6 @@
 #![no_std] // don't link the Rust standard library
 
+extern crate bootloader_precompiled;
 extern crate spin;
 extern crate volatile;
 #[macro_use]

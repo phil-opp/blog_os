@@ -319,13 +319,42 @@ Now that we have an executable that does something perceptible, it is time to tu
 
 [section about booting]: #the-boot-process
 
-To make things easy, we created a tool named `bootimage` that automatically downloads a bootloader and combines it with the kernel executable to create a bootable disk image. To install it, execute the following command in your terminal:
+To add a bootloader to our kernel we add a dependency on the [`bootloader_precompiled`] crate:
+
+[`bootloader_precompiled`]: https://crates.io/crates/bootloader_precompiled
+
+```toml
+# in Cargo.toml
+
+[dependencies]
+bootloader_precompiled = "0.2.0"
+```
+
+```rust
+// in main.rs
+
+extern crate bootloader_precompiled;
+```
+
+This crate is a precompiled version of the [`bootloader`] crate, an experimental bootloader written in Rust and assembly. We use the precompiled version because the bootloader has some linking issues on platforms other than Linux. We try our best to solve these issues and will update the post as soon as it works on all platforms.
+
+[`bootloader`]: https://crates.io/crates/bootloader
+
+Regardless of whether precompiled or not, adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to combine the bootloader with the kernel after it has been compiled, but cargo has no support for additional build steps after successful compilation (see [this issue][post-build script] for more information).
+
+[post-build script]: https://github.com/rust-lang/cargo/issues/545
+
+To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then combines them to create a bootable disk image. To install the tool, execute the following command in your terminal:
 
 ```
-cargo install bootimage --version 0.4.0
+cargo install bootimage --version "^0.5.0"
 ```
 
-After installing, creating a bootimage is as easy as executing:
+The `^0.5.0` is a so-called [_caret requirement_], which means "version `0.5.0` or a later compatible version". So if we find a bug and publish version `0.5.1` or `0.5.2`, cargo would automatically use the latest version, as long as it is still a version `0.5.x`. However, it wouldn't choose version `0.6.0`, because it is not considered as compatible. Note that dependencies in your `Cargo.toml` are caret requirements by default, so the same rules are applied to our bootloader dependency.
+
+[_caret requirement_]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#caret-requirements
+
+After installing the `bootimage` tool, creating a bootable disk image is as easy as executing:
 
 ```
 > bootimage build --target x86_64-blog_os.json
@@ -339,8 +368,8 @@ After executing the command, you should see a file named `bootimage.bin` in your
 The `bootimage` tool performs the following steps behind the scenes:
 
 - It compiles our kernel to an [ELF] file.
-- It downloads a pre-compiled bootloader release from [rust-osdev/bootloader]. The file is already a bootable image that only requires that a kernel is appended.
-- It appends the bytes of the kernel ELF file to the bootloader (without any modifications).
+- It compiles the bootloader dependency as a standalone executable.
+- It appends the bytes of the kernel ELF file to the bootloader.
 
 [ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 [rust-osdev/bootloader]: https://github.com/rust-osdev/bootloader
