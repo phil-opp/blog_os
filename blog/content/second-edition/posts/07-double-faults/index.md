@@ -37,7 +37,7 @@ pub extern "C" fn _start() -> ! {
 
     // trigger a page fault
     unsafe {
-        *(0xdeadbeaf as *mut u64) = 42;
+        *(0xdeadbeef as *mut u64) = 42;
     };
 
     println!("It did not crash!");
@@ -45,11 +45,11 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-We use `unsafe` to write to the invalid address `0xdeadbeaf`. The virtual address is not mapped to a physical address in the page tables, so a page fault occurs. We haven't registered a page fault handler in our [IDT], so a double fault occurs.
+We use `unsafe` to write to the invalid address `0xdeadbeef`. The virtual address is not mapped to a physical address in the page tables, so a page fault occurs. We haven't registered a page fault handler in our [IDT], so a double fault occurs.
 
 When we start our kernel now, we see that it enters an endless boot loop. The reason for the boot loop is the following:
 
-1. The CPU tries to write to `0xdeadbeaf`, which causes a page fault.
+1. The CPU tries to write to `0xdeadbeef`, which causes a page fault.
 2. The CPU looks at the corresponding entry in the IDT and sees that the present bit isn't set. Thus, it can't call the page fault handler and a double fault occurs.
 3. The CPU looks at the IDT entry of the double fault handler, but this entry is also non-present. Thus, a _triple_ fault occurs.
 4. A triple fault is fatal. QEMU reacts to it like most real hardware and issues a system reset.
@@ -88,7 +88,7 @@ When we start our kernel now, we should see that the double fault handler is inv
 
 It worked! Here is what happens this time:
 
-1. The CPU executes tries to write to `0xdeadbeaf`, which causes a page fault.
+1. The CPU executes tries to write to `0xdeadbeef`, which causes a page fault.
 2. Like before, the CPU looks at the corresponding entry in the IDT and sees that the present bit isn't set. Thus, a double fault occurs.
 3. The CPU jumps to the – now present – double fault handler.
 
