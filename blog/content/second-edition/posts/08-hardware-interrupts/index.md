@@ -6,7 +6,7 @@ date = 2018-07-26
 template = "second-edition/page.html"
 +++
 
-In this post we set up the programmable interrupt controller to correctly forward hardware interrupts to the CPU. To handle these interrups we add new entries to our interrupt descriptor table, just like we did for our exception handlers. We will learn how to get periodic timer interrupts and how to get input from the keyboard.
+In this post we set up the programmable interrupt controller to correctly forward hardware interrupts to the CPU. This allows us to create handler functions for these, which work in almost the same way as our exception handlers. We will then learn how to configure a hardware timer so that we get periodic interrupts and also how to add keyboard support.
 
 <!-- more -->
 
@@ -26,7 +26,7 @@ Connecting all hardware devices directly to the CPU is not possible. Instead, a 
 ```
                                     ____________             _____
                Timer ------------> |            |           |     |
-               Keyboard ---------> | Interrupt  |---------> | CPU |
+               Keyboard ---------> | Interrupt  | --------> | CPU |
                Other Hardware ---> | Controller |           |_____|
                Etc. -------------> |____________|
 
@@ -42,7 +42,7 @@ The [Intel 8259] is a programmable interrupt controller (PIC) introduced in 1976
 
 [APIC]: https://en.wikipedia.org/wiki/Intel_APIC_Architecture
 
-The 8259 has 8 interrupt lines and several lines for communicating with the CPU. The typical systems back then where equipped with two instances of the 8259 PIC, one primary and one secondary PIC connected to one of the interrupt lines of the primary:
+The 8259 has 8 interrupt lines and several lines for communicating with the CPU. The typical systems back then where equipped with two instances of the 8259 PIC, one acting as master and the other as slave connected to one of the masters interrupt lines:
 
 [Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259
 
@@ -50,8 +50,8 @@ The 8259 has 8 interrupt lines and several lines for communicating with the CPU.
                      ____________                          ____________
 Real Time Clock --> |            |   Timer -------------> |            |
 ACPI -------------> |            |   Keyboard-----------> |            |      _____
-Available --------> | Secondary  |----------------------> | Primary    |     |     |
-Available --------> | Interrupt  |   Serial Port 2 -----> | Interrupt  |---> | CPU |
+Available --------> | Slave      |----------------------> | Master     |     |     |
+Available --------> | Interrupt  |   Serial Port 2 -----> | Interrupt  | --> | CPU |
 Mouse ------------> | Controller |   Serial Port 1 -----> | Controller |     |_____|
 Co-Processor -----> |            |   Parallel Port 2/3 -> |            |
 Primary ATA ------> |            |   Floppy disk -------> |            |
