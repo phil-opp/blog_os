@@ -6,7 +6,7 @@ date  = 2018-02-26
 template = "second-edition/page.html"
 +++
 
-The [VGA text mode] is a simple way to print text to the screen. In this post, we create an interface that makes its usage safe and simple, by encapsulating all unsafety in a separate module and providing support for Rust's [formatting macros].
+The [VGA text mode] is a simple way to print text to the screen. In this post, we create an interface that makes its usage safe and simple, by encapsulating all unsafety in a separate module. We also implement support for Rust's [formatting macros].
 
 [VGA text mode]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
 [formatting macros]: https://doc.rust-lang.org/std/fmt/#related-macros

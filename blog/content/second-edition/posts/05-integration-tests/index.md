@@ -6,7 +6,7 @@ date  = 2018-06-15
 template = "second-edition/page.html"
 +++
 
-In this post we complete the testing picture by implementing a basic integration test framework, which allows us to run tests on the target system. The idea is to run tests inside QEMU and report the results back to the host through the serial port.
+To complete the testing picture we implement a basic integration test framework, which allows us to run tests on the target system. The idea is to run tests inside QEMU and report the results back to the host through the serial port.
 
 <!-- more -->
 
