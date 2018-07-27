@@ -26,7 +26,7 @@ Connecting all hardware devices directly to the CPU is not possible. Instead, a 
 ```
                                     ____________             _____
                Timer ------------> |            |           |     |
-               Keyboard ---------> | Interrupt  | --------> | CPU |
+               Keyboard ---------> | Interrupt  |---------> | CPU |
                Other Hardware ---> | Controller |           |_____|
                Etc. -------------> |____________|
 
@@ -50,8 +50,8 @@ The 8259 has 8 interrupt lines and several lines for communicating with the CPU.
                      ____________                          ____________
 Real Time Clock --> |            |   Timer -------------> |            |
 ACPI -------------> |            |   Keyboard-----------> |            |      _____
-Available --------> | Slave      |----------------------> | Master     |     |     |
-Available --------> | Interrupt  |   Serial Port 2 -----> | Interrupt  | --> | CPU |
+Available --------> | Secondary  |----------------------> | Primary    |     |     |
+Available --------> | Interrupt  |   Serial Port 2 -----> | Interrupt  |---> | CPU |
 Mouse ------------> | Controller |   Serial Port 1 -----> | Controller |     |_____|
 Co-Processor -----> |            |   Parallel Port 2/3 -> |            |
 Primary ATA ------> |            |   Floppy disk -------> |            |
