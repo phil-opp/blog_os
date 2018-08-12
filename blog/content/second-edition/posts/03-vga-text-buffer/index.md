@@ -251,8 +251,7 @@ The problem is that we only write to the `Buffer` and never read from it again. 
 
 [volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
 
-In order to use volatile writes for the VGA buffer, we use the [volatile][volatile crate] library. This _crate_ (this is how packages are called in the Rust world) provides a `Volatile` wrapper type with `read` and `write` methods. These methods internally use the [read_volatile] and [write_volatile] functions of the standard library and thus guarantee that the reads/writes are not optimized away.
-
+In order to use volatile writes for the VGA buffer, we use the [volatile][volatile crate] library. This _crate_ (this is how packages are called in the Rust world) provides a `Volatile` wrapper type with `read` and `write` methods. These methods internally use the [read_volatile] and [write_volatile] functions of the standard library and thus guarantee that the reads/writes are not optimized
 [volatile crate]: https://docs.rs/volatile
 [read_volatile]: https://doc.rust-lang.org/nightly/core/ptr/fn.read_volatile.html
 [write_volatile]: https://doc.rust-lang.org/nightly/core/ptr/fn.write_volatile.html
@@ -347,7 +346,7 @@ pub fn print_something() {
     };
 
     writer.write_byte(b'H');
-    writer.write_str("ello! ").unwrap();
+    writer.write_str("ello! ");
     write!(writer, "The numbers are {} and {}", 42, 1.0/3.0).unwrap();
 }
 ```
