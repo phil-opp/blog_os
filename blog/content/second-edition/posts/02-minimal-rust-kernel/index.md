@@ -57,7 +57,7 @@ To avoid that every operating system implements its own bootloader, which is onl
 [Multiboot]: https://wiki.osdev.org/Multiboot
 [GNU GRUB]: https://en.wikipedia.org/wiki/GNU_GRUB
 
-To make a kernel Multiboot compliant, one just needs to insert a so-called [Multiboot header] at the beginning of the kernel file. This makes it very easy to boot an OS in GRUB. However, GRUB and the the Multiboot standard have some problems too:
+To make a kernel Multiboot compliant, one just needs to insert a so-called [Multiboot header] at the beginning of the kernel file. This makes it very easy to boot an OS in GRUB. However, GRUB and the Multiboot standard have some problems too:
 
 [Multiboot header]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
 
