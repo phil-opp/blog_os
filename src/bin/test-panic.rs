@@ -1,4 +1,3 @@
-#![feature(panic_implementation)]
 #![no_std]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
@@ -16,7 +15,7 @@ pub extern "C" fn _start() -> ! {
 }
 
 #[cfg(not(test))]
-#[panic_implementation]
+#[panic_handler]
 #[no_mangle]
 pub fn panic(_info: &PanicInfo) -> ! {
     serial_println!("ok");
