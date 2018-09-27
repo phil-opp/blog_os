@@ -144,7 +144,7 @@ The `panic_impl` language item defines the function that the compiler should inv
 use core::panic::PanicInfo;
 
 /// This function is called on panic.
-#[panic_implementation]
+#[panic_handler]
 #[no_mangle]
 pub fn panic(_info: &PanicInfo) -> ! {
     loop {}
@@ -196,14 +196,13 @@ Our freestanding executable does not have access to the Rust runtime and `crt0`,
 To tell the Rust compiler that we don't want to use the normal entry point chain, we add the `#![no_main]` attribute.
 
 ```rust
-#![feature(panic_implementation)]
 #![no_std]
 #![no_main]
 
 use core::panic::PanicInfo;
 
 /// This function is called on panic.
-#[panic_implementation]
+#[panic_handler]
 #[no_mangle]
 pub fn panic(_info: &PanicInfo) -> ! {
     loop {}
@@ -311,14 +310,13 @@ A minimal freestanding Rust binary looks like this:
 `src/main.rs`:
 
 ```rust
-#![feature(panic_implementation)] // required for defining the panic handler
 #![no_std] // don't link the Rust standard library
 #![no_main] // disable all Rust-level entry points
 
 use core::panic::PanicInfo;
 
 /// This function is called on panic.
-#[panic_implementation]
+#[panic_handler]
 #[no_mangle]
 pub fn panic(_info: &PanicInfo) -> ! {
     loop {}
