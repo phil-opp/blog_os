@@ -134,9 +134,11 @@ This sets the panic strategy to `abort` for both the `dev` profile (used for `ca
 
 ### Panic Implementation
 
-The `panic_impl` language item defines the function that the compiler should invoke when a [panic] occurs. Instead of providing the language item directly, we can use the [`panic_implementation`] attribute to create a `panic` function:
+The `panic_impl` language item defines the function that the compiler should invoke when a [panic] occurs. Instead of providing the language item directly, we can use the [`panic_handler`] attribute to create a `panic` function. This used to take the for [`panic_implementation`], which has been deprecated and replaced by [`panic_handler`].
 
 [`panic_implementation`]: https://github.com/rust-lang/rfcs/blob/master/text/2070-panic-implementation.md#panic_implementation
+
+Note: [`panic_implementation`] has been deprecated, and we now use [`panic_handler`] instead
 
 ```rust
 // in main.rs
@@ -157,11 +159,11 @@ The [`PanicInfo` parameter][PanicInfo] contains the file and line where the pani
 [diverging function]: https://doc.rust-lang.org/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-When we try `cargo build` now, we get an error that “#[panic_implementation] is an unstable feature”.
+When we try `cargo build` now, we get an error that “#[panic_handler] is an unstable feature”.
 
 #### Enabling Unstable Features
 
-The `panic_implementation` attribute was recently added and is thus still unstable and protected by a so-called _feature gate_. A feature gate is a special attribute that you have to specify at the top of your `main.rs` in order to use the corresponding feature. By doing this you basically say: “I know that this feature is unstable and that it might stop working without any warnings. I want to use it anyway.”
+The `panic_handler` attribute was recently added and is thus still unstable and protected by a so-called _feature gate_. A feature gate is a special attribute that you have to specify at the top of your `main.rs` in order to use the corresponding feature. By doing this you basically say: “I know that this feature is unstable and that it might stop working without any warnings. I want to use it anyway.”
 
 Feature gates are not available in the stable or beta Rust compilers, only [nightly Rust] makes it possible to opt-in. This means that you have to use a nightly compiler for OS development for the near future (until all unstable features that we need are added are stabilized).
 
@@ -170,8 +172,6 @@ Feature gates are not available in the stable or beta Rust compilers, only [nigh
 To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory.
 
 [rustup]: https://www.rustup.rs/
-
-After installing a nightly Rust compiler, you can enable the unstable `panic_implementation` feature by inserting `#![feature(panic_implementation)]` right at the top of `main.rs`.
 
 Now we fixed both language item errors. However, if we try to compile it now, another language item is required:
 
