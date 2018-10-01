@@ -344,8 +344,7 @@ pub extern "C" fn _start() -> ! {
 
 #[cfg(not(test))]
 #[panic_handle]
-#[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 ```
@@ -424,8 +423,7 @@ pub extern "C" fn _start() -> ! {
 /// This function is called on panic.
 #[cfg(not(test))]
 #[panic_handler]
-#[no_mangle]
-pub fn panic(info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     loop {}
 }
@@ -488,8 +486,7 @@ pub extern "C" fn _start() -> ! {
 /// This function is called on panic.
 #[cfg(not(test))]
 #[panic_handler]
-#[no_mangle]
-pub fn panic(info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
     serial_println!("failed");
 
     serial_println!("{}", info);
@@ -546,8 +543,7 @@ pub extern "C" fn _start() -> ! {
 
 #[cfg(not(test))]
 #[panic_handler]
-#[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+fn panic(_info: &PanicInfo) -> ! {
     serial_println!("ok");
 
     unsafe { exit_qemu(); }
