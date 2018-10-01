@@ -134,11 +134,7 @@ This sets the panic strategy to `abort` for both the `dev` profile (used for `ca
 
 ### Panic Implementation
 
-The `panic_impl` language item defines the function that the compiler should invoke when a [panic] occurs. Instead of providing the language item directly, we can use the [`panic_handler`] attribute to create a `panic` function. This used to take the for [`panic_implementation`], which has been deprecated and replaced by [`panic_handler`].
-
-[`panic_implementation`]: https://github.com/rust-lang/rfcs/blob/master/text/2070-panic-implementation.md#panic_implementation
-
-Note: [`panic_implementation`] has been deprecated, and we now use [`panic_handler`] instead
+The `panic_impl` language item defines the function that the compiler should invoke when a [panic] occurs. Instead of providing the language item directly, we can use the [`panic_handler`] attribute to create a `panic` function.
 
 ```rust
 // in main.rs
