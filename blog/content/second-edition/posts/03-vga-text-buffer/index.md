@@ -627,7 +627,7 @@ Now that we have a `println` macro, we can use it in our panic function to print
 // in main.rs
 
 /// This function is called on panic.
-#[panic_implementation]
+#[panic_handler]
 #[no_mangle]
 pub fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);

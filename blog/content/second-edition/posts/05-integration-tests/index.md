@@ -329,7 +329,6 @@ Cargo allows to add [additional executables] to a project by putting them inside
 ```rust
 // src/bin/test-something.rs
 
-#![feature(panic_implementation)]
 #![no_std]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
@@ -344,7 +343,7 @@ pub extern "C" fn _start() -> ! {
 }
 
 #[cfg(not(test))]
-#[panic_implementation]
+#[panic_handle]
 #[no_mangle]
 pub fn panic(_info: &PanicInfo) -> ! {
     loop {}
@@ -402,7 +401,6 @@ pub unsafe fn exit_qemu() {
 ```rust
 // src/main.rs
 
-#![feature(panic_implementation)] // required for defining the panic handler
 #![no_std] // don't link the Rust standard library
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
@@ -425,7 +423,7 @@ pub extern "C" fn _start() -> ! {
 
 /// This function is called on panic.
 #[cfg(not(test))]
-#[panic_implementation]
+#[panic_handler]
 #[no_mangle]
 pub fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
@@ -464,7 +462,6 @@ We are finally able to create our first integration test executable. We start si
 ```rust
 // in src/bin/test-basic-boot.rs
 
-#![feature(panic_implementation)] // required for defining the panic handler
 #![no_std] // don't link the Rust standard library
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
@@ -490,7 +487,7 @@ pub extern "C" fn _start() -> ! {
 
 /// This function is called on panic.
 #[cfg(not(test))]
-#[panic_implementation]
+#[panic_handler]
 #[no_mangle]
 pub fn panic(info: &PanicInfo) -> ! {
     serial_println!("failed");
@@ -531,7 +528,6 @@ To test that our panic handler is really invoked on a panic, we create a `test-p
 ```rust
 // in src/bin/test-panic.rs
 
-#![feature(panic_implementation)]
 #![no_std]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
@@ -549,7 +545,7 @@ pub extern "C" fn _start() -> ! {
 }
 
 #[cfg(not(test))]
-#[panic_implementation]
+#[panic_handler]
 #[no_mangle]
 pub fn panic(_info: &PanicInfo) -> ! {
     serial_println!("ok");
