@@ -143,8 +143,7 @@ use core::panic::PanicInfo;
 
 /// This function is called on panic.
 #[panic_handler]
-#[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 ```
@@ -154,20 +153,6 @@ The [`PanicInfo` parameter][PanicInfo] contains the file and line where the pani
 [PanicInfo]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
 [diverging function]: https://doc.rust-lang.org/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
-
-When we try `cargo build` now, we get an error that “#[panic_handler] is an unstable feature”.
-
-#### Enabling Unstable Features
-
-The `panic_handler` attribute was recently added and is thus still unstable and protected by a so-called _feature gate_. A feature gate is a special attribute that you have to specify at the top of your `main.rs` in order to use the corresponding feature. By doing this you basically say: “I know that this feature is unstable and that it might stop working without any warnings. I want to use it anyway.”
-
-Feature gates are not available in the stable or beta Rust compilers, only [nightly Rust] makes it possible to opt-in. This means that you have to use a nightly compiler for OS development for the near future (until all unstable features that we need are added are stabilized).
-
-[nightly Rust]: https://doc.rust-lang.org/book/first-edition/release-channels.html
-
-To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory.
-
-[rustup]: https://www.rustup.rs/
 
 Now we fixed both language item errors. However, if we try to compile it now, another language item is required:
 
@@ -199,8 +184,7 @@ use core::panic::PanicInfo;
 
 /// This function is called on panic.
 #[panic_handler]
-#[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 ```
@@ -313,8 +297,7 @@ use core::panic::PanicInfo;
 
 /// This function is called on panic.
 #[panic_handler]
-#[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 

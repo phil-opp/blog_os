@@ -28,7 +28,7 @@ Unfortunately it's a bit more complicated for `no_std` applications such as our 
 error[E0152]: duplicate lang item found: `panic_impl`.
   --> src/main.rs:35:1
    |
-35 | / pub fn panic(info: &PanicInfo) -> ! {
+35 | / fn panic(info: &PanicInfo) -> ! {
 36 | |     println!("{}", info);
 37 | |     loop {}
 38 | | }
@@ -49,8 +49,7 @@ use core::panic::PanicInfo;
 
 #[cfg(not(test))] // only compile when the test flag is not set
 #[panic_handler]
-#[no_mangle]
-pub fn panic(info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     loop {}
 }

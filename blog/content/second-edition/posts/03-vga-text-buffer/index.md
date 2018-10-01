@@ -628,8 +628,7 @@ Now that we have a `println` macro, we can use it in our panic function to print
 
 /// This function is called on panic.
 #[panic_handler]
-#[no_mangle]
-pub fn panic(info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     loop {}
 }
