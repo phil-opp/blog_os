@@ -295,3 +295,12 @@ form.subscribe input[type=submit] {
   padding: .25rem .5rem;
   cursor: pointer;
 }
+
+/* Asides */
+aside.post_aside {
+  font-style: italic;
+  padding: 0rem 1rem 0rem;
+  margin: .8rem 0;
+  border-left: .1rem solid #e5e5e5;
+  border-right: .1rem solid #e5e5e5;
+}
