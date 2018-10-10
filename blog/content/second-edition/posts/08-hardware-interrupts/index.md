@@ -42,7 +42,7 @@ The [Intel 8259] is a programmable interrupt controller (PIC) introduced in 1976
 
 [APIC]: https://en.wikipedia.org/wiki/Intel_APIC_Architecture
 
-The 8259 has 8 interrupt lines and several lines for communicating with the CPU. The typical systems back then where equipped with two instances of the 8259 PIC, one acting as master and the other as slave connected to one of the masters interrupt lines:
+The 8259 has 8 interrupt lines and several lines for communicating with the CPU. The typical systems back then where equipped with two instances of the 8259 PIC, one primary and one secondary PIC connected to one of the interrupt lines of the primary:
 
 [Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259
 
@@ -50,7 +50,7 @@ The 8259 has 8 interrupt lines and several lines for communicating with the CPU.
                      ____________                          ____________
 Real Time Clock --> |            |   Timer -------------> |            |
 ACPI -------------> |            |   Keyboard-----------> |            |      _____
-Available --------> | Slave      |----------------------> | Master     |     |     |
+Available --------> | Secondary  |----------------------> | Primary    |     |     |
 Available --------> | Interrupt  |   Serial Port 2 -----> | Interrupt  |---> | CPU |
 Mouse ------------> | Controller |   Serial Port 1 -----> | Controller |     |_____|
 Co-Processor -----> |            |   Parallel Port 2/3 -> |            |
@@ -59,9 +59,9 @@ Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
 
 ```
 
-This graphic shows the typical assignment of interrupt lines. We see that most of the 15 lines have a fixed mapping, e.g. line 4 of the slave PIC is assigned to the mouse.
+This graphic shows the typical assignment of interrupt lines. We see that most of the 15 lines have a fixed mapping, e.g. line 4 of the secondary PIC is assigned to the mouse.
 
-Each controller can be configured through two [I/O ports], one “command” port and one “data” port. For the master controller these ports are `0x20` (command) and `0x21` (data). For the slave they are `0xa0` (command) and `0xa1` (data). For more information on how the PICs can be configured see the [article on osdev.org].
+Each controller can be configured through two [I/O ports], one “command” port and one “data” port. For the primary controller these ports are `0x20` (command) and `0x21` (data). For the secondary controller they are `0xa0` (command) and `0xa1` (data). For more information on how the PICs can be configured see the [article on osdev.org].
 
 [I/O ports]: ./second-edition/posts/05-integration-tests/index.md#port-i-o
 [article on osdev.org]: https://wiki.osdev.org/8259_PIC
@@ -91,7 +91,7 @@ pic8259_simple = "0.1.1"
 extern crate pic8259_simple;
 ```
 
-The main abstraction provided by the crate is the [`ChainedPics`] struct that represents the master/slave PIC layout we saw above. It is designed to be used in the following way:
+The main abstraction provided by the crate is the [`ChainedPics`] struct that represents the primary/secondary PIC layout we saw above. It is designed to be used in the following way:
 
 [`ChainedPics`]: https://docs.rs/pic8259_simple/0.1.1/pic8259_simple/struct.ChainedPics.html
 
@@ -173,7 +173,7 @@ The reason for this double fault is that the hardware timer (the [Intel 8253] to
 
 ## Handling Timer Interrupts
 
-As we see from the graphic [above](#the-8259-pic), the timer uses line 0 of the master PIC. This means that it arrives at the CPU as interrupt 32 (0 + offset 32). Therefore we need to add a handler for interrupt 32 if we want to handle the timer interrupt:
+As we see from the graphic [above](#the-8259-pic), the timer uses line 0 of the primary PIC. This means that it arrives at the CPU as interrupt 32 (0 + offset 32). Therefore we need to add a handler for interrupt 32 if we want to handle the timer interrupt:
 
 ```rust
 // in src/interrupts.rs
