@@ -227,10 +227,204 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 }
 ```
 
-The `notify_end_of_interrupt` figures out wether the master or slave PIC sent the interrupt and then uses the `command` and `data` ports to send an EOI signal to respective controllers. If the slave PIC sent the interrupt both PICs need to be notified because the slave PIC is connected to an input line of the master PIC.
+The `notify_end_of_interrupt` figures out wether the primary or secondary PIC sent the interrupt and then uses the `command` and `data` ports to send an EOI signal to respective controllers. If the secondary PIC sent the interrupt both PICs need to be notified because the secondary PIC is connected to an input line of the primary PIC.
 
 We need to be careful to use the correct interrupt vector number, otherwise we could accidentally delete an important unsent interrupt or cause our system to hang. This is the reason that the function is unsafe.
 
 When we now execute `bootimage run` we see dots periodically appearing on the screen:
 
 TODO screenshot gif
+
+### Configuring The Timer
+
+The hardware timer that we use is called the _Progammable Interval Timer_ or PIT for short. Like the name says, it is possible to configure the interval between two interrupts. We won't go into details here because we will switch to the [APIC timer] soon, but the OSDev wiki has an extensive article about the [configuring the PIT].
+
+[APIC timer]: https://wiki.osdev.org/APIC_timer
+[configuring the PIT]: https://wiki.osdev.org/Programmable_Interval_Timer
+
+## The `hlt` Instruction
+
+Until now we used a simple empty loop statement at the end of our `_start` and `panic` functions. This causes the CPU to spin endlessly and thus works as expected. But it is also very inefficient, because the CPU continues to run at full speed even though there's no work to do. You can see this problem in your task manager when you run your kernel: The QEMU process needs close to 100% CPU the whole time.
+
+What we really want to do is to halt the CPU until the next interrupt arrives. This allows the CPU to enter a sleep state in which it consumes much less energy. The [`hlt` instruction] does exactly that. Let's use this instruction to create an energy efficient endless loop:
+
+[`hlt` instruction]: https://en.wikipedia.org/wiki/HLT_(x86_instruction)
+
+```rust
+// in src/lib.rs
+
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
+}
+```
+
+The `instructions::hlt` function is just a [thin wrapper] around the assembly instruction. It is safe because there's no way it can compromise memory safety.
+
+[thin wrapper]: https://github.com/rust-osdev/x86_64/blob/5e8e218381c5205f5777cb50da3ecac5d7e3b1ab/src/instructions/mod.rs#L16-L22
+
+We can now use this `hlt_loop` instead of the endless loops in our `_start` and `panic` functions:
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    […]
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();            // new
+}
+
+
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
+    blog_os::hlt_loop();            // new
+}
+
+```
+
+When we run our kernel now in QEMU, we see a much lower CPU usage.
+
+## Keyboard Input
+
+Now that we are able to handle interrupts from external devices we are finally able to add support for keyboard input. This will allow us to interact with our kernel for the first time.
+
+<aside class="post_aside">
+
+Note that we only describe how to handle [PS/2] keyboards here, not USB keyboards. However the mainboard emulates USB keyboards as PS/2 devices to support older software, so we can safely ignore USB keyboards until we have USB support in our kernel.
+
+</aside>
+
+[PS/2]: https://en.wikipedia.org/wiki/PS/2_port
+
+Like the hardware timer, the keyboard controller is already enabled by default. So when you press a key the keyboard controller sends an interrupt to the PIC, which forwards it to the CPU. The CPU looks for a handler function in the IDT, but the corresponding entry is empty. Therefore a double fault occurs.
+
+So let's add a handler function for the keyboard interrupt. It's quite similar to how we defined the handler for the timer interrupt, it just uses a different interrupt number:
+
+```rust
+// in src/interrupts.rs
+
+pub const KEYBOARD_INTERRUPT_ID: u8 = PIC_1_OFFSET + 1; // new
+
+// in src/main.rs
+
+lazy_static! {
+    static ref IDT: InterruptDescriptorTable = {
+        let mut idt = InterruptDescriptorTable::new();
+        idt.breakpoint.set_handler_fn(breakpoint_handler);
+        […]
+        // new
+        let keyboard_interrupt_id = usize::from(interrupts::KEYBOARD_INTERRUPT_ID);
+        idt[keyboard_interrupt_id].set_handler_fn(keyboard_interrupt_handler);
+
+        idt
+    };
+}
+
+extern "x86-interrupt" fn keyboard_interrupt_handler(
+    _stack_frame: &mut ExceptionStackFrame)
+{
+    print!("k");
+    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+}
+```
+
+As we see from the graphic [above](#the-8259-pic), the keyboard uses line 1 of the primary PIC. This means that it arrives at the CPU as interrupt 33 (1 + offset 32). We again create a `KEYBOARD_INTERRUPT_ID` constant to keep things organized. In the interrupt handler, we print a `k` and send the end of interrupt signal to the interrupt controller.
+
+We now see that a `k` appears whenever we press or release a key. The keyboard controller generates continuous interrupts if the key is hold down, so we see a series of `k`s on the screen.
+
+### Reading the Scancodes
+
+To find out _which_ key was pressed, we need to query the keyboard controller. We do this by reading from the from the data port of the PS/2 controller, which is the [I/O port] with number `0x60`:
+
+[I/O port]: ./second-edition/posts/05-integration-tests/index.md#port-i-o
+
+```rust
+// in src/main.rs
+
+extern "x86-interrupt" fn keyboard_interrupt_handler(
+    _stack_frame: &mut ExceptionStackFrame)
+{
+    use x86_64::instructions::port::Port;
+
+    let port = Port::new(0x60);
+    let scancode: u8 = unsafe { port.read() };
+    print!("{}", scancode);
+    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+}
+```
+
+We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard's data port. This byte is called the [_scancode_] and is a number that represents the key press/release. We don't do anything with the scancode yet, we just print it to the screen:
+
+[`Port`]: https://docs.rs/x86_64/0.2.11/x86_64/instructions/port/struct.Port.html
+[_scancode_]: https://en.wikipedia.org/wiki/Scancode
+
+TODO image/gif
+
+The above image shows me slowly typing "123". We see that adjacent keys have adjacent scancodes and that pressing a key causes a different scancode than releasing it. But how do we translate the scancodes to the actual key actions exactly?
+
+### Interpreting the Scancodes
+There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. All three sets go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. Later computers fortunatly did not continue the trend of defining new scancodes, but rather emulated the existing scancode sets and extending them. Today most keyboards can be configured to emulate any of the three sets.
+
+[IBM XT]: https://en.wikipedia.org/wiki/IBM_Personal_Computer_XT
+[IBM 3270 PC]: https://en.wikipedia.org/wiki/IBM_3270_PC
+[IBM AT]: https://en.wikipedia.org/wiki/IBM_Personal_Computer/AT
+
+By default, PS/2 keyboards emulate scancode set 1 ("XT"). In this set, the lower 7 bits of a scancode byte define the key, and the most significant bit defines whether it's a press ("0") or an release ("1"). Keys that were not present on the original [IBM XT] keyboard, such as the enter key on the keypad, generate two scancodes in succession: a `0xe0` escape byte and then a byte representing the key. For a list of all the set 1 scancodes and their corresponding keys, check out the [OSDev Wiki][scancode set 1].
+
+[scancode set 1]: https://wiki.osdev.org/Keyboard#Scan_Code_Set_1
+
+To translate the scancodes to keys, we can use a match statement:
+
+```rust
+// in src/main.rs
+
+extern "x86-interrupt" fn keyboard_interrupt_handler(
+    _stack_frame: &mut ExceptionStackFrame)
+{
+    use x86_64::instructions::port::Port;
+
+    let port = Port::new(0x60);
+    let scancode: u8 = unsafe { port.read() };
+
+    // new
+    let key = match scancode {
+        0x02 => Some('1'),
+        0x03 => Some('2'),
+        0x04 => Some('3'),
+        0x05 => Some('4'),
+        0x06 => Some('5'),
+        0x07 => Some('6'),
+        0x08 => Some('7'),
+        0x09 => Some('8'),
+        0x0a => Some('9'),
+        0x0b => Some('0'),
+        _ => None,
+    };
+    if let Some(key) = key {
+        print!("{}", key);
+    }
+    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+}
+```
+
+The above code just translates the numbers 0-9 and ignores all other keys. Now we can write numbers:
+
+TODO image
+
+Translating the other keys could work in the same way, probably with an enum for control keys such as escape or backspace. Such a translation function would be a good candidate for a small external crate, but I couldn't find one that works with scancode set 1. In case you'd like to write such a crate and need mentoring, just let us know, we're happy to help!
+
+## Summary
+
+In this post we learned how to enable and handle external interrupts. We learned about the 8259 PIC and its primary/secondary layout, the remapping of the interrupt numbers, and the "end of interrupt" signal. We saw that the hardware timer and the keyboard controller are active by default and start to send interrupts as soon as we enable them in the CPU. We learned about the `hlt` instruction, which halts the CPU until the next interrupt, and about the scancode sets of PS/2 keyboards.
+
+Now we are able to interact with our kernel and have some fundamential building blocks for creating a small shell or simple games.
+
+## What's next?
+
+As already mentioned, the 8259 APIC has been superseded by the [APIC], a controller with more capabilities and multicore support. In the next post we will explore this controller and learn how to use its integrated timer and interrupt priorities.
