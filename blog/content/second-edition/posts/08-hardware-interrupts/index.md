@@ -6,7 +6,7 @@ date = 2018-07-26
 template = "second-edition/page.html"
 +++
 
-In this post we set up the programmable interrupt controller to correctly forward hardware interrupts to the CPU. This allows us to create handler functions for these, which work in almost the same way as our exception handlers. We will then learn how to configure a hardware timer so that we get periodic interrupts and also how to add keyboard support.
+In this post we set up the programmable interrupt controller to correctly forward hardware interrupts to the CPU. To handle these interrups we add new entries to our interrupt descriptor table, just like we did for our exception handlers. We will learn how to get periodic timer interrupts and how to get input from the keyboard.
 
 <!-- more -->
 
