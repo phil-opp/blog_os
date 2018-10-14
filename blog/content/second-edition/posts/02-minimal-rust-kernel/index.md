@@ -6,7 +6,7 @@ date = 2018-02-10
 template = "second-edition/page.html"
 +++
 
-In this post we create a minimal 64-bit Rust kernel for the x86 architecture. We built upon the [freestanding Rust binary] from the previous post to create a bootable disk image, that prints something to the screen.
+In this post we create a minimal 64-bit Rust kernel for the x86 architecture. We build upon the [freestanding Rust binary] from the previous post to create a bootable disk image, that prints something to the screen.
 
 [freestanding Rust binary]: ./second-edition/posts/01-freestanding-rust-binary/index.md
 
