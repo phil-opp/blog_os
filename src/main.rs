@@ -9,8 +9,8 @@ extern crate x86_64;
 #[macro_use]
 extern crate lazy_static;
 
-use core::panic::PanicInfo;
 use blog_os::interrupts::{self, PICS};
+use core::panic::PanicInfo;
 
 /// This function is the entry point, since the linker looks for a function
 /// named `_start` by default.
@@ -25,7 +25,7 @@ pub extern "C" fn _start() -> ! {
     x86_64::instructions::interrupts::enable();
 
     println!("It did not crash!");
-    loop {}
+    blog_os::hlt_loop();
 }
 
 /// This function is called on panic.
@@ -33,7 +33,7 @@ pub extern "C" fn _start() -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    blog_os::hlt_loop();
 }
 
 use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
@@ -50,6 +50,8 @@ lazy_static! {
 
         let timer_interrupt_id = usize::from(interrupts::TIMER_INTERRUPT_ID);
         idt[timer_interrupt_id].set_handler_fn(timer_interrupt_handler);
+        let keyboard_interrupt_id = usize::from(interrupts::KEYBOARD_INTERRUPT_ID);
+        idt[keyboard_interrupt_id].set_handler_fn(keyboard_interrupt_handler);
 
         idt
     };
@@ -76,5 +78,33 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut ExceptionSt
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(interrupts::TIMER_INTERRUPT_ID)
+    }
+}
+
+extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
+    use x86_64::instructions::port::Port;
+
+    let port = Port::new(0x60);
+    let scancode: u8 = unsafe { port.read() };
+
+    let key = match scancode {
+        0x02 => Some('1'),
+        0x03 => Some('2'),
+        0x04 => Some('3'),
+        0x05 => Some('4'),
+        0x06 => Some('5'),
+        0x07 => Some('6'),
+        0x08 => Some('7'),
+        0x09 => Some('8'),
+        0x0a => Some('9'),
+        0x0b => Some('0'),
+        _ => None,
+    };
+    if let Some(key) = key {
+        print!("{}", key);
+    }
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(interrupts::KEYBOARD_INTERRUPT_ID)
     }
 }

@@ -330,13 +330,13 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: &mut ExceptionStackFrame)
 {
     print!("k");
-    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+    unsafe { PICS.lock().notify_end_of_interrupt(interrupts::KEYBOARD_INTERRUPT_ID) }
 }
 ```
 
 As we see from the graphic [above](#the-8259-pic), the keyboard uses line 1 of the primary PIC. This means that it arrives at the CPU as interrupt 33 (1 + offset 32). We again create a `KEYBOARD_INTERRUPT_ID` constant to keep things organized. In the interrupt handler, we print a `k` and send the end of interrupt signal to the interrupt controller.
 
-We now see that a `k` appears whenever we press or release a key. The keyboard controller generates continuous interrupts if the key is hold down, so we see a series of `k`s on the screen.
+We now see that a `k` appears on the screen when we press a key. However, this only works for the first key we press, even if we continue to press keys no more `k`s appear on the screen. This is because the keyboard won't send another interrupt if we haven't read the pressed from its data port.
 
 ### Reading the Scancodes
 
@@ -355,7 +355,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     let port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
     print!("{}", scancode);
-    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+    unsafe { PICS.lock().notify_end_of_interrupt(interrupts::KEYBOARD_INTERRUPT_ID) }
 }
 ```
 
@@ -364,12 +364,12 @@ We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard'
 [`Port`]: https://docs.rs/x86_64/0.2.11/x86_64/instructions/port/struct.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
 
-TODO image/gif
+![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)
 
 The above image shows me slowly typing "123". We see that adjacent keys have adjacent scancodes and that pressing a key causes a different scancode than releasing it. But how do we translate the scancodes to the actual key actions exactly?
 
 ### Interpreting the Scancodes
-There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. All three sets go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. Later computers fortunatly did not continue the trend of defining new scancodes, but rather emulated the existing scancode sets and extending them. Today most keyboards can be configured to emulate any of the three sets.
+There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. All three sets go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. Later computers fortunately did not continue the trend of defining new scancodes, but rather emulated the existing scancode sets and extending them. Today most keyboards can be configured to emulate any of the three sets.
 
 [IBM XT]: https://en.wikipedia.org/wiki/IBM_Personal_Computer_XT
 [IBM 3270 PC]: https://en.wikipedia.org/wiki/IBM_3270_PC
@@ -409,13 +409,13 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     if let Some(key) = key {
         print!("{}", key);
     }
-    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+    unsafe { PICS.lock().notify_end_of_interrupt(interrupts::KEYBOARD_INTERRUPT_ID) }
 }
 ```
 
 The above code just translates the numbers 0-9 and ignores all other keys. Now we can write numbers:
 
-TODO image
+![QEMU printing numbers to the screen](qemu-printing-numbers.gif)
 
 Translating the other keys could work in the same way, probably with an enum for control keys such as escape or backspace. Such a translation function would be a good candidate for a small external crate, but I couldn't find one that works with scancode set 1. In case you'd like to write such a crate and need mentoring, just let us know, we're happy to help!
 
@@ -423,7 +423,7 @@ Translating the other keys could work in the same way, probably with an enum for
 
 In this post we learned how to enable and handle external interrupts. We learned about the 8259 PIC and its primary/secondary layout, the remapping of the interrupt numbers, and the "end of interrupt" signal. We saw that the hardware timer and the keyboard controller are active by default and start to send interrupts as soon as we enable them in the CPU. We learned about the `hlt` instruction, which halts the CPU until the next interrupt, and about the scancode sets of PS/2 keyboards.
 
-Now we are able to interact with our kernel and have some fundamential building blocks for creating a small shell or simple games.
+Now we are able to interact with our kernel and have some fundamental building blocks for creating a small shell or simple games.
 
 ## What's next?
 
