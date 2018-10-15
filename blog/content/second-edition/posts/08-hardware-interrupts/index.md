@@ -102,7 +102,7 @@ pub mod interrupts;
 
 // in src/interrupts.rs
 
-use pic8259::ChainedPics;
+use pic8259_simple::ChainedPics;
 use spin;
 
 pub const PIC_1_OFFSET: u8 = 32;
@@ -165,7 +165,7 @@ pub extern "C" fn _start() -> ! {
 
 The `interrupts::enable` function of the `x86_64` crate executes the special `sti` instruction (“set interrupts”) to enable external interrupts. When we try `bootimage run` now, we see that a double fault occurs:
 
-TODO screenshot
+![QEMU printing `EXCEPTION: DOUBLE FAULT` because of hardware timer](qemu-hardware-timer-double-fault.png)
 
 The reason for this double fault is that the hardware timer (the [Intel 8253] to be exact) is enabled by default, so we start receiving timer interrupts as soon as we enable interrupts. Since we didn't define a handler function for it yet, our double fault handler is invoked.
 
@@ -208,7 +208,7 @@ We introduce a `TIMER_INTERRUPT_ID` constant to keep things organized. Our `time
 
 In our timer interrupt handler, we print a dot to the screen. As the timer interrupt happens periodically, we would expect to see a dot appearing on each timer tick. However, when we run it we see that only a single dot is printed:
 
-TODO screenshot
+![QEMU printing only a single dot for hardware timer](qemu-single-dot-printed.png)
 
 ### End of Interrupt
 
@@ -233,7 +233,7 @@ We need to be careful to use the correct interrupt vector number, otherwise we c
 
 When we now execute `bootimage run` we see dots periodically appearing on the screen:
 
-TODO screenshot gif
+![QEMU printing consequtive dots showing the hardware timer](qemu-hardware-timer-dots.gif)
 
 ### Configuring The Timer
 

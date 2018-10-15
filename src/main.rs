@@ -22,7 +22,6 @@ pub extern "C" fn _start() -> ! {
 
     blog_os::gdt::init();
     init_idt();
-
     unsafe { PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
 
