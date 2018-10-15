@@ -10,6 +10,7 @@ extern crate x86_64;
 extern crate lazy_static;
 
 use core::panic::PanicInfo;
+use blog_os::interrupts::{self, PICS};
 
 /// This function is the entry point, since the linker looks for a function
 /// named `_start` by default.
@@ -21,12 +22,8 @@ pub extern "C" fn _start() -> ! {
     blog_os::gdt::init();
     init_idt();
 
-    fn stack_overflow() {
-        stack_overflow(); // for each recursion, the return address is pushed
-    }
-
-    // trigger a stack overflow
-    stack_overflow();
+    unsafe { PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();
 
     println!("It did not crash!");
     loop {}
@@ -52,6 +49,9 @@ lazy_static! {
                 .set_stack_index(blog_os::gdt::DOUBLE_FAULT_IST_INDEX);
         }
 
+        let timer_interrupt_id = usize::from(interrupts::TIMER_INTERRUPT_ID);
+        idt[timer_interrupt_id].set_handler_fn(timer_interrupt_handler);
+
         idt
     };
 }
@@ -70,4 +70,12 @@ extern "x86-interrupt" fn double_fault_handler(
 ) {
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
     loop {}
+}
+
+extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
+    print!(".");
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(interrupts::TIMER_INTERRUPT_ID)
+    }
 }
