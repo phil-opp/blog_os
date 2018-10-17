@@ -207,7 +207,11 @@ If you are interested in more details: We also have a series of posts that expla
 Now that we've understood the theory, it's time to handle CPU exceptions in our kernel. We start by creating an `init_idt` function that creates a new `InterruptDescriptorTable`:
 
 ``` rust
-// in src/main.rs
+// in src/lib.rs
+
+pub mod interrupts;
+
+// in src/interrupts.rs
 
 extern crate x86_64;
 use x86_64::structures::idt::InterruptDescriptorTable;
@@ -228,7 +232,7 @@ The breakpoint exception is commonly used in debuggers: When the user sets a bre
 For our use case, we don't need to overwrite any instructions. Instead, we just want to print a message when the breakpoint instruction is executed and then continue the program. So let's create a simple `breakpoint_handler` function and add it to our IDT:
 
 ```rust
-/// in src/main.rs
+// in src/interrupts.rs
 
 use x86_64::structures::idt::{InterruptDescriptorTable, ExceptionStackFrame};
 
@@ -246,7 +250,7 @@ extern "x86-interrupt" fn breakpoint_handler(
 
 Our handler just outputs a message and pretty-prints the exception stack frame.
 
-When we try to compile it, the following error occurs:
+When we try to compile it, the following errors occur:
 
 ```
 error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue #40180)
@@ -260,7 +264,33 @@ error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue
    = help: add #![feature(abi_x86_interrupt)] to the crate attributes to enable
 ```
 
-This error occurs because the `x86-interrupt` calling convention is still unstable. To use it anyway, we have to explicitly enable it by adding `#![feature(abi_x86_interrupt)]` on the top of our `main.rs`.
+This error occurs because the `x86-interrupt` calling convention is still unstable. To use it anyway, we have to explicitly enable it by adding `#![feature(abi_x86_interrupt)]` on the top of our `lib.rs`.
+
+```
+error: cannot find macro `println!` in this scope
+  --> src/interrupts.rs:40:5
+   |
+40 |     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+   |     ^^^^^^^
+   |
+   = help: have you added the `#[macro_use]` on the module/import?
+```
+
+And this error occurs because the `print!` and `println!` macros we created in the `vga_buffer` _must be defined_ before we use them. This is one case where import order matters in Rust. We can easily fix this by ensuring the order of our imports places the macros first:
+
+```rust
+// in src/lib.rs
+
+#[macro_use]
+pub mod vga_buffer; // import this before other modules so its macros may be used
+pub mod gdt;
+pub mod interrupts;
+pub mod serial;
+```
+
+Now we can use our `print!` and `println!` macros in `interrupts.rs`. If you'd like to know more about the ins and outs of macros and how they differ from functions [you can find more information here](in-depth-rust-macros).
+
+[in-depth-rust-macros]: https://doc.rust-lang.org/book/second-edition/appendix-04-macros.html
 
 ### Loading the IDT
 In order that the CPU uses our new interrupt descriptor table, we need to load it using the [`lidt`] instruction. The `InterruptDescriptorTable` struct of the `x86_64` provides a [`load`][InterruptDescriptorTable::load] method function for that. Let's try to use it:
@@ -269,7 +299,7 @@ In order that the CPU uses our new interrupt descriptor table, we need to load i
 [InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.2.8/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
 
 ```rust
-// in src/main.rs
+// in src/interrupts.rs
 
 pub fn init_idt() {
     let mut idt = InterruptDescriptorTable::new();
@@ -339,10 +369,7 @@ We already imported the `lazy_static` crate when we [created an abstraction for 
 [vga text buffer lazy static]: ./second-edition/posts/03-vga-text-buffer/index.md#lazy-statics
 
 ```rust
-// in src/main.rs
-
-#[macro_use]
-extern crate lazy_static;
+// in src/interrupts.rs
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -370,7 +397,7 @@ Now we should be able to handle breakpoint exceptions! Let's try it in our `_sta
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    init_idt();
+    blog_os::interrupts::init_idt();
 
     // invoke a breakpoint exception
     x86_64::instructions::int3();
@@ -403,7 +430,7 @@ static BREAKPOINT_HANDLER_CALLED: AtomicUsize = AtomicUsize::new(0);
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    init_idt();
+    blog_os::interrupts::init_idt();
 
     // invoke a breakpoint exception
     x86_64::instructions::int3();
