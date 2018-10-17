@@ -17,7 +17,7 @@ This blog is openly developed on [Github]. If you have any problems or questions
 
 ## Overview
 
-Interrupts provide a way to notify the CPU from attached hardware devices. So instead of letting the kernel periodically check the keyboard for new characters (a process called [_polling_]), the keyboard can notify the kernel of each keypress. This is much more efficient because the kernel only needs to act when something happened. It also allows faster reaction times, because the kernel can react immediately and not only at the next poll.
+Interrupts provide a way to notify the CPU from attached hardware devices. So instead of letting the kernel periodically check the keyboard for new characters (a process called [_polling_]), the keyboard can notify the kernel of each keypress. This is much more efficient because the kernel only needs to act when something happened. It also allows faster reaction times, since the kernel can react immediately and not only at the next poll.
 
 [_polling_]: https://en.wikipedia.org/wiki/Polling_(computer_science)
 
@@ -336,7 +336,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 As we see from the graphic [above](#the-8259-pic), the keyboard uses line 1 of the primary PIC. This means that it arrives at the CPU as interrupt 33 (1 + offset 32). We again create a `KEYBOARD_INTERRUPT_ID` constant to keep things organized. In the interrupt handler, we print a `k` and send the end of interrupt signal to the interrupt controller.
 
-We now see that a `k` appears on the screen when we press a key. However, this only works for the first key we press, even if we continue to press keys no more `k`s appear on the screen. This is because the keyboard won't send another interrupt if we haven't read the pressed from its data port.
+We now see that a `k` appears on the screen when we press a key. However, this only works for the first key we press, even if we continue to press keys no more `k`s appear on the screen. This is because the keyboard controller won't send another interrupt until we have read the so-called _scancode_ of the pressed key.
 
 ### Reading the Scancodes
 
@@ -369,13 +369,13 @@ We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard'
 The above image shows me slowly typing "123". We see that adjacent keys have adjacent scancodes and that pressing a key causes a different scancode than releasing it. But how do we translate the scancodes to the actual key actions exactly?
 
 ### Interpreting the Scancodes
-There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. All three sets go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. Later computers fortunately did not continue the trend of defining new scancodes, but rather emulated the existing scancode sets and extending them. Today most keyboards can be configured to emulate any of the three sets.
+There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. All three go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. Later computers fortunately did not continue the trend of defining new scancode sets, but rather emulated the existing sets and extended them. Today most keyboards can be configured to emulate any of the three sets.
 
 [IBM XT]: https://en.wikipedia.org/wiki/IBM_Personal_Computer_XT
 [IBM 3270 PC]: https://en.wikipedia.org/wiki/IBM_3270_PC
 [IBM AT]: https://en.wikipedia.org/wiki/IBM_Personal_Computer/AT
 
-By default, PS/2 keyboards emulate scancode set 1 ("XT"). In this set, the lower 7 bits of a scancode byte define the key, and the most significant bit defines whether it's a press ("0") or an release ("1"). Keys that were not present on the original [IBM XT] keyboard, such as the enter key on the keypad, generate two scancodes in succession: a `0xe0` escape byte and then a byte representing the key. For a list of all the set 1 scancodes and their corresponding keys, check out the [OSDev Wiki][scancode set 1].
+By default, PS/2 keyboards emulate scancode set 1 ("XT"). In this set, the lower 7 bits of a scancode byte define the key, and the most significant bit defines whether it's a press ("0") or a release ("1"). Keys that were not present on the original [IBM XT] keyboard, such as the enter key on the keypad, generate two scancodes in succession: a `0xe0` escape byte and then a byte representing the key. For a list of all set 1 scancodes and their corresponding keys, check out the [OSDev Wiki][scancode set 1].
 
 [scancode set 1]: https://wiki.osdev.org/Keyboard#Scan_Code_Set_1
 
@@ -413,11 +413,17 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-The above code just translates the numbers 0-9 and ignores all other keys. Now we can write numbers:
+The above code just translates keypresses of the number keys 0-9 and ignores all other keys. Now we can write numbers:
 
 ![QEMU printing numbers to the screen](qemu-printing-numbers.gif)
 
 Translating the other keys could work in the same way, probably with an enum for control keys such as escape or backspace. Such a translation function would be a good candidate for a small external crate, but I couldn't find one that works with scancode set 1. In case you'd like to write such a crate and need mentoring, just let us know, we're happy to help!
+
+### Configuring The Keyboard
+
+It's possible to configure some aspects of a PS/2 keyboard, for example which scancode set it should use. We won't cover it here because this post is already long enough, but the OSDev Wiki has an overview of possible [configuration commands].
+
+[configuration commands]: https://wiki.osdev.org/PS/2_Keyboard#Commands
 
 ## Summary
 
@@ -427,4 +433,4 @@ Now we are able to interact with our kernel and have some fundamental building b
 
 ## What's next?
 
-As already mentioned, the 8259 APIC has been superseded by the [APIC], a controller with more capabilities and multicore support. In the next post we will explore this controller and learn how to use its integrated timer and interrupt priorities.
+As already mentioned, the 8259 APIC has been superseded by the [APIC], a controller with more capabilities and multicore support. In the next post we will explore this controller and learn how to use its integrated timer and how to set interrupt priorities.
