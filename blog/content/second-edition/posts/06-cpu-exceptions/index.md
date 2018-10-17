@@ -204,7 +204,7 @@ If you are interested in more details: We also have a series of posts that expla
 [too-much-magic]: #too-much-magic
 
 ## Implementation
-Now that we've understood the theory, it's time to handle CPU exceptions in our kernel. We start by creating an `init_idt` function that creates a new `InterruptDescriptorTable`:
+Now that we've understood the theory, it's time to handle CPU exceptions in our kernel. We'll start by creating a new interrupts module in `src/interrupts.rs`, that first creates an `init_idt` function that creates a new `InterruptDescriptorTable`:
 
 ``` rust
 // in src/lib.rs
