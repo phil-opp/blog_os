@@ -276,7 +276,19 @@ error: cannot find macro `println!` in this scope
    = help: have you added the `#[macro_use]` on the module/import?
 ```
 
-And this error occurs because the `print!` and `println!` macros we created in the `vga_buffer` _must be defined_ before we use them. This is one case where import order matters in Rust. We can easily fix this by ensuring the order of our imports places the macros first:
+This happened because we forgot to add `#[macro_use]` before our import of the `vga_buffer` module.
+
+```rust
+// in src/lib.rs
+
+pub mod gdt;
+pub mod interrupts;
+pub mod serial;
+#[macro_use] // new
+pub mod vga_buffer;
+```
+
+However, after adding `#[macro_use]` before the module import, we still get the same error. Sometimes this can be confusing, but it's actually a quirk of how Rust's macro system works. Macros _must be defined_ before you can use them. This is one case where import order matters in Rust. We can easily fix this by ensuring the order of our imports places the macros first:
 
 ```rust
 // in src/lib.rs
