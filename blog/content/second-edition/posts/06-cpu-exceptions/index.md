@@ -434,15 +434,14 @@ Let's create an integration test that ensures that the above continues to work. 
 ```rust
 // in src/bin/test-exception-breakpoint.rs
 
-use blog_os::exit_qemu;
+[…]
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 static BREAKPOINT_HANDLER_CALLED: AtomicUsize = AtomicUsize::new(0);
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    init_idt();
+    init_test_idt();
 
     // invoke a breakpoint exception
     x86_64::instructions::int3();
@@ -463,16 +462,31 @@ pub extern "C" fn _start() -> ! {
     loop {}
 }
 
-extern "x86-interrupt" fn breakpoint_handler(_: &mut ExceptionStackFrame) {
+
+lazy_static! {
+    static ref TEST_IDT: InterruptDescriptorTable = {
+        let mut idt = InterruptDescriptorTable::new();
+        idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt
+    };
+}
+
+pub fn init_test_idt() {
+    TEST_IDT.load();
+}
+
+extern "x86-interrupt" fn breakpoint_handler(
+    _stack_frame: &mut ExceptionStackFrame)
+{
     BREAKPOINT_HANDLER_CALLED.fetch_add(1, Ordering::SeqCst);
 }
 
-// […]
+[…]
 ```
 
 For space reasons we don't show the full content here. You can find the full file [on Github](https://github.com/phil-opp/blog_os/blob/master/src/bin/test-exception-breakpoint.rs).
 
-It is basically a copy of our `main.rs` with some modifications to `_start` and `breakpoint_handler`. The most interesting part is the `BREAKPOINT_HANDLER_CALLER` static. It is an [`AtomicUsize`], an integer type that can be safely concurrently modifies because all of its operations are atomic. We increment it when the `breakpoint_handler` is called and verify in our `_start` function that the handler was called exactly once.
+It is similar to our `main.rs`, but uses a custom IDT called `TEST_IDT` and different `_start` and `breakpoint_handler` functions. The most interesting part is the `BREAKPOINT_HANDLER_CALLER` static. It is an [`AtomicUsize`], an integer type that can be safely concurrently modifies because all of its operations are atomic. We increment it when the `breakpoint_handler` is called and verify in our `_start` function that the handler was called exactly once.
 
 [`AtomicUsize`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicUsize.html
 

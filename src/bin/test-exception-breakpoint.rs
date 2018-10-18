@@ -18,7 +18,7 @@ static BREAKPOINT_HANDLER_CALLED: AtomicUsize = AtomicUsize::new(0);
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    init_idt();
+    init_test_idt();
 
     // invoke a breakpoint exception
     x86_64::instructions::int3();
@@ -59,15 +59,15 @@ fn panic(info: &PanicInfo) -> ! {
 use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
 
 lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
+    static ref TEST_IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         idt
     };
 }
 
-pub fn init_idt() {
-    IDT.load();
+pub fn init_test_idt() {
+    TEST_IDT.load();
 }
 
 extern "x86-interrupt" fn breakpoint_handler(_stack_frame: &mut ExceptionStackFrame) {
