@@ -96,10 +96,6 @@ The main abstraction provided by the crate is the [`ChainedPics`] struct that re
 [`ChainedPics`]: https://docs.rs/pic8259_simple/0.1.1/pic8259_simple/struct.ChainedPics.html
 
 ```rust
-// in src/lib.rs
-
-pub mod interrupts;
-
 // in src/interrupts.rs
 
 use pic8259_simple::ChainedPics;
@@ -127,7 +123,7 @@ pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
     blog_os::gdt::init();
-    init_idt();
+    blog_os::interrupts::init_idt();
     unsafe { PICS.lock().initialize() }; // new
 
     println!("It did not crash!");
@@ -154,7 +150,7 @@ pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
     blog_os::gdt::init();
-    init_idt();
+    blog_os::interrupts::init_idt();
     unsafe { PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable(); // new
 
@@ -180,14 +176,14 @@ As we see from the graphic [above](#the-8259-pic), the timer uses line 0 of the 
 
 pub const TIMER_INTERRUPT_ID: u8 = PIC_1_OFFSET; // new
 
-// in src/main.rs
+[…]
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
-        let timer_interrupt_id = usize::from(interrupts::TIMER_INTERRUPT_ID); // new
+        let timer_interrupt_id = usize::from(TIMER_INTERRUPT_ID); // new
         idt[timer_interrupt_id].set_handler_fn(timer_interrupt_handler); // new
 
         idt
@@ -217,13 +213,13 @@ The reason is that the PIC expects an explicit “end of interrupt” (EOI) sign
 To send the EOI, we use our static `PICS` struct again:
 
 ```rust
-// in src/main.rs
+// in src/interrupts.rs
 
 extern "x86-interrupt" fn timer_interrupt_handler(
     _stack_frame: &mut ExceptionStackFrame)
 {
     print!(".");
-    unsafe { PICS.lock().notify_end_of_interrupt(interrupts::TIMER_INTERRUPT_ID) }
+    unsafe { PICS.lock().notify_end_of_interrupt(TIMER_INTERRUPT_ID) }
 }
 ```
 
@@ -288,6 +284,22 @@ fn panic(info: &PanicInfo) -> ! {
 
 ```
 
+We can also use `hlt_loop` in our double fault exception handler as well:
+
+```rust
+// in src/interrupts.rs
+
+use hlt_loop; // new
+
+extern "x86-interrupt" fn double_fault_handler(
+    stack_frame: &mut ExceptionStackFrame,
+    _error_code: u64,
+) {
+    println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
+    hlt_loop(); // new
+}
+```
+
 When we run our kernel now in QEMU, we see a much lower CPU usage.
 
 ## Keyboard Input
@@ -311,15 +323,13 @@ So let's add a handler function for the keyboard interrupt. It's quite similar t
 
 pub const KEYBOARD_INTERRUPT_ID: u8 = PIC_1_OFFSET + 1; // new
 
-// in src/main.rs
-
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
         // new
-        let keyboard_interrupt_id = usize::from(interrupts::KEYBOARD_INTERRUPT_ID);
+        let keyboard_interrupt_id = usize::from(KEYBOARD_INTERRUPT_ID);
         idt[keyboard_interrupt_id].set_handler_fn(keyboard_interrupt_handler);
 
         idt
@@ -330,7 +340,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: &mut ExceptionStackFrame)
 {
     print!("k");
-    unsafe { PICS.lock().notify_end_of_interrupt(interrupts::KEYBOARD_INTERRUPT_ID) }
+    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
 }
 ```
 
@@ -345,7 +355,7 @@ To find out _which_ key was pressed, we need to query the keyboard controller. W
 [I/O port]: ./second-edition/posts/05-integration-tests/index.md#port-i-o
 
 ```rust
-// in src/main.rs
+// in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: &mut ExceptionStackFrame)
@@ -355,7 +365,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     let port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
     print!("{}", scancode);
-    unsafe { PICS.lock().notify_end_of_interrupt(interrupts::KEYBOARD_INTERRUPT_ID) }
+    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
 }
 ```
 
@@ -382,7 +392,7 @@ By default, PS/2 keyboards emulate scancode set 1 ("XT"). In this set, the lower
 To translate the scancodes to keys, we can use a match statement:
 
 ```rust
-// in src/main.rs
+// in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: &mut ExceptionStackFrame)
@@ -409,7 +419,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     if let Some(key) = key {
         print!("{}", key);
     }
-    unsafe { PICS.lock().notify_end_of_interrupt(interrupts::KEYBOARD_INTERRUPT_ID) }
+    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
 }
 ```
 
