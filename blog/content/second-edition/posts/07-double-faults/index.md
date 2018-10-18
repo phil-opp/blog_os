@@ -33,7 +33,7 @@ Let's provoke a double fault by triggering an exception for that we didn't defin
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    init_idt();
+    blog_os::interrupts::init_idt();
 
     // trigger a page fault
     unsafe {
@@ -60,7 +60,7 @@ So in order to prevent this triple fault, we need to either provide a handler fu
 A double fault is a normal exception with an error code, so we can specify a handler function similar to our breakpoint handler:
 
 ```rust
-// in src/main.rs
+// in src/interrupts.rs
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -162,7 +162,7 @@ Let's try it ourselves! We can easily provoke a kernel stack overflow by calling
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    init_idt();
+    blog_os::interrupts::init_idt();
 
     fn stack_overflow() {
         stack_overflow(); // for each recursion, the return address is pushed
@@ -314,7 +314,7 @@ pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
     blog_os::gdt::init();
-    init_idt();
+    blog_os::interrupts::init_idt();
 
     […]
 }
@@ -380,7 +380,9 @@ We reload the code segment register using [`set_cs`] and to load the TSS using [
 Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 
 ```rust
-// in src/main.rs
+// in src/interrupts.rs
+
+use gdt;
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -388,7 +390,7 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         unsafe {
             idt.double_fault.set_handler_fn(double_fault_handler)
-                .set_stack_index(blog_os::gdt::DOUBLE_FAULT_IST_INDEX); // new
+                .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX); // new
         }
 
         idt
