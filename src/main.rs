@@ -5,8 +5,6 @@
 #[macro_use]
 extern crate blog_os;
 extern crate x86_64;
-#[macro_use]
-extern crate lazy_static;
 
 use core::panic::PanicInfo;
 
