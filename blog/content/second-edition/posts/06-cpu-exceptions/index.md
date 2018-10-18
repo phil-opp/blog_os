@@ -300,7 +300,7 @@ pub mod interrupts;
 pub mod serial;
 ```
 
-Now we can use our `print!` and `println!` macros in `interrupts.rs`. If you'd like to know more about the ins and outs of macros and how they differ from functions [you can find more information here](in-depth-rust-macros).
+Now we can use our `print!` and `println!` macros in `interrupts.rs`. If you'd like to know more about the ins and outs of macros and how they differ from functions [you can find more information here][in-depth-rust-macros].
 
 [in-depth-rust-macros]: https://doc.rust-lang.org/book/second-edition/appendix-04-macros.html
 
@@ -442,7 +442,7 @@ static BREAKPOINT_HANDLER_CALLED: AtomicUsize = AtomicUsize::new(0);
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    blog_os::interrupts::init_idt();
+    init_idt();
 
     // invoke a breakpoint exception
     x86_64::instructions::int3();
