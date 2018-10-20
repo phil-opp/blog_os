@@ -10,8 +10,8 @@ pub static PICS: spin::Mutex<ChainedPics> =
 pub const TIMER_INTERRUPT_ID: u8 = PIC_1_OFFSET;
 pub const KEYBOARD_INTERRUPT_ID: u8 = PIC_1_OFFSET + 1;
 
-use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
 use gdt;
+use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -50,10 +50,7 @@ extern "x86-interrupt" fn double_fault_handler(
 
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
     print!(".");
-    unsafe {
-        PICS.lock()
-            .notify_end_of_interrupt(TIMER_INTERRUPT_ID)
-    }
+    unsafe { PICS.lock().notify_end_of_interrupt(TIMER_INTERRUPT_ID) }
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
@@ -80,8 +77,5 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut Exceptio
         print!("{}", key);
     }
 
-    unsafe {
-        PICS.lock()
-            .notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID)
-    }
+    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
 }
