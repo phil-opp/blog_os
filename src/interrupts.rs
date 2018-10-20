@@ -33,8 +33,6 @@ pub fn init_idt() {
     IDT.load();
 }
 
-use hlt_loop;
-
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut ExceptionStackFrame) {
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
@@ -43,6 +41,8 @@ extern "x86-interrupt" fn double_fault_handler(
     stack_frame: &mut ExceptionStackFrame,
     _error_code: u64,
 ) {
+    use hlt_loop;
+
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
     hlt_loop();
 }
