@@ -183,8 +183,8 @@ lazy_static! {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
-        let timer_interrupt_id = usize::from(TIMER_INTERRUPT_ID); // new
-        idt[timer_interrupt_id].set_handler_fn(timer_interrupt_handler); // new
+        idt[usize::from(TIMER_INTERRUPT_ID)]
+            .set_handler_fn(timer_interrupt_handler); // new
 
         idt
     };
@@ -432,8 +432,8 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
         // new
-        let keyboard_interrupt_id = usize::from(KEYBOARD_INTERRUPT_ID);
-        idt[keyboard_interrupt_id].set_handler_fn(keyboard_interrupt_handler);
+        idt[usize::from(KEYBOARD_INTERRUPT_ID)]
+            .set_handler_fn(keyboard_interrupt_handler);
 
         idt
     };

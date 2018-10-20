@@ -23,10 +23,8 @@ lazy_static! {
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
         }
 
-        let timer_interrupt_id = usize::from(TIMER_INTERRUPT_ID);
-        idt[timer_interrupt_id].set_handler_fn(timer_interrupt_handler);
-        let keyboard_interrupt_id = usize::from(KEYBOARD_INTERRUPT_ID);
-        idt[keyboard_interrupt_id].set_handler_fn(keyboard_interrupt_handler);
+        idt[usize::from(TIMER_INTERRUPT_ID)].set_handler_fn(timer_interrupt_handler);
+        idt[usize::from(KEYBOARD_INTERRUPT_ID)].set_handler_fn(keyboard_interrupt_handler);
 
         idt
     };
