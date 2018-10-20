@@ -2,7 +2,7 @@
 title = "Hardware Interrupts"
 order = 8
 path = "hardware-interrupts"
-date = 2018-07-26
+date = 2018-10-20
 template = "second-edition/page.html"
 +++
 
