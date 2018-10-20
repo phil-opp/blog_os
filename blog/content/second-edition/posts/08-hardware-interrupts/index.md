@@ -231,12 +231,115 @@ When we now execute `bootimage run` we see dots periodically appearing on the sc
 
 ![QEMU printing consequtive dots showing the hardware timer](qemu-hardware-timer-dots.gif)
 
-### Configuring The Timer
+### Configuring the Timer
 
 The hardware timer that we use is called the _Progammable Interval Timer_ or PIT for short. Like the name says, it is possible to configure the interval between two interrupts. We won't go into details here because we will switch to the [APIC timer] soon, but the OSDev wiki has an extensive article about the [configuring the PIT].
 
 [APIC timer]: https://wiki.osdev.org/APIC_timer
 [configuring the PIT]: https://wiki.osdev.org/Programmable_Interval_Timer
+
+## Deadlocks
+
+We now have a form of concurrency in our kernel: The timer interrupts occur asynchronously, so they can interrupt our `_start` function at any time. Fortunately Rust's ownership system prevents many types of concurrency related bugs at compile time. One notable exception are deadlocks. Deadlocks occur if a thread tries to aquire a lock that will never become free. Thus the thread hangs indefinitely.
+
+We can already provoke a deadlock in our kernel. Remember, our `println` macro calls the `vga_buffer::print` function, which [locks a global `WRITER`][vga spinlock] using a spinlock:
+
+[vga spinlock]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
+
+```rust
+// in src/vga_buffer.rs
+
+[…]
+
+pub fn print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    WRITER.lock().write_fmt(args).unwrap();
+}
+```
+
+It locks the `WRITER`, calls `write_fmt` on it, and implicitly unlocks it at the end of the function. Now imagine that an interrupt occurs while the `WRITER` is locked and the interrupt handler tries to print something too:
+
+Timestep | _start | interrupt_handler
+---------|------|------------------
+0 | calls `println!`      | &nbsp;
+1 | `print` locks `WRITER` | &nbsp;
+2 | | **interrupt occurs**, handler begins to run
+3 | | calls `println!` |
+4 | | `print` tries to lock `WRITER` (already locked)
+5 | | `print` tries to lock `WRITER` (already locked)
+… | | …
+_never_ | _unlock `WRITER`_ | 
+
+The `WRITER` is locked, so the interrupt handler waits until it becomes free. But this never happens, because the `_start` function only continues to run after the interrupt handler returns. Thus the complete system hangs.
+
+### Provoking a Deadlock
+
+We can easily provoke such a deadlock in our kernel by printing something in the loop at the end of our `_start` function:
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    […]
+    loop {
+        print!("-");        // new
+    }
+}
+```
+
+When we run it in QEMU we get output of the form:
+
+![QEMU output with many rows of hyphens and no dots](./qemu-deadlock.png)
+
+We see that only a limited number of hyphens is printed, until the first timer interrupt occurs. Then the system hangs because the timer interrupt handler deadlocks when it tries to print a dot. This is the reason that we see no dots in the above output.
+
+The actual number of hyphens varies between runs because the timer interrupt occurs asynchronously. This non-determinism is what makes concurrency related bugs so difficult to debug.
+
+### Fixing the Deadlock
+
+To avoid this deadlock, we can disable interrupts as long as the `Mutex` is locked:
+
+```rust
+// in src/vga_buffer.rs
+
+/// Prints the given formatted string to the VGA text buffer
+/// through the global `WRITER` instance.
+pub fn print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    use x86_64::instructions::interrupts;   // new
+
+    interrupts::without_interrupts(|| {     // new
+        WRITER.lock().write_fmt(args).unwrap();
+    });
+}
+```
+
+The [`without_interrupts`] function takes a [closure] and executes it in an interrupt-free environment. We use it to ensure that no interrupt can occur as long as the `Mutex` is locked. When we run our kernel now we see that it keeps running without hanging. (We still don't notice any dots, but this is because they're scrolling by too fast. Try to slow down the printing, e.g. by putting a `for _ in 0..10000 {}` inside the loop.)
+
+[`without_interrupts`]: https://docs.rs/x86_64/0.2.10/x86_64/instructions/interrupts/fn.without_interrupts.html
+[closure]: https://doc.rust-lang.org/book/second-edition/ch13-01-closures.html
+
+We can apply the same change to our serial printing function to ensure that no deadlocks occur with it either:
+
+```rust
+// in src/serial.rs
+
+pub fn print(args: ::core::fmt::Arguments) {
+    use core::fmt::Write;
+    use x86_64::instructions::interrupts;       // new
+
+    interrupts::without_interrupts(|| {         // new
+        SERIAL1
+            .lock()
+            .write_fmt(args)
+            .expect("Printing to serial failed");
+    });
+}
+```
+
+Note that disabling interrupts shouldn't be a general solution. The problem is that it increases the worst case interrupt latency, i.e. the time until the system reacts to an interrupt. Therefore interrupts should be only disabled for a very short time.
 
 ## The `hlt` Instruction
 
@@ -429,7 +532,7 @@ The above code just translates keypresses of the number keys 0-9 and ignores all
 
 Translating the other keys could work in the same way, probably with an enum for control keys such as escape or backspace. Such a translation function would be a good candidate for a small external crate, but I couldn't find one that works with scancode set 1. In case you'd like to write such a crate and need mentoring, just let us know, we're happy to help!
 
-### Configuring The Keyboard
+### Configuring the Keyboard
 
 It's possible to configure some aspects of a PS/2 keyboard, for example which scancode set it should use. We won't cover it here because this post is already long enough, but the OSDev Wiki has an overview of possible [configuration commands].
 
