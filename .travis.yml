@@ -18,6 +18,7 @@ rust:
 os:
   - linux
   - osx
+  - windows
 
 cache:
   cargo: true
@@ -31,6 +32,7 @@ addons:
 
 install:
   - if [ $TRAVIS_OS_NAME = osx ]; then brew update; brew install qemu; fi
+  - if [ $TRAVIS_OS_NAME = windows ]; then wget https://qemu.weilnetz.de/w64/2018/qemu-w64-setup-20180801.exe; 7z x qemu-w64-setup-20180801.exe; fi
 
 before_script:
   - rustup component add rust-src

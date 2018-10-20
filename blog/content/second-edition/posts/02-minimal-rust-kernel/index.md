@@ -6,7 +6,7 @@ date = 2018-02-10
 template = "second-edition/page.html"
 +++
 
-In this post we create a minimal 64-bit Rust kernel for the x86 architecture. We built upon the [freestanding Rust binary] from the previous post to create a bootable disk image, that prints something to the screen.
+In this post we create a minimal 64-bit Rust kernel for the x86 architecture. We build upon the [freestanding Rust binary] from the previous post to create a bootable disk image, that prints something to the screen.
 
 [freestanding Rust binary]: ./second-edition/posts/01-freestanding-rust-binary/index.md
 
@@ -57,7 +57,7 @@ To avoid that every operating system implements its own bootloader, which is onl
 [Multiboot]: https://wiki.osdev.org/Multiboot
 [GNU GRUB]: https://en.wikipedia.org/wiki/GNU_GRUB
 
-To make a kernel Multiboot compliant, one just needs to insert a so-called [Multiboot header] at the beginning of the kernel file. This makes it very easy to boot an OS in GRUB. However, GRUB and the the Multiboot standard have some problems too:
+To make a kernel Multiboot compliant, one just needs to insert a so-called [Multiboot header] at the beginning of the kernel file. This makes it very easy to boot an OS in GRUB. However, GRUB and the Multiboot standard have some problems too:
 
 [Multiboot header]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
 
@@ -199,16 +199,14 @@ Compiling for our new target will use Linux conventions (I'm not quite sure why,
 ```rust
 // src/main.rs
 
-#![feature(panic_implementation)] // required for defining the panic handler
 #![no_std] // don't link the Rust standard library
 #![no_main] // disable all Rust-level entry points
 
 use core::panic::PanicInfo;
 
 /// This function is called on panic.
-#[panic_implementation]
-#[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
@@ -239,7 +237,7 @@ It fails! The error tells us that the Rust compiler no longer finds the `core` o
 The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for supported host triples (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for other targets, we need to recompile `core` for these targets first.
 
 #### Cargo xbuild
-That's where [`cargo xbuild`] comes in. It is a wrapper for `cargo build` that automatically cross-compiles the built-in libraries. We can install it by executing:
+That's where [`cargo xbuild`] comes in. It is a wrapper for `cargo build` that automatically cross-compiles `core` and other built-in libraries. We can install it by executing:
 
 [`cargo xbuild`]: https://github.com/rust-osdev/cargo-xbuild
 
@@ -249,7 +247,27 @@ cargo install cargo-xbuild
 
 The command depends on the rust source code, which we can install with `rustup component add rust-src`.
 
-We now can rerun the above command with `xbuild` instead of `build`:
+Now we can rerun the above command with `xbuild` instead of `build`:
+
+```
+> cargo xbuild --target x86_64-blog_os.json
+```
+
+Depending on your version of the Rust compiler you might get the following error:
+
+```
+error: The sysroot can't be built for the Stable channel. Switch to nightly.
+```
+
+To understand this error, you need to know that the Rust compiler has three release channels: _stable_, _beta_, and _nightly_. The Rust Book explains the difference between these channels really well, so take a minute and [check it out](https://doc.rust-lang.org/book/second-edition/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains).
+
+Some experimental features are only available on the nightly channel. Since Rust uses many of these features for the internal implementation of `core` and other built-in libraries, we need to use a nightly compiler when invoking `cargo xbuild` (since it rebuilds these libraries).
+
+To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. With rustup you can use a nightly compiler for the current directory by running `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory.
+
+[rustup]: https://www.rustup.rs/
+
+With a nightly compiler the build finally succeeds:
 
 ```
 > cargo xbuild --target x86_64-blog_os.json
@@ -261,7 +279,7 @@ We now can rerun the above command with `xbuild` instead of `build`:
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-It worked! We see that `cargo xbuild` cross-compiled the `core`, `compiler_builtin`, and `alloc` libraries for our new custom target and then continued to compile our `blog_os` crate.
+We see that `cargo xbuild` cross-compiled the `core`, `compiler_builtin`, and `alloc` libraries for our new custom target and then continued to compile our `blog_os` crate.
 
 Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
 

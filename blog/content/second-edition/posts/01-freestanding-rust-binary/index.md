@@ -134,9 +134,7 @@ This sets the panic strategy to `abort` for both the `dev` profile (used for `ca
 
 ### Panic Implementation
 
-The `panic_impl` language item defines the function that the compiler should invoke when a [panic] occurs. Instead of providing the language item directly, we can use the [`panic_implementation`] attribute to create a `panic` function:
-
-[`panic_implementation`]: https://github.com/rust-lang/rfcs/blob/master/text/2070-panic-implementation.md#panic_implementation
+The `panic_impl` language item defines the function that the compiler should invoke when a [panic] occurs. Instead of providing the language item directly, we can use the [`panic_handler`] attribute to create a `panic` function.
 
 ```rust
 // in main.rs
@@ -144,9 +142,8 @@ The `panic_impl` language item defines the function that the compiler should inv
 use core::panic::PanicInfo;
 
 /// This function is called on panic.
-#[panic_implementation]
-#[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 ```
@@ -156,22 +153,6 @@ The [`PanicInfo` parameter][PanicInfo] contains the file and line where the pani
 [PanicInfo]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
 [diverging function]: https://doc.rust-lang.org/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
-
-When we try `cargo build` now, we get an error that “#[panic_implementation] is an unstable feature”.
-
-#### Enabling Unstable Features
-
-The `panic_implementation` attribute was recently added and is thus still unstable and protected by a so-called _feature gate_. A feature gate is a special attribute that you have to specify at the top of your `main.rs` in order to use the corresponding feature. By doing this you basically say: “I know that this feature is unstable and that it might stop working without any warnings. I want to use it anyway.”
-
-Feature gates are not available in the stable or beta Rust compilers, only [nightly Rust] makes it possible to opt-in. This means that you have to use a nightly compiler for OS development for the near future (until all unstable features that we need are added are stabilized).
-
-[nightly Rust]: https://doc.rust-lang.org/book/first-edition/release-channels.html
-
-To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory.
-
-[rustup]: https://www.rustup.rs/
-
-After installing a nightly Rust compiler, you can enable the unstable `panic_implementation` feature by inserting `#![feature(panic_implementation)]` right at the top of `main.rs`.
 
 Now we fixed both language item errors. However, if we try to compile it now, another language item is required:
 
@@ -196,16 +177,14 @@ Our freestanding executable does not have access to the Rust runtime and `crt0`,
 To tell the Rust compiler that we don't want to use the normal entry point chain, we add the `#![no_main]` attribute.
 
 ```rust
-#![feature(panic_implementation)]
 #![no_std]
 #![no_main]
 
 use core::panic::PanicInfo;
 
 /// This function is called on panic.
-#[panic_implementation]
-#[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 ```
@@ -215,7 +194,7 @@ You might notice that we removed the `main` function. The reason is that a `main
 The entry point convention depends on your operating system. I recommend you to read the Linux section even if you're on a different OS because we will use this convention for our kernel.
 
 #### Linux
-On Linux, the default entry point is called `_start`. The linker just looks for a function with that name and sets this function as entry point the executable. So to overwrite the entry point, we define our own `_start` function:
+On Linux, the default entry point is called `_start`. The linker just looks for a function with that name and sets this function as entry point to the executable. So, to overwrite the entry point, we define our own `_start` function:
 
 ```rust
 #[no_mangle]
@@ -311,16 +290,14 @@ A minimal freestanding Rust binary looks like this:
 `src/main.rs`:
 
 ```rust
-#![feature(panic_implementation)] // required for defining the panic handler
 #![no_std] // don't link the Rust standard library
 #![no_main] // disable all Rust-level entry points
 
 use core::panic::PanicInfo;
 
 /// This function is called on panic.
-#[panic_implementation]
-#[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 

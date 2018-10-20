@@ -1,4 +1,3 @@
-#![feature(panic_implementation)]
 #![feature(abi_x86_interrupt)]
 #![no_std]
 #![cfg_attr(not(test), no_main)]
@@ -18,7 +17,7 @@ use core::panic::PanicInfo;
 #[allow(unconditional_recursion)]
 pub extern "C" fn _start() -> ! {
     blog_os::gdt::init();
-    init_idt();
+    init_test_idt();
 
     fn stack_overflow() {
         stack_overflow(); // for each recursion, the return address is pushed
@@ -39,9 +38,8 @@ pub extern "C" fn _start() -> ! {
 
 /// This function is called on panic.
 #[cfg(not(test))]
-#[panic_implementation]
-#[no_mangle]
-pub fn panic(info: &PanicInfo) -> ! {
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
     serial_println!("failed");
     serial_println!("{}", info);
 
@@ -55,7 +53,7 @@ pub fn panic(info: &PanicInfo) -> ! {
 use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
 
 lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
+    static ref TEST_IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         unsafe {
             idt.double_fault
@@ -67,8 +65,8 @@ lazy_static! {
     };
 }
 
-pub fn init_idt() {
-    IDT.load();
+pub fn init_test_idt() {
+    TEST_IDT.load();
 }
 
 extern "x86-interrupt" fn double_fault_handler(

@@ -347,7 +347,7 @@ pub fn print_something() {
     };
 
     writer.write_byte(b'H');
-    writer.write_str("ello! ").unwrap();
+    writer.write_string("ello! ");
     write!(writer, "The numbers are {} and {}", 42, 1.0/3.0).unwrap();
 }
 ```
@@ -627,9 +627,8 @@ Now that we have a `println` macro, we can use it in our panic function to print
 // in main.rs
 
 /// This function is called on panic.
-#[panic_implementation]
-#[no_mangle]
-pub fn panic(info: &PanicInfo) -> ! {
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     loop {}
 }
