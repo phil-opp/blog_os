@@ -1,5 +1,7 @@
+use gdt;
 use pic8259_simple::ChainedPics;
 use spin;
+use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
 
 pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
@@ -9,9 +11,6 @@ pub static PICS: spin::Mutex<ChainedPics> =
 
 pub const TIMER_INTERRUPT_ID: u8 = PIC_1_OFFSET;
 pub const KEYBOARD_INTERRUPT_ID: u8 = PIC_1_OFFSET + 1;
-
-use gdt;
-use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
