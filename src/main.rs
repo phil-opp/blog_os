@@ -6,6 +6,7 @@
 extern crate blog_os;
 extern crate x86_64;
 
+use blog_os::interrupts::PICS;
 use core::panic::PanicInfo;
 
 /// This function is the entry point, since the linker looks for a function
@@ -17,16 +18,11 @@ pub extern "C" fn _start() -> ! {
 
     blog_os::gdt::init();
     blog_os::interrupts::init_idt();
-
-    fn stack_overflow() {
-        stack_overflow(); // for each recursion, the return address is pushed
-    }
-
-    // trigger a stack overflow
-    stack_overflow();
+    unsafe { PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();
 
     println!("It did not crash!");
-    loop {}
+    blog_os::hlt_loop();
 }
 
 /// This function is called on panic.
@@ -34,5 +30,5 @@ pub extern "C" fn _start() -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    blog_os::hlt_loop();
 }
