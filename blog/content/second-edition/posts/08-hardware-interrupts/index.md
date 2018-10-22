@@ -42,7 +42,7 @@ The [Intel 8259] is a programmable interrupt controller (PIC) introduced in 1976
 
 [APIC]: https://en.wikipedia.org/wiki/Intel_APIC_Architecture
 
-The 8259 has 8 interrupt lines and several lines for communicating with the CPU. The typical systems back then where equipped with two instances of the 8259 PIC, one primary and one secondary PIC connected to one of the interrupt lines of the primary:
+The 8259 has 8 interrupt lines and several lines for communicating with the CPU. The typical systems back then were equipped with two instances of the 8259 PIC, one primary and one secondary PIC connected to one of the interrupt lines of the primary:
 
 [Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259
 
