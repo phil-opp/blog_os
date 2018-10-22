@@ -380,7 +380,7 @@ After installing the `bootimage` tool, creating a bootable disk image is as easy
 
 The tool also recompiles your kernel using `cargo xbuild`, so it will automatically pick up any changes you make.
 
-After executing the command, you should see a file named `bootimage.bin` in your `target/x86_64-blog_os/debug` directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
+After executing the command, you should see a file named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
 #### How does it work?
 The `bootimage` tool performs the following steps behind the scenes:
@@ -412,7 +412,7 @@ We can now boot the disk image in a virtual machine. To boot it in [QEMU], execu
 [QEMU]: https://www.qemu.org/
 
 ```
-> qemu-system-x86_64 -drive format=raw,file=bootimage.bin
+> qemu-system-x86_64 -drive format=raw,file=bootimage-blog_os.bin
 warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 ```
 
@@ -432,7 +432,7 @@ By default it invokes the exact same QEMU command as above. Additional QEMU opti
 It is also possible to write it to an USB stick and boot it on a real machine:
 
 ```
-> dd if=target/x86_64-blog_os/debug/bootimage.bin of=/dev/sdX && sync
+> dd if=target/x86_64-blog_os/debug/bootimage-blog_os.bin of=/dev/sdX && sync
 ```
 
 Where `sdX` is the device name of your USB stick. **Be careful** to choose the correct device name, because everything on that device is overwritten.
