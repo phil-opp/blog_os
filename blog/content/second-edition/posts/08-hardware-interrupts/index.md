@@ -2,7 +2,7 @@
 title = "Hardware Interrupts"
 order = 8
 path = "hardware-interrupts"
-date = 2018-10-20
+date = 2018-10-22
 template = "second-edition/page.html"
 +++
 
@@ -268,7 +268,7 @@ Timestep | _start | interrupt_handler
 4 | | `print` tries to lock `WRITER` (already locked)
 5 | | `print` tries to lock `WRITER` (already locked)
 … | | …
-_never_ | _unlock `WRITER`_ | 
+_never_ | _unlock `WRITER`_ |
 
 The `WRITER` is locked, so the interrupt handler waits until it becomes free. But this never happens, because the `_start` function only continues to run after the interrupt handler returns. Thus the complete system hangs.
 
