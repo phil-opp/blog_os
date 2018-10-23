@@ -5,7 +5,7 @@ version = "0.2.0"
 
 [dependencies]
 bootloader_precompiled = "0.2.0"
-spin = "0.4.6"
+spin = "0.4.9"
 volatile = "0.2.3"
 uart_16550 = "0.1.0"
 x86_64 = "0.2.8"
