@@ -70,6 +70,18 @@
     You are viewing the second edition of “Writing an OS in Rust”, which is still in progress. The <a href="{{ get_url(path = "/first-edition") }}">first edition</a> has more content, but is no longer updated. We try our best to incorporate the missing content soon.
 </div>
 
+<hr>
+{% set extra = get_section(path = "second-edition/extra/_index.md") %}
+<h1>{{ extra.title }}</h1>
+<ul>
+    {% for subsection in extra.subsections|reverse %}
+        <li><a href="/{{ subsection.path | safe }}">{{ subsection.title }}</a></li>
+    {% endfor %}
+    {% for page in extra.pages|reverse %}
+        <li><a href="/{{ page.path | safe }}">{{ page.title }}</a></li>
+    {% endfor %}
+</ul>
+
 <aside id="recent-updates">
     <h2>Recent Updates</h2>
     {% include "recent-updates.html" %}
