@@ -500,7 +500,7 @@ To use a spinning mutex, we can add the [spin crate] as a dependency:
 ```toml
 # in Cargo.toml
 [dependencies]
-spin = "0.4.6"
+spin = "0.4.9"
 ```
 
 ```rust
