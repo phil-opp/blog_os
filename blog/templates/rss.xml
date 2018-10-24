@@ -1,0 +1,20 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>{{ config.title }}</title>
+        <link>{{ config.base_url | safe }}</link>
+        <description>{{ config.description }}</description>
+        <generator>Gutenberg</generator>
+        <language>{{ config.default_language }}</language>
+        <atom:link href="{{ feed_url | safe }}" rel="self" type="application/rss+xml"/>
+        <lastBuildDate>{{ last_build_date | date(format="%a, %d %b %Y %H:%M:%S %z") }}</lastBuildDate>
+        {% for page in pages %}
+            <item>
+                <title>{{ page.title }}</title>
+                <pubDate>{{ page.date | date(format="%a, %d %b %Y %H:%M:%S %z") }}</pubDate>
+                <link>{{ page.permalink | safe }}</link>
+                <guid>{{ page.permalink | safe }}</guid>
+                <description>{{ page.content }}</description>
+            </item>
+        {% endfor %}
+    </channel>
+</rss>
