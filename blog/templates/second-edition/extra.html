@@ -6,9 +6,6 @@
 
 {% block main %}
     <h1>{{ page.title }}</h1>
-    <div class="warning">
-        <b>Note:</b> You are viewing the in-progress second edition of “Writing an OS in Rust”. For more content, take a look at the <a href="{{ get_url(path = "/first-edition") }}">first edition</a>.
-    </div>
     {{ page.content | safe }}
 {% endblock main %}
 
