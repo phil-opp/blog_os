@@ -26,7 +26,7 @@ A double fault behaves like a normal exception. It has the vector number `8` and
 Let's provoke a double fault by triggering an exception for that we didn't define a handler function:
 
 ```rust
-// in src/lib.rs
+// in src/main.rs
 
 #[cfg(not(test))]
 #[no_mangle]
@@ -155,7 +155,7 @@ So the CPU tries to call the _double fault handler_ now. However, on a double fa
 Let's try it ourselves! We can easily provoke a kernel stack overflow by calling a function that recurses endlessly:
 
 ```rust
-// in src/lib.rs
+// in src/main.rs
 
 #[cfg(not(test))]
 #[no_mangle] // don't mangle the name of this function
