@@ -453,7 +453,7 @@ We now see that a `k` appears on the screen when we press a key. However, this o
 
 ### Reading the Scancodes
 
-To find out _which_ key was pressed, we need to query the keyboard controller. We do this by reading from the from the data port of the PS/2 controller, which is the [I/O port] with number `0x60`:
+To find out _which_ key was pressed, we need to query the keyboard controller. We do this by reading from the data port of the PS/2 controller, which is the [I/O port] with number `0x60`:
 
 [I/O port]: ./second-edition/posts/05-integration-tests/index.md#port-i-o
 
