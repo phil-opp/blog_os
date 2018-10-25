@@ -221,7 +221,7 @@ pub fn init_idt() {
 }
 ```
 
-Now we can add handler functions. We start by adding a handler for the [breakpoint exception]. The breakpoint exception is the perfect exception to test exception handling. Its only purpose is to temporary pause a program when the breakpoint instruction `int3` is executed.
+Now we can add handler functions. We start by adding a handler for the [breakpoint exception]. The breakpoint exception is the perfect exception to test exception handling. Its only purpose is to temporarily pause a program when the breakpoint instruction `int3` is executed.
 
 [breakpoint exception]: http://wiki.osdev.org/Exceptions#Breakpoint
 

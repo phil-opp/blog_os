@@ -329,7 +329,7 @@ The problem is that the GDT segments are not yet active becaues the segment and 
 
 In summary, we need to do the following:
 
-1. **Reload code segment register**: We changed our GDT, so we should reload `cs`, the code segment register. This required since the old segment selector could point a different GDT descriptor now (e.g. a TSS descriptor).
+1. **Reload code segment register**: We changed our GDT, so we should reload `cs`, the code segment register. This is required since the old segment selector could point a different GDT descriptor now (e.g. a TSS descriptor).
 2. **Load the TSS** : We loaded a GDT that contains a TSS selector, but we still need to tell the CPU that it should use that TSS.
 3. **Update the IDT entry**: As soon as our TSS is loaded, the CPU has access to a valid interrupt stack table (IST). Then we can tell the CPU that it should use our new double fault stack by modifying our double fault IDT entry.
 
