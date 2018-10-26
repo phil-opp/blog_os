@@ -147,12 +147,14 @@ Until now nothing happened because interrupts are still disabled in the CPU conf
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    use blog_os::interrupts::PICS;                  // new
+
     println!("Hello World{}", "!");
 
     blog_os::gdt::init();
     blog_os::interrupts::init_idt();
     unsafe { PICS.lock().initialize() };
-    x86_64::instructions::interrupts::enable(); // new
+    x86_64::instructions::interrupts::enable();     // new
 
     println!("It did not crash!");
     loop {}
