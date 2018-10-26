@@ -6,7 +6,6 @@
 extern crate blog_os;
 extern crate x86_64;
 
-use blog_os::interrupts::PICS;
 use core::panic::PanicInfo;
 
 /// This function is the entry point, since the linker looks for a function
@@ -14,6 +13,8 @@ use core::panic::PanicInfo;
 #[cfg(not(test))]
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
+    use blog_os::interrupts::PICS;
+
     println!("Hello World{}", "!");
 
     blog_os::gdt::init();
