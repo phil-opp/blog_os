@@ -91,5 +91,6 @@ before_test:
 # environment variable.
 test_script:
   - bootimage build
-  - cargo test
+  - if %target%==x86_64-pc-windows-gnu cargo test
+  - if %target%==x86_64-pc-windows-msvc cargo test
   - bootimage test
