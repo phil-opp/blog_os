@@ -36,10 +36,10 @@ install:
 
 before_script:
   - rustup component add rust-src
-  - (test -x $HOME/.cargo/bin/cargo-install-update || cargo install cargo-update)
+  - (test -x $HOME/.cargo/bin/cargo-update-installed || cargo install cargo-update-installed)
   - (test -x $HOME/.cargo/bin/cargo-xbuild || cargo install cargo-xbuild)
   - (test -x $HOME/.cargo/bin/bootimage || cargo install bootimage)
-  - cargo install-update -a
+  - cargo update-installed
 
 script:
   - bootimage build
