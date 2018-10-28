@@ -8,9 +8,13 @@ notifications:
         on_failure: change
 
 branches:
-  except:
-    # Used by bors
-    - staging.tmp
+  only:
+    # This is where pull requests from "bors r+" are built.
+    - staging
+    # This is where pull requests from "bors try" are built.
+    - trying
+    # Build pull requests.
+    - master
 
 rust:
     - nightly
