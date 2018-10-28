@@ -32,6 +32,17 @@ In order to create an OS kernel in Rust, we need to create an executable that ca
 
 This post describes the necessary steps to create a freestanding Rust binary and explains why the steps are needed. If you're just interested in a minimal example, you can **[jump to the summary](#summary)**.
 
+## Installing Rust Nightly
+Rust has three release channels: _stable_, _beta_, and _nightly_. The Rust Book explains the difference between these channels really well, so take a minute and [check it out](https://doc.rust-lang.org/book/second-edition/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). For building an operating system we will need some experimental features that are only available on the nightly channel, so we need to install a nightly version of Rust.
+
+To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. With rustup you can use a nightly compiler for the current directory by running `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory. You can check that you have a nightly version installed by running `rustc --version`: The version number should contain `-nightly` at the end.
+
+[rustup]: https://www.rustup.rs/
+
+The nightly compiler allows us to opt-in to various experimental features by using so-called _feature flags_ at the top of our file. For example, we could enable the experimental [`asm!` macro] for inline assembly by adding `#![feature(asm)]` to the top of our `main.rs`. Note that such experimental features are completely unstable, which means that future Rust versions might change or remove them without prior warning. For this reason we will only use them if absolutely necessary.
+
+[`asm!` macro]: https://doc.rust-lang.org/nightly/unstable-book/language-features/asm.html
+
 ## Disabling the Standard Library
 By default, all Rust crates link the [standard library], which depends on the operating system for features such as threads, files, or networking. It also depends on the C standard library `libc`, which closely interacts with OS services. Since our plan is to write an operating system, we can not use any OS-dependent libraries. So we have to disable the automatic inclusion of the standard library through the [`no_std` attribute].
 
@@ -239,13 +250,13 @@ error: linking with `cc` failed: exit code: 1
 
 The problem is that we still link the startup routine of the C runtime, which requires some symbols of the C standard library `libc`, which we don't link due to the `no_std` attribute. So we need to get rid of the C startup routine. We can do that by passing the `-nostartfiles` flag to the linker.
 
-One way to pass linker attributes via cargo is the `cargo rustc` command. The command behaves exactly like `cargo build`, but allows to pass options to `rustc`, the underlying Rust compiler. `rustc` has the (unstable) `-Z pre-link-arg` flag, which passes an argument to the linker. Combined, our new build command looks like this:
+One way to pass linker attributes via cargo is the `cargo rustc` command. The command behaves exactly like `cargo build`, but allows to pass options to `rustc`, the underlying Rust compiler. `rustc` has the `-Z pre-link-arg` flag, which passes an argument to the linker. Combined, our new build command looks like this:
 
 ```
 > cargo rustc -- -Z pre-link-arg=-nostartfiles
 ```
 
-With this command, our crate finally builds as a freestanding executable!
+Note that all `-Z` flags are unstable, so the command only works with nightly Rust. Now our crate finally builds as a freestanding executable!
 
 #### Windows
 On Windows, the linker requires two entry points [depending on the used subsystem]. For the `CONSOLE` subsystem, we need a function called `mainCRTStartup`, which calls a function called `main`. Like on Linux, we overwrite the entry points by defining `no_mangle` functions:
