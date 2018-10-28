@@ -251,35 +251,19 @@ Now we can rerun the above command with `xbuild` instead of `build`:
 
 ```
 > cargo xbuild --target x86_64-blog_os.json
-```
-
-Depending on your version of the Rust compiler you might get the following error:
-
-```
-error: The sysroot can't be built for the Stable channel. Switch to nightly.
-```
-
-To understand this error, you need to know that the Rust compiler has three release channels: _stable_, _beta_, and _nightly_. The Rust Book explains the difference between these channels really well, so take a minute and [check it out](https://doc.rust-lang.org/book/second-edition/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains).
-
-Some experimental features are only available on the nightly channel. Since Rust uses many of these features for the internal implementation of `core` and other built-in libraries, we need to use a nightly compiler when invoking `cargo xbuild` (since it rebuilds these libraries).
-
-To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. With rustup you can use a nightly compiler for the current directory by running `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory.
-
-[rustup]: https://www.rustup.rs/
-
-With a nightly compiler the build finally succeeds:
-
-```
-> cargo xbuild --target x86_64-blog_os.json
    Compiling core v0.0.0 (file:///…/rust/src/libcore)
     Finished release [optimized] target(s) in 52.75 secs
    Compiling compiler_builtins v0.1.0 (file:///…/rust/src/libcompiler_builtins)
     Finished release [optimized] target(s) in 3.92 secs
+   Compiling alloc v0.0.0 (/tmp/xargo.9I97eR3uQ3Cq)
+    Finished release [optimized] target(s) in 7.61s
    Compiling blog_os v0.1.0 (file:///…/blog_os)
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-We see that `cargo xbuild` cross-compiled the `core`, `compiler_builtin`, and `alloc` libraries for our new custom target and then continued to compile our `blog_os` crate.
+We see that `cargo xbuild` cross-compiles the `core`, `compiler_builtin`, and `alloc` libraries for our new custom target. Since these libraries use a lot of unstable features internally, this only works with a [nightly Rust compiler]. Afterwards, `cargo xbuild` successfully compiles our `blog_os` crate.
+
+[nightly Rust compiler]: ./second-edition/posts/01-freestanding-rust-binary/index.md#installing-rust-nightly
 
 Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
 
