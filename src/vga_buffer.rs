@@ -119,10 +119,7 @@ impl Writer {
     /// Shifts all lines one line up and clears the last row.
     fn new_line(&mut self) {
         for row in 1..BUFFER_HEIGHT {
-            for col in 0..BUFFER_WIDTH {
-                let character = self.buffer.chars[row][col].read();
-                self.buffer.chars[row - 1][col].write(character);
-            }
+            self.buffer.chars[row - 1] = self.buffer.chars[row].clone();
         }
         self.clear_row(BUFFER_HEIGHT - 1);
         self.column_position = 0;

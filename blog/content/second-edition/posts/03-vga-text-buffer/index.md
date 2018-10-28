@@ -363,10 +363,7 @@ Right now, we just ignore newlines and characters that don't fit into the line a
 impl Writer {
     fn new_line(&mut self) {
         for row in 1..BUFFER_HEIGHT {
-            for col in 0..BUFFER_WIDTH {
-                let character = self.buffer.chars[row][col].read();
-                self.buffer.chars[row - 1][col].write(character);
-            }
+            self.buffer.chars[row - 1] = self.buffer.chars[row].clone();
         }
         self.clear_row(BUFFER_HEIGHT - 1);
         self.column_position = 0;
