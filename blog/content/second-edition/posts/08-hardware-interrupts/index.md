@@ -548,4 +548,4 @@ Now we are able to interact with our kernel and have some fundamental building b
 
 ## What's next?
 
-As already mentioned, the 8259 APIC has been superseded by the [APIC], a controller with more capabilities and multicore support. In the next post we will explore this controller and learn how to use its integrated timer and how to set interrupt priorities.
+As already mentioned, the 8259 PIC has been superseded by the [APIC], a controller with more capabilities and multicore support. In the next post we will explore this controller and learn how to use its integrated timer and how to set interrupt priorities.
