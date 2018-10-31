@@ -8,6 +8,7 @@ extern crate lazy_static;
 extern crate pic8259_simple;
 extern crate uart_16550;
 extern crate x86_64;
+extern crate pc_keyboard;
 
 #[cfg(test)]
 extern crate array_init;
