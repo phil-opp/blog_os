@@ -486,7 +486,7 @@ extern "x86-interrupt" fn breakpoint_handler(
 
 For space reasons we don't show the full content here. You can find the full file [on Github](https://github.com/phil-opp/blog_os/blob/master/src/bin/test-exception-breakpoint.rs).
 
-It is similar to our `main.rs`, but uses a custom IDT called `TEST_IDT` and different `_start` and `breakpoint_handler` functions. The most interesting part is the `BREAKPOINT_HANDLER_CALLER` static. It is an [`AtomicUsize`], an integer type that can be safely concurrently modified because all of its operations are atomic. We increment it when the `breakpoint_handler` is called and verify in our `_start` function that the handler was called exactly once.
+It is similar to our `main.rs`, but uses a custom IDT called `TEST_IDT` and different `_start` and `breakpoint_handler` functions. The most interesting part is the `BREAKPOINT_HANDLER_CALLED` static. It is an [`AtomicUsize`], an integer type that can be safely concurrently modified because all of its operations are atomic. We increment it when the `breakpoint_handler` is called and verify in our `_start` function that the handler was called exactly once.
 
 [`AtomicUsize`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicUsize.html
 
