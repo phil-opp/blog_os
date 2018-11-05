@@ -359,7 +359,7 @@ However, there is a problem: Statics are immutable, so we can't modify the break
 [`static mut`]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
-static mut IDT: Option<InterruptDescriptorTable> = InterruptDescriptorTable::new();
+static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();
 
 pub fn init_idt() {
     unsafe {
