@@ -372,7 +372,7 @@ Cargo supports hybrid projects that are both a library and a binary. We only nee
 
 #![no_std] // don't link the Rust standard library
 
-extern crate bootloader_precompiled;
+extern crate bootloader;
 extern crate spin;
 extern crate volatile;
 #[macro_use]

@@ -1,7 +1,7 @@
 #![no_std] // don't link the Rust standard library
 #![feature(abi_x86_interrupt)]
 
-extern crate bootloader_precompiled;
+extern crate bootloader;
 extern crate spin;
 extern crate volatile;
 #[macro_use]
