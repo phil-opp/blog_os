@@ -321,28 +321,24 @@ Now that we have an executable that does something perceptible, it is time to tu
 
 [section about booting]: #the-boot-process
 
-To add a bootloader to our kernel we add a dependency on the [`bootloader_precompiled`] crate:
+Instead of writing our own bootloader, which is a project on its own, we use the [`bootloader`] crate. This crate implements a basic BIOS bootloader without any C dependencies, just Rust and inline assembly. To use it for booting our kernel, we need to add a dependency on it:
 
-[`bootloader_precompiled`]: https://crates.io/crates/bootloader_precompiled
+[`bootloader`]: https://crates.io/crates/bootloader
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-bootloader_precompiled = "0.2.0"
+bootloader = "0.3.4"
 ```
 
 ```rust
 // in main.rs
 
-extern crate bootloader_precompiled;
+extern crate bootloader;
 ```
 
-This crate is a precompiled version of the [`bootloader`] crate, an experimental bootloader written in Rust and assembly. We use the precompiled version because the bootloader has some linking issues on platforms other than Linux. We try our best to solve these issues and will update the post as soon as it works on all platforms.
-
-[`bootloader`]: https://crates.io/crates/bootloader
-
-Regardless of whether precompiled or not, adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to combine the bootloader with the kernel after it has been compiled, but cargo has no support for additional build steps after successful compilation (see [this issue][post-build script] for more information).
+Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to combine the bootloader with the kernel after it has been compiled, but cargo has no support for additional build steps after successful compilation (see [this issue][post-build script] for more information).
 
 [post-build script]: https://github.com/rust-lang/cargo/issues/545
 
@@ -362,9 +358,9 @@ After installing the `bootimage` tool, creating a bootable disk image is as easy
 > bootimage build --target x86_64-blog_os.json
 ```
 
-The tool also recompiles your kernel using `cargo xbuild`, so it will automatically pick up any changes you make.
+You see that the tool recompiles your kernel using `cargo xbuild`, so it will automatically pick up any changes you make. Afterwards it compiles the bootloader, which might take a while. Like all crate dependencies it is only built once and then cached, so subsequent builds will be much faster. Finally, `bootimage` combines the bootloader and your kernel to a bootable disk image.
 
-After executing the command, you should see a file named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. This file is a bootable disk image. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
+After executing the command, you should see a bootable disk image named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
 #### How does it work?
 The `bootimage` tool performs the following steps behind the scenes:
