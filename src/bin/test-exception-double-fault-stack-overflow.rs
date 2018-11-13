@@ -6,11 +6,11 @@
 #[macro_use]
 extern crate blog_os;
 extern crate x86_64;
-#[macro_use]
 extern crate lazy_static;
 
 use blog_os::exit_qemu;
 use core::panic::PanicInfo;
+use lazy_static::lazy_static;
 
 #[cfg(not(test))]
 #[no_mangle]

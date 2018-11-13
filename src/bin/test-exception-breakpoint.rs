@@ -6,12 +6,12 @@
 #[macro_use]
 extern crate blog_os;
 extern crate x86_64;
-#[macro_use]
 extern crate lazy_static;
 
 use blog_os::exit_qemu;
 use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicUsize, Ordering};
+use lazy_static::lazy_static;
 
 static BREAKPOINT_HANDLER_CALLED: AtomicUsize = AtomicUsize::new(0);
 
