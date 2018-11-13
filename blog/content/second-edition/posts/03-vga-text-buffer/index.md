@@ -67,6 +67,8 @@ All of the code below goes into our new module (unless specified otherwise).
 First, we represent the different colors using an enum:
 
 ```rust
+// in src/vga_buffer.rs
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -110,6 +112,8 @@ To represent a full color code that specifies foreground and background color, w
 [newtype]: https://rustbyexample.com/generics/new_types.html
 
 ```rust
+// in src/vga_buffer.rs
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ColorCode(u8);
 
@@ -125,6 +129,8 @@ The `ColorCode` contains the full color byte, containing foreground and backgrou
 Now we can add structures to represent a screen character and the text buffer:
 
 ```rust
+// in src/vga_buffer.rs
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 struct ScreenChar {
@@ -146,6 +152,8 @@ Since the field ordering in default structs is undefined in Rust, we need the [`
 To actually write to screen, we now create a writer type:
 
 ```rust
+// in src/vga_buffer.rs
+
 pub struct Writer {
     column_position: usize,
     color_code: ColorCode,
@@ -161,6 +169,8 @@ The writer will always write to the last line and shift lines up when a line is 
 Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte:
 
 ```rust
+// in src/vga_buffer.rs
+
 impl Writer {
     pub fn write_byte(&mut self, byte: u8) {
         match byte {
@@ -195,6 +205,8 @@ When printing a byte, the writer checks if the current line is full. In that cas
 To print whole strings, we can convert them to bytes and print them one-by-one:
 
 ```rust
+// in src/vga_buffer.rs
+
 impl Writer {
     pub fn write_string(&mut self, s: &str) {
         for byte in s.bytes() {
@@ -219,6 +231,8 @@ The VGA text buffer only supports ASCII and the additional bytes of [code page 4
 To write some characters to the screen, you can create a temporary function:
 
 ```rust
+// in src/vga_buffer.rs
+
 pub fn print_something() {
     let mut writer = Writer {
         column_position: 0,
@@ -297,6 +311,8 @@ Instead of a `ScreenChar`, we're now using a `Volatile<ScreenChar>`. (The `Volat
 This means that we have to update our `Writer::write_byte` method:
 
 ```rust
+// in src/vga_buffer.rs
+
 impl Writer {
     pub fn write_byte(&mut self, byte: u8) {
         match byte {
@@ -324,6 +340,8 @@ It would be nice to support Rust's formatting macros, too. That way, we can easi
 [`core::fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
 ```rust
+// in src/vga_buffer.rs
+
 use core::fmt;
 
 impl fmt::Write for Writer {
@@ -338,6 +356,8 @@ The `Ok(())` is just a `Ok` Result containing the `()` type.
 Now we can use Rust's built-in `write!`/`writeln!` formatting macros:
 
 ```rust
+// in src/vga_buffer.rs
+
 pub fn print_something() {
     use core::fmt::Write;
     let mut writer = Writer {
@@ -360,6 +380,8 @@ Now you should see a `Hello! The numbers are 42 and 0.3333333333333333` at the b
 Right now, we just ignore newlines and characters that don't fit into the line anymore. Instead we want to move every character one line up (the top line gets deleted) and start at the beginning of the last line again. To do this, we add an implementation for the `new_line` method of `Writer`:
 
 ```rust
+// in src/vga_buffer.rs
+
 impl Writer {
     fn new_line(&mut self) {
         for row in 1..BUFFER_HEIGHT {
@@ -380,6 +402,8 @@ We iterate over all screen characters and move each character one row up. Note t
 To finish the newline code, we add the `clear_row` method:
 
 ```rust
+// in src/vga_buffer.rs
+
 impl Writer {
     fn clear_row(&mut self, row: usize) {
         let blank = ScreenChar {
@@ -398,6 +422,8 @@ This method clears a row by overwriting all of its characters with a space chara
 To provide a global writer that can used as an interface from other modules without carrying a `Writer` instance around, we try to create a static `WRITER`:
 
 ```rust
+// in src/vga_buffer.rs
+
 pub static WRITER: Writer = Writer {
     column_position: 0,
     color_code: ColorCode::new(Color::Yellow, Color::Black),
@@ -469,6 +495,8 @@ We need the `spin_no_std` feature, since we don't link the standard library. We 
 With `lazy_static`, we can define our static `WRITER` without problems:
 
 ```rust
+// in src/vga_buffer.rs
+
 lazy_static! {
     pub static ref WRITER: Writer = Writer {
         column_position: 0,
@@ -511,7 +539,8 @@ extern crate spin;
 Then we can use the spinning Mutex to add safe [interior mutability] to our static `WRITER`:
 
 ```rust
-// in src/vga_buffer.rs again
+// in src/vga_buffer.rs
+
 use spin::Mutex;
 ...
 lazy_static! {
