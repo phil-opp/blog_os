@@ -325,7 +325,7 @@ Now our GDT is loaded, but we still see the boot loop on stack overflow.
 
 ### The final Steps
 
-The problem is that the GDT segments are not yet active becaues the segment and TSS registers still contain the values from the old GDT. We also need to modify the double fault IDT entry so that it uses the new stack.
+The problem is that the GDT segments are not yet active because the segment and TSS registers still contain the values from the old GDT. We also need to modify the double fault IDT entry so that it uses the new stack.
 
 In summary, we need to do the following:
 
