@@ -85,6 +85,7 @@ mod serial;
 
 use uart_16550::SerialPort;
 use spin::Mutex;
+use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref SERIAL1: Mutex<SerialPort> = {
@@ -375,7 +376,6 @@ Cargo supports hybrid projects that are both a library and a binary. We only nee
 extern crate bootloader;
 extern crate spin;
 extern crate volatile;
-#[macro_use]
 extern crate lazy_static;
 extern crate uart_16550;
 extern crate x86_64;

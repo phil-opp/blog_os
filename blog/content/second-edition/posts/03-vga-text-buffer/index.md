@@ -478,7 +478,6 @@ Let's add the `lazy_static` crate to our project:
 ```rust
 // in src/main.rs
 
-#[macro_use]
 extern crate lazy_static;
 ```
 
@@ -490,12 +489,14 @@ version = "1.0"
 features = ["spin_no_std"]
 ```
 
-We need the `spin_no_std` feature, since we don't link the standard library. We also need the `#[macro_use]` attribute on the `extern crate` line to import the `lazy_static!` macro.
+We need the `spin_no_std` feature, since we don't link the standard library.
 
 With `lazy_static`, we can define our static `WRITER` without problems:
 
 ```rust
 // in src/vga_buffer.rs
+
+use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref WRITER: Writer = Writer {

@@ -382,6 +382,8 @@ We already imported the `lazy_static` crate when we [created an abstraction for 
 ```rust
 // in src/interrupts.rs
 
+use lazy_static::lazy_static;
+
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();

@@ -4,7 +4,6 @@
 extern crate bootloader;
 extern crate spin;
 extern crate volatile;
-#[macro_use]
 extern crate lazy_static;
 extern crate pic8259_simple;
 extern crate uart_16550;
