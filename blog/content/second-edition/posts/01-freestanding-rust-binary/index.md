@@ -109,43 +109,15 @@ fn main() {}
 
 ```
 > cargo build
-error: language item required, but not found: `panic_impl`
+error: `#[panic_handler]` function required, but not found
 error: language item required, but not found: `eh_personality`
 ```
 
-Now the compiler is missing some _language items_. Language items are special pluggable functions that the compiler invokes on certain conditions, for example when the application [panics][panic]. Normally, these items are provided by the standard library, but we disabled it.
-
-[panic]: https://doc.rust-lang.org/stable/book/second-edition/ch09-01-unrecoverable-errors-with-panic.html
-
-Providing our own implementation of the language items would be possible, but this should only be done as a last resort. The reason is that language items are highly unstable implementation details and not even type checked (so the compiler doesn't even check if it has the right argument types).
-
-Fortunately, there are more stable ways to fix these language item errors.
-
-### Disabling Unwinding
-
-The `eh_personality` language item is used for implementing [stack unwinding]. By default, Rust uses unwinding to run the destructors of all live stack variables in case of a [panic]. This ensures that all used memory is freed and allows the parent thread to catch the panic and continue execution. Unwinding, however, is a complicated process and requires some OS specific libraries (e.g. [libunwind] on Linux or [structured exception handling] on Windows), so we don't want to use it for our operating system.
-
-[stack unwinding]: http://www.bogotobogo.com/cplusplus/stackunwinding.php
-[libunwind]: http://www.nongnu.org/libunwind/
-[structured exception handling]: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx
-
-There are other use cases as well for which unwinding is undesirable, so Rust provides an option to [abort on panic] instead. This disables the generation of unwinding symbol information and thus considerably reduces binary size. There are multiple places where we can disable unwinding. The easiest way is to add the following lines to our `Cargo.toml`:
-
-```toml
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"
-```
-
-This sets the panic strategy to `abort` for both the `dev` profile (used for `cargo build`) and the `release` profile (used for `cargo build --release`). Now the `eh_personality` language item should no longer be required.
-
-[abort on panic]: https://github.com/rust-lang/rust/pull/32900
+Now the compiler is missing a `#[panic_handler]` function and a _language item_.
 
 ### Panic Implementation
 
-The `panic_impl` language item defines the function that the compiler should invoke when a [panic] occurs. Instead of providing the language item directly, we can use the [`panic_handler`] attribute to create a `panic` function.
+The `panic_handler` attribute defines the function that the compiler should invoke when a [panic] occurs. The standard library provides its own panic handler function, but in a `no_std` environment we need to define it ourselves:
 
 ```rust
 // in main.rs
@@ -165,7 +137,38 @@ The [`PanicInfo` parameter][PanicInfo] contains the file and line where the pani
 [diverging function]: https://doc.rust-lang.org/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-Now we fixed both language item errors. However, if we try to compile it now, another language item is required:
+### The `eh_personality` Language Item
+
+Language items are special functions and types that are required internally by the compiler. For example, the [`Copy`] trait is a language item that tells the compiler which types have [_copy semantics_][`Copy`]. When we look at the [implementation][copy code], we see has the special `#[lang = "copy"]` attribute that defines it as a language item.
+
+[`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
+[copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
+
+Providing own implementations of language items would be possible, but this should only be done as a last resort. The reason is that language items are highly unstable implementation details and not even type checked (so the compiler doesn't even check if a function has the right argument types). Fortunately, there is a more stable ways to fix the above language item error.
+
+The `eh_personality` language item marks a function that is used for implementing [stack unwinding]. By default, Rust uses unwinding to run the destructors of all live stack variables in case of a [panic]. This ensures that all used memory is freed and allows the parent thread to catch the panic and continue execution. Unwinding, however, is a complicated process and requires some OS specific libraries (e.g. [libunwind] on Linux or [structured exception handling] on Windows), so we don't want to use it for our operating system.
+
+[stack unwinding]: http://www.bogotobogo.com/cplusplus/stackunwinding.php
+[libunwind]: http://www.nongnu.org/libunwind/
+[structured exception handling]: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx
+
+#### Disabling Unwinding
+
+There are other use cases as well for which unwinding is undesirable, so Rust provides an option to [abort on panic] instead. This disables the generation of unwinding symbol information and thus considerably reduces binary size. There are multiple places where we can disable unwinding. The easiest way is to add the following lines to our `Cargo.toml`:
+
+```toml
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+```
+
+This sets the panic strategy to `abort` for both the `dev` profile (used for `cargo build`) and the `release` profile (used for `cargo build --release`). Now the `eh_personality` language item should no longer be required.
+
+[abort on panic]: https://github.com/rust-lang/rust/pull/32900
+
+Now we fixed both of the above errors. However, if we try to compile it now, another language item is required:
 
 ```
 > cargo build
