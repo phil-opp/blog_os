@@ -532,7 +532,70 @@ The above code just translates keypresses of the number keys 0-9 and ignores all
 
 ![QEMU printing numbers to the screen](qemu-printing-numbers.gif)
 
-Translating the other keys could work in the same way, probably with an enum for control keys such as escape or backspace. Such a translation function would be a good candidate for a small external crate, but I couldn't find one that works with scancode set 1. In case you'd like to write such a crate and need mentoring, just let us know, we're happy to help!
+Translating the other keys works in the same way. Fortunately there is a crate named [`pc-keyboard`] for translating scancodes of scancode sets 1 and 2, so we don't have to implement this ourselves. To use the crate, we add it to our `Cargo.toml` and import it in our `lib.rs`:
+
+[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/
+
+```toml
+# in Cargo.toml
+
+[dependencies]
+pc-keyboard = "0.3.1"
+```
+
+```rust
+// in src/lib.rs
+
+extern crate pc_keyboard;
+```
+
+Now we can use this crate to rewrite our `keyboard_interrupt_handler`:
+
+```rust
+// in/src/interrupts.rs
+
+extern "x86-interrupt" fn keyboard_interrupt_handler(
+    _stack_frame: &mut ExceptionStackFrame)
+{
+    use x86_64::instructions::port::Port;
+    use pc_keyboard::{Keyboard, ScancodeSet1, DecodedKey, layouts};
+    use spin::Mutex;
+
+    lazy_static! {
+        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
+            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1));
+    }
+
+    let mut keyboard = KEYBOARD.lock();
+    let port = Port::new(0x60);
+
+    let scancode: u8 = unsafe { port.read() };
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            match key {
+                DecodedKey::Unicode(character) => print!("{}", character),
+                DecodedKey::RawKey(key) => print!("{:?}", key),
+            }
+        }
+    }
+
+    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+}
+```
+
+We use the `lazy_static` macro to create a static [`Keyboard`] object protected by a Mutex. On each interrupt, we lock the Mutex, read the scancode from the keyboard controller and pass it to the [`add_byte`] method, which translates the scancode into an `Option<KeyEvent>`. The [`KeyEvent`] contains which key caused the event and whether it was a press or release event.
+
+[`Keyboard`]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/struct.Keyboard.html
+[`add_byte`]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/struct.Keyboard.html#method.add_byte
+[`KeyEvent`]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/struct.KeyEvent.html
+
+To interpret this key event, we pass it to the [`process_keyevent`] method, which translates the key event to a character if possible. For example, translates a press event of the `A` key to either a lowercase `a` character or an uppercase `A` character, depending on whether the shift key was pressed.
+
+[`process_keyevent]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/struct.Keyboard.html#method.process_keyevent
+
+With this modified interrupt handler we can now write text:
+
+TODO gif
 
 ### Configuring the Keyboard
 
