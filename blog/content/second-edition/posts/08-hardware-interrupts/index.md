@@ -595,7 +595,7 @@ To interpret this key event, we pass it to the [`process_keyevent`] method, whic
 
 With this modified interrupt handler we can now write text:
 
-TODO gif
+![Typing "Hello World" in QEMU](qemu-typing.gif)
 
 ### Configuring the Keyboard
 
