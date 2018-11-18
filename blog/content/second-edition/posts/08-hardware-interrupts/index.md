@@ -253,7 +253,7 @@ We can already provoke a deadlock in our kernel. Remember, our `println` macro c
 
 […]
 
-pub fn print(args: fmt::Arguments) {
+pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
 }
@@ -308,7 +308,7 @@ To avoid this deadlock, we can disable interrupts as long as the `Mutex` is lock
 
 /// Prints the given formatted string to the VGA text buffer
 /// through the global `WRITER` instance.
-pub fn print(args: fmt::Arguments) {
+pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     use x86_64::instructions::interrupts;   // new
 
@@ -328,7 +328,7 @@ We can apply the same change to our serial printing function to ensure that no d
 ```rust
 // in src/serial.rs
 
-pub fn print(args: ::core::fmt::Arguments) {
+pub fn _print(args: ::core::fmt::Arguments) {
     use core::fmt::Write;
     use x86_64::instructions::interrupts;       // new
 
