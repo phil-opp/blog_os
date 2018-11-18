@@ -111,13 +111,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 The test framework seems to work as intended. We don't have any tests yet, but we already get a test result summary.
 
 ### Silencing the Warnings
-We get a few warnings about unused items, because we no longer compile our `_start` function. To silence such unused code warnings, we can add the following to the top of our `main.rs`:
+We get a few warnings about unused imports, because we no longer compile our `_start` function. To silence such unused code warnings, we can add the following to the top of our `main.rs`:
 
 ```
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![cfg_attr(test, allow(unused_imports))]
 ```
 
-Like before, the `cfg_attr` attribute sets the passed attribute if the passed condition holds. Here, we set the `allow(…)` attribute when compiling in test mode. We use the `allow` attribute to disable warnings for the `dead_code`, `unused_macro`, and `unused_import` _lints_.
+Like before, the `cfg_attr` attribute sets the passed attribute if the passed condition holds. Here, we set the `allow(…)` attribute when compiling in test mode. We use the `allow` attribute to disable warnings for the `unused_import` _lint_.
 
 Lints are classes of warnings, for example `dead_code` for unused code or `missing-docs` for missing documentation. Lints can be set to four different states:
 
@@ -131,14 +131,12 @@ Some lints are `allow` by default (such as `missing-docs`), others are `warn` by
 [clippy]: https://github.com/rust-lang-nursery/rust-clippy
 
 ### Including the Standard Library
-Unit tests run on the host machine, so it's possible to use the complete standard library inside them. To link the standard library in test mode, we can add the following to our `main.rs`:
+Unit tests run on the host machine, so it's possible to use the complete standard library inside them. To link the standard library in test mode, we can make the `#![no_std]` attribute conditional through `cfg_attr` too:
 
-```rust
-#[cfg(test)]
-extern crate std;
+```diff
+-#![no_std]
++#![cfg_attr(not(test), no_std)]
 ```
-
-Rust knows where to find the `std` crate, so no modification to the `Cargo.toml` is required.
 
 ## Testing the VGA Module
 Now that we have set up the test framework, we can add a first unit test for our `vga_buffer` module:
