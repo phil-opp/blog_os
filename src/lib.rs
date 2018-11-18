@@ -1,7 +1,6 @@
 #![cfg_attr(not(test), no_std)] // don't link the Rust standard library
 #![feature(abi_x86_interrupt)]
 
-#[macro_use]
 pub mod vga_buffer;
 pub mod gdt;
 pub mod interrupts;

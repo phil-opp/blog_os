@@ -4,7 +4,7 @@
 // problem we skip compilation of this module on Windows.
 #![cfg(not(windows))]
 
-use crate::gdt;
+use crate::{gdt, print, println};
 use pic8259_simple::ChainedPics;
 use spin;
 use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
