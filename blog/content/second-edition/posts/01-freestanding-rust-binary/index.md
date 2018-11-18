@@ -52,10 +52,12 @@ By default, all Rust crates link the [standard library], which depends on the op
 We start by creating a new cargo application project. The easiest way to do this is through the command line:
 
 ```
-> cargo new blog_os --bin
+> cargo new blog_os --bin --edition 2018
 ```
 
-I named the project `blog_os`, but of course you can choose your own name. The `--bin` flag specifies that we want to create an executable binary (in contrast to a library). When we run the command, cargo creates the following directory structure for us:
+I named the project `blog_os`, but of course you can choose your own name. The `--bin` flag specifies that we want to create an executable binary (in contrast to a library) and the `--edition 2018` flag specifies that we want to use the [2018 edition] of Rust for our crate. When we run the command, cargo creates the following directory structure for us:
+
+[2018 edition]: https://rust-lang-nursery.github.io/edition-guide/rust-2018/index.html
 
 ```
 blog_os
