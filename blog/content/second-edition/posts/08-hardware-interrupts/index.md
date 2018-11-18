@@ -85,12 +85,6 @@ To add the crate as dependency, we add the following to our project:
 pic8259_simple = "0.1.1"
 ```
 
-```rust
-// in src/lib.rs
-
-extern crate pic8259_simple;
-```
-
 The main abstraction provided by the crate is the [`ChainedPics`] struct that represents the primary/secondary PIC layout we saw above. It is designed to be used in the following way:
 
 [`ChainedPics`]: https://docs.rs/pic8259_simple/0.1.1/pic8259_simple/struct.ChainedPics.html
@@ -541,12 +535,6 @@ Translating the other keys works in the same way. Fortunately there is a crate n
 
 [dependencies]
 pc-keyboard = "0.3.1"
-```
-
-```rust
-// in src/lib.rs
-
-extern crate pc_keyboard;
 ```
 
 Now we can use this crate to rewrite our `keyboard_interrupt_handler`:

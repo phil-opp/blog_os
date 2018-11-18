@@ -285,14 +285,6 @@ The `0.2.3` is the [semantic] version number. For more information, see the [Spe
 [semantic]: http://semver.org/
 [Specifying Dependencies]: http://doc.crates.io/specifying-dependencies.html
 
-Now we've declared that our project depends on the `volatile` crate and are able to import it in `src/main.rs`:
-
-```rust
-// in src/main.rs
-
-extern crate volatile;
-```
-
 Let's use it to make writes to the VGA buffer volatile. We update our `Buffer` type as follows:
 
 ```rust
@@ -475,12 +467,6 @@ The one-time initialization of statics with non-const functions is a common prob
 
 Let's add the `lazy_static` crate to our project:
 
-```rust
-// in src/main.rs
-
-extern crate lazy_static;
-```
-
 ```toml
 # in Cargo.toml
 
@@ -530,11 +516,6 @@ To use a spinning mutex, we can add the [spin crate] as a dependency:
 # in Cargo.toml
 [dependencies]
 spin = "0.4.9"
-```
-
-```rust
-// in src/main.rs
-extern crate spin;
 ```
 
 Then we can use the spinning Mutex to add safe [interior mutability] to our static `WRITER`:

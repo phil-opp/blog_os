@@ -244,17 +244,9 @@ To use that crate, we add the following to our `Cargo.toml`:
 array-init = "0.0.3"
 ```
 
-Note that we're using the [`dev-dependencies`] table instead of the `dependencies` table, because we only need the crate for `cargo test` and not for a normal build. Consequently, we also add a `#[cfg(test)]` attribute to the `extern crate` declaration in `main.rs`:
+Note that we're using the [`dev-dependencies`] table instead of the `dependencies` table, because we only need the crate for `cargo test` and not for a normal build.
 
 [`dev-dependencies`]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#development-dependencies
-
-
-```rust
-// in main.rs
-
-#[cfg(test)]
-extern crate array_init;
-```
 
 Now we can fix our `construct_buffer` function:
 
