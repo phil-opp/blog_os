@@ -332,12 +332,6 @@ Instead of writing our own bootloader, which is a project on its own, we use the
 bootloader = "0.3.4"
 ```
 
-```rust
-// in main.rs
-
-extern crate bootloader;
-```
-
 Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to combine the bootloader with the kernel after it has been compiled, but cargo has no support for additional build steps after successful compilation (see [this issue][post-build script] for more information).
 
 [post-build script]: https://github.com/rust-lang/cargo/issues/545

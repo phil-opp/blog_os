@@ -234,6 +234,7 @@ For our use case, we don't need to overwrite any instructions. Instead, we just 
 // in src/interrupts.rs
 
 use x86_64::structures::idt::{InterruptDescriptorTable, ExceptionStackFrame};
+use crate::println;
 
 pub fn init_idt() {
     let mut idt = InterruptDescriptorTable::new();
@@ -249,7 +250,7 @@ extern "x86-interrupt" fn breakpoint_handler(
 
 Our handler just outputs a message and pretty-prints the exception stack frame.
 
-When we try to compile it, the following errors occur:
+When we try to compile it, the following error occurs:
 
 ```
 error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue #40180)
@@ -264,44 +265,6 @@ error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue
 ```
 
 This error occurs because the `x86-interrupt` calling convention is still unstable. To use it anyway, we have to explicitly enable it by adding `#![feature(abi_x86_interrupt)]` on the top of our `lib.rs`.
-
-```
-error: cannot find macro `println!` in this scope
-  --> src/interrupts.rs:40:5
-   |
-40 |     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
-   |     ^^^^^^^
-   |
-   = help: have you added the `#[macro_use]` on the module/import?
-```
-
-This happened because we forgot to add `#[macro_use]` before our import of the `vga_buffer` module.
-
-```rust
-// in src/lib.rs
-
-pub mod gdt;
-pub mod interrupts;
-pub mod serial;
-#[macro_use] // new
-pub mod vga_buffer;
-```
-
-However, after adding `#[macro_use]` before the module import, we still get the same error. Sometimes this can be confusing, but it's actually a quirk of how Rust's macro system works. Macros _must be defined_ before you can use them. This is one case where import order matters in Rust. We can easily fix this by ensuring the order of our imports places the macros first:
-
-```rust
-// in src/lib.rs
-
-#[macro_use]
-pub mod vga_buffer; // import this before other modules so its macros may be used
-pub mod gdt;
-pub mod interrupts;
-pub mod serial;
-```
-
-Now we can use our `print!` and `println!` macros in `interrupts.rs`. If you'd like to know more about the ins and outs of macros and how they differ from functions [you can find more information here][in-depth-rust-macros].
-
-[in-depth-rust-macros]: https://doc.rust-lang.org/book/second-edition/appendix-04-macros.html
 
 ### Loading the IDT
 In order that the CPU uses our new interrupt descriptor table, we need to load it using the [`lidt`] instruction. The `InterruptDescriptorTable` struct of the `x86_64` provides a [`load`][InterruptDescriptorTable::load] method function for that. Let's try to use it:

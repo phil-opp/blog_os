@@ -285,14 +285,6 @@ The `0.2.3` is the [semantic] version number. For more information, see the [Spe
 [semantic]: http://semver.org/
 [Specifying Dependencies]: http://doc.crates.io/specifying-dependencies.html
 
-Now we've declared that our project depends on the `volatile` crate and are able to import it in `src/main.rs`:
-
-```rust
-// in src/main.rs
-
-extern crate volatile;
-```
-
 Let's use it to make writes to the VGA buffer volatile. We update our `Buffer` type as follows:
 
 ```rust
@@ -475,12 +467,6 @@ The one-time initialization of statics with non-const functions is a common prob
 
 Let's add the `lazy_static` crate to our project:
 
-```rust
-// in src/main.rs
-
-extern crate lazy_static;
-```
-
 ```toml
 # in Cargo.toml
 
@@ -532,11 +518,6 @@ To use a spinning mutex, we can add the [spin crate] as a dependency:
 spin = "0.4.9"
 ```
 
-```rust
-// in src/main.rs
-extern crate spin;
-```
-
 Then we can use the spinning Mutex to add safe [interior mutability] to our static `WRITER`:
 
 ```rust
@@ -577,25 +558,29 @@ Now that we have a global writer, we can add a `println` macro that can be used 
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust
+#[macro_export]
 macro_rules! println {
     () => (print!("\n"));
-    ($fmt:expr) => (print!(concat!($fmt, "\n")));
-    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+    ($($arg:tt)*) => (print!("{}\n", format_args!($($arg)*)));
 }
 ```
-Macros are defined through one or more rules, which are similar to `match` arms. The `println` macro has three rules: The first rule for is invocations without arguments (e.g `println!()`), the second rule is for invocations with a single argument (e.g. `println!("Hello")`) and the third rule is for invocations with additional parameters (e.g. `println!("{}{}", 4, 2)`).
 
-First line just prints a `\n` symbol which literally means "don't print anything, just break the line".
-Last two rules simply append a newline character (`\n`) to the format string and then invoke the [`print!` macro], which is defined as:
+Macros are defined through one or more rules, which are similar to `match` arms. The `println` macro has two rules: The first rule for is invocations without arguments (e.g `println!()`), which is expanded to `print!("\n)` and thus just prints a newline. the second rule is for invocations with parameters such as `println!("Hello")` or `println!("Number: {}", 4)`. It is also expanded to an invocation of the `print!` macro, passing all arguments and an additional newline `\n` at the end.
+
+The `#[macro_export]` attribute makes the available to the whole crate (not just the module it is defined) and external crates. It also places the macro at the crate root, which means that we have to import the macro through `use std::println` instead of `std::macros::println`.
+
+The [`print!` macro] is defined as:
 
 [`print!` macro]: https://doc.rust-lang.org/nightly/std/macro.print!.html
 
 ```rust
+#[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
 }
 ```
-The macro expands to a call of the [`_print` function] in the `io` module. The [`$crate` variable] ensures that the macro also works from outside the `std` crate. For example, it expands to `::std` when it's used in other crates.
+
+The macro expands to a call of the [`_print` function] in the `io` module. The [`$crate` variable] ensures that the macro also works from outside the `std` crate by expanding to `std` when it's used in other crates.
 
 The [`format_args` macro] builds a [fmt::Arguments] type from the passed arguments, which is passed to `_print`. The [`_print` function] of libstd calls `print_to`, which is rather complicated because it supports different `Stdout` devices. We don't need that complexity since we just want to print to the VGA buffer.
 
@@ -604,36 +589,46 @@ The [`format_args` macro] builds a [fmt::Arguments] type from the passed argumen
 [`format_args` macro]: https://doc.rust-lang.org/nightly/std/macro.format_args.html
 [fmt::Arguments]: https://doc.rust-lang.org/nightly/core/fmt/struct.Arguments.html
 
-To print to the VGA buffer, we just copy the `println!` and `print!` macros, but modify them to use a `print` function:
+To print to the VGA buffer, we just copy the `println!` and `print!` macros, but modify them to use our own `_print` function:
 
 ```rust
 // in src/vga_buffer.rs
 
+#[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::vga_buffer::print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*)));
 }
 
+#[macro_export]
 macro_rules! println {
-    () => (print!("\n"));
-    ($fmt:expr) => (print!(concat!($fmt, "\n")));
-    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
 }
 
-pub fn print(args: fmt::Arguments) {
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
 }
 ```
-The `print` function locks our static `WRITER` and calls the `write_fmt` method on it. This method is from the `Write` trait, we need to import that trait. The additional `unwrap()` at the end panics if printing isn't successful. But since we always return `Ok` in `write_str`, that should not happen.
+
+One thing that we changed from the original `println` definition is that we prefixed the invocations of the `print!` macro with `$crate` too. This ensures that we don't need to have to import the `print!` macro too if we only want to use `println`.
+
+Like in the standard library, we add the `#[macro_export]` attribute to both macros to make them available everywhere in our crate. Note that this places the macros in the root namespace of the crate, so importing them via `use crate::vga_buffer::println` does not work. Instead, we have to do `use crate::println`.
+
+The `_print` function locks our static `WRITER` and calls the `write_fmt` method on it. This method is from the `Write` trait, we need to import that trait. The additional `unwrap()` at the end panics if printing isn't successful. But since we always return `Ok` in `write_str`, that should not happen.
+
+Since the macros need to be able to call `_print` from outside of the module, the function needs to be public. However, since we consider this a private implementation detail, we add the [`doc(hidden)` attribute] to hide it from the generated documentation.
+
+[`doc(hidden)` attribute]: https://doc.rust-lang.org/nightly/rustdoc/the-doc-attribute.html#dochidden
 
 ### Hello World using `println`
-To use `println` in `main.rs`, we need to import the macros of the VGA buffer module first. Therefore we add a `#[macro_use]` attribute to the module declaration:
+Now we can use `println` in our `_start` function:
 
 ```rust
 // in src/main.rs
 
-#[macro_use]
-mod vga_buffer;
+use crate::println;
 
 #[no_mangle]
 pub extern "C" fn _start() {
@@ -643,7 +638,7 @@ pub extern "C" fn _start() {
 }
 ```
 
-Since we imported the macros at crate level, they are available in all modules and thus provide an easy and safe interface to the VGA buffer.
+We have to explicitly import the `println` macro in order to use it. This is different from the standard library where the `println` macro is implicitly imported. Note that the macros live directly under the crate root (i.e. `crate::println` instead of `crate::vga_buffer::println`) because of the `#[macro_export]` attribute.
 
 As expected, we now see a _“Hello World!”_ on the screen:
 

@@ -3,12 +3,7 @@
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
-#[macro_use]
-extern crate blog_os;
-extern crate x86_64;
-extern crate lazy_static;
-
-use blog_os::exit_qemu;
+use blog_os::{exit_qemu, serial_println};
 use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use lazy_static::lazy_static;

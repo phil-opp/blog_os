@@ -85,12 +85,6 @@ To add the crate as dependency, we add the following to our project:
 pic8259_simple = "0.1.1"
 ```
 
-```rust
-// in src/lib.rs
-
-extern crate pic8259_simple;
-```
-
 The main abstraction provided by the crate is the [`ChainedPics`] struct that represents the primary/secondary PIC layout we saw above. It is designed to be used in the following way:
 
 [`ChainedPics`]: https://docs.rs/pic8259_simple/0.1.1/pic8259_simple/struct.ChainedPics.html
@@ -244,7 +238,7 @@ The hardware timer that we use is called the _Progammable Interval Timer_ or PIT
 
 We now have a form of concurrency in our kernel: The timer interrupts occur asynchronously, so they can interrupt our `_start` function at any time. Fortunately Rust's ownership system prevents many types of concurrency related bugs at compile time. One notable exception are deadlocks. Deadlocks occur if a thread tries to aquire a lock that will never become free. Thus the thread hangs indefinitely.
 
-We can already provoke a deadlock in our kernel. Remember, our `println` macro calls the `vga_buffer::print` function, which [locks a global `WRITER`][vga spinlock] using a spinlock:
+We can already provoke a deadlock in our kernel. Remember, our `println` macro calls the `vga_buffer::_print` function, which [locks a global `WRITER`][vga spinlock] using a spinlock:
 
 [vga spinlock]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
 
@@ -253,7 +247,8 @@ We can already provoke a deadlock in our kernel. Remember, our `println` macro c
 
 […]
 
-pub fn print(args: fmt::Arguments) {
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
 }
@@ -308,7 +303,8 @@ To avoid this deadlock, we can disable interrupts as long as the `Mutex` is lock
 
 /// Prints the given formatted string to the VGA text buffer
 /// through the global `WRITER` instance.
-pub fn print(args: fmt::Arguments) {
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     use x86_64::instructions::interrupts;   // new
 
@@ -328,7 +324,8 @@ We can apply the same change to our serial printing function to ensure that no d
 ```rust
 // in src/serial.rs
 
-pub fn print(args: ::core::fmt::Arguments) {
+#[doc(hidden)]
+pub fn _print(args: ::core::fmt::Arguments) {
     use core::fmt::Write;
     use x86_64::instructions::interrupts;       // new
 
@@ -541,12 +538,6 @@ Translating the other keys works in the same way. Fortunately there is a crate n
 
 [dependencies]
 pc-keyboard = "0.3.1"
-```
-
-```rust
-// in src/lib.rs
-
-extern crate pc_keyboard;
 ```
 
 Now we can use this crate to rewrite our `keyboard_interrupt_handler`:

@@ -66,12 +66,6 @@ We will use the [`uart_16550`] crate to initialize the UART and send data over t
 uart_16550 = "0.1.0"
 ```
 
-```rust
-// in src/main.rs
-
-extern crate uart_16550;
-```
-
 The `uart_16550` crate contains a `SerialPort` struct that represents the UART registers, but we still need to construct an instance of it ourselves. For that we create a new `serial` module with the following content:
 
 ```rust
@@ -103,23 +97,26 @@ Like with the [VGA text buffer][vga lazy-static], we use `lazy_static` and a spi
 To make the serial port easily usable, we add `serial_print!` and `serial_println!` macros:
 
 ```rust
-pub fn print(args: ::core::fmt::Arguments) {
+#[doc(hidden)]
+pub fn _print(args: ::core::fmt::Arguments) {
     use core::fmt::Write;
     SERIAL1.lock().write_fmt(args).expect("Printing to serial failed");
 }
 
 /// Prints to the host through the serial interface.
+#[macro_export]
 macro_rules! serial_print {
     ($($arg:tt)*) => {
-        $crate::serial::print(format_args!($($arg)*));
+        $crate::serial::_print(format_args!($($arg)*));
     };
 }
 
 /// Prints to the host through the serial interface, appending a newline.
+#[macro_export]
 macro_rules! serial_println {
-    () => (serial_print!("\n"));
-    ($fmt:expr) => (serial_print!(concat!($fmt, "\n")));
-    ($fmt:expr, $($arg:tt)*) => (serial_print!(concat!($fmt, "\n"), $($arg)*));
+    () => ($crate::serial_print!("\n"));
+    ($fmt:expr) => ($crate::serial_print!(concat!($fmt, "\n")));
+    ($fmt:expr, $($arg:tt)*) => ($crate::serial_print!(concat!($fmt, "\n"), $($arg)*));
 }
 ```
 
@@ -132,7 +129,8 @@ Now we can print to the serial interface in our `main.rs`:
 ```rust
 // in src/main.rs
 
-#[macro_use]
+use crate::serial_println;
+
 mod serial;
 
 #[cfg(not(test))]
@@ -145,7 +143,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-Note that we need to add the `#[macro_use]` attribute to the `mod serial` declaration, because otherwise the `serial_println` macro is not imported.
+Note that the `serial_println` macro lives directly under the root namespace because we used the `#[macro_export]` attribute, so importing it through `use crate::serial::serial_println` will not work.
 
 ### QEMU Arguments
 
@@ -206,8 +204,6 @@ x86_64 = "0.2.8"
 
 ```rust
 // in src/main.rs
-
-extern crate x86_64;
 
 pub unsafe fn exit_qemu() {
     use x86_64::instructions::port::Port;
@@ -371,19 +367,7 @@ Cargo supports hybrid projects that are both a library and a binary. We only nee
 ```rust
 // src/lib.rs
 
-#![no_std] // don't link the Rust standard library
-
-extern crate bootloader;
-extern crate spin;
-extern crate volatile;
-extern crate lazy_static;
-extern crate uart_16550;
-extern crate x86_64;
-
-#[cfg(test)]
-extern crate array_init;
-#[cfg(test)]
-extern crate std;
+#![cfg_attr(not(test), no_std)] // don't link the Rust standard library
 
 // NEW: We need to add `pub` here to make them accessible from the outside
 pub mod vga_buffer;
@@ -404,11 +388,8 @@ pub unsafe fn exit_qemu() {
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
-// NEW: Add the library as dependency (same crate name as executable)
-#[macro_use]
-extern crate blog_os;
-
 use core::panic::PanicInfo;
+use blog_os::println;
 
 /// This function is the entry point, since the linker looks for a function
 /// named `_start` by default.
@@ -429,29 +410,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-So we move everything except `_start` and `panic` to `lib.rs`, make the `vga_buffer` and `serial` modules public, and add an `extern crate` definition to our `main.rs`.
-
-This doesn't compile yet, because Rust's macros are not exported over crate boundaries by default. To export our printing macros, we need to add the `#[macro_export]` attribute to them:
-
-```rust
-// in src/vga_buffer.rs
-
-#[macro_export]
-macro_rules! print {…}
-
-#[macro_export]
-macro_rules! println {…}
-
-// in src/serial.rs
-
-#[macro_export]
-macro_rules! serial_print {…}
-
-#[macro_export]
-macro_rules! serial_println {…}
-```
-
-Now everything should work exactly as before, including `bootimage run` and `cargo test`.
+So we move everything except `_start` and `panic` to `lib.rs` and make the `vga_buffer` and `serial` modules public. Everything should work exactly as before, including `bootimage run` and `cargo test`.
 
 ### Test Basic Boot
 
@@ -464,12 +423,8 @@ We are finally able to create our first integration test executable. We start si
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
-// add the library as dependency (same crate name as executable)
-#[macro_use]
-extern crate blog_os;
-
 use core::panic::PanicInfo;
-use blog_os::exit_qemu;
+use blog_os::{exit_qemu, serial_println};
 
 /// This function is the entry point, since the linker looks for a function
 /// named `_start` by default.
@@ -529,11 +484,8 @@ To test that our panic handler is really invoked on a panic, we create a `test-p
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
-#[macro_use]
-extern crate blog_os;
-
 use core::panic::PanicInfo;
-use blog_os::exit_qemu;
+use blog_os::{exit_qemu, serial_println};
 
 #[cfg(not(test))]
 #[no_mangle]

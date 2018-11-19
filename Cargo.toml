@@ -2,6 +2,7 @@
 authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 name = "blog_os"
 version = "0.2.0"
+edition = "2018"
 
 [dependencies]
 bootloader = "0.3.4"

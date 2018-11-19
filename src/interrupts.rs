@@ -4,7 +4,7 @@
 // problem we skip compilation of this module on Windows.
 #![cfg(not(windows))]
 
-use gdt;
+use crate::{gdt, print, println};
 use pic8259_simple::ChainedPics;
 use spin;
 use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
@@ -48,7 +48,7 @@ extern "x86-interrupt" fn double_fault_handler(
     stack_frame: &mut ExceptionStackFrame,
     _error_code: u64,
 ) {
-    use hlt_loop;
+    use crate::hlt_loop;
 
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
     hlt_loop();

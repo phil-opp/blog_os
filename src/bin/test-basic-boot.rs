@@ -2,11 +2,7 @@
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
-// add the library as dependency (same crate name as executable)
-#[macro_use]
-extern crate blog_os;
-
-use blog_os::exit_qemu;
+use blog_os::{exit_qemu, serial_println};
 use core::panic::PanicInfo;
 
 /// This function is the entry point, since the linker looks for a function

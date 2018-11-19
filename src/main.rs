@@ -1,12 +1,10 @@
 #![no_std] // don't link the Rust standard library
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
-
-#[macro_use]
-extern crate blog_os;
-extern crate x86_64;
+#![cfg_attr(test, allow(unused_imports))]
 
 use core::panic::PanicInfo;
+
+use blog_os::println;
 
 /// This function is the entry point, since the linker looks for a function
 /// named `_start` by default.
