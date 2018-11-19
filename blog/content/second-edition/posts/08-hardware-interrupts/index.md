@@ -238,7 +238,7 @@ The hardware timer that we use is called the _Progammable Interval Timer_ or PIT
 
 We now have a form of concurrency in our kernel: The timer interrupts occur asynchronously, so they can interrupt our `_start` function at any time. Fortunately Rust's ownership system prevents many types of concurrency related bugs at compile time. One notable exception are deadlocks. Deadlocks occur if a thread tries to aquire a lock that will never become free. Thus the thread hangs indefinitely.
 
-We can already provoke a deadlock in our kernel. Remember, our `println` macro calls the `vga_buffer::print` function, which [locks a global `WRITER`][vga spinlock] using a spinlock:
+We can already provoke a deadlock in our kernel. Remember, our `println` macro calls the `vga_buffer::_print` function, which [locks a global `WRITER`][vga spinlock] using a spinlock:
 
 [vga spinlock]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
 
