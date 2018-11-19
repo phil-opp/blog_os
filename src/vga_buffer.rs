@@ -162,6 +162,7 @@ macro_rules! println {
 }
 
 /// Prints the given formatted string to the VGA text buffer through the global `WRITER` instance.
+#[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     use x86_64::instructions::interrupts;

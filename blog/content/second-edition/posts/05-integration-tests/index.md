@@ -97,6 +97,7 @@ Like with the [VGA text buffer][vga lazy-static], we use `lazy_static` and a spi
 To make the serial port easily usable, we add `serial_print!` and `serial_println!` macros:
 
 ```rust
+#[doc(hidden)]
 pub fn _print(args: ::core::fmt::Arguments) {
     use core::fmt::Write;
     SERIAL1.lock().write_fmt(args).expect("Printing to serial failed");
