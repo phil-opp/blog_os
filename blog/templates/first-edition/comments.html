@@ -1,0 +1,31 @@
+{% macro comment(page) %}
+    {% if page.path == "multiboot-kernel/" %}
+        {% include "first-edition/comments/multiboot-kernel.html" %}
+    {% elif page.path == "entering-longmode/" %}
+        {% include "first-edition/comments/entering-longmode.html" %}
+    {% elif page.path == "set-up-rust/" %}
+        {% include "first-edition/comments/set-up-rust.html" %}
+    {% elif page.path == "printing-to-screen/" %}
+        {% include "first-edition/comments/printing-to-screen.html" %}
+    {% elif page.path == "allocating-frames/" %}
+        {% include "first-edition/comments/allocating-frames.html" %}
+    {% elif page.path == "page-tables/" %}
+        {% include "first-edition/comments/page-tables.html" %}
+    {% elif page.path == "remap-the-kernel/" %}
+        {% include "first-edition/comments/remap-the-kernel.html" %}
+    {% elif page.path == "kernel-heap/" %}
+        {% include "first-edition/comments/kernel-heap.html" %}
+    {% elif page.path == "handling-exceptions/" %}
+        {% include "first-edition/comments/handling-exceptions.html" %}
+    {% elif page.path == "double-faults/" %}
+        {% include "first-edition/comments/double-faults.html" %}
+    {% elif page.path == "catching-exceptions/" %}
+        {% include "first-edition/comments/catching-exceptions.html" %}
+    {% elif page.path == "better-exception-messages/" %}
+        {% include "first-edition/comments/better-exception-messages.html" %}
+    {% elif page.path == "returning-from-exceptions/" %}
+        {% include "first-edition/comments/returning-from-exceptions.html" %}
+    {% else %}
+        No comments.
+    {% endif %}
+{% endmacro post_link %}
