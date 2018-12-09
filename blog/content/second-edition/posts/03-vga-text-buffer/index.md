@@ -628,8 +628,6 @@ Now we can use `println` in our `_start` function:
 ```rust
 // in src/main.rs
 
-use crate::println;
-
 #[no_mangle]
 pub extern "C" fn _start() {
     println!("Hello World{}", "!");
@@ -638,7 +636,7 @@ pub extern "C" fn _start() {
 }
 ```
 
-We have to explicitly import the `println` macro in order to use it. This is different from the standard library where the `println` macro is implicitly imported. Note that the macros live directly under the crate root (i.e. `crate::println` instead of `crate::vga_buffer::println`) because of the `#[macro_export]` attribute.
+Note that we don't have to import the macro in the main function, because it already lives in the root namespace.
 
 As expected, we now see a _“Hello World!”_ on the screen:
 
