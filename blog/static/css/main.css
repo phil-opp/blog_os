@@ -118,6 +118,10 @@ main img {
   color: #f33;
 }
 
+.post-footer-support, .post-footer-support > h2 {
+  color: #888;
+}
+
 .PageNavigation {
   font-size: 0.9em;
   display: table;
