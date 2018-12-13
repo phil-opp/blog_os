@@ -158,7 +158,7 @@ The physical address of the currently active level 4 page table, which is the ro
 
 The above page table hierarchy maps two pages (in blue). The start addresses of these pages are `0x803FE7F000` and `0x803FE00000`. Let's see what happens when the program tries to read from address `0x803FE7F5CE`. First, we convert the address to binary and determine the page table indices and the page offset for the address:
 
-![An example 4-level page hierarchy with each page table shown in physical memory](x86_64-page-table-translation-addresses.svg)
+![The sign extension bits are all 0, the level 4 index is 1, the level 3 index is 0, the level 2 index is 511, the level 1 index is 127, and the page offset is 0x5ce](x86_64-page-table-translation-addresses.svg)
 
 With these indices, we can now walk the page table hierarchy to determine the mapped frame for the address:
 
