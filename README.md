@@ -36,6 +36,7 @@ The goal of this project is to provide step-by-step tutorials in individual blog
 
 - [CPU Exceptions](https://os.phil-opp.com/cpu-exceptions/)
 - [Double Faults](https://os.phil-opp.com/double-fault-exceptions/)
+- [Hardware Interrupts](https://os.phil-opp.com/hardware-interrupts/)
 
 
 ## First Edition Posts
