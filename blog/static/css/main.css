@@ -68,11 +68,11 @@ main img {
 }
 
 .posts.testing {
-  border: 2px solid #0c0;
+  border: 2px solid #0a0;
 }
 
 .posts.memory-management {
-  border: 2px solid #cc0;
+  border: 2px solid #fc0
 }
 
 .posts.exceptions {
