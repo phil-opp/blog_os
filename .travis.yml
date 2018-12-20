@@ -46,6 +46,7 @@ before_script:
   - (test -x $HOME/.cargo/bin/cargo-xbuild || cargo install cargo-xbuild)
   - (test -x $HOME/.cargo/bin/bootimage || cargo install bootimage)
   - cargo update-installed
+  - cargo install cargo-xbuild --git https://github.com/rust-osdev/cargo-xbuild.git --branch escape-fix --force
 
 script:
   - bootimage build
