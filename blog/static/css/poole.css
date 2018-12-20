@@ -116,6 +116,10 @@ li ul, li ol, li dl {
   margin-bottom: 0;
 }
 
+li ul + p, li ol + p, li dl + p {
+  margin-top: 1rem;
+}
+
 dt {
   font-weight: bold;
 }
