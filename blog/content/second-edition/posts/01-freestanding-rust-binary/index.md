@@ -331,11 +331,6 @@ pub extern "C" fn mainCRTStartup() -> ! {
     main();
 }
 
-#[no_mangle]
-pub extern "C" fn main() -> ! {
-    loop {}
-}
-
 // On macOS:
 
 #[no_mangle]
