@@ -345,7 +345,7 @@ pub extern "C" fn main() -> ! {
 
 And for macOS like this:
 
-```
+```rust
 #[no_mangle]
 pub extern "C" fn main() -> ! {
     loop {}
