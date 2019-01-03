@@ -316,16 +316,22 @@ use core::panic::PanicInfo;
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
+```
 
-// On Linux:
+The entry point definition depends on the target operating system. For Linux it looks like this:
+
+```rust
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
     // named `_start` by default
     loop {}
 }
+```
 
-// On Windows:
+For Windows like this:
+
+```rust
 #[no_mangle]
 pub extern "C" fn mainCRTStartup() -> ! {
     main();
@@ -335,16 +341,18 @@ pub extern "C" fn mainCRTStartup() -> ! {
 pub extern "C" fn main() -> ! {
     loop {}
 }
+```
 
-// On macOS:
+And for macOS like this:
 
+```
 #[no_mangle]
 pub extern "C" fn main() -> ! {
     loop {}
 }
 ```
 
-`Cargo.toml`:
+The `Cargo.toml` is independent of the operating system and looks like this:
 
 ```toml
 [package]
@@ -361,7 +369,7 @@ panic = "abort" # disable stack unwinding on panic
 panic = "abort" # disable stack unwinding on panic
 ```
 
-It can be compiled with:
+The binary can be compiled with:
 
 ```bash
 # Linux
