@@ -5,7 +5,7 @@ version = "0.2.0"
 edition = "2018"
 
 [dependencies]
-bootloader = "0.3.4"
+bootloader = "0.3.12"
 spin = "0.4.9"
 volatile = "0.2.3"
 uart_16550 = "0.1.0"

@@ -330,7 +330,7 @@ Instead of writing our own bootloader, which is a project on its own, we use the
 # in Cargo.toml
 
 [dependencies]
-bootloader = "0.3.4"
+bootloader = "0.3.12"
 ```
 
 Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to combine the bootloader with the kernel after it has been compiled, but cargo has no support for additional build steps after successful compilation (see [this issue][post-build script] for more information).
