@@ -252,12 +252,11 @@ Now we can rerun the above command with `xbuild` instead of `build`:
 
 ```
 > cargo xbuild --target x86_64-blog_os.json
-   Compiling core v0.0.0 (file:///…/rust/src/libcore)
-    Finished release [optimized] target(s) in 52.75 secs
-   Compiling compiler_builtins v0.1.0 (file:///…/rust/src/libcompiler_builtins)
-    Finished release [optimized] target(s) in 3.92 secs
-   Compiling alloc v0.0.0 (/tmp/xargo.9I97eR3uQ3Cq)
-    Finished release [optimized] target(s) in 7.61s
+   Compiling core v0.0.0 (/…/rust/src/libcore)
+   Compiling compiler_builtins v0.1.5
+   Compiling rustc-std-workspace-core v1.0.0 (/…/rust/src/tools/rustc-std-workspace-core)
+   Compiling alloc v0.0.0 (/tmp/xargo.PB7fj9KZJhAI)
+    Finished release [optimized + debuginfo] target(s) in 45.18s
    Compiling blog_os v0.1.0 (file:///…/blog_os)
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
