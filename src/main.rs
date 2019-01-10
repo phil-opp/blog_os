@@ -5,12 +5,14 @@
 use core::panic::PanicInfo;
 
 use blog_os::println;
+use bootloader::bootinfo::BootInfo;
+
 
 /// This function is the entry point, since the linker looks for a function
 /// named `_start` by default.
 #[cfg(not(test))]
 #[no_mangle] // don't mangle the name of this function
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn _start(boot_info: &BootInfo) -> ! {
     use blog_os::interrupts::PICS;
     use x86_64::structures::paging::PageTable;
 
