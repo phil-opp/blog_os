@@ -1,16 +1,14 @@
 +++
-title = "Paging"
+title = "Introduction to Paging"
 order = 9
-path = "paging"
+path = "paging-introduction"
 date = 0000-01-01
 template = "second-edition/page.html"
 +++
 
-This post introduces _paging_, a very common memory management scheme that we will also use for our operating system. It explains why memory isolation is needed, how _segmentation_ works, what _virtual memory_ is, and how paging solves memory fragmentation issues. It also explores (multilevel) page tables and explains how paging works on the x86_64 architecture.
+This post introduces _paging_, a very common memory management scheme that we will also use for our operating system. It explains why memory isolation is needed, how _segmentation_ works, what _virtual memory_ is, and how paging solves memory fragmentation issues. It also explores the layout of multilevel page tables on the x86_64 architecture.
 
 <!-- more -->
-
-In contrast to the other posts on this blog, this post does not contain any code. The reason for this is that a working paging implementation already needs many advanced features, which might be overwhelming if introduced right at the beginning. By focusing on the fundamentals first we can explain the concepts step by step, before we introduce the advanced features and the implementation in the next post.
 
 This blog is openly developed on [Github]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].
 
@@ -96,13 +94,13 @@ Internal fragmentation is unfortunate, but often better than the external fragme
 
 ### How does it work?
 
-We saw that each of the potentially thousands of pages is individually mapped to a frame. This mapping information needs to be stored somewhere. Segmentation uses an individual segment selector register for each active memory region, which is not possible for paging since there are way more pages than registers. Instead paging uses a table structure called _page table_ to store the mapping information.
+We saw that each of the potentially millions of pages is individually mapped to a frame. This mapping information needs to be stored somewhere. Segmentation uses an individual segment selector register for each active memory region, which is not possible for paging since there are way more pages than registers. Instead paging uses a table structure called _page table_ to store the mapping information.
 
 For our above example the page tables would look like this:
 
 ![Three page tables, one for each program instance. For instance 1 the mapping is 0->100, 50->150, 100->200. For instance 2 it is 0->300, 50->350, 100->400. For instance 3 it is 0->250, 50->450, 100->500.](paging-page-tables.svg)
 
-We see that each program instance has its own page table. A pointer to the currently active table is stored in a special CPU register. On `x86`, this register is called `CR3`. It is the job of the operating system to load this register with the correct value before running each program instance.
+We see that each program instance has its own page table. A pointer to the currently active table is stored in a special CPU register. On `x86`, this register is called `CR3`. It is the job of the operating system to load this register with the pointer to the correct page table before running each program instance.
 
 On each memory access, the CPU reads the table pointer from the register and looks up the mapped frame for the accessed page in the table. This is entirely done in hardware and completely transparent to the running program. To speed up the translation process, many CPU architectures have a special cache that remembers the results of the last translations.
 
@@ -110,23 +108,23 @@ Depending on the architecture, page table entries can also store attributes such
 
 ### Multilevel Page Tables
 
-The simple page tables we just saw have a problem in larger address spaces: they waste memory. For example, imagine a program that uses the four virtual pages 0, 1 000 000, 1_000 050, and 1 000 100:
+The simple page tables we just saw have a problem in larger address spaces: they waste memory. For example, imagine a program that uses the four virtual pages `0`, `1_000_000`, `1_000_050`, and `1_000_100` (we use `_` as a thousands separator):
 
-![Page 0 mapped to frame 0 and pages 1 000 000–1 000 150 mapped to frames 100–250](single-level-page-table.svg)
+![Page 0 mapped to frame 0 and pages `1_000_000`–`1_000_150` mapped to frames 100–250](single-level-page-table.svg)
 
 It only needs 4 physical frames, but the page table has over a million entries. We can't omit the empty entries because then the CPU would no longer be able to jump directly to the correct entry in the translation process (e.g. it is no longer guaranteed that the fourth page uses the fourth entry).
 
 To reduce the wasted memory, we can use a **two-level page table**. The idea is that we use different page tables for different address regions. An additional table called _level 2_ page table contains the mapping between address regions and (level 1) page tables.
 
-This is best explained by an example. Let's define that each level 1 page table is responsible for a region of size 10 000. Then the following tables would exist for the above example mapping:
+This is best explained by an example. Let's define that each level 1 page table is responsible for a region of size `10_000`. Then the following tables would exist for the above example mapping:
 
-![Page 0 points to entry 0 of the level 2 page table, which points to the level 1 page table T1. The first entry of T1 points to frame 0, the other entries are empty. Pages 1 000 000–1 000 150 point to the 100th entry of the level 2 page table, which points to a different level 1 page table T2. The first three entries of T2 point to frames 100–250, the other entries are empty.](multilevel-page-table.svg)
+![Page 0 points to entry 0 of the level 2 page table, which points to the level 1 page table T1. The first entry of T1 points to frame 0, the other entries are empty. Pages `1_000_000`–`1_000_150` point to the 100th entry of the level 2 page table, which points to a different level 1 page table T2. The first three entries of T2 point to frames 100–250, the other entries are empty.](multilevel-page-table.svg)
 
-Page 0 falls into the first 10 000 byte region, so it uses the first entry of the level 2 page table. This entry points to level 1 page table T1, which specifies that page 0 points to frame 0.
+Page 0 falls into the first `10_000` byte region, so it uses the first entry of the level 2 page table. This entry points to level 1 page table T1, which specifies that page `0` points to frame `0`.
 
-The pages 1 000 000, 1 000 050, and 1 000 100 all fall into the 100th memory region (which goes from 1 000 000 to 1 010 000), so they use the 100th entry of the level 2 page table. This entry points at a different level 1 page table T2. The T2 table maps the three pages to frames 100, 150, and 200. Note that the page number does not include the region offset, so e.g. for page 1 000 050 we use the T2 entry for page 50 (= 1 000 050 - 1 000 000).
+The pages `1_000_000`, `1_000_050`, and `1_000_100` all fall into the 100th `10_000` byte region, so they use the 100th entry of the level 2 page table. This entry points at a different level 1 page table T2, which maps the three pages to frames `100`, `150`, and `200`. Note that the page address in level 1 tables does not include the region offset, so e.g. the entry for page `1_000_050` is just `50`.
 
-We still have 100 empty entries in the level 2 table, but much fewer than the million empty entries before. The reason for this savings is that we don't need to create level 1 page tables for the unmapped memory regions between 10 000 and 1 000 000.
+We still have 100 empty entries in the level 2 table, but much fewer than the million empty entries before. The reason for this savings is that we don't need to create level 1 page tables for the unmapped memory regions between `10_000` and `1_000_000`.
 
 The principle of two-level page tables can be extended to three, four, or more levels. Then the page table register points at the highest level table, which points to the next lower level table, which points to the next lower level, and so on. The level 1 page table then points at the mapped frame. The principle in general is called a _multilevel_ or _hierarchical_ page table.
 
@@ -140,7 +138,7 @@ The page table index for level is derived directly from the virtual address:
 
 ![Bits 0–12 are the page offset, bits 12–21 the level 1 index, bits 21–30 the level 2 index, bits 30–39 the level 3 index, and bits 39–48 the level 4 index](x86_64-table-indices-from-address.svg)
 
-We see that each table index consists of 9 bits, which makes sense because each table has 2^9 = 512 entries. The lowest 12 bits are the offset in the 4KiB page (2^12 bytes = 4KiB). Bits 48 to 64 are discarded, which means that x86_64 is not really 64-bit and only supports 48-bit addresses. There are plans to extend the address size to 57 bits through a [5-level page table], but no processors that support this feature exist yet.
+We see that each table index consists of 9 bits, which makes sense because each table has 2^9 = 512 entries. The lowest 12 bits are the offset in the 4KiB page (2^12 bytes = 4KiB). Bits 48 to 64 are discarded, which means that x86_64 is not really 64-bit since it only supports 48-bit addresses. There are plans to extend the address size to 57 bits through a [5-level page table], but no processor that supports this feature exists yet.
 
 [5-level page table]: https://en.wikipedia.org/wiki/Intel_5-level_paging
 
@@ -156,18 +154,20 @@ Let's go through an example to understand how the translation process works in d
 
 The physical address of the currently active level 4 page table, which is the root of the 4-level page table, is stored in the `CR3` register. Each page table entry then points to the physical frame of the next level table. The entry of the level 1 table then points to the mapped frame. Note that all addresses in the page tables are physical instead of virtual, because otherwise the CPU would need to translate those addresses too (which could cause a never-ending recursion).
 
-The above page table hierarchy maps two pages (in blue). The start addresses of these pages are `0x803FE7F000` and `0x803FE00000`. Let's see what happens when the program tries to read from address `0x803FE7F5CE`. First, we convert the address to binary and determine the page table indices and the page offset for the address:
+The above page table hierarchy maps two pages (in blue). From the page table indices we can deduce that the virtual addresses of these two pages are `0x803FE7F000` and `0x803FE00000`. Let's see what happens when the program tries to read from address `0x803FE7F5CE`. First, we convert the address to binary and determine the page table indices and the page offset for the address:
 
 ![The sign extension bits are all 0, the level 4 index is 1, the level 3 index is 0, the level 2 index is 511, the level 1 index is 127, and the page offset is 0x5ce](x86_64-page-table-translation-addresses.svg)
 
 With these indices, we can now walk the page table hierarchy to determine the mapped frame for the address:
 
 - We start by reading the address of the level 4 table out of the `CR3` register.
-- Then we look at the entry with index 1 of that table, which tells us that the level 3 table is stored at address 16KiB.
-- We load the level 3 table from that address and look at the entry with index 0, which points us to the level 2 table at 14KiB.
+- The level 4 index is 1, so we look at the entry with index 1 of that table, which tells us that the level 3 table is stored at address 16KiB.
+- We load the level 3 table from that address and look at the entry with index 0, which points us to the level 2 table at 24KiB.
 - The level 2 index is 511, so we look at the last entry of that page to find out the address of the level 1 table.
-- The entry with index 127 of the level 1 table we finally find that the page is mapped to frame 12KiB, or 0xc000 in hexadecimal.
+- Through the entry with index 127 of the level 1 table we finally find out that the page is mapped to frame 12KiB, or 0xc000 in hexadecimal.
 - The final step is to add the page offset to the frame address to get the physical address 0xc000 + 0x5ce = 0xc5ce.
+
+![The same example 4-level page hierarchy with 5 additional arrows: "Step 0" from the CR3 register to the level 4 table, "Step 1" from the level 4 entry to the level 3 table, "Step 2" from the level 3 entry to the level 2 table, "Step 3" from the level 2 entry to the level 1 table, and "Step 4" from the level 1 table to the mapped frames.](x86_64-page-table-translation-steps.svg)
 
 The permissions for the page in the level 1 table are `r`, which means read-only. The hardware enforces this permissions and would throw an exception if we tried to write to that page. Permissions in higher level pages restrict the possible permissions in lower level, so if we set the level 3 entry to read-only, no pages that use this entry can be writable, even if lower levels specify read/write permissions.
 
@@ -233,22 +233,139 @@ The `x86_64` crate provides types for [page tables] and their [entries], so we d
 
 A 4-level page table makes the translation of virtual addresses expensive, because each translation requires 4 memory accesses. To improve performance, the x86_64 architecture caches the last few translations in the so-called _translation lookaside buffer_ (TLB). This allows to skip the translation when the translation is still cached.
 
-Unlike the other CPU caches, the TLB is not fully transparent since it does not update or remove translations when a mapping in the page table changes. Instead it must be manually updated whenever a mapping in the page table changes. To do this, there is a special CPU instruction called [`invlpg`] (“invalidate page”) that removes the translation for the specified page from the TLB, so that it is loaded again from the page table on the next access. The TLB can also be flushed completely by reloading the `CR3` register, which simulates an address space switch. The `x86_64` crate provides Rust functions for both variants in the [`tlb` module].
+Unlike the other CPU caches, the TLB is not fully transparent and does not update or remove translations when the contents of page tables change. This means that the kernel must manually update the TLB whenever it modifies a page table. To do this, there is a special CPU instruction called [`invlpg`] (“invalidate page”) that removes the translation for the specified page from the TLB, so that it is loaded again from the page table on the next access. The TLB can also be flushed completely by reloading the `CR3` register, which simulates an address space switch. The `x86_64` crate provides Rust functions for both variants in the [`tlb` module].
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
 [`tlb` module]: https://docs.rs/x86_64/0.3.4/x86_64/instructions/tlb/index.html
 
 It is important to remember flushing the TLB on each page table modification because otherwise the CPU might keep using the old translation, which can lead to non-deterministic bugs that are very hard to debug.
 
+## Try it out
+
+One thing that we did not mention yet: **Our kernel already runs on paging**. The bootloader that we added in the ["A minimal Rust Kernel"] post already set up a 4-level paging hierarchy that maps every page of our kernel to a physical frame. The bootloader does this because paging is mandatory in 64-bit mode on x86_64.
+
+["A minimal Rust kernel"]: ./second-edition/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
+
+This means that every memory address that we used in our kernel was a virtual address. Accessing the VGA buffer at address `0xb8000` only worked because the bootloader _identity mapped_ that memory page, which means that the virtual page `0xb8000` is mapped to the physical frame `0xb8000`.
+
+Let's try to take a look at the page tables that our kernel runs on:
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    use x86_64::registers::control::Cr3;
+
+    let (level_4_page_table, _) = Cr3::read();
+    println!("Level 4 page table at: {:?}", level_4_page_table.start_address());
+
+    […]
+}
+```
+
+The [`Cr3::read`] function of the `x86_64` returns the currently active level 4 page table from the `CR3` register. It returns a tuple of a [`PhysFrame`] and a [`Cr3Flags`] type. We are only interested in the frame, so we ignore the second element of the tuple.
+
+[`Cr3::read`]: https://docs.rs/x86_64/0.3.4/x86_64/registers/control/struct.Cr3.html#method.read
+[`PhysFrame`]: https://docs.rs/x86_64/0.3.4/x86_64/structures/paging/struct.PhysFrame.html
+[`Cr3Flags`]: https://docs.rs/x86_64/0.3.4/x86_64/registers/control/struct.Cr3Flags.html
+
+When we run it, we see the following output:
+
+```
+Level 4 page table at: PhysAddr(0x1000)
+```
+
+So the currently active level 4 page table is stored at address `0x1000` in _physical_ memory, as indicated by the [`PhysAddr`] wrapper type. The question now is: how can we access this table from our kernel?
+
+[`PhysAddr`]: https://docs.rs/x86_64/0.3.4/x86_64/struct.PhysAddr.html
+
+Accessing physical memory directly is not possible when paging is active, since programs could easily circumvent memory protection and access memory of other programs otherwise. So the only way to access the table is through some virtual page that is mapped to the physical frame at address `0x1000`. This problem of creating mappings for page table frames is a general problem, since the kernel needs to access the page tables regularly, for example when allocating a stack for a new thread.
+
+Solutions to this problem are explained in detail in the next post. For now it suffices to know that the bootloader used a technique called _recursive page tables_ to map the last page of the virtual address space to the physical frame of the level 4 page table. The last page of the virtual address space is `0xffff_ffff_ffff_f000`, so let's use it to read some entries of that table:
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    let level_4_table_pointer = 0xffff_ffff_ffff_f000 as *const u64;
+    for i in 0..10 {
+        let entry = unsafe { *level_4_table_pointer.offset(i) };
+        println!("Entry {}: {:#x}", i, entry);
+    }
+
+    […]
+}
+```
+
+We cast the address of the last virtual page to a pointer to an `u64`. As we saw in the [previous section][page table format], each page table entry is 8 bytes (64 bits), so an `u64` represents exactly one entry. We print the first 10 entries of the table using a `for` loop. Inside the loop, we use an unsafe block to read from the raw pointer and the [`offset` method] to perform pointer arithmetic.
+
+[page table format]: #page-table-format
+[`offset` method]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
+
+When we run it, we see the following output:
+
+![Entry 0: 0x2023, Entry 1: 0x6e2063, Entry 2-9: 0x0](qemu-print-p4-entries.png)
+
+When we look at the [format of page table entries][page table format], we see that the value `0x2023` of entry 0 means that the entry is `present`, `writable`, was `accessed` by the CPU, and is mapped to frame `0x2000`. Entry 1 is mapped to frame `0x6e2000` has the same flags as entry 0, with the addition of the `dirty` flag that indicates that the page was written. Entries 2–9 are not `present`, so this virtual address range is not mapped to any physical addresses.
+
+Instead of working with unsafe raw pointers we can use the [`PageTable`] type of the `x86_64` crate:
+
+[`PageTable`]: https://docs.rs/x86_64/0.3.4/x86_64/structures/paging/struct.PageTable.html
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    use x86_64::structures::paging::PageTable;
+    
+    let level_4_table_ptr = 0xffff_ffff_ffff_f000 as *const PageTable;
+    let level_4_table = unsafe {&*level_4_table_ptr};
+    for i in 0..10 {
+        println!("Entry {}: {:?}", i, level_4_table[i]);
+    }
+
+    […]
+}
+```
+
+Here we cast the `0xffff_ffff_ffff_f000` pointer first to a raw pointer and then transform it to a Rust reference. This operation still needs `unsafe`, because the compiler can't know that this accessing this address is valid. But after this conversion we have a safe `&PageTable` type, which allows us to access the individual entries through safe, bounds checked [indexing operations].
+
+[indexing operations]: https://doc.rust-lang.org/core/ops/trait.Index.html
+
+The crate also provides some nice abstractions for the individual entries so that we directly see which flags are set when we print them:
+
+![
+Entry 0: PageTableEntry { addr: PhysAddr(0x2000), flags: PRESENT | WRITABLE | ACCCESSED }
+Entry 1: PageTableEntry { addr: PhysAddr(0x6e5000), flags: PRESENT | WRITABLE | ACCESSED | DIRTY }
+Entry 2: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 3: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 4: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 5: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 6: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 7: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 8: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 9: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+](qemu-print-p4-entries-abstraction.png)
+
+The next step would be to follow the pointers in entry 0 or entry 1 to a level 3 page table. But we now have the problem again that `0x2000` and `0x6e5000` are physical addresses, so we can't access them directly. We will solve this problem in the next post.
+
 ## Summary
 
-This post introduced two memory protection techniques: segmentation and paging. While the former uses a variable-sized memory regions and suffers from external fragmentation, the latter uses fixed-sized pages and allows much more fine-grained control over access permissions.
+This post introduced two memory protection techniques: segmentation and paging. While the former uses variable-sized memory regions and suffers from external fragmentation, the latter uses fixed-sized pages and allows much more fine-grained control over access permissions.
 
 Paging stores the mapping information for pages in page tables with one or more levels. The x86_64 architecture uses 4-level page tables and a page size of 4KiB. The hardware automatically walks the page tables and caches the resulting translations in the translation lookaside buffer (TLB). This buffer is not updated transparently and needs to be flushed manually on page table changes.
 
+We learned that our kernel already runs on top of paging and tried to access the page table that our kernel runs on. This was compilicated by the fact that page tables store physical addresses that we can't access directly from our kernel. We can only access them through virtual pages that are mapped to the physical frame.
+
 ## What's next?
 
-The next post will build upon the fundamentals we learned in this post. It will introduce an advanced technique called _recursive page tables_ and then use that feature to implement a software based translation function and mapping functions.
+The next post builds upon the fundamentals we learned in this post. It introduces an advanced technique called _recursive page tables_ to solve the problem of accessing page tables from our kernel. This allows us to traverse the page table hierarchy and implement a software based translation function. The post also implements functions to allocate new stacks, that we can use to implement multithreading in the future.
 
 -------
 
