@@ -19,7 +19,7 @@ This blog is openly developed on [Github]. If you have any problems or questions
 
 In the [previous post] we learned about the principles of paging and how the 4-level page tables on the x86_64 architecture work. One thing that the post did not mention: **Our kernel already runs on paging**. The bootloader that we added in the ["A minimal Rust Kernel"] post already set up a 4-level paging hierarchy that maps every page of our kernel to a physical frame. The reason why the bootloader does this is that paging is manditory in 64-bit mode on x86_64.
 
-[previous post]: ./second-edition/posts/09-paging/index.md
+[previous post]: ./second-edition/posts/09-paging-introduction/index.md
 ["A minimal Rust kernel"]: ./second-edition/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
 
 The bootloader also sets the correct access permissions for each page, which means that only the pages containing code are executable and only data pages are writable. You can try this by accessing some memory outside our kernel:
@@ -59,7 +59,7 @@ So in order access page table frames, we need to map some virtual pages to them.
   However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at 26 KiB because it would collide with the already mapped page at 1004 MiB. So we have to look further until we find a large enough unmapped area, for example at 1008 KiB. This is a similar fragmentation problem as with [segmentation].
 
   [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
-  [segmentation]: ./second-edition/posts/09-paging/index.md#fragmentation
+  [segmentation]: ./second-edition/posts/09-paging-introduction/index.md#fragmentation
   
   Equally, it makes it much more difficult to create new page tables, because we need to find physical frames whose corresponding pages aren't already in use. For example, let's assume that we reserved the 1000 KiB memory region starting at 1008 KiB for our memory-mapped file. Now we can't use any frame with a _physical_ address between 1000 KiB and 2008 KiB anymore, because we can't identity map it.
 
@@ -152,7 +152,7 @@ Whereas `AAA` is the level 4 index, `BBB` the level 3 index, `CCC` the level 2 i
 
 `SSSSSS` are sign extension bits, which means that they are all copies of bit 47. This is a special requirement for valid addresses on the x86_64 architecture. We explained it in the [previous post][sign extension].
 
-[sign extension]: ./second-edition/posts/09-paging/index.md#paging-on-x86
+[sign extension]: ./second-edition/posts/09-paging-introduction/index.md#paging-on-x86
 
 ## Implementation
 
@@ -215,7 +215,7 @@ println!("Entry 511: {:#x}", entry_511);
 
 This code casts the `p4_table_addr` to a pointer to an `u64`. As we saw in the [previous post][page table format], each page table entry is 8 bytes (64 bits), so an `u64` represents exactly one entry. We use unsafe blocks to read from the raw pointers and the [`offset` method] to perform pointer arithmetic. When we run it, we see the following output:
 
-[page table format]: ./second-edition/posts/09-paging/index.md##page-table-format
+[page table format]: ./second-edition/posts/09-paging-introduction/index.md#page-table-format
 [`offset` method]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
 ![QEMU printing "Hello world! Entry 0: 0x2023 Entry 1: 0x6d8063 Entry 2: 0x0 Entry 511: 0x1063 It did not crash!](qemu-print-p4-entries.png)
