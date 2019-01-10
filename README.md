@@ -50,6 +50,7 @@ The goal of this project is to provide step-by-step tutorials in individual blog
 
 - [Introduction to Paging](https://os.phil-opp.com/paging-introduction/)
     ([source code](https://github.com/phil-opp/blog_os/tree/post-09))
+- [Advanced Paging](https://os.phil-opp.com/advanced-paging/)
 
 
 ## First Edition Posts
