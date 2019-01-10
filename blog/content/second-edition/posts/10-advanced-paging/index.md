@@ -1,7 +1,7 @@
 +++
-title = "Paging 2"
+title = "Advanced Paging"
 order = 10
-path = "paging-2"
+path = "advanced-paging"
 date = 0000-01-01
 template = "second-edition/page.html"
 +++
