@@ -21,7 +21,7 @@ In the [previous post] we learned about the principles of paging and how the 4-l
 
 [previous post]: ./second-edition/posts/09-paging-introduction/index.md
 
-This makes our kernel much safer, since every memory access that is out of bounds causes a page fault exception instead of writing to random physical memory. The bootloader even set the correct access permissions for each page, which means that only the pages containing code are executable and only data pages are writable. 
+This makes our kernel much safer, since every memory access that is out of bounds causes a page fault exception instead of writing to random physical memory. The bootloader even set the correct access permissions for each page, which means that only the pages containing code are executable and only data pages are writable.
 
 ### Page Faults
 
@@ -283,7 +283,202 @@ The most interesting field for us right now is `p4_table_addr`, as it contains a
 
 The `memory_map` field will become relevant later in this post. The `package` field is an in-progress feature to bundle additional data with the bootloader. The implementation is not finished, so we can ignore this field for now.
 
-### The `RecursivePageTable` Type
+#### The `entry_point` Macro
+
+Since our `_start` function is called externally from the bootloader, no checking of our function signature occurs. This means that we could let it take arbitrary arguments without any compilation errors, but it would fail or cause undefined behavior at runtime.
+
+To make sure that the entry point function has always the correct signature that the bootloader expects, the `bootloader` crate provides an [`entry_point`] macro that provides a type-checked way to define a Rust function as entry point. Let's rewrite our entry point function to use this macro:
+
+[`entry_point`]: https://docs.rs/bootloader/0.3.12/bootloader/macro.entry_point.html
+
+```rust
+// in src/main.rs
+
+use bootloader::entry_point;
+
+entry_point!(kernel_main);
+
+#[cfg(not(test))]
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    use blog_os::interrupts::PICS;
+
+    blog_os::gdt::init();
+    blog_os::interrupts::init_idt();
+    unsafe { PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+Note that we no longer need to use `extern "C"` or `no_mangle` for our entry point, since the macro does this for us. We can also use an arbitrary name for our function. When we now try to modify the function signature in any way, for example adding an argument or changing the argument type, a compilation error occurs.
+
+### Translating Addresses
+
+Now we have a clean way to retrieve the virtual address of the recursively mapped level 4 table. which allows us to derive the virtual addreses of all other page tables. As a first step, let's try to create a function that translates a virtual address to a physical address:
+
+```rust
+// in src/lib.rs
+
+pub mod memory;
+```
+
+```rust
+// in src/memory/mod.rs
+
+use x86_64::PhysAddr;
+use x86_64::structures::paging::PageTable;
+
+/// Returns the physical address for the given virtual address, or `None` if the
+/// virtual address is not mapped.
+pub fn translate_addr(addr: usize, level_4_table_addr: usize) -> Option<PhysAddr> {
+    // retrieve the page table indices of the address that we want to translate
+    let level_4_index = (addr >> 39) & 0o777;
+    let level_3_index = (addr >> 30) & 0o777;
+    let level_2_index = (addr >> 21) & 0o777;
+    let level_1_index = (addr >> 12) & 0o777;
+    let page_offset = addr & 0o7777;
+
+    // check that level 4 entry is mapped
+    let level_4_table = unsafe {&*(level_4_table_addr as *const PageTable)};
+    if level_4_table[level_4_index].addr().is_null() {
+        return None;
+    }
+    let level_3_table_addr = (level_4_table_addr << 9) | (level_4_index << 12);
+
+    // check that level 3 entry is mapped
+    let level_3_table = unsafe {&*(level_3_table_addr as *const PageTable)};
+    if level_3_table[level_3_index].addr().is_null() {
+        return None;
+    }
+    let level_2_table_addr = (level_3_table_addr << 9) | (level_3_index << 12);
+
+    // check that level 2 entry is mapped
+    let level_2_table = unsafe {&*(level_2_table_addr as *const PageTable)};
+    if level_2_table[level_2_index].addr().is_null() {
+        return None;
+    }
+    let level_1_table_addr = (level_2_table_addr << 9) | (level_2_index << 12);
+
+    // check that level 1 entry is mapped and retrieve physical address from it
+    let level_1_table = unsafe {&*(level_1_table_addr as *const PageTable)};
+    let phys_addr = level_1_table[level_1_index].addr();
+    if phys_addr.is_null() {
+        return None;
+    }
+
+    Some(phys_addr + page_offset)
+}
+```
+
+First, we calculate the page table indices and the page offset from the address:
+
+![Bits 0–12 are the page offset, bits 12–21 the level 1 index, bits 21–30 the level 2 index, bits 30–39 the level 3 index, and bits 39–48 the level 4 index](../paging-introduction/x86_64-table-indices-from-address.svg)
+
+Then we check the whether the entries in the four tables are empty and return `None` in that case. It's important that we do this because the address of the next table is only valid if the entry is mapped, and we don't want to risk that our translation function causes a page fault.
+
+After we checked the three higher level pages, we can finally read the entry of the level 1 table that tells us the physical frame that the address is mapped to. Finally, we add the page offset to that address and return it.
+
+Now we can use this function to translate some virtual addresses in our `kernel_main` function:
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    […] // initialize GDT, IDT, PICS
+
+    use blog_os::memory::translate_addr;
+
+    let level_4_table_addr = boot_info.p4_table_addr as usize;
+
+    // the identity-mapped vga buffer page
+    println!("0xb8000 -> {:?}", translate_addr(0xb8000, level_4_table_addr));
+    // some code page
+    println!("0x20010a -> {:?}", translate_addr(0x20010a, level_4_table_addr));
+    // some stack page
+    println!("0x57ac001ffe48 -> {:?}", translate_addr(0x57ac001ffe48,
+        level_4_table_addr));
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+When we run it, we see the following output:
+
+![0xb8000 -> 0xb8000, 0x20010a -> 0x40010a, 0x57ac001ffe48 -> 0x27be48](qemu-translate-addr.png)
+
+As expected, the identity-mapped address `0xb8000` translates to the same physical address. The code page and the stack page translate to some arbitrary physical addresses, that depend on how the bootloader created the initial mapping for our kernel.
+
+#### The `RecursivePageTable` Type
+
+The `x86_64` provides a [`RecursivePageTable`] type that implements safe abstractions for various page table operations. By using this type, we can reimplement our `translate_addr` function in a much cleaner way:
+
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.RecursivePageTable.html
+
+```rust
+// in src/memory/mod.rs
+
+use x86_64::{VirtAddr, PhysAddr};
+use x86_64::structures::paging::{Mapper, Page, PageTable, RecursivePageTable};
+
+/// Returns the physical address for the given virtual address, or
+/// `None` if the virtual address is not mapped.
+pub fn translate_addr(addr: u64, level_4_table_addr: usize) -> Option<PhysAddr> {
+    // create a RecursivePageTable instance from the level 4 address
+    let level_4_table_ptr = level_4_table_addr as *mut PageTable;
+    let level_4_table = unsafe { &mut *level_4_table_ptr };
+    let recursive_page_table = RecursivePageTable::new(level_4_table).unwrap();
+
+    let addr = VirtAddr::new(addr);
+    let page: Page = Page::containing_address(addr);
+
+    // perform the translation
+    let frame = recursive_page_table.translate_page(page);
+    frame.map(|frame| frame.start_address() + addr.page_offset())
+}
+```
+
+The `RecursivePageTable` type encapsulates the unsafety of the page table walk completely. We only need a single instance of `unsafe` to create a `&mut PageTable` from the level 4 page table address. Also, we no longer need to perform any bitwise operations.
+
+### Creating a new Mapping
+
+Let's try to create a new mapping in the page tables. The `RecursivePageTable` type implements the [`Mapper`] trait, which has a [`map_to`] method with the following signature:
+
+[`Mapper`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.Mapper.html
+[`map_to`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
+
+```rust
+pub trait Mapper<S: PageSize> {
+    fn map_to<A>(
+        &mut self,
+        page: Page<S>,
+        frame: PhysFrame<S>,
+        flags: PageTableFlags,
+        allocator: &mut A
+    ) -> Result<MapperFlush<S>, MapToError>
+    where
+        A: FrameAllocator<Size4KiB>;
+
+    […]
+}
+```
+
+The method creates a mapping in the page table that maps the given [`Page`] to the given [`PhysFrame`] with the given [`PageTableFlags`]. The last parameter is [generic] and expects some type that implements the [`FrameAllocator`] trait. This parameter is needed because the method might need to create new page tables to create the mapping, so it requires empty frames for this. <-- TODO
+
+[`Page`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.Page.html
+[`PhysFrame`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.PhysFrame.html
+[`PageTableFlags`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.PageTableFlags.html
+[generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.FrameAllocator.html
+
+There are two [generic parameters]: `S: PageSize` and `A: FrameAllocator`. The [`PageSize`] trait makes it possible to generate generic code that works with normal 4 KiB pages and huge 2 MiB and 1 GiB pages at the same time. We only use default 4 KiB for now, so we can ignore this parameter for now.
+
+[generic parameters]: https://doc.rust-lang.org/book/ch10-00-generics.html
+[`PageSize`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.PageSize.html
+
 
 TODO:
 
