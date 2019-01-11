@@ -35,7 +35,7 @@ Let's try to cause a page fault by accessing some memory outside of our kernel! 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
-        
+
         […]
 
         idt.page_fault.set_handler_fn(page_fault_handler); // new
@@ -138,14 +138,14 @@ So in order access page table frames, we need to map some virtual pages to them.
 - A simple solution is to **identity map all page tables**:
 
   ![A virtual and a physical address space with various virtual pages mapped to the physical frame with the same address](identity-mapped-page-tables.svg)
-  
+
   In this example we see various identity-mapped page table frames. This way the physical addresses in the page tables are also valid virtual addresses, so that we can easily access the page tables of all levels starting from the CR3 register.
-  
+
   However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at `26 KiB` because it would collide with the already mapped page at `1004 MiB`. So we have to look further until we find a large enough unmapped area, for example at `1008 KiB`. This is a similar fragmentation problem as with [segmentation].
 
   [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
   [segmentation]: ./second-edition/posts/09-paging-introduction/index.md#fragmentation
-  
+
   Equally, it makes it much more difficult to create new page tables, because we need to find physical frames whose corresponding pages aren't already in use. For example, let's assume that we reserved the _virtual_ 1000 KiB memory region starting at `1008 KiB` for our memory-mapped file. Now we can't use any frame with a _physical_ address between `1000 KiB` and `2008 KiB` anymore, because we can't identity map it.
 
 - Alternatively, we could **map the page tables frames only temporarily** when we need to access them. To be able to create the temporary mappings we only need a single identity-mapped level 1 table:
@@ -155,7 +155,7 @@ So in order access page table frames, we need to map some virtual pages to them.
   The level 1 table in this graphic controls the first 2 MiB of the virtual address space. This is because it is reachable by starting at the CR3 register and following the 0th entry in the level 4, level 3, and level 2 page tables. The entry with index `8` maps the virtual page at address `32 KiB` to the physical frame at address `32 KiB`, thereby identity mapping the level 1 table itself. The graphic shows this identity-mapping by the horizontal arrow at `32 KiB`.
 
   By writing to the identity-mapped level 1 table, our kernel can create up to 511 temporary mappings (512 minus the entry required for the identity mapping). In the above example, the kernel mapped the 0th entry of the level 1 table to the frame with address `24 KiB`. This created a temporary mapping of the virtual page at `0 KiB` to the physical frame of the level 2 page table, indicated by the dashed arrow. Now the kernel can access the level 2 page table by writing to the page starting at `0 KiB`.
-  
+
   The process for accessing an arbitrary page table frame with temporary mappings would be:
 
   - Search for a free entry in the identity mapped level 1 table.
@@ -225,7 +225,7 @@ The table below summarizes the address structure for accessing the different kin
 
 Mapped Frame for | Address Structure ([octal])
 ---------------- | -------------------------------
-Page             | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE` 
+Page             | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE`
 Level 1 Table    | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD`
 Level 2 Table    | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC`
 Level 3 Table    | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB`
