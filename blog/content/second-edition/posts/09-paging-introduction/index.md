@@ -10,9 +10,9 @@ This post introduces _paging_, a very common memory management scheme that we wi
 
 <!-- more -->
 
-This blog is openly developed on [Github]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].
 
-[Github]: https://github.com/phil-opp/blog_os
+[GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
 
 ## Memory Protection
@@ -214,7 +214,7 @@ We see that only bits 12–51 are used to store the physical frame address, the 
 Let's take a closer look at the available flags:
 
 - The `present` flag differentiates mapped pages from unmapped ones. It can be used to temporary swap out pages to disk when main memory becomes full. When the page is accessed subsequently, a special exception called _page fault_ occurs, to which the operating system can react by reloading the missing page from disk and then continuing the program.
-- The `writable` and `no execute` flags control whether the contents of the page are writeable or contain executable instructions respectively.
+- The `writable` and `no execute` flags control whether the contents of the page are writable or contain executable instructions respectively.
 - The `accessed` and `dirty` flags are automatically set by the CPU when a read or write to the page occurs. This information can be leveraged by the operating system e.g. to decide which pages to swap out or whether the page contents were modified since the last save to disk.
 - The `write through caching` and `disable cache` flags allow to control the caches for every page individually.
 - The `user accessible` flag makes a page available to userspace code, otherwise it is only accessible when the CPU is in kernel mode. This feature can be used to make [system calls] faster by keeping the kernel mapped while an userspace program is running. However, the [Spectre] vulnerability can allow userspace programs to read these pages nonetheless.
@@ -327,7 +327,7 @@ When we run it, we see that our page fault handler is called:
 
 ![EXCEPTION: Page Fault, Accessed Address: VirtAddr(0xdeadbeaf), ExceptionStackFrame: {…}](qemu-page-fault.png)
 
-The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access. This virtual address has no mapping in the page tables, so a page fault occured.
+The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access. This virtual address has no mapping in the page tables, so a page fault occurred.
 
 We see that the current instruction pointer is `0x20430a`, so we know that this address points to a code page. Code pages are mapped read-only by the bootloader, so reading from this address works but writing causes a page fault. You can try this by changing the `0xdeadbeaf` pointer to `0x20430a`:
 
@@ -458,7 +458,7 @@ This post introduced two memory protection techniques: segmentation and paging. 
 
 Paging stores the mapping information for pages in page tables with one or more levels. The x86_64 architecture uses 4-level page tables and a page size of 4KiB. The hardware automatically walks the page tables and caches the resulting translations in the translation lookaside buffer (TLB). This buffer is not updated transparently and needs to be flushed manually on page table changes.
 
-We learned that our kernel already runs on top of paging and tried to access the page table that our kernel runs on. This was compilicated by the fact that page tables store physical addresses that we can't access directly from our kernel. We can only access them through virtual pages that are mapped to the physical frame.
+We learned that our kernel already runs on top of paging and tried to access the page table that our kernel runs on. This was complicated by the fact that page tables store physical addresses that we can't access directly from our kernel. We can only access them through virtual pages that are mapped to the physical frame.
 
 ## What's next?
 
