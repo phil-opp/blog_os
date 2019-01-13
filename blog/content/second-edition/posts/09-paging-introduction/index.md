@@ -240,13 +240,110 @@ Unlike the other CPU caches, the TLB is not fully transparent and does not updat
 
 It is important to remember flushing the TLB on each page table modification because otherwise the CPU might keep using the old translation, which can lead to non-deterministic bugs that are very hard to debug.
 
-## Try it out
+## Implementation
 
 One thing that we did not mention yet: **Our kernel already runs on paging**. The bootloader that we added in the ["A minimal Rust Kernel"] post already set up a 4-level paging hierarchy that maps every page of our kernel to a physical frame. The bootloader does this because paging is mandatory in 64-bit mode on x86_64.
 
 ["A minimal Rust kernel"]: ./second-edition/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
 
 This means that every memory address that we used in our kernel was a virtual address. Accessing the VGA buffer at address `0xb8000` only worked because the bootloader _identity mapped_ that memory page, which means that the virtual page `0xb8000` is mapped to the physical frame `0xb8000`.
+
+Paging makes our kernel already relatively safe, since every memory access that is out of bounds causes a page fault exception instead of writing to random physical memory. The bootloader even set the correct access permissions for each page, which means that only the pages containing code are executable and only data pages are writable.
+
+### Page Faults
+
+Let's try to cause a page fault by accessing some memory outside of our kernel. First, we create a page fault handler and register it in our IDT, so that we see a page fault exception instead of a generic [double fault] :
+
+[double fault]: ./second-edition/posts/07-double-faults/index.md
+
+```rust
+// in src/interrupts.rs
+
+lazy_static! {
+    static ref IDT: InterruptDescriptorTable = {
+        let mut idt = InterruptDescriptorTable::new();
+
+        […]
+
+        idt.page_fault.set_handler_fn(page_fault_handler); // new
+
+        idt
+    };
+}
+
+use x86_64::structures::idt::PageFaultErrorCode;
+
+extern "x86-interrupt" fn page_fault_handler(
+    stack_frame: &mut ExceptionStackFrame,
+    _error_code: PageFaultErrorCode,
+) {
+    use crate::hlt_loop;
+    use x86_64::registers::control::Cr2;
+
+    println!("EXCEPTION: PAGE FAULT");
+    println!("Accessed Address: {:?}", Cr2::read());
+    println!("{:#?}", stack_frame);
+    hlt_loop();
+}
+```
+
+The [`CR2`] register is automatically set by the CPU on a page fault and contains the accessed virtual address that caused the page fault. We use the [`Cr2::read`] function of the `x86_64` crate to read and print it. Normally the [`PageFaultErrorCode`] type would provide more information about the type of memory access that caused the page fault, but there is currently an [LLVM bug] that passes an invalid error code, so we ignore it for now. We can't continue execution without resolving the page fault, so we enter a [`hlt_loop`] at the end.
+
+[`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
+[`Cr2::read`]: https://docs.rs/x86_64/0.3.5/x86_64/registers/control/struct.Cr2.html#method.read
+[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.3.4/x86_64/structures/idt/struct.PageFaultErrorCode.html
+[LLVM bug]: https://github.com/rust-lang/rust/issues/57270
+[`hlt_loop`]: ./second-edition/posts/08-hardware-interrupts/index.md#the
+
+Now we can try to access some memory outside our kernel:
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    use blog_os::interrupts::PICS;
+
+    println!("Hello World{}", "!");
+
+    // set up the IDT first, otherwise we would enter a boot loop instead of
+    // invoking our page fault handler
+    blog_os::gdt::init();
+    blog_os::interrupts::init_idt();
+    unsafe { PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();
+
+    // new
+    let ptr = 0xdeadbeaf as *mut u32;
+    unsafe { *ptr = 42; }
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+When we run it, we see that our page fault handler is called:
+
+![EXCEPTION: Page Fault, Accessed Address: VirtAddr(0xdeadbeaf), ExceptionStackFrame: {…}](qemu-page-fault.png)
+
+The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access. This virtual address has no mapping in the page tables, so a page fault occured.
+
+We see that the current instruction pointer is `0x20430a`, so we know that this address points to a code page. Code pages are mapped read-only by the bootloader, so reading from this address works but writing causes a page fault. You can try this by changing the `0xdeadbeaf` pointer to `0x20430a`:
+
+```rust
+// Note: The actual address might be different for you. Use the address that
+// your page fault handler reports.
+let ptr = 0x20430a as *mut u32;
+// read from a code page -> works
+unsafe { let x = *ptr; }
+// write to a code page -> page fault
+unsafe { *ptr = 42; }
+```
+
+By commenting out the last line, we see that the read access works, but the write access causes a page fault.
+
+### Accessing the Page Tables
 
 Let's try to take a look at the page tables that our kernel runs on:
 
