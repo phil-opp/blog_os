@@ -2,7 +2,7 @@
 title = "Introduction to Paging"
 order = 9
 path = "paging-introduction"
-date = 0000-01-01
+date = 2019-01-14
 template = "second-edition/page.html"
 +++
 
@@ -463,7 +463,3 @@ We learned that our kernel already runs on top of paging and that illegal memory
 ## What's next?
 
 The next post builds upon the fundamentals we learned in this post. It introduces an advanced technique called _recursive page tables_ to solve the problem of accessing page tables from our kernel. This allows us to traverse the page table hierarchy and implement a software based translation function. The post also explains how to create a new mapping in the page tables.
-
--------
-
-TODO: update date
