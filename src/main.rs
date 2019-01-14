@@ -12,8 +12,15 @@ use blog_os::println;
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     use blog_os::interrupts::PICS;
+    use x86_64::structures::paging::PageTable;
 
     println!("Hello World{}", "!");
+
+    let level_4_table_ptr = 0xffff_ffff_ffff_f000 as *const PageTable;
+    let level_4_table = unsafe { &*level_4_table_ptr };
+    for i in 0..10 {
+        println!("Entry {}: {:?}", i, level_4_table[i]);
+    }
 
     blog_os::gdt::init();
     blog_os::interrupts::init_idt();

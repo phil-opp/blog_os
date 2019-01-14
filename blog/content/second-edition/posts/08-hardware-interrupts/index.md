@@ -596,10 +596,12 @@ It's possible to configure some aspects of a PS/2 keyboard, for example which sc
 
 ## Summary
 
-In this post we learned how to enable and handle external interrupts. We learned about the 8259 PIC and its primary/secondary layout, the remapping of the interrupt numbers, and the "end of interrupt" signal. We saw that the hardware timer and the keyboard controller are active by default and start to send interrupts as soon as we enable them in the CPU. We learned about the `hlt` instruction, which halts the CPU until the next interrupt, and about the scancode sets of PS/2 keyboards.
+This post explained how to enable and handle external interrupts. We learned about the 8259 PIC and its primary/secondary layout, the remapping of the interrupt numbers, and the "end of interrupt" signal. We implemented handlers for the hardware timer and the keyboard and learned about the `hlt` instruction, which halts the CPU until the next interrupt.
 
 Now we are able to interact with our kernel and have some fundamental building blocks for creating a small shell or simple games.
 
 ## What's next?
 
-As already mentioned, the 8259 PIC has been superseded by the [APIC], a controller with more capabilities and multicore support. In the next post we will explore this controller and learn how to use its integrated timer and how to set interrupt priorities.
+Timer interrupts are essential for an operating system, because they provide a way to periodically interrupt the running process and regain control in the kernel. The kernel can then switch to a different process and create the illusion that multiple processes run in parallel.
+
+But before we can create processes or threads, we need a way to allocate memory for them. The next posts will explore memory management to provide this fundamental building block.
