@@ -5,10 +5,10 @@
 #![cfg(not(windows))]
 
 use crate::{gdt, print, println};
+use lazy_static::lazy_static;
 use pic8259_simple::ChainedPics;
 use spin;
 use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable, PageFaultErrorCode};
-use lazy_static::lazy_static;
 
 pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
@@ -74,9 +74,9 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut ExceptionSt
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
-    use x86_64::instructions::port::Port;
-    use pc_keyboard::{Keyboard, ScancodeSet1, DecodedKey, layouts};
+    use pc_keyboard::{layouts, DecodedKey, Keyboard, ScancodeSet1};
     use spin::Mutex;
+    use x86_64::instructions::port::Port;
 
     lazy_static! {
         static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
