@@ -23,38 +23,38 @@ As an example, some ARM Cortex-M processors (used for embedded systems) have a [
 
 [_Memory Protection Unit_]: https://developer.arm.com/docs/ddi0337/e/memory-protection-unit/about-the-mpu
 
-On x86, two different techniques are supported: [segmentation] and [paging].
+On x86, the hardware supports two different approaches to memory protection: [segmentation] and [paging].
 
 [segmentation]: https://en.wikipedia.org/wiki/X86_memory_segmentation
 [paging]: https://en.wikipedia.org/wiki/Virtual_memory#Paged_virtual_memory
 
 ## Segmentation
 
-Segmentation was already introduced in 1978, originally to increase the amount of addressable memory. The situation back then was that CPUs only used 16-bit addresses, which limited the amount of addressable memory to 64KiB. To make more than these 64KiB accessible, additional segment registers were introduced that each contain an offset address. This offset is added on each memory access, which results in a 20bit address so that up to 1MiB of memory are accessible.
+Segmentation was already introduced in 1978, originally to increase the amount of addressable memory. The situation back then was that CPUs only used 16-bit addresses, which limited the amount of addressable memory to 64KiB. To make more than these 64KiB accessible, additional segment registers were introduced, each containing an offset address. The CPU automatically added this offset on each memory access, so that up to 1MiB of memory were accessible.
 
-The CPU chooses a segment register automatically, depending on the kind of memory access: For fetching instructions the code segment `CS` is used and for stack operations (push/pop) the stack segment `SS` is used. Other instructions use data segment `DS` or the extra segment `ES`. Later two additional segment registers `FS` and `GS` were added, which can be used freely.
+The segment register is chosen automatically by the CPU, depending on the kind of memory access: For fetching instructions the code segment `CS` is used and for stack operations (push/pop) the stack segment `SS` is used. Other instructions use data segment `DS` or the extra segment `ES`. Later two additional segment registers `FS` and `GS` were added, which can be used freely.
 
-In the first version of segmentation, the segment registers directly contained the offset and no access control was performed. This was changed later with the introduction of the [_protected mode_]. When the CPU runs in this mode, the segment descriptors contain an index into a local or global [_descriptor table_], which contains in addition to an offset address the segment size and access permissions. The OS can utilize this to isolate processes from each other by loading separate global/local descriptor tables for each process that confine memory accesses to the process's own memory areas.
+In the first version of segmentation, the segment registers directly contained the offset and no access control was performed. This was changed later with the introduction of the [_protected mode_]. When the CPU runs in this mode, the segment descriptors contain an index into a local or global [_descriptor table_], which contains – in addition to an offset address – the segment size and access permissions. By loading separate global/local descriptor tables for each process that confine memory accesses to the process's own memory areas, the OS can isolate processes from each other.
 
 [_protected mode_]: https://en.wikipedia.org/wiki/X86_memory_segmentation#Protected_mode
 [_descriptor table_]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
-Although segmentation is no longer used on modern systems, it already used a technique that is now used everywhere: _virtual memory_.
+By modifying the memory addresses before the actual access, segmentation already employed a technique that is now used almost everywhere: _virtual memory_.
 
 ### Virtual Memory
 
-The idea behind virtual memory is to abstract away the memory addresses from the underlying physical storage device. Instead of directly accessing the storage device, a translation step is performed. For segmentation, this translation step is to add the offset address of the active segment. Imagine a program accessing memory address `0x1234000` in a segment with offset `0x1111000`: The translated address is then `0x2345000`.
+The idea behind virtual memory is to abstract away the memory addresses from the underlying physical storage device. Instead of directly accessing the storage device, a translation step is performed first. For segmentation, the translation step is to add the offset address of the active segment. Imagine a program accessing memory address `0x1234000` in a segment with offset `0x1111000`: The address that is really accessed is `0x2345000`.
 
-To differentiate the two address types, addresses before the translation are called _virtual_ and addresses after the translation are called _physical_. One important difference between these two kind of addresses is that physical addresses are unique and always refer to the same, distinct memory location. Virtual addresses on the other hand depend on the translation function. It is entirely possible that two identical virtual addresses refer to different physical addresses with when different translation functions are used.
+To differentiate the two address types, addresses before the translation are called _virtual_ and addresses after the translation are called _physical_. One important difference between these two kinds of addresses is that physical addresses are unique and always refer to the same, distinct memory location. Virtual addresses on the other hand depend on the translation function. It is entirely possible that two different vrtual addresses refer to the same physical address. Also, identical virtual addresses can refer to different physical addresses when they use different translation functions.
 
 An example where this property is useful is running the same program twice in parallel:
 
 
 ![Two virtual address spaces with address 0–150, one translated to 100–250, the other to 300–450](segmentation-same-program-twice.svg)
 
-Here the same program runs twice, but with different translation functions. The first instance has an segment offset of 100, so that its virtual addresses 0–100 are translated to the physical addresses 100–250. The second instance has offset 300, which translates its virtual addresses to physical addresses 300–450. The important thing here is that both programs can run the same code and use the same virtual addresses without interfering with each other.
+Here the same program runs twice, but with different translation functions. The first instance has an segment offset of 100, so that its virtual addresses 0–150 are translated to the physical addresses 100–250. The second instance has offset 300, which translates its virtual addresses  0–150 to physical addresses 300–450. This allows both programs to run the same code and use the same virtual addresses without interfering with each other.
 
-Similarly, we can place programs at arbitrary physical memory locations now, even if they use completely different virtual addresses. Thus we can utilize the full amount of available memory without recompiling any program.
+Another advantage is that programs can be placed at arbitrary physical memory locations now, even if they use completely different virtual addresses. Thus, the OS can utilize the full amount of available memory without needing to recompile programs.
 
 ### Fragmentation
 
@@ -72,7 +72,7 @@ Now there is enough continuous space to start the third instance of our program.
 
 The disadvantage of this defragmentation process is that is needs to copy large amounts of memory which decreases performance. It also needs to be done regularly before the memory becomes too fragmented. This makes performance unpredictable, since programs are paused at random times and might become unresponsive.
 
-The fragmentation problem is one of the reasons that segmentation is no longer used by most systems. Segmentation is not even supported in 64-bit mode on x86 anymore. Instead _paging_ is used, which completely avoids the fragmentation problem. 
+The fragmentation problem is one of the reasons that segmentation is no longer used by most systems. In fact, segmentation is not even supported in 64-bit mode on x86 anymore. Instead _paging_ is used, which completely avoids the fragmentation problem.
 
 ## Paging
 
@@ -82,7 +82,7 @@ The advantage of this becomes visible if we recap the example of the fragmented 
 
 ![With paging the third program instance can be split across many smaller physical areas](paging-fragmentation.svg)
 
-In this example we have a page size of 50 bytes, which means that each memory region is split across three pages. Each page is mapped to a frame individually, so a continuous virtual memory region can be mapped to non-continuous memory frames. This allows us to start the third instance of the program without performing any defragmentation before.
+In this example we have a page size of 50 bytes, which means that each of our memory regions is split across three pages. Each page is mapped to a frame individually, so a continuous virtual memory region can be mapped to non-continuous physical frames. This allows us to start the third instance of the program without performing any defragmentation before.
 
 ### Hidden Fragmentation
 
@@ -92,7 +92,7 @@ Or it _seems_ like no fragmentation occurs. There is still some hidden kind of f
 
 Internal fragmentation is unfortunate, but often better than the external fragmentation that occurs with segmentation. It still wastes memory, but does not require defragmentation and makes the amount of fragmentation predictable (on average half a page per memory region).
 
-### How does it work?
+### Page Tables
 
 We saw that each of the potentially millions of pages is individually mapped to a frame. This mapping information needs to be stored somewhere. Segmentation uses an individual segment selector register for each active memory region, which is not possible for paging since there are way more pages than registers. Instead paging uses a table structure called _page table_ to store the mapping information.
 
@@ -246,7 +246,7 @@ One thing that we did not mention yet: **Our kernel already runs on paging**. Th
 
 ["A minimal Rust kernel"]: ./second-edition/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
 
-This means that every memory address that we used in our kernel was a virtual address. Accessing the VGA buffer at address `0xb8000` only worked because the bootloader _identity mapped_ that memory page, which means that the virtual page `0xb8000` is mapped to the physical frame `0xb8000`.
+This means that every memory address that we used in our kernel was a virtual address. Accessing the VGA buffer at address `0xb8000` only worked because the bootloader _identity mapped_ that memory page, which means that it mapped the virtual page `0xb8000` to the physical frame `0xb8000`.
 
 Paging makes our kernel already relatively safe, since every memory access that is out of bounds causes a page fault exception instead of writing to random physical memory. The bootloader even set the correct access permissions for each page, which means that only the pages containing code are executable and only data pages are writable.
 
@@ -327,7 +327,7 @@ When we run it, we see that our page fault handler is called:
 
 ![EXCEPTION: Page Fault, Accessed Address: VirtAddr(0xdeadbeaf), ExceptionStackFrame: {…}](qemu-page-fault.png)
 
-The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access. This virtual address has no mapping in the page tables, so a page fault occurred.
+The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access.
 
 We see that the current instruction pointer is `0x20430a`, so we know that this address points to a code page. Code pages are mapped read-only by the bootloader, so reading from this address works but writing causes a page fault. You can try this by changing the `0xdeadbeaf` pointer to `0x20430a`:
 
@@ -407,7 +407,7 @@ When we run it, we see the following output:
 
 ![Entry 0: 0x2023, Entry 1: 0x6e2063, Entry 2-9: 0x0](qemu-print-p4-entries.png)
 
-When we look at the [format of page table entries][page table format], we see that the value `0x2023` of entry 0 means that the entry is `present`, `writable`, was `accessed` by the CPU, and is mapped to frame `0x2000`. Entry 1 is mapped to frame `0x6e2000` has the same flags as entry 0, with the addition of the `dirty` flag that indicates that the page was written. Entries 2–9 are not `present`, so this virtual address range is not mapped to any physical addresses.
+When we look at the [format of page table entries][page table format], we see that the value `0x2023` of entry 0 means that the entry is `present`, `writable`, was `accessed` by the CPU, and is mapped to frame `0x2000`. Entry 1 is mapped to frame `0x6e2000` and has the same flags as entry 0, with the addition of the `dirty` flag that indicates that the page was written. Entries 2–9 are not `present`, so these virtual address ranges are not mapped to any physical addresses.
 
 Instead of working with unsafe raw pointers we can use the [`PageTable`] type of the `x86_64` crate:
 
@@ -420,7 +420,7 @@ Instead of working with unsafe raw pointers we can use the [`PageTable`] type of
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     use x86_64::structures::paging::PageTable;
-    
+
     let level_4_table_ptr = 0xffff_ffff_ffff_f000 as *const PageTable;
     let level_4_table = unsafe {&*level_4_table_ptr};
     for i in 0..10 {
@@ -435,7 +435,7 @@ Here we cast the `0xffff_ffff_ffff_f000` pointer first to a raw pointer and then
 
 [indexing operations]: https://doc.rust-lang.org/core/ops/trait.Index.html
 
-The crate also provides some nice abstractions for the individual entries so that we directly see which flags are set when we print them:
+The crate also provides some abstractions for the individual entries so that we directly see which flags are set when we print them:
 
 ![
 Entry 0: PageTableEntry { addr: PhysAddr(0x2000), flags: PRESENT | WRITABLE | ACCCESSED }
@@ -450,7 +450,7 @@ Entry 8: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
 Entry 9: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
 ](qemu-print-p4-entries-abstraction.png)
 
-The next step would be to follow the pointers in entry 0 or entry 1 to a level 3 page table. But we now have the problem again that `0x2000` and `0x6e5000` are physical addresses, so we can't access them directly. We will solve this problem in the next post.
+The next step would be to follow the pointers in entry 0 or entry 1 to a level 3 page table. But we now again have the problem that `0x2000` and `0x6e5000` are physical addresses, so we can't access them directly. This problem will be solved in the next post.
 
 ## Summary
 
@@ -458,11 +458,11 @@ This post introduced two memory protection techniques: segmentation and paging. 
 
 Paging stores the mapping information for pages in page tables with one or more levels. The x86_64 architecture uses 4-level page tables and a page size of 4KiB. The hardware automatically walks the page tables and caches the resulting translations in the translation lookaside buffer (TLB). This buffer is not updated transparently and needs to be flushed manually on page table changes.
 
-We learned that our kernel already runs on top of paging and tried to access the page table that our kernel runs on. This was complicated by the fact that page tables store physical addresses that we can't access directly from our kernel. We can only access them through virtual pages that are mapped to the physical frame.
+We learned that our kernel already runs on top of paging and that illegal memory accesses cause page fault exceptions. We tried to access the currently active page tables, but we were only able to access the level 4 table, since page tables store physical addresses that we can't access directly from our kernel.
 
 ## What's next?
 
-The next post builds upon the fundamentals we learned in this post. It introduces an advanced technique called _recursive page tables_ to solve the problem of accessing page tables from our kernel. This allows us to traverse the page table hierarchy and implement a software based translation function. The post also implements functions to allocate new stacks, that we can use to implement multithreading in the future.
+The next post builds upon the fundamentals we learned in this post. It introduces an advanced technique called _recursive page tables_ to solve the problem of accessing page tables from our kernel. This allows us to traverse the page table hierarchy and implement a software based translation function. The post also explains how to create a new mapping in the page tables.
 
 -------
 
