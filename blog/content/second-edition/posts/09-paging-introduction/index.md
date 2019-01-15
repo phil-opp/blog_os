@@ -76,7 +76,7 @@ The fragmentation problem is one of the reasons that segmentation is no longer u
 
 ## Paging
 
-The idea is to divide both the virtual and the physical memory space into small, fixed-size blocks. The blocks of the virtual memory space are called _pages_ and the blocks of the physical address space are called _frames_. Each page can be individually mapped to a frame, which makes it possible split larger memory regions across non-continuous physical frames.
+The idea is to divide both the virtual and the physical memory space into small, fixed-size blocks. The blocks of the virtual memory space are called _pages_ and the blocks of the physical address space are called _frames_. Each page can be individually mapped to a frame, which makes it possible to split larger memory regions across non-continuous physical frames.
 
 The advantage of this becomes visible if we recap the example of the fragmented memory space, but use paging instead of segmentation this time:
 
