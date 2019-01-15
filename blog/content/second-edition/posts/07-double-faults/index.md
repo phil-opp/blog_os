@@ -127,7 +127,7 @@ First Exception | Second Exception
 [Page Fault]: http://wiki.osdev.org/Exceptions#Page_Fault
 
 
-[AMD64 manual]: http://developer.amd.com/wordpress/media/2012/10/24593_APM_v21.pdf
+[AMD64 manual]: https://www.amd.com/system/files/TechDocs/24593.pdf
 
 So for example a divide-by-zero fault followed by a page fault is fine (the page fault handler is invoked), but a divide-by-zero fault followed by a general-protection fault leads to a double fault.
 
