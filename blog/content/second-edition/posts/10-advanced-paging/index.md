@@ -17,13 +17,13 @@ This blog is openly developed on [Github]. If you have any problems or questions
 
 ## Introduction
 
-In the [previous post] we learned about the principles of paging and how the 4-level page tables on the x86_64 architecture work. We also found out that the bootloader already set up a 4-level page table hierarchy for our kernel, since paging is mandatory on x86_64 in 64-bit mode. This means that our kernel already runs on virtual addresses.
+In the [previous post] we learned about the principles of paging and how the 4-level page tables on the x86_64 architecture work. We also found out that the bootloader already set up a 4-level page table hierarchy for our kernel, which means that our kernel already runs on virtual addresses. This improves safety since illegal memory accesses cause page fault exceptions instead of modifying arbitrary physical memory.
 
 [previous post]: ./second-edition/posts/09-paging-introduction/index.md
 
-The problem that page tables use physical addresses internally, which we can't access directly from our kernel. We experienced that problem already [at the end of the previous post] when we tried to inspect the active page tables. The next section discusses the problem in detail and provides different approaches to a solution.
+However, it also causes a problem when we try to access the page tables from our kernel, because we can't directly access the physical addresses that are stored in page table entries or the `CR3` register. We experienced that problem already [at the end of the previous post] when we tried to inspect the active page tables. The next section discusses the problem in detail and provides different approaches to a solution.
 
-[at the end of the previous post]: ./second-edition/posts/09-paging-introduction/index.md#try-it-out
+[at the end of the previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
 
 ## Accessing Page Tables
 
@@ -44,7 +44,7 @@ So in order access page table frames, we need to map some virtual pages to them.
 
   In this example we see various identity-mapped page table frames. This way the physical addresses in the page tables are also valid virtual addresses, so that we can easily access the page tables of all levels starting from the CR3 register.
 
-  However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at `26 KiB` because it would collide with the already mapped page at `1004 MiB`. So we have to look further until we find a large enough unmapped area, for example at `1008 KiB`. This is a similar fragmentation problem as with [segmentation].
+  However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at `28 KiB` because it would collide with the already mapped page at `1004 MiB`. So we have to look further until we find a large enough unmapped area, for example at `1008 KiB`. This is a similar fragmentation problem as with [segmentation].
 
   [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
   [segmentation]: ./second-edition/posts/09-paging-introduction/index.md#fragmentation
@@ -122,17 +122,17 @@ Finally, we can access the level 4 table by moving each block four blocks to the
 
 ![Bits 0–12 are the offset into the level l table frame and bits 12–21, bits 21–30, bits 30–39 and bits 39–48 are the index of the recursive entry](table-indices-from-address-recursive-level-4.svg)
 
-The page table index blocks are 9 bits, so moving each block one block to the right means a bitshift by 9 bits: `address >> 9`. To derive the 12-bit offset field from the shifted index, we need to multiply it by 8, the size of a page table entry. Through this operation, we can calculate virtual addresses for the page tables of all four levels.
+We can now calculate virtual addresses for the page tables of all four levels. We can even calculate an address that points exactly to a specific page table entry by multiplying the its index by 8, the size of a page table entry.
 
 The table below summarizes the address structure for accessing the different kinds of frames:
 
-Mapped Frame for | Address Structure ([octal])
----------------- | -------------------------------
-Page             | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE`
-Level 1 Table    | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD`
-Level 2 Table    | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC`
-Level 3 Table    | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB`
-Level 4 Table    | `0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA`
+Virtual Address for | Address Structure ([octal])
+------------------- | -------------------------------
+Page                | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE`
+Level 1 Table Entry | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD`
+Level 2 Table Entry | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC`
+Level 3 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB`
+Level 4 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA`
 
 [octal]: https://en.wikipedia.org/wiki/Octal
 
@@ -141,6 +141,8 @@ Whereas `AAA` is the level 4 index, `BBB` the level 3 index, `CCC` the level 2 i
 `SSSSSS` are sign extension bits, which means that they are all copies of bit 47. This is a special requirement for valid addresses on the x86_64 architecture. We explained it in the [previous post][sign extension].
 
 [sign extension]: ./second-edition/posts/09-paging-introduction/index.md#paging-on-x86
+
+We use [octal] numbers for representing the addresses since each octal character represents 3 bits, which allows us to clearly spearate the the 9-bit indexes of the different page table levels. This isn't possible with the hexadecimal system where each character represents four bits.
 
 ## Implementation
 
@@ -219,7 +221,9 @@ First, we calculate the page table indices and the page offset from the address 
 
 ![Bits 0–12 are the page offset, bits 12–21 the level 1 index, bits 21–30 the level 2 index, bits 30–39 the level 3 index, and bits 39–48 the level 4 index](../paging-introduction/x86_64-table-indices-from-address.svg)
 
-Then we transform the `level_4_table_addr` to a `&PageTable`, which is an `unsafe` operation since the compiler can't know that the address is valid. We use the indexing operator to look at the entry with `level_4_index`. If that entry is null, there is no level 3 table for this level 4 entry, which means that the `addr` is not mapped to any physical memory, so we return `None`.
+Then we transform the `level_4_table_addr` to a [`PageTable`] reference, which is an `unsafe` operation since the compiler can't know that the address is valid. We use the indexing operator to look at the entry with `level_4_index`. If that entry is null, there is no level 3 table for this level 4 entry, which means that the `addr` is not mapped to any physical memory, so we return `None`.
+
+[`PageTable`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.PageTable.html
 
 If the entry is not `None`, we know that a level 3 table exist. We calculate the virtual address of it by shifting the level 4 address 9 bits to the left and setting the address bits 12–21 to the level 4 index (see the section about [address calculation]). We can do that because the recursive index is `0o777`, so that it is also a valid sign extension. We then do the same cast and entry-checking as with the level 4 table.
 
@@ -227,7 +231,7 @@ If the entry is not `None`, we know that a level 3 table exist. We calculate the
 
 After we checked the three higher level pages, we can finally read the entry of the level 1 table that tells us the physical frame that the address is mapped to. As a last step, we add the page offset to that address and return it.
 
-If we knew that the address is mapped, we could directly access the level 1 table without looking at the higher level pages first. But since we don't know this, so we have to check whether the level 1 table exists first, otherwise we would cause a page fault for unmapped addresses.
+If we knew that the address is mapped, we could directly access the level 1 table without looking at the higher level pages first. But since we don't know this, we have to check whether the level 1 table exists first, otherwise we would cause a page fault for unmapped addresses.
 
 #### Try it out
 
@@ -335,8 +339,6 @@ After reading the page tables and creating a translation function, the next step
 ### Creating a new Mapping
 
 The difficulty of creating a new mapping depends on on the virtual page that we want to map. In the easiest case, the level 1 page table for the page already exists and we just need to write a single entry. In the most difficult case, the page is in a memory region for that no level 3 exists yet, so that we need to create new level 3, level 2 and level 1 page tables first.
-
-For creating a new page table we need to find an unused physical frame where the page table will be stored. We initialize it to zero and create a mapping for that frame in the higher level page table. At this point, we can access the new page table through the recursive page table and continue with the next level.
 
 Let's start with the simple case and assume that we don't need to create new page tables. The bootloader loads itself in the first megabyte of the virtual address space, so we know that a valid level 1 table exists for this region. We can choose any unused page in this memory region for our example mapping, for example the page at address `0x1000`. As the target frame we use `0xb8000`, the frame of the VGA text buffer. This way we can easily test whether our mapping worked.
 
@@ -614,6 +616,9 @@ Now the mapping succeeds and we see the white block on the screen again:
 
 The `map_to` method was now able to create the missing page tables on the frames allocated from our `BootInfoFrameAllocator`. You can insert a `println` message into the `BootInfoFrameAllocator::alloc` method to see how it's called.
 
+For creating a new page table we need to find an unused physical frame where the page table will be stored. We initialize it to zero and create a mapping for that frame in the higher level page table. At this point, we can access the new page table through the recursive page table and continue with the next level.
+
+
 We're now able to map arbitrary pages and to allocate new physical frames when we need them.
 
 # TODO
@@ -626,4 +631,6 @@ We're now able to map arbitrary pages and to allocate new physical frames when w
 
 ---
 TODO spellcheck
+TODO improve transition between sections
 TODO update post date
+TODO check level 2 table diagram 24KiB -> 32KiB
