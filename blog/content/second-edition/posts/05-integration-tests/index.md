@@ -410,7 +410,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-So we move everything except `_start` and `panic` to `lib.rs` and make the `vga_buffer` and `serial` modules public. Everything should work exactly as before, including `bootimage run` and `cargo test`.
+So we move everything except `_start` and `panic` to `lib.rs` and make the `vga_buffer` and `serial` modules public. Everything should work exactly as before, including `bootimage run` and `cargo test`. To run tests only for the library part of our crate and avoid the additional output we can execute `cargo test --lib`.
 
 ### Test Basic Boot
 
