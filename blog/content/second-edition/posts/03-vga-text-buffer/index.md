@@ -59,9 +59,7 @@ Now that we know how the VGA buffer works, we can create a Rust module to handle
 mod vga_buffer;
 ```
 
-The content of this module can live either in `src/vga_buffer.rs` or `src/vga_buffer/mod.rs`. The latter supports submodules while the former does not. Our module does not need any submodules so we create it as `src/vga_buffer.rs`.
-
-All of the code below goes into our new module (unless specified otherwise).
+For the content of this module we create a new `src/vga_buffer.rs` file. All of the code below goes into our new module (unless specified otherwise).
 
 ### Colors
 First, we represent the different colors using an enum:
