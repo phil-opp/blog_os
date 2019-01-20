@@ -404,65 +404,42 @@ Let's create an integration test that ensures that the above continues to work. 
 ```rust
 // in src/bin/test-exception-breakpoint.rs
 
-[…]
-use core::sync::atomic::{AtomicUsize, Ordering};
+#![no_std]
+#![cfg_attr(not(test), no_main)]
+#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
-static BREAKPOINT_HANDLER_CALLED: AtomicUsize = AtomicUsize::new(0);
+use core::panic::PanicInfo;
+use blog_os::{exit_qemu, serial_println};
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    init_test_idt();
+    blog_os::interrupts::init_idt();
 
-    // invoke a breakpoint exception
     x86_64::instructions::int3();
 
-    match BREAKPOINT_HANDLER_CALLED.load(Ordering::SeqCst) {
-        1 => serial_println!("ok"),
-        0 => {
-            serial_println!("failed");
-            serial_println!("Breakpoint handler was not called.");
-        }
-        other => {
-            serial_println!("failed");
-            serial_println!("Breakpoint handler was called {} times", other);
-        }
-    }
+    serial_println!("ok");
 
     unsafe { exit_qemu(); }
     loop {}
 }
 
 
-lazy_static! {
-    static ref TEST_IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt
-    };
-}
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    serial_println!("failed");
 
-pub fn init_test_idt() {
-    TEST_IDT.load();
-}
+    serial_println!("{}", info);
 
-extern "x86-interrupt" fn breakpoint_handler(
-    _stack_frame: &mut ExceptionStackFrame)
-{
-    BREAKPOINT_HANDLER_CALLED.fetch_add(1, Ordering::SeqCst);
+    unsafe { exit_qemu(); }
+    loop {}
 }
-
-[…]
 ```
 
-For space reasons we don't show the full content here. You can find the full file [on Github](https://github.com/phil-opp/blog_os/blob/master/src/bin/test-exception-breakpoint.rs).
+It is similar to our `main.rs`, but instead of printing "It did not crash!" to the VGA buffer, it prints "ok" to the serial output and calls `exit_qemu`. This allows the `bootimage` tool to detect that our code successfully continued after invoking the `int3` instruction. If our `panic_handler` is called, we instead print `failed` to signalize the failure to `bootimage`.
 
-It is similar to our `main.rs`, but uses a custom IDT called `TEST_IDT` and different `_start` and `breakpoint_handler` functions. The most interesting part is the `BREAKPOINT_HANDLER_CALLED` static. It is an [`AtomicUsize`], an integer type that can be safely concurrently modified because all of its operations are atomic. We increment it when the `breakpoint_handler` is called and verify in our `_start` function that the handler was called exactly once.
-
-[`AtomicUsize`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicUsize.html
-
-The [`Ordering`] parameter specifies the desired guarantees of the atomic operations. The `SeqCst` ordering means “sequential consistent” and gives the strongest guarantees. It is a good default, because weaker orderings can have undesired effects.
-
-[`Ordering`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
+You can try this new test by running `bootimage test`.
 
 ### Fixing `cargo test` on Windows
 
