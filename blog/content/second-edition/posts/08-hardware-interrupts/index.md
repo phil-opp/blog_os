@@ -114,6 +114,8 @@ We can now initialize the 8259 PIC from our `_start` function:
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    use blog_os::interrupts::PICS;                  // new
+
     println!("Hello World{}", "!");
 
     blog_os::gdt::init();
@@ -141,7 +143,7 @@ Until now nothing happened because interrupts are still disabled in the CPU conf
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    use blog_os::interrupts::PICS;                  // new
+    use blog_os::interrupts::PICS;
 
     println!("Hello World{}", "!");
 
