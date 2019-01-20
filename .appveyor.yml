@@ -39,7 +39,6 @@ environment:
 cache:
   - '%USERPROFILE%\.cargo\bin'
   - '%USERPROFILE%\.cargo\.crates.toml'
-  - target
 
 ## Install Script ##
 

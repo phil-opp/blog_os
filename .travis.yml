@@ -25,8 +25,9 @@ os:
   - windows
 
 cache:
-  cargo: true
   directories:
+    - $HOME/.cargo/bin
+    - $HOME/.cargo/.crates.toml
     - $HOME/Library/Caches/Homebrew
 
 addons:
