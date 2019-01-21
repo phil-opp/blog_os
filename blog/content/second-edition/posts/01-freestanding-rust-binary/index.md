@@ -20,11 +20,11 @@ This means that we can't use most of the [Rust standard library], but there are 
 [option]: https://doc.rust-lang.org/core/option/
 [result]:https://doc.rust-lang.org/core/result/
 [Rust standard library]: https://doc.rust-lang.org/std/
-[iterators]: https://doc.rust-lang.org/book/second-edition/ch13-02-iterators.html
-[closures]: https://doc.rust-lang.org/book/second-edition/ch13-01-closures.html
-[pattern matching]: https://doc.rust-lang.org/book/second-edition/ch06-00-enums.html
+[iterators]: https://doc.rust-lang.org/book/ch13-02-iterators.html
+[closures]: https://doc.rust-lang.org/book/ch13-01-closures.html
+[pattern matching]: https://doc.rust-lang.org/book/ch06-00-enums.html
 [string formatting]: https://doc.rust-lang.org/core/macro.write.html
-[ownership system]: https://doc.rust-lang.org/book/second-edition/ch04-00-understanding-ownership.html
+[ownership system]: https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html
 [undefined behavior]: https://www.nayuki.io/page/undefined-behavior-in-c-and-cplusplus-programs
 [memory safety]: https://tonyarcieri.com/it-s-time-for-a-memory-safety-intervention
 
@@ -33,7 +33,7 @@ In order to create an OS kernel in Rust, we need to create an executable that ca
 This post describes the necessary steps to create a freestanding Rust binary and explains why the steps are needed. If you're just interested in a minimal example, you can **[jump to the summary](#summary)**.
 
 ## Installing Rust Nightly
-Rust has three release channels: _stable_, _beta_, and _nightly_. The Rust Book explains the difference between these channels really well, so take a minute and [check it out](https://doc.rust-lang.org/book/second-edition/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). For building an operating system we will need some experimental features that are only available on the nightly channel, so we need to install a nightly version of Rust.
+Rust has three release channels: _stable_, _beta_, and _nightly_. The Rust Book explains the difference between these channels really well, so take a minute and [check it out](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). For building an operating system we will need some experimental features that are only available on the nightly channel, so we need to install a nightly version of Rust.
 
 To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. With rustup you can use a nightly compiler for the current directory by running `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory. You can check that you have a nightly version installed by running `rustc --version`: The version number should contain `-nightly` at the end.
 
@@ -47,7 +47,7 @@ The nightly compiler allows us to opt-in to various experimental features by usi
 By default, all Rust crates link the [standard library], which depends on the operating system for features such as threads, files, or networking. It also depends on the C standard library `libc`, which closely interacts with OS services. Since our plan is to write an operating system, we can not use any OS-dependent libraries. So we have to disable the automatic inclusion of the standard library through the [`no_std` attribute].
 
 [standard library]: https://doc.rust-lang.org/std/
-[`no_std` attribute]: https://doc.rust-lang.org/book/first-edition/using-rust-without-the-standard-library.html
+[`no_std` attribute]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
 
 We start by creating a new cargo application project. The easiest way to do this is through the command line:
 
@@ -136,7 +136,7 @@ fn panic(_info: &PanicInfo) -> ! {
 The [`PanicInfo` parameter][PanicInfo] contains the file and line where the panic happened and the optional panic message. The function should never return, so it is marked as a [diverging function] by returning the [“never” type] `!`. There is not much we can do in this function for now, so we just loop indefinitely.
 
 [PanicInfo]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
-[diverging function]: https://doc.rust-lang.org/book/first-edition/functions.html#diverging-functions
+[diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
 ### The `eh_personality` Language Item
