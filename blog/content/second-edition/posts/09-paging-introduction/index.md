@@ -169,9 +169,9 @@ With these indices, we can now walk the page table hierarchy to determine the ma
 
 ![The same example 4-level page hierarchy with 5 additional arrows: "Step 0" from the CR3 register to the level 4 table, "Step 1" from the level 4 entry to the level 3 table, "Step 2" from the level 3 entry to the level 2 table, "Step 3" from the level 2 entry to the level 1 table, and "Step 4" from the level 1 table to the mapped frames.](x86_64-page-table-translation-steps.svg)
 
-The permissions for the page in the level 1 table are `r`, which means read-only. The hardware enforces this permissions and would throw an exception if we tried to write to that page. Permissions in higher level pages restrict the possible permissions in lower level, so if we set the level 3 entry to read-only, no pages that use this entry can be writable, even if lower levels specify read/write permissions.
+The permissions for the page in the level 1 table are `r`, which means read-only. The hardware enforces these permissions and would throw an exception if we tried to write to that page. Permissions in higher level pages restrict the possible permissions in lower level, so if we set the level 3 entry to read-only, no pages that use this entry can be writable, even if lower levels specify read/write permissions.
 
-It's important to note that even through this example used only a single instance of each table, there are typically multiple instances of each level in each address space. At maximum, there are:
+It's important to note that even though this example used only a single instance of each table, there are typically multiple instances of each level in each address space. At maximum, there are:
 
 - one level 4 table,
 - 512 level 3 tables (because the level 4 table has 512 entries),
@@ -213,7 +213,7 @@ We see that only bits 12–51 are used to store the physical frame address, the 
 
 Let's take a closer look at the available flags:
 
-- The `present` flag differentiates mapped pages from unmapped ones. It can be used to temporary swap out pages to disk when main memory becomes full. When the page is accessed subsequently, a special exception called _page fault_ occurs, to which the operating system can react by reloading the missing page from disk and then continuing the program.
+- The `present` flag differentiates mapped pages from unmapped ones. It can be used to temporarily swap out pages to disk when main memory becomes full. When the page is accessed subsequently, a special exception called _page fault_ occurs, to which the operating system can react by reloading the missing page from disk and then continuing the program.
 - The `writable` and `no execute` flags control whether the contents of the page are writable or contain executable instructions respectively.
 - The `accessed` and `dirty` flags are automatically set by the CPU when a read or write to the page occurs. This information can be leveraged by the operating system e.g. to decide which pages to swap out or whether the page contents were modified since the last save to disk.
 - The `write through caching` and `disable cache` flags allow to control the caches for every page individually.
