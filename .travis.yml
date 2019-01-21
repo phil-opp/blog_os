@@ -25,8 +25,8 @@ os:
   - windows
 
 cache:
-  cargo: true
   directories:
+    - $HOME/.cargo
     - $HOME/Library/Caches/Homebrew
 
 addons:
@@ -45,9 +45,11 @@ before_script:
   - (test -x $HOME/.cargo/bin/cargo-update-installed || cargo install cargo-update-installed)
   - (test -x $HOME/.cargo/bin/cargo-xbuild || cargo install cargo-xbuild)
   - (test -x $HOME/.cargo/bin/bootimage || cargo install bootimage)
+  - (test -x $HOME/.cargo/bin/cargo-cache || cargo install cargo-cache)
   - cargo update-installed
 
 script:
   - bootimage build
   - cargo test
   - bootimage test
+  - cargo cache --autoclean
