@@ -1,6 +1,6 @@
 +++
 title = "VGA Text Mode"
-order = 3
+weight = 3
 path = "vga-text-mode"
 date  = 2018-02-26
 template = "second-edition/page.html"

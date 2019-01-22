@@ -2,7 +2,7 @@
 title = "Talks"
 path = "talks"
 template = "plain.html"
-order = 1
+weight = 1
 +++
 
 ## 2018

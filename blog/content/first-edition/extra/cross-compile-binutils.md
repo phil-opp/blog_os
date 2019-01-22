@@ -2,7 +2,7 @@
 title = "Cross Compile Binutils"
 template = "plain.html"
 path = "cross-compile-binutils"
-order = 2
+weight = 2
 +++
 
 The [GNU Binutils] are a collection of various binary tools such as `ld`, `as`, `objdump`, or `readelf`. These tools are platform-specific, so you need to compile them again if your host system and target system are different. In our case, we need `ld` and `objdump` for the x86_64 architecture.

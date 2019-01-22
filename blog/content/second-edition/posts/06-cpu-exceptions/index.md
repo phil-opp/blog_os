@@ -1,6 +1,6 @@
 +++
 title = "CPU Exceptions"
-order = 6
+weight = 6
 path = "cpu-exceptions"
 date  = 2018-06-17
 template = "second-edition/page.html"

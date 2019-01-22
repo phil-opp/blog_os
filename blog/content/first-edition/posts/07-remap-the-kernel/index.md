@@ -1,6 +1,6 @@
 +++
 title = "Remap the Kernel"
-order = 7
+weight = 7
 path = "remap-the-kernel"
 date  = 2016-01-01
 template = "first-edition/page.html"

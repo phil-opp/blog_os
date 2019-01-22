@@ -1,6 +1,6 @@
 +++
 title = "Printing to Screen"
-order = 4
+weight = 4
 path = "printing-to-screen"
 date  = 2015-10-23
 template = "first-edition/page.html"

@@ -1,6 +1,6 @@
 +++
 title = "Disable the Red Zone"
-order = 1
+weight = 1
 path = "red-zone"
 template = "second-edition/extra.html"
 +++
