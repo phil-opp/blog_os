@@ -50,6 +50,7 @@ before_script:
   - ls ${TRAVIS_HOME}/.cargo/bin
   - cargo install --list
 
+
 script:
   - bootimage build
   - cargo test
