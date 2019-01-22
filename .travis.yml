@@ -24,7 +24,11 @@ os:
   - osx
   - windows
 
-cache: cargo
+cache:
+  branch: bash
+  cargo: true
+  directories:
+    - ${TRAVIS_HOME}/Library/Caches/Homebrew
 
 addons:
   apt:
