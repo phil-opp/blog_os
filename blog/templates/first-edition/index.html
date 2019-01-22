@@ -50,7 +50,8 @@
 {% set extra = get_section(path = "first-edition/extra/_index.md") %}
 <h1>{{ extra.title }}</h1>
 <ul>
-    {% for subsection in extra.subsections|reverse %}
+    {% for subsection_path in extra.subsections|reverse %}
+        {% set subsection = get_section(path=subsection_path) %}
         <li><a href="/{{ subsection.path | safe }}">{{ subsection.title }}</a></li>
     {% endfor %}
     {% for page in extra.pages|reverse %}
