@@ -1,0 +1,12 @@
+{% extends "second-edition/base.html" %}
+
+{% block title %}Page not found | {{ config.title }}{% endblock title %}
+
+{% block main %}
+    <h1>Page not found</h1>
+    <p>Sorry, this address is not valid.</p>
+
+    <p><a href="{{ config.base_url }}">Go to the index page</a>.</p>
+
+    <p>If you followed a link on this site, please <a href="https://github.com/phil-opp/blog_os/issues">report it</a>!</p>
+{% endblock main %}
