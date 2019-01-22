@@ -1,6 +1,6 @@
 +++
 title = "Integration Tests"
-order = 5
+weight = 5
 path = "integration-tests"
 date  = 2018-06-15
 template = "second-edition/page.html"

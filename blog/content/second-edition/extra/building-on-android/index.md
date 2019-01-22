@@ -1,6 +1,6 @@
 +++
 title = "Building on Android"
-order = 3
+weight = 3
 template = "second-edition/extra.html"
 +++
 

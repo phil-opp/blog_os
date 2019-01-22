@@ -9,7 +9,9 @@
     <meta name="description" content="{{ config.description }}">
     <meta name="author" content="{{ config.extra.author.name }}">
 
-    <link rel="canonical" href="{{ current_url | safe }}" />
+    {% if current_url %}
+        <link rel="canonical" href="{{ current_url | safe }}" />
+    {% endif %}
     <link href="/css/poole.css" rel="stylesheet">
     <link href="/css/main.css" rel="stylesheet">
 

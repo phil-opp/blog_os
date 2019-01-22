@@ -1,6 +1,6 @@
 +++
 title = "Catching Exceptions"
-order = 1
+weight = 1
 path = "catching-exceptions"
 date  = 2016-05-28
 template = "first-edition/page.html"

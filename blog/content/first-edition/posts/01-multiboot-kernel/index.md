@@ -1,6 +1,6 @@
 +++
 title = "A minimal Multiboot Kernel"
-order = 1
+weight = 1
 path = "multiboot-kernel/"
 date  = 2015-08-18
 template = "first-edition/page.html"

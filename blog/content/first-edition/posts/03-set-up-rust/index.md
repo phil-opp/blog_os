@@ -1,6 +1,6 @@
 +++
 title = "Set Up Rust"
-order = 3
+weight = 3
 path = "set-up-rust"
 date  = 2015-09-02
 template = "first-edition/page.html"

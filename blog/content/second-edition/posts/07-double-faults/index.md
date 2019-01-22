@@ -1,6 +1,6 @@
 +++
 title = "Double Faults"
-order = 7
+weight = 7
 path = "double-fault-exceptions"
 date  = 2018-06-18
 template = "second-edition/page.html"

@@ -1,6 +1,6 @@
 +++
 title = "Allocating Frames"
-order = 5
+weight = 5
 path = "allocating-frames"
 date  = 2015-11-15
 template = "first-edition/page.html"

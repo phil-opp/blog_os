@@ -1,6 +1,6 @@
 +++
 title = "Unit Testing"
-order = 4
+weight = 4
 path = "unit-testing"
 date  = 2018-04-29
 template = "second-edition/page.html"

@@ -1,6 +1,6 @@
 +++
 title = "Handling Exceptions"
-order = 9
+weight = 9
 path = "handling-exceptions"
 date  = 2017-03-26
 template = "first-edition/page.html"

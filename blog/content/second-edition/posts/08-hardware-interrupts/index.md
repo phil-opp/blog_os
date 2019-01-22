@@ -1,6 +1,6 @@
 +++
 title = "Hardware Interrupts"
-order = 8
+weight = 8
 path = "hardware-interrupts"
 date = 2018-10-22
 template = "second-edition/page.html"

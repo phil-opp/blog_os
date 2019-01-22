@@ -1,6 +1,6 @@
 +++
 title = "Double Faults"
-order = 10
+weight = 10
 path = "double-faults"
 date  = 2017-01-02
 template = "first-edition/page.html"

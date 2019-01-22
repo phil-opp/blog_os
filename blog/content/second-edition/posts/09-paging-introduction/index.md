@@ -1,6 +1,6 @@
 +++
 title = "Introduction to Paging"
-order = 9
+weight = 9
 path = "paging-introduction"
 date = 2019-01-14
 template = "second-edition/page.html"

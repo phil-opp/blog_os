@@ -1,6 +1,6 @@
 +++
 title = "Page Tables"
-order = 6
+weight = 6
 path = "page-tables"
 date  = 2015-12-09
 template = "first-edition/page.html"

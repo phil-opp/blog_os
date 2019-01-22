@@ -1,6 +1,6 @@
 +++
 title = "A Freestanding Rust Binary"
-order = 1
+weight = 1
 path = "freestanding-rust-binary"
 date = 2018-02-10
 template = "second-edition/page.html"

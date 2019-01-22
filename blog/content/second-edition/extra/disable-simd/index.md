@@ -1,6 +1,6 @@
 +++
 title = "Disable SIMD"
-order = 2
+weight = 2
 path = "disable-simd"
 template = "second-edition/extra.html"
 +++

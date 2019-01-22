@@ -1,6 +1,6 @@
 +++
 title = "Better Exception Messages"
-order = 2
+weight = 2
 path = "better-exception-messages"
 date  = 2016-08-03
 template = "first-edition/page.html"

@@ -1,6 +1,6 @@
 +++
 title = "Entering Long Mode"
-order = 2
+weight = 2
 path = "entering-longmode"
 date  = 2015-08-25
 template = "first-edition/page.html"
