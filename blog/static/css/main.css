@@ -243,7 +243,7 @@ a code {
   color: #268bd2;
 }
 
-a.gutenberg-anchor {
+a.zola-anchor {
   opacity: 0;
   position: absolute;
   margin-left: -1.5em;
@@ -253,12 +253,12 @@ a.gutenberg-anchor {
   line-height: 2em;
 }
 
-:hover>a.gutenberg-anchor {
+:hover>a.zola-anchor {
   opacity: 1;
   text-decoration: none;
 }
 
-a.gutenberg-anchor:hover {
+a.zola-anchor:hover {
   text-decoration: none;
 }
 
