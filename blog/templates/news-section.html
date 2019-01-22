@@ -11,7 +11,7 @@
 {% block introduction %}{% endblock introduction %}
 
 <div class="posts neutral">
-    {% for page in section.pages|reverse %}
+    {% for page in section.pages %}
         <article>
             <h2 class="post-title"><a href="/{{ page.path | safe }}">{{ page.title }}</a></h2>
             <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">

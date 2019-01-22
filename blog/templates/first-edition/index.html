@@ -6,7 +6,7 @@
 
 {% block main %}
 {% set posts_section = get_section(path = "first-edition/posts/_index.md") %}
-{% set posts = posts_section.pages | reverse %}
+{% set posts = posts_section.pages %}
 <div class="front-page-introduction">
     <p>
         This blog series creates a small operating system in the
@@ -50,11 +50,11 @@
 {% set extra = get_section(path = "first-edition/extra/_index.md") %}
 <h1>{{ extra.title }}</h1>
 <ul>
-    {% for subsection_path in extra.subsections|reverse %}
+    {% for subsection_path in extra.subsections %}
         {% set subsection = get_section(path=subsection_path) %}
         <li><a href="/{{ subsection.path | safe }}">{{ subsection.title }}</a></li>
     {% endfor %}
-    {% for page in extra.pages|reverse %}
+    {% for page in extra.pages %}
         <li><a href="/{{ page.path | safe }}">{{ page.title }}</a></li>
     {% endfor %}
 </ul>
