@@ -26,8 +26,8 @@ os:
 
 cache:
   directories:
-    - $HOME/.cargo
-    - $HOME/Library/Caches/Homebrew
+    - ${TRAVIS_HOME}/.cargo
+    - ${TRAVIS_HOME}/Library/Caches/Homebrew
 
 addons:
   apt:
@@ -38,15 +38,15 @@ addons:
       - qemu
 
 install:
-  - ls $HOME/.cargo/bin
+  - ls ${TRAVIS_HOME}/.cargo/bin
   - cargo install --list
   - if [ $TRAVIS_OS_NAME = windows ]; then choco install qemu; export PATH="/c/Program Files/qemu:$PATH"; fi
 
 before_script:
   - rustup component add rust-src
-  - (test -x $HOME/.cargo/bin/cargo-install-latest || test -x $HOME/.cargo/bin/cargo-install-latest.exe || cargo install cargo-install-latest)
+  - (test -x ${TRAVIS_HOME}/.cargo/bin/cargo-install-latest || test -x ${TRAVIS_HOME}/.cargo/bin/cargo-install-latest.exe || cargo install cargo-install-latest)
   - cargo install-latest cargo-xbuild bootimage cargo-cache
-  - ls $HOME/.cargo/bin
+  - ls ${TRAVIS_HOME}/.cargo/bin
   - cargo install --list
 
 script:
