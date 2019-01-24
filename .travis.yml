@@ -25,10 +25,11 @@ os:
   - windows
 
 cache:
-  branch: bash
-  cargo: true
+  # Fix absolute extraction - https://github.com/travis-ci/casher/pull/38
+  branch: 46c41ee208def16781fe4075283b70e1dbfe70ae
   directories:
     - ${TRAVIS_HOME}/Library/Caches/Homebrew
+    - ${TRAVIS_HOME}/.cargo
 
 addons:
   apt:
@@ -46,7 +47,7 @@ install:
 before_script:
   - rustup component add rust-src
   - (test -x ${TRAVIS_HOME}/.cargo/bin/cargo-install-latest || test -x ${TRAVIS_HOME}/.cargo/bin/cargo-install-latest.exe || cargo install cargo-install-latest)
-  - cargo install-latest cargo-xbuild bootimage
+  - cargo install-latest cargo-xbuild bootimage cargo-cache
   - ls ${TRAVIS_HOME}/.cargo/bin
   - cargo install --list
 
@@ -55,3 +56,4 @@ script:
   - bootimage build
   - cargo test
   - bootimage test
+  - cargo cache --autoclean
