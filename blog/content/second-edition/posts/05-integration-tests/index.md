@@ -130,8 +130,6 @@ Now we can print to the serial interface in our `main.rs`:
 ```rust
 // in src/main.rs
 
-use crate::serial_println;
-
 mod serial;
 
 #[cfg(not(test))]
