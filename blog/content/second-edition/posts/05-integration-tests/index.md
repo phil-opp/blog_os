@@ -325,7 +325,7 @@ Cargo allows to add [additional executables] to a project by putting them inside
 ```rust
 // src/bin/test-something.rs
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
@@ -383,8 +383,8 @@ pub unsafe fn exit_qemu() {
 ```rust
 // src/main.rs
 
-#![no_std] // don't link the Rust standard library
-#![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
 use core::panic::PanicInfo;
@@ -418,7 +418,7 @@ We are finally able to create our first integration test executable. We start si
 ```rust
 // in src/bin/test-basic-boot.rs
 
-#![no_std] // don't link the Rust standard library
+#![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
@@ -479,7 +479,7 @@ To test that our panic handler is really invoked on a panic, we create a `test-p
 ```rust
 // in src/bin/test-panic.rs
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
