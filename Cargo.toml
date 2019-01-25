@@ -5,6 +5,7 @@ authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 edition = "2018"
 
 [dependencies]
+bootloader = "0.3.12"
 
 [profile.dev]
 panic = "abort"
