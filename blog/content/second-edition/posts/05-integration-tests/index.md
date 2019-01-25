@@ -327,7 +327,7 @@ Cargo allows to add [additional executables] to a project by putting them inside
 
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![cfg_attr(test, allow(unused_imports))]
 
 use core::panic::PanicInfo;
 
@@ -385,7 +385,7 @@ pub unsafe fn exit_qemu() {
 
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![cfg_attr(test, allow(unused_imports))]
 
 use core::panic::PanicInfo;
 use blog_os::println;
@@ -420,7 +420,7 @@ We are finally able to create our first integration test executable. We start si
 
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![cfg_attr(test, allow(unused_imports))]
 
 use core::panic::PanicInfo;
 use blog_os::{exit_qemu, serial_println};
@@ -481,7 +481,7 @@ To test that our panic handler is really invoked on a panic, we create a `test-p
 
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![cfg_attr(test, allow(unused_imports))]
 
 use core::panic::PanicInfo;
 use blog_os::{exit_qemu, serial_println};
