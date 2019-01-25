@@ -1,3 +1,8 @@
+// LLVM throws an error if a function with the
+// x86-interrupt calling convention is compiled
+// for a Windows system.
+#![cfg(not(windows))]
+
 use crate::println;
 use lazy_static::lazy_static;
 use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
