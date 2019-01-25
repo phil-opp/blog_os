@@ -3,14 +3,16 @@
 // for a Windows system.
 #![cfg(not(windows))]
 
-use crate::{gdt, println};
+use crate::{gdt, print, println};
 use lazy_static::lazy_static;
-use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
 use pic8259_simple::ChainedPics;
 use spin;
+use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
 
 pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
+
+pub const TIMER_INTERRUPT_ID: u8 = PIC_1_OFFSET;
 
 pub static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
@@ -21,9 +23,11 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         idt.double_fault.set_handler_fn(double_fault_handler);
         unsafe {
-            idt.double_fault.set_handler_fn(double_fault_handler)
+            idt.double_fault
+                .set_handler_fn(double_fault_handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
         }
+        idt[usize::from(TIMER_INTERRUPT_ID)].set_handler_fn(timer_interrupt_handler);
         idt
     };
 }
@@ -42,4 +46,8 @@ extern "x86-interrupt" fn double_fault_handler(
 ) {
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
     loop {}
+}
+
+extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
+    print!(".");
 }
