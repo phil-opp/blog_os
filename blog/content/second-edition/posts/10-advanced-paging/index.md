@@ -172,7 +172,7 @@ pub mod memory;
 ```
 
 ```rust
-// in src/memory/mod.rs
+// in src/memory.rs
 
 use x86_64::PhysAddr;
 use x86_64::structures::paging::PageTable;
@@ -277,7 +277,7 @@ The `x86_64` provides a [`RecursivePageTable`] type that implements safe abstrac
 [`RecursivePageTable`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.RecursivePageTable.html
 
 ```rust
-// in src/memory/mod.rs
+// in src/memory.rs
 
 use x86_64::{VirtAddr, PhysAddr};
 use x86_64::structures::paging::{Mapper, Page, PageTable, RecursivePageTable};
@@ -347,7 +347,7 @@ Let's start with the simple case and assume that we don't need to create new pag
 We implement it in a new `create_mapping` function in our `memory` module:
 
 ```rust
-// in src/memory/mod.rs
+// in src/memory.rs
 
 use x86_64::structures::paging::{FrameAllocator, PhysFrame, Size4KiB};
 
@@ -393,7 +393,7 @@ The [`map_to`] function can fail, so it returns a [`Result`]. Since this is just
 TODO
 
 ```rust
-// in src/memory/mod.rs
+// in src/memory.rs
 
 /// A FrameAllocator that always returns `None`.
 pub struct EmptyFrameAllocator;
@@ -445,7 +445,7 @@ The white block in the middle of the screen is by our write to `0x1c00`, which m
 This only worked because there was already a level 1 table for mapping page `0x1000`. If we try to map a page for that no level 1 table exists yet, the `map_to` function tries to allocate frames from the `EmptyFrameAllocator` to create new page tables, which fails. We can see that happen when we try to map for example page `0xdeadbeaf000` instead of `0x1000`:
 
 ```rust
-// in src/memory/mod.rs
+// in src/memory.rs
 
 TODO: update create_example_mapping
 
@@ -528,7 +528,7 @@ Note that we now pass `boot_info.p4_table_addr` instead of a hardcoded address t
 Now that we have access to the memory map through the boot information we can create a proper frame allocator on top. We start with a generic skeleton:
 
 ```rust
-// in src/memory/mod.rs
+// in src/memory.rs
 
 pub struct BootInfoFrameAllocator<I> where I: Iterator<Item = PhysFrame> {
     frames: I,
@@ -551,7 +551,7 @@ The `frames` field can be initialized with an arbitrary [`Iterator`] of frames. 
 The initialization of the `BootInfoFrameAllocator` happens in a new `init_frame_allocator` function:
 
 ```rust
-// in src/memory/mod.rs
+// in src/memory.rs
 
 use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 
