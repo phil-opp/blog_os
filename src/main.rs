@@ -8,21 +8,18 @@ use core::panic::PanicInfo;
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    use blog_os::interrupts::PICS;
+
     println!("Hello World{}", "!");
 
     blog_os::gdt::init();
     blog_os::interrupts::init_idt();
-
-    fn stack_overflow() {
-        stack_overflow(); // for each recursion, the return address is pushed
-    }
-
-    // trigger a stack overflow
-    stack_overflow();
+    unsafe { PICS.lock().initialize() };
 
     println!("It did not crash!");
     loop {}
 }
+
 
 /// This function is called on panic.
 #[cfg(not(test))]
