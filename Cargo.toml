@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 bootloader = "0.3.12"
+volatile = "0.2.3"
 
 [profile.dev]
 panic = "abort"
