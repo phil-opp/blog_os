@@ -18,7 +18,10 @@ pub extern "C" fn _start() -> ! {
     x86_64::instructions::interrupts::enable();
 
     println!("It did not crash!");
-    loop {}
+    loop {
+        use blog_os::print;
+        print!("-");
+    }
 }
 
 /// This function is called on panic.
