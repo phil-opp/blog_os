@@ -56,6 +56,10 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut ExceptionSt
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
-    print!("k");
+    use x86_64::instructions::port::Port;
+
+    let port = Port::new(0x60);
+    let scancode: u8 = unsafe { port.read() };
+    print!("{}", scancode);
     unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
 }
