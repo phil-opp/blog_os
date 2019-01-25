@@ -72,7 +72,7 @@ So in order to access page table frames, we need to map some virtual pages to th
 
 - While both of the above approaches work, there is a third technique called **recursive page tables** that combines their advantages: It keeps all page table frames mapped at all times so that no temporary mappings are needed, and also keeps the mapped pages together to avoid fragmentation of the virtual address space. This is the technique that we will use for our implementation, therefore it is described in detail in the following section.
 
-## Recursive Page Tables
+### Recursive Page Tables
 
 The idea behind this approach sounds simple: _Map some entry of the level 4 page table to the frame of level 4 table itself_. By doing this, we effectively reserve a part of the virtual address space and map all current and future page table frames to that space. Thus, the single entry makes every table of every level accessible through a calculatable address.
 
@@ -102,7 +102,7 @@ Accessing the tables of levels 3 and 4 works in the same way. For accessing the 
 
 It might take some time to wrap your head around the concept, but it works quite well in practice.
 
-### Address Calculation
+#### Address Calculation
 
 We saw that we can access tables of all levels by following the recursive entry once or multiple times before the actual translation. Since the indexes into the tables of the four levels are derived directly from the virtual address, we need to construct special virtual addresses for this technique. Remember, the page table indexes are derived from the address in the following way:
 
