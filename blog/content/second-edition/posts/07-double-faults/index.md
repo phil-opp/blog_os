@@ -383,7 +383,7 @@ Now that we loaded a valid TSS and interrupt stack table, we can set the stack i
 ```rust
 // in src/interrupts.rs
 
-use gdt;
+use crate::gdt;
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
