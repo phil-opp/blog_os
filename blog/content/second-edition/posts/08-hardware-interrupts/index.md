@@ -172,6 +172,8 @@ As we see from the graphic [above](#the-8259-pic), the timer uses line 0 of the 
 ```rust
 // in src/interrupts.rs
 
+use crate::print;
+
 pub const TIMER_INTERRUPT_ID: u8 = PIC_1_OFFSET; // new
 
 […]
