@@ -9,6 +9,10 @@ use core::panic::PanicInfo;
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     use blog_os::interrupts::PICS;
+    use x86_64::registers::control::Cr3;
+
+    let (level_4_page_table, _) = Cr3::read();
+    println!("Level 4 page table at: {:?}", level_4_page_table.start_address());
 
     println!("Hello World{}", "!");
 
@@ -16,10 +20,6 @@ pub extern "C" fn _start() -> ! {
     blog_os::interrupts::init_idt();
     unsafe { PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
-
-    // provoke a page fault
-    let ptr = 0xdeadbeaf as *mut u32;
-    unsafe { *ptr = 42; }
 
     println!("It did not crash!");
     blog_os::hlt_loop();
