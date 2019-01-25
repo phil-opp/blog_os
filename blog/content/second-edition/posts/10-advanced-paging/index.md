@@ -1,6 +1,6 @@
 +++
 title = "Advanced Paging"
-order = 10
+weight = 10
 path = "advanced-paging"
 date = 0000-01-01
 template = "second-edition/page.html"
