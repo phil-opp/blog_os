@@ -396,7 +396,7 @@ We can also use `hlt_loop` in our double fault exception handler as well:
 ```rust
 // in src/interrupts.rs
 
-use hlt_loop; // new
+use crate::hlt_loop; // new
 
 extern "x86-interrupt" fn double_fault_handler(
     stack_frame: &mut ExceptionStackFrame,
