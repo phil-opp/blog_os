@@ -9,10 +9,12 @@ use core::panic::PanicInfo;
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     use blog_os::interrupts::PICS;
-    use x86_64::registers::control::Cr3;
 
-    let (level_4_page_table, _) = Cr3::read();
-    println!("Level 4 page table at: {:?}", level_4_page_table.start_address());
+    let level_4_table_pointer = 0xffff_ffff_ffff_f000 as *const u64;
+    for i in 0..10 {
+        let entry = unsafe { *level_4_table_pointer.offset(i) };
+        println!("Entry {}: {:#x}", i, entry);
+    }
 
     println!("Hello World{}", "!");
 
