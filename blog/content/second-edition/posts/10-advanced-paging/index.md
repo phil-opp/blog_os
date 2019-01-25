@@ -17,13 +17,15 @@ This blog is openly developed on [Github]. If you have any problems or questions
 
 ## Introduction
 
-In the [previous post] we learned about the principles of paging and how the 4-level page tables on the x86_64 architecture work. We also found out that the bootloader already set up a 4-level page table hierarchy for our kernel, which means that our kernel already runs on virtual addresses. This improves safety since illegal memory accesses cause page fault exceptions instead of modifying arbitrary physical memory.
+In the [previous post] we learned about the principles of paging and how the 4-level page tables on x86_64 work. We also found out that the bootloader already set up a page table hierarchy for our kernel, which means that our kernel already runs on virtual addresses. This improves safety since illegal memory accesses cause page fault exceptions instead of modifying arbitrary physical memory.
 
 [previous post]: ./second-edition/posts/09-paging-introduction/index.md
 
-However, it also causes a problem when we try to access the page tables from our kernel, because we can't directly access the physical addresses that are stored in page table entries or the `CR3` register. We experienced that problem already [at the end of the previous post] when we tried to inspect the active page tables. The next section discusses the problem in detail and provides different approaches to a solution.
+However, it also causes a problem when we try to access the page tables from our kernel, because we can't directly access the physical addresses that are stored in page table entries or the `CR3` register. We experienced that problem already [at the end of the previous post] when we tried to inspect the active page tables.
 
 [at the end of the previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
+
+The next section discusses the problem in detail and provides different approaches to a solution. Afterwards, we will implement a function to translate virtual to physical addresses and learn how to create new mappings in the page tables. 
 
 ## Accessing Page Tables
 
@@ -35,14 +37,14 @@ The important thing here is that each page entry stores the _physical_ address o
 
 The problem for us is that we can't directly access physical addresses from our kernel, since our kernel also runs on top of virtual addresses. For example when we access address `4 KiB`, we access the _virtual_ address `4 KiB`, not the _physical_ address `4 KiB` where the level 4 page table lives. When we want to acccess the physical address `4 KiB`, we can only do so through some virtual address that maps to it.
 
-So in order access page table frames, we need to map some virtual pages to them. There are different ways to create these mappings that all allow us to access arbitrary page table frames:
+So in order to access page table frames, we need to map some virtual pages to them. There are different ways to create these mappings that all allow us to access arbitrary page table frames:
 
 
 - A simple solution is to **identity map all page tables**:
 
   ![A virtual and a physical address space with various virtual pages mapped to the physical frame with the same address](identity-mapped-page-tables.svg)
 
-  In this example we see various identity-mapped page table frames. This way the physical addresses in the page tables are also valid virtual addresses, so that we can easily access the page tables of all levels starting from the CR3 register.
+  In this example we see various identity-mapped page table frames. This way the physical addresses of page tables are also valid virtual addresses, so that we can easily access the page tables of all levels starting from the CR3 register.
 
   However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at `28 KiB` because it would collide with the already mapped page at `1004 MiB`. So we have to look further until we find a large enough unmapped area, for example at `1008 KiB`. This is a similar fragmentation problem as with [segmentation].
 
