@@ -17,6 +17,10 @@ pub extern "C" fn _start() -> ! {
     unsafe { PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
 
+    // provoke a page fault
+    let ptr = 0xdeadbeaf as *mut u32;
+    unsafe { *ptr = 42; }
+
     println!("It did not crash!");
     blog_os::hlt_loop();
 }
