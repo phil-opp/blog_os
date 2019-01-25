@@ -285,6 +285,7 @@ We can easily provoke such a deadlock in our kernel by printing something in the
 pub extern "C" fn _start() -> ! {
     […]
     loop {
+        use blog_os::print;
         print!("-");        // new
     }
 }
