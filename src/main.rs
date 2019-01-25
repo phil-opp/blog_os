@@ -13,7 +13,18 @@ pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
     serial_println!("Hello Host{}", "!");
 
+    unsafe {
+        exit_qemu();
+    }
+
     loop {}
+}
+
+pub unsafe fn exit_qemu() {
+    use x86_64::instructions::port::Port;
+
+    let mut port = Port::<u32>::new(0xf4);
+    port.write(0);
 }
 
 /// This function is called on panic.
