@@ -25,7 +25,7 @@ However, it also causes a problem when we try to access the page tables from our
 
 [at the end of the previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
 
-The next section discusses the problem in detail and provides different approaches to a solution. Afterwards, we will implement a function to translate virtual to physical addresses and learn how to create new mappings in the page tables. 
+The next section discusses the problem in detail and provides different approaches to a solution. Afterwards, we will implement a function to translate virtual to physical addresses and learn how to create new mappings in the page tables.
 
 ## Accessing Page Tables
 
@@ -399,7 +399,7 @@ use x86_64::structures::paging::{FrameAllocator, PhysFrame, Size4KiB};
 
 pub fn create_example_mapping(
     recursive_page_table: &mut RecursivePageTable,
-    frame_allocator: &mut impl FrameAllocator,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
 ) {
     use x86_64::structures::paging::PageTableFlags as Flags;
 
@@ -407,17 +407,21 @@ pub fn create_example_mapping(
     let frame = PhysFrame::containing_address(PhysAddr::new(0xb8000));
     let flags = Flags::PRESENT | Flags::WRITABLE;
 
-    recursive_page_table.map_to(page, frame, flags, frame_allocator)
-        .expect("map_to failed").flush();
+    let map_to_result = unsafe {
+        recursive_page_table.map_to(page, frame, flags, frame_allocator)
+    };
+    map_to_result.expect("map_to failed").flush();
 }
 ```
 
-The function takes a mutable reference to the `RecursivePageTable` because it needs to modify it. It then uses the [`map_to`] function of the [`Mapper`] trait to map the page at `0x1000` to the physical frame at address `0xb8000`. The `PRESENT` flags is required for all valid entries and the `WRITABLE` flag makes the mapping writable.
+The function takes a mutable reference to the `RecursivePageTable` because it needs to modify it and a `FrameAllocator` that is explained below. It then uses the [`map_to`] function of the [`Mapper`] trait to map the page at `0x1000` to the physical frame at address `0xb8000`. The function is unsafe because it's possible to break memory safety with invalid arguments.
 
 [`map_to`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
 [`Mapper`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.Mapper.html
 
-The 4th argument needs to be some structure that implements the [`FrameAllocator`] trait. The `map_to` method needs this argument, because it might need unused frames for creating new page tables. Since we know that no new page tables are required for the address `0x1000`, we pass an `EmptyFrameAllocator` type that always returns `None` (see below). The `Size4KiB` argument in the trait implementation is needed because the [`Page`] and [`PhysFrame`] types are [generic] over the [`PageSize`] to work with both standard 4KiB pages and huge 2MiB/1GiB pages.
+Apart from the `page` and `frame` arguments, the [`map_to`] function takes two more arguments. The third argument is a set of flags for the page table entry. We set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapping writable.
+
+The fourth argument needs to be some structure that implements the [`FrameAllocator`] trait. The `map_to` method needs this argument, because it might need unused frames for creating new page tables. The `Size4KiB` argument in the trait implementation is needed because the [`Page`] and [`PhysFrame`] types are [generic] over the [`PageSize`] to work with both standard 4KiB pages and huge 2MiB/1GiB pages.
 
 [`FrameAllocator`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.FrameAllocator.html
 [`Page`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.Page.html
@@ -425,7 +429,7 @@ The 4th argument needs to be some structure that implements the [`FrameAllocator
 [generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
 [`PageSize`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.PageSize.html
 
-The [`map_to`] function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally forget to use the return type.
+The `map_to` function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally forget to use the return type.
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
@@ -433,7 +437,7 @@ The [`map_to`] function can fail, so it returns a [`Result`]. Since this is just
 [`flush`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.MapperFlush.html#method.flush
 [`#[must_use]`]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
-The `EmptyFrameAllocator` looks like this:
+Since we know that no new page tables are required for the address `0x1000`, a frame allocator that always returns `None` suffices. We create such  `EmptyFrameAllocator` for testing our mapping function:
 
 ```rust
 // in src/memory.rs
@@ -442,7 +446,7 @@ The `EmptyFrameAllocator` looks like this:
 pub struct EmptyFrameAllocator;
 
 impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
-    fn alloc(&mut self) -> Option<PhysFrame> {
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
         None
     }
 }
@@ -460,10 +464,11 @@ pub extern "C" fn _start() -> ! {
 
     use blog_os::memory::{create_example_mapping, EmptyFrameAllocator};
 
-    let mut recursive_page_table = memory::init(boot_info.p4_table_addr as usize);
+    const LEVEL_4_TABLE_ADDR: usize = 0o_177777_777_777_777_777_0000;
+    let mut recursive_page_table = unsafe { memory::init(LEVEL_4_TABLE_ADDR) };
 
     create_example_mapping(&mut recursive_page_table, &mut EmptyFrameAllocator);
-    unsafe { (0x1c00 as *mut u64).write_volatile(0xffffffffffffffff)};
+    unsafe { (0x1900 as *mut u64).write_volatile(0xf021f077f065f04e)};
 
     println!("It did not crash!");
     blog_os::hlt_loop();
@@ -472,7 +477,7 @@ pub extern "C" fn _start() -> ! {
 
 We first create the mapping for the page at `0x1000` by calling our `create_example_mapping` function with a mutable reference to the `RecursivePageTable` instance. This maps the page `0x1000` to the VGA text buffer, so we should see any write to it on the screen.
 
-Then we write the value `0xffffffffffffffff` to this page, which represents the string "New!" on white background. We don't write directly to `0x1000` since the top line is directly shifted off the screen by the next `println`. Instead we write to offset `0xc00`, which is in the lower screen half. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile, so we use the [`write_volatile`] method.
+Then we write the value `0xf021f077f065f04e` to this page, which represents the string "New!" on white background. We don't write directly to `0x1000` since the top line is directly shifted off the screen by the next `println`. Instead we write to offset `0x900`, which is about in the middle of the screen. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile, so we use the [`write_volatile`] method.
 
 [in the _“VGA Text Mode”_ post]: ./second-edition/posts/03-vga-text-buffer/index.md#volatile
 [`write_volatile`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write_volatile
@@ -481,18 +486,27 @@ When we run it in QEMU, we see the following output:
 
 ![QEMU printing "It did not crash!" with four completely white cells in middle of the screen](qemu-new-mapping.png)
 
-The "New!" on the screen is by our write to `0x1c00`, which means that we successfully created a new mapping in the page tables.
+The "New!" on the screen is by our write to `0x1900`, which means that we successfully created a new mapping in the page tables.
 
 This only worked because there was already a level 1 table for mapping page `0x1000`. When we try to map a page for that no level 1 table exists yet, the `map_to` function fails because it tries to allocate frames from the `EmptyFrameAllocator` for creating new page tables. We can see that happen when we try to map page `0xdeadbeaf000` instead of `0x1000`:
 
 ```rust
 // in src/memory.rs
 
-TODO: update create_example_mapping
+pub fn create_example_mapping(…) {
+    […]
+    let page: Page = Page::containing_address(VirtAddr::new(0xdeadbeaf000));
+    […]
+}
 
 // in src/main.rs
 
-TODO: update accessed address
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    […]
+    unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e)};
+    […]
+}
 ```
 
 When we run it, a panic with the following error message occurs:
@@ -564,7 +578,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the real lower level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. The important thing is that it is type-checked, so that a compilation error occurs when we now try to modify the function signature in any way, for example adding an argument or changing the argument type.
 
-Note that we now pass `boot_info.p4_table_addr` instead of a hardcoded address to our `memory::init`. Thus our code continues to work even if a future version of the bootloader chooses a different entry of the level 4 page table for the recursive mapping. 
+Note that we now pass `boot_info.p4_table_addr` instead of a hardcoded address to our `memory::init`. Thus our code continues to work even if a future version of the bootloader chooses a different entry of the level 4 page table for the recursive mapping.
 
 ### Allocating Frames
 
@@ -601,7 +615,7 @@ use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 /// Create a FrameAllocator from the passed memory map
 pub fn init_frame_allocator(memory_map: &'static MemoryMap)
     -> BootInfoFrameAllocator<impl Iterator<Item = PhysFrame>>
-{   
+{
     // get usable regions from memory map
     let regions = memory_map.iter().filter(|r| {
         r.region_type == MemoryRegionType::Usable
