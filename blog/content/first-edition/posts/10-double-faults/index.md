@@ -12,7 +12,7 @@ In this post we explore double faults in detail. We also set up an _Interrupt St
 
 As always, the complete source code is available on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a comment section at the end of this page.
 
-[Github]: https://github.com/phil-opp/blog_os/tree/post_10
+[Github]: https://github.com/phil-opp/blog_os/tree/first_edition_post_10
 [issues]: https://github.com/phil-opp/blog_os/issues
 [gitter chat]: https://gitter.im/phil-opp/blog_os
 

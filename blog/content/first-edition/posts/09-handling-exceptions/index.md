@@ -14,7 +14,7 @@ In this post, we start exploring CPU exceptions. Exceptions occur in various err
 
 As always, the complete source code is available on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a comment section at the end of this page.
 
-[Github]: https://github.com/phil-opp/blog_os/tree/post_9
+[Github]: https://github.com/phil-opp/blog_os/tree/first_edition_post_9
 [issues]: https://github.com/phil-opp/blog_os/issues
 
 ## Exceptions

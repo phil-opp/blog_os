@@ -20,7 +20,7 @@ In the [previous post] we switched from assembly to [Rust], a systems programmin
 This post uses recent unstable features, so you need an up-to-date nighly compiler. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is also available on [Github][code repository].
 
 [file an issue]: https://github.com/phil-opp/blog_os/issues
-[code repository]: https://github.com/phil-opp/blog_os/tree/post_4
+[code repository]: https://github.com/phil-opp/blog_os/tree/first_edition_post_4
 
 ## The VGA Text Buffer
 The text buffer starts at physical address `0xb8000` and contains the characters displayed on screen. It has 25 rows and 80 columns. Each screen character has the following format:

@@ -20,7 +20,7 @@ In the [previous post] we created a minimal multiboot kernel. It just prints `OK
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions, or issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
 [create an issue]: https://github.com/phil-opp/blog_os/issues
-[source code]: https://github.com/phil-opp/blog_os/tree/post_2/src/arch/x86_64
+[source code]: https://github.com/phil-opp/blog_os/tree/first_edition_post_2/src/arch/x86_64
 
 ## Some Tests
 To avoid bugs and strange errors on old CPUs we should check if the processor supports every needed feature. If not, the kernel should abort and display an error message. To handle errors easily, we create an error procedure in `boot.asm`. It prints a rudimentary `ERR: X` message, where X is an error code letter, and hangs:

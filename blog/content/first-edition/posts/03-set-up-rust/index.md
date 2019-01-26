@@ -19,7 +19,7 @@ In the previous posts we created a [minimal Multiboot kernel][multiboot post] an
 This blog post tries to set up Rust step-by-step and point out the different problems. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is in a [Github repository], too.
 
 [file an issue]: https://github.com/phil-opp/blog_os/issues
-[Github repository]: https://github.com/phil-opp/blog_os/tree/post_3
+[Github repository]: https://github.com/phil-opp/blog_os/tree/first_edition_post_3
 
 ## Installing Rust
 We need a nightly compiler, as we will use many unstable features. To manage Rust installations I highly recommend [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. To use a nightly compiler for the current directory, you can run `rustup override add nightly`. Alternatively, you can add a file called `rust-toolchain` to the project's root directory:

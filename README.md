@@ -49,29 +49,29 @@ The current version of the blog is already the second edition. The first edition
 
 ### Bare Bones
 - [A Minimal x86 Kernel](https://os.phil-opp.com/multiboot-kernel.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_1))
+      ([source code](https://github.com/phil-opp/blog_os/tree/first_edition_post_1))
 - [Entering Long Mode](https://os.phil-opp.com/entering-longmode.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_2))
+      ([source code](https://github.com/phil-opp/blog_os/tree/first_edition_post_2))
 - [Set Up Rust](https://os.phil-opp.com/set-up-rust.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_3))
+      ([source code](https://github.com/phil-opp/blog_os/tree/first_edition_post_3))
 - [Printing to Screen](https://os.phil-opp.com/printing-to-screen.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_4))
+      ([source code](https://github.com/phil-opp/blog_os/tree/first_edition_post_4))
 
 ### Memory Management
 - [Allocating Frames](https://os.phil-opp.com/allocating-frames.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_5))
+      ([source code](https://github.com/phil-opp/blog_os/tree/first_edition_post_5))
 - [Page Tables](https://os.phil-opp.com/modifying-page-tables.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_6))
+      ([source code](https://github.com/phil-opp/blog_os/tree/first_edition_post_6))
 - [Remap the Kernel](https://os.phil-opp.com/remap-the-kernel.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_7))
+      ([source code](https://github.com/phil-opp/blog_os/tree/first_edition_post_7))
 - [Kernel Heap](https://os.phil-opp.com/kernel-heap.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_8))
+      ([source code](https://github.com/phil-opp/blog_os/tree/first_edition_post_8))
 
 ### Exceptions
 - [Handling Exceptions](https://os.phil-opp.com/handling-exceptions.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_9))
+      ([source code](https://github.com/phil-opp/blog_os/tree/first_edition_post_9))
 - [Double Faults](https://os.phil-opp.com/double-faults.html)
-      ([source code](https://github.com/phil-opp/blog_os/tree/post_10))
+      ([source code](https://github.com/phil-opp/blog_os/tree/first_edition_post_10))
 
 ### Additional Resources
 - [Cross Compile Binutils](https://os.phil-opp.com/cross-compile-binutils.html)

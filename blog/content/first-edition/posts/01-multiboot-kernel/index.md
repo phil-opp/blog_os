@@ -15,7 +15,7 @@ This post explains how to create a minimal x86 operating system kernel using the
 I tried to explain everything in detail and to keep the code as simple as possible. If you have any questions, suggestions or other issues, please leave a comment or [create an issue] on Github. The source code is available in a [repository][source code], too.
 
 [create an issue]: https://github.com/phil-opp/blog_os/issues
-[source code]: https://github.com/phil-opp/blog_os/tree/post_1/src/arch/x86_64
+[source code]: https://github.com/phil-opp/blog_os/tree/first_edition_post_1/src/arch/x86_64
 
 Note that this tutorial is written mainly for Linux. For some known problems on OS X see the comment section and [this issue][mac os issue]. If you want to use a virtual Linux machine, you can find instructions and a Vagrantfile in Ashley Willams's [x86-kernel repository].
 
