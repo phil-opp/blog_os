@@ -179,7 +179,7 @@ use x86_64::structures::paging::PageTable;
 
 /// Returns the physical address for the given virtual address, or `None` if the
 /// virtual address is not mapped.
-pub fn translate_addr(addr: usize, level_4_table_addr) -> Option<PhysAddr> {
+pub fn translate_addr(addr: usize, level_4_table_addr: usize) -> Option<PhysAddr> {
     // retrieve the page table indices of the address that we want to translate
     let level_4_index = (addr >> 39) & 0o777;
     let level_3_index = (addr >> 30) & 0o777;
@@ -279,19 +279,21 @@ The `x86_64` provides a [`RecursivePageTable`] type that implements safe abstrac
 ```rust
 // in src/memory.rs
 
-use x86_64::{VirtAddr, PhysAddr};
 use x86_64::structures::paging::{Mapper, Page, PageTable, RecursivePageTable};
+use x86_64::{VirtAddr, PhysAddr};
 
-/// Create a RecursivePageTable instance from the level 4 address
-// TODO call only once
-pub fn init(level_4_table_addr: usize) -> RecursivePageTable {
+/// Creates a RecursivePageTable instance from the level 4 address.
+///
+/// This function is unsafe because it can break memory safety if an invalid
+/// address is passed.
+pub unsafe fn init(level_4_table_addr: usize) -> RecursivePageTable<'static> {
     let level_4_table_ptr = level_4_table_addr as *mut PageTable;
-    let level_4_table = unsafe { &mut *level_4_table_ptr };
+    let level_4_table = &mut *level_4_table_ptr;
     RecursivePageTable::new(level_4_table).unwrap()
 }
 
-/// Returns the physical address for the given virtual address, or
-/// `None` if the virtual address is not mapped.
+/// Returns the physical address for the given virtual address, or `None` if
+/// the virtual address is not mapped.
 pub fn translate_addr(addr: u64, recursive_page_table: &RecursivePageTable)
     -> Option<PhysAddr>
 {
@@ -300,11 +302,11 @@ pub fn translate_addr(addr: u64, recursive_page_table: &RecursivePageTable)
 
     // perform the translation
     let frame = recursive_page_table.translate_page(page);
-    frame.map(|frame| frame.start_address() + addr.page_offset())
+    frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
 }
 ```
 
-The `RecursivePageTable` type encapsulates the unsafety of the page table walk completely. We only need a single instance of `unsafe` in the `init` function to create a `&mut PageTable` from the level 4 page table address. Also, we no longer need to perform any bitwise operations.
+The `RecursivePageTable` type encapsulates the unsafety of the page table walk completely so that we no longer need `unsafe` in our `translate_addr` function. The `init` function needs to be unsafe because the caller has to guarantee that the passed `level_4_table_addr` is valid.
 
 Our `_start` function needs to be updated for the new function signature in the following way:
 
@@ -319,7 +321,7 @@ pub extern "C" fn _start() -> ! {
     use blog_os::memory::{self, translate_addr};
 
     const LEVEL_4_TABLE_ADDR: usize = 0o_177777_777_777_777_777_0000;
-    let recursive_page_table = memory::init(LEVEL_4_TABLE_ADDR);
+    let recursive_page_table = unsafe { memory::init(LEVEL_4_TABLE_ADDR) };
 
     // the identity-mapped vga buffer page
     println!("0xb8000 -> {:?}", translate_addr(0xb8000, &recursive_page_table));
@@ -336,9 +338,53 @@ pub extern "C" fn _start() -> ! {
 
 Instead of passing the `LEVEL_4_TABLE_ADDR` to `translate_addr` and accessing the page tables through unsafe raw pointers, we now pass references to a `RecursivePageTable` type. By doing this, we now have a safe abstraction and clear ownership semantics. This ensures that we can't accidentally modify the page table concurrently, because an exclusive borrow of the `RecursivePageTable` is needed in order to modify it.
 
-After reading the page tables and creating a translation function, the next step is to create a new mapping in the page table hierarchy.
+When we run it, we see the same result as with our handcrafted translation function.
+
+#### Making Unsafe Functions Safer
+
+Our `memory::init` function is an [unsafe function], which means that an `unsafe` block is required for calling it, because the caller has to guarantee that certain requirements are met. In our case, the requirement is that the passed address is mapped to the physical frame of the level 4 page table.
+
+[unsafe function]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#calling-an-unsafe-function-or-method
+
+The second property of unsafe functions is that their complete body is treated as an `unsafe` block, which means that it can perform all kinds of unsafe operations without additional unsafe blocks. This is the reason that we didn't need an `unsafe` block for dereferencing the raw `level_4_table_ptr`:
+
+```rust
+pub unsafe fn init(level_4_table_addr: usize) -> RecursivePageTable<'static> {
+    let level_4_table_ptr = level_4_table_addr as *mut PageTable;
+    let level_4_table = &mut *level_4_table_ptr; // <- this operation is unsafe
+    RecursivePageTable::new(level_4_table).unwrap()
+}
+```
+
+The problem with this is that we don't immediately see which parts are unsafe. For example, we don't know whether the `RecursivePageTable::new` function is unsafe or not without looking at [its definition][RecursivePageTable::new]. This makes it very easy to accidentally do something unsafe without noticing.
+
+[RecursivePageTable::new]: https://docs.rs/x86_64/0.3.6/x86_64/structures/paging/struct.RecursivePageTable.html#method.new
+
+To avoid this problem, we can add a safe inner function:
+
+```rust
+// in src/memory.rs
+
+pub unsafe fn init(level_4_table_addr: usize) -> RecursivePageTable<'static> {
+    /// Rust currently treats the whole body of unsafe functions as an unsafe
+    /// block, which makes it difficult to see which operations are unsafe. To
+    /// limit the scope of unsafe we use a safe inner function.
+    fn init_inner(level_4_table_addr: usize) -> RecursivePageTable<'static> {
+        let level_4_table_ptr = level_4_table_addr as *mut PageTable;
+        let level_4_table = unsafe { &mut *level_4_table_ptr };
+        RecursivePageTable::new(level_4_table).unwrap()
+    }
+
+    init_inner(level_4_table_addr)
+}
+```
+
+Now an `unsafe` block is required again for dereferencing the `level_4_table_ptr` and we immediately see that this is the only unsafe operations in the function. There is currently an open [RFC][unsafe-fn-rfc] to change this dangerous property of unsafe functions that would allow us to avoid the above boilerplate.
+
+[unsafe-fn-rfc]: https://github.com/rust-lang/rfcs/pull/2585
 
 ### Creating a new Mapping
+After reading the page tables and creating a translation function, the next step is to create a new mapping in the page table hierarchy.
 
 The difficulty of creating a new mapping depends on on the virtual page that we want to map. In the easiest case, the level 1 page table for the page already exists and we just need to write a single entry. In the most difficult case, the page is in a memory region for that no level 3 exists yet, so that we need to create new level 3, level 2 and level 1 page tables first.
 
@@ -371,7 +417,7 @@ The function takes a mutable reference to the `RecursivePageTable` because it ne
 [`map_to`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
 [`Mapper`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.Mapper.html
 
-The 4th argument needs to be some structure that implements the [`FrameAllocator`] trait. The `map_to` method needs this argument, because it might need unused frames for creating new page tables. Since we know that no new page tables are required for the address `0x1000`, we pass an `EmptyFrameAllocator` type that always returns `None`. The `Size4KiB` argument in the trait implementation is needed because the [`Page`] and [`PhysFrame`] types are [generic] over the [`PageSize`] to work with both standard 4KiB pages and huge 2MiB/1GiB pages.
+The 4th argument needs to be some structure that implements the [`FrameAllocator`] trait. The `map_to` method needs this argument, because it might need unused frames for creating new page tables. Since we know that no new page tables are required for the address `0x1000`, we pass an `EmptyFrameAllocator` type that always returns `None` (see below). The `Size4KiB` argument in the trait implementation is needed because the [`Page`] and [`PhysFrame`] types are [generic] over the [`PageSize`] to work with both standard 4KiB pages and huge 2MiB/1GiB pages.
 
 [`FrameAllocator`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.FrameAllocator.html
 [`Page`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.Page.html
@@ -379,7 +425,7 @@ The 4th argument needs to be some structure that implements the [`FrameAllocator
 [generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
 [`PageSize`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.PageSize.html
 
-The [`map_to`] function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally ignore the return type.
+The [`map_to`] function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally forget to use the return type.
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
@@ -387,10 +433,7 @@ The [`map_to`] function can fail, so it returns a [`Result`]. Since this is just
 [`flush`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.MapperFlush.html#method.flush
 [`#[must_use]`]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
-
-
-
-TODO
+The `EmptyFrameAllocator` looks like this:
 
 ```rust
 // in src/memory.rs
@@ -405,12 +448,7 @@ impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
 }
 ```
 
-TODO
-
-
-
-
-We can test the new mapping function in our `main.rs`:
+We can now test the new mapping function in our `main.rs`:
 
 ```rust
 // in src/main.rs
@@ -432,17 +470,20 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-We first create the mapping for the page at `0x1000` by calling our `create_example_mapping` function with a mutable reference to the `RecursivePageTable` instance. This maps the page `0x1000` to the VGA text buffer, so we should see any write to it on the screen. We don't write directly to `0x1000` since the top line is directly shifted off the screen by the next `println`. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile.
+We first create the mapping for the page at `0x1000` by calling our `create_example_mapping` function with a mutable reference to the `RecursivePageTable` instance. This maps the page `0x1000` to the VGA text buffer, so we should see any write to it on the screen.
+
+Then we write the value `0xffffffffffffffff` to this page, which represents the string "New!" on white background. We don't write directly to `0x1000` since the top line is directly shifted off the screen by the next `println`. Instead we write to offset `0xc00`, which is in the lower screen half. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile, so we use the [`write_volatile`] method.
 
 [in the _“VGA Text Mode”_ post]: ./second-edition/posts/03-vga-text-buffer/index.md#volatile
+[`write_volatile`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write_volatile
 
 When we run it in QEMU, we see the following output:
 
 ![QEMU printing "It did not crash!" with four completely white cells in middle of the screen](qemu-new-mapping.png)
 
-The white block in the middle of the screen is by our write to `0x1c00`, which means that we successfully created a new mapping in the page tables.
+The "New!" on the screen is by our write to `0x1c00`, which means that we successfully created a new mapping in the page tables.
 
-This only worked because there was already a level 1 table for mapping page `0x1000`. If we try to map a page for that no level 1 table exists yet, the `map_to` function tries to allocate frames from the `EmptyFrameAllocator` to create new page tables, which fails. We can see that happen when we try to map for example page `0xdeadbeaf000` instead of `0x1000`:
+This only worked because there was already a level 1 table for mapping page `0x1000`. When we try to map a page for that no level 1 table exists yet, the `map_to` function fails because it tries to allocate frames from the `EmptyFrameAllocator` for creating new page tables. We can see that happen when we try to map page `0xdeadbeaf000` instead of `0x1000`:
 
 ```rust
 // in src/memory.rs
@@ -464,9 +505,9 @@ To map pages that don't have a level 1 page table yet we need to create a proper
 
 ### Boot Information
 
-The amount of physical memory and physical memory reserved by devices like the VGA hardware varies between different machines. Only the BIOS or UEFI firmware knows exactly which memory regions can be used by the operating system and which regions are reserved. Both firmaware standards provide functions to retrieve the memory map, but they can only be called very early in the boot process. For this reason, the bootloader already queries this and other information from the firmaware.
+The amount of physical memory and the memory regions reserved by devices like the VGA hardware vary between different machines. Only the BIOS or UEFI firmware knows exactly which memory regions can be used by the operating system and which regions are reserved. Both firmware standards provide functions to retrieve the memory map, but they can only be called very early in the boot process. For this reason, the bootloader already queries this and other information from the firmaware.
 
-To communicate this information to our kernel, the bootloader passes a reference to a boot information structure as an argument when calling our `_start` function. Right now we don't have this argument declared in our function, so we just ignore it. Let's add it:
+To communicate this information to our kernel, the bootloader passes a reference to a boot information structure as an argument when calling our `_start` function. Right now we don't have this argument declared in our function, so it is ignored. Let's add it:
 
 ```rust
 // in src/main.rs
@@ -475,7 +516,7 @@ use bootloader::bootinfo::BootInfo;
 
 #[cfg(not(test))]
 #[no_mangle]
-pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! {
+pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // new argument
     […]
 }
 ```
@@ -510,7 +551,9 @@ entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […] // initialize GDT, IDT, PICS
 
-    let mut recursive_page_table = memory::init(boot_info.p4_table_addr as usize);
+    let mut recursive_page_table = unsafe{
+        memory::init(boot_info.p4_table_addr as usize)
+    };
 
     […] // create and test example mapping
 
@@ -519,7 +562,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the real lowet level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. The important thing is that it is type-checked now, so that a compilation error occurs when we now try to modify the function signature in any way, for example adding an argument or changing the argument type.
+We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the real lower level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. The important thing is that it is type-checked, so that a compilation error occurs when we now try to modify the function signature in any way, for example adding an argument or changing the argument type.
 
 Note that we now pass `boot_info.p4_table_addr` instead of a hardcoded address to our `memory::init`. Thus our code continues to work even if a future version of the bootloader chooses a different entry of the level 4 page table for the recursive mapping. 
 
@@ -580,7 +623,7 @@ This function uses iterator combinator methods to transform the initial `MemoryM
 
 - First, we call the `iter` method to convert the memory map to an iterator of [`MemoryRegion`]s. Then we use the [`filter`] method to skip any reserved or otherwise unavailable regions. The bootloader updates the memory map for all the mappings it creates, so frames that are used by our kernel (code, data or stack) or to store the boot information are already marked as `InUse` or similar. Thus we can be sure that `Usable` frames are not in use somewhere else.
 - In the second step, we use the [`map`] combinator and Rust's [range syntax] to transform our iterator of memory regions to an iterator of address ranges.
-- The third step is the most complicated: We convert each range to an iterator through the `into_iter` method and then choose every 4096th address using [`step_by`]. 4096 bytes (= 4 KiB) is the page size, so by doing this we get the start address of each frame. The bootloader page aligns all usable memory areas, so that we don't need any alignment or rounding code here. By using [`flat_map`] instead of `map`, we get an `Iterator<Item = u64>` instead of an `Iterator<Item = Iterator<Item = u64>>`.
+- The third step is the most complicated: We convert each range to an iterator through the `into_iter` method and then choose every 4096th address using [`step_by`]. Since 4096 bytes (= 4 KiB) is the page size, we get the start address of each frame. The bootloader page aligns all usable memory areas, so that we don't need any alignment or rounding code here. By using [`flat_map`] instead of `map`, we get an `Iterator<Item = u64>` instead of an `Iterator<Item = Iterator<Item = u64>>`.
 - In the final step, we convert the start addresses to `PhysFrame` types to construct the desired `Iterator<Item = PhysFrame>`. We then use this iterator to create and return a new `BootInfoFrameAllocator`.
 
 [`MemoryRegion`]: https://docs.rs/bootloader/0.3.12/bootloader/bootinfo/struct.MemoryRegion.html
@@ -601,7 +644,10 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     use x86_64::structures::paging::{PageTable, RecursivePageTable};
 
-    let mut recursive_page_table = memory::init(boot_info.p4_table_addr as usize);
+    let mut recursive_page_table = unsafe {
+        memory::init(boot_info.p4_table_addr as usize)
+    };
+    // new
     let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);
 
     blog_os::memory::create_mapping(&mut recursive_page_table, &mut frame_allocator);
@@ -612,24 +658,24 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-Now the mapping succeeds and we see the white block on the screen again:
+Now the mapping succeeds and we see the black-on-white "New!" on the screen again. Behind the scenes, the `map_to` method creates the missing page tables in the following way:
 
-![]() TODO
+- Allocate an unused frame from the passed `frame_allocator`.
+- Map the entry of the higher level table to that frame. Now the frame is accessible through the recursive page table.
+- Zero the frame to create a new, empty page table.
+- Continue with the next table level.
 
-The `map_to` method was now able to create the missing page tables on the frames allocated from our `BootInfoFrameAllocator`. You can insert a `println` message into the `BootInfoFrameAllocator::alloc` method to see how it's called.
-
-For creating a new page table we need to find an unused physical frame where the page table will be stored. We initialize it to zero and create a mapping for that frame in the higher level page table. At this point, we can access the new page table through the recursive page table and continue with the next level.
-
-
-We're now able to map arbitrary pages and to allocate new physical frames when we need them.
-
-# TODO
-
-## Allocating Stacks
+We're now able to create mapping for arbitrary pages in the page table hierarchy.
 
 ## Summary
 
+In this post we learned how a recursive level 4 table entry can be used to map all page table frames to calculatable virtual addresses. We used this technique to implement an address translation function in our kernel. First we implemented the translation function manually using bitwise operations, then we learned about the `RecursivePageTable` type and used it to create a higher level implementation.
+
+We saw that the creation of new mappings requires unused frames for creating new page tables. Such a frame allocator can be implemented on top of the boot information structure that the bootloader passes to our kernel.
+
 ## What's next?
+
+We're now able to create mapping for arbitrary pages in the page table hierarchy.
 
 ---
 TODO spellcheck
