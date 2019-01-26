@@ -9,7 +9,7 @@ use core::panic::PanicInfo;
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     use blog_os::interrupts::PICS;
-    use x86_64::structures::paging::PageTable;
+    use blog_os::memory::translate_addr;
 
     println!("Hello World{}", "!");
 
@@ -18,11 +18,15 @@ pub extern "C" fn _start() -> ! {
     unsafe { PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
 
-    let level_4_table_ptr = 0xffff_ffff_ffff_f000 as *const PageTable;
-    let level_4_table = unsafe { &*level_4_table_ptr };
-    for i in 0..10 {
-        println!("Entry {}: {:?}", i, level_4_table[i]);
-    }
+    const LEVEL_4_TABLE_ADDR: usize = 0o_177777_777_777_777_777_0000;
+
+    // the identity-mapped vga buffer page
+    println!("0xb8000 -> {:?}", translate_addr(0xb8000, LEVEL_4_TABLE_ADDR));
+    // some code page
+    println!("0x20010a -> {:?}", translate_addr(0x20010a, LEVEL_4_TABLE_ADDR));
+    // some stack page
+    println!("0x57ac001ffe48 -> {:?}", translate_addr(0x57ac001ffe48,
+        LEVEL_4_TABLE_ADDR));
 
     println!("It did not crash!");
     blog_os::hlt_loop();
