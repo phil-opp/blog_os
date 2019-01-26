@@ -1,6 +1,6 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![cfg_attr(test, allow(unused_imports))]
 
 use blog_os::{exit_qemu, serial_println};
 use core::panic::PanicInfo;
