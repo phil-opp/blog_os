@@ -353,12 +353,15 @@ Let's try to take a look at the page tables that our kernel runs on:
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    […] // initialize GDT, IDT, PICS
+
     use x86_64::registers::control::Cr3;
 
     let (level_4_page_table, _) = Cr3::read();
     println!("Level 4 page table at: {:?}", level_4_page_table.start_address());
 
-    […]
+    println!("It did not crash!");
+    blog_os::hlt_loop();
 }
 ```
 
@@ -388,13 +391,16 @@ Solutions to this problem are explained in detail in the next post. For now it s
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    […] // initialize GDT, IDT, PICS
+
     let level_4_table_pointer = 0xffff_ffff_ffff_f000 as *const u64;
     for i in 0..10 {
         let entry = unsafe { *level_4_table_pointer.offset(i) };
         println!("Entry {}: {:#x}", i, entry);
     }
 
-    […]
+    println!("It did not crash!");
+    blog_os::hlt_loop();
 }
 ```
 
@@ -419,6 +425,8 @@ Instead of working with unsafe raw pointers we can use the [`PageTable`] type of
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    […] // initialize GDT, IDT, PICS
+
     use x86_64::structures::paging::PageTable;
 
     let level_4_table_ptr = 0xffff_ffff_ffff_f000 as *const PageTable;
@@ -427,7 +435,8 @@ pub extern "C" fn _start() -> ! {
         println!("Entry {}: {:?}", i, level_4_table[i]);
     }
 
-    […]
+    println!("It did not crash!");
+    blog_os::hlt_loop();
 }
 ```
 
