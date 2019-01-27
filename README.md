@@ -24,23 +24,32 @@ The goal of this project is to provide step-by-step tutorials in individual blog
 ### Bare Bones
 
 - [A Freestanding Rust Binary](https://os.phil-opp.com/freestanding-rust-binary/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-01))
 - [A Minimal Rust Kernel](https://os.phil-opp.com/minimal-rust-kernel/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-02))
 - [VGA Text Mode](https://os.phil-opp.com/vga-text-mode/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-03))
 
 ### Testing
 
 - [Unit Testing](https://os.phil-opp.com/unit-testing/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-04))
 - [Integration Tests](https://os.phil-opp.com/integration-tests/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-05))
 
 ### Interrupts
 
 - [CPU Exceptions](https://os.phil-opp.com/cpu-exceptions/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-06))
 - [Double Faults](https://os.phil-opp.com/double-fault-exceptions/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-07))
 - [Hardware Interrupts](https://os.phil-opp.com/hardware-interrupts/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-08))
 
 ### Memory Management
 
 - [Introduction to Paging](https://os.phil-opp.com/paging-introduction/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-09))
 
 
 ## First Edition Posts
