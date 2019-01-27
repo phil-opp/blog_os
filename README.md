@@ -1,10 +1,10 @@
-# Blog OS (VGA Text Mode)
+# Blog OS (Unit Testing)
 
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-03)](https://travis-ci.org/phil-opp/blog_os/branches)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-04)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [VGA Text Mode][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
+This repository contains the source code for the [Unit Testing][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
-[post]: https://os.phil-opp.com/vga-text-mode/
+[post]: https://os.phil-opp.com/unit-testing/
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
@@ -45,6 +45,10 @@ dd if=target/x86_64-blog_os/debug/bootimage-blog_os.bin of=/dev/sdX && sync
 ```
 
 Where `sdX` is the device name of your USB stick. **Be careful** to choose the correct device name, because everything on that device is overwritten.
+
+## Testing
+
+To run the unit tests on the host system, execute `cargo test`.
 
 ## License
 The source code is dual-licensed under MIT or the Apache License (Version 2.0).
