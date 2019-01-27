@@ -12,9 +12,9 @@ In this post, we learn how to return from exceptions correctly. In the course of
 
 <!-- more -->
 
-As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a comment section at the end of this page.
+As always, the complete source code is on [GitHub]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a comment section at the end of this page.
 
-[Github]: https://github.com/phil-opp/blog_os/tree/returning_from_exceptions
+[GitHub]: https://github.com/phil-opp/blog_os/tree/returning_from_exceptions
 [issues]: https://github.com/phil-opp/blog_os/issues
 [gitter chat]: https://gitter.im/phil-opp/blog_os
 

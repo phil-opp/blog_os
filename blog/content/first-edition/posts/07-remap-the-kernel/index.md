@@ -12,9 +12,9 @@ In this post we will create a new page table to map the kernel sections correctl
 
 <!-- more -->
 
-As always, you can find the source code on [Github]. Don't hesitate to file issues there if you have any problems or improvement suggestions. There is also a comment section at the end of this page. Note that this post requires a current Rust nightly.
+As always, you can find the source code on [GitHub]. Don't hesitate to file issues there if you have any problems or improvement suggestions. There is also a comment section at the end of this page. Note that this post requires a current Rust nightly.
 
-[Github]: https://github.com/phil-opp/blog_os/tree/first_edition_post_7
+[GitHub]: https://github.com/phil-opp/blog_os/tree/first_edition_post_7
 
 ## Motivation
 

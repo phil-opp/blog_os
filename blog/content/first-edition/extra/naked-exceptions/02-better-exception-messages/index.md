@@ -12,9 +12,9 @@ In this post, we explore exceptions in more detail. Our goal is to print additio
 
 <!-- more -->
 
-As always, the complete source code is on [Github]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a comment section at the end of this page.
+As always, the complete source code is on [GitHub]. Please file [issues] for any problems, questions, or improvement suggestions. There is also a [gitter chat] and a comment section at the end of this page.
 
-[Github]: https://github.com/phil-opp/blog_os/tree/better_exception_messages
+[GitHub]: https://github.com/phil-opp/blog_os/tree/better_exception_messages
 [issues]: https://github.com/phil-opp/blog_os/issues
 [gitter chat]: https://gitter.im/phil-opp/blog_os
 

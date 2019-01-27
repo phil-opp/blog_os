@@ -10,7 +10,7 @@ In this post we will create a paging module, which allows us to access and modif
 
 <!-- more -->
 
-You can find the source code and this post itself on [Github][source repository]. Please file an issue there if you have any problems or improvement suggestions. There is also a comment section at the end of this page. Note that this post requires a current Rust nightly.
+You can find the source code and this post itself on [GitHub][source repository]. Please file an issue there if you have any problems or improvement suggestions. There is also a comment section at the end of this page. Note that this post requires a current Rust nightly.
 
 [source repository]: https://github.com/phil-opp/blog_os/tree/first_edition_post_6
 

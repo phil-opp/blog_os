@@ -17,7 +17,7 @@ In the [previous post] we switched from assembly to [Rust], a systems programmin
 
 <!-- more -->
 
-This post uses recent unstable features, so you need an up-to-date nighly compiler. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is also available on [Github][code repository].
+This post uses recent unstable features, so you need an up-to-date nighly compiler. If you have any questions, problems, or suggestions please [file an issue] or create a comment at the bottom. The code from this post is also available on [GitHub][code repository].
 
 [file an issue]: https://github.com/phil-opp/blog_os/issues
 [code repository]: https://github.com/phil-opp/blog_os/tree/first_edition_post_4

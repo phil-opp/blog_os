@@ -10,7 +10,7 @@ In this post we create an allocator that provides free physical frames for a fut
 
 <!-- more -->
 
-The full source code is available on [Github][source repo]. Feel free to open issues there if you have any problems or improvements. You can also leave a comment at the bottom.
+The full source code is available on [GitHub][source repo]. Feel free to open issues there if you have any problems or improvements. You can also leave a comment at the bottom.
 
 [source repo]: https://github.com/phil-opp/blog_os/tree/first_edition_post_5
 
