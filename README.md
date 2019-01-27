@@ -1,10 +1,10 @@
-# Blog OS (A Minimal Rust Kernel)
+# Blog OS (VGA Text Mode)
 
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-02)](https://travis-ci.org/phil-opp/blog_os/branches)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-03)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [A Minimal Rust Kernel][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
+This repository contains the source code for the [VGA Text Mode][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
-[post]: https://os.phil-opp.com/minimal-rust-kernel/
+[post]: https://os.phil-opp.com/vga-text-mode/
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
