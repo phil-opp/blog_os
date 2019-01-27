@@ -1,10 +1,10 @@
-# Blog OS (Unit Testing)
+# Blog OS (Integration Tests)
 
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-04)](https://travis-ci.org/phil-opp/blog_os/branches)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-05)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [Unit Testing][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
+This repository contains the source code for the [Integration Tests][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
-[post]: https://os.phil-opp.com/unit-testing/
+[post]: https://os.phil-opp.com/integration-tests/
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
@@ -48,7 +48,7 @@ Where `sdX` is the device name of your USB stick. **Be careful** to choose the c
 
 ## Testing
 
-To run the unit tests on the host system, execute `cargo test`.
+To run the unit tests on the host system, execute `cargo test`. To run the integration tests in [QEMU], run `bootimage test`.
 
 ## License
 The source code is dual-licensed under MIT or the Apache License (Version 2.0).
