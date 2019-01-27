@@ -6,7 +6,7 @@ date = 0000-01-01
 template = "second-edition/page.html"
 +++
 
-This post TODO
+This post explains techniques to make the physical page table frames accessible to our kernel. It then uses these techniques to implement a function that translates virtual to physical addresses. It also explains how to create new mappings in the page tables.
 
 <!-- more -->
 
