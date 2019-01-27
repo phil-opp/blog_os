@@ -1,10 +1,10 @@
-# Blog OS (Hardware Interrupts)
+# Blog OS (Introduction to Paging)
 
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-08)](https://travis-ci.org/phil-opp/blog_os/branches)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-09)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [Hardware Interrupts][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
+This repository contains the source code for the [Introduction to Paging][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
-[post]: https://os.phil-opp.com/hardware-interrupts/
+[post]: https://os.phil-opp.com/paging-introduction/
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
