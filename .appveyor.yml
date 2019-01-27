@@ -3,7 +3,7 @@ branches:
     - staging
     - trying
     - master
-    - /z_post_*/
+    - /post-.*/
 
 # Appveyor configuration template for Rust using rustup for Rust installation
 # https://github.com/starkat99/appveyor-rust
