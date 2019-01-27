@@ -22,7 +22,7 @@ branches:
     # Build pull requests.
     - master
     # Build post braches
-    - /^z_post_.*$/
+    - /^post-.*$/
 
 cache:
   directories:
