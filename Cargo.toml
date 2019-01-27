@@ -9,7 +9,7 @@ bootloader = "0.3.12"
 spin = "0.4.9"
 volatile = "0.2.3"
 uart_16550 = "0.1.0"
-x86_64 = "0.3.5"
+x86_64 = "0.4.0"
 pic8259_simple = "0.1.1"
 pc-keyboard = "0.3.1"
 
