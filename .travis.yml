@@ -35,4 +35,5 @@ before_script:
 
 script:
   - bootimage build
+  - cargo test
   - cargo cache --autoclean
