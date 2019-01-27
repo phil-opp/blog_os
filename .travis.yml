@@ -1,0 +1,52 @@
+language: rust
+
+rust:
+    - nightly
+
+os:
+  - linux
+  - osx
+  - windows
+
+notifications:
+    email:
+        on_success: never
+        on_failure: always
+
+branches:
+  only:
+    # This is where pull requests from "bors r+" are built.
+    - staging
+    # This is where pull requests from "bors try" are built.
+    - trying
+    # Build pull requests.
+    - master
+    # Build post braches
+    - /^z_post_.*$/
+
+cache:
+  directories:
+    - $HOME/.cargo
+    - $HOME/Library/Caches/Homebrew
+
+addons:
+  apt:
+    packages:
+      - qemu-system-x86
+  homebrew:
+    packages:
+      - qemu
+
+install:
+  - if [ $TRAVIS_OS_NAME = windows ]; then choco install qemu; export PATH="/c/Program Files/qemu:$PATH"; fi
+
+before_script:
+  - rustup component add rust-src
+  - (test -x $HOME/.cargo/bin/cargo-install-latest || cargo install cargo-install-latest)
+  - cargo install-latest cargo-xbuild bootimage cargo-cache
+
+script:
+  - bootimage build
+  - cargo test
+  - bootimage test
+  - cargo cache --autoclean
