@@ -5,6 +5,8 @@ rust:
 
 os:
   - linux
+  - osx
+  - windows
 
 notifications:
     email:
@@ -26,5 +28,11 @@ cache:
   directories:
     - $HOME/.cargo
 
+before_script:
+  - rustup component add rust-src
+  - (test -x $HOME/.cargo/bin/cargo-install-latest || cargo install cargo-install-latest)
+  - cargo install-latest cargo-xbuild bootimage cargo-cache
+
 script:
-  - cargo rustc -- -Z pre-link-arg=-nostartfiles
+  - bootimage build
+  - cargo cache --autoclean
