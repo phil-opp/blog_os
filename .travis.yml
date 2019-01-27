@@ -1,0 +1,30 @@
+language: rust
+
+rust:
+    - nightly
+
+os:
+  - linux
+
+notifications:
+    email:
+        on_success: never
+        on_failure: always
+
+branches:
+  only:
+    # This is where pull requests from "bors r+" are built.
+    - staging
+    # This is where pull requests from "bors try" are built.
+    - trying
+    # Build pull requests.
+    - master
+    # Build post braches
+    - /^z_post_.*$/
+
+cache:
+  directories:
+    - $HOME/.cargo
+
+script:
+  - cargo rustc -- -Z pre-link-arg=-nostartfiles
