@@ -6,7 +6,7 @@ date = 0000-01-01
 template = "second-edition/page.html"
 +++
 
-This post explains techniques to make the physical page table frames accessible to our kernel. It then uses these techniques to implement a function that translates virtual to physical addresses. It also explains how to create new mappings in the page tables.
+This post explains techniques to make the physical page table frames accessible to our kernel. It then uses such a technique to implement a function that translates virtual to physical addresses. It also explains how to create new mappings in the page tables.
 
 <!-- more -->
 
@@ -26,7 +26,7 @@ However, it also causes a problem when we try to access the page tables from our
 
 [at the end of the previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
 
-The next section discusses the problem in detail and provides different approaches to a solution. Afterwards, we will implement a function to translate virtual to physical addresses and learn how to create new mappings in the page tables.
+The next section discusses the problem in detail and provides different approaches to a solution. Afterwards, we implement a function that traverses the page table hierarchie in order to translate virtual to physical addresses. Finally, we learn how to create new mappings in the page tables and how to find unused memory frames for creating new page tables.
 
 ## Accessing Page Tables
 
@@ -36,7 +36,7 @@ Accessing the page tables from our kernel is not as easy as it may seem. To unde
 
 The important thing here is that each page entry stores the _physical_ address of the next table. This avoids the need to run a translation for these addresses too, which would be bad for performance and could easily cause endless translation loops.
 
-The problem for us is that we can't directly access physical addresses from our kernel, since our kernel also runs on top of virtual addresses. For example when we access address `4 KiB`, we access the _virtual_ address `4 KiB`, not the _physical_ address `4 KiB` where the level 4 page table lives. When we want to acccess the physical address `4 KiB`, we can only do so through some virtual address that maps to it.
+The problem for us is that we can't directly access physical addresses from our kernel, since our kernel also runs on top of virtual addresses. For example when we access address `4 KiB`, we access the _virtual_ address `4 KiB`, not the _physical_ address `4 KiB` where the level 4 page table is stored. When we want to acccess the physical address `4 KiB`, we can only do so through some virtual address that maps to it.
 
 So in order to access page table frames, we need to map some virtual pages to them. There are different ways to create these mappings that all allow us to access arbitrary page table frames:
 
@@ -75,7 +75,7 @@ So in order to access page table frames, we need to map some virtual pages to th
 
 ### Recursive Page Tables
 
-The idea behind this approach sounds simple: _Map some entry of the level 4 page table to the frame of level 4 table itself_. By doing this, we effectively reserve a part of the virtual address space and map all current and future page table frames to that space. Thus, the single entry makes every table of every level accessible through a calculatable address.
+The idea behind this approach is to map some entry of the level 4 page table to the level 4 table itself. By doing this, we effectively reserve a part of the virtual address space and map all current and future page table frames to that space.
 
 Let's go through an example to understand how this all works:
 
@@ -125,7 +125,7 @@ Finally, we can access the level 4 table by moving each block four blocks to the
 
 ![Bits 0–12 are the offset into the level l table frame and bits 12–21, bits 21–30, bits 30–39 and bits 39–48 are the index of the recursive entry](table-indices-from-address-recursive-level-4.svg)
 
-We can now calculate virtual addresses for the page tables of all four levels. We can even calculate an address that points exactly to a specific page table entry by multiplying the its index by 8, the size of a page table entry.
+We can now calculate virtual addresses for the page tables of all four levels. We can even calculate an address that points exactly to a specific page table entry by multiplying its index by 8, the size of a page table entry.
 
 The table below summarizes the address structure for accessing the different kinds of frames:
 
@@ -145,7 +145,7 @@ Whereas `AAA` is the level 4 index, `BBB` the level 3 index, `CCC` the level 2 i
 
 [sign extension]: ./second-edition/posts/09-paging-introduction/index.md#paging-on-x86
 
-We use [octal] numbers for representing the addresses since each octal character represents 3 bits, which allows us to clearly spearate the the 9-bit indexes of the different page table levels. This isn't possible with the hexadecimal system where each character represents four bits.
+We use [octal] numbers for representing the addresses since each octal character represents three bits, which allows us to clearly spearate the the 9-bit indexes of the different page table levels. This isn't possible with the hexadecimal system where each character represents four bits.
 
 ## Implementation
 
@@ -153,7 +153,7 @@ After all this theory we can finally start our implementation. Conveniently, the
 
 [chicken or egg problem]: https://en.wikipedia.org/wiki/Chicken_or_the_egg
 
-We already used this recursive mapping [at the end of the previous post] to access the level 4 table. We did this through the hardcoded address `0xffff_ffff_ffff_f000`. When we convert this address to [octal] and compare it with the above table, we can see that it exactly follows the structure with `RRR` = `0o777`, `AAAA` = 0, and the sign extension bits set to `1` each:
+We already used this recursive mapping [at the end of the previous post] to access the level 4 table. We did this through the hardcoded address `0xffff_ffff_ffff_f000`. When we convert this address to [octal] and compare it with the above table, we can see that it exactly follows the structure of a level 4 table entry with `RRR` = `0o777`, `AAAA` = 0, and the sign extension bits set to `1` each:
 
 ```
 structure: 0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA
@@ -234,7 +234,7 @@ If the entry is not `None`, we know that a level 3 table exist. We calculate the
 
 After we checked the three higher level pages, we can finally read the entry of the level 1 table that tells us the physical frame that the address is mapped to. As a last step, we add the page offset to that address and return it.
 
-If we knew that the address is mapped, we could directly access the level 1 table without looking at the higher level pages first. But since we don't know this, we have to check whether the level 1 table exists first, otherwise we would cause a page fault for unmapped addresses.
+If we knew that the address is mapped, we could directly access the level 1 table without looking at the higher level pages first. But since we don't know this, we have to check whether the level 1 table exists first, otherwise our function would cause a page fault for unmapped addresses.
 
 #### Try it out
 
@@ -380,7 +380,7 @@ pub unsafe fn init(level_4_table_addr: usize) -> RecursivePageTable<'static> {
 }
 ```
 
-Now an `unsafe` block is required again for dereferencing the `level_4_table_ptr` and we immediately see that this is the only unsafe operations in the function. There is currently an open [RFC][unsafe-fn-rfc] to change this dangerous property of unsafe functions that would allow us to avoid the above boilerplate.
+Now an `unsafe` block is required again for dereferencing the `level_4_table_ptr` and we immediately see that this is the only unsafe operations in the function. There is currently an open [RFC][unsafe-fn-rfc] to change this unfortunate property of unsafe functions that would allow us to avoid the above boilerplate.
 
 [unsafe-fn-rfc]: https://github.com/rust-lang/rfcs/pull/2585
 
@@ -415,14 +415,14 @@ pub fn create_example_mapping(
 }
 ```
 
-The function takes a mutable reference to the `RecursivePageTable` because it needs to modify it and a `FrameAllocator` that is explained below. It then uses the [`map_to`] function of the [`Mapper`] trait to map the page at `0x1000` to the physical frame at address `0xb8000`. The function is unsafe because it's possible to break memory safety with invalid arguments.
+The function takes a mutable reference to the `RecursivePageTable` because it needs to modify it and a `FrameAllocator` that is explained below. It then uses the [`map_to`] function of the [`Mapper`] trait to map the page at address `0x1000` to the physical frame at address `0xb8000`. The function is unsafe because it's possible to break memory safety with invalid arguments.
 
 [`map_to`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
 [`Mapper`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.Mapper.html
 
-Apart from the `page` and `frame` arguments, the [`map_to`] function takes two more arguments. The third argument is a set of flags for the page table entry. We set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapping writable.
+Apart from the `page` and `frame` arguments, the [`map_to`] function takes two more arguments. The third argument is a set of flags for the page table entry. We set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable.
 
-The fourth argument needs to be some structure that implements the [`FrameAllocator`] trait. The `map_to` method needs this argument, because it might need unused frames for creating new page tables. The `Size4KiB` argument in the trait implementation is needed because the [`Page`] and [`PhysFrame`] types are [generic] over the [`PageSize`] to work with both standard 4KiB pages and huge 2MiB/1GiB pages.
+The fourth argument needs to be some structure that implements the [`FrameAllocator`] trait. The `map_to` method needs this argument, because it might need unused frames for creating new page tables. The `Size4KiB` argument in the trait implementation is needed because the [`Page`] and [`PhysFrame`] types are [generic] over the [`PageSize`] trait to work with both standard 4KiB pages and huge 2MiB/1GiB pages.
 
 [`FrameAllocator`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.FrameAllocator.html
 [`Page`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.Page.html
@@ -430,7 +430,7 @@ The fourth argument needs to be some structure that implements the [`FrameAlloca
 [generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
 [`PageSize`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/trait.PageSize.html
 
-The `map_to` function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally forget to use the return type.
+The `map_to` function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally forget to use it.
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
@@ -438,7 +438,7 @@ The `map_to` function can fail, so it returns a [`Result`]. Since this is just s
 [`flush`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.MapperFlush.html#method.flush
 [`#[must_use]`]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
-Since we know that no new page tables are required for the address `0x1000`, a frame allocator that always returns `None` suffices. We create such  `EmptyFrameAllocator` for testing our mapping function:
+Since we know that no new page tables are required for the address `0x1000`, a frame allocator that always returns `None` suffices. We create such an `EmptyFrameAllocator` for testing our mapping function:
 
 ```rust
 // in src/memory.rs
@@ -478,7 +478,7 @@ pub extern "C" fn _start() -> ! {
 
 We first create the mapping for the page at `0x1000` by calling our `create_example_mapping` function with a mutable reference to the `RecursivePageTable` instance. This maps the page `0x1000` to the VGA text buffer, so we should see any write to it on the screen.
 
-Then we write the value `0xf021f077f065f04e` to this page, which represents the string "New!" on white background. We don't write directly to `0x1000` since the top line is directly shifted off the screen by the next `println`. Instead we write to offset `0x900`, which is about in the middle of the screen. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile, so we use the [`write_volatile`] method.
+Then we write the value `0xf021f077f065f04e` to this page, which represents the string _"New!"_ on white background. We don't write directly to the beginning of the page at `0x1000` since the top line is directly shifted off the screen by the next `println`. Instead we write to offset `0x900`, which is about in the middle of the screen. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile, so we use the [`write_volatile`] method.
 
 [in the _“VGA Text Mode”_ post]: ./second-edition/posts/03-vga-text-buffer/index.md#volatile
 [`write_volatile`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write_volatile
@@ -487,7 +487,7 @@ When we run it in QEMU, we see the following output:
 
 ![QEMU printing "It did not crash!" with four completely white cells in middle of the screen](qemu-new-mapping.png)
 
-The "New!" on the screen is by our write to `0x1900`, which means that we successfully created a new mapping in the page tables.
+The _"New!"_ on the screen is by our write to `0x1900`, which means that we successfully created a new mapping in the page tables.
 
 This only worked because there was already a level 1 table for mapping page `0x1000`. When we try to map a page for that no level 1 table exists yet, the `map_to` function fails because it tries to allocate frames from the `EmptyFrameAllocator` for creating new page tables. We can see that happen when we try to map page `0xdeadbeaf000` instead of `0x1000`:
 
@@ -636,7 +636,7 @@ pub fn init_frame_allocator(memory_map: &'static MemoryMap)
 
 This function uses iterator combinator methods to transform the initial `MemoryMap` into an iterator of usable physical frames:
 
-- First, we call the `iter` method to convert the memory map to an iterator of [`MemoryRegion`]s. Then we use the [`filter`] method to skip any reserved or otherwise unavailable regions. The bootloader updates the memory map for all the mappings it creates, so frames that are used by our kernel (code, data or stack) or to store the boot information are already marked as `InUse` or similar. Thus we can be sure that `Usable` frames are not in use somewhere else.
+- First, we call the `iter` method to convert the memory map to an iterator of [`MemoryRegion`]s. Then we use the [`filter`] method to skip any reserved or otherwise unavailable regions. The bootloader updates the memory map for all the mappings it creates, so frames that are used by our kernel (code, data or stack) or to store the boot information are already marked as `InUse` or similar. Thus we can be sure that `Usable` frames are not used somewhere else.
 - In the second step, we use the [`map`] combinator and Rust's [range syntax] to transform our iterator of memory regions to an iterator of address ranges.
 - The third step is the most complicated: We convert each range to an iterator through the `into_iter` method and then choose every 4096th address using [`step_by`]. Since 4096 bytes (= 4 KiB) is the page size, we get the start address of each frame. The bootloader page aligns all usable memory areas, so that we don't need any alignment or rounding code here. By using [`flat_map`] instead of `map`, we get an `Iterator<Item = u64>` instead of an `Iterator<Item = Iterator<Item = u64>>`.
 - In the final step, we convert the start addresses to `PhysFrame` types to construct the desired `Iterator<Item = PhysFrame>`. We then use this iterator to create and return a new `BootInfoFrameAllocator`.
@@ -673,24 +673,27 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-Now the mapping succeeds and we see the black-on-white "New!" on the screen again. Behind the scenes, the `map_to` method creates the missing page tables in the following way:
+Now the mapping succeeds and we see the black-on-white _"New!"_ on the screen again. Behind the scenes, the `map_to` method creates the missing page tables in the following way:
 
 - Allocate an unused frame from the passed `frame_allocator`.
 - Map the entry of the higher level table to that frame. Now the frame is accessible through the recursive page table.
 - Zero the frame to create a new, empty page table.
 - Continue with the next table level.
 
-We're now able to create mapping for arbitrary pages in the page table hierarchy.
+While our `create_mapping` function is just some example code, we are now able to create new mappings for arbitrary pages. This will be essential for allocating memory or implementing multithreading in future posts.
 
 ## Summary
 
-In this post we learned how a recursive level 4 table entry can be used to map all page table frames to calculatable virtual addresses. We used this technique to implement an address translation function in our kernel. First we implemented the translation function manually using bitwise operations, then we learned about the `RecursivePageTable` type and used it to create a higher level implementation.
+In this post we learned how a recursive level 4 table entry can be used to map all page table frames to calculatable virtual addresses. We used this technique to implement an address translation function and to create a new mapping in the page tables.
 
 We saw that the creation of new mappings requires unused frames for creating new page tables. Such a frame allocator can be implemented on top of the boot information structure that the bootloader passes to our kernel.
 
 ## What's next?
 
-We're now able to create mapping for arbitrary pages in the page table hierarchy.
+The next post will create a heap memory region for our kernel, which will allow us to [allocate memory] and various [collection types]. This will involve the creation of new mappings in the page tables and the implementation of a heap allocator.
+
+[allocate memory]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html
+[collection types]: https://doc.rust-lang.org/alloc/collections/index.html
 
 ---
 TODO spellcheck
