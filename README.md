@@ -1,10 +1,10 @@
-# Blog OS (Integration Tests)
+# Blog OS (CPU Exceptions)
 
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-05)](https://travis-ci.org/phil-opp/blog_os/branches)
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-06)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [Integration Tests][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
+This repository contains the source code for the [CPU Exceptions][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
-[post]: https://os.phil-opp.com/integration-tests/
+[post]: https://os.phil-opp.com/cpu-exceptions/
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
