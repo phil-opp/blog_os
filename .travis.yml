@@ -27,6 +27,7 @@ branches:
 cache:
   directories:
     - $HOME/.cargo
+    - /c/Users/travis/.cargo    # workaround for https://travis-ci.community/t/caching-travis-home-cargo-does-not-work-with-bash-branch-of-basher/1961
 
 before_script:
   - rustup component add rust-src
