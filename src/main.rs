@@ -9,7 +9,7 @@ use core::panic::PanicInfo;
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     use blog_os::interrupts::PICS;
-    use blog_os::memory::{self, translate_addr};
+    use blog_os::memory::{self, create_example_mapping, EmptyFrameAllocator};
 
     println!("Hello World{}", "!");
 
@@ -19,16 +19,10 @@ pub extern "C" fn _start() -> ! {
     x86_64::instructions::interrupts::enable();
 
     const LEVEL_4_TABLE_ADDR: usize = 0o_177777_777_777_777_777_0000;
-    let recursive_page_table = unsafe { memory::init(LEVEL_4_TABLE_ADDR) };
+    let mut recursive_page_table = unsafe { memory::init(LEVEL_4_TABLE_ADDR) };
 
-    // the identity-mapped vga buffer page
-    println!("0xb8000 -> {:?}", translate_addr(0xb8000, &recursive_page_table));
-    // some code page
-    println!("0x20010a -> {:?}", translate_addr(0x20010a, &recursive_page_table));
-    // some stack page
-    println!("0x57ac001ffe48 -> {:?}", translate_addr(0x57ac001ffe48,
-        &recursive_page_table));
-
+    create_example_mapping(&mut recursive_page_table, &mut EmptyFrameAllocator);
+    unsafe { (0x1900 as *mut u64).write_volatile(0xf021f077f065f04e) };
 
     println!("It did not crash!");
     blog_os::hlt_loop();
