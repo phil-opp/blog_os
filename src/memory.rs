@@ -20,9 +20,7 @@ pub unsafe fn init(level_4_table_addr: usize) -> RecursivePageTable<'static> {
 
 /// Returns the physical address for the given virtual address, or `None` if
 /// the virtual address is not mapped.
-pub fn translate_addr(addr: u64, recursive_page_table: &RecursivePageTable)
-    -> Option<PhysAddr>
-{
+pub fn translate_addr(addr: u64, recursive_page_table: &RecursivePageTable) -> Option<PhysAddr> {
     let addr = VirtAddr::new(addr);
     let page: Page = Page::containing_address(addr);
 
