@@ -1,11 +1,17 @@
 language: rust
 
-sudo: false
+rust:
+    - nightly
+
+os:
+  - linux
+  - osx
+  - windows
 
 notifications:
     email:
         on_success: never
-        on_failure: change
+        on_failure: always
 
 branches:
   only:
@@ -15,14 +21,8 @@ branches:
     - trying
     # Build pull requests.
     - master
-
-rust:
-    - nightly
-
-os:
-  - linux
-  - osx
-  - windows
+    # Build post braches
+    - /^post-.*$/
 
 cache:
   directories:
@@ -42,11 +42,8 @@ install:
 
 before_script:
   - rustup component add rust-src
-  - (test -x $HOME/.cargo/bin/cargo-update-installed || cargo install cargo-update-installed)
-  - (test -x $HOME/.cargo/bin/cargo-xbuild || cargo install cargo-xbuild)
-  - (test -x $HOME/.cargo/bin/bootimage || cargo install bootimage)
-  - (test -x $HOME/.cargo/bin/cargo-cache || cargo install cargo-cache)
-  - cargo update-installed
+  - (test -x $HOME/.cargo/bin/cargo-install-latest || cargo install cargo-install-latest)
+  - cargo install-latest cargo-xbuild bootimage cargo-cache
 
 script:
   - bootimage build

@@ -3,6 +3,7 @@ branches:
     - staging
     - trying
     - master
+    - /post-.*/
 
 # Appveyor configuration template for Rust using rustup for Rust installation
 # https://github.com/starkat99/appveyor-rust
@@ -39,7 +40,6 @@ environment:
 cache:
   - '%USERPROFILE%\.cargo\bin'
   - '%USERPROFILE%\.cargo\.crates.toml'
-  - target
 
 ## Install Script ##
 
@@ -81,14 +81,9 @@ before_test:
   - sed -rie "s/#define std([[:alpha:]]+)[[:space:]]+\(__acrt_iob_func\(([[:digit:]]+)\)\)/#define std\1 (\&__iob_func()[\2])/" "C:\msys64\mingw32\i686-w64-mingw32\include\stdio.h"
   - rustup component add rust-src
   - set RUST_BACKTRACE=1
-  - if not exist %USERPROFILE%\.cargo\bin\cargo-update-installed.exe cargo install cargo-update-installed
-  - if not exist %USERPROFILE%\.cargo\bin\cargo-xbuild.exe cargo install cargo-xbuild
-  - if not exist %USERPROFILE%\.cargo\bin\bootimage.exe cargo install bootimage
-  - cargo update-installed
+  - if not exist %USERPROFILE%\.cargo\bin\cargo-install-latest.exe cargo install cargo-install-latest
+  - cargo install-latest cargo-xbuild bootimage
 
-# Uses 'cargo test' to run tests and build. Alternatively, the project may call compiled programs
-# directly or perform other testing commands. Rust will automatically be placed in the PATH
-# environment variable.
 test_script:
   - bootimage build
   - if %target%==x86_64-pc-windows-gnu cargo test
