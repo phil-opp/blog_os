@@ -690,7 +690,7 @@ We saw that the creation of new mappings requires unused frames for creating new
 
 ## What's next?
 
-The next post will create a heap memory region for our kernel, which will allow us to [allocate memory] and various [collection types]. This will involve the creation of new mappings in the page tables and the implementation of a heap allocator.
+The next post will create a heap memory region for our kernel, which will allow us to [allocate memory] and use various [collection types].
 
 [allocate memory]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html
 [collection types]: https://doc.rust-lang.org/alloc/collections/index.html
