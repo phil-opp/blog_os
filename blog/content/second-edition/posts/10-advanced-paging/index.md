@@ -2,7 +2,7 @@
 title = "Advanced Paging"
 weight = 10
 path = "advanced-paging"
-date = 0000-01-01
+date = 2019-01-28
 template = "second-edition/page.html"
 +++
 
@@ -694,8 +694,3 @@ The next post will create a heap memory region for our kernel, which will allow 
 
 [allocate memory]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html
 [collection types]: https://doc.rust-lang.org/alloc/collections/index.html
-
----
-TODO improve transition between sections
-TODO update post date
-TODO use PNGs instead of SVGs?
