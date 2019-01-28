@@ -1,31 +1,30 @@
-#![no_std] // don't link the Rust standard library
-#![cfg_attr(not(test), no_main)] // disable all Rust-level entry points
+#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(unused_imports))]
 
+use blog_os::println;
+use bootloader::{bootinfo::BootInfo, entry_point};
 use core::panic::PanicInfo;
 
-use blog_os::println;
+entry_point!(kernel_main);
 
-/// This function is the entry point, since the linker looks for a function
-/// named `_start` by default.
 #[cfg(not(test))]
-#[no_mangle] // don't mangle the name of this function
-pub extern "C" fn _start() -> ! {
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::interrupts::PICS;
-    use x86_64::structures::paging::PageTable;
+    use blog_os::memory::{self, create_example_mapping};
 
     println!("Hello World{}", "!");
-
-    let level_4_table_ptr = 0xffff_ffff_ffff_f000 as *const PageTable;
-    let level_4_table = unsafe { &*level_4_table_ptr };
-    for i in 0..10 {
-        println!("Entry {}: {:?}", i, level_4_table[i]);
-    }
 
     blog_os::gdt::init();
     blog_os::interrupts::init_idt();
     unsafe { PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
+
+    let mut recursive_page_table = unsafe { memory::init(boot_info.p4_table_addr as usize) };
+    let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);
+
+    create_example_mapping(&mut recursive_page_table, &mut frame_allocator);
+    unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e) };
 
     println!("It did not crash!");
     blog_os::hlt_loop();

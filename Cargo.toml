@@ -1,13 +1,13 @@
 [package]
-authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 name = "blog_os"
-version = "0.2.0"
+version = "0.1.0"
+authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 edition = "2018"
 
 [dependencies]
 bootloader = "0.3.12"
-spin = "0.4.9"
 volatile = "0.2.3"
+spin = "0.4.9"
 uart_16550 = "0.1.0"
 x86_64 = "0.4.0"
 pic8259_simple = "0.1.1"
@@ -20,13 +20,11 @@ features = ["spin_no_std"]
 [dev-dependencies]
 array-init = "0.0.3"
 
-# the profile used for `cargo build`
 [profile.dev]
-panic = "abort" # disable stack unwinding on panic
+panic = "abort"
 
-# the profile used for `cargo build --release`
 [profile.release]
-panic = "abort" # disable stack unwinding on panic
+panic = "abort"
 
 [package.metadata.bootimage]
 default-target = "x86_64-blog_os.json"

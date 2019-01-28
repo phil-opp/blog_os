@@ -4,7 +4,7 @@
 // problem we skip compilation of this module on Windows.
 #![cfg(not(windows))]
 
-use crate::{gdt, print, println};
+use crate::{gdt, hlt_loop, print, println};
 use lazy_static::lazy_static;
 use pic8259_simple::ChainedPics;
 use spin;
@@ -13,11 +13,11 @@ use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable, Pag
 pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
 
-pub static PICS: spin::Mutex<ChainedPics> =
-    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
-
 pub const TIMER_INTERRUPT_ID: u8 = PIC_1_OFFSET;
 pub const KEYBOARD_INTERRUPT_ID: u8 = PIC_1_OFFSET + 1;
+
+pub static PICS: spin::Mutex<ChainedPics> =
+    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -29,10 +29,8 @@ lazy_static! {
                 .set_handler_fn(double_fault_handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
         }
-
         idt[usize::from(TIMER_INTERRUPT_ID)].set_handler_fn(timer_interrupt_handler);
         idt[usize::from(KEYBOARD_INTERRUPT_ID)].set_handler_fn(keyboard_interrupt_handler);
-
         idt
     };
 }
@@ -62,8 +60,6 @@ extern "x86-interrupt" fn double_fault_handler(
     stack_frame: &mut ExceptionStackFrame,
     _error_code: u64,
 ) {
-    use crate::hlt_loop;
-
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
     hlt_loop();
 }
