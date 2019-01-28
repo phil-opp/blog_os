@@ -558,7 +558,7 @@ To make sure that the entry point function has always the correct signature that
 ```rust
 // in src/main.rs
 
-use bootloader::entry_point;
+use bootloader::{bootinfo::BootInfo, entry_point};
 
 entry_point!(kernel_main);
 
@@ -566,7 +566,7 @@ entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […] // initialize GDT, IDT, PICS
 
-    let mut recursive_page_table = unsafe{
+    let mut recursive_page_table = unsafe {
         memory::init(boot_info.p4_table_addr as usize)
     };
 
@@ -595,7 +595,7 @@ pub struct BootInfoFrameAllocator<I> where I: Iterator<Item = PhysFrame> {
 impl<I> FrameAllocator<Size4KiB> for BootInfoFrameAllocator<I>
     where I: Iterator<Item = PhysFrame>
 {
-    fn alloc(&mut self) -> Option<PhysFrame> {
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
         self.frames.next()
     }
 }
@@ -614,13 +614,13 @@ The initialization of the `BootInfoFrameAllocator` happens in a new `init_frame_
 use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 
 /// Create a FrameAllocator from the passed memory map
-pub fn init_frame_allocator(memory_map: &'static MemoryMap)
-    -> BootInfoFrameAllocator<impl Iterator<Item = PhysFrame>>
-{
+pub fn init_frame_allocator(
+    memory_map: &'static MemoryMap,
+) -> BootInfoFrameAllocator<impl Iterator<Item = PhysFrame>> {
     // get usable regions from memory map
-    let regions = memory_map.iter().filter(|r| {
-        r.region_type == MemoryRegionType::Usable
-    });
+    let regions = memory_map
+        .iter()
+        .filter(|r| r.region_type == MemoryRegionType::Usable);
     // map each region to its address range
     let addr_ranges = regions.map(|r| r.range.start_addr()..r.range.end_addr());
     // transform to an iterator of frame start addresses
