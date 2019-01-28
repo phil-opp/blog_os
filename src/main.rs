@@ -3,11 +3,13 @@
 #![cfg_attr(test, allow(unused_imports))]
 
 use blog_os::println;
+use bootloader::{bootinfo::BootInfo, entry_point};
 use core::panic::PanicInfo;
 
+entry_point!(kernel_main);
+
 #[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::interrupts::PICS;
     use blog_os::memory::{self, create_example_mapping, EmptyFrameAllocator};
 
@@ -18,8 +20,7 @@ pub extern "C" fn _start() -> ! {
     unsafe { PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
 
-    const LEVEL_4_TABLE_ADDR: usize = 0o_177777_777_777_777_777_0000;
-    let mut recursive_page_table = unsafe { memory::init(LEVEL_4_TABLE_ADDR) };
+    let mut recursive_page_table = unsafe { memory::init(boot_info.p4_table_addr as usize) };
 
     create_example_mapping(&mut recursive_page_table, &mut EmptyFrameAllocator);
     unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e) };
