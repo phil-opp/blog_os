@@ -22,7 +22,7 @@ pub extern "C" fn _start() -> ! {
     let mut recursive_page_table = unsafe { memory::init(LEVEL_4_TABLE_ADDR) };
 
     create_example_mapping(&mut recursive_page_table, &mut EmptyFrameAllocator);
-    unsafe { (0x1900 as *mut u64).write_volatile(0xf021f077f065f04e) };
+    unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e) };
 
     println!("It did not crash!");
     blog_os::hlt_loop();
