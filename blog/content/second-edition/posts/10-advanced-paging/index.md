@@ -666,7 +666,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);
 
     blog_os::memory::create_mapping(&mut recursive_page_table, &mut frame_allocator);
-    unsafe { (0xdeadbeafc00 as *mut u64).write_volatile(0xffffffffffffffff)};
+    unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e)};
 
     println!("It did not crash!");
     blog_os::hlt_loop();
