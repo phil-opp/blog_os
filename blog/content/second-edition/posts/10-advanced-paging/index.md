@@ -453,6 +453,8 @@ impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
 }
 ```
 
+(If you're getting a 'method `allocate_frame` is not a member of trait `FrameAllocator`' error, you need to update `x86_64` to version 0.4.0.)
+
 We can now test the new mapping function in our `main.rs`:
 
 ```rust
