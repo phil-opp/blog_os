@@ -180,7 +180,10 @@ use x86_64::structures::paging::PageTable;
 
 /// Returns the physical address for the given virtual address, or `None` if the
 /// virtual address is not mapped.
-pub fn translate_addr(addr: usize, level_4_table_addr: usize) -> Option<PhysAddr> {
+///
+/// Safety: This requires level_4_table_addr to be the address of a valid
+/// level-4 PageTable
+pub unsafe fn translate_addr(addr: usize, level_4_table_addr: usize) -> Option<PhysAddr> {
     // retrieve the page table indices of the address that we want to translate
     let level_4_index = (addr >> 39) & 0o777;
     let level_3_index = (addr >> 30) & 0o777;
@@ -252,13 +255,15 @@ pub extern "C" fn _start() -> ! {
 
     const LEVEL_4_TABLE_ADDR: usize = 0o_177777_777_777_777_777_0000;
 
-    // the identity-mapped vga buffer page
-    println!("0xb8000 -> {:?}", translate_addr(0xb8000, LEVEL_4_TABLE_ADDR));
-    // some code page
-    println!("0x20010a -> {:?}", translate_addr(0x20010a, LEVEL_4_TABLE_ADDR));
-    // some stack page
-    println!("0x57ac001ffe48 -> {:?}", translate_addr(0x57ac001ffe48,
-        LEVEL_4_TABLE_ADDR));
+    unsafe {
+        // the identity-mapped vga buffer page
+        println!("0xb8000 -> {:?}", translate_addr(0xb8000, LEVEL_4_TABLE_ADDR));
+        // some code page
+        println!("0x20010a -> {:?}", translate_addr(0x20010a, LEVEL_4_TABLE_ADDR));
+        // some stack page
+        println!("0x57ac001ffe48 -> {:?}", translate_addr(0x57ac001ffe48,
+            LEVEL_4_TABLE_ADDR));
+    }
 
     println!("It did not crash!");
     blog_os::hlt_loop();
