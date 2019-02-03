@@ -28,6 +28,15 @@ However, it also causes a problem when we try to access the page tables from our
 
 The next section discusses the problem in detail and provides different approaches to a solution. Afterward, we implement a function that traverses the page table hierarchy in order to translate virtual to physical addresses. Finally, we learn how to create new mappings in the page tables and how to find unused memory frames for creating new page tables.
 
+### Dependency Updates
+
+This post requires version 0.4.0 or later of the `x86_64` dependency. You can update the dependency in your `Cargo.toml`:
+
+```toml
+[dependencies]
+x86_64 = "0.4.0" # or later
+```
+
 ## Accessing Page Tables
 
 Accessing the page tables from our kernel is not as easy as it may seem. To understand the problem let's take a look at the example 4-level page table hierarchy of the previous post again:
