@@ -189,41 +189,50 @@ use x86_64::structures::paging::PageTable;
 
 /// Returns the physical address for the given virtual address, or `None` if the
 /// virtual address is not mapped.
-///
-/// Safety: This requires level_4_table_addr to be the address of a valid
-/// level-4 PageTable
-pub unsafe fn translate_addr(addr: usize, level_4_table_addr: usize) -> Option<PhysAddr> {
+pub fn translate_addr(addr: usize) -> Option<PhysAddr> {
+    // introduce variables for the recursive index and the sign extension bits
+    // TODO: Don't hardcode these values
+    let r = 0o777; // recursive index
+    let sign = 0o177777 << 48; // sign extension
+
     // retrieve the page table indices of the address that we want to translate
-    let level_4_index = (addr >> 39) & 0o777;
-    let level_3_index = (addr >> 30) & 0o777;
-    let level_2_index = (addr >> 21) & 0o777;
-    let level_1_index = (addr >> 12) & 0o777;
+    let l4_idx = (addr >> 39) & 0o777; // level 4 index
+    let l3_idx = (addr >> 30) & 0o777; // level 3 index
+    let l2_idx = (addr >> 21) & 0o777; // level 2 index
+    let l1_idx = (addr >> 12) & 0o777; // level 1 index
     let page_offset = addr & 0o7777;
 
+    // calculate the table addresses
+    let level_4_table_addr =
+        sign | (r << 39) | (r << 30) | (r << 21) | (r << 12);
+    let level_3_table_addr =
+        sign | (r << 39) | (r << 30) | (r << 21) | (l4_idx << 12);
+    let level_2_table_addr =
+        sign | (r << 39) | (r << 30) | (l4_idx << 21) | (l3_idx << 12);
+    let level_1_table_addr =
+        sign | (r << 39) | (l4_idx << 30) | (l3_idx << 21) | (l2_idx << 12);
+
     // check that level 4 entry is mapped
-    let level_4_table = unsafe {&*(level_4_table_addr as *const PageTable)};
-    if level_4_table[level_4_index].addr().is_null() {
+    let level_4_table = unsafe { &*(level_4_table_addr as *const PageTable) };
+    if level_4_table[l4_idx].addr().is_null() {
         return None;
     }
-    let level_3_table_addr = (level_4_table_addr << 9) | (level_4_index << 12);
 
     // check that level 3 entry is mapped
-    let level_3_table = unsafe {&*(level_3_table_addr as *const PageTable)};
-    if level_3_table[level_3_index].addr().is_null() {
+    let level_3_table = unsafe { &*(level_3_table_addr as *const PageTable) };
+    if level_3_table[l3_idx].addr().is_null() {
         return None;
     }
-    let level_2_table_addr = (level_3_table_addr << 9) | (level_3_index << 12);
 
     // check that level 2 entry is mapped
-    let level_2_table = unsafe {&*(level_2_table_addr as *const PageTable)};
-    if level_2_table[level_2_index].addr().is_null() {
+    let level_2_table = unsafe { &*(level_2_table_addr as *const PageTable) };
+    if level_2_table[l2_idx].addr().is_null() {
         return None;
     }
-    let level_1_table_addr = (level_2_table_addr << 9) | (level_2_index << 12);
 
     // check that level 1 entry is mapped and retrieve physical address from it
-    let level_1_table = unsafe {&*(level_1_table_addr as *const PageTable)};
-    let phys_addr = level_1_table[level_1_index].addr();
+    let level_1_table = unsafe { &*(level_1_table_addr as *const PageTable) };
+    let phys_addr = level_1_table[l1_idx].addr();
     if phys_addr.is_null() {
         return None;
     }
@@ -232,17 +241,16 @@ pub unsafe fn translate_addr(addr: usize, level_4_table_addr: usize) -> Option<P
 }
 ```
 
-First, we calculate the page table indices and the page offset from the address through bitwise operations as specified in the graphic:
+First, we introduce variables for the recursive index (511 = `0o777`) and the sign extension bits (which are 1 each). Then we calculate the page table indices and the page offset from the address through bitwise operations as specified in the graphic:
 
 ![Bits 0–12 are the page offset, bits 12–21 the level 1 index, bits 21–30 the level 2 index, bits 30–39 the level 3 index, and bits 39–48 the level 4 index](../paging-introduction/x86_64-table-indices-from-address.svg)
 
-Then we transform the `level_4_table_addr` to a [`PageTable`] reference, which is an `unsafe` operation since the compiler can't know that the address is valid. We use the indexing operator to look at the entry with `level_4_index`. If that entry is null, there is no level 3 table for this level 4 entry, which means that the `addr` is not mapped to any physical memory, so we return `None`.
-
-[`PageTable`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.PageTable.html
-
-If the entry is not `None`, we know that a level 3 table exists. We calculate the virtual address of it by shifting the level 4 address 9 bits to the left and setting the address bits 12–21 to the level 4 index (see the section about [address calculation]). We can do that because the recursive index is `0o777` so that it is also a valid sign extension. We then do the same cast and entry-checking as with the level 4 table.
+In the next step we calculate the virtual addresses of the four page tables as descripbed in the [address calculation] section. We transform each of these addresses to [`PageTable`] references later in the function. These transformations are `unsafe` operations since the compiler can't know that these addresses are valid.
 
 [address calculation]: #address-calculation
+[`PageTable`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.PageTable.html
+
+After the address calculation, we use the indexing operator to look at the entry in the level 4 table. If that entry is null, there is no level 3 table for this level 4 entry, which means that the `addr` is not mapped to any physical memory, so we return `None`. If the entry is not `None`, we know that a level 3 table exists. We then do the same cast and entry-checking as with the level 4 table.
 
 After we checked the three higher level pages, we can finally read the entry of the level 1 table that tells us the physical frame that the address is mapped to. As the last step, we add the page offset to that address and return it.
 
@@ -262,17 +270,13 @@ pub extern "C" fn _start() -> ! {
 
     use blog_os::memory::translate_addr;
 
-    const LEVEL_4_TABLE_ADDR: usize = 0o_177777_777_777_777_777_0000;
+    // the identity-mapped vga buffer page
+    println!("0xb8000 -> {:?}", translate_addr(0xb8000));
+    // some code page
+    println!("0x20010a -> {:?}", translate_addr(0x20010a));
+    // some stack page
+    println!("0x57ac001ffe48 -> {:?}", translate_addr(0x57ac001ffe48));
 
-    unsafe {
-        // the identity-mapped vga buffer page
-        println!("0xb8000 -> {:?}", translate_addr(0xb8000, LEVEL_4_TABLE_ADDR));
-        // some code page
-        println!("0x20010a -> {:?}", translate_addr(0x20010a, LEVEL_4_TABLE_ADDR));
-        // some stack page
-        println!("0x57ac001ffe48 -> {:?}", translate_addr(0x57ac001ffe48,
-            LEVEL_4_TABLE_ADDR));
-    }
 
     println!("It did not crash!");
     blog_os::hlt_loop();
