@@ -498,7 +498,7 @@ However, this `WRITER` is pretty useless since it is immutable. This means that 
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
 [RefCell]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt
 [UnsafeCell]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html
-[interior mutability]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#enforcing-borrowing-rules-at-runtime-with-refcellt
+[interior mutability]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html
 [Sync]: https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html
 
 ### Spinlocks
