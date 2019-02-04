@@ -584,7 +584,7 @@ The macro expands to a call of the [`_print` function] in the `io` module. The [
 The [`format_args` macro] builds a [fmt::Arguments] type from the passed arguments, which is passed to `_print`. The [`_print` function] of libstd calls `print_to`, which is rather complicated because it supports different `Stdout` devices. We don't need that complexity since we just want to print to the VGA buffer.
 
 [`_print` function]: https://github.com/rust-lang/rust/blob/29f5c699b11a6a148f097f82eaa05202f8799bbc/src/libstd/io/stdio.rs#L698
-[`$crate` variable]: https://doc.rust-lang.org/1.5.0/book/macros.html#the-variable-crate
+[`$crate` variable]: https://doc.rust-lang.org/1.30.0/book/first-edition/macros.html#the-variable-crate
 [`format_args` macro]: https://doc.rust-lang.org/nightly/std/macro.format_args.html
 [fmt::Arguments]: https://doc.rust-lang.org/nightly/core/fmt/struct.Arguments.html
 
