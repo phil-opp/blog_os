@@ -161,8 +161,8 @@ pub struct Writer {
 ```
 The writer will always write to the last line and shift lines up when a line is full (or on `\n`). The `column_position` field keeps track of the current position in the last row. The current foreground and background colors are specified by `color_code` and a reference to the VGA buffer is stored in `buffer`. Note that we need an [explicit lifetime] here to tell the compiler how long the reference is valid. The [`'static`] lifetime specifies that the reference is valid for the whole program run time (which is true for the VGA text buffer).
 
-[explicit lifetime]: https://doc.rust-lang.org/book/first-edition/lifetimes.html#syntax
-[`'static`]: https://doc.rust-lang.org/book/first-edition/lifetimes.html#static
+[explicit lifetime]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#lifetime-annotation-syntax
+[`'static`]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
 
 ### Printing
 Now we can use the `Writer` to modify the buffer's characters. First we create a method to write a single ASCII byte:
@@ -246,8 +246,8 @@ pub fn print_something() {
 ```
 It first creates a new Writer that points to the VGA buffer at `0xb8000`. The syntax for this might seem a bit strange: First, we cast the integer `0xb8000` as an mutable [raw pointer]. Then we convert it to a mutable reference by dereferencing it (through `*`) and immediately borrowing it again (through `&mut`). This conversion requires an [`unsafe` block], since the compiler can't guarantee that the raw pointer is valid.
 
-[raw pointer]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
-[`unsafe` block]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#unsafe-rust
+[raw pointer]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[`unsafe` block]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
 
 Then it writes the byte `b'H'` to it. The `b` prefix creates a [byte literal], which represents an ASCII character. By writing the strings `"ello "'` and `"Wörld!"`, we test our `write_string` method and the handling of unprintable characters.  When we call `vga_buffer::print_something` in our `_start` function (in `src/main.rs`), a `Hello W■■rld!` should be printed in the _lower_ left corner of the screen in yellow:
 
@@ -297,7 +297,7 @@ struct Buffer {
 ```
 Instead of a `ScreenChar`, we're now using a `Volatile<ScreenChar>`. (The `Volatile` type is [generic] and can wrap (almost) any type). This ensures that we can't accidentally write to it through a “normal” write. Instead, we have to use the `write` method now.
 
-[generic]: https://doc.rust-lang.org/book/second-edition/ch10-00-generics.html
+[generic]: https://doc.rust-lang.org/book/ch10-01-syntax.html
 
 This means that we have to update our `Writer::write_byte` method:
 
@@ -494,11 +494,11 @@ lazy_static! {
 
 However, this `WRITER` is pretty useless since it is immutable. This means that we can't write anything to it (since all the write methods take `&mut self`). One possible solution would be to use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged, there were even proposals to [remove it][remove static mut]. But what are the alternatives? We could try to use a immutable static with a cell type like [RefCell] or even [UnsafeCell] that provides [interior mutability]. But these types aren't [Sync] \(with good reason), so we can't use them in statics.
 
-[mutable static]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[mutable static]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
-[RefCell]: https://doc.rust-lang.org/nightly/core/cell/struct.RefCell.html
+[RefCell]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt
 [UnsafeCell]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html
-[interior mutability]: https://doc.rust-lang.org/book/first-edition/mutability.html#interior-vs-exterior-mutability
+[interior mutability]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html
 [Sync]: https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html
 
 ### Spinlocks
@@ -553,7 +553,7 @@ Note that we only have a single unsafe block in our code, which is needed to cre
 ### A println Macro
 Now that we have a global writer, we can add a `println` macro that can be used from anywhere in the codebase. Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead we look at the source of the [`println!` macro] in the standard library:
 
-[macro syntax]: https://doc.rust-lang.org/nightly/book/second-edition/appendix-04-macros.html
+[macro syntax]: https://doc.rust-lang.org/nightly/book/ch19-06-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust
@@ -584,7 +584,7 @@ The macro expands to a call of the [`_print` function] in the `io` module. The [
 The [`format_args` macro] builds a [fmt::Arguments] type from the passed arguments, which is passed to `_print`. The [`_print` function] of libstd calls `print_to`, which is rather complicated because it supports different `Stdout` devices. We don't need that complexity since we just want to print to the VGA buffer.
 
 [`_print` function]: https://github.com/rust-lang/rust/blob/29f5c699b11a6a148f097f82eaa05202f8799bbc/src/libstd/io/stdio.rs#L698
-[`$crate` variable]: https://doc.rust-lang.org/book/first-edition/macros.html#the-variable-crate
+[`$crate` variable]: https://doc.rust-lang.org/1.30.0/book/first-edition/macros.html#the-variable-crate
 [`format_args` macro]: https://doc.rust-lang.org/nightly/std/macro.format_args.html
 [fmt::Arguments]: https://doc.rust-lang.org/nightly/core/fmt/struct.Arguments.html
 
