@@ -18,6 +18,12 @@ strategy:
     linux:
       image_name: 'ubuntu-16.04'
       rustup_toolchain: nightly
+    mac:
+      image_name: 'macos-10.13'
+      rustup_toolchain: nightly
+    windows:
+      image_name: 'vs2017-win2016'
+      rustup_toolchain: nightly
 
 pool:
   vmImage: $(image_name)
@@ -39,7 +45,15 @@ steps:
 - script: |
     curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
     echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
-  displayName: 'Install Rust'
+  condition: or(eq( variables['Agent.OS'], 'Linux' ),  eq( variables['Agent.OS'], 'Darwin' ))
+  displayName: 'Install Rust (Linux/macOS)'
+
+- script: |
+    curl -sSf -o rustup-init.exe https://win.rustup.rs
+    rustup-init.exe -y --default-toolchain %RUSTUP_TOOLCHAIN%
+    echo ##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin
+  condition: eq( variables['Agent.OS'], 'Windows_NT' )
+  displayName: 'Install Rust (Windows)'
 
 - script: |
     rustc -Vv
@@ -47,5 +61,13 @@ steps:
   displayName: 'Print Rust Version'
   continueOnError: true
 
-- script: cargo rustc -- -Z pre-link-arg=-nostartfiles
+- script: rustup component add rust-src
+  displayName: 'Install Rustup Src Component'
+
+- script: |
+    cargo install cargo-xbuild --debug
+    cargo install bootimage --debug
+  displayName: 'Install cargo-xbuild and bootimage'
+
+- script: bootimage build
   displayName: 'Build'
