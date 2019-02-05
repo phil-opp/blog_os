@@ -127,6 +127,8 @@ Now the compiler is missing a `#[panic_handler]` function and a _language item_.
 
 The `panic_handler` attribute defines the function that the compiler should invoke when a [panic] occurs. The standard library provides its own panic handler function, but in a `no_std` environment we need to define it ourselves:
 
+[panic]: https://doc.rust-lang.org/stable/book/ch09-01-unrecoverable-errors-with-panic.html
+
 ```rust
 // in main.rs
 
