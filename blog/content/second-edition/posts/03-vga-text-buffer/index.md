@@ -114,6 +114,7 @@ To represent a full color code that specifies foreground and background color, w
 // in src/vga_buffer.rs
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
 struct ColorCode(u8);
 
 impl ColorCode {
@@ -122,7 +123,9 @@ impl ColorCode {
     }
 }
 ```
-The `ColorCode` contains the full color byte, containing foreground and background color. Like before, we derive the `Copy` and `Debug` traits for it.
+The `ColorCode` struct contains the full color byte, containing foreground and background color. Like before, we derive the `Copy` and `Debug` traits for it. To ensure that the `ColorCode` has the exact same data layout as an `u8`, we use the [`repr(transparent)`] attribute.
+
+[`repr(transparent)`]: https://doc.rust-lang.org/nomicon/other-reprs.html#reprtransparent
 
 ### Text Buffer
 Now we can add structures to represent a screen character and the text buffer:
@@ -140,11 +143,12 @@ struct ScreenChar {
 const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
 
+#[repr(transparent)]
 struct Buffer {
     chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 ```
-Since the field ordering in default structs is undefined in Rust, we need the [`repr(C)`] attribute. It guarantees that the struct's fields are laid out exactly like in a C struct and thus guarantees the correct field ordering.
+Since the field ordering in default structs is undefined in Rust, we need the [`repr(C)`] attribute. It guarantees that the struct's fields are laid out exactly like in a C struct and thus guarantees the correct field ordering. For the `Buffer` struct, we use [`repr(transparent)`] again to ensure that it has the same memory layout as its single field.
 
 [`repr(C)`]: https://doc.rust-lang.org/nightly/nomicon/other-reprs.html#reprc
 
