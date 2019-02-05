@@ -32,13 +32,7 @@ steps:
 - bash: |
     echo "Hello world from $AGENT_NAME running on $AGENT_OS"
     echo "Reason: $BUILD_REASON"
-    case "$BUILD_REASON" in
-            "Manual") echo "$BUILD_REQUESTEDFOR manually queued the build." ;;
-            "PullRequest") echo "This is a CI build for a pull request on $BUILD_REQUESTEDFOR." ;;
-            "IndividualCI") echo "This is a CI build for $BUILD_REQUESTEDFOR." ;;
-            "BatchedCI") echo "This is a batched CI build for $BUILD_REQUESTEDFOR." ;;
-        *) "$BUILD_REASON" ;;
-    esac
+    echo "Requested for: $BUILD_REQUESTEDFOR"
   displayName: 'Build Info'
   continueOnError: true
 
