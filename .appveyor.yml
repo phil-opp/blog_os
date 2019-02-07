@@ -19,21 +19,21 @@ environment:
 
 ### MSVC Toolchains ###
   # Nightly 64-bit MSVC
-    - channel: stable
+    - channel: nightly
       target: x86_64-pc-windows-msvc
       MSYS_BITS: 64
   # Nightly 32-bit MSVC
-    - channel: stable
+    - channel: nightly
       target: i686-pc-windows-msvc
       MSYS_BITS: 32
 
 ### GNU Toolchains ###
   # Nightly 64-bit GNU
-    - channel: stable
+    - channel: nightly
       target: x86_64-pc-windows-gnu
       MSYS_BITS: 64
   # Nightly 32-bit GNU
-    - channel: stable
+    - channel: nightly
       target: i686-pc-windows-gnu
       MSYS_BITS: 32
 
