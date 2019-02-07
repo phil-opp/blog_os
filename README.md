@@ -6,17 +6,15 @@ This repository contains the source code for the _Writing an OS in Rust_ series 
 
 ## Where is the code?
 
-The code for each post lives in a separate git branch. This makes it possible to see the intermediate state after each post. You can find the branch for each post by following the `(source code)` link in the [post list](#posts) below. The branches are named `post-XX` where `XX` is the post number, for example `post-03` for the third post ("VGA Text Mode").
+The code for each post lives in a separate git branch. This makes it possible to see the intermediate state after each post.
 
-**You can find the code for the latest post [here][latest-post].**
+**The code for the latest post is available [here][latest-post].**
 
 [latest-post]: https://github.com/phil-opp/blog_os/tree/post-10
 
-For build instructions, see the Readme of the post branches.
+You can find the branch for each post by following the `(source code)` link in the [post list](#posts) below. The branches are named `post-XX` where `XX` is the post number, for example `post-03` for the _VGA Text Mode_ post or `post-08` for the _Hardware Interrupts_ post. For build instructions, see the Readme of the respective branch.
 
-### Checking out the Code in a Subdirectory
-
-To check out the code in a subdirectory use [git worktree]:
+You can check out a branch in a subdirectory using [git worktree]:
 
 [git worktree]: https://git-scm.com/docs/git-worktree
 
@@ -24,7 +22,7 @@ To check out the code in a subdirectory use [git worktree]:
 git worktree add code post-10
 ```
 
-This creates a subdirectory named `code` that contains the code for the latest post ("Advanced Paging").
+The above command creates a subdirectory named `code` that contains the code for the latest post ("Advanced Paging").
 
 ## Posts
 
