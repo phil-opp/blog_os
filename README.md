@@ -4,18 +4,27 @@
 
 This repository contains the source code for the _Writing an OS in Rust_ series at [os.phil-opp.com](https://os.phil-opp.com).
 
-## Building
-You need a nightly Rust compiler and the `cargo-xbuild` and `bootimage` tools. You can install the tools by executing the following command:
+## Where is the code?
+
+The code for each post lives in a separate git branch. This makes it possible to see the intermediate state after each post. You can find the branch for each post by following the `(source code)` link in the [post list](#posts) below. The branches are named `post-XX` where `XX` is the post number, for example `post-03` for the third post ("VGA Text Mode").
+
+**You can find the code for the latest post [here][latest-post].**
+
+[latest-post]: https://github.com/phil-opp/blog_os/tree/post-10
+
+For build instructions, see the Readme of the post branches.
+
+### Checking out the Code in a Subdirectory
+
+To check out the code in a subdirectory use [git worktree]:
+
+[git worktree]: https://git-scm.com/docs/git-worktree
 
 ```
-cargo install cargo-xbuild bootimage
+git worktree add code post-10
 ```
 
-Afterwards you can invoke `bootimage build` to produce a bootable disk image. Please file an issue if you run into any problems.
-
-To run the image in [QEMU], you can execute `bootimage run`. Note that you need to have QEMU installed.
-
-[QEMU]: https://www.qemu.org/
+This creates a subdirectory named `code` that contains the code for the latest post ("Advanced Paging").
 
 ## Posts
 
