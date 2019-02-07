@@ -27,4 +27,4 @@ cache:
     - $HOME/.cargo
 
 script:
-  - cargo rustc -- -Z pre-link-arg=-nostartfiles
+  - cargo rustc -- -Clink-arg=-nostartfiles

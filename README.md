@@ -10,10 +10,10 @@ This repository contains the source code for the [A Freestanding Rust Binary][po
 
 ## Building
 
-You need a nightly Rust compiler. To build the project on Linux, run:
+To build the project on Linux, run:
 
 ```
-cargo rustc -- -Z pre-link-arg=-nostartfiles
+cargo rustc -- -Clink-arg=-nostartfiles
 ```
 
 The entry point and the build command differ slightly on macOS and Windows. See the [post] for more information.

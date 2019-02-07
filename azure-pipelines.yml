@@ -41,5 +41,5 @@ steps:
   displayName: 'Print Rust Version'
   continueOnError: true
 
-- script: cargo rustc -- -Z pre-link-arg=-nostartfiles
+- script: cargo rustc -- -Clink-arg=-nostartfiles
   displayName: 'Build'
