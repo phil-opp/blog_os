@@ -22,7 +22,7 @@ By using such SIMD standards, programs can often speed up significantly. Good co
 
 [auto-vectorization]: https://en.wikipedia.org/wiki/Automatic_vectorization
 
-However, the large SIMD registers lead to problems in OS kernels. The reason is that the kernel has to backup all registers that it uses in hardware interrupt, because they need to have their original values when the interrupted program continues. So if the kernel uses SIMD registers, it has to backup a lot more data, which noticably decreases performance. To avoid this performance loss, we want to disable the `sse` and `mmx` features (the `avx` feature is disabled by default).
+However, the large SIMD registers lead to problems in OS kernels. The reason is that the kernel has to backup all registers that it uses to memory on each hardware interrupt, because they need to have their original values when the interrupted program continues. So if the kernel uses SIMD registers, it has to backup a lot more data (512–1600 bytes), which noticably decreases performance. To avoid this performance loss, we want to disable the `sse` and `mmx` features (the `avx` feature is disabled by default).
 
 We can do that through the the `features` field in our target specification. To disable the `mmx` and `sse` features we add them prefixed with a minus:
 
