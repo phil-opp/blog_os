@@ -8,8 +8,6 @@ trigger:
     - staging
     # This is where pull requests from "bors try" are built.
     - trying
-    # Build pull requests.
-    - master
     # Build post braches
     - post-*
 
