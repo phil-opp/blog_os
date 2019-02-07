@@ -1,0 +1,4 @@
+status = [
+  "phil-opp.blog_os",
+]
+delete_merged_branches = true
