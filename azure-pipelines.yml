@@ -17,7 +17,7 @@ strategy:
   matrix:
     linux:
       image_name: 'ubuntu-16.04'
-      rustup_toolchain: nightly
+      rustup_toolchain: stable
 
 pool:
   vmImage: $(image_name)
