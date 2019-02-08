@@ -1,4 +1,4 @@
 status = [
-  "continuous-integration/travis-ci/push",
+  "deploy/netlify",
 ]
 delete_merged_branches = true

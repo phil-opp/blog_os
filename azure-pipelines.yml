@@ -8,25 +8,11 @@ trigger:
     - staging
     # This is where pull requests from "bors try" are built.
     - trying
-    # Build pull requests.
-    - master
     # Build post braches
     - post-*
 
-strategy:
-  matrix:
-    linux:
-      image_name: 'ubuntu-16.04'
-      rustup_toolchain: nightly
-    mac:
-      image_name: 'macos-10.13'
-      rustup_toolchain: nightly
-    windows:
-      image_name: 'vs2017-win2016'
-      rustup_toolchain: nightly
-
 pool:
-  vmImage: $(image_name)
+  vmImage: ubuntu-16.04
 
 steps:
 - bash: |
@@ -36,58 +22,5 @@ steps:
   displayName: 'Build Info'
   continueOnError: true
 
-- script: |
-    curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUSTUP_TOOLCHAIN
-    echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
-  condition: or(eq( variables['Agent.OS'], 'Linux' ),  eq( variables['Agent.OS'], 'Darwin' ))
-  displayName: 'Install Rust (Linux/macOS)'
-
-- script: |
-    curl -sSf -o rustup-init.exe https://win.rustup.rs
-    rustup-init.exe -y --default-toolchain %RUSTUP_TOOLCHAIN%
-    echo ##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin
-  condition: eq( variables['Agent.OS'], 'Windows_NT' )
-  displayName: 'Install Rust (Windows)'
-
-- script: |
-    rustc -Vv
-    cargo -V
-  displayName: 'Print Rust Version'
-  continueOnError: true
-
-- script: rustup component add rust-src
-  displayName: 'Install Rustup Src Component'
-
-- script: |
-    cargo install cargo-xbuild --debug
-    cargo install bootimage --debug
-  displayName: 'Install cargo-xbuild and bootimage'
-
-- script: bootimage build
-  displayName: 'Build'
-
-- script: cargo test
-  displayName: 'Unit Tests'
-
-- script: sudo apt install qemu-system-x86
-  condition: eq( variables['Agent.OS'], 'Linux' )
-  displayName: 'Install QEMU (Linux)'
-
-- script: |
-    export HOMEBREW_NO_AUTO_UPDATE=1
-    export HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK=1
-    export HOMEBREW_NO_INSTALL_CLEANUP=1
-    brew install qemu
-  condition: eq( variables['Agent.OS'], 'Darwin' )
-  displayName: 'Install QEMU (macOS)'
-
-- script: |
-    choco install qemu --limit-output --no-progress
-    echo ##vso[task.setvariable variable=PATH;]%PATH%;C:\Program Files\qemu
-    set PATH=%PATH%;C:\Program Files\qemu
-    qemu-system-x86_64 --version
-  condition: eq( variables['Agent.OS'], 'Windows_NT' )
-  displayName: 'Install QEMU (Windows)'
-
-- script: bootimage test
-  displayName: 'Integration Tests'
+- script: echo "Nothing to do for master branch"
+  displayName: "Nothing to do"
