@@ -410,7 +410,7 @@ From now on we should never see a triple fault again!
 
 To ensure that we don't accidentally break the above, we should add a integration test for this. We don't show the code here for space reasons, but you can find it [on Github][stack overflow test]. The idea is to do a `serial_println!("ok");` from the double fault handler to ensure that it is called. The rest of the file is is very similar to our `main.rs`.
 
-[stack overflow test]: https://github.com/phil-opp/blog_os/blob/master/src/bin/test-exception-double-fault-stack-overflow.rs
+[stack overflow test]: https://github.com/phil-opp/blog_os/blob/post-07/src/bin/test-exception-double-fault-stack-overflow.rs
 
 ## Summary
 In this post we learned what a double fault is and under which conditions it occurs. We added a basic double fault handler that prints an error message and added an integration test for it.
