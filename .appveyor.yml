@@ -4,6 +4,11 @@ branches:
     - trying
     - /post-.*/
 
+pr:
+  branches:
+    exclude:
+    - master
+
 build: false
 
 test_script:
