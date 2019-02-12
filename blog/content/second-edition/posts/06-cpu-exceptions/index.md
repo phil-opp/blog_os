@@ -124,8 +124,8 @@ type HandlerFunc = extern "x86-interrupt" fn(_: &mut ExceptionStackFrame);
 
 It's a [type alias] for an `extern "x86-interrupt" fn` type. The `extern` keyword defines a function with a [foreign calling convention] and is often used to communicate with C code (`extern "C" fn`). But what is the `x86-interrupt` calling convention?
 
-[type alias]: https://doc.rust-lang.org/book/second-edition/ch19-04-advanced-types.html#type-aliases-create-type-synonyms
-[foreign calling convention]: https://doc.rust-lang.org/book/first-edition/ffi.html#foreign-calling-conventions
+[type alias]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[foreign calling convention]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## The Interrupt Calling Convention
 Exceptions are quite similar to function calls: The CPU jumps to the first instruction of the called function and executes it. Afterwards the CPU jumps to the return address and continues the execution of the parent function.
