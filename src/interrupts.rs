@@ -13,10 +13,18 @@ use x86_64::structures::idt::{ExceptionStackFrame, InterruptDescriptorTable};
 pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
 
-pub const TIMER_INTERRUPT_ID: u8 = PIC_1_OFFSET;
-pub const KEYBOARD_INTERRUPT_ID: u8 = PIC_1_OFFSET + 1;
+pub mod interrupt_indexes {
+	#[derive(Debug)]
+	#[repr(u8)]
+	pub enum Hardware {
+		Timer = super::PIC_1_OFFSET,
+		Keyboard,
+	}
+	pub fn as_u8(interrupt: Hardware) -> u8 { interrupt as u8 }
+	pub fn as_usize(interrupt: Hardware) -> usize { usize::from(as_u8(interrupt)) }
+}
 
-pub static PICS: spin::Mutex<ChainedPics> =
+pub static PICS: spin::Mutex<ChainedPics``> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 
 lazy_static! {
@@ -28,8 +36,9 @@ lazy_static! {
                 .set_handler_fn(double_fault_handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
         }
-        idt[usize::from(TIMER_INTERRUPT_ID)].set_handler_fn(timer_interrupt_handler);
-        idt[usize::from(KEYBOARD_INTERRUPT_ID)].set_handler_fn(keyboard_interrupt_handler);
+		use self::interrupt_indexes::*;
+		idt[as_usize(Hardware::Timer)].set_handler_fn(timer_interrupt_handler);
+		idt[as_usize(Hardware::Keyboard)].set_handler_fn(keyboard_interrupt_handler);
         idt
     };
 }
@@ -52,10 +61,12 @@ extern "x86-interrupt" fn double_fault_handler(
 
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
     print!(".");
-    unsafe { PICS.lock().notify_end_of_interrupt(TIMER_INTERRUPT_ID) }
+	use self::interrupt_indexes::*;
+	unsafe { PICS.lock().notify_end_of_interrupt(as_u8(Hardware::Timer)) }
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
+	use interrupt_indexes::*;
     use pc_keyboard::{layouts, DecodedKey, Keyboard, ScancodeSet1};
     use spin::Mutex;
     use x86_64::instructions::port::Port;
@@ -78,5 +89,5 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut Exceptio
         }
     }
 
-    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+	unsafe { PICS.lock().notify_end_of_interrupt(as_u8(Hardware::Keyboard)) }
 }
