@@ -11,6 +11,11 @@ trigger:
     # Build post braches
     - post-*
 
+pr:
+  branches:
+    exclude:
+    - master
+
 pool:
   vmImage: ubuntu-16.04
 
