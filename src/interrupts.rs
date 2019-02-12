@@ -24,7 +24,7 @@ pub mod interrupt_indexes {
 	pub fn as_usize(interrupt: Hardware) -> usize { usize::from(as_u8(interrupt)) }
 }
 
-pub static PICS: spin::Mutex<ChainedPics``> =
+pub static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 
 lazy_static! {
@@ -36,9 +36,9 @@ lazy_static! {
                 .set_handler_fn(double_fault_handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
         }
-		use self::interrupt_indexes::*;
-		idt[as_usize(Hardware::Timer)].set_handler_fn(timer_interrupt_handler);
-		idt[as_usize(Hardware::Keyboard)].set_handler_fn(keyboard_interrupt_handler);
+	use self::interrupt_indexes::*;
+	idt[as_usize(Hardware::Timer)].set_handler_fn(timer_interrupt_handler);
+	idt[as_usize(Hardware::Keyboard)].set_handler_fn(keyboard_interrupt_handler);
         idt
     };
 }
@@ -61,7 +61,7 @@ extern "x86-interrupt" fn double_fault_handler(
 
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
     print!(".");
-	use self::interrupt_indexes::*;
+    use self::interrupt_indexes::*;
 	unsafe { PICS.lock().notify_end_of_interrupt(as_u8(Hardware::Timer)) }
 }
 
