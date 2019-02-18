@@ -414,7 +414,7 @@ impl Writer {
 This method clears a row by overwriting all of its characters with a space character.
 
 ## A Global Interface
-To provide a global writer that can used as an interface from other modules without carrying a `Writer` instance around, we try to create a static `WRITER`:
+To provide a global writer that can be used as an interface from other modules without carrying a `Writer` instance around, we try to create a static `WRITER`:
 
 ```rust
 // in src/vga_buffer.rs
