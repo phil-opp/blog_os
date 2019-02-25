@@ -68,3 +68,9 @@ steps:
 
 - script: cargo test
   displayName: 'Unit Tests'
+
+- script: rustup component add rustfmt
+  displayName: 'Install Rustfmt'
+
+- script: cargo fmt -- --check
+  displayName: 'Check Formatting'
