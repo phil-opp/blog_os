@@ -168,23 +168,45 @@ The reason for this double fault is that the hardware timer (the [Intel 8253] to
 
 ## Handling Timer Interrupts
 
-As we see from the graphic [above](#the-8259-pic), the timer uses line 0 of the primary PIC. This means that it arrives at the CPU as interrupt 32 (0 + offset 32). Therefore we need to add a handler for interrupt 32 if we want to handle the timer interrupt:
+As we see from the graphic [above](#the-8259-pic), the timer uses line 0 of the primary PIC. This means that it arrives at the CPU as interrupt 32 (0 + offset 32). Instead of hardcoding index 32, we store it in an `InterruptIndex` enum:
+
+```rust
+// in src/interrupts.rs
+
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum InterruptIndex {
+    Timer = PIC_1_OFFSET,
+}
+
+impl InterruptIndex {
+    fn as_u8(self) -> u8 {
+        self as u8
+    }
+
+    fn as_usize(self) -> usize {
+        usize::from(self.as_u8())
+    }
+}
+```
+
+The enum is a [C-like enum] so that we can directly specify the index for each variant. The `repr(u8)` attribute specifies that each variant is represented as an `u8`. We will add more variants for other interrupts in the future.
+
+[C-like enum]: https://doc.rust-lang.org/reference/items/enumerations.html#custom-discriminant-values-for-field-less-enumerations
+
+Now we can add a handler function for the timer interrupt:
 
 ```rust
 // in src/interrupts.rs
 
 use crate::print;
 
-pub const TIMER_INTERRUPT_ID: u8 = PIC_1_OFFSET; // new
-
-[…]
-
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
-        idt[usize::from(TIMER_INTERRUPT_ID)]
+        idt[InterruptIndex::Timer.as_usize()]
             .set_handler_fn(timer_interrupt_handler); // new
 
         idt
@@ -198,7 +220,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 }
 ```
 
-We introduce a `TIMER_INTERRUPT_ID` constant to keep things organized. Our `timer_interrupt_handler` has the same signature as our exception handlers, because the CPU reacts identically to exceptions and external interrupts (the only difference is that some exceptions push an error code). The [`InterruptDescriptorTable`] struct implements the [`IndexMut`] trait, so we can access individual entries through array indexing syntax.
+Our `timer_interrupt_handler` has the same signature as our exception handlers, because the CPU reacts identically to exceptions and external interrupts (the only difference is that some exceptions push an error code). The [`InterruptDescriptorTable`] struct implements the [`IndexMut`] trait, so we can access individual entries through array indexing syntax.
 
 [`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.2.11/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
@@ -220,7 +242,11 @@ extern "x86-interrupt" fn timer_interrupt_handler(
     _stack_frame: &mut ExceptionStackFrame)
 {
     print!(".");
-    unsafe { PICS.lock().notify_end_of_interrupt(TIMER_INTERRUPT_ID) }
+
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
+    }
 }
 ```
 
@@ -429,7 +455,12 @@ So let's add a handler function for the keyboard interrupt. It's quite similar t
 ```rust
 // in src/interrupts.rs
 
-pub const KEYBOARD_INTERRUPT_ID: u8 = PIC_1_OFFSET + 1; // new
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum InterruptIndex {
+    Timer = PIC_1_OFFSET,
+    Keyboard, // new
+}
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -437,7 +468,7 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
         // new
-        idt[usize::from(KEYBOARD_INTERRUPT_ID)]
+        idt[InterruptIndex::Keyboard.as_usize()]
             .set_handler_fn(keyboard_interrupt_handler);
 
         idt
@@ -448,11 +479,15 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: &mut ExceptionStackFrame)
 {
     print!("k");
-    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
+    }
 }
 ```
 
-As we see from the graphic [above](#the-8259-pic), the keyboard uses line 1 of the primary PIC. This means that it arrives at the CPU as interrupt 33 (1 + offset 32). We again create a `KEYBOARD_INTERRUPT_ID` constant to keep things organized. In the interrupt handler, we print a `k` and send the end of interrupt signal to the interrupt controller.
+As we see from the graphic [above](#the-8259-pic), the keyboard uses line 1 of the primary PIC. This means that it arrives at the CPU as interrupt 33 (1 + offset 32). We add this index as a new `Keyboard` variant to the `InterruptIndex` enum. We don't need to specify the value explicitely, since it defaults to the previous value plus one, which is also 33. In the interrupt handler, we print a `k` and send the end of interrupt signal to the interrupt controller.
 
 We now see that a `k` appears on the screen when we press a key. However, this only works for the first key we press, even if we continue to press keys no more `k`s appear on the screen. This is because the keyboard controller won't send another interrupt until we have read the so-called _scancode_ of the pressed key.
 
@@ -473,7 +508,11 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     let port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
     print!("{}", scancode);
-    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
+    }
 }
 ```
 
@@ -527,7 +566,11 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     if let Some(key) = key {
         print!("{}", key);
     }
-    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
+    }
 }
 ```
 
@@ -576,7 +619,10 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
         }
     }
 
-    unsafe { PICS.lock().notify_end_of_interrupt(KEYBOARD_INTERRUPT_ID) }
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
+    }
 }
 ```
 
