@@ -91,3 +91,9 @@ steps:
 
 - script: bootimage test
   displayName: 'Integration Tests'
+
+- script: rustup component add rustfmt
+  displayName: 'Install Rustfmt'
+
+- script: cargo fmt -- --check
+  displayName: 'Check Formatting'
