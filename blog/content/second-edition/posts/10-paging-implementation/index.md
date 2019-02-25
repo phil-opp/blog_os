@@ -1,8 +1,8 @@
 +++
-title = "Advanced Paging"
+title = "Paging Implementation"
 weight = 10
-path = "advanced-paging"
-date = 2019-01-28
+path = "paging-implementation"
+date = 0000-01-01
 template = "second-edition/page.html"
 +++
 
@@ -15,6 +15,9 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-10
+
+
+
 
 ## Introduction
 
@@ -50,37 +53,40 @@ The problem for us is that we can't directly access physical addresses from our 
 So in order to access page table frames, we need to map some virtual pages to them. There are different ways to create these mappings that all allow us to access arbitrary page table frames:
 
 
-- A simple solution is to **identity map all page tables**:
+### Identity Mapping
 
-  ![A virtual and a physical address space with various virtual pages mapped to the physical frame with the same address](identity-mapped-page-tables.svg)
+A simple solution is to **identity map all page tables**:
 
-  In this example, we see various identity-mapped page table frames. This way the physical addresses of page tables are also valid virtual addresses so that we can easily access the page tables of all levels starting from the CR3 register.
+![A virtual and a physical address space with various virtual pages mapped to the physical frame with the same address](identity-mapped-page-tables.svg)
 
-  However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at `28 KiB` because it would collide with the already mapped page at `1004 MiB`. So we have to look further until we find a large enough unmapped area, for example at `1008 KiB`. This is a similar fragmentation problem as with [segmentation].
+In this example, we see various identity-mapped page table frames. This way the physical addresses of page tables are also valid virtual addresses so that we can easily access the page tables of all levels starting from the CR3 register.
 
-  [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
-  [segmentation]: ./second-edition/posts/09-paging-introduction/index.md#fragmentation
+However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at `28 KiB` because it would collide with the already mapped page at `1004 MiB`. So we have to look further until we find a large enough unmapped area, for example at `1008 KiB`. This is a similar fragmentation problem as with [segmentation].
 
-  Equally, it makes it much more difficult to create new page tables, because we need to find physical frames whose corresponding pages aren't already in use. For example, let's assume that we reserved the _virtual_ 1000 KiB memory region starting at `1008 KiB` for our memory-mapped file. Now we can't use any frame with a _physical_ address between `1000 KiB` and `2008 KiB` anymore, because we can't identity map it.
+[memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
+[segmentation]: ./second-edition/posts/09-paging-introduction/index.md#fragmentation
 
-- Alternatively, we could **map the page tables frames only temporarily** when we need to access them. To be able to create the temporary mappings we only need a single identity-mapped level 1 table:
+Equally, it makes it much more difficult to create new page tables, because we need to find physical frames whose corresponding pages aren't already in use. For example, let's assume that we reserved the _virtual_ 1000 KiB memory region starting at `1008 KiB` for our memory-mapped file. Now we can't use any frame with a _physical_ address between `1000 KiB` and `2008 KiB` anymore, because we can't identity map it.
 
-  ![A virtual and a physical address space with an identity mapped level 1 table, which maps its 0th entry to the level 2 table frame, thereby mapping that frame to page with address 0](temporarily-mapped-page-tables.png)
 
-  The level 1 table in this graphic controls the first 2 MiB of the virtual address space. This is because it is reachable by starting at the CR3 register and following the 0th entry in the level 4, level 3, and level 2 page tables. The entry with index `8` maps the virtual page at address `32 KiB` to the physical frame at address `32 KiB`, thereby identity mapping the level 1 table itself. The graphic shows this identity-mapping by the horizontal arrow at `32 KiB`.
+### Temporary Mapping
 
-  By writing to the identity-mapped level 1 table, our kernel can create up to 511 temporary mappings (512 minus the entry required for the identity mapping). In the above example, the kernel mapped the 0th entry of the level 1 table to the frame with address `24 KiB`. This created a temporary mapping of the virtual page at `0 KiB` to the physical frame of the level 2 page table, indicated by the dashed arrow. Now the kernel can access the level 2 page table by writing to the page starting at `0 KiB`.
+Alternatively, we could **map the page tables frames only temporarily** when we need to access them. To be able to create the temporary mappings we only need a single identity-mapped level 1 table:
 
-  The process for accessing an arbitrary page table frame with temporary mappings would be:
+![A virtual and a physical address space with an identity mapped level 1 table, which maps its 0th entry to the level 2 table frame, thereby mapping that frame to page with address 0](temporarily-mapped-page-tables.png)
 
-  - Search for a free entry in the identity-mapped level 1 table.
-  - Map that entry to the physical frame of the page table that we want to access.
-  - Access the target frame through the virtual page that maps to the entry.
-  - Set the entry back to unused thereby removing the temporary mapping again.
+The level 1 table in this graphic controls the first 2 MiB of the virtual address space. This is because it is reachable by starting at the CR3 register and following the 0th entry in the level 4, level 3, and level 2 page tables. The entry with index `8` maps the virtual page at address `32 KiB` to the physical frame at address `32 KiB`, thereby identity mapping the level 1 table itself. The graphic shows this identity-mapping by the horizontal arrow at `32 KiB`.
 
-  This approach keeps the virtual address space clean since it reuses the same 512 virtual pages for creating the mappings. The drawback is that it is a bit cumbersome, especially since a new mapping might require modifications of multiple table levels, which means that we would need to repeat the above process multiple times.
+By writing to the identity-mapped level 1 table, our kernel can create up to 511 temporary mappings (512 minus the entry required for the identity mapping). In the above example, the kernel mapped the 0th entry of the level 1 table to the frame with address `24 KiB`. This created a temporary mapping of the virtual page at `0 KiB` to the physical frame of the level 2 page table, indicated by the dashed arrow. Now the kernel can access the level 2 page table by writing to the page starting at `0 KiB`.
 
-- While both of the above approaches work, there is a third technique called **recursive page tables** that combines their advantages: It keeps all page table frames mapped at all times so that no temporary mappings are needed, and also keeps the mapped pages together to avoid fragmentation of the virtual address space. This is the technique that we will use for our implementation, therefore it is described in detail in the following section.
+The process for accessing an arbitrary page table frame with temporary mappings would be:
+
+- Search for a free entry in the identity-mapped level 1 table.
+- Map that entry to the physical frame of the page table that we want to access.
+- Access the target frame through the virtual page that maps to the entry.
+- Set the entry back to unused thereby removing the temporary mapping again.
+
+This approach keeps the virtual address space clean since it reuses the same 512 virtual pages for creating the mappings. The drawback is that it is a bit cumbersome, especially since a new mapping might require modifications of multiple table levels, which means that we would need to repeat the above process multiple times.
 
 ### Recursive Page Tables
 
@@ -112,7 +118,12 @@ Accessing the tables of levels 3 and 4 works in the same way. For accessing the 
 
 It might take some time to wrap your head around the concept, but it works quite well in practice.
 
-#### Address Calculation
+In the section below we explain how to construct virtual addresses for following the recursive entry one or multiple times. We will not use recursive paging for our implementation, so you don't need to read it to continue with the post. If it interests you, just click on _"Address Calculation"_ to expand it.
+
+---
+
+<details>
+<summary><h4>Address Calculation</h4></summary>
 
 We saw that we can access tables of all levels by following the recursive entry once or multiple times before the actual translation. Since the indexes into the tables of the four levels are derived directly from the virtual address, we need to construct special virtual addresses for this technique. Remember, the page table indexes are derived from the address in the following way:
 
@@ -155,6 +166,207 @@ Whereas `AAA` is the level 4 index, `BBB` the level 3 index, `CCC` the level 2 i
 [sign extension]: ./second-edition/posts/09-paging-introduction/index.md#paging-on-x86
 
 We use [octal] numbers for representing the addresses since each octal character represents three bits, which allows us to clearly separate the 9-bit indexes of the different page table levels. This isn't possible with the hexadecimal system where each character represents four bits.
+
+##### In Rust Code
+
+To construct such addresses in Rust code, you can use bitwise operations:
+
+```rust
+// the virtual address whose corresponding page tables you want to access
+let addr: usize = […];
+
+let r = 0o777; // recursive index
+let sign = 0o177777 << 48; // sign extension
+
+// retrieve the page table indices of the address that we want to translate
+let l4_idx = (addr >> 39) & 0o777; // level 4 index
+let l3_idx = (addr >> 30) & 0o777; // level 3 index
+let l2_idx = (addr >> 21) & 0o777; // level 2 index
+let l1_idx = (addr >> 12) & 0o777; // level 1 index
+let page_offset = addr & 0o7777;
+
+// calculate the table addresses
+let level_4_table_addr =
+    sign | (r << 39) | (r << 30) | (r << 21) | (r << 12);
+let level_3_table_addr =
+    sign | (r << 39) | (r << 30) | (r << 21) | (l4_idx << 12);
+let level_2_table_addr =
+    sign | (r << 39) | (r << 30) | (l4_idx << 21) | (l3_idx << 12);
+let level_1_table_addr =
+    sign | (r << 39) | (l4_idx << 30) | (l3_idx << 21) | (l2_idx << 12);
+```
+
+The above code assumes that the last level 4 entry with index `0o777` (511) is recursively mapped. This isn't the case currently, so the code won't work yet. See below on how to tell the bootloader to set up the recursive mapping.
+
+Alternatively to performing the bitwise operations by hand, you can use the [`RecursivePageTable`] type of the `x86_64` crate, which provides safe abstractions for various page table operations. For example, the code below shows how to translate a virtual address to its mapped physical address:
+
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.3.5/x86_64/structures/paging/struct.RecursivePageTable.html
+
+```rust
+// in src/memory.rs
+
+use x86_64::structures::paging::{Mapper, Page, PageTable, RecursivePageTable};
+use x86_64::{VirtAddr, PhysAddr};
+
+/// Creates a RecursivePageTable instance from the level 4 address.
+let level_4_table_addr = […];
+let level_4_table_ptr = level_4_table_addr as *mut PageTable;
+let recursive_page_table = unsafe {
+    let level_4_table = &mut *level_4_table_ptr;
+    RecursivePageTable::new(level_4_table).unwrap();
+}
+
+
+/// Retrieve the physical address for the given virtual address
+let addr: u64 = […]
+let addr = VirtAddr::new(addr);
+let page: Page = Page::containing_address(addr);
+
+// perform the translation
+let frame = recursive_page_table.translate_page(page);
+frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
+```
+
+Again, a valid recursive mapping is required for this code. With such a mapping, the missing `level_4_table_addr` can be calculated as in the first code example.
+
+</details>
+
+---
+
+Recursive Paging is a interesting technique that shows how powerful a single mapping in a page table can be. It is relatively easy to implement and only requires a minimal amount of setup (just a single recursive entry), so it's a good choice for first experiments with paging.
+
+However, it also has some disadvantages:
+
+- It occupies a large amount of virtual memory (512GiB). This isn't a big problem in the large 48-bit address space, but it might lead to suboptimal cache behavior.
+- It only allows accessing the currently active address space easily. Accessing other address spaces is still possible by changing the recursive entry, but a temporary mapping is required for switching back. We described how to do this in the (outdated) [_Remap The Kernel_] post.
+- It heavily relies on the page table format of x86 and might not work on other architectures.
+
+[_Remap The Kernel_]: https://os.phil-opp.com/remap-the-kernel/#overview
+
+For these reasons we will choose a different approach.
+
+## Choosing a Design
+
+This is the first time that we need a design decision for our kernel.
+
+
+
+
+
+
+---
+
+
+
+
+For now it suffices to know that the bootloader used a technique called _recursive page tables_ to map the last page of the virtual address space to the physical frame of the level 4 page table. The last page of the virtual address space is `0xffff_ffff_ffff_f000`, so let's use it to read some entries of that table:
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    […] // initialize GDT, IDT, PICS
+
+    let level_4_table_pointer = 0xffff_ffff_ffff_f000 as *const u64;
+    for i in 0..10 {
+        let entry = unsafe { *level_4_table_pointer.offset(i) };
+        println!("Entry {}: {:#x}", i, entry);
+    }
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+We cast the address of the last virtual page to a pointer to an `u64`. As we saw in the [previous section][page table format], each page table entry is 8 bytes (64 bits), so an `u64` represents exactly one entry. We print the first 10 entries of the table using a `for` loop. Inside the loop, we use an unsafe block to read from the raw pointer and the [`offset` method] to perform pointer arithmetic.
+
+[page table format]: #page-table-format
+[`offset` method]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
+
+When we run it, we see the following output:
+
+![Entry 0: 0x2023, Entry 1: 0x6e2063, Entry 2-9: 0x0](qemu-print-p4-entries.png)
+
+When we look at the [format of page table entries][page table format], we see that the value `0x2023` of entry 0 means that the entry is `present`, `writable`, was `accessed` by the CPU, and is mapped to frame `0x2000`. Entry 1 is mapped to frame `0x6e2000` and has the same flags as entry 0, with the addition of the `dirty` flag that indicates that the page was written. Entries 2–9 are not `present`, so these virtual address ranges are not mapped to any physical addresses.
+
+Instead of working with unsafe raw pointers we can use the [`PageTable`] type of the `x86_64` crate:
+
+[`PageTable`]: https://docs.rs/x86_64/0.3.4/x86_64/structures/paging/struct.PageTable.html
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    […] // initialize GDT, IDT, PICS
+
+    use x86_64::structures::paging::PageTable;
+
+    let level_4_table_ptr = 0xffff_ffff_ffff_f000 as *const PageTable;
+    let level_4_table = unsafe {&*level_4_table_ptr};
+    for i in 0..10 {
+        println!("Entry {}: {:?}", i, level_4_table[i]);
+    }
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+Here we cast the `0xffff_ffff_ffff_f000` pointer first to a raw pointer and then transform it to a Rust reference. This operation still needs `unsafe`, because the compiler can't know that this accessing this address is valid. But after this conversion we have a safe `&PageTable` type, which allows us to access the individual entries through safe, bounds checked [indexing operations].
+
+[indexing operations]: https://doc.rust-lang.org/core/ops/trait.Index.html
+
+The crate also provides some abstractions for the individual entries so that we directly see which flags are set when we print them:
+
+![
+Entry 0: PageTableEntry { addr: PhysAddr(0x2000), flags: PRESENT | WRITABLE | ACCCESSED }
+Entry 1: PageTableEntry { addr: PhysAddr(0x6e5000), flags: PRESENT | WRITABLE | ACCESSED | DIRTY }
+Entry 2: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 3: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 4: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 5: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 6: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 7: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 8: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+Entry 9: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
+](qemu-print-p4-entries-abstraction.png)
+
+The next step would be to follow the pointers in entry 0 or entry 1 to a level 3 page table. But we now again have the problem that `0x2000` and `0x6e5000` are physical addresses, so we can't access them directly. This problem will be solved in the next post.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Implementation
 
