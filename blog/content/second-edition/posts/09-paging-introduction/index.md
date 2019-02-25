@@ -384,83 +384,7 @@ So the currently active level 4 page table is stored at address `0x1000` in _phy
 
 Accessing physical memory directly is not possible when paging is active, since programs could easily circumvent memory protection and access memory of other programs otherwise. So the only way to access the table is through some virtual page that is mapped to the physical frame at address `0x1000`. This problem of creating mappings for page table frames is a general problem, since the kernel needs to access the page tables regularly, for example when allocating a stack for a new thread.
 
-Solutions to this problem are explained in detail in the next post. For now it suffices to know that the bootloader used a technique called _recursive page tables_ to map the last page of the virtual address space to the physical frame of the level 4 page table. The last page of the virtual address space is `0xffff_ffff_ffff_f000`, so let's use it to read some entries of that table:
-
-```rust
-// in src/main.rs
-
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    […] // initialize GDT, IDT, PICS
-
-    let level_4_table_pointer = 0xffff_ffff_ffff_f000 as *const u64;
-    for i in 0..10 {
-        let entry = unsafe { *level_4_table_pointer.offset(i) };
-        println!("Entry {}: {:#x}", i, entry);
-    }
-
-    println!("It did not crash!");
-    blog_os::hlt_loop();
-}
-```
-
-We cast the address of the last virtual page to a pointer to an `u64`. As we saw in the [previous section][page table format], each page table entry is 8 bytes (64 bits), so an `u64` represents exactly one entry. We print the first 10 entries of the table using a `for` loop. Inside the loop, we use an unsafe block to read from the raw pointer and the [`offset` method] to perform pointer arithmetic.
-
-[page table format]: #page-table-format
-[`offset` method]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
-
-When we run it, we see the following output:
-
-![Entry 0: 0x2023, Entry 1: 0x6e2063, Entry 2-9: 0x0](qemu-print-p4-entries.png)
-
-When we look at the [format of page table entries][page table format], we see that the value `0x2023` of entry 0 means that the entry is `present`, `writable`, was `accessed` by the CPU, and is mapped to frame `0x2000`. Entry 1 is mapped to frame `0x6e2000` and has the same flags as entry 0, with the addition of the `dirty` flag that indicates that the page was written. Entries 2–9 are not `present`, so these virtual address ranges are not mapped to any physical addresses.
-
-Instead of working with unsafe raw pointers we can use the [`PageTable`] type of the `x86_64` crate:
-
-[`PageTable`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/page_table/struct.PageTable.html
-
-```rust
-// in src/main.rs
-
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    […] // initialize GDT, IDT, PICS
-
-    use x86_64::structures::paging::PageTable;
-
-    let level_4_table_ptr = 0xffff_ffff_ffff_f000 as *const PageTable;
-    let level_4_table = unsafe {&*level_4_table_ptr};
-    for i in 0..10 {
-        println!("Entry {}: {:?}", i, level_4_table[i]);
-    }
-
-    println!("It did not crash!");
-    blog_os::hlt_loop();
-}
-```
-
-Here we cast the `0xffff_ffff_ffff_f000` pointer first to a raw pointer and then transform it to a Rust reference. This operation still needs `unsafe`, because the compiler can't know that this accessing this address is valid. But after this conversion we have a safe `&PageTable` type, which allows us to access the individual entries through safe, bounds checked [indexing operations].
-
-[indexing operations]: https://doc.rust-lang.org/core/ops/trait.Index.html
-
-The crate also provides some abstractions for the individual entries so that we directly see which flags are set when we print them:
-
-![
-Entry 0: PageTableEntry { addr: PhysAddr(0x2000), flags: PRESENT | WRITABLE | ACCCESSED }
-Entry 1: PageTableEntry { addr: PhysAddr(0x6e5000), flags: PRESENT | WRITABLE | ACCESSED | DIRTY }
-Entry 2: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
-Entry 3: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
-Entry 4: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
-Entry 5: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
-Entry 6: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
-Entry 7: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
-Entry 8: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
-Entry 9: PageTableEntry { addr: PhysAddr(0x0), flags: (empty)}
-](qemu-print-p4-entries-abstraction.png)
-
-The next step would be to follow the pointers in entry 0 or entry 1 to a level 3 page table. But we now again have the problem that `0x2000` and `0x6e5000` are physical addresses, so we can't access them directly. This problem will be solved in the next post.
+Solutions to this problem are explained in detail in the next post.
 
 ## Summary
 
@@ -468,8 +392,8 @@ This post introduced two memory protection techniques: segmentation and paging. 
 
 Paging stores the mapping information for pages in page tables with one or more levels. The x86_64 architecture uses 4-level page tables and a page size of 4KiB. The hardware automatically walks the page tables and caches the resulting translations in the translation lookaside buffer (TLB). This buffer is not updated transparently and needs to be flushed manually on page table changes.
 
-We learned that our kernel already runs on top of paging and that illegal memory accesses cause page fault exceptions. We tried to access the currently active page tables, but we were only able to access the level 4 table, since page tables store physical addresses that we can't access directly from our kernel.
+We learned that our kernel already runs on top of paging and that illegal memory accesses cause page fault exceptions. We tried to access the currently active page tables, but we weren't able to do it because the CR3 register stores a physical address that we can't access directly from our kernel.
 
 ## What's next?
 
-The next post builds upon the fundamentals we learned in this post. It introduces an advanced technique called _recursive page tables_ to solve the problem of accessing page tables from our kernel. This allows us to traverse the page table hierarchy and implement a software based translation function. The post also explains how to create a new mapping in the page tables.
+The next post explains how to implement support for paging in our kernel. It presents different ways to access physical memory from our kernel, which makes it possible to access the page tables that our kernel runs on. At this point we are able to implement functions for translating virtual to physical addresses and for creating new mappings in the page tables.
