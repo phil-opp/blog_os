@@ -245,13 +245,98 @@ However, it also has some disadvantages:
 
 For these reasons we will choose a different approach.
 
-## Choosing a Design
+## Bootloader Support
 
-This is the first time that we need a design decision for our kernel.
+All of these approaches require page table modifications for their setup. For example, mappings for the physical memory need to be created or an entry of the level 4 table needs to be mapped recursively. The problem is that we can't create these required mappings without an existing way to access the page tables.
+
+This means that we need the help of the bootloader, which creates the page tables that our kernel runs on. The bootloader has access to the page tables, so it can create any mappings that we need. In its current implementation, the `bootloader` crate has support for two of the above approaches, controlled through [cargo features]:
+
+- With the `recursive-page-table` TODO feature, the bootloader maps an entry of the level 4 page table recursively. This allows the kernel to access the page tables as described in the [Recursive Page Tables](#recursive-page-tables) section.
+- The `map-physical-memory` TODO feature maps the complete physical memory somewhere into the virtual address space. Thus, the kernel can access all physical memory and can follow the [TODO](#todo) approach.
+
+We choose the TODO approach for our kernel since it is simple, platform-independent, and more powerful (it also allows to access non-page-table-frames). To enable the required bootloader support, we add the `map-physical-memory` feature to our `bootloader` dependency:
+
+```toml
+[dependencies]
+bootloader = { version = TODO, features = ["map-physical-memory"]}
+```
+
+With this feature enabled, the bootloader maps the complete physical memory to some unused virtual address range. To communicate the virtual address range to our kernel, the bootloader passes a _boot information_ structure.
+
+### Boot Information
+
+The `bootloader` crate defines a [`BootInfo`] struct that contains all the information it passes to our kernel. The struct is still in an early stage, so expect some breakage when updating to future [semver-incompatible] bootloader versions. With the `map-physical-memory` feature enabled, it currently has the two fields `memory_map` and `physical_memory_offset`:
+
+[`BootInfo`]: https://docs.rs/bootloader/0.3.11/bootloader/bootinfo/struct.BootInfo.html
+[semver-incompatible]: https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html#caret-requirements
+
+- The `memory_map` field contains an overview over the available physical memory. This tells our kernel how much physical memory is available in the system and which memory regions are reserved for devices such as the VGA hardware. The memory map can be queried from the BIOS or UEFI firmware, but only very early in the boot process. For this reason, it must be provided by the bootloader because there is no way for the kernel to retrieve it later. We will need the memory map later in this post.
+- The `physical_memory_offset` tells us the virtual start address of the physical memory mapping. By adding this offset to a physical address, we get the corresponding virtual address. This allows us to access arbitrary physical memory from our kernel.
+
+The bootloader passes the `BootInfo` struct to our kernel in form of a `&'static BootInfo` argument to our `_start` function. We don't have this argument declared in our function yet, so let's add it:
+
+```rust
+// in src/main.rs
+
+use bootloader::bootinfo::BootInfo;
+
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // new argument
+    […]
+}
+```
+
+It wasn't a problem to leave off this argument before because the x86_64 calling convention passes the first argument in a CPU register. Thus, the argument is simply ignored when it isn't declared. However, it would be a problem if we accidentally used a wrong argument type, since the compiler doesn't know the correct type signature of our entry point function.
+
+### The `entry_point` Macro
+
+Since our `_start` function is called externally from the bootloader, no checking of our function signature occurs. This means that we could let it take arbitrary arguments without any compilation errors, but it would fail or cause undefined behavior at runtime.
+
+To make sure that the entry point function has always the correct signature that the bootloader expects, the `bootloader` crate provides an [`entry_point`] macro that provides a type-checked way to define a Rust function as the entry point. Let's rewrite our entry point function to use this macro:
+
+[`entry_point`]: https://docs.rs/bootloader/0.3.12/bootloader/macro.entry_point.html
+
+```rust
+// in src/main.rs
+
+use bootloader::{bootinfo::BootInfo, entry_point};
+
+entry_point!(kernel_main);
+
+#[cfg(not(test))]
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    […] // initialize GDT, IDT, PICS
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the real lower level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. The important thing is that it is type-checked so that a compilation error occurs when we now try to modify the function signature in any way, for example adding an argument or changing the argument type.
+
+## Implementation
+
+### Accessing the Page Tables
+
+### Translating Addresses
+
+### Creating a new Mapping
+
+### Allocating Frames
 
 
 
 
+
+
+
+
+
+---
+
+
+The amount of physical memory and the memory regions reserved by devices like the VGA hardware vary between different machines. Only the BIOS or UEFI firmware knows exactly which memory regions can be used by the operating system and which regions are reserved. Both firmware standards provide functions to retrieve the memory map, but they can only be called very early in the boot process. For this reason, the bootloader already queries this and other information from the firmware.
 
 
 ---
@@ -750,68 +835,32 @@ panicked at 'map_to failed: FrameAllocationFailed', /…/result.rs:999:5
 
 To map pages that don't have a level 1 page table yet we need to create a proper `FrameAllocator`. But how do we know which frames are unused and how much physical memory is available?
 
-### Boot Information
 
-The amount of physical memory and the memory regions reserved by devices like the VGA hardware vary between different machines. Only the BIOS or UEFI firmware knows exactly which memory regions can be used by the operating system and which regions are reserved. Both firmware standards provide functions to retrieve the memory map, but they can only be called very early in the boot process. For this reason, the bootloader already queries this and other information from the firmware.
 
-To communicate this information to our kernel, the bootloader passes a reference to a boot information structure as an argument when calling our `_start` function. Right now we don't have this argument declared in our function, so it is ignored. Let's add it:
 
-```rust
-// in src/main.rs
 
-use bootloader::bootinfo::BootInfo;
 
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // new argument
-    […]
-}
-```
 
-The [`BootInfo`] struct is still in an early stage, so expect some breakage when updating to future [semver-incompatible] bootloader versions. It currently has the three fields `p4_table_addr`, `memory_map`, and `package`:
 
-[`BootInfo`]: https://docs.rs/bootloader/0.3.11/bootloader/bootinfo/struct.BootInfo.html
-[semver-incompatible]: https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html#caret-requirements
+---
 
-- The `p4_table_addr` field contains the recursive virtual address of the level 4 page table. By using this field we can avoid hardcoding the address `0o_177777_777_777_777_777_0000`.
-- The `memory_map` field is most interesting to us since it contains a list of all memory regions and their type (i.e. unused, reserved, or other).
--  The `package` field is an in-progress feature to bundle additional data with the bootloader. The implementation is not finished, so we can ignore this field for now.
 
-Before we use the `memory_map` field to create a proper `FrameAllocator`, we want to ensure that we can't use a `boot_info` argument of the wrong type.
 
-#### The `entry_point` Macro
 
-Since our `_start` function is called externally from the bootloader, no checking of our function signature occurs. This means that we could let it take arbitrary arguments without any compilation errors, but it would fail or cause undefined behavior at runtime.
 
-To make sure that the entry point function has always the correct signature that the bootloader expects, the `bootloader` crate provides an [`entry_point`] macro that provides a type-checked way to define a Rust function as the entry point. Let's rewrite our entry point function to use this macro:
 
-[`entry_point`]: https://docs.rs/bootloader/0.3.12/bootloader/macro.entry_point.html
 
-```rust
-// in src/main.rs
 
-use bootloader::{bootinfo::BootInfo, entry_point};
 
-entry_point!(kernel_main);
 
-#[cfg(not(test))]
-fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […] // initialize GDT, IDT, PICS
 
-    let mut recursive_page_table = unsafe {
-        memory::init(boot_info.p4_table_addr as usize)
-    };
 
-    […] // create and test example mapping
 
-    println!("It did not crash!");
-    blog_os::hlt_loop();
-}
-```
 
-We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the real lower level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. The important thing is that it is type-checked so that a compilation error occurs when we now try to modify the function signature in any way, for example adding an argument or changing the argument type.
 
-Note that we now pass `boot_info.p4_table_addr` instead of a hardcoded address to our `memory::init`. Thus our code continues to work even if a future version of the bootloader chooses a different entry of the level 4 page table for the recursive mapping.
+
+
+
 
 ### Allocating Frames
 
