@@ -275,7 +275,7 @@ pub extern "C" fn _start() -> ! {
     // some code page
     println!("0x20010a -> {:?}", translate_addr(0x20010a));
     // some stack page
-    println!("0x57ac001ffe48 -> {:?}", translate_addr(0x57ac001ffe48));
+    println!("0x57ac_001f_fe48 -> {:?}", translate_addr(0x57ac_001f_fe48));
 
 
     println!("It did not crash!");
@@ -347,7 +347,7 @@ pub extern "C" fn _start() -> ! {
     // some code page
     println!("0x20010a -> {:?}", translate_addr(0x20010a, &recursive_page_table));
     // some stack page
-    println!("0x57ac001ffe48 -> {:?}", translate_addr(0x57ac001ffe48,
+    println!("0x57ac_001f_fe48 -> {:?}", translate_addr(0x57ac_001f_fe48,
         &recursive_page_table));
 
     println!("It did not crash!");
@@ -489,7 +489,7 @@ pub extern "C" fn _start() -> ! {
     let mut recursive_page_table = unsafe { memory::init(LEVEL_4_TABLE_ADDR) };
 
     create_example_mapping(&mut recursive_page_table, &mut EmptyFrameAllocator);
-    unsafe { (0x1900 as *mut u64).write_volatile(0xf021f077f065f04e)};
+    unsafe { (0x1900 as *mut u64).write_volatile(0xf021_f077_f065_f04e)};
 
     println!("It did not crash!");
     blog_os::hlt_loop();
@@ -498,7 +498,7 @@ pub extern "C" fn _start() -> ! {
 
 We first create the mapping for the page at `0x1000` by calling our `create_example_mapping` function with a mutable reference to the `RecursivePageTable` instance. This maps the page `0x1000` to the VGA text buffer, so we should see any write to it on the screen.
 
-Then we write the value `0xf021f077f065f04e` to this page, which represents the string _"New!"_ on white background. We don't write directly to the beginning of the page at `0x1000` since the top line is directly shifted off the screen by the next `println`. Instead, we write to offset `0x900`, which is about in the middle of the screen. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile, so we use the [`write_volatile`] method.
+Then we write the value `0xf021_f077_f065_f04e` to this page, which represents the string _"New!"_ on white background. We don't write directly to the beginning of the page at `0x1000` since the top line is directly shifted off the screen by the next `println`. Instead, we write to offset `0x900`, which is about in the middle of the screen. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile, so we use the [`write_volatile`] method.
 
 [in the _“VGA Text Mode”_ post]: ./second-edition/posts/03-vga-text-buffer/index.md#volatile
 [`write_volatile`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write_volatile
@@ -525,7 +525,7 @@ pub fn create_example_mapping(…) {
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     […]
-    unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e)};
+    unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021_f077_f065_f04e)};
     […]
 }
 ```
@@ -686,7 +686,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);
 
     blog_os::memory::create_example_mapping(&mut recursive_page_table, &mut frame_allocator);
-    unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e)};
+    unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021_f077_f065_f04e)};
 
     println!("It did not crash!");
     blog_os::hlt_loop();
