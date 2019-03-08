@@ -409,7 +409,7 @@ The difficulty of creating a new mapping depends on the virtual page that we wan
 
 Let's start with the simple case and assume that we don't need to create new page tables. The bootloader loads itself in the first megabyte of the virtual address space, so we know that a valid level 1 table exists for this region. We can choose any unused page in this memory region for our example mapping, for example, the page at address `0x1000`. As the target frame we use `0xb8000`, the frame of the VGA text buffer. This way we can easily test whether our mapping worked.
 
-We implement it in a new `create_mapping` function in our `memory` module:
+We implement it in a new `create_example_mapping` function in our `memory` module:
 
 ```rust
 // in src/memory.rs
@@ -685,7 +685,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     // new
     let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);
 
-    blog_os::memory::create_mapping(&mut recursive_page_table, &mut frame_allocator);
+    blog_os::memory::create_example_mapping(&mut recursive_page_table, &mut frame_allocator);
     unsafe { (0xdeadbeaf900 as *mut u64).write_volatile(0xf021f077f065f04e)};
 
     println!("It did not crash!");
@@ -700,7 +700,7 @@ Now the mapping succeeds and we see the black-on-white _"New!"_ on the screen ag
 - Zero the frame to create a new, empty page table.
 - Continue with the next table level.
 
-While our `create_mapping` function is just some example code, we are now able to create new mappings for arbitrary pages. This will be essential for allocating memory or implementing multithreading in future posts.
+While our `create_example_mapping` function is just some example code, we are now able to create new mappings for arbitrary pages. This will be essential for allocating memory or implementing multithreading in future posts.
 
 ## Summary
 
