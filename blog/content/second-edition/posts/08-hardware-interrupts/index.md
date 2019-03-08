@@ -634,7 +634,7 @@ We use the `lazy_static` macro to create a static [`Keyboard`] object protected 
 
 To interpret this key event, we pass it to the [`process_keyevent`] method, which translates the key event to a character if possible. For example, translates a press event of the `A` key to either a lowercase `a` character or an uppercase `A` character, depending on whether the shift key was pressed.
 
-[`process_keyevent]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/struct.Keyboard.html#method.process_keyevent
+[`process_keyevent`]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/struct.Keyboard.html#method.process_keyevent
 
 With this modified interrupt handler we can now write text:
 
