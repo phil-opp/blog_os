@@ -39,17 +39,6 @@ pub fn init_frame_allocator(
     BootInfoFrameAllocator { frames }
 }
 
-/// Returns the physical address for the given virtual address, or `None` if
-/// the virtual address is not mapped.
-pub fn translate_addr(addr: u64, recursive_page_table: &RecursivePageTable) -> Option<PhysAddr> {
-    let addr = VirtAddr::new(addr);
-    let page: Page = Page::containing_address(addr);
-
-    // perform the translation
-    let frame = recursive_page_table.translate_page(page);
-    frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
-}
-
 pub fn create_example_mapping(
     recursive_page_table: &mut RecursivePageTable,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
