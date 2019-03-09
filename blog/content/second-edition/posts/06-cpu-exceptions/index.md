@@ -383,7 +383,7 @@ pub extern "C" fn _start() -> ! {
     blog_os::interrupts::init_idt();
 
     // invoke a breakpoint exception
-    x86_64::instructions::int3();
+    x86_64::instructions::interrupts::int3();
 
     println!("It did not crash!");
     loop {}
@@ -417,7 +417,7 @@ use blog_os::{exit_qemu, serial_println};
 pub extern "C" fn _start() -> ! {
     blog_os::interrupts::init_idt();
 
-    x86_64::instructions::int3();
+    x86_64::instructions::interrupts::int3();
 
     serial_println!("ok");
 
