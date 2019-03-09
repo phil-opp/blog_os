@@ -275,7 +275,7 @@ lazy_static! {
 use x86_64::structures::idt::PageFaultErrorCode;
 
 extern "x86-interrupt" fn page_fault_handler(
-    stack_frame: &mut ExceptionStackFrame,
+    stack_frame: &mut InterruptStackFrame,
     _error_code: PageFaultErrorCode,
 ) {
     use crate::hlt_loop;
@@ -326,7 +326,7 @@ pub extern "C" fn _start() -> ! {
 
 When we run it, we see that our page fault handler is called:
 
-![EXCEPTION: Page Fault, Accessed Address: VirtAddr(0xdeadbeaf), ExceptionStackFrame: {…}](qemu-page-fault.png)
+![EXCEPTION: Page Fault, Accessed Address: VirtAddr(0xdeadbeaf), InterruptStackFrame: {…}](qemu-page-fault.png)
 
 The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access.
 

@@ -214,7 +214,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     print!(".");
 }
@@ -239,7 +239,7 @@ To send the EOI, we use our static `PICS` struct again:
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     print!(".");
 
@@ -426,7 +426,7 @@ We can also use `hlt_loop` in our double fault exception handler as well:
 use crate::hlt_loop; // new
 
 extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: &mut ExceptionStackFrame,
+    stack_frame: &mut InterruptStackFrame,
     _error_code: u64,
 ) {
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
@@ -476,7 +476,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     print!("k");
 
@@ -501,7 +501,7 @@ To find out _which_ key was pressed, we need to query the keyboard controller. W
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
 
@@ -542,7 +542,7 @@ To translate the scancodes to keys, we can use a match statement:
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
 
@@ -595,7 +595,7 @@ Now we can use this crate to rewrite our `keyboard_interrupt_handler`:
 // in/src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
     use pc_keyboard::{Keyboard, ScancodeSet1, DecodedKey, layouts};
