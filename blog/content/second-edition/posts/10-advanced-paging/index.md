@@ -270,13 +270,18 @@ pub extern "C" fn _start() -> ! {
 
     use blog_os::memory::translate_addr;
 
-    // the identity-mapped vga buffer page
-    println!("0xb8000 -> {:?}", translate_addr(0xb8000));
-    // some code page
-    println!("0x20010a -> {:?}", translate_addr(0x20010a));
-    // some stack page
-    println!("0x57ac_001f_fe48 -> {:?}", translate_addr(0x57ac_001f_fe48));
+    let addresses = [
+        // the identity-mapped vga buffer page
+        0xb8000,
+        // some code page
+        0x20010a,
+        // some stack page
+        0x57ac_001f_fe48,
+    ];
 
+    for &address in &addresses {
+        println!("{:?} -> {:?}", address, translate_addr(address));
+    }
 
     println!("It did not crash!");
     blog_os::hlt_loop();
@@ -291,9 +296,10 @@ As expected, the identity-mapped address `0xb8000` translates to the same physic
 
 #### The `RecursivePageTable` Type
 
-The `x86_64` provides a [`RecursivePageTable`] type that implements safe abstractions for various page table operations. By using this type, we can reimplement our `translate_addr` function in a much cleaner way:
+The `x86_64` provides a [`RecursivePageTable`] type that implements safe abstractions for various page table operations. The type implements the [`MapperAllSizes`] trait, which already contains a `translate_addr` function that we can use instead of hand-rolling our own. To create a new `RecursivePageTable`, we create a `memory::init` function:
 
 [`RecursivePageTable`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/struct.RecursivePageTable.html
+[`MapperAllSizes`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
 
 ```rust
 // in src/memory.rs
@@ -310,24 +316,11 @@ pub unsafe fn init(level_4_table_addr: usize) -> RecursivePageTable<'static> {
     let level_4_table = &mut *level_4_table_ptr;
     RecursivePageTable::new(level_4_table).unwrap()
 }
-
-/// Returns the physical address for the given virtual address, or `None` if
-/// the virtual address is not mapped.
-pub fn translate_addr(addr: u64, recursive_page_table: &RecursivePageTable)
-    -> Option<PhysAddr>
-{
-    let addr = VirtAddr::new(addr);
-    let page: Page = Page::containing_address(addr);
-
-    // perform the translation
-    let frame = recursive_page_table.translate_page(page);
-    frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
-}
 ```
 
-The `RecursivePageTable` type encapsulates the unsafety of the page table walk completely so that we no longer need `unsafe` in our `translate_addr` function. The `init` function needs to be unsafe because the caller has to guarantee that the passed `level_4_table_addr` is valid.
+The `RecursivePageTable` type encapsulates the unsafety of the page table walk completely so that we no longer need `unsafe` to implement our own `translate_addr` function. The `init` function needs to be unsafe because the caller has to guarantee that the passed `level_4_table_addr` is valid.
 
-Our `_start` function needs to be updated for the new function signature in the following way:
+We can now use the `MapperAllSizes::translate_addr` function in our `_start` function:
 
 ```rust
 // in src/main.rs
@@ -337,25 +330,33 @@ Our `_start` function needs to be updated for the new function signature in the 
 pub extern "C" fn _start() -> ! {
     […] // initialize GDT, IDT, PICS
 
-    use blog_os::memory::{self, translate_addr};
+    use blog_os::memory;
+    use x86_64::{
+        structures::paging::MapperAllSizes,
+        VirtAddr,
+    };
 
     const LEVEL_4_TABLE_ADDR: usize = 0o_177777_777_777_777_777_0000;
     let recursive_page_table = unsafe { memory::init(LEVEL_4_TABLE_ADDR) };
 
-    // the identity-mapped vga buffer page
-    println!("0xb8000 -> {:?}", translate_addr(0xb8000, &recursive_page_table));
-    // some code page
-    println!("0x20010a -> {:?}", translate_addr(0x20010a, &recursive_page_table));
-    // some stack page
-    println!("0x57ac_001f_fe48 -> {:?}", translate_addr(0x57ac_001f_fe48,
-        &recursive_page_table));
+    let addresses = […]; // as before
+    for &address in &addresses {
+        let virt_addr = VirtAddr::new(address);
+        let phys_addr = recursive_page_table.translate_addr(virt_addr);
+        println!("{:?} -> {:?}", virt_addr, phys_addr);
+    }
 
     println!("It did not crash!");
     blog_os::hlt_loop();
 }
 ```
 
-Instead of passing the `LEVEL_4_TABLE_ADDR` to `translate_addr` and accessing the page tables through unsafe raw pointers, we now pass references to a `RecursivePageTable` type. By doing this, we now have a safe abstraction and clear ownership semantics. This ensures that we can't accidentally modify the page table concurrently, because an exclusive borrow of the `RecursivePageTable` is needed in order to modify it.
+Instead of using `u64` for all addresses we now use the [`VirtAddr`] and [`PhysAddr`] wrapper types to differentiate the two kinds of addresses. In order to be able to call the `translate_addr` method, we need to import the `MapperAllSizes` trait.
+
+[`VirtAddr`]: https://docs.rs/x86_64/0.5.0/x86_64/struct.VirtAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.5.0/x86_64/struct.PhysAddr.html
+
+By using the `RecursivePageTable` type, we now have a safe abstraction and clear ownership semantics. This ensures that we can't accidentally modify the page table concurrently, because an exclusive borrow of the `RecursivePageTable` is needed in order to modify it.
 
 When we run it, we see the same result as with our handcrafted translation function.
 
