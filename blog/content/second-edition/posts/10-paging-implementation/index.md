@@ -33,11 +33,12 @@ The next section discusses the problem in detail and provides different approach
 
 ### Dependency Updates
 
-This post requires version 0.4.0 or later of the `x86_64` dependency. You can update the dependency in your `Cargo.toml`:
+This post requires version 0.5.0 or later of the `x86_64` dependency and version 0.4.0 or later of the `bootloader` dependency. You can update the dependencies in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-x86_64 = "0.4.0" # or later
+x86_64 = "0.5.0"
+bootloader = "0.4.0"
 ```
 
 ## Accessing Page Tables
