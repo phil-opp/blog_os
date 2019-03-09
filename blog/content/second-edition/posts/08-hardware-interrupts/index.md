@@ -214,7 +214,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     print!(".");
 }
@@ -222,7 +222,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 Our `timer_interrupt_handler` has the same signature as our exception handlers, because the CPU reacts identically to exceptions and external interrupts (the only difference is that some exceptions push an error code). The [`InterruptDescriptorTable`] struct implements the [`IndexMut`] trait, so we can access individual entries through array indexing syntax.
 
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.2.11/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
 In our timer interrupt handler, we print a dot to the screen. As the timer interrupt happens periodically, we would expect to see a dot appearing on each timer tick. However, when we run it we see that only a single dot is printed:
@@ -239,7 +239,7 @@ To send the EOI, we use our static `PICS` struct again:
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     print!(".");
 
@@ -348,7 +348,7 @@ pub fn _print(args: fmt::Arguments) {
 
 The [`without_interrupts`] function takes a [closure] and executes it in an interrupt-free environment. We use it to ensure that no interrupt can occur as long as the `Mutex` is locked. When we run our kernel now we see that it keeps running without hanging. (We still don't notice any dots, but this is because they're scrolling by too fast. Try to slow down the printing, e.g. by putting a `for _ in 0..10000 {}` inside the loop.)
 
-[`without_interrupts`]: https://docs.rs/x86_64/0.2.10/x86_64/instructions/interrupts/fn.without_interrupts.html
+[`without_interrupts`]: https://docs.rs/x86_64/0.5.0/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/second-edition/ch13-01-closures.html
 
 We can apply the same change to our serial printing function to ensure that no deadlocks occur with it either:
@@ -426,7 +426,7 @@ We can also use `hlt_loop` in our double fault exception handler as well:
 use crate::hlt_loop; // new
 
 extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: &mut ExceptionStackFrame,
+    stack_frame: &mut InterruptStackFrame,
     _error_code: u64,
 ) {
     println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
@@ -476,7 +476,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     print!("k");
 
@@ -501,7 +501,7 @@ To find out _which_ key was pressed, we need to query the keyboard controller. W
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
 
@@ -518,7 +518,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard's data port. This byte is called the [_scancode_] and is a number that represents the key press/release. We don't do anything with the scancode yet, we just print it to the screen:
 
-[`Port`]: https://docs.rs/x86_64/0.2.11/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.5.0/x86_64/instructions/port/struct.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
 
 ![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)
@@ -542,7 +542,7 @@ To translate the scancodes to keys, we can use a match statement:
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
 
@@ -595,7 +595,7 @@ Now we can use this crate to rewrite our `keyboard_interrupt_handler`:
 // in/src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut ExceptionStackFrame)
+    _stack_frame: &mut InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
     use pc_keyboard::{Keyboard, ScancodeSet1, DecodedKey, layouts};

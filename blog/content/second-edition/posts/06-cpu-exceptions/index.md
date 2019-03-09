@@ -80,7 +80,7 @@ Don't worry about steps 4 and 5 for now, we will learn about the global descript
 ## An IDT Type
 Instead of creating our own IDT type, we will use the [`InterruptDescriptorTable` struct] of the `x86_64` crate, which looks like this:
 
-[`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.2.8/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.5.0/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 
 ``` rust
 #[repr(C)]
@@ -111,15 +111,15 @@ pub struct InterruptDescriptorTable {
 
 The fields have the type [`idt::Entry<F>`], which is a struct that represents the fields of an IDT entry (see the table above). The type parameter `F` defines the expected handler function type. We see that some entries require a [`HandlerFunc`] and some entries require a [`HandlerFuncWithErrCode`]. The page fault even has its own special type: [`PageFaultHandlerFunc`].
 
-[`idt::Entry<F>`]: https://docs.rs/x86_64/0.2.8/x86_64/structures/idt/struct.Entry.html
-[`HandlerFunc`]: https://docs.rs/x86_64/0.2.8/x86_64/structures/idt/type.HandlerFunc.html
-[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.2.8/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
-[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.2.8/x86_64/structures/idt/type.PageFaultHandlerFunc.html
+[`idt::Entry<F>`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/idt/struct.Entry.html
+[`HandlerFunc`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/idt/type.HandlerFunc.html
+[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
+[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/idt/type.PageFaultHandlerFunc.html
 
 Let's look at the `HandlerFunc` type first:
 
 ```rust
-type HandlerFunc = extern "x86-interrupt" fn(_: &mut ExceptionStackFrame);
+type HandlerFunc = extern "x86-interrupt" fn(_: &mut InterruptStackFrame);
 ```
 
 It's a [type alias] for an `extern "x86-interrupt" fn` type. The `extern` keyword defines a function with a [foreign calling convention] and is often used to communicate with C code (`extern "C" fn`). But what is the `x86-interrupt` calling convention?
@@ -166,7 +166,7 @@ In contrast to function calls, exceptions can occur on _any_ instruction. In mos
 
 Since we don't know when an exception occurs, we can't backup any registers before. This means that we can't use a calling convention that relies on caller-saved registers for exception handlers. Instead, we need a calling convention means that preserves _all registers_. The `x86-interrupt` calling convention is such a calling convention, so it guarantees that all register values are restored to their original values on function return.
 
-### The Exception Stack Frame
+### The Interrupt Stack Frame
 On a normal function call (using the `call` instruction), the CPU pushes the return address before jumping to the target function. On function return (using the `ret` instruction), the CPU pops this return address and jumps to it. So the stack frame of a normal function call looks like this:
 
 ![function stack frame](function-stack-frame.svg)
@@ -183,13 +183,13 @@ For exception and interrupt handlers, however, pushing a return address would no
 
 [`RFLAGS`]: https://en.wikipedia.org/wiki/FLAGS_register
 
-So the _exception stack frame_ looks like this:
+So the _interrupt stack frame_ looks like this:
 
-![exception stack frame](exception-stack-frame.svg)
+![interrupt stack frame](exception-stack-frame.svg)
 
-In the `x86_64` crate, the exception stack frame is represented by the [`ExceptionStackFrame`] struct. It is passed to interrupt handlers as `&mut` and can be used to retrieve additional information about the exception's cause. The struct contains no error code field, since only some few exceptions push an error code. These exceptions use the separate [`HandlerFuncWithErrCode`] function type, which has an additional `error_code` argument.
+In the `x86_64` crate, the interrupt stack frame is represented by the [`InterruptStackFrame`] struct. It is passed to interrupt handlers as `&mut` and can be used to retrieve additional information about the exception's cause. The struct contains no error code field, since only some few exceptions push an error code. These exceptions use the separate [`HandlerFuncWithErrCode`] function type, which has an additional `error_code` argument.
 
-[`ExceptionStackFrame`]: https://docs.rs/x86_64/0.2.8/x86_64/structures/idt/struct.ExceptionStackFrame.html
+[`InterruptStackFrame`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/idt/struct.InterruptStackFrame.html
 
 Note that there is currently [a bug in LLVM] that leads to wrong error code arguments. The cause of the issue is already known and a solution is [being worked on].
 
@@ -201,7 +201,7 @@ Note that there is currently [a bug in LLVM] that leads to wrong error code argu
 The `x86-interrupt` calling convention is a powerful abstraction that hides almost all of the messy details of the exception handling process. However, sometimes it's useful to know what's happening behind the curtain. Here is a short overview of the things that the `x86-interrupt` calling convention takes care of:
 
 - **Retrieving the arguments**: Most calling conventions expect that the arguments are passed in registers. This is not possible for exception handlers, since we must not overwrite any register values before backing them up on the stack. Instead, the `x86-interrupt` calling convention is aware that the arguments already lie on the stack at a specific offset.
-- **Returning using `iretq`**: Since the exception stack frame completely differs from stack frames of normal function calls, we can't return from handlers functions through the normal `ret` instruction. Instead, the `iretq` instruction must be used.
+- **Returning using `iretq`**: Since the interrupt stack frame completely differs from stack frames of normal function calls, we can't return from handlers functions through the normal `ret` instruction. Instead, the `iretq` instruction must be used.
 - **Handling the error code**: The error code, which is pushed for some exceptions, makes things much more complex. It changes the stack alignment (see the next point) and needs to be popped off the stack before returning. The `x86-interrupt` calling convention handles all that complexity. However, it doesn't know which handler function is used for which exception, so it needs to deduce that information from the number of function arguments. That means that the programmer is still responsible to use the correct function type for each exception. Luckily, the `InterruptDescriptorTable` type defined by the `x86_64` crate ensures that the correct function types are used.
 - **Aligning the stack**: There are some instructions (especially SSE instructions) that require a 16-byte stack alignment. The CPU ensures this alignment whenever an exception occurs, but for some exceptions it destroys it again later when it pushes an error code. The `x86-interrupt` calling convention takes care of this by realigning the stack in this case.
 
@@ -240,7 +240,7 @@ For our use case, we don't need to overwrite any instructions. Instead, we just 
 ```rust
 // in src/interrupts.rs
 
-use x86_64::structures::idt::{InterruptDescriptorTable, ExceptionStackFrame};
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 use crate::println;
 
 pub fn init_idt() {
@@ -249,13 +249,13 @@ pub fn init_idt() {
 }
 
 extern "x86-interrupt" fn breakpoint_handler(
-    stack_frame: &mut ExceptionStackFrame)
+    stack_frame: &mut InterruptStackFrame)
 {
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
 ```
 
-Our handler just outputs a message and pretty-prints the exception stack frame.
+Our handler just outputs a message and pretty-prints the interrupt stack frame.
 
 When we try to compile it, the following error occurs:
 
@@ -263,7 +263,7 @@ When we try to compile it, the following error occurs:
 error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue #40180)
   --> src/main.rs:53:1
    |
-53 | / extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut ExceptionStackFrame) {
+53 | / extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut InterruptStackFrame) {
 54 | |     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 55 | | }
    | |_^
@@ -277,7 +277,7 @@ This error occurs because the `x86-interrupt` calling convention is still unstab
 In order that the CPU uses our new interrupt descriptor table, we need to load it using the [`lidt`] instruction. The `InterruptDescriptorTable` struct of the `x86_64` provides a [`load`][InterruptDescriptorTable::load] method function for that. Let's try to use it:
 
 [`lidt`]: http://x86.renejeschke.de/html/file_module_x86_id_156.html
-[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.2.8/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
+[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.5.0/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
 
 ```rust
 // in src/interrupts.rs
@@ -383,7 +383,7 @@ pub extern "C" fn _start() -> ! {
     blog_os::interrupts::init_idt();
 
     // invoke a breakpoint exception
-    x86_64::instructions::int3();
+    x86_64::instructions::interrupts::int3();
 
     println!("It did not crash!");
     loop {}
@@ -392,11 +392,11 @@ pub extern "C" fn _start() -> ! {
 
 When we run it in QEMU now (using `bootimage run`), we see the following:
 
-![QEMU printing `EXCEPTION: BREAKPOINT` and the exception stack frame](qemu-breakpoint-exception.png)
+![QEMU printing `EXCEPTION: BREAKPOINT` and the interrupt stack frame](qemu-breakpoint-exception.png)
 
 It works! The CPU successfully invokes our breakpoint handler, which prints the message, and then returns back to the `_start` function, where the `It did not crash!` message is printed.
 
-We see that the exception stack frame tells us the instruction and stack pointers at the time when the exception occured. This information is very useful when debugging unexpected exceptions.
+We see that the interrupt stack frame tells us the instruction and stack pointers at the time when the exception occured. This information is very useful when debugging unexpected exceptions.
 
 ### Adding a Test
 
@@ -417,7 +417,7 @@ use blog_os::{exit_qemu, serial_println};
 pub extern "C" fn _start() -> ! {
     blog_os::interrupts::init_idt();
 
-    x86_64::instructions::int3();
+    x86_64::instructions::interrupts::int3();
 
     serial_println!("ok");
 
@@ -476,7 +476,7 @@ Both variants have the exact same effects, so it comes down to personal preferen
 The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own IDT type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed. Note that these posts are based on the [first edition] of this blog and might be out of date.
 
 [“Handling Exceptions with Naked Functions”]: ./first-edition/extra/naked-exceptions/_index.md
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.2.8/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [first edition]: ./first-edition/_index.md
 
 ## What's next?

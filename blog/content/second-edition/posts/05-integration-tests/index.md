@@ -193,13 +193,13 @@ The `iobase` specifies on which port address the device should live (`0xf4` is a
 
 To write to the I/O port, we use the [`x86_64`] crate:
 
-[`x86_64`]: https://docs.rs/x86_64
+[`x86_64`]: https://docs.rs/x86_64/0.5.0/x86_64/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.4.0"
+x86_64 = "0.5.0"
 ```
 
 ```rust
