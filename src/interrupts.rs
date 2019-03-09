@@ -64,7 +64,7 @@ extern "x86-interrupt" fn double_fault_handler(
     hlt_loop();
 }
 
-extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
+extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
     print!(".");
     unsafe {
         PICS.lock()
@@ -72,7 +72,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut ExceptionSt
     }
 }
 
-extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut ExceptionStackFrame) {
+extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
     use pc_keyboard::{layouts, DecodedKey, Keyboard, ScancodeSet1};
     use spin::Mutex;
     use x86_64::instructions::port::Port;
