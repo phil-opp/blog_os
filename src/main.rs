@@ -9,7 +9,7 @@ use core::panic::PanicInfo;
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     use blog_os::interrupts::PICS;
-    use x86_64::structures::paging::PageTable;
+    use x86_64::registers::control::Cr3;
 
     println!("Hello World{}", "!");
 
@@ -18,11 +18,11 @@ pub extern "C" fn _start() -> ! {
     unsafe { PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
 
-    let level_4_table_ptr = 0xffff_ffff_ffff_f000 as *const PageTable;
-    let level_4_table = unsafe { &*level_4_table_ptr };
-    for i in 0..10 {
-        println!("Entry {}: {:?}", i, level_4_table[i]);
-    }
+    let (level_4_page_table, _) = Cr3::read();
+    println!(
+        "Level 4 page table at: {:?}",
+        level_4_page_table.start_address()
+    );
 
     println!("It did not crash!");
     blog_os::hlt_loop();
