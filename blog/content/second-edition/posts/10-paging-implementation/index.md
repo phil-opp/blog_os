@@ -68,7 +68,7 @@ However, it clutters the virtual address space and makes it more difficult to fi
 
 Equally, it makes it much more difficult to create new page tables, because we need to find physical frames whose corresponding pages aren't already in use. For example, let's assume that we reserved the _virtual_ 1000 KiB memory region starting at `1008 KiB` for our memory-mapped file. Now we can't use any frame with a _physical_ address between `1000 KiB` and `2008 KiB` anymore, because we can't identity map it.
 
-### Mapping at a Fixed Offset
+### Map at a Fixed Offset
 
 To avoid the problem of cluttering the virtual address space, we can **use a seperate memory region for page table mappings**. So instead of identity mapping page table frames, we map them at a fixed offset in the virtual address space. For example, the offset could be 10 TiB:
 
@@ -78,7 +78,7 @@ By using the virtual memory in the range `10TiB..(10TiB + physical memory size)`
 
 This approach still has the disadvantage that we need to create a new mapping whenever we create a new page table. Also, it does not allow accessing page tables of other address spaces, which would be useful when creating a new process.
 
-### Mapping the Complete Physical Memory
+### Map the Complete Physical Memory
 
 We can solve these problems by **mapping the complete physical memory** instead of only page table frames:
 
@@ -274,21 +274,21 @@ This means that we need the help of the bootloader, which creates the page table
 
 [cargo features]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section
 
-- With the `recursive-page-table` TODO feature, the bootloader maps an entry of the level 4 page table recursively. This allows the kernel to access the page tables as described in the [Recursive Page Tables](#recursive-page-tables) section.
-- The `map-physical-memory` TODO feature maps the complete physical memory somewhere into the virtual address space. Thus, the kernel can access all physical memory and can follow the [TODO](#todo) approach.
+- The `map_physical_memory` feature maps the complete physical memory somewhere into the virtual address space. Thus, the kernel can access all physical memory and can follow the [_Map the Complete Physical Memory_](#map-the-complete-physical-memory) approach.
+- With the `recursive_page_table` feature, the bootloader maps an entry of the level 4 page table recursively. This allows the kernel to access the page tables as described in the [_Recursive Page Tables_](#recursive-page-tables) section.
 
-We choose the TODO approach for our kernel since it is simple, platform-independent, and more powerful (it also allows to access non-page-table-frames). To enable the required bootloader support, we add the `map-physical-memory` feature to our `bootloader` dependency:
+We choose the first approach for our kernel since it is simple, platform-independent, and more powerful (it also allows to access non-page-table-frames). To enable the required bootloader support, we add the `map_physical_memory` feature to our `bootloader` dependency:
 
 ```toml
 [dependencies]
-bootloader = { version = TODO, features = ["map-physical-memory"]}
+bootloader = { version = "0.4.0", features = ["map_physical_memory"]}
 ```
 
 With this feature enabled, the bootloader maps the complete physical memory to some unused virtual address range. To communicate the virtual address range to our kernel, the bootloader passes a _boot information_ structure.
 
 ### Boot Information
 
-The `bootloader` crate defines a [`BootInfo`] struct that contains all the information it passes to our kernel. The struct is still in an early stage, so expect some breakage when updating to future [semver-incompatible] bootloader versions. With the `map-physical-memory` feature enabled, it currently has the two fields `memory_map` and `physical_memory_offset`:
+The `bootloader` crate defines a [`BootInfo`] struct that contains all the information it passes to our kernel. The struct is still in an early stage, so expect some breakage when updating to future [semver-incompatible] bootloader versions. With the `map_physical_memory` feature enabled, it currently has the two fields `memory_map` and `physical_memory_offset`:
 
 [`BootInfo`]: https://docs.rs/bootloader/0.3.11/bootloader/bootinfo/struct.BootInfo.html
 [semver-incompatible]: https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html#caret-requirements
@@ -336,7 +336,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the real lower level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. The important thing is that it is type-checked so that a compilation error occurs when we now try to modify the function signature in any way, for example adding an argument or changing the argument type.
+We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the real lower level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. The important thing is that it is type-checked so that a compilation error occurs when we use a wrong function signature, for example by adding an argument or changing the argument type.
 
 ## Implementation
 
