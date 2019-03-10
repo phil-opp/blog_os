@@ -301,7 +301,7 @@ The bootloader passes the `BootInfo` struct to our kernel in form of a `&'static
 ```rust
 // in src/main.rs
 
-use bootloader::bootinfo::BootInfo;
+use bootloader::BootInfo;
 
 #[cfg(not(test))]
 #[no_mangle]
@@ -323,16 +323,13 @@ To make sure that the entry point function has always the correct signature that
 ```rust
 // in src/main.rs
 
-use bootloader::{bootinfo::BootInfo, entry_point};
+use bootloader::{BootInfo, entry_point};
 
 entry_point!(kernel_main);
 
 #[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […] // initialize GDT, IDT, PICS
-
-    println!("It did not crash!");
-    blog_os::hlt_loop();
+    […]
 }
 ```
 
@@ -340,47 +337,73 @@ We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the
 
 ## Implementation
 
+Now that we have access to physical memory, we can finally start our implementation. First, we will take a look at the currently active page tables that our kernel runs on. In the second step we will create a translation function that returns the physical address that a given virtual address is mapped to. As the last step, we will try to modify the page tables in order to create a new mapping.
+
+Before we begin, we create a new `memory` module for our code:
+
+```rust
+// in src/lib.rs
+
+pub mod memory;
+```
+
+For the module we create an empty `src/memory.rs` file.
+
 ### Accessing the Page Tables
 
-### Translating Addresses
+At the [end of the previous post], we tried to take a look at the page tables our kernel runs on, but failed since we couldn't access the physical frame that the `CR3` register points to. We're now able to continue from there by creating a `active_level_4_table` function that returns a reference to the active level 4 page table:
 
-### Creating a new Mapping
+[end of the previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
 
-### Allocating Frames
+```rust
+// in src/memory.rs
 
+use x86_64::structures::paging::PageTable;
 
+/// Returns a mutable reference to the active level 4 table.
+///
+/// This function is unsafe because the caller must guarantee that the
+/// complete physical memory is mapped to virtual memory at the passed
+/// `physical_memory_offset`. Also, this function must be only called once
+/// to avoid aliasing `&mut` references (which is undefined behavior).
+pub unsafe fn active_level_4_table(physical_memory_offset: u64)
+    -> &'static mut PageTable
+{
+    use x86_64::{registers::control::Cr3, PhysAddr, VirtAddr};
 
+    let (level_4_table_frame, _) = Cr3::read();
 
+    let phys_to_virt = |phys: PhysAddr| {
+        VirtAddr::new(phys.as_u64() + physical_memory_offset)
+    };
+    let level_4_table_addr = phys_to_virt(level_4_table_frame.start_address());
 
+    &mut *level_4_table_addr.as_mut_ptr() // unsafe
+}
+```
 
+First, we read the physical frame of the active level 4 table from the `CR3` register. We then convert its start address to a virtual address using a `phys_to_virt` closure that adds the passed `physical_memory_offset` to the address. Finally we convert the address to a `*mut PageTable` raw pointer through the `as_mut_ptr` method and then unsafely create a `&mut PageTable` reference from it. We create a `&mut` reference instead of a `&` reference because we will mutate the page tables later in this post.
 
+We don't need to use an unsafe block here because Rust treats the complete body of an `unsafe fn` like a large `unsafe` block. This makes our code more dangerous since we could accidentally introduce an unsafe operation in previous lines without noticing. It also makes it much more difficult to spot the unsafe operations. There is an [RFC](https://github.com/rust-lang/rfcs/pull/2585) to change this behavior.
 
-
----
-
-
-The amount of physical memory and the memory regions reserved by devices like the VGA hardware vary between different machines. Only the BIOS or UEFI firmware knows exactly which memory regions can be used by the operating system and which regions are reserved. Both firmware standards provide functions to retrieve the memory map, but they can only be called very early in the boot process. For this reason, the bootloader already queries this and other information from the firmware.
-
-
----
-
-
-
-
-For now it suffices to know that the bootloader used a technique called _recursive page tables_ to map the last page of the virtual address space to the physical frame of the level 4 page table. The last page of the virtual address space is `0xffff_ffff_ffff_f000`, so let's use it to read some entries of that table:
+We can now use this function to print the entries of the level 4 table:
 
 ```rust
 // in src/main.rs
 
 #[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […] // initialize GDT, IDT, PICS
 
-    let level_4_table_pointer = 0xffff_ffff_ffff_f000 as *const u64;
-    for i in 0..10 {
-        let entry = unsafe { *level_4_table_pointer.offset(i) };
-        println!("Entry {}: {:#x}", i, entry);
+    use blog_os::memory::active_level_4_table;
+
+    let l4_table = unsafe {
+        active_level_4_table(boot_info.physical_memory_offset)
+    };
+    for (i, entry) in l4_table.iter().enumerate() {
+        if !entry.is_unused() {
+            println!("L4 Entry {}: {:?}", i, entry);
+        }
     }
 
     println!("It did not crash!");
@@ -388,20 +411,187 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-We cast the address of the last virtual page to a pointer to an `u64`. As we saw in the [previous section][page table format], each page table entry is 8 bytes (64 bits), so an `u64` represents exactly one entry. We print the first 10 entries of the table using a `for` loop. Inside the loop, we use an unsafe block to read from the raw pointer and the [`offset` method] to perform pointer arithmetic.
+As `physical_memory_offset` we pass the respective field of the `BootInfo` struct. We then use the `iter` function to iterate over the page table entries and the [`enumerate`] combinator to additionally add an index `i` to each element. We only print non-empty entries because all 512 entries wouldn't fit on the screen.
 
-[page table format]: #page-table-format
-[`offset` method]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
+[`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
 When we run it, we see the following output:
 
-![Entry 0: 0x2023, Entry 1: 0x6e2063, Entry 2-9: 0x0](qemu-print-p4-entries.png)
+![QEMU printing entry 0 (0x2000, PRESENT, WRITABLE, ACCESSED), entry 1 (0x894000, PRESENT, WRITABLE, ACCESSED, DIRTY), entry 31 (0x88e000, PRESENT, WRITABLE, ACCESSED, DIRTY), entry 175 (0x891000, PRESENT, WRITABLE, ACCESSED, DIRTY), and entry 504 (0x897000, PRESENT, WRITABLE, ACCESSED, DIRTY)](qemu-print-level-4-table.png)
 
-When we look at the [format of page table entries][page table format], we see that the value `0x2023` of entry 0 means that the entry is `present`, `writable`, was `accessed` by the CPU, and is mapped to frame `0x2000`. Entry 1 is mapped to frame `0x6e2000` and has the same flags as entry 0, with the addition of the `dirty` flag that indicates that the page was written. Entries 2–9 are not `present`, so these virtual address ranges are not mapped to any physical addresses.
+We see that there are various non-empty entries, which all map to different level 3 tables. There are so many regions because kernel code, kernel stack, the physical memory mapping, and the boot information all use separate memory areas.
 
-Instead of working with unsafe raw pointers we can use the [`PageTable`] type of the `x86_64` crate:
+To travesre the page tables further and take a look at a level 3 table, we can take the mapped frame of an entry convert it to a virtual address again:
 
-[`PageTable`]: https://docs.rs/x86_64/0.3.4/x86_64/structures/paging/struct.PageTable.html
+```rust
+// get the physical address from the entry and convert it
+let phys = entry.frame().unwrap().start_address();
+let virt = phys.as_u64() + boot_info.physical_memory_offset;
+let ptr = VirtAddr::new(virt).as_mut_ptr()
+let l3_table: &PageTable = unsafe {&*ptr};
+
+// print non-empty entries of the level 3 table
+for (i, entry) in l3_table.iter().enumerate() {
+    if !entry.is_unused() {
+        println!("  L3 Entry {}: {:?}", i, entry);
+    }
+}
+```
+
+For looking at the level 2 and level 1 tables, we repeat that process for the level 3 and level 2 entries. As you can imagine, this gets very verbose quickly, so we don't show the full code here.
+
+Traversing the page tables manually is interesting because it helps to understand how the CPU performs the translation. However, most of the time we are only interested in the mapped physical address for a given virtual address, so let's create a function for that.
+
+### Translating Addresses
+
+For translating a virtual to a physical address, we have to traverse the four-level page table until we reach the mapped frame. Let's create a function that performs this translation:
+
+```rust
+// in src/memory.rs
+
+/// Translates the given virtual address to the mapped physical address, or
+/// `None` if the address is not mapped.
+///
+/// This function is unsafe because the caller must guarantee that the
+/// complete physical memory is mapped to virtual memory at the passed
+/// `physical_memory_offset`.
+pub unsafe fn translate_addr(addr: VirtAddr, physical_memory_offset: u64)
+    -> Option<PhysAddr>
+{
+    translate_addr_inner(addr, physical_memory_offset)
+}
+```
+
+We forward the function to a safe `translate_addr_inner` function to limit the scope of `unsafe`. As we noted above, Rust treats the complete body of an unsafe fn like a large unsafe block. By calling into a private safe function, we make each `unsafe` operation explicit again.
+
+The private inner function contains the real implementation:
+
+```rust
+// in src/memory.rs
+
+/// Private function that is called by `translate_addr`.
+///
+/// This function is safe to limit the scope of `unsafe` because Rust treats
+/// the whole body of unsafe functions as an unsafe block. This function must
+/// only be reachable through `unsafe fn` from outside of this module.
+fn translate_addr_inner(addr: VirtAddr, physical_memory_offset: u64)
+    -> Option<PhysAddr>
+{
+    use x86_64::structures::paging::page_table::FrameError;
+    use x86_64::registers::control::Cr3;
+
+    // read the active level 4 frame from the CR3 register
+    let (level_4_table_frame, _) = Cr3::read();
+
+    let table_indexes = [
+        addr.p4_index(), addr.p3_index(), addr.p2_index(), addr.p1_index()
+    ];
+    let mut frame = level_4_table_frame;
+
+    // traverse the multi-level page table
+    for &index in &table_indexes {
+        // convert the frame into a page table reference
+        let virt = frame.start_address().as_u64() + physical_memory_offset;
+        let table_ptr: *const PageTable = VirtAddr::new(virt).as_ptr();
+        let table = unsafe {&*table_ptr};
+
+        // read the page table entry and update `frame`
+        let entry = &table[index];
+        frame = match entry.frame() {
+            Ok(frame) => frame,
+            Err(FrameError::FrameNotPresent) => return None,
+            Err(FrameError::HugeFrame) => panic!("huge pages not supported"),
+        };
+    }
+
+    // calculate the physical address by adding the page offset
+    Some(frame.start_address() + u64::from(addr.page_offset()))
+}
+```
+
+Instead of reusing our `active_level_4_table` function, we read the level 4 frame from the `CR3` register again. We do this because it simplifies this prototype implementation. Don't worry, we will create a better solution in a moment.
+
+The `VirtAddr` struct already provides methods to compute the indexes into the page tables of the four levels. We store these indexes in a small array because it allows us to traverse the page tables using a `for` loop. Outside of the loop, we remember the last visited `frame` to calculate the physical address later. The `frame` points to page table frames while iterating, and to the mapped frame after the last iteration, i.e. after following the level 1 entry.
+
+Inside the loop, we again use the `physical_memory_offset` to convert the frame into a page table reference. We then read the entry of the current page table and use the [`PageTableEntry::frame`] function to retrieve the mapped frame. If the entry is not mapped to a frame we return `None`. If the entry has maps a huge 2MiB or 1GiB page we panic for know.
+
+[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
+
+
+TODO use x86_64 types
+
+### Creating a new Mapping
+
+### Allocating Frames
+
+In order to create new page tables, we need to create a proper frame allocator. We start with a generic skeleton:
+
+```rust
+// in src/memory.rs
+
+pub struct BootInfoFrameAllocator<I> where I: Iterator<Item = PhysFrame> {
+    frames: I,
+}
+
+impl<I> FrameAllocator<Size4KiB> for BootInfoFrameAllocator<I>
+    where I: Iterator<Item = PhysFrame>
+{
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
+        self.frames.next()
+    }
+}
+```
+
+The `frames` field can be initialized with an arbitrary [`Iterator`] of frames. This allows us to just delegate `alloc` calls to the [`Iterator::next`] method.
+
+[`Iterator`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html
+[`Iterator::next`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#tymethod.next
+
+The plan is to use the [`MemoryMap`] passed by the bootloader to find out which physical frames are available to our kernel and still unused. The memory map consists of a list of [`MemoryRegion`] structs, which contain the start address, the length, and the type (e.g. unused, reserved, etc.) of each memory region. By creating an iterator that yields frames from unused regions, we can instantiate a valid `BootInfoFrameAllocator`.
+
+The initialization of the `BootInfoFrameAllocator` happens in a new `init_frame_allocator` function:
+
+```rust
+// in src/memory.rs
+
+use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
+
+/// Create a FrameAllocator from the passed memory map
+pub fn init_frame_allocator(
+    memory_map: &'static MemoryMap,
+) -> BootInfoFrameAllocator<impl Iterator<Item = PhysFrame>> {
+    // get usable regions from memory map
+    let regions = memory_map
+        .iter()
+        .filter(|r| r.region_type == MemoryRegionType::Usable);
+    // map each region to its address range
+    let addr_ranges = regions.map(|r| r.range.start_addr()..r.range.end_addr());
+    // transform to an iterator of frame start addresses
+    let frame_addresses = addr_ranges.flat_map(|r| r.into_iter().step_by(4096));
+    // create `PhysFrame` types from the start addresses
+    let frames = frame_addresses.map(|addr| {
+        PhysFrame::containing_address(PhysAddr::new(addr))
+    });
+
+    BootInfoFrameAllocator { frames }
+}
+```
+
+This function uses iterator combinator methods to transform the initial `MemoryMap` into an iterator of usable physical frames:
+
+- First, we call the `iter` method to convert the memory map to an iterator of [`MemoryRegion`]s. Then we use the [`filter`] method to skip any reserved or otherwise unavailable regions. The bootloader updates the memory map for all the mappings it creates, so frames that are used by our kernel (code, data or stack) or to store the boot information are already marked as `InUse` or similar. Thus we can be sure that `Usable` frames are not used somewhere else.
+- In the second step, we use the [`map`] combinator and Rust's [range syntax] to transform our iterator of memory regions to an iterator of address ranges.
+- The third step is the most complicated: We convert each range to an iterator through the `into_iter` method and then choose every 4096th address using [`step_by`]. Since 4096 bytes (= 4 KiB) is the page size, we get the start address of each frame. The bootloader page aligns all usable memory areas so that we don't need any alignment or rounding code here. By using [`flat_map`] instead of `map`, we get an `Iterator<Item = u64>` instead of an `Iterator<Item = Iterator<Item = u64>>`.
+- In the final step, we convert the start addresses to `PhysFrame` types to construct the desired `Iterator<Item = PhysFrame>`. We then use this iterator to create and return a new `BootInfoFrameAllocator`.
+
+[`MemoryRegion`]: https://docs.rs/bootloader/0.3.12/bootloader/bootinfo/struct.MemoryRegion.html
+[`filter`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.filter
+[`map`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.map
+[range syntax]: https://doc.rust-lang.org/core/ops/struct.Range.html
+[`step_by`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.step_by
+[`flat_map`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.flat_map
+
+We can now modify our `kernel_main` function to pass a `BootInfoFrameAllocator` instance instead of an `EmptyFrameAllocator`:
 
 ```rust
 // in src/main.rs
