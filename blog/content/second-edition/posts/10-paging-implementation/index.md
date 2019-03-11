@@ -513,14 +513,145 @@ Instead of reusing our `active_level_4_table` function, we read the level 4 fram
 
 The `VirtAddr` struct already provides methods to compute the indexes into the page tables of the four levels. We store these indexes in a small array because it allows us to traverse the page tables using a `for` loop. Outside of the loop, we remember the last visited `frame` to calculate the physical address later. The `frame` points to page table frames while iterating, and to the mapped frame after the last iteration, i.e. after following the level 1 entry.
 
-Inside the loop, we again use the `physical_memory_offset` to convert the frame into a page table reference. We then read the entry of the current page table and use the [`PageTableEntry::frame`] function to retrieve the mapped frame. If the entry is not mapped to a frame we return `None`. If the entry has maps a huge 2MiB or 1GiB page we panic for know.
+Inside the loop, we again use the `physical_memory_offset` to convert the frame into a page table reference. We then read the entry of the current page table and use the [`PageTableEntry::frame`] function to retrieve the mapped frame. If the entry is not mapped to a frame we return `None`. If the entry has maps a huge 2MiB or 1GiB page we panic for now.
 
 [`PageTableEntry::frame`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
+Let's test translation function by translating some addresses:
 
-TODO use x86_64 types
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    […] // initialize GDT, IDT, PICS
+
+    use blog_os::memory::translate_addr;
+    use x86_64::VirtAddr;
+
+    let addresses = [
+        // the identity-mapped vga buffer page
+        0xb8000,
+        // some code page
+        0x20010a,
+        // some stack page
+        0x57ac_001f_fe48,
+        // virtual address mapped to physical address 0
+        boot_info.physical_memory_offset,
+    ];
+
+    for &address in &addresses {
+        let virt = VirtAddr::new(address);
+        let phys = translate_addr(virt, boot_info.physical_memory_offset);
+        println!("{:?} -> {:?}", virt, phys);
+    }
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+When we run it, we see the following output:
+
+![0xb8000 -> 0xb8000, 0x20010a -> 0x40010a, 0x57ac001ffe48 -> 0x27be48, "panicked at 'huge pages not supported'](qemu-translate-addr.png)
+
+As expected, the identity-mapped address `0xb8000` translates to the same physical address. The code page and the stack page translate to some arbitrary physical addresses, which depend on how the bootloader created the initial mapping for our kernel. The translation of the `physical_memory_offset` should point to physical address `0`, but the translation fails because the mapping uses huge pages for efficiency. Future bootloader version might use the same optimization for kernel and stack pages.
+
+### Using `MappedPageTable`
+
+Translating virtual to physical addresses is a common task in an OS kernel, therefore the `x86_64` crate provides an abstraction for it. The implementation already supports huge pages and several other page table functions apart from `translate_addr`, so we will use it in the following instead of adding huge page support to our own implementation.
+
+The base of the abstraction are two traits that define various page table mapping functions:
+
+- The [`Mapper`] trait is generic over the page size and provides functions that operate on pages. Examples are [`translate_page`], which translates a given page to a frame of the same size, and [`map_to`], which creates a new mapping in the page table.
+- The [`MapperAllSizes`] trait implies that the implementor implements `Mapper` for all pages sizes. In addition, it provides functions that work with multiple page sizes such as [`translate_addr`] or the general [`translate`].
+
+[`Mapper`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.Mapper.html
+[`translate_page`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
+[`map_to`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
+[`MapperAllSizes`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
+[`translate_addr`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
+[`translate`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate
+
+The traits only define the interface, they don't provide any implementation. The `x86_64` crate currently provides two types that implement the traits: [`MappedPageTable`] and [`RecursivePageTable`]. The former type requires that each page table frame is mapped somewhere (e.g. at an offset). The latter type can be used when the level 4 table is [mapped recursively](#recursive-page-tables).
+
+[`MappedPageTable`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/struct.MappedPageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/struct.RecursivePageTable.html
+
+We have the complete physical memory mapped at `physical_memory_offset`, so we can use the `MappedPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
+
+```rust
+/// Initialize a new MappedPageTable.
+///
+/// This function is unsafe because the caller must guarantee that the
+/// complete physical memory is mapped to virtual memory at the passed
+/// `physical_memory_offset`. Also, this function must be only called once
+/// to avoid aliasing `&mut` references (which is undefined behavior).
+pub unsafe fn init(physical_memory_offset: u64) -> impl MapperAllSizes {
+    let level_4_table = active_level_4_table(physical_memory_offset);
+    let phys_to_virt = move |frame: PhysFrame| -> *mut PageTable {
+        let phys = frame.start_address().as_u64();
+        let virt = VirtAddr::new(phys + physical_memory_offset);
+        virt.as_mut_ptr()
+    };
+    MappedPageTable::new(level_4_table, phys_to_virt)
+}
+
+// make private
+unsafe fn active_level_4_table(physical_memory_offset: u64)
+    -> &'static mut PageTable
+{…}
+```
+
+We can't directly return a `MappedPageTable` from the function because it is generic over a closure type, which can't be named. We avoid this problem by using the [`impl Trait`] syntax. This also has the advantage that we can switch our kernel to use `RecursivePageTable` without changing the signature of the function.
+
+[`impl Trait`]: https://doc.rust-lang.org/book/ch10-02-traits.html#returning-traits
+
+The [`MappedPageTable::new`] function expects two parameters: a mutable reference to the level 4 page table and a `phys_to_virt` closure that converts a physical frame to a page table pointer `*mut PageTable`. For the first parameter we can reuse our `active_level_4_table` function. For the second parameter, we create a closure that uses the `physical_memory_offset` to perform the conversion.
+
+[`MappedPageTable::new`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/struct.MappedPageTable.html#method.new
+
+We also make the `active_level_4_table` private because it should only be called from the `init` function from now on.
+
+To use the `MapperAllSizes::translate_addr` method instead of our own `memory::translate_addr` function, we only need to change a few lines in our `kernel_main`:
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    […] // initialize GDT, IDT, PICS
+
+    // new: different imports
+    use blog_os::memory;
+    use x86_64::{structures::paging::MapperAllSizes, VirtAddr};
+
+    // new: initialize a mapper
+    let mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
+
+    let addresses = […]; // same as before
+
+    for &address in &addresses {
+        let virt = VirtAddr::new(address);
+        // new: use the `mapper.translate_addr` method
+        let phys = mapper.translate_addr(virt);
+        println!("{:?} -> {:?}", virt, phys);
+    }
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+When we run it now, we see the same translation results as before, with the difference that the huge page translation now also works:
+
+![0xb8000 -> 0xb8000, 0x20010a -> 0x40010a, 0x57ac001ffe48 -> 0x27be48, 0xfffffc0000000000 -> 0x0](qemu-mapper-translate-addr.png)
+
+As expected the virtual address `physical_memory_offset` translates to the physical address `0x0`. By using the translation function of the `MappedPageTable` type we can spare ourselves the work of implementing huge page support. We also have access to other page functions such as `map_to`, which we will use in the next section. At this point we no longer need our `memory::tranlate_addr` function, so you can delete it if you want.
 
 ### Creating a new Mapping
+
+Until now we only looked at the page tables without modifying anything. Let's change that by creating a new mapping for a previously unmapped page.
 
 ### Allocating Frames
 
