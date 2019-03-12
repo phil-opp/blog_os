@@ -6,7 +6,7 @@ date = 0000-01-01
 template = "second-edition/page.html"
 +++
 
-This post explains techniques to make the physical page table frames accessible to our kernel. It then uses such a technique to implement a function that translates virtual to physical addresses. It also explains how to create new mappings in the page tables.
+This post shows how to implement paging support in our kernel. It first explores different techniques to make the physical page table frames accessible to the kernel and discusses their drawbacks. It then implements an address translation function and a function to create a new mapping.
 
 <!-- more -->
 
@@ -16,30 +16,47 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 [at the bottom]: #comments
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-10
 
+<aside class="post_aside">
 
+## Another Paging Post?
 
+If you follow this blog, you have probably seen the [_Advanced Paging_](/advanced-paging) post that we published at the end of January. After receiving some [negative feedback] about the use of recursive page tables in that post, I decided to rewrite that post using a [different approach] for accessing the page table frames.
+
+[negative feedback]: https://news.ycombinator.com/item?id=19017995
+[different approach]: https://github.com/phil-opp/blog_os/issues/545
+
+This post is the result of the rewrite. It still explains how recursive page tables work, but it chooses a different approach for the implementation that is both simpler and more powerful. The _Advanced Paging_ post will still be available, but it is marked as deprecated and will no longer receive updates.
+
+I hope that you enjoy this new post!
+
+</aside>
 
 ## Introduction
 
-In the [previous post] we learned about the principles of paging and how the 4-level page tables on x86_64 work. We also found out that the bootloader already set up a page table hierarchy for our kernel, which means that our kernel already runs on virtual addresses. This improves safety since illegal memory accesses cause page fault exceptions instead of modifying arbitrary physical memory.
+The [previous post] gave an introduction to the concept of paging. It motivated paging by comparing it with segmentation, explained how paging and page tables work, and then introduced the 4-level page table design of `x86_64`. We found out that the bootloader already set up a page table hierarchy for our kernel, which means that our kernel already runs on virtual addresses. This improves safety since illegal memory accesses cause page fault exceptions instead of modifying arbitrary physical memory.
 
 [previous post]: ./second-edition/posts/09-paging-introduction/index.md
 
-However, it also causes a problem when we try to access the page tables from our kernel because we can't directly access the physical addresses that are stored in page table entries or the `CR3` register. We experienced that problem already [at the end of the previous post] when we tried to inspect the active page tables.
+The post ended with the problem that we [can't access the page tables from our kernel][end of previous post] because they are stored in physical memory and our kernel already runs on virtual addresses. This post continues at this point and explores different approaches of making the page table frames accessible to our kernel. We will discuss the advantages and drawbacks of each approach and then decide for an approach for our kernel.
 
-[at the end of the previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
+[end of previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
 
-The next section discusses the problem in detail and provides different approaches to a solution. Afterward, we implement a function that traverses the page table hierarchy in order to translate virtual to physical addresses. Finally, we learn how to create new mappings in the page tables and how to find unused memory frames for creating new page tables.
+To implement the approach, we will need support from the bootloader, so we'll configure it first. Afterward, we will implement a function that traverses the page table hierarchy in order to translate virtual to physical addresses. Finally, we learn how to create new mappings in the page tables and how to find unused memory frames for creating new page tables.
 
 ### Dependency Updates
 
-This post requires version 0.5.0 or later of the `x86_64` dependency and version 0.4.0 or later of the `bootloader` dependency. You can update the dependencies in your `Cargo.toml`:
+This post requires version 0.4.0 or later of the `bootloader` dependency and version 0.5.2 or later of the `x86_64` dependency. You can update the dependencies in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-x86_64 = "0.5.0"
 bootloader = "0.4.0"
+x86_64 = "0.5.2"
 ```
+
+For an overview over the changes in these versions, check out the [`bootloader` changelog] and the [`x86_64` changelog].
+
+[`bootloader` changelog]: https://github.com/rust-osdev/x86_64/blob/master/Changelog.md
+[`x86_64` changelog]: https://github.com/rust-osdev/bootloader/blob/master/Changelog.md
 
 ## Accessing Page Tables
 
