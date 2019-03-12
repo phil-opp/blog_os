@@ -53,7 +53,7 @@ bootloader = "0.4.0"
 x86_64 = "0.5.2"
 ```
 
-For an overview over the changes in these versions, check out the [`bootloader` changelog] and the [`x86_64` changelog].
+For an overview of the changes in these versions, check out the [`bootloader` changelog] and the [`x86_64` changelog].
 
 [`bootloader` changelog]: https://github.com/rust-osdev/x86_64/blob/master/Changelog.md
 [`x86_64` changelog]: https://github.com/rust-osdev/bootloader/blob/master/Changelog.md
@@ -66,7 +66,7 @@ Accessing the page tables from our kernel is not as easy as it may seem. To unde
 
 The important thing here is that each page entry stores the _physical_ address of the next table. This avoids the need to run a translation for these addresses too, which would be bad for performance and could easily cause endless translation loops.
 
-The problem for us is that we can't directly access physical addresses from our kernel since our kernel also runs on top of virtual addresses. For example when we access address `4 KiB`, we access the _virtual_ address `4 KiB`, not the _physical_ address `4 KiB` where the level 4 page table is stored. When we want to access the physical address `4 KiB`, we can only do so through some virtual address that maps to it.
+The problem for us is that we can't directly access physical addresses from our kernel since our kernel also runs on top of virtual addresses. For example, when we access address `4 KiB` we access the _virtual_ address `4 KiB`, not the _physical_ address `4 KiB` where the level 4 page table is stored. When we want to access the physical address `4 KiB`, we can only do so through some virtual address that maps to it.
 
 So in order to access page table frames, we need to map some virtual pages to them. There are different ways to create these mappings that all allow us to access arbitrary page table frames.
 
@@ -87,7 +87,7 @@ Equally, it makes it much more difficult to create new page tables, because we n
 
 ### Map at a Fixed Offset
 
-To avoid the problem of cluttering the virtual address space, we can **use a seperate memory region for page table mappings**. So instead of identity mapping page table frames, we map them at a fixed offset in the virtual address space. For example, the offset could be 10 TiB:
+To avoid the problem of cluttering the virtual address space, we can **use a separate memory region for page table mappings**. So instead of identity mapping page table frames, we map them at a fixed offset in the virtual address space. For example, the offset could be 10 TiB:
 
 ![The same figure as for the identity mapping, but each mapped virtual page is offset by 10 TiB.](page-tables-mapped-at-offset.svg)
 
@@ -105,7 +105,7 @@ This approach allows our kernel to access arbitrary physical memory, including p
 
 The disadvantage of this approach is that additional page tables are needed for storing the mapping of the physical memory. These page tables need to be stored somewhere, so they use up a part of physical memory, which can be a problem on devices with a small amount of memory.
 
-On x86_64, however, we can use [huge pages] with size 2MiB for the mapping, instead of the default 4KiB pages. This way, mapping 32 GiB of physical memory only requires 132 KiB for page tables since only one level 3 table and 32 level 2 tables are needed. Huge pages are also more cache efficient, since they use less entries in the translation lookaside buffer (TLB).
+On x86_64, however, we can use [huge pages] with size 2MiB for the mapping, instead of the default 4KiB pages. This way, mapping 32 GiB of physical memory only requires 132 KiB for page tables since only one level 3 table and 32 level 2 tables are needed. Huge pages are also more cache efficient since they use fewer entries in the translation lookaside buffer (TLB).
 
 [huge pages]: https://en.wikipedia.org/wiki/Page_%28computer_memory%29#Multiple_page_sizes
 
@@ -152,7 +152,7 @@ Similarly, we can follow the recursive entry twice before starting the translati
 
 Let's go through it step by step: First, the CPU follows the recursive entry on the level 4 table and thinks that it reaches a level 3 table. Then it follows the recursive entry again and thinks that it reaches a level 2 table. But in reality, it is still on the level 4 table. When the CPU now follows a different entry, it lands on a level 3 table but thinks it is already on a level 1 table. So while the next entry points at a level 2 table, the CPU thinks that it points to the mapped frame, which allows us to read and write the level 2 table.
 
-Accessing the tables of levels 3 and 4 works in the same way. For accessing the level 3 table, we follow the recursive entry three times, tricking the CPU into thinking it is already on a level 1 table. Then we follow another entry and reach a level 3 table, which the CPU treats as a mapped frame. For accessing the level 4 table itself, we just follow the recursive entry four times until the CPU treats the level 4 table itself as mapped frame (in blue in the graphic below).
+Accessing the tables of levels 3 and 4 works in the same way. For accessing the level 3 table, we follow the recursive entry three times, tricking the CPU into thinking it is already on a level 1 table. Then we follow another entry and reach a level 3 table, which the CPU treats as a mapped frame. For accessing the level 4 table itself, we just follow the recursive entry four times until the CPU treats the level 4 table itself as the mapped frame (in blue in the graphic below).
 
 ![The same 4-level page hierarchy with the following 3 arrows: "Step 0" from CR4 to level 4 table, "Steps 1,2,3" from level 4 table to level 4 table, and "Step 4" from level 4 table to level 3 table. In blue the alternative "Steps 1,2,3,4" arrow from level 4 table to level 4 table.](recursive-page-table-access-level-3.png)
 
@@ -273,7 +273,7 @@ Again, a valid recursive mapping is required for this code. With such a mapping,
 
 ---
 
-Recursive Paging is a interesting technique that shows how powerful a single mapping in a page table can be. It is relatively easy to implement and only requires a minimal amount of setup (just a single recursive entry), so it's a good choice for first experiments with paging.
+Recursive Paging is an interesting technique that shows how powerful a single mapping in a page table can be. It is relatively easy to implement and only requires a minimal amount of setup (just a single recursive entry), so it's a good choice for first experiments with paging.
 
 However, it also has some disadvantages:
 
@@ -310,10 +310,10 @@ The `bootloader` crate defines a [`BootInfo`] struct that contains all the infor
 [`BootInfo`]: https://docs.rs/bootloader/0.3.11/bootloader/bootinfo/struct.BootInfo.html
 [semver-incompatible]: https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html#caret-requirements
 
-- The `memory_map` field contains an overview over the available physical memory. This tells our kernel how much physical memory is available in the system and which memory regions are reserved for devices such as the VGA hardware. The memory map can be queried from the BIOS or UEFI firmware, but only very early in the boot process. For this reason, it must be provided by the bootloader because there is no way for the kernel to retrieve it later. We will need the memory map later in this post.
+- The `memory_map` field contains an overview of the available physical memory. This tells our kernel how much physical memory is available in the system and which memory regions are reserved for devices such as the VGA hardware. The memory map can be queried from the BIOS or UEFI firmware, but only very early in the boot process. For this reason, it must be provided by the bootloader because there is no way for the kernel to retrieve it later. We will need the memory map later in this post.
 - The `physical_memory_offset` tells us the virtual start address of the physical memory mapping. By adding this offset to a physical address, we get the corresponding virtual address. This allows us to access arbitrary physical memory from our kernel.
 
-The bootloader passes the `BootInfo` struct to our kernel in form of a `&'static BootInfo` argument to our `_start` function. We don't have this argument declared in our function yet, so let's add it:
+The bootloader passes the `BootInfo` struct to our kernel in the form of a `&'static BootInfo` argument to our `_start` function. We don't have this argument declared in our function yet, so let's add it:
 
 ```rust
 // in src/main.rs
@@ -354,7 +354,7 @@ We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the
 
 ## Implementation
 
-Now that we have access to physical memory, we can finally start our implementation. First, we will take a look at the currently active page tables that our kernel runs on. In the second step we will create a translation function that returns the physical address that a given virtual address is mapped to. As the last step, we will try to modify the page tables in order to create a new mapping.
+Now that we have access to physical memory, we can finally start our implementation. First, we will take a look at the currently active page tables that our kernel runs on. In the second step, we will create a translation function that returns the physical address that a given virtual address is mapped to. As the last step, we will try to modify the page tables in order to create a new mapping.
 
 Before we begin, we create a new `memory` module for our code:
 
@@ -368,7 +368,7 @@ For the module we create an empty `src/memory.rs` file.
 
 ### Accessing the Page Tables
 
-At the [end of the previous post], we tried to take a look at the page tables our kernel runs on, but failed since we couldn't access the physical frame that the `CR3` register points to. We're now able to continue from there by creating a `active_level_4_table` function that returns a reference to the active level 4 page table:
+At the [end of the previous post], we tried to take a look at the page tables our kernel runs on, but failed since we couldn't access the physical frame that the `CR3` register points to. We're now able to continue from thereby creating an `active_level_4_table` function that returns a reference to the active level 4 page table:
 
 [end of the previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
 
@@ -399,7 +399,7 @@ pub unsafe fn active_level_4_table(physical_memory_offset: u64)
 }
 ```
 
-First, we read the physical frame of the active level 4 table from the `CR3` register. We then convert its start address to a virtual address using a `phys_to_virt` closure that adds the passed `physical_memory_offset` to the address. Finally we convert the address to a `*mut PageTable` raw pointer through the `as_mut_ptr` method and then unsafely create a `&mut PageTable` reference from it. We create a `&mut` reference instead of a `&` reference because we will mutate the page tables later in this post.
+First, we read the physical frame of the active level 4 table from the `CR3` register. We then convert its start address to a virtual address using a `phys_to_virt` closure that adds the passed `physical_memory_offset` to the address. Finally, we convert the address to a `*mut PageTable` raw pointer through the `as_mut_ptr` method and then unsafely create a `&mut PageTable` reference from it. We create a `&mut` reference instead of a `&` reference because we will mutate the page tables later in this post.
 
 We don't need to use an unsafe block here because Rust treats the complete body of an `unsafe fn` like a large `unsafe` block. This makes our code more dangerous since we could accidentally introduce an unsafe operation in previous lines without noticing. It also makes it much more difficult to spot the unsafe operations. There is an [RFC](https://github.com/rust-lang/rfcs/pull/2585) to change this behavior.
 
@@ -534,7 +534,7 @@ Inside the loop, we again use the `physical_memory_offset` to convert the frame 
 
 [`PageTableEntry::frame`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
-Let's test translation function by translating some addresses:
+Let's test our translation function by translating some addresses:
 
 ```rust
 // in src/main.rs
@@ -664,7 +664,7 @@ When we run it now, we see the same translation results as before, with the diff
 
 ![0xb8000 -> 0xb8000, 0x20010a -> 0x40010a, 0x57ac001ffe48 -> 0x27be48, 0xfffffc0000000000 -> 0x0](qemu-mapper-translate-addr.png)
 
-As expected the virtual address `physical_memory_offset` translates to the physical address `0x0`. By using the translation function of the `MappedPageTable` type we can spare ourselves the work of implementing huge page support. We also have access to other page functions such as `map_to`, which we will use in the next section. At this point we no longer need our `memory::tranlate_addr` function, so you can delete it if you want.
+As expected the virtual address `physical_memory_offset` translates to the physical address `0x0`. By using the translation function of the `MappedPageTable` type we can spare ourselves the work of implementing huge page support. We also have access to other page functions such as `map_to`, which we will use in the next section. At this point we no longer need our `memory::translate_addr` function, so you can delete it if you want.
 
 ### Creating a new Mapping
 
@@ -899,7 +899,7 @@ While our `create_example_mapping` function is just some example code, we are no
 
 In this post we learned about different techniques to access the physical frames of page tables, including identity mapping, mapping of the complete physical memory, temporary mapping, and recursive page tables. We chose to map the complete physical memory since it's simple, portable, and powerful.
 
-We can't map the physical memory from our kernel without page table access, so we needed support from the bootloader. The `bootloader` crate supports creating the required mapping through optional cargo features. It passes the required information to our kernel in form of a `&BootInfo` argument to our entry point function.
+We can't map the physical memory from our kernel without page table access, so we needed support from the bootloader. The `bootloader` crate supports creating the required mapping through optional cargo features. It passes the required information to our kernel in the form of a `&BootInfo` argument to our entry point function.
 
 For our implementation, we first manually traversed the page tables to implement a translation function, and then used the `MappedPageTable` type of the `x86_64` crate. We also learned how to create new mappings in the page table and how to create the necessary `FrameAllocator` on top of the memory map passed by the bootloader.
 
