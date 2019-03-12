@@ -438,7 +438,7 @@ When we run it, we see the following output:
 
 We see that there are various non-empty entries, which all map to different level 3 tables. There are so many regions because kernel code, kernel stack, the physical memory mapping, and the boot information all use separate memory areas.
 
-To travesre the page tables further and take a look at a level 3 table, we can take the mapped frame of an entry convert it to a virtual address again:
+To traverse the page tables further and take a look at a level 3 table, we can take the mapped frame of an entry convert it to a virtual address again:
 
 ```rust
 // get the physical address from the entry and convert it
@@ -530,7 +530,7 @@ Instead of reusing our `active_level_4_table` function, we read the level 4 fram
 
 The `VirtAddr` struct already provides methods to compute the indexes into the page tables of the four levels. We store these indexes in a small array because it allows us to traverse the page tables using a `for` loop. Outside of the loop, we remember the last visited `frame` to calculate the physical address later. The `frame` points to page table frames while iterating, and to the mapped frame after the last iteration, i.e. after following the level 1 entry.
 
-Inside the loop, we again use the `physical_memory_offset` to convert the frame into a page table reference. We then read the entry of the current page table and use the [`PageTableEntry::frame`] function to retrieve the mapped frame. If the entry is not mapped to a frame we return `None`. If the entry has maps a huge 2MiB or 1GiB page we panic for now.
+Inside the loop, we again use the `physical_memory_offset` to convert the frame into a page table reference. We then read the entry of the current page table and use the [`PageTableEntry::frame`] function to retrieve the mapped frame. If the entry is not mapped to a frame we return `None`. If the entry maps a huge 2MiB or 1GiB page we panic for now.
 
 [`PageTableEntry::frame`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
@@ -670,14 +670,14 @@ As expected the virtual address `physical_memory_offset` translates to the physi
 
 Until now we only looked at the page tables without modifying anything. Let's change that by creating a new mapping for a previously unmapped page.
 
-We will use the [`map_to`] function of the [`Mapper`] trait for our implementation, so let's take a look at that function first. We see from the documentation takes it four arguments: the page that we want to map, the frame that the page should be mapped to, a set of flags for the page table entry, and a `frame_allocator`. The frame allocator is needed because mapping the given page might require to create additional page tables, which need unused frames as backing storage.
+We will use the [`map_to`] function of the [`Mapper`] trait for our implementation, so let's take a look at that function first. The documentation tells us that it takes four arguments: the page that we want to map, the frame that the page should be mapped to, a set of flags for the page table entry, and a `frame_allocator`. The frame allocator is needed because mapping the given page might require creating additional page tables, which need unused frames as backing storage.
 
 [`map_to`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
 [`Mapper`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/trait.Mapper.html
 
 #### A `create_example_mapping` Function
 
-The first step of our implementation is to create a new `create_example_mapping` function that maps a given page to `0xb8000`, the physical frame of the VGA text buffer. We choose that frame because it allows us to easily test if the mapping was created correctly. We just need to write to the newly mapped page and see whether we see the write appear on the screen.
+The first step of our implementation is to create a new `create_example_mapping` function that maps a given page to `0xb8000`, the physical frame of the VGA text buffer. We choose that frame because it allows us to easily test if the mapping was created correctly: We just need to write to the newly mapped page and see whether we see the write appear on the screen.
 
 The `create_example_mapping` function looks like this:
 
@@ -740,7 +740,7 @@ impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
 
 We now need to find a page that we can map without creating new page tables. The bootloader loads itself in the first megabyte of the virtual address space, so we know that a valid level 1 table exists for this region. We can choose any unused page in this memory region for our example mapping, for example, the page at address `0x1000`.
 
-To test our mapping function, we first map page `0x1000` and then try to write to the screen through that mapping it:
+To test our mapping function, we first map page `0x1000` and then try to write to the screen through that mapping:
 
 ```rust
 // in src/main.rs
