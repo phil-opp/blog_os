@@ -36,7 +36,7 @@ dependencies = [
  "spin 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "uart_16550 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "volatile 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "x86_64 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x86_64 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -279,7 +279,7 @@ dependencies = [
 
 [[package]]
 name = "x86_64"
-version = "0.5.0"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "array-init 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -341,6 +341,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum winapi-i686-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
 "checksum winapi-x86_64-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 "checksum x86_64 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)" = "2bd647af1614659e1febec1d681231aea4ebda4818bf55a578aff02f3e4db4b4"
-"checksum x86_64 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a86c6fdb5b6847e14c63f94186211b5680a0a2564b36f180a3532ce420fdada0"
+"checksum x86_64 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "de155d368de1d32afc8f90838bf81986e4bd43a0cd5fcd7f7e9c85cb8f51dc7c"
 "checksum xmas-elf 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "22678df5df766e8d1e5d609da69f0c3132d794edf6ab5e75e7abcd2270d4cf58"
 "checksum zero 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "5f1bc8a6b2005884962297587045002d8cfb8dcec9db332f4ca216ddc5de82c5"
