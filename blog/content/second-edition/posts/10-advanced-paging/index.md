@@ -248,7 +248,7 @@ First, we introduce variables for the recursive index (511 = `0o777`) and the si
 In the next step we calculate the virtual addresses of the four page tables as descripbed in the [address calculation] section. We transform each of these addresses to [`PageTable`] references later in the function. These transformations are `unsafe` operations since the compiler can't know that these addresses are valid.
 
 [address calculation]: #address-calculation
-[`PageTable`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/page_table/struct.PageTable.html
+[`PageTable`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/page_table/struct.PageTable.html
 
 After the address calculation, we use the indexing operator to look at the entry in the level 4 table. If that entry is null, there is no level 3 table for this level 4 entry, which means that the `addr` is not mapped to any physical memory, so we return `None`. If the entry is not `None`, we know that a level 3 table exists. We then do the same cast and entry-checking as with the level 4 table.
 
@@ -298,8 +298,8 @@ As expected, the identity-mapped address `0xb8000` translates to the same physic
 
 The `x86_64` provides a [`RecursivePageTable`] type that implements safe abstractions for various page table operations. The type implements the [`MapperAllSizes`] trait, which already contains a `translate_addr` function that we can use instead of hand-rolling our own. To create a new `RecursivePageTable`, we create a `memory::init` function:
 
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/struct.RecursivePageTable.html
-[`MapperAllSizes`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/struct.RecursivePageTable.html
+[`MapperAllSizes`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
 
 ```rust
 // in src/memory.rs
@@ -353,8 +353,8 @@ pub extern "C" fn _start() -> ! {
 
 Instead of using `u64` for all addresses we now use the [`VirtAddr`] and [`PhysAddr`] wrapper types to differentiate the two kinds of addresses. In order to be able to call the `translate_addr` method, we need to import the `MapperAllSizes` trait.
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.5.0/x86_64/struct.VirtAddr.html
-[`PhysAddr`]: https://docs.rs/x86_64/0.5.0/x86_64/struct.PhysAddr.html
+[`VirtAddr`]: https://docs.rs/x86_64/0.5.2/x86_64/struct.VirtAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.5.2/x86_64/struct.PhysAddr.html
 
 By using the `RecursivePageTable` type, we now have a safe abstraction and clear ownership semantics. This ensures that we can't accidentally modify the page table concurrently, because an exclusive borrow of the `RecursivePageTable` is needed in order to modify it.
 
@@ -378,7 +378,7 @@ pub unsafe fn init(level_4_table_addr: usize) -> RecursivePageTable<'static> {
 
 The problem with this is that we don't immediately see which parts are unsafe. For example, we don't know whether the `RecursivePageTable::new` function is unsafe or not without looking at [its definition][RecursivePageTable::new]. This makes it very easy to accidentally do something unsafe without noticing.
 
-[RecursivePageTable::new]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/struct.RecursivePageTable.html#method.new
+[RecursivePageTable::new]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/struct.RecursivePageTable.html#method.new
 
 To avoid this problem, we can add a safe inner function:
 
@@ -436,25 +436,25 @@ pub fn create_example_mapping(
 
 The function takes a mutable reference to the `RecursivePageTable` because it needs to modify it and a `FrameAllocator` that is explained below. It then uses the [`map_to`] function of the [`Mapper`] trait to map the page at address `0x1000` to the physical frame at address `0xb8000`. The function is unsafe because it's possible to break memory safety with invalid arguments.
 
-[`map_to`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
-[`Mapper`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/mapper/trait.Mapper.html
+[`map_to`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
+[`Mapper`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.Mapper.html
 
 Apart from the `page` and `frame` arguments, the [`map_to`] function takes two more arguments. The third argument is a set of flags for the page table entry. We set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable.
 
 The fourth argument needs to be some structure that implements the [`FrameAllocator`] trait. The `map_to` method needs this argument because it might need unused frames for creating new page tables. The `Size4KiB` argument in the trait implementation is needed because the [`Page`] and [`PhysFrame`] types are [generic] over the [`PageSize`] trait to work with both standard 4KiB pages and huge 2MiB/1GiB pages.
 
-[`FrameAllocator`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/trait.FrameAllocator.html
-[`Page`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/page/struct.Page.html
-[`PhysFrame`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/frame/struct.PhysFrame.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/trait.FrameAllocator.html
+[`Page`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/page/struct.Page.html
+[`PhysFrame`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/frame/struct.PhysFrame.html
 [generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
-[`PageSize`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/page/trait.PageSize.html
+[`PageSize`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/page/trait.PageSize.html
 
 The `map_to` function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally forget to use it.
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
-[`MapperFlush`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[`flush`]: https://docs.rs/x86_64/0.5.0/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`MapperFlush`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`flush`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 [`#[must_use]`]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
 Since we know that no new page tables are required for the address `0x1000`, a frame allocator that always returns `None` suffices. We create such an `EmptyFrameAllocator` for testing our mapping function:
