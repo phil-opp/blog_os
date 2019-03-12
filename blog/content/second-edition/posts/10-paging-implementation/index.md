@@ -653,6 +653,138 @@ As expected the virtual address `physical_memory_offset` translates to the physi
 
 Until now we only looked at the page tables without modifying anything. Let's change that by creating a new mapping for a previously unmapped page.
 
+We will use the [`map_to`] function of the [`Mapper`] trait for our implementation, so let's take a look at that function first. We see from the documentation takes it four arguments: the page that we want to map, the frame that the page should be mapped to, a set of flags for the page table entry, and a `frame_allocator`. The frame allocator is needed because mapping the given page might require to create additional page tables, which need unused frames as backing storage.
+
+[`map_to`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
+[`Mapper`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/trait.Mapper.html
+
+#### A `create_example_mapping` Function
+
+The first step of our implementation is to create a new `create_example_mapping` function that maps a given page to `0xb8000`, the physical frame of the VGA text buffer. We choose that frame because it allows us to easily test if the mapping was created correctly. We just need to write to the newly mapped page and see whether we see the write appear on the screen.
+
+The `create_example_mapping` function looks like this:
+
+```rust
+// in src/memory.rs
+
+use x86_64::structures::paging::{Page, Size4KiB, Mapper, FrameAllocator};
+
+/// Creates an example mapping for the given page to frame `0xb8000`.
+pub fn create_example_mapping(
+    page: Page,
+    mapper: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+) {
+    use x86_64::structures::paging::PageTableFlags as Flags;
+
+    let frame = PhysFrame::containing_address(PhysAddr::new(0xb8000));
+    let flags = Flags::PRESENT | Flags::WRITABLE;
+
+    let map_to_result = unsafe {
+        mapper.map_to(page, frame, flags, frame_allocator)
+    };
+    map_to_result.expect("map_to failed").flush();
+}
+```
+
+In addition to the `page` that should be mapped, the function expects a `mapper` instance and a `frame_allocator`. The `mapper` is a type that implements the `Mapper<Size4KiB>` trait, which provides the `map_to` method. The generic `Size4KiB` parameter is needed because the [`Mapper`] trait is [generic] over the [`PageSize`] trait to work with both standard 4KiB pages and huge 2MiB/1GiB pages. We only want to create 4KiB pages, so we can use `Mapper<Size4KiB>` instead of requiring `MapperAllSizes`.
+
+[generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
+[`PageSize`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/trait.PageSize.html
+
+For the mapping, we set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable. Calling `map_to` is unsafe because it's possible to break memory safety with invalid arguments, so we need to use an `unsafe` block.
+
+The `map_to` function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally forget to use it.
+
+[`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
+[`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
+[`MapperFlush`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/struct.MapperFlush.html
+[`flush`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/struct.MapperFlush.html#method.flush
+[`#[must_use]`]: https://doc.rust-lang.org/std/result/#results-must-be-used
+
+#### A dummy `FrameAllocator`
+
+To be able to call `create_example_mapping` we need to create a `FrameAllocator` first. As noted above, the difficulty of creating a new mapping depends on the virtual page that we want to map. In the easiest case, the level 1 page table for the page already exists and we just need to write a single entry. In the most difficult case, the page is in a memory region for that no level 3 exists yet so that we need to create new level 3, level 2 and level 1 page tables first.
+
+Let's start with the simple case and assume that we don't need to create new page tables. For this case, a frame allocator that always returns `None` suffices. We create such an `EmptyFrameAllocator` for testing our mapping function:
+
+```rust
+// in src/memory.rs
+
+/// A FrameAllocator that always returns `None`.
+pub struct EmptyFrameAllocator;
+
+impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
+        None
+    }
+}
+```
+
+We now need to find a page that we can map without creating new page tables. The bootloader loads itself in the first megabyte of the virtual address space, so we know that a valid level 1 table exists for this region. We can choose any unused page in this memory region for our example mapping, for example, the page at address `0x1000`.
+
+To test our mapping function, we first map page `0x1000` and then try to write to the screen through that mapping it:
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    […] // initialize GDT, IDT, PICS
+
+    use blog_os::memory;
+    use x86_64::{structures::paging::Page, VirtAddr};
+
+    let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
+    let mut frame_allocator = memory::EmptyFrameAllocator;
+
+    // map a previously unmapped page
+    let page = Page::containing_address(VirtAddr::new(0x1000));
+    memory::create_example_mapping(page, &mut mapper, &mut frame_allocator);
+
+    // write the string `New!` to the screen through the new mapping
+    let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
+    unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e)};
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+We first create the mapping for the page at `0x1000` by calling our `create_example_mapping` function with a mutable reference to the `mapper` and the `frame_allocator` instances. This maps the page `0x1000` to the VGA text buffer frame, so we should see any write to it on the screen.
+
+Then we convert the page to a raw pointer and write a value to offset `400`. We don't write to the start of the page because the top line of the VGA buffer is directly shifted off the screen by the next `println`. We write the value `0x_f021_f077_f065_f04e`, which represents the string _"New!"_ on white background. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile, so we use the [`write_volatile`] method.
+
+[in the _“VGA Text Mode”_ post]: ./second-edition/posts/03-vga-text-buffer/index.md#volatile
+[`write_volatile`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write_volatile
+
+When we run it in QEMU, we see the following output:
+
+![QEMU printing "It did not crash!" with four completely white cells in the middle of the screen](qemu-new-mapping.png)
+
+The _"New!"_ on the screen is by our write to page `0x1000`, which means that we successfully created a new mapping in the page tables.
+
+Creating that mapping only worked because there was already a level 1 table for mapping page `0x1000`. When we try to map a page for that no level 1 table exists yet, the `map_to` function fails because it tries to allocate frames from the `EmptyFrameAllocator` for creating new page tables. We can see that happen when we try to map page `0xdeadbeaf000` instead of `0x1000`:
+
+```rust
+// in src/main.rs
+
+#[cfg(not(test))]
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    […]
+    let page = Page::containing_address(VirtAddr::new(0xdeadbeaf000));
+    […]
+}
+```
+
+When we run it, a panic with the following error message occurs:
+
+```
+panicked at 'map_to failed: FrameAllocationFailed', /…/result.rs:999:5
+```
+
+To map pages that don't have a level 1 page table yet we need to create a proper `FrameAllocator`. But how do we know which frames are unused and how much physical memory is available?
+
 ### Allocating Frames
 
 In order to create new page tables, we need to create a proper frame allocator. We start with a generic skeleton:
@@ -678,7 +810,9 @@ The `frames` field can be initialized with an arbitrary [`Iterator`] of frames. 
 [`Iterator`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html
 [`Iterator::next`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#tymethod.next
 
-The plan is to use the [`MemoryMap`] passed by the bootloader to find out which physical frames are available to our kernel and still unused. The memory map consists of a list of [`MemoryRegion`] structs, which contain the start address, the length, and the type (e.g. unused, reserved, etc.) of each memory region. By creating an iterator that yields frames from unused regions, we can instantiate a valid `BootInfoFrameAllocator`.
+For initializing the `BootInfoFrameAllocator` we use the `memory_map` that is passed by the bootloader as part of the `BootInfo` struct. As we explained in the [_Boot Information_](#boot-information) section, the memory map is provided by the BIOS/UEFI firmware. It can only be queried very early in the boot process, so the bootloader already calls the respective functions for us.
+
+The memory map consists of a list of [`MemoryRegion`] structs, which contain the start address, the length, and the type (e.g. unused, reserved, etc.) of each memory region. By creating an iterator that yields frames from unused regions, we can instantiate a valid `BootInfoFrameAllocator`.
 
 The initialization of the `BootInfoFrameAllocator` happens in a new `init_frame_allocator` function:
 
@@ -728,9 +862,36 @@ We can now modify our `kernel_main` function to pass a `BootInfoFrameAllocator` 
 // in src/main.rs
 
 #[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    […] // initialize GDT, IDT, PICS
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    […]
+    let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);
+    […]
+}
+```
+
+Now the mapping succeeds and we see the black-on-white _"New!"_ on the screen again. Behind the scenes, the `map_to` method creates the missing page tables in the following way:
+
+- Allocate an unused frame from the passed `frame_allocator`.
+- Zero the frame to create a new, empty page table.
+- Map the entry of the higher level table to that frame.
+- Continue with the next table level.
+
+While our `create_example_mapping` function is just some example code, we are now able to create new mappings for arbitrary pages. This will be essential for allocating memory or implementing multithreading in future posts.
+
+## Summary
+
+In this post we learned about different techniques to access the physical frames of page tables, including identity mapping, mapping of the complete physical memory, temporary mapping, and recursive page tables. We chose to map the complete physical memory since it's simple, portable, and powerful.
+
+We can't map the physical memory from our kernel without page table access, so we needed support from the bootloader. The `bootloader` crate supports creating the required mapping through optional cargo features. It passes the required information to our kernel in form of a `&BootInfo` argument to our entry point function.
+
+For our implementation, we first manually traversed the page tables to implement a translation function, and then used the `MappedPageTable` type of the `x86_64` crate. We also learned how to create new mappings in the page table and how to create the necessary `FrameAllocator` on top of the memory map passed by the bootloader.
+
+## What's next?
+
+The next post will create a heap memory region for our kernel, which will allow us to [allocate memory] and use various [collection types].
+
+[allocate memory]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html
+[collection types]: https://doc.rust-lang.org/alloc/collections/index.html
 
     use x86_64::structures::paging::PageTable;
 
