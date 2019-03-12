@@ -4,6 +4,9 @@ weight = 10
 path = "advanced-paging"
 date = 2019-01-28
 template = "second-edition/page.html"
+[extra]
+warning_short = "Deprecated: "
+warning = "This post is deprecated in favor of the [_Paging Implementation_](/paging-implementation) post and will no longer receive updates. See issue [#545](https://github.com/phil-opp/blog_os/issues/545) for reasons for this deprecation."
 +++
 
 This post explains techniques to make the physical page table frames accessible to our kernel. It then uses such a technique to implement a function that translates virtual to physical addresses. It also explains how to create new mappings in the page tables.
@@ -28,13 +31,14 @@ However, it also causes a problem when we try to access the page tables from our
 
 The next section discusses the problem in detail and provides different approaches to a solution. Afterward, we implement a function that traverses the page table hierarchy in order to translate virtual to physical addresses. Finally, we learn how to create new mappings in the page tables and how to find unused memory frames for creating new page tables.
 
-### Dependency Updates
+### Dependency Versions
 
-This post requires version 0.4.0 or later of the `x86_64` dependency. You can update the dependency in your `Cargo.toml`:
+This post requires version 0.3.12 of the `bootloader` dependency and version 0.5.0 of the `x86_64` dependency. You can set the dependency versions in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-x86_64 = "0.4.0" # or later
+bootloader = "0.3.12"
+x86_64 = "0.5.0"
 ```
 
 ## Accessing Page Tables
