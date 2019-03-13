@@ -391,20 +391,19 @@ use x86_64::structures::paging::PageTable;
 pub unsafe fn active_level_4_table(physical_memory_offset: u64)
     -> &'static mut PageTable
 {
-    use x86_64::{registers::control::Cr3, PhysAddr, VirtAddr};
+    use x86_64::{registers::control::Cr3, VirtAddr};
 
     let (level_4_table_frame, _) = Cr3::read();
 
-    let phys_to_virt = |phys: PhysAddr| {
-        VirtAddr::new(phys.as_u64() + physical_memory_offset)
-    };
-    let level_4_table_addr = phys_to_virt(level_4_table_frame.start_address());
+    let phys = level_4_table_frame.start_address();
+    let virt = VirtAddr::new(phys.as_u64() + physical_memory_offset);
+    let page_table_ptr: *mut PageTable = virt.as_mut_ptr();
 
-    &mut *level_4_table_addr.as_mut_ptr() // unsafe
+    &mut *page_table_ptr // unsafe
 }
 ```
 
-First, we read the physical frame of the active level 4 table from the `CR3` register. We then convert its start address to a virtual address using a `phys_to_virt` closure that adds the passed `physical_memory_offset` to the address. Finally, we convert the address to a `*mut PageTable` raw pointer through the `as_mut_ptr` method and then unsafely create a `&mut PageTable` reference from it. We create a `&mut` reference instead of a `&` reference because we will mutate the page tables later in this post.
+First, we read the physical frame of the active level 4 table from the `CR3` register. We then take its physical start address and convert it to a virtual address by adding the passed `physical_memory_offset`. Finally, we convert the address to a `*mut PageTable` raw pointer through the `as_mut_ptr` method and then unsafely create a `&mut PageTable` reference from it. We create a `&mut` reference instead of a `&` reference because we will mutate the page tables later in this post.
 
 We don't need to use an unsafe block here because Rust treats the complete body of an `unsafe fn` like a large `unsafe` block. This makes our code more dangerous since we could accidentally introduce an unsafe operation in previous lines without noticing. It also makes it much more difficult to spot the unsafe operations. There is an [RFC](https://github.com/rust-lang/rfcs/pull/2585) to change this behavior.
 
