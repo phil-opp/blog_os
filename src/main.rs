@@ -3,11 +3,13 @@
 #![cfg_attr(test, allow(unused_imports))]
 
 use blog_os::println;
+use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 
+entry_point!(kernel_main);
+
 #[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::interrupts::PICS;
     use x86_64::registers::control::Cr3;
 
