@@ -11,8 +11,8 @@ entry_point!(kernel_main);
 #[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::interrupts::PICS;
-    use blog_os::memory::translate_addr;
-    use x86_64::VirtAddr;
+    use blog_os::memory;
+    use x86_64::{structures::paging::MapperAllSizes, VirtAddr};
 
     println!("Hello World{}", "!");
 
@@ -20,6 +20,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     blog_os::interrupts::init_idt();
     unsafe { PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
+
+    let mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
 
     let addresses = [
         // the identity-mapped vga buffer page
@@ -34,7 +36,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     for &address in &addresses {
         let virt = VirtAddr::new(address);
-        let phys = unsafe { translate_addr(virt, boot_info.physical_memory_offset) };
+        let phys = mapper.translate_addr(virt);
         println!("{:?} -> {:?}", virt, phys);
     }
 
