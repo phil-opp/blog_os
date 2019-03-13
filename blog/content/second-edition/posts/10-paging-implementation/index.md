@@ -728,7 +728,9 @@ In addition to the `page` that should be mapped, the function expects a `mapper`
 [generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
 [`PageSize`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/trait.PageSize.html
 
-For the mapping, we set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable. Calling `map_to` is unsafe because it's possible to break memory safety with invalid arguments, so we need to use an `unsafe` block.
+For the mapping, we set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable. Calling `map_to` is unsafe because it's possible to break memory safety with invalid arguments, so we need to use an `unsafe` block. For a list of all possible flags, see the [_Page Table Format_] section of the previous post.
+
+[_Page Table Format_]: ./second-edition/posts/09-paging-introduction/index.md#page-table-format
 
 The `map_to` function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally forget to use it.
 
