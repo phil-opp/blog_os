@@ -17,7 +17,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-10
+[post branch]: https://github.com/phil-opp/blog_os/tree/5c0fb63f33380fc8596d7166c2ebde03ef3d6726
 
 ## Introduction
 
