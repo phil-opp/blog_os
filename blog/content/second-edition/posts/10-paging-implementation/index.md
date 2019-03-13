@@ -571,7 +571,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     for &address in &addresses {
         let virt = VirtAddr::new(address);
-        let phys = translate_addr(virt, boot_info.physical_memory_offset);
+        let phys = unsafe {
+            translate_addr(virt, boot_info.physical_memory_offset)
+        };
         println!("{:?} -> {:?}", virt, phys);
     }
 
