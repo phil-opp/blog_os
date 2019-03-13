@@ -63,3 +63,19 @@ impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
         None
     }
 }
+
+pub struct BootInfoFrameAllocator<I>
+where
+    I: Iterator<Item = PhysFrame>,
+{
+    frames: I,
+}
+
+impl<I> FrameAllocator<Size4KiB> for BootInfoFrameAllocator<I>
+where
+    I: Iterator<Item = PhysFrame>,
+{
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
+        self.frames.next()
+    }
+}
