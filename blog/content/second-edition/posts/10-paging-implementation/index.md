@@ -478,6 +478,8 @@ For translating a virtual to a physical address, we have to traverse the four-le
 ```rust
 // in src/memory.rs
 
+use x86_64::{PhysAddr, VirtAddr};
+
 /// Translates the given virtual address to the mapped physical address, or
 /// `None` if the address is not mapped.
 ///
@@ -612,6 +614,9 @@ The traits only define the interface, they don't provide any implementation. The
 We have the complete physical memory mapped at `physical_memory_offset`, so we can use the `MappedPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
 
 ```rust
+use x86_64::structures::paging::{PhysFrame, MapperAllSizes, MappedPageTable};
+use x86_64::PhysAddr;
+
 /// Initialize a new MappedPageTable.
 ///
 /// This function is unsafe because the caller must guarantee that the
