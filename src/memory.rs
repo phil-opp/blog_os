@@ -54,3 +54,12 @@ pub fn create_example_mapping(
     let map_to_result = unsafe { mapper.map_to(page, frame, flags, frame_allocator) };
     map_to_result.expect("map_to failed").flush();
 }
+
+/// A FrameAllocator that always returns `None`.
+pub struct EmptyFrameAllocator;
+
+impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
+        None
+    }
+}
