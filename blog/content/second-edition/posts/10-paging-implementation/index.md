@@ -445,16 +445,24 @@ We see that there are various non-empty entries, which all map to different leve
 To traverse the page tables further and take a look at a level 3 table, we can take the mapped frame of an entry convert it to a virtual address again:
 
 ```rust
-// get the physical address from the entry and convert it
-let phys = entry.frame().unwrap().start_address();
-let virt = phys.as_u64() + boot_info.physical_memory_offset;
-let ptr = VirtAddr::new(virt).as_mut_ptr()
-let l3_table: &PageTable = unsafe {&*ptr};
+// in the for loop in src/main.rs
 
-// print non-empty entries of the level 3 table
-for (i, entry) in l3_table.iter().enumerate() {
-    if !entry.is_unused() {
-        println!("  L3 Entry {}: {:?}", i, entry);
+use x86_64::{structures::paging::PageTable, VirtAddr};
+
+if !entry.is_unused() {
+    println!("L4 Entry {}: {:?}", i, entry);
+
+    // get the physical address from the entry and convert it
+    let phys = entry.frame().unwrap().start_address();
+    let virt = phys.as_u64() + boot_info.physical_memory_offset;
+    let ptr = VirtAddr::new(virt).as_mut_ptr();
+    let l3_table: &PageTable = unsafe { &*ptr };
+
+    // print non-empty entries of the level 3 table
+    for (i, entry) in l3_table.iter().enumerate() {
+        if !entry.is_unused() {
+            println!("  L3 Entry {}: {:?}", i, entry);
+        }
     }
 }
 ```
