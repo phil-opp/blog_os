@@ -6,11 +6,11 @@ date = 0000-01-01
 template = "second-edition/page.html"
 +++
 
-This post shows how to implement paging support in our kernel. It first explores different techniques to make the physical page table frames accessible to the kernel and discusses their drawbacks. It then implements an address translation function and a function to create a new mapping.
+This post shows how to implement paging support in our kernel. It first explores different techniques to make the physical page table frames accessible to the kernel and discusses their respective advantages and drawbacks. It then implements an address translation function and a function to create a new mapping.
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found [here][post branch].
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-10`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -20,7 +20,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 ## Another Paging Post?
 
-If you follow this blog, you have probably seen the [_Advanced Paging_](/advanced-paging) post that we published at the end of January. After receiving some [negative feedback] about the use of recursive page tables in that post, I decided to rewrite that post using a [different approach] for accessing the page table frames.
+If you follow this blog, you have probably seen the [_Advanced Paging_](/advanced-paging) post that was published at the end of January. After receiving some [negative feedback] about the use of recursive page tables in that post, I decided to rewrite that post using a [different approach] for accessing the page table frames.
 
 [negative feedback]: https://news.ycombinator.com/item?id=19017995
 [different approach]: https://github.com/phil-opp/blog_os/issues/545
@@ -373,7 +373,7 @@ For the module we create an empty `src/memory.rs` file.
 
 ### Accessing the Page Tables
 
-At the [end of the previous post], we tried to take a look at the page tables our kernel runs on, but failed since we couldn't access the physical frame that the `CR3` register points to. We're now able to continue from thereby creating an `active_level_4_table` function that returns a reference to the active level 4 page table:
+At the [end of the previous post], we tried to take a look at the page tables our kernel runs on, but failed since we couldn't access the physical frame that the `CR3` register points to. We're now able to continue from there by creating an `active_level_4_table` function that returns a reference to the active level 4 page table:
 
 [end of the previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
 
