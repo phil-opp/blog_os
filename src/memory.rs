@@ -1,3 +1,4 @@
+use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 use x86_64::{
     structures::paging::{
         FrameAllocator, MappedPageTable, Mapper, MapperAllSizes, Page, PageTable, PhysFrame,
@@ -20,6 +21,24 @@ pub unsafe fn init(physical_memory_offset: u64) -> impl MapperAllSizes {
         virt.as_mut_ptr()
     };
     MappedPageTable::new(level_4_table, phys_to_virt)
+}
+
+/// Create a FrameAllocator from the passed memory map
+pub fn init_frame_allocator(
+    memory_map: &'static MemoryMap,
+) -> BootInfoFrameAllocator<impl Iterator<Item = PhysFrame>> {
+    // get usable regions from memory map
+    let regions = memory_map
+        .iter()
+        .filter(|r| r.region_type == MemoryRegionType::Usable);
+    // map each region to its address range
+    let addr_ranges = regions.map(|r| r.range.start_addr()..r.range.end_addr());
+    // transform to an iterator of frame start addresses
+    let frame_addresses = addr_ranges.flat_map(|r| r.into_iter().step_by(4096));
+    // create `PhysFrame` types from the start addresses
+    let frames = frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)));
+
+    BootInfoFrameAllocator { frames }
 }
 
 /// Returns a mutable reference to the active level 4 table.
