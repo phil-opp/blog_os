@@ -34,7 +34,7 @@ pub fn init_frame_allocator(
     // map each region to its address range
     let addr_ranges = regions.map(|r| r.range.start_addr()..r.range.end_addr());
     // transform to an iterator of frame start addresses
-    let frame_addresses = addr_ranges.flat_map(|r| r.into_iter().step_by(4096));
+    let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
     // create `PhysFrame` types from the start addresses
     let frames = frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)));
 
