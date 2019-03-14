@@ -2,7 +2,7 @@
 title = "Paging Implementation"
 weight = 10
 path = "paging-implementation"
-date = 0000-01-01
+date = 2019-03-14
 template = "second-edition/page.html"
 +++
 
@@ -930,7 +930,3 @@ The next post will create a heap memory region for our kernel, which will allow 
 
 [allocate memory]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html
 [collection types]: https://doc.rust-lang.org/alloc/collections/index.html
-
----
-
-TODO: update date
