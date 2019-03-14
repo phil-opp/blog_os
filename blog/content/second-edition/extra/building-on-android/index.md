@@ -1,7 +1,7 @@
 +++
 title = "Building on Android"
 weight = 3
-template = "second-edition/extra.html"
+
 +++
 
 I finally managed to get `blog_os` building on my Android phone using [termux](https://termux.com/). This post explains the necessary steps to set it up.

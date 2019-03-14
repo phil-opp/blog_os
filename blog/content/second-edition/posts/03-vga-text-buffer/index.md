@@ -3,7 +3,7 @@ title = "VGA Text Mode"
 weight = 3
 path = "vga-text-mode"
 date  = 2018-02-26
-template = "second-edition/page.html"
+
 +++
 
 The [VGA text mode] is a simple way to print text to the screen. In this post, we create an interface that makes its usage safe and simple, by encapsulating all unsafety in a separate module. We also implement support for Rust's [formatting macros].

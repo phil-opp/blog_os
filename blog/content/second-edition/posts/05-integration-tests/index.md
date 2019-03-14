@@ -3,7 +3,7 @@ title = "Integration Tests"
 weight = 5
 path = "integration-tests"
 date  = 2018-06-15
-template = "second-edition/page.html"
+
 +++
 
 To complete the testing picture we implement a basic integration test framework, which allows us to run tests on the target system. The idea is to run tests inside QEMU and report the results back to the host through the serial port.

@@ -2,7 +2,7 @@
 title = "Disable SIMD"
 weight = 2
 path = "disable-simd"
-template = "second-edition/extra.html"
+
 +++
 
 [Single Instruction Multiple Data (SIMD)] instructions are able to perform an operation (e.g. addition) simultaneously on multiple data words, which can speed up programs significantly. The `x86_64` architecture supports various SIMD standards:

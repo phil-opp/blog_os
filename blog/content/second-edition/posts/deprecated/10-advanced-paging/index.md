@@ -3,7 +3,7 @@ title = "Advanced Paging"
 weight = 10
 path = "advanced-paging"
 date = 2019-01-28
-template = "second-edition/page.html"
+
 [extra]
 warning_short = "Deprecated: "
 warning = "This post is deprecated in favor of the [_Paging Implementation_](/paging-implementation) post and will no longer receive updates. See issue [#545](https://github.com/phil-opp/blog_os/issues/545) for reasons for this deprecation."

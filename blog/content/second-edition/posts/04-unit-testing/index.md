@@ -3,7 +3,7 @@ title = "Unit Testing"
 weight = 4
 path = "unit-testing"
 date  = 2018-04-29
-template = "second-edition/page.html"
+
 +++
 
 This post explores unit testing in `no_std` executables using Rust's built-in test framework. We will adjust our code so that `cargo test` works and add some basic unit tests to our VGA buffer module.
