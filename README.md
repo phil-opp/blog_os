@@ -1,10 +1,10 @@
-# Blog OS (Advanced Paging)
+# Blog OS (Paging Implementation)
 
 [![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-10)](https://travis-ci.org/phil-opp/blog_os/branches)
 
-This repository contains the source code for the [Advanced Paging][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
+This repository contains the source code for the [Paging Implementation][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
-[post]: https://os.phil-opp.com/advanced-paging/
+[post]: https://os.phil-opp.com/paging-implementation/
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
