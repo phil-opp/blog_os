@@ -340,7 +340,7 @@ Since our `_start` function is called externally from the bootloader, no checkin
 
 To make sure that the entry point function has always the correct signature that the bootloader expects, the `bootloader` crate provides an [`entry_point`] macro that provides a type-checked way to define a Rust function as the entry point. Let's rewrite our entry point function to use this macro:
 
-[`entry_point`]: https://docs.rs/bootloader/0.3.12/bootloader/macro.entry_point.html
+[`entry_point`]: https://docs.rs/bootloader/0.4.0/bootloader/macro.entry_point.html
 
 ```rust
 // in src/main.rs
@@ -887,7 +887,7 @@ This function uses iterator combinator methods to transform the initial `MemoryM
 - The third step is the most complicated: We convert each range to an iterator through the `into_iter` method and then choose every 4096th address using [`step_by`]. Since 4096 bytes (= 4 KiB) is the page size, we get the start address of each frame. The bootloader page aligns all usable memory areas so that we don't need any alignment or rounding code here. By using [`flat_map`] instead of `map`, we get an `Iterator<Item = u64>` instead of an `Iterator<Item = Iterator<Item = u64>>`.
 - In the final step, we convert the start addresses to `PhysFrame` types to construct the desired `Iterator<Item = PhysFrame>`. We then use this iterator to create and return a new `BootInfoFrameAllocator`.
 
-[`MemoryRegion`]: https://docs.rs/bootloader/0.3.12/bootloader/bootinfo/struct.MemoryRegion.html
+[`MemoryRegion`]: https://docs.rs/bootloader/0.4.0/bootloader/bootinfo/struct.MemoryRegion.html
 [`filter`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.filter
 [`map`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.map
 [range syntax]: https://doc.rust-lang.org/core/ops/struct.Range.html
