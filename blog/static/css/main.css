@@ -308,3 +308,11 @@ aside.post_aside {
   border-left: .1rem solid #e5e5e5;
   border-right: .1rem solid #e5e5e5;
 }
+
+details summary {
+  cursor: pointer;
+}
+
+details summary h3, details summary h4, details summary h5, details summary h6 {
+  display: inline;
+}
