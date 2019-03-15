@@ -54,8 +54,8 @@ x86_64 = "0.5.2"
 
 For an overview of the changes in these versions, check out the [`bootloader` changelog] and the [`x86_64` changelog].
 
-[`bootloader` changelog]: https://github.com/rust-osdev/x86_64/blob/master/Changelog.md
-[`x86_64` changelog]: https://github.com/rust-osdev/bootloader/blob/master/Changelog.md
+[`bootloader` changelog]: https://github.com/rust-osdev/bootloader/blob/master/Changelog.md
+[`x86_64` changelog]: https://github.com/rust-osdev/x86_64/blob/master/Changelog.md
 
 ## Accessing Page Tables
 
