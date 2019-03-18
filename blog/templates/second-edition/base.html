@@ -23,10 +23,13 @@
 <body>
     <div class="container content">
         <header class="masthead">
-            <h1 class="masthead-title">
+            <div style="position:relative">
+                <h1 class="masthead-title">
                     <a href="{{ get_url(path="./second-edition/_index.md") }}" title="Home">{{ config.title }} (Second Edition)</a>
-            </h1>
-            <p><small>{{ config.extra.subtitle }}</small></p>
+                </h1>
+                <p><small>{{ config.extra.subtitle }}</small></p>
+                {% block header %}{% endblock header %}
+            </div>
         </header>
 
         <main>{% block main %}{% endblock main %}</main>

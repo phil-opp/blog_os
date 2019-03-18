@@ -3,6 +3,9 @@
 {% import "macros.html" as macros %}
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+{% block header %}
+    <aside id="all-posts-link"><a href="{{ get_url(path="./second-edition/_index.md") }}" title="All Posts">« All Posts</a></aside>
+{% endblock header %}
 
 {% block main %}
     <h1>{{ page.title }}</h1>

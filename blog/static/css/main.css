@@ -166,6 +166,11 @@ aside#toc {
   display: none;
 }
 
+aside#all-posts-link {
+  font-size: 90%;
+  margin-top: 0.5rem;
+}
+
 @media (min-width: 80rem) {
   aside#toc {
     display: block;
@@ -232,6 +237,14 @@ aside#toc {
 
   aside#recent-updates ul li {
     margin-top: .5rem;
+  }
+
+  aside#all-posts-link {
+    float: left;
+    position: absolute;
+    bottom: 0;
+    left: -15rem;
+    margin-top: 0;
   }
 }
 
