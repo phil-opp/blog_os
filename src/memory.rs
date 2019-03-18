@@ -1,11 +1,13 @@
 use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 use x86_64::{
     structures::paging::{
-        FrameAllocator, MappedPageTable, Mapper, MapperAllSizes, Page, PageTable, PhysFrame,
-        Size4KiB,
+        mapper, FrameAllocator, MappedPageTable, Mapper, MapperAllSizes, Page, PageTable,
+        PhysFrame, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
+
+pub mod allocator;
 
 /// Initialize a new MappedPageTable.
 ///
@@ -59,19 +61,37 @@ unsafe fn active_level_4_table(physical_memory_offset: u64) -> &'static mut Page
     &mut *page_table_ptr // unsafe
 }
 
-/// Creates an example mapping for the given page to frame `0xb8000`.
-pub fn create_example_mapping(
-    page: Page,
+pub fn map_heap(
+    heap_start: VirtAddr,
+    heap_end: VirtAddr,
     mapper: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-) {
+) -> Result<(), MapHeapError> {
     use x86_64::structures::paging::PageTableFlags as Flags;
 
-    let frame = PhysFrame::containing_address(PhysAddr::new(0xb8000));
     let flags = Flags::PRESENT | Flags::WRITABLE;
+    let start_page = Page::containing_address(heap_start);
+    let end_page = Page::containing_address(heap_end - 1u64);
 
-    let map_to_result = unsafe { mapper.map_to(page, frame, flags, frame_allocator) };
-    map_to_result.expect("map_to failed").flush();
+    for page in Page::range_inclusive(start_page, end_page) {
+        let frame = frame_allocator.allocate_frame();
+        let frame = frame.ok_or(MapHeapError::FrameAllocationFailed)?;
+        unsafe { mapper.map_to(page, frame, flags, frame_allocator)?.flush() };
+    }
+
+    Ok(())
+}
+
+#[derive(Debug)]
+pub enum MapHeapError {
+    FrameAllocationFailed,
+    MapToError(mapper::MapToError),
+}
+
+impl From<mapper::MapToError> for MapHeapError {
+    fn from(err: mapper::MapToError) -> Self {
+        MapHeapError::MapToError(err)
+    }
 }
 
 /// A FrameAllocator that always returns `None`.

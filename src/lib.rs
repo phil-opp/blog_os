@@ -1,5 +1,9 @@
 #![cfg_attr(not(test), no_std)]
 #![feature(abi_x86_interrupt)]
+#![feature(alloc)]
+#![feature(const_fn)]
+
+extern crate alloc;
 
 pub mod gdt;
 pub mod interrupts;

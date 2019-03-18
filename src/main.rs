@@ -1,9 +1,18 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 #![cfg_attr(test, allow(unused_imports))]
+#![feature(alloc)]
+#![feature(alloc_error_handler)]
 
-use blog_os::println;
+extern crate alloc;
+
+use alloc::vec::Vec;
+use blog_os::{
+    memory::allocator::{BumpAllocator, LinkedListAllocator, LockedAllocator, BucketAllocator},
+    println,
+};
 use bootloader::{entry_point, BootInfo};
+use core::alloc::Layout;
 use core::panic::PanicInfo;
 
 entry_point!(kernel_main);
@@ -24,13 +33,21 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
     let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);
 
-    // map a previously unmapped page
-    let page = Page::containing_address(VirtAddr::new(0xdeadbeaf000));
-    memory::create_example_mapping(page, &mut mapper, &mut frame_allocator);
+    let heap_start = VirtAddr::new(HEAP_START);
+    let heap_end = VirtAddr::new(HEAP_END);
+    memory::map_heap(heap_start, heap_end, &mut mapper, &mut frame_allocator)
+        .expect("map_heap failed");
 
-    // write the string `New!` to the screen through the new mapping
-    let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
-    unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e) };
+    ALLOCATOR.lock().underlying().add_memory(heap_start, HEAP_END - HEAP_START);
+
+    //let mut x = Vec::with_capacity(1000);
+    let mut x = Vec::new();
+    for i in 0..1000 {
+        x.push(i);
+    }
+    println!("{:?}", *ALLOCATOR.lock());
+    println!("with vec of size {}: {}", x.len(), x.iter().sum::<i32>());
+    println!("with formular: {}", 999 * 1000 / 2);
 
     println!("It did not crash!");
     blog_os::hlt_loop();
@@ -42,4 +59,16 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     blog_os::hlt_loop();
+}
+
+const HEAP_START: u64 = 0o_001_000_000_0000;
+const HEAP_END: u64 = HEAP_START + 10 * 0x1000;
+
+#[global_allocator]
+static ALLOCATOR: LockedAllocator<BucketAllocator<LinkedListAllocator>> =
+    LockedAllocator::new(BucketAllocator::new(LinkedListAllocator::empty()));
+
+#[alloc_error_handler]
+fn out_of_memory(layout: Layout) -> ! {
+    panic!("out of memory: allocation for {:?} failed", layout);
 }
