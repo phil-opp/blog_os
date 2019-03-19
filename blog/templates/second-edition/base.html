@@ -27,7 +27,7 @@
                 <h1 class="masthead-title">
                     <a href="{{ get_url(path="./second-edition/_index.md") }}" title="Home">{{ config.title }} (Second Edition)</a>
                 </h1>
-                <p><small>{{ config.extra.subtitle }}</small></p>
+                <p><small>{{ config.extra.subtitle | replace(from=" ", to="&nbsp;")}}</small></p>
                 {% block header %}{% endblock header %}
             </div>
         </header>
