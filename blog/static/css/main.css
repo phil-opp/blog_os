@@ -172,6 +172,10 @@ aside#all-posts-link {
 }
 
 @media (min-width: 80rem) {
+  #toc-inline {
+    display: none;
+  }
+
   #toc-aside {
     display: block;
     width: 12rem;

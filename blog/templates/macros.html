@@ -17,3 +17,19 @@
         async>
     </script>
 {% endmacro utterances %}
+
+{% macro toc(page) %}
+    <details id = "toc-inline">
+        <summary><b>Table of Contents</b></summary>
+        <ul>
+            {% for h2 in page.toc %}<li>
+                <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
+                {% if h2.children %}<ul>
+                    {% for h3 in h2.children %}<li>
+                        <a href="#{{h3.id | safe}}">{{ h3.title | safe }}</a>
+                    </li>{% endfor %}
+                </ul>{% endif %}
+            </li>{% endfor %}
+        </ul>
+    </details>
+{% endmacro toc %}

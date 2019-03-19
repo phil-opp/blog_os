@@ -34,7 +34,7 @@
             </li>{% endfor %}
         </ol>
     </aside>
-    {{ page.content | safe }}
+    {{ page.content | safe | replace(from="<!-- toc -->", to=macros::toc(page=page))}}
 
     <div class="post-footer-support">
         <h2>Support Me</h2>
