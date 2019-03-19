@@ -175,8 +175,10 @@ aside#all-posts-link {
   #toc-aside {
     display: block;
     width: 12rem;
-    position: fixed;
-    top: 4rem;
+    position: sticky;
+    float: left;
+    top: 1rem;
+    margin-top: -4rem;
     margin-left: -15rem;
     font-size: 90%;
     line-height: 1.2;
