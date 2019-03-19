@@ -166,6 +166,10 @@ a.anchorjs-link:hover {
   display: none;
 }
 
+#toc-inline summary {
+  margin-bottom: .2rem;
+}
+
 aside#all-posts-link {
   font-size: 90%;
   margin-top: 0.5rem;
