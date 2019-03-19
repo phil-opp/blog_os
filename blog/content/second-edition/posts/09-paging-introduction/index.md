@@ -16,6 +16,8 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 [at the bottom]: #comments
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-09
 
+<!-- toc -->
+
 ## Memory Protection
 
 One main task of an operating system is to isolate programs from each other. Your web browser shouldn't be able to interfere with your text editor, for example. To achieve this goal, operating systems utilize hardware functionality to ensure that memory areas of one process are not accessible by other processes. There are different approaches, depending on the hardware and the OS implementation.

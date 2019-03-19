@@ -15,6 +15,8 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 [at the bottom]: #comments
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-10
 
+<!-- toc -->
+
 <aside class="post_aside">
 
 ## Another Paging Post?
