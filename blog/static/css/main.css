@@ -162,7 +162,7 @@ a.anchorjs-link:hover {
     text-decoration: none;
 }
 
-aside#toc {
+#toc-aside {
   display: none;
 }
 
@@ -172,7 +172,7 @@ aside#all-posts-link {
 }
 
 @media (min-width: 80rem) {
-  aside#toc {
+  #toc-aside {
     display: block;
     width: 12rem;
     position: fixed;
@@ -184,22 +184,22 @@ aside#all-posts-link {
     transition: opacity .5s;
   }
 
-  aside#toc:hover {
+  #toc-aside:hover {
     opacity: 1;
   }
 
-  aside#toc h2 {
+  #toc-aside h2 {
     font-size: 110%;
     margin-bottom: .2rem;
   }
 
-  aside#toc ol {
+  #toc-aside ol {
     margin: 0 0 .2rem 0;
     padding: 0 0 0 1rem;
     list-style:none;
   }
 
-  aside#toc ol li:before {
+  #toc-aside ol li:before {
     content: "";
     border-color: transparent #008eef;
     border-style: solid;
@@ -212,7 +212,7 @@ aside#all-posts-link {
     position: relative;
   }
 
-  aside#toc.coarse li ol {
+  #toc-aside.coarse li ol {
     display: none;
   }
 
