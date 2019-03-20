@@ -1,5 +1,5 @@
 window.onload = function() {
-  var container = document.querySelector('#toc');
+  var container = document.querySelector('#toc-aside');
 
   if (container != null) {
     resize_toc(container);
