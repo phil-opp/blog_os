@@ -69,7 +69,7 @@ steps:
 - script: cargo test
   displayName: 'Unit Tests'
 
-- script: sudo apt install qemu-system-x86
+- script: sudo apt update && sudo apt install qemu-system-x86
   condition: eq( variables['Agent.OS'], 'Linux' )
   displayName: 'Install QEMU (Linux)'
 
