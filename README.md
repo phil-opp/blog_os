@@ -22,7 +22,7 @@ You can check out a branch in a subdirectory using [git worktree]:
 git worktree add code post-10
 ```
 
-The above command creates a subdirectory named `code` that contains the code for the latest post ("Advanced Paging").
+The above command creates a subdirectory named `code` that contains the code for the 10th post ("Paging Implementation").
 
 ## Posts
 
@@ -57,7 +57,7 @@ The goal of this project is to provide step-by-step tutorials in individual blog
 
 - [Introduction to Paging](https://os.phil-opp.com/paging-introduction/)
     ([source code](https://github.com/phil-opp/blog_os/tree/post-09))
-- [Advanced Paging](https://os.phil-opp.com/advanced-paging/)
+- [Paging Implementation](https://os.phil-opp.com/paging-implementation/)
     ([source code](https://github.com/phil-opp/blog_os/tree/post-10))
 
 ## First Edition Posts
