@@ -1,16 +1,16 @@
 [build]
     base    = "blog"
     publish = "blog/public"
-    command = "python before_build.py && curl -sL https://github.com/getzola/zola/releases/download/v0.5.1/zola-v0.5.1-x86_64-unknown-linux-gnu.tar.gz | tar zxv && ./zola build"
+    command = "python before_build.py && curl -sL https://github.com/getzola/zola/releases/download/v0.6.0/zola-v0.6.0-x86_64-unknown-linux-gnu.tar.gz | tar zxv && ./zola build"
 
 [build.environment]
     ZOLA_VERSION = "0.5.1"
 
 [context.deploy-preview]
-    command = "python before_build.py && curl -sL https://github.com/getzola/zola/releases/download/v0.5.1/zola-v0.5.1-x86_64-unknown-linux-gnu.tar.gz | tar zxv && ./zola build --base-url $DEPLOY_PRIME_URL"
+    command = "python before_build.py && curl -sL https://github.com/getzola/zola/releases/download/v0.6.0/zola-v0.6.0-x86_64-unknown-linux-gnu.tar.gz | tar zxv && ./zola build --base-url $DEPLOY_PRIME_URL"
 
 [context.branch-deploy]
-    command = "python before_build.py && curl -sL https://github.com/getzola/zola/releases/download/v0.5.1/zola-v0.5.1-x86_64-unknown-linux-gnu.tar.gz | tar zxv && ./zola build --base-url $DEPLOY_PRIME_URL"
+    command = "python before_build.py && curl -sL https://github.com/getzola/zola/releases/download/v0.6.0/zola-v0.6.0-x86_64-unknown-linux-gnu.tar.gz | tar zxv && ./zola build --base-url $DEPLOY_PRIME_URL"
 
 
 [[redirects]]

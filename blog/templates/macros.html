@@ -18,11 +18,11 @@
     </script>
 {% endmacro utterances %}
 
-{% macro toc(page) %}
+{% macro toc(toc) %}
     <details id = "toc-inline">
         <summary><b>Table of Contents</b></summary>
         <ul>
-            {% for h2 in page.toc %}<li>
+            {% for h2 in toc %}<li>
                 <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
                 {% if h2.children %}<ul>
                     {% for h3 in h2.children %}<li>
