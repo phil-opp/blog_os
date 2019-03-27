@@ -1,11 +1,11 @@
 {% macro post_link(page) %}
-    <article>
+    <div>
         <h2 class="post-title"><a href="/{{ page.path | safe }}">{{ page.title }}</a></h2>
         <div class="post-summary">
             {{ page.summary | safe}}
             <a class="read-more" href="/{{ page.path | safe }}">read&nbsp;more…</a>
         </div>
-    </article>
+    </div>
 {% endmacro post_link %}
 
 {% macro utterances() %}

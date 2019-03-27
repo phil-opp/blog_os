@@ -12,7 +12,7 @@
 
 <div class="posts neutral">
     {% for page in section.pages %}
-        <article>
+        <div>
             <h2 class="post-title"><a href="/{{ page.path | safe }}">{{ page.title }}</a></h2>
             <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
                     {{ page.date | date(format="%b %d, %Y") }}
@@ -21,7 +21,7 @@
                 {{ page.summary | safe}}
                 <a class="read-more" href="/{{ page.path | safe }}">read more…</a>
             </div>
-        </article>
+        </div>
     {% endfor %}
 </div>
 
