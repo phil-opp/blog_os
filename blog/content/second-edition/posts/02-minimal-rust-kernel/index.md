@@ -12,7 +12,7 @@ In this post we create a minimal 64-bit Rust kernel for the x86 architecture. We
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found [here][post branch].
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-02`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
