@@ -1,6 +1,6 @@
 # Blog OS (Double Faults)
 
-[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=post-07)](https://travis-ci.org/phil-opp/blog_os/branches)
+[![Azure Pipelines CI build](https://img.shields.io/azure-devops/build/phil-opp/blog_os/1/post-07.svg?label=Build&style=flat-square)](https://dev.azure.com/phil-opp/blog_os/_build?definitionId=1)
 
 This repository contains the source code for the [Double Faults][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
