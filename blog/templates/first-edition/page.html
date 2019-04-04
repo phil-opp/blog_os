@@ -11,10 +11,6 @@
         {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
     </time>
 
-    <div class="warning">
-        <b>No longer updated!</b> You are viewing the a post of the first edition of “Writing an OS in Rust”, which is no longer updated. You can find the second edition <a href="{{ get_url(path = "./second-edition/_index.md") }}">here</a>.
-    </div>
-
     <aside id="toc-aside">
         <h2>Table of Contents</h2>
         <ol>
@@ -28,6 +24,11 @@
             </li>{% endfor %}
         </ol>
     </aside>
+
+    <div class="warning">
+        <b>No longer updated!</b> You are viewing the a post of the first edition of “Writing an OS in Rust”, which is no longer updated. You can find the second edition <a href="{{ get_url(path = "./second-edition/_index.md") }}">here</a>.
+    </div>
+
     {{ page.content | safe }}
 {% endblock main %}
 

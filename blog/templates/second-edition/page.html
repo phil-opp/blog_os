@@ -14,13 +14,6 @@
         {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
     </time>
 
-    {% if page.extra.warning %}
-        <div class="warning">
-            {% if page.extra.warning_short %} <b>{{ page.extra.warning_short }}</b> {% endif %}
-            {{ page.extra.warning | markdown(inline=true)}}
-        </div>
-    {% endif %}
-
     <aside id="toc-aside">
         <h2>Table of Contents</h2>
         <ol>
@@ -34,6 +27,14 @@
             </li>{% endfor %}
         </ol>
     </aside>
+
+    {% if page.extra.warning %}
+        <div class="warning">
+            {% if page.extra.warning_short %} <b>{{ page.extra.warning_short }}</b> {% endif %}
+            {{ page.extra.warning | markdown(inline=true)}}
+        </div>
+    {% endif %}
+
     {{ page.content | safe | replace(from="<!-- toc -->", to=macros::toc(toc=toc))}}
 
     <div class="post-footer-support">
