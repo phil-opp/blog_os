@@ -343,7 +343,7 @@ Instead of writing our own bootloader, which is a project on its own, we use the
 # in Cargo.toml
 
 [dependencies]
-bootloader = "0.4.0"
+bootloader = "0.5.1"
 ```
 
 Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to combine the bootloader with the kernel after it has been compiled, but cargo has no support for additional build steps after successful compilation (see [this issue][post-build script] for more information).
@@ -353,20 +353,22 @@ Adding the bootloader as dependency is not enough to actually create a bootable 
 To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then combines them to create a bootable disk image. To install the tool, execute the following command in your terminal:
 
 ```
-cargo install bootimage --version "^0.5.0"
+cargo install bootimage --version "^0.7.1"
 ```
 
-The `^0.5.0` is a so-called [_caret requirement_], which means "version `0.5.0` or a later compatible version". So if we find a bug and publish version `0.5.1` or `0.5.2`, cargo would automatically use the latest version, as long as it is still a version `0.5.x`. However, it wouldn't choose version `0.6.0`, because it is not considered as compatible. Note that dependencies in your `Cargo.toml` are caret requirements by default, so the same rules are applied to our bootloader dependency.
+The `^0.7.1` is a so-called [_caret requirement_], which means "version `0.7.1` or a later compatible version". So if we find a bug and publish version `0.7.2` or `0.7.3`, cargo would automatically use the latest version, as long as it is still a version `0.7.x`. However, it wouldn't choose version `0.8.0`, because it is not considered as compatible. Note that dependencies in your `Cargo.toml` are caret requirements by default, so the same rules are applied to our bootloader dependency.
 
 [_caret requirement_]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#caret-requirements
 
-After installing the `bootimage` tool, creating a bootable disk image is as easy as executing:
+For running `bootimage` and building the bootloader, you need to have the `llvm-tools-preview` rustup component installed. You can do so by executing `rustup component add llvm-tools-preview`.
+
+After installing `bootimage` and adding the `llvm-tools-preview` component, we can create a bootable disk image by executing:
 
 ```
 > bootimage build --target x86_64-blog_os.json
 ```
 
-You see that the tool recompiles your kernel using `cargo xbuild`, so it will automatically pick up any changes you make. Afterwards it compiles the bootloader, which might take a while. Like all crate dependencies it is only built once and then cached, so subsequent builds will be much faster. Finally, `bootimage` combines the bootloader and your kernel to a bootable disk image.
+We see that the tool recompiles our kernel using `cargo xbuild`, so it will automatically pick up any changes you make. Afterwards it compiles the bootloader, which might take a while. Like all crate dependencies it is only built once and then cached, so subsequent builds will be much faster. Finally, `bootimage` combines the bootloader and your kernel to a bootable disk image.
 
 After executing the command, you should see a bootable disk image named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
