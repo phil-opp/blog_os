@@ -55,8 +55,8 @@ steps:
   displayName: 'Print Rust Version'
   continueOnError: true
 
-- script: rustup component add rust-src
-  displayName: 'Install Rustup Src Component'
+- script: rustup component add rust-src llvm-tools-preview
+  displayName: 'Install Rustup Components'
 
 - script: |
     cargo install cargo-xbuild --debug
