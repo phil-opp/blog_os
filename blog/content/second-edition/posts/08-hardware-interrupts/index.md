@@ -576,7 +576,13 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-The above code just translates keypresses of the number keys 0-9 and ignores all other keys. Now we can write numbers:
+The above code translates keypresses of the number keys 0-9 and ignores all other keys. It uses a [match] statement to assign a character or `None` to each scancode. It then uses [`if let`] to destructure the optional `key`. By using the same variable name `key` in the pattern, we [shadow] the previous declaration, which is a common pattern for destructuring `Option` types in Rust.
+
+[match]: https://doc.rust-lang.org/book/ch06-02-match.html
+[`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
+[shadow]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
+
+Now we can write numbers:
 
 ![QEMU printing numbers to the screen](qemu-printing-numbers.gif)
 
