@@ -266,7 +266,7 @@ We will use the [`uart_16550`] crate to initialize the UART and send data over t
 # in Cargo.toml
 
 [dependencies]
-uart_16550 = "0.1.0"
+uart_16550 = "0.2.0"
 ```
 
 The `uart_16550` crate contains a `SerialPort` struct that represents the UART registers, but we still need to construct an instance of it ourselves. For that we create a new `serial` module with the following content:
