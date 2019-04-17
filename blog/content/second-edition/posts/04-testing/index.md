@@ -375,9 +375,9 @@ TODO image
 
 Note that it's no longer possible to exit QEMU from the console through `Ctrl+c` when `serial mon:stdio` is passed. An alternative keyboard shortcut is `Ctrl+a` and then `x`. Or you can just close the QEMU window manually.
 
-### Exit QEMU on Panic
+### Print a Error Message on Panic
 
-To also exit QEMU on a panic, we can use [conditional compilation] to use a different panic handler in testing mode:
+To exit QEMU with an error message on a panic, we can use [conditional compilation] to use a different panic handler in testing mode:
 
 [conditional compilation]: https://doc.rust-lang.org/1.30.0/book/first-edition/conditional-compilation.html
 
