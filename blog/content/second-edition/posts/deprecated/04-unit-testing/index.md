@@ -18,6 +18,10 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 <!-- toc -->
 
+## Requirements
+
+In this post we explore how to execute `cargo test` on the host system. This only works if you don't have a default target set in your `.cargo/config` file. If you don't have a `.cargo/config` file in your project, you're fine too.
+
 ## Unit Tests for `no_std` Binaries
 Rust has a [built-in test framework] that is capable of running unit tests without the need to set anything up. Just create a function that checks some results through assertions and add the `#[test]` attribute to the function header. Then `cargo test` will automatically find and execute all test functions of your crate.
 
