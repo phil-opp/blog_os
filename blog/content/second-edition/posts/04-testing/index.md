@@ -244,11 +244,11 @@ Our test runner now automatically closes QEMU and correctly reports the test res
 
 ## Printing to the Console
 
-
+To see the test output on the console, we need to send the data from our kernel to the host system somehow. There are various ways to achieve this, for example by sending the data over a TCP network interface. However, setting up a networking stack is a quite complex task, so we will choose a simpler solution instead.
 
 ### Serial Port
 
-A simple way to achieve this is by using the [serial port], an old interface standard which is no longer found in modern computers. It is easy to program and QEMU can redirect the bytes sent over serial to the host's standard output or a file.
+A simple way to send the data is to use the [serial port], an old interface standard which is no longer found in modern computers. It is easy to program and QEMU can redirect the bytes sent over serial to the host's standard output or a file.
 
 [serial port]: https://en.wikipedia.org/wiki/Serial_port
 
