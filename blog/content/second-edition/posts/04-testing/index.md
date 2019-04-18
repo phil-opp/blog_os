@@ -593,6 +593,46 @@ For cases like this, where more than a single test are not useful, we can use th
 
 #### No Harness
 
+The [`no_harness`] flag can be set for an integration test in the `Cargo.toml`. It disables both the default test runner and the custom test runner feature, so that the test is treated like a normal executable.
+
+Let's use the `no_harness` feature to create a panic handler test. First, we create the test at `tests/panic_handler.rs`:
+
+```rust
+TODO
+```
+
+The code is similar to the `basic_boot` test with the difference that no test attributes are needed and no runner function is called. We immediately exit with an error from the `_start` entry point and the panic handler for now and first try to get it to compile.
+
+If you run `cargo xtest` now, you will get an error that the `test` crate is missing. This error occurs because we didn't set a custom test framework, so that the compiler tries to use the default test framework, which is unavailable for our panic. By setting the `no_harness` flag for the test in our `Cargo.toml`, we can fix this error:
+
+```toml
+# in Cargo.toml
+
+[[test]]
+name = "panic_handler"
+harness = false
+```
+
+Now the test compiles fine, but fails of course since we always exit with an error exit code.
+
+#### Implement a Proper Test
+
+Let's finish the implementation of our panic handler test:
+
+```rust
+TODO
+```
+
+We immediately `panic` in our `_start` function with a panic message. In the panic handler, we verify that the reported message and file/line information are correct. At the end of the panic handler, we exit with a success exit code because our panic handler works as intended then. We don't need a `qemu_exit` call at the end of our `_start` function, since the Rust compiler knows for sure that the code after the `panic` is unreachable.
+
+## Summary
+
+## What's next?
+In the next post, we will explore _CPU exceptions_. These exceptions are thrown by the CPU when something illegal happens, such as a division by zero or an access to an unmapped memory page (a so-called “page fault”). Being able to catch and examine these exceptions is very important for debugging future errors. Exception handling is also very similar to the handling of hardware interrupts, which is required for keyboard support.
+
+
+
+
 
 # Unit Tests
 
