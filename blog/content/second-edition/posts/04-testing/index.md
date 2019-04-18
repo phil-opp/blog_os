@@ -432,28 +432,166 @@ Now QEMU runs completely in the background and no window is opened anymore. This
 
 ## Testing the VGA Buffer
 
-Now that we have a working test framework, we can create a few tests for our VGA buffer implementation. First, we create a very simple test that ensures that `println` works without panicking:
+Now that we have a working test framework, we can create a few tests for our VGA buffer implementation. First, we create a very simple test to verify that `println` works without panicking:
 
 ```rust
+// in src/vga_buffer.rs
+
 #[test_case]
-fn test_println() {
+fn test_println_simple() {
     serial_print!("test_println... ");
-    println!("Test Output");
+    println!("test_println_simple output");
     serial_println("[ok]");
 }
 ```
 
+The test just prints something to the VGA buffer. If it finishes without panicking, it means that the `println` invocation did not panic either.
 
+To ensure that no panic occurs even if many lines are printed and lines are shifted off the screen, we can create another test:
+
+```rust
+// in src/vga_buffer.rs
+
+#[test_case]
+fn test_println_many() {
+    serial_print!("test_println... ");
+    for _ in 0..1000 {
+        println!("test_println_many output");
+    }
+    serial_println("[ok]");
+}
+```
+
+We can also create a test function to verify that the printed lines really appear on the screen:
+
+```rust
+// in src/vga_buffer.rs
+
+#[test_case]
+fn check_println_output() {
+    serial_print!("test_println... ");
+
+    let s = "Some test string that fits on a single line";
+    println!("{}", s);
+    for (i, c) in s.chars().enumerate() {
+        let screen_char = WRITER.lock().chars[BUFFER_HEIGHT - 2][i].load();
+        assert_eq!(char::from(screen_char.ascii_character), c);
+    }
+
+    serial_println("[ok]");
+}
+```
+
+The function defines a test string, prints it using `println`, and then iterates over the screen characters of the static `WRITER`, which represents the vga text buffer. Since `println` prints to the last screen line and then immediately appends a newline, the string should appear on line `BUFFER_HEIGHT - 2`.
+
+By using [`enumerate`], we count the number of iterations in the variable `i`, which we then use for loading the screen character corresponding to `c`. By comparing the `ascii_character` of the screen character with `c`, we ensure that each character of the string really appears in the vga text buffer.
+
+[`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
+
+As you can imagine, we could create many more test functions, for example a function that tests that no panic occurs when printing very long lines and that they're wrapped correctly. Or a function for testing that newlines, non-printable characters, and non-unicode charactes are handled correctly.
+
+For the rest of this post, however, we will explain how to create _integration tests_ to test the interaction of different components together.
 
 ## Integration Tests
 
-Our kernel has more features in the future -> ensure that printing works from the beginning on by testing println in minimal environment
+The convention for [integration tests] in Rust is to put them into a `tests` directory in the project root (i.e. next to the `src` directory). Both the default test framework and custom test frameworks will automatically pick up and execute all tests in that directory.
 
-## Split off a Library
+[integration tests]: https://doc.rust-lang.org/book/ch11-03-test-organization.html#integration-tests
 
-## No Harness
+All integration tests are their own executables and completely separate from our `main.rs`. This means that each test needs to define its own entry point function. Let's create an example integration test named `basic_boot` to see how it works in detail:
 
-should panic test
+```rust
+// in tests/basic_boot.rs
+
+#![no_std]
+#![no_main]
+
+#![feature(custom_test_frameworks)]
+#![test_runner(blog_os::test_runner)]
+#![reexport_test_harness_main = "test_main"]
+
+use core::panic::PanicInfo;
+
+#[no_mangle] // don't mangle the name of this function
+pub extern "C" fn _start() -> ! {
+    test_main();
+
+    loop {}
+}
+
+fn test_runner(tests: &[&dyn Fn()]) {
+    unimplemented!();
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    unimplemented!();
+}
+```
+
+Since integration tests are separate executables we need to provide all the crate attributes (`no_std`, `no_main`, `test_runner`, etc.) again. We also need to create a new entry point function `_start`, which calls the test entry point function `test_main`. We don't need any `cfg(test)` attributes because integration test executables are never built in non-test mode.
+
+We use the [`unimplemented`] macro that always panics as a placeholder for the `test_runner` and the `panic` function. Ideally, we want to implement these functions exactly as we did in our `main.rs` using the `serial_println` macro and the `exit_qemu` function. The problem is that we don't have access to these functions since tests are built completely separately of our `main.rs` executable.
+
+[`unimplemented`]: https://doc.rust-lang.org/core/macro.unimplemented.html
+
+### Create a Library
+
+The solution is to split off a library from our `main.rs`, which can be included by other crates and integration test executables. To do this, we create a new `src/lib.rs` file and move most of our `main.rs` to it:
+
+```rust
+// src/lib.rs
+
+TODO
+```
+
+As you can see, we moved all module declarations, the `exit_qemu` function, and our test runner into the library. Since the test runner also runs for our library, it needs to define its own entry point function in test-mode. To share the implementation of the entry point between our `main.rs` and our `lib.rs`, we move it into a new `run` function.
+
+The remaining code of our `src/main.rs` is:
+
+```rust
+// src/main.rs
+
+TODO
+```
+
+We add a new `use` statement that imports all the used functions and macros from our library component. The library is called like your crate, which is named `blog_os` in our case. From the `_start` entry point we call the `run` function of our `lib.rs` to use the same environment for our `main.rs` and our `lib.rs` tests.
+
+### Completing the Integration Test
+
+Like our `src/main.rs`, our `tests/basic_boot.rs` executable can import types from our new library. This allows us to import the missing components to complete our test.
+
+```rust
+// in tests/basic_boot.rs
+
+TODO
+```
+
+Instead of reimplementing the `test_runner`, we use the `test_runner` function of the library. We deliberatly don't call the `run` function from `_start` to let the tests run in a minimal boot environment. This way, we can test that certain features don't depend on initialization code that we will add to our `run` function in future posts.
+
+For example, we can test that `println` works right after boot without needing any initialization:
+
+```rust
+TODO
+```
+
+This test is very similar to the TODO vga buffer test that we created earlier in this post. The important difference is that TODO runs at the end of the `run` function and TODO runs directly after boot without running any initialization code beforehand.
+
+At this stage, a test like this doesn't seem very useful. However, when our kernel becomes more featureful in the future, integration tests like this will be useful for testing certain features in well defined environments. For example, we might want to prepare certain page table mappings and that are used in our tests.
+
+### Testing Our Panic Handler
+
+Another thing that we can test with an integration test is our panic handler function. The idea is the following:
+
+- Deliberately cause a panic in the test
+- Add assertions in the panic handler that check the panic message and the file/line information
+- Exit with a success exit code at the end of the panic handler
+
+This is similar to a should panic test in the default Rust test framework. The difference is that can't continue the test after our panic handler was called because we don't have support for unwinding and the catch_panic function.
+
+For cases like this, where more than a single test are not useful, we can use the `no harness` feature to omit the test runner completely.
+
+#### No Harness
 
 
 # Unit Tests
