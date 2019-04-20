@@ -48,7 +48,7 @@ Since the `test` crate depends on the standard library, it is not available for 
 
 ### Custom Test Frameworks
 
-Fortunately, Rust supports replacing the default test framework through the unstable [`custom_test_frameworks`] feature. This feature requires no external libraries and thus also works in `#[no_std]` environments. It works by collecting all functions annotated with a `#[test_case]` attribute and then invoking a specified runner function with the list of tests as argument. Thus it gives the implementation maximal control over the test process.
+Fortunately, Rust supports replacing the default test framework through the unstable [`custom_test_frameworks`] feature. This feature requires no external libraries and thus also works in `#[no_std]` environments. It works by collecting all functions annotated with a `#[test_case]` attribute and then invoking a user-specified runner function with the list of tests as argument. Thus it gives the implementation maximal control over the test process.
 
 [`custom_test_frameworks`]: https://doc.rust-lang.org/unstable-book/language-features/custom-test-frameworks.html
 
@@ -121,11 +121,13 @@ fn trivial_assertion() {
 }
 ```
 
-Of course the test succeeds and we see the `trivial assertion... [ok]` output on the screen. The problem is that QEMU never exits so that `cargo xtest` runs forever.
+When we run `cargo xtest` now, we see the `trivial assertion... [ok]` output on the screen, which indicates that the test succeeded.
+
+After executing the tests, our `test_runner` returns to the `test_main` function, which in turn returns to our `_start` entry point function. At the end of `_start`, we enter an endless loop because the entry point function is not allowed to return. This is a problem, because we want `cargo xtest` to exit after running all tests.
 
 ## Exiting QEMU
 
-Right now we have an endless loop at the end of our `_start` function and need to close QEMU manually. The clean solution to this would be to implement a proper way to shutdown our OS. Unfortunatly this is relatively complex, because it requires implementing support for either the [APM] or [ACPI] power management standard.
+Right now we have an endless loop at the end of our `_start` function and need to close QEMU manually on each execution of `cargo xtest`. This is unfortunate because we also want to run `cargo xtest` in scripts without user interaction. The clean solution to this would be to implement a proper way to shutdown our OS. Unfortunatly this is relatively complex, because it requires implementing support for either the [APM] or [ACPI] power management standard.
 
 [APM]: https://wiki.osdev.org/APM
 [ACPI]: https://wiki.osdev.org/ACPI
@@ -293,7 +295,9 @@ lazy_static! {
 }
 ```
 
-Like with the [VGA text buffer][vga lazy-static], we use `lazy_static` and a spinlock to create a `static`. However, this time we use `lazy_static` to ensure that the `init` method is called before first use. We're using the port address `0x3F8`, which is the standard port number for the first serial interface.
+Like with the [VGA text buffer][vga lazy-static], we use `lazy_static` and a spinlock to create a `static` writer instance. By using `lazy_static` we can ensure that the `init` method is called exactly once on its first use.
+
+Like the `isa-debug-exit` device, the UART is programmed using port I/O. Since the UART is more complex, it uses multiple I/O ports for programming different device registers. The `SerialPort::new` function expects the address of the first I/O port of the UART as argument, from which it can calculate the addresses of all needed ports. We're passing the port address `0x3F8`, which is the standard port number for the first serial interface.
 
 [vga lazy-static]: ./second-edition/posts/03-vga-text-buffer/index.md#lazy-statics
 
@@ -324,7 +328,7 @@ macro_rules! serial_println {
 }
 ```
 
-The `SerialPort` type already implements the [`fmt::Write`] trait, so we don't need to provide an implementation.
+The implementation is very similar to the implementation of our `print` and `println` macros. Since the `SerialPort` type already implements the [`fmt::Write`] trait, we don't need to provide our own implementation.
 
 [`fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
@@ -351,7 +355,7 @@ Note that the `serial_println` macro lives directly under the root namespace bec
 
 ### QEMU Arguments
 
-To see the serial output in QEMU, we need use the `-serial` argument to redirect the output to stdout:
+To see the serial output from QEMU, we need use the `-serial` argument to redirect the output to stdout:
 
 ```toml
 # in Cargo.toml
@@ -567,7 +571,7 @@ Like our `src/main.rs`, our `tests/basic_boot.rs` executable can import types fr
 TODO
 ```
 
-Instead of reimplementing the `test_runner`, we use the `test_runner` function of the library. We deliberatly don't call the `run` function from `_start` to let the tests run in a minimal boot environment. This way, we can test that certain features don't depend on initialization code that we will add to our `run` function in future posts.
+Instead of reimplementing the test runner, we use the `test_runner` function of the library. We deliberatly don't call the `run` function from `_start` to let the tests run in a minimal boot environment. This way, we can test that certain features don't depend on initialization code that we will add to our `run` function in future posts.
 
 For example, we can test that `println` works right after boot without needing any initialization:
 
@@ -577,7 +581,7 @@ TODO
 
 This test is very similar to the TODO vga buffer test that we created earlier in this post. The important difference is that TODO runs at the end of the `run` function and TODO runs directly after boot without running any initialization code beforehand.
 
-At this stage, a test like this doesn't seem very useful. However, when our kernel becomes more featureful in the future, integration tests like this will be useful for testing certain features in well defined environments. For example, we might want to prepare certain page table mappings and that are used in our tests.
+At this stage, a test like this doesn't seem very useful. However, when our kernel becomes more featureful in the future, integration tests like this will be useful for testing certain features in well defined environments. For example, we might want to prepare certain page table mappings that are then used in the tests.
 
 ### Testing Our Panic Handler
 
@@ -593,9 +597,9 @@ For cases like this, where more than a single test are not useful, we can use th
 
 #### No Harness
 
-The [`no_harness`] flag can be set for an integration test in the `Cargo.toml`. It disables both the default test runner and the custom test runner feature, so that the test is treated like a normal executable.
+The `harness` flag defines whether a test runner is used for an integration test. When it's set to `false`, both the default test runner and the custom test runner feature are disabled, so that the test is treated like a normal executable.
 
-Let's use the `no_harness` feature to create a panic handler test. First, we create the test at `tests/panic_handler.rs`:
+Let's create a panic handler test with a disabled `harness` flag. First, we create the test at `tests/panic_handler.rs`:
 
 ```rust
 TODO
@@ -603,7 +607,7 @@ TODO
 
 The code is similar to the `basic_boot` test with the difference that no test attributes are needed and no runner function is called. We immediately exit with an error from the `_start` entry point and the panic handler for now and first try to get it to compile.
 
-If you run `cargo xtest` now, you will get an error that the `test` crate is missing. This error occurs because we didn't set a custom test framework, so that the compiler tries to use the default test framework, which is unavailable for our panic. By setting the `no_harness` flag for the test in our `Cargo.toml`, we can fix this error:
+If you run `cargo xtest` now, you will get an error that the `test` crate is missing. This error occurs because we didn't set a custom test framework, so that the compiler tries to use the default test framework, which is unavailable for our panic. By setting the `harness` flag to `false` for the test in our `Cargo.toml`, we can fix this error:
 
 ```toml
 # in Cargo.toml
