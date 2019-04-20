@@ -52,12 +52,10 @@ steps:
 - script: rustup component add rust-src llvm-tools-preview
   displayName: 'Install Rustup Components'
 
-- script: |
-    cargo install cargo-xbuild --debug
-    cargo install bootimage --debug
+- script: cargo install cargo-xbuild bootimage --debug
   displayName: 'Install cargo-xbuild and bootimage'
 
-- script: bootimage build
+- script: cargo bootimage
   displayName: 'Build'
 
 - script: rustup component add rustfmt
