@@ -29,9 +29,19 @@ fn test_runner(tests: &[&dyn Fn()]) {
 }
 
 /// This function is called on panic.
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
+    loop {}
+}
+
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    serial_println!("[failed]\n");
+    serial_println!("Error: {}\n", info);
+    unsafe { exit_qemu(QemuExitCode::Failed); }
     loop {}
 }
 
