@@ -9,6 +9,7 @@ bootloader = "0.6.0"
 volatile = "0.2.3"
 spin = "0.4.9"
 x86_64 = "0.5.2"
+uart_16550 = "0.2.0"
 
 [dependencies.lazy_static]
 version = "1.0"
@@ -22,5 +23,7 @@ panic = "abort"
 
 [package.metadata.bootimage]
 default-target = "x86_64-blog_os.json"
-test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
+test-args = [
+    "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "mon:stdio"
+]
 test-success-exit-code = 33         # (0x10 << 1) | 1
