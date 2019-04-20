@@ -23,3 +23,4 @@ panic = "abort"
 [package.metadata.bootimage]
 default-target = "x86_64-blog_os.json"
 test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
+test-success-exit-code = 33         # (0x10 << 1) | 1
