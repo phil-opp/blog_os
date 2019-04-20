@@ -41,7 +41,9 @@ fn panic(info: &PanicInfo) -> ! {
 fn panic(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
-    unsafe { exit_qemu(QemuExitCode::Failed); }
+    unsafe {
+        exit_qemu(QemuExitCode::Failed);
+    }
     loop {}
 }
 
