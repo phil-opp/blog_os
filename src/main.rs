@@ -24,6 +24,7 @@ fn test_runner(tests: &[&dyn Fn()]) {
     for test in tests {
         test();
     }
+    unsafe { exit_qemu(QemuExitCode::Success) };
 }
 
 /// This function is called on panic.
@@ -31,6 +32,20 @@ fn test_runner(tests: &[&dyn Fn()]) {
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     loop {}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitCode {
+    Success = 0x10,
+    Failed = 0x11,
+}
+
+pub unsafe fn exit_qemu(exit_code: QemuExitCode) {
+    use x86_64::instructions::port::Port;
+
+    let mut port = Port::new(0xf4);
+    port.write(exit_code as u32);
 }
 
 #[test_case]

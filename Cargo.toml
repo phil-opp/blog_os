@@ -8,6 +8,7 @@ edition = "2018"
 bootloader = "0.6.0"
 volatile = "0.2.3"
 spin = "0.4.9"
+x86_64 = "0.5.2"
 
 [dependencies.lazy_static]
 version = "1.0"
@@ -21,3 +22,4 @@ panic = "abort"
 
 [package.metadata.bootimage]
 default-target = "x86_64-blog_os.json"
+test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
