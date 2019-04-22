@@ -1,8 +1,10 @@
-use crate::{serial_print, serial_println};
 use core::fmt;
 use lazy_static::lazy_static;
 use spin::Mutex;
 use volatile::Volatile;
+
+#[cfg(test)]
+use crate::{serial_print, serial_println};
 
 lazy_static! {
     /// A global `Writer` instance that can be used for printing to the VGA text buffer.
