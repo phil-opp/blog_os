@@ -38,7 +38,7 @@ We can see this when we try to run `cargo xtest` in our project:
 
 ```
 > cargo xtest
-   Compiling blog_os v0.1.0 (/home/philipp/Documents/blog_os/code)
+   Compiling blog_os v0.1.0 (/…/blog_os)
 error[E0463]: can't find crate for `test`
 ```
 
@@ -64,6 +64,7 @@ To implement a custom test framework for our kernel, we add the following to our
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
 
+#[cfg(test)]
 fn test_runner(tests: &[&dyn Fn()]) {
     println!("Running {} tests", tests.len());
     for test in tests {
@@ -72,17 +73,13 @@ fn test_runner(tests: &[&dyn Fn()]) {
 }
 ```
 
-Our runner just prints a short debug message and then calls each test function in the list. The argument type `&[&dyn Fn()]` is a [_slice_] of [_trait object_] references of the [_Fn()_] trait. It is basically a list of references to types that can be called like a function.
+Our runner just prints a short debug message and then calls each test function in the list. The argument type `&[&dyn Fn()]` is a [_slice_] of [_trait object_] references of the [_Fn()_] trait. It is basically a list of references to types that can be called like a function. Since the function is useless for non-test runs, we use the `#[cfg(test)]` attribute to include it only for tests.
 
 [_slice_]: https://doc.rust-lang.org/std/primitive.slice.html
 [_trait object_]: https://doc.rust-lang.org/1.30.0/book/first-edition/trait-objects.html
 [_Fn()_]: https://doc.rust-lang.org/std/ops/trait.Fn.html
 
-When we run `cargo xtest` now, we see that it now succeeds. However, we still see our "Hello World" instead of the message from our `test_runner`:
-
-TODO image
-
-The reason is that our `_start` function is still used as entry point. The custom test frameworks feature generates a `main` function that calls `test_runner`, but this function is ignored because we use the `#[no_main]` attribute and provide our own entry point.
+When we run `cargo xtest` now, we see that it now succeeds. However, we still see our "Hello World" instead of the message from our `test_runner`. The reason is that our `_start` function is still used as entry point. The custom test frameworks feature generates a `main` function that calls `test_runner`, but this function is ignored because we use the `#[no_main]` attribute and provide our own entry point.
 
 To fix this, we first need to change the name of the generated function to something different than `main` through the `reexport_test_harness_main` attribute. Then we can call the renamed function from our `_start` function:
 
@@ -104,11 +101,7 @@ pub extern "C" fn _start() -> ! {
 
 We set the name of the test framework entry function to `test_main` and call it from our `_start` entry point. We use [conditional compilation] to add the call to `test_main` only in test contexts because the function is not generated on a normal run.
 
-When we now execute `cargo xtest`, we see the message from our `test_runner` on the screen:
-
-TODO image
-
-We are now ready to create our first test function:
+When we now execute `cargo xtest`, we see the "Running 0 tests" message from our `test_runner` on the screen. We are now ready to create our first test function:
 
 ```rust
 // in src/main.rs
@@ -117,11 +110,15 @@ We are now ready to create our first test function:
 fn trivial_assertion() {
     print!("trivial assertion... ");
     assert_eq!(1, 1);
-    println("[ok]");
+    println!("[ok]");
 }
 ```
 
-When we run `cargo xtest` now, we see the `trivial assertion... [ok]` output on the screen, which indicates that the test succeeded.
+When we run `cargo xtest` now, we see the following output:
+
+![QEMU printing "Hello World!", "Running 1 tests", and "trivial assertion... [ok]"](qemu-test-runner-output.png)
+
+The `tests` slice passed to our `test_runner` function now contains a reference to the `trivial_assertion` function. From the `trivial assertion... [ok]` output on the screen we see that the test was called and that it succeeded.
 
 After executing the tests, our `test_runner` returns to the `test_main` function, which in turn returns to our `_start` entry point function. At the end of `_start`, we enter an endless loop because the entry point function is not allowed to return. This is a problem, because we want `cargo xtest` to exit after running all tests.
 
@@ -222,10 +219,10 @@ When we run `cargo xtest` now, we see that QEMU immediately closes after executi
 Building bootloader
    Compiling bootloader v0.5.3 (/home/philipp/Documents/bootloader)
     Finished release [optimized + debuginfo] target(s) in 1.07s
-Running: `qemu-system-x86_64 -drive format=raw,file=target/x86_64-blog_os/debug/
+Running: `qemu-system-x86_64 -drive format=raw,file=/…/target/x86_64-blog_os/debug/
     deps/bootimage-blog_os-5804fc7d2dd4c9be.bin -device isa-debug-exit,iobase=0xf4,
     iosize=0x04`
-error: test failed
+error: test failed, to rerun pass '--bin blog_os'
 ```
 
 The problem is that `cargo test` considers all error codes other than `0` as failure.
@@ -337,7 +334,7 @@ Now we can print to the serial interface instead of the VGA text buffer in our t
 ```rust
 // in src/main.rs
 
-```rust
+#[cfg(test)]
 fn test_runner(tests: &[&dyn Fn()]) {
     serial_println!("Running {} tests", tests.len());
     […]
@@ -347,7 +344,7 @@ fn test_runner(tests: &[&dyn Fn()]) {
 fn trivial_assertion() {
     serial_print!("trivial assertion... ");
     assert_eq!(1, 1);
-    serial_println("[ok]");
+    serial_println!("[ok]");
 }
 ```
 
@@ -370,12 +367,23 @@ When we run `cargo xtest` now, we see the test output directly in the console:
 
 ```
 > cargo xtest
-TODO
+    Finished dev [unoptimized + debuginfo] target(s) in 0.02s
+     Running target/x86_64-blog_os/debug/deps/blog_os-7b7c37b4ad62551a
+Building bootloader
+    Finished release [optimized + debuginfo] target(s) in 0.02s
+Running: `qemu-system-x86_64 -drive format=raw,file=/…/target/x86_64-blog_os/debug/
+    deps/bootimage-blog_os-7b7c37b4ad62551a.bin -device
+    isa-debug-exit,iobase=0xf4,iosize=0x04 -serial mon:stdio`
+Running 1 tests
+trivial assertion... [ok]
 ```
 
 However, when a test fails we still see the output inside QEMU because our panic handler still uses `println`. To simulate this, we can change the assertion in our `trivial_assertion` test to `assert_eq!(0, 1)`:
 
-TODO image
+![QEMU printing "Hello World!" and "panicked at 'assertion failed: `(left == right)`
+    left: `0`, right: `1`', src/main.rs:55:5](qemu-failed-test.png)
+
+We see that the panic message is still printed to the VGA buffer, while the other test output is printed to the serial port. The panic message is quite useful, so it would be useful to see it in the console too.
 
 Note that it's no longer possible to exit QEMU from the console through `Ctrl+c` when `serial mon:stdio` is passed. An alternative keyboard shortcut is `Ctrl+a` and then `x`. Or you can just close the QEMU window manually.
 
@@ -411,10 +419,22 @@ Now QEMU also exits for failed tests and prints a useful error message on the co
 
 ```
 > cargo xtest
-TODO
+    Finished dev [unoptimized + debuginfo] target(s) in 0.02s
+     Running target/x86_64-blog_os/debug/deps/blog_os-7b7c37b4ad62551a
+Building bootloader
+    Finished release [optimized + debuginfo] target(s) in 0.02s
+Running: `qemu-system-x86_64 -drive format=raw,file=/…/target/x86_64-blog_os/debug/
+    deps/bootimage-blog_os-7b7c37b4ad62551a.bin -device
+    isa-debug-exit,iobase=0xf4,iosize=0x04 -serial mon:stdio`
+Running 1 tests
+trivial assertion... [failed]
+
+Error: panicked at 'assertion failed: `(left == right)`
+  left: `0`,
+ right: `1`', src/main.rs:65:5
 ```
 
-We still see the QEMU window open for a short time, which we don't need anymore.
+Since we see all test output on the console now, we no longer need the QEMU window that pops up for a short time. So we can hide it completely.
 
 ### Hiding QEMU
 
@@ -434,6 +454,8 @@ Now QEMU runs completely in the background and no window is opened anymore. This
 
 [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 
+At this point, we no longer need the `trivial_assertion` test, so we can delete it.
+
 ## Testing the VGA Buffer
 
 Now that we have a working test framework, we can create a few tests for our VGA buffer implementation. First, we create a very simple test to verify that `println` works without panicking:
@@ -441,15 +463,18 @@ Now that we have a working test framework, we can create a few tests for our VGA
 ```rust
 // in src/vga_buffer.rs
 
+#[cfg(test)]
+use crate::{serial_print, serial_println};
+
 #[test_case]
 fn test_println_simple() {
     serial_print!("test_println... ");
     println!("test_println_simple output");
-    serial_println("[ok]");
+    serial_println!("[ok]");
 }
 ```
 
-The test just prints something to the VGA buffer. If it finishes without panicking, it means that the `println` invocation did not panic either.
+The test just prints something to the VGA buffer. If it finishes without panicking, it means that the `println` invocation did not panic either. Since we only need the `serial_println` import in test mode, we add the `cfg(test)` attribute to avoid the unused import warning for a normal `cargo xbuild`.
 
 To ensure that no panic occurs even if many lines are printed and lines are shifted off the screen, we can create another test:
 
@@ -458,11 +483,11 @@ To ensure that no panic occurs even if many lines are printed and lines are shif
 
 #[test_case]
 fn test_println_many() {
-    serial_print!("test_println... ");
-    for _ in 0..1000 {
+    serial_print!("test_println_many... ");
+    for _ in 0..200 {
         println!("test_println_many output");
     }
-    serial_println("[ok]");
+    serial_println!("[ok]");
 }
 ```
 
@@ -472,17 +497,17 @@ We can also create a test function to verify that the printed lines really appea
 // in src/vga_buffer.rs
 
 #[test_case]
-fn check_println_output() {
-    serial_print!("test_println... ");
+fn test_println_output() {
+    serial_print!("test_println_output... ");
 
     let s = "Some test string that fits on a single line";
     println!("{}", s);
     for (i, c) in s.chars().enumerate() {
-        let screen_char = WRITER.lock().chars[BUFFER_HEIGHT - 2][i].load();
+        let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
         assert_eq!(char::from(screen_char.ascii_character), c);
     }
 
-    serial_println("[ok]");
+    serial_println!("[ok]");
 }
 ```
 
@@ -509,9 +534,8 @@ All integration tests are their own executables and completely separate from our
 
 #![no_std]
 #![no_main]
-
 #![feature(custom_test_frameworks)]
-#![test_runner(blog_os::test_runner)]
+#![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
@@ -529,37 +553,153 @@ fn test_runner(tests: &[&dyn Fn()]) {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    unimplemented!();
+    loop {}
 }
 ```
 
-Since integration tests are separate executables we need to provide all the crate attributes (`no_std`, `no_main`, `test_runner`, etc.) again. We also need to create a new entry point function `_start`, which calls the test entry point function `test_main`. We don't need any `cfg(test)` attributes because integration test executables are never built in non-test mode.
+Since integration tests are separate executables, we need to provide all the crate attributes (`no_std`, `no_main`, `test_runner`, etc.) again. We also need to create a new entry point function `_start`, which calls the test entry point function `test_main`. We don't need any `cfg(test)` attributes because integration test executables are never built in non-test mode.
 
-We use the [`unimplemented`] macro that always panics as a placeholder for the `test_runner` and the `panic` function. Ideally, we want to implement these functions exactly as we did in our `main.rs` using the `serial_println` macro and the `exit_qemu` function. The problem is that we don't have access to these functions since tests are built completely separately of our `main.rs` executable.
+We use the [`unimplemented`] macro that always panics as a placeholder for the `test_runner` function and just `loop` in the `panic` handler for now. Ideally, we want to implement these functions exactly as we did in our `main.rs` using the `serial_println` macro and the `exit_qemu` function. The problem is that we don't have access to these functions since tests are built completely separately of our `main.rs` executable.
 
 [`unimplemented`]: https://doc.rust-lang.org/core/macro.unimplemented.html
 
+If you run `cargo xtest` at this stage, you will get an endless loop because the panic handler itself panics again. Remember the `Ctrl-a` and then `x` keyboard shortcut for exiting QEMU.
+
 ### Create a Library
 
-The solution is to split off a library from our `main.rs`, which can be included by other crates and integration test executables. To do this, we create a new `src/lib.rs` file and move most of our `main.rs` to it:
+To make the required functions available to our integration test, we need to split off a library from our `main.rs`, which can be included by other crates and integration test executables. To do this, we create a new `src/lib.rs` file:
 
 ```rust
 // src/lib.rs
 
-TODO
+#![no_std]
 ```
 
-As you can see, we moved all module declarations, the `exit_qemu` function, and our test runner into the library. Since the test runner also runs for our library, it needs to define its own entry point function in test-mode. To share the implementation of the entry point between our `main.rs` and our `lib.rs`, we move it into a new `run` function.
+Like the `main.rs`, the `lib.rs` is a special file that is automatically recognized by cargo. The library is a separate compilation unit, so we need to specify the `#![no_std]` attribute again.
 
-The remaining code of our `src/main.rs` is:
+To make our library work with `cargo xtest`, we need to also add the test functions and attributes:
+
+```rust
+// in src/lib.rs
+
+#![cfg_attr(test, no_main)]
+#![feature(custom_test_frameworks)]
+#![test_runner(crate::test_runner)]
+#![reexport_test_harness_main = "test_main"]
+
+use core::panic::PanicInfo;
+
+pub fn test_runner(tests: &[&dyn Fn()]) {
+    serial_println!("Running {} tests", tests.len());
+    for test in tests {
+        test();
+    }
+    unsafe { exit_qemu(QemuExitCode::Success) };
+}
+
+pub fn test_panic_handler(info: &PanicInfo) -> ! {
+    serial_println!("[failed]\n");
+    serial_println!("Error: {}\n", info);
+    unsafe {
+        exit_qemu(QemuExitCode::Failed);
+    }
+    loop {}
+}
+
+/// Entry point for `cargo xtest`
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    test_main();
+    loop {}
+}
+
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    test_panic_handler(info)
+}
+```
+
+The above code adds a `_start` entry point and panic handler that are compiled in test mode using the `cfg(test)` attribute. By using the [`cfg_attr`] crate attribute, we can conditionally enable the `no_main` attribute in test mode.
+
+To make our `test_runner` available to executables and integration tests, we don't apply the `cfg(test)` attribute to it and make it public. We also factor out the implementation of our panic handler into a public `test_panic_handler` function, so that it is available for executables too.
+
+[`cfg_attr`]: https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg_attr-attribute
+
+We also move over the `QemuExitCode` enum and the `exit_qemu` function and make them public:
+
+```rust
+// in src/lib.rs
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitCode {
+    Success = 0x10,
+    Failed = 0x11,
+}
+
+pub unsafe fn exit_qemu(exit_code: QemuExitCode) {
+    use x86_64::instructions::port::Port;
+
+    let mut port = Port::new(0xf4);
+    port.write(exit_code as u32);
+}
+```
+
+Now executables and integration tests can import these functions from the library and don't need to define their own implementations. To also make `println` and `serial_println` available, we move the module declarations too:
+
+```rust
+// in src/lib.rs
+
+pub mod serial;
+pub mod vga_buffer;
+```
+
+We make the modules public to make them usable from outside of our library. This is also required for making our `println` and `serial_println` macros usable, since they use the `_print` functions of the modules.
+
+Now we can update our `main.rs` to use the library:
 
 ```rust
 // src/main.rs
 
-TODO
+#![no_std]
+#![no_main]
+#![feature(custom_test_frameworks)]
+#![test_runner(blog_os::test_runner)]
+#![reexport_test_harness_main = "test_main"]
+
+use core::panic::PanicInfo;
+use blog_os::println;
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    println!("Hello World{}", "!");
+
+    #[cfg(test)]
+    test_main();
+
+    loop {}
+}
+
+/// This function is called on panic.
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
+    loop {}
+}
+
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    blog_os::test_panic_handler(info)
+}
 ```
 
-We add a new `use` statement that imports all the used functions and macros from our library component. The library is called like your crate, which is named `blog_os` in our case. From the `_start` entry point we call the `run` function of our `lib.rs` to use the same environment for our `main.rs` and our `lib.rs` tests.
+The library is usable like a normal external crate. It is called like our crate, which is `blog_os` in our case. The above code uses the `blog_os::test_runner` function in the `test_runner` attribute and the `blog_os::test_panic_handler` function in our `cfg(test)` panic handler. It also imports the `println` macro to make it available to our `_start` and `panic` functions.
+
+At this point, `cargo xrun` and `cargo xtest` should work again. Of course, `cargo xtest` still loops endlessly (remember the `ctrl+a` and then `x` shortcut to exit). Let's fix this by using the required library functions in our integration test.
 
 ### Completing the Integration Test
 
@@ -568,22 +708,50 @@ Like our `src/main.rs`, our `tests/basic_boot.rs` executable can import types fr
 ```rust
 // in tests/basic_boot.rs
 
-TODO
+#![test_runner(blog_os::test_runner)]
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    blog_os::test_panic_handler(info)
+}
 ```
 
-Instead of reimplementing the test runner, we use the `test_runner` function of the library. We deliberatly don't call the `run` function from `_start` to let the tests run in a minimal boot environment. This way, we can test that certain features don't depend on initialization code that we will add to our `run` function in future posts.
+Instead of reimplementing the test runner, we use the `test_runner` function from our library. For our `panic` handler, we call the `blog_os::test_panic_handler` function like we did in our `main.rs`.
 
-For example, we can test that `println` works right after boot without needing any initialization:
+Now `cargo xtest` exits normally again. When you run it, you see that it builds and runs the tests for our `lib.rs`, `main.rs`, and `basic_boot.rs` separately after each other. For the `main.rs` and the `basic_boot` integration test, it reports "Running 0 tests" since these files don't have any functions annotated with `#[test_case]`.
+
+We can now add tests to our `basic_boot.rs`. For example, we can test that `println` works without panicking, like we did did in the vga buffer tests:
 
 ```rust
-TODO
+// in tests/basic_boot.rs
+
+#[test_case]
+fn test_println() {
+    serial_print!("test_println... ");
+    println!("test_println output");
+    serial_println!("[ok]");
+}
 ```
 
-This test is very similar to the TODO vga buffer test that we created earlier in this post. The important difference is that TODO runs at the end of the `run` function and TODO runs directly after boot without running any initialization code beforehand.
+When we run `cargo xtest` now, we see that it finds and executes the test function.
 
-At this stage, a test like this doesn't seem very useful. However, when our kernel becomes more featureful in the future, integration tests like this will be useful for testing certain features in well defined environments. For example, we might want to prepare certain page table mappings that are then used in the tests.
+The test might seem a bit useless right now since it's almost identical to one of the VGA buffer tests. However, in the future the `_start` functions of our `main.rs` and `lib.rs` might grow and call various initialization routines before running the `test_main` function, so that the two tests are executed in very different environments.
 
-### Testing Our Panic Handler
+By testing `println` in a `basic_boot` environment without calling any initialization routines in `_start`, we can ensure that `println` works right after booting. This is important because we rely on it e.g. for printing panic messages.
+
+### Future Tests
+
+The power of integration tests is that they're treated as completely separate executables. This gives them complete control over the environment, which makes it possible to test that the code interacts correctly with the CPU or hardware devices.
+
+Our `basic_boot` test is a very simple example for an integration test. In the future, our kernel will become much more featureful and interact with the hardware in various ways. By adding integration tests, we can ensure that these interactions work (and keep working) as expected. Some ideas for possible future tests are:
+
+- **CPU Exceptions**: When the code performs invalid operations (e.g. divides by zero), the CPU throws an exception. The kernel can register handler functions for such exceptions. An integration test could verify that the correct exception handler is called when a CPU execption occurs or that the execution continues correctly after resolvable exceptions.
+- **Page Tables**: Page tables define which memory regions are valid and accessible. By modifying the page tables, it is possible to allocate new memory regions, for example when launching programs. An integration test could perform some modifications of the page tables in the `_start` function and then verify that the modifications have the desired effects in `#[test_case]` functions.
+- **Userspace Programs**: Userspace programs are programs with limited access to the system's resources. For example, they don't have access to kernel data structures or to the memory of other programs. An integration test could launch userspace programs that perform forbidden operations and verify that the kernel prevents them all.
+
+As you can imagine, many more tests are possible. By adding such tests, we can ensure that we don't break them accidentally when we add new features to our kernel or refactor our code. This is especially important when our kernel becomes larger and more complex.
+
+## Testing Our Panic Handler
 
 Another thing that we can test with an integration test is our panic handler function. The idea is the following:
 
