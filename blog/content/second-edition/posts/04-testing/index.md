@@ -563,7 +563,7 @@ We use the [`unimplemented`] macro that always panics as a placeholder for the `
 
 [`unimplemented`]: https://doc.rust-lang.org/core/macro.unimplemented.html
 
-If you run `cargo xtest` at this stage, you will get an endless loop because the panic handler itself panics again. Remember the `Ctrl-a` and then `x` keyboard shortcut for exiting QEMU.
+If you run `cargo xtest` at this stage, you will get an endless loop because the panic handler loops endlessly. You need to use the `Ctrl-a` and then `x` keyboard shortcut for exiting QEMU.
 
 ### Create a Library
 
@@ -621,9 +621,9 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-The above code adds a `_start` entry point and panic handler that are compiled in test mode using the `cfg(test)` attribute. By using the [`cfg_attr`] crate attribute, we can conditionally enable the `no_main` attribute in test mode.
-
 To make our `test_runner` available to executables and integration tests, we don't apply the `cfg(test)` attribute to it and make it public. We also factor out the implementation of our panic handler into a public `test_panic_handler` function, so that it is available for executables too.
+
+Since our `lib.rs` is tested independently of our `main.rs`, we need to add a `_start` entry point and a panic handler when the library is compiled in test mode. By using the [`cfg_attr`] crate attribute, we conditionally enable the `no_main` attribute in this case.
 
 [`cfg_attr`]: https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg_attr-attribute
 
@@ -720,7 +720,7 @@ Instead of reimplementing the test runner, we use the `test_runner` function fro
 
 Now `cargo xtest` exits normally again. When you run it, you see that it builds and runs the tests for our `lib.rs`, `main.rs`, and `basic_boot.rs` separately after each other. For the `main.rs` and the `basic_boot` integration test, it reports "Running 0 tests" since these files don't have any functions annotated with `#[test_case]`.
 
-We can now add tests to our `basic_boot.rs`. For example, we can test that `println` works without panicking, like we did did in the vga buffer tests:
+We can now add tests to our `basic_boot.rs`. For example, we can test that `println` works without panicking, like we did in the vga buffer tests:
 
 ```rust
 // in tests/basic_boot.rs
