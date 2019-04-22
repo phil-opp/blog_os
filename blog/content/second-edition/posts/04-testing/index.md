@@ -727,6 +727,8 @@ We can now add tests to our `basic_boot.rs`. For example, we can test that `prin
 ```rust
 // in tests/basic_boot.rs
 
+use blog_os::{println, serial_print, serial_println};
+
 #[test_case]
 fn test_println() {
     serial_print!("test_println... ");
