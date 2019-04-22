@@ -28,6 +28,17 @@ cache:
   directories:
     - $HOME/.cargo
 
+addons:
+  apt:
+    packages:
+      - qemu-system-x86
+  homebrew:
+    packages:
+      - qemu
+
+install:
+  - if [ $TRAVIS_OS_NAME = windows ]; then choco install qemu; export PATH="/c/Program Files/qemu:$PATH"; fi
+
 before_script:
   - rustup component add rust-src llvm-tools-preview
   - cargo install cargo-xbuild bootimage cargo-cache --debug -Z install-upgrade
