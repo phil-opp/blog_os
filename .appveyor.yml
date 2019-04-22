@@ -75,3 +75,4 @@ before_test:
 test_script:
   - cargo xbuild
   - cargo bootimage
+  - cargo xtest

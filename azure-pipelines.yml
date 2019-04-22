@@ -61,6 +61,9 @@ steps:
 - script: cargo bootimage
   displayName: 'Create Bootimage'
 
+- script: cargo xtest
+  displayName: 'Test'
+
 - script: rustup component add rustfmt
   displayName: 'Install Rustfmt'
 
