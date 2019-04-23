@@ -14,15 +14,13 @@ pub fn test_runner(tests: &[&dyn Fn()]) {
     for test in tests {
         test();
     }
-    unsafe { exit_qemu(QemuExitCode::Success) };
+    exit_qemu(QemuExitCode::Success);
 }
 
 pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
-    unsafe {
-        exit_qemu(QemuExitCode::Failed);
-    }
+    exit_qemu(QemuExitCode::Failed);
     loop {}
 }
 
@@ -33,11 +31,13 @@ pub enum QemuExitCode {
     Failed = 0x11,
 }
 
-pub unsafe fn exit_qemu(exit_code: QemuExitCode) {
+pub fn exit_qemu(exit_code: QemuExitCode) {
     use x86_64::instructions::port::Port;
 
-    let mut port = Port::new(0xf4);
-    port.write(exit_code as u32);
+    unsafe {
+        let mut port = Port::new(0xf4);
+        port.write(exit_code as u32);
+    }
 }
 
 /// Entry point for `cargo xtest`
