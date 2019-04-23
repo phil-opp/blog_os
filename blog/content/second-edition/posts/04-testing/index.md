@@ -757,24 +757,36 @@ As you can imagine, many more tests are possible. By adding such tests, we can e
 
 ## Testing Our Panic Handler
 
-Another thing that we can test with an integration test is our panic handler function. The idea is the following:
+Another thing that we can test with an integration test is that our panic handler is called correctly. The idea is to deliberately cause a panic in the test function and exit with a success exit code in the panic handler.
 
-- Deliberately cause a panic in the test
-- Add assertions in the panic handler that check the panic message and the file/line information
-- Exit with a success exit code at the end of the panic handler
+Since we exit from our panic handler, the panicking test never returns to the test runner. For this reason, it does not make sense to add more than one test because subsequent tests are never executed. For cases like this, where only a single test function exists, we can disable the test runner completely and run our test directly in the `_start` function.
 
-This is similar to a should panic test in the default Rust test framework. The difference is that can't continue the test after our panic handler was called because we don't have support for unwinding and the catch_panic function.
-
-For cases like this, where more than a single test are not useful, we can use the `no harness` feature to omit the test runner completely.
-
-#### No Harness
+### No Harness
 
 The `harness` flag defines whether a test runner is used for an integration test. When it's set to `false`, both the default test runner and the custom test runner feature are disabled, so that the test is treated like a normal executable.
 
-Let's create a panic handler test with a disabled `harness` flag. First, we create the test at `tests/panic_handler.rs`:
+Let's create a panic handler test with a disabled `harness` flag. First, we create a skeleton for the test at `tests/panic_handler.rs`:
 
 ```rust
-TODO
+// in tests/panic_handler.rs
+
+#![no_std]
+#![no_main]
+
+use core::panic::PanicInfo;
+use blog_os::{QemuExitCode, exit_qemu};
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    exit_qemu(QemuExitCode::Failed);
+    loop {}
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    exit_qemu(QemuExitCode::Failed);
+    loop {}
+}
 ```
 
 The code is similar to the `basic_boot` test with the difference that no test attributes are needed and no runner function is called. We immediately exit with an error from the `_start` entry point and the panic handler for now and first try to get it to compile.
@@ -791,15 +803,149 @@ harness = false
 
 Now the test compiles fine, but fails of course since we always exit with an error exit code.
 
-#### Implement a Proper Test
+### Implementing the Test
 
-Let's finish the implementation of our panic handler test:
+Let's complete the implementation of our panic handler test:
 
 ```rust
-TODO
+// in tests/panic_handler.rs
+
+use blog_os::{serial_print, serial_println, QemuExitCode, exit_qemu};
+
+const MESSAGE: &str = "Example panic message from panic_handler test";
+const PANIC_LINE: u32 = 14; // adjust this when moving the `panic!` call
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    serial_print!("panic_handler... ");
+    panic!(MESSAGE); // must be in line `PANIC_LINE`
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    serial_println!("[ok]");
+    exit_qemu(QemuExitCode::Success);
+    loop {}
+}
 ```
 
-We immediately `panic` in our `_start` function with a panic message. In the panic handler, we verify that the reported message and file/line information are correct. At the end of the panic handler, we exit with a success exit code because our panic handler works as intended then. We don't need a `qemu_exit` call at the end of our `_start` function, since the Rust compiler knows for sure that the code after the `panic` is unreachable.
+We immediately `panic` in our `_start` function with a `MESSAGE`. In the panic handler, we exit with a success exit code. We don't need a `qemu_exit` call at the end of our `_start` function, since the Rust compiler knows for sure that the code after the `panic` is unreachable. If we run the test with `cargo xtest --test panic_handler` now, we see that it succeeds as expected.
+
+We will need the `MESSAGE` and `PANIC_LINE` constants in the next section. The `PANIC_LINE` constant specifies the line number that contains the `panic!` invocation, which is `14` in our case (but it might be different for you).
+
+### Checking the `PanicInfo`
+
+To ensure that the given `PanicInfo` is correct, we can extend the `panic` function to check that the reported message and file/line information are correct:
+
+```rust
+// in tests/panic_handler.rs
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    check_message(info);
+    check_location(info);
+
+    // same as before
+    serial_println!("[ok]");
+    exit_qemu(QemuExitCode::Success);
+    loop {}
+}
+```
+
+We will show the implementation of `check_message` and `check_location` in a moment. Before that, we create a `fail` helper function that can be used to print an error message and exit QEMU with an failure exit code:
+
+```rust
+// in tests/panic_handler.rs
+
+fn fail(error: &str) -> ! {
+    serial_println!("[failed]");
+    serial_println!("{}", error);
+    exit_qemu(QemuExitCode::Failed);
+    loop {}
+}
+```
+
+Now we can implement our `check_location` function:
+
+```rust
+// in tests/panic_handler.rs
+
+fn check_location(info: &PanicInfo) {
+    let location = info.location().unwrap_or_else(|| fail("no location"));
+    if location.file() != file!() {
+        fail("file name wrong");
+    }
+    if location.line() != PANIC_LINE {
+        fail("file line wrong");
+    }
+}
+```
+
+The function takes queries the location information from the `PanicInfo` and fails if it does not exist. It then checks that the reported file name is correct by comparing it with the output of the compiler-provided [`file!`] macro. To check the reported line number, it compares it with the `PANIC_LINE` constant that we manually defined above.
+
+[`file!`]: https://doc.rust-lang.org/core/macro.file.html
+
+#### Checking the Panic Message
+
+Checking the reported panic message is a bit more complicated. The reason is that the [`PanicInfo::message`] function returns a [`fmt::Arguments`] instance that can't be compared with our `MESSAGE` string directly. To work around this, we need to create a `CompareMessage` struct:
+
+[`PanicInfo::message`]: https://doc.rust-lang.org/core/macro.file.html
+[`fmt::Arguments`]: https://doc.rust-lang.org/core/fmt/struct.Arguments.html
+
+```rust
+// in tests/panic_handler.rs
+
+/// Compares a `fmt::Arguments` instance with the `MESSAGE` string.
+///
+/// To use this type, write the `fmt::Arguments` instance to it using the
+/// `write` macro. If a message component matches `MESSAGE`, the equals
+/// field is set to true.
+struct CompareMessage {
+    equals: bool,
+}
+
+impl fmt::Write for CompareMessage {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        if s == MESSAGE {
+            self.equals = true;
+        }
+        Ok(())
+    }
+}
+```
+
+The trick is to implement the [`fmt::Write`] trait, which is called by the [`write`] macro with `&str` arguments. This makes it possible to compare the panic arguments with `MESSAGE`. By the way, this is the same trait that we implemented for our VGA buffer writer in order to print to the screen.
+
+[`fmt::Write`]: https://doc.rust-lang.org/core/fmt/trait.Write.html
+[`write`]: https://doc.rust-lang.org/core/macro.write.html
+
+The above code only works for messages with a single component. This means that it works for `panic!("some message")`, but not for `panic!("some {}", message)`. This isn't ideal, but good enough for our test.
+
+With the `CompareMessage` type, we can finally implement our `check_message` function:
+
+```rust
+// in tests/panic_handler.rs
+
+#![feature(panic_info_message)] // at the top of the file
+
+fn check_message(info: &PanicInfo) {
+    let message = info.message().unwrap_or_else(|| fail("no message"));
+    let mut compare_message = CompareMessage { equals: false };
+    write!(&mut compare_message, "{}", message)
+        .unwrap_or_else(|_| fail("write failed"));
+    if !compare_message.equals {
+        fail("message not equal to expected message");
+    }
+}
+```
+
+The function uses the [`PanicInfo::message`] function to get the panic message. If no message is reported, it calls `fail` to fail the test. Since the function is unstable, we need to add the `#![feature(panic_info_message)]` attribute at the top of our test file.
+
+[`PanicInfo::message`]: https://doc.rust-lang.org/core/panic/struct.PanicInfo.html#method.message
+
+After querying the message, the function constructs a `CompareMessage` instance and writes the message to it using the `write!` macro. Afterwards it reads the `equals` field and fails the test if the panic message does not equal `MESSAGE`.
+
+Now we can run the test using `cargo xtest --test panic_handler`. We see that it passes, which means that the reported panic info is correct. If we use a wrong line number in `PANIC_LINE` or panic with an additional character through `panic!("{}x", MESSAGE)`, we see that the test indeed fails.
 
 ## Summary
 
