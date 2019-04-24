@@ -2,6 +2,7 @@
 title = "Remap the Kernel"
 weight = 7
 path = "remap-the-kernel"
+aliases = ["remap-the-kernel.html"]
 date  = 2016-01-01
 template = "first-edition/page.html"
 [extra]

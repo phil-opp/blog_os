@@ -2,6 +2,7 @@
 title = "Handling Exceptions"
 weight = 9
 path = "handling-exceptions"
+aliases = ["handling-exceptions.html"]
 date  = 2017-03-26
 template = "first-edition/page.html"
 +++

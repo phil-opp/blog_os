@@ -2,6 +2,7 @@
 title = "Catching Exceptions"
 weight = 1
 path = "catching-exceptions"
+aliases = ["catching-exceptions.html"]
 date  = 2016-05-28
 template = "first-edition/page.html"
 [extra]

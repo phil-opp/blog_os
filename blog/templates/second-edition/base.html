@@ -25,7 +25,7 @@
         <header class="masthead">
             <div style="position:relative">
                 <h1 class="masthead-title">
-                    <a href="{{ get_url(path="./second-edition/_index.md") }}" title="Home">{{ config.title }} (Second Edition)</a>
+                    <a href="{{ config.base_url }}" title="Home">{{ config.title }} (Second Edition)</a>
                 </h1>
                 <p><small>{{ config.extra.subtitle | replace(from=" ", to="&nbsp;")}}</small></p>
                 {% block header %}{% endblock header %}
@@ -39,13 +39,8 @@
         <footer class="footer">
             <hr>
             <small>
-                <p>
-                    &copy; <time datetime="2019">2019</time>. All rights reserved.
-                    <a href="{{ get_url(path="./pages/contact.md") }}">Contact</a>
-                </p>
-                <p style = "color: gray;">
-                    Developed on <a href="https://github.com/phil-opp/blog_os">GitHub</a>, built with <a href="https://www.getzola.org/">Zola</a>, </a>hosted on <a href="https://www.netlify.com">Netlify</a>.
-                </p>
+                &copy; <time datetime="2019">2019</time>. All rights reserved.
+                <a href="{{ get_url(path="./pages/contact.md") }}">Contact</a>
             </small>
         </footer>
     </div>
