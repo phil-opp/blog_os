@@ -11,11 +11,6 @@ trigger:
     # Build post braches
     - post-*
 
-pr:
-  branches:
-    exclude:
-    - master
-
 pool:
   vmImage: ubuntu-16.04
 
@@ -27,5 +22,24 @@ steps:
   displayName: 'Build Info'
   continueOnError: true
 
-- script: echo "Nothing to do for master branch"
-  displayName: "Nothing to do"
+- bash: curl -sL https://github.com/getzola/zola/releases/download/v0.6.0/zola-v0.6.0-x86_64-unknown-linux-gnu.tar.gz | tar zxv
+  displayName: "Download Zola"
+
+- script: python -m pip install --upgrade pip setuptools wheel
+  displayName: 'Install Python Tools'
+
+- script: python -m pip install --user PyGithub
+  displayName: 'Install PyGithub'
+
+- script: python before_build.py
+  displayName: "Run before_build.py script"
+  workingDirectory: "blog"
+
+- script: ../zola build
+  displayName: "Build Site"
+  workingDirectory: "blog"
+
+- task: PublishPipelineArtifact@0
+  inputs:
+    artifactName: 'generated_site'
+    targetPath: 'blog/public'
