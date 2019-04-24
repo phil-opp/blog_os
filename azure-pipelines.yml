@@ -24,8 +24,9 @@ steps:
 - script: python -m pip install --upgrade pip setuptools wheel
   displayName: 'Install Python Tools'
 
-- script: python -m pip install --user PyGithub
-  displayName: 'Install PyGithub'
+- script: python -m pip install --user -r requirements.txt
+  displayName: 'Install Python Libraries'
+  workingDirectory: "blog"
 
 - script: python before_build.py
   displayName: "Run before_build.py script"
