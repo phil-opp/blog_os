@@ -2,6 +2,7 @@
 title = "Page Tables"
 weight = 6
 path = "page-tables"
+aliases = ["page-tables.html", "modifying-page-tables.html"]
 date  = 2015-12-09
 template = "first-edition/page.html"
 +++

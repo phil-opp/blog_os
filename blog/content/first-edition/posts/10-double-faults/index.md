@@ -2,6 +2,7 @@
 title = "Double Faults"
 weight = 10
 path = "double-faults"
+aliases = ["double-faults.html"]
 date  = 2017-01-02
 template = "first-edition/page.html"
 +++

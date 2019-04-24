@@ -1,4 +1,4 @@
 +++
 title = "Second Edition"
-template = "second-edition/index.html"
+template = "redirect-to-frontpage.html"
 +++
