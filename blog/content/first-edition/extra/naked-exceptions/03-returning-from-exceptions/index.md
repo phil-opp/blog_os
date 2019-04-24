@@ -2,6 +2,7 @@
 title = "Returning from Exceptions"
 weight = 3
 path = "returning-from-exceptions"
+aliases = ["returning-from-exceptions.html"]
 date  = 2016-09-21
 template = "first-edition/page.html"
 [extra]

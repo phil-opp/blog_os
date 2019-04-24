@@ -2,6 +2,7 @@
 title = "Kernel Heap"
 weight = 8
 path = "kernel-heap"
+aliases = ["kernel-heap.html"]
 date  = 2016-04-11
 updated = "2017-11-19"
 template = "first-edition/page.html"
