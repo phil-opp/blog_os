@@ -1,15 +1,11 @@
 # Documentation: https://aka.ms/yaml
 
 trigger:
-  batch: true
   branches:
     include:
-    # This is where pull requests from "bors r+" are built.
-    - staging
-    # This is where pull requests from "bors try" are built.
-    - trying
-    # Build post braches
-    - post-*
+    - '*'
+    exclude:
+    - 'staging.tmp'
 
 pool:
   vmImage: ubuntu-16.04
