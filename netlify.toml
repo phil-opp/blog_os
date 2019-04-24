@@ -11,3 +11,56 @@
 
 [context.branch-deploy]
     command = "python before_build.py && curl -sL https://github.com/getzola/zola/releases/download/v0.6.0/zola-v0.6.0-x86_64-unknown-linux-gnu.tar.gz | tar zxv && ./zola build --base-url $DEPLOY_PRIME_URL"
+
+
+[[redirects]]
+from = "/second-edition/"
+to = "/"
+
+[[redirects]]
+from = "/2015/08/18/multiboot-kernel/"
+to = "/multiboot-kernel/"
+
+[[redirects]]
+from = "/rust-os/multiboot-kernel.html"
+to = "/multiboot-kernel/"
+
+[[redirects]]
+from = "/2015/08/25/entering-longmode/"
+to = "/entering-longmode/"
+
+[[redirects]]
+from = "/rust-os/entering-longmode.html"
+to = "/entering-longmode/"
+
+[[redirects]]
+from = "/2015/09/02/setup-rust/"
+to = "/set-up-rust/"
+
+[[redirects]]
+from = "/setup-rust.html"
+to = "/set-up-rust/"
+
+[[redirects]]
+from = "/rust-os/setup-rust.html"
+to = "/set-up-rust/"
+
+[[redirects]]
+from = "/2015/10/23/printing-to-screen/"
+to = "/printing-to-screen/"
+
+[[redirects]]
+from = "/rust-os/printing-to-screen.html"
+to = "/printing-to-screen/"
+
+[[redirects]]
+from = "/atom.xml"
+to = "/rss.xml"
+
+[[redirects]]
+from = "/modifying-page-tables.html"
+to = "/page-tables/"
+
+[[redirects]]
+from = "/handling-exceptions-with-naked-fns.html"
+to = "/extra/naked-exceptions/"

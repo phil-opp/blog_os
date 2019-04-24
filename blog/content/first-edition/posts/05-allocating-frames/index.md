@@ -2,7 +2,6 @@
 title = "Allocating Frames"
 weight = 5
 path = "allocating-frames"
-aliases = ["allocating-frames.html"]
 date  = 2015-11-15
 template = "first-edition/page.html"
 +++

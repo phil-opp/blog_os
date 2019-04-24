@@ -2,7 +2,6 @@
 title = "Set Up Rust"
 weight = 3
 path = "set-up-rust"
-aliases = ["set-up-rust.html", "setup-rust.html", "/2015/09/02/setup-rust/", "/rust-os/setup-rust.html"]
 date  = 2015-09-02
 template = "first-edition/page.html"
 [extra]

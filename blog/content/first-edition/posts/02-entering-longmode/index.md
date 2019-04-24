@@ -2,7 +2,6 @@
 title = "Entering Long Mode"
 weight = 2
 path = "entering-longmode"
-aliases = ["entering-longmode.html", "/2015/08/25/entering-longmode/", "/rust-os/entering-longmode.html"]
 date  = 2015-08-25
 template = "first-edition/page.html"
 [extra]

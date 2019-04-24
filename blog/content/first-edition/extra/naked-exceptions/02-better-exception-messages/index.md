@@ -2,7 +2,6 @@
 title = "Better Exception Messages"
 weight = 2
 path = "better-exception-messages"
-aliases = ["better-exception-messages.html"]
 date  = 2016-08-03
 template = "first-edition/page.html"
 [extra]

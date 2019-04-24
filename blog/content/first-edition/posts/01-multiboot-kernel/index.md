@@ -1,8 +1,7 @@
 +++
 title = "A minimal Multiboot Kernel"
 weight = 1
-path = "multiboot-kernel"
-aliases = ["multiboot-kernel.html", "/2015/08/18/multiboot-kernel/", "/rust-os/multiboot-kernel.html"]
+path = "multiboot-kernel/"
 date  = 2015-08-18
 template = "first-edition/page.html"
 +++
