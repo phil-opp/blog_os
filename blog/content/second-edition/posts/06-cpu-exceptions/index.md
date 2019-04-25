@@ -392,7 +392,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-When we run it in QEMU now (using `bootimage run`), we see the following:
+When we run it in QEMU now (using `cargo xrun`), we see the following:
 
 ![QEMU printing `EXCEPTION: BREAKPOINT` and the interrupt stack frame](qemu-breakpoint-exception.png)
 
