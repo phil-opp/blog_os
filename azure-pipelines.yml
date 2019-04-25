@@ -60,9 +60,6 @@ steps:
 - script: bootimage build
   displayName: 'Build'
 
-- script: cargo test
-  displayName: 'Unit Tests'
-
 - script: rustup component add rustfmt
   displayName: 'Install Rustfmt'
 
