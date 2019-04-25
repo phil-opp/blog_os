@@ -305,16 +305,9 @@ Now we can try to access some memory outside our kernel:
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    use blog_os::interrupts::PICS;
-
     println!("Hello World{}", "!");
 
-    // set up the IDT first, otherwise we would enter a boot loop instead of
-    // invoking our page fault handler
-    blog_os::gdt::init();
-    blog_os::interrupts::init_idt();
-    unsafe { PICS.lock().initialize() };
-    x86_64::instructions::interrupts::enable();
+    blog_os::init();
 
     // new
     let ptr = 0xdeadbeaf as *mut u32;
@@ -354,7 +347,9 @@ Let's try to take a look at the page tables that our kernel runs on:
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    […] // initialize GDT, IDT, PICS
+    println!("Hello World{}", "!");
+
+    blog_os::init();
 
     use x86_64::registers::control::Cr3;
 

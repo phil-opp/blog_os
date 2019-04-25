@@ -109,24 +109,15 @@ We're setting the offsets for the pics to the range 32–47 as we noted above. B
 
 [spin mutex lock]: https://docs.rs/spin/0.4.8/spin/struct.Mutex.html#method.lock
 
-We can now initialize the 8259 PIC from our `_start` function:
+We can now initialize the 8259 PIC in our `init` function:
 
 ```rust
-// in src/main.rs
+// in src/lib.rs
 
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    use blog_os::interrupts::PICS;                  // new
-
-    println!("Hello World{}", "!");
-
-    blog_os::gdt::init();
-    blog_os::interrupts::init_idt();
-    unsafe { PICS.lock().initialize() }; // new
-
-    println!("It did not crash!");
-    loop {}
+pub fn init() {
+    gdt::init();
+    interrupts::init_idt();
+    unsafe { interrupts::PICS.lock().initialize() }; // new
 }
 ```
 
@@ -141,22 +132,13 @@ If all goes well we should continue to see the "It did not crash" message when e
 Until now nothing happened because interrupts are still disabled in the CPU configuration. This means that the CPU does not listen to the interrupt controller at all, so no interrupts can reach the CPU. Let's change that:
 
 ```rust
-// in src/main.rs
+// in src/lib.rs
 
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    use blog_os::interrupts::PICS;
-
-    println!("Hello World{}", "!");
-
-    blog_os::gdt::init();
-    blog_os::interrupts::init_idt();
-    unsafe { PICS.lock().initialize() };
+pub fn init() {
+    gdt::init();
+    interrupts::init_idt();
+    unsafe { interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();     // new
-
-    println!("It did not crash!");
-    loop {}
 }
 ```
 

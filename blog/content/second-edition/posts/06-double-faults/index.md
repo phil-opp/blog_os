@@ -35,7 +35,7 @@ Let's provoke a double fault by triggering an exception for that we didn't defin
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    blog_os::interrupts::init_idt();
+    blog_os::init();
 
     // trigger a page fault
     unsafe {
@@ -162,7 +162,7 @@ Let's try it ourselves! We can easily provoke a kernel stack overflow by calling
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    blog_os::interrupts::init_idt();
+    blog_os::init();
 
     fn stack_overflow() {
         stack_overflow(); // for each recursion, the return address is pushed
@@ -298,7 +298,7 @@ We use `lazy_static` again, because Rust's const evaluator is not powerful enoug
 
 #### Loading the GDT
 
-To load our GDT we create a new `gdt::init` function, that we call from our `_start` function:
+To load our GDT we create a new `gdt::init` function, that we call from our `init` function:
 
 ```rust
 // in src/gdt.rs
@@ -307,22 +307,15 @@ pub fn init() {
     GDT.load();
 }
 
-// in src/main.rs
+// in src/lib.rs
 
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    println!("Hello World{}", "!");
-
-    blog_os::gdt::init();
-    blog_os::interrupts::init_idt();
-
-    […]
+pub fn init() {
+    gdt::init();
+    interrupts::init_idt();
 }
-
 ```
 
-Now our GDT is loaded, but we still see the boot loop on stack overflow.
+Now our GDT is loaded (since the `_start` function calls `init`), but we still see the boot loop on stack overflow.
 
 ### The final Steps
 
