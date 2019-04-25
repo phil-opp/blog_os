@@ -390,7 +390,6 @@ Now we can update the `_start` function of our `main.rs` to call `init` and then
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");

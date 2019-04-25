@@ -303,7 +303,6 @@ Now we can try to access some memory outside our kernel:
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     use blog_os::interrupts::PICS;
@@ -353,7 +352,6 @@ Let's try to take a look at the page tables that our kernel runs on:
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     […] // initialize GDT, IDT, PICS

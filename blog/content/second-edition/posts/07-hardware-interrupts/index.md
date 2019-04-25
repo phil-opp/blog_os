@@ -309,7 +309,6 @@ We can easily provoke such a deadlock in our kernel by printing something in the
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     […]

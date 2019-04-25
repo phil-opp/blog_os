@@ -31,7 +31,6 @@ Let's provoke a double fault by triggering an exception for that we didn't defin
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
@@ -159,7 +158,6 @@ Let's try it ourselves! We can easily provoke a kernel stack overflow by calling
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
