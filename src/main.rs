@@ -9,13 +9,9 @@ use core::panic::PanicInfo;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    use blog_os::interrupts::PICS;
-
     println!("Hello World{}", "!");
 
     blog_os::init();
-    unsafe { PICS.lock().initialize() };
-    x86_64::instructions::interrupts::enable();
 
     #[cfg(test)]
     test_main();
