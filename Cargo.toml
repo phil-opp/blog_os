@@ -8,6 +8,10 @@ edition = "2018"
 name = "panic_handler"
 harness = false
 
+[[test]]
+name = "stack_overflow"
+harness = false
+
 [dependencies]
 bootloader = "0.6.0"
 volatile = "0.2.3"
