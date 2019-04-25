@@ -55,8 +55,11 @@ steps:
 - script: cargo install cargo-xbuild bootimage --debug
   displayName: 'Install cargo-xbuild and bootimage'
 
-- script: cargo bootimage
+- script: cargo xbuild
   displayName: 'Build'
+
+- script: cargo bootimage
+  displayName: 'Create Bootimage'
 
 - script: rustup component add rustfmt
   displayName: 'Install Rustfmt'

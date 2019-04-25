@@ -33,5 +33,6 @@ before_script:
   - cargo install cargo-xbuild bootimage cargo-cache --debug -Z install-upgrade
 
 script:
+  - cargo xbuild
   - cargo bootimage
   - cargo cache --autoclean

@@ -73,4 +73,5 @@ before_test:
   - cargo install-latest cargo-xbuild bootimage
 
 test_script:
+  - cargo xbuild
   - cargo bootimage
