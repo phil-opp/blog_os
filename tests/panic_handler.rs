@@ -9,7 +9,7 @@ use core::{
 };
 
 const MESSAGE: &str = "Example panic message from panic_handler test";
-const PANIC_LINE: u32 = 14; // adjust this when moving the `panic!` call
+const PANIC_LINE: u32 = 17; // adjust this when moving the `panic!` call
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
