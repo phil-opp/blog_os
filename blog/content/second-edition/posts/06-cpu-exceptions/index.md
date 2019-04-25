@@ -371,8 +371,21 @@ pub fn init_idt() {
 
 Note how this solution requires no `unsafe` blocks. The `lazy_static!` macro does use `unsafe` behind the scenes, but it is abstracted away in a safe interface.
 
-### Testing it
-Now we should be able to handle breakpoint exceptions! Let's try it in our `_start` function:
+### Running it
+
+The last step for making exceptions work in our kernel it to call the `init_idt` function from our `main.rs`. Instead of calling it directly, we introduce a general `init` function in our `lib.rs`:
+
+```rust
+// in src/lib.rs
+
+pub fn init() {
+    interrupts::init_idt();
+}
+```
+
+With this function we now have a central place for initialization routines that can be shared between the different `_start` functions in our `main.rs`, `lib.rs`, and integration tests.
+
+Now we can update the `_start` function of our `main.rs` to call `init` and then trigger a breakpoint exception:
 
 ```rust
 // in src/main.rs
@@ -382,10 +395,10 @@ Now we should be able to handle breakpoint exceptions! Let's try it in our `_sta
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    blog_os::interrupts::init_idt();
+    blog_os::init(); // new
 
     // invoke a breakpoint exception
-    x86_64::instructions::interrupts::int3();
+    x86_64::instructions::interrupts::int3(); // new
 
     println!("It did not crash!");
     loop {}
@@ -402,47 +415,46 @@ We see that the interrupt stack frame tells us the instruction and stack pointer
 
 ### Adding a Test
 
-Let's create an integration test that ensures that the above continues to work. For that we create a file named `test-exception-breakpoint.rs`:
+Let's create a test that ensures that the above continues to work. First, we update the `_start` function to also call `init`:
 
 ```rust
-// in src/bin/test-exception-breakpoint.rs
+// in src/lib.rs
 
-#![no_std]
-#![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
-
-use core::panic::PanicInfo;
-use blog_os::{exit_qemu, serial_println};
-
-#[cfg(not(test))]
+#[cfg(test)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    blog_os::interrupts::init_idt();
+    init(); // new
 
-    x86_64::instructions::interrupts::int3();
+    test_main();
 
-    serial_println!("ok");
-
-    unsafe { exit_qemu(); }
-    loop {}
-}
-
-
-#[cfg(not(test))]
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    serial_println!("failed");
-
-    serial_println!("{}", info);
-
-    unsafe { exit_qemu(); }
     loop {}
 }
 ```
 
-It is similar to our `main.rs`, but instead of printing "It did not crash!" to the VGA buffer, it prints "ok" to the serial output and calls `exit_qemu`. This allows the `bootimage` tool to detect that our code successfully continued after invoking the `int3` instruction. If our `panic_handler` is called, we instead print `failed` to signalize the failure to `bootimage`.
+Remember, this `_start` function is used when running `cargo xtest --lib`, since Rust's tests the `lib.rs` completely independent of the `main.rs`. We need to call `init` here to set up an IDT before running the tests.
 
-You can try this new test by running `bootimage test`.
+Now we can create a `test_breakpoint_exception` test:
+
+```rust
+// in src/interrupts.rs
+
+#[cfg(test)]
+use crate::{serial_print, serial_println};
+
+#[test_case]
+fn test_breakpoint_exception() {
+    serial_print!("test_breakpoint_exception...");
+    // invoke a breakpoint exception
+    x86_64::instructions::interrupts::int3();
+    serial_println!("[ok]");
+}
+```
+
+Apart from printing status messages through the [serial port], the test invokes the `int3` function to trigger a breakpoint exception. By checking that the execution continues afterwards, we verify that our breakpoint handler is working correctly.
+
+[serial port]: ./second-edition/posts/04-testing/index.md#serial-port
+
+You can try this new test by running `cargo xtest --lib`. You should see `test_breakpoint_exception...[ok]` in the output.
 
 ### Fixing `cargo test` on Windows
 
