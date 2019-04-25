@@ -257,7 +257,7 @@ Paging makes our kernel already relatively safe, since every memory access that 
 
 Let's try to cause a page fault by accessing some memory outside of our kernel. First, we create a page fault handler and register it in our IDT, so that we see a page fault exception instead of a generic [double fault] :
 
-[double fault]: ./second-edition/posts/07-double-faults/index.md
+[double fault]: ./second-edition/posts/06-double-faults/index.md
 
 ```rust
 // in src/interrupts.rs
@@ -296,7 +296,7 @@ The [`CR2`] register is automatically set by the CPU on a page fault and contain
 [`Cr2::read`]: https://docs.rs/x86_64/0.5.2/x86_64/registers/control/struct.Cr2.html#method.read
 [`PageFaultErrorCode`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
-[`hlt_loop`]: ./second-edition/posts/08-hardware-interrupts/index.md#the
+[`hlt_loop`]: ./second-edition/posts/07-hardware-interrupts/index.md#the
 
 Now we can try to access some memory outside our kernel:
 
