@@ -385,7 +385,7 @@ For running `bootimage` and building the bootloader, you need to have the `llvm-
 After installing `bootimage` and adding the `llvm-tools-preview` component, we can create a bootable disk image by executing:
 
 ```
-> bootimage build --target x86_64-blog_os.json
+> cargo bootimage
 ```
 
 We see that the tool recompiles our kernel using `cargo xbuild`, so it will automatically pick up any changes you make. Afterwards it compiles the bootloader, which might take a while. Like all crate dependencies it is only built once and then cached, so subsequent builds will be much faster. Finally, `bootimage` combines the bootloader and your kernel to a bootable disk image.
@@ -415,17 +415,11 @@ We can now boot the disk image in a virtual machine. To boot it in [QEMU], execu
 warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 ```
 
+This opens a separate window with that looks like this:
+
 ![QEMU showing "Hello World!"](qemu.png)
 
-Alternatively, you can invoke the `run` subcommand of the `bootimage` tool:
-
-```
-> bootimage run
-```
-
-By default it invokes the exact same QEMU command as above. Additional QEMU options can be passed after a `--`. For example, `bootimage run -- --help` will show the QEMU help. It's also possible to change the default command through an `run-command` key in the `package.metadata.bootimage` table in the `Cargo.toml`. For more information see the `--help` output or the [Readme file].
-
-[Readme file]: https://github.com/rust-osdev/bootimage/blob/master/Readme.md
+We see that our "Hello World!" is visible on the screen.
 
 ### Real Machine
 
