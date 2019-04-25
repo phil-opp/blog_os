@@ -353,10 +353,10 @@ Adding the bootloader as dependency is not enough to actually create a bootable 
 To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then combines them to create a bootable disk image. To install the tool, execute the following command in your terminal:
 
 ```
-cargo install bootimage --version "^0.7.1"
+cargo install bootimage --version "^0.7.3"
 ```
 
-The `^0.7.1` is a so-called [_caret requirement_], which means "version `0.7.1` or a later compatible version". So if we find a bug and publish version `0.7.2` or `0.7.3`, cargo would automatically use the latest version, as long as it is still a version `0.7.x`. However, it wouldn't choose version `0.8.0`, because it is not considered as compatible. Note that dependencies in your `Cargo.toml` are caret requirements by default, so the same rules are applied to our bootloader dependency.
+The `^0.7.3` is a so-called [_caret requirement_], which means "version `0.7.3` or a later compatible version". So if we find a bug and publish version `0.7.4` or `0.7.5`, cargo would automatically use the latest version, as long as it is still a version `0.7.x`. However, it wouldn't choose version `0.8.0`, because it is not considered as compatible. Note that dependencies in your `Cargo.toml` are caret requirements by default, so the same rules are applied to our bootloader dependency.
 
 [_caret requirement_]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#caret-requirements
 
