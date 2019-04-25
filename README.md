@@ -10,16 +10,16 @@ The code for each post lives in a separate git branch. This makes it possible to
 
 **The code for the latest post is available [here][latest-post].**
 
-[latest-post]: https://github.com/phil-opp/blog_os/tree/post-10
+[latest-post]: https://github.com/phil-opp/blog_os/tree/post-09
 
-You can find the branch for each post by following the `(source code)` link in the [post list](#posts) below. The branches are named `post-XX` where `XX` is the post number, for example `post-03` for the _VGA Text Mode_ post or `post-08` for the _Hardware Interrupts_ post. For build instructions, see the Readme of the respective branch.
+You can find the branch for each post by following the `(source code)` link in the [post list](#posts) below. The branches are named `post-XX` where `XX` is the post number, for example `post-03` for the _VGA Text Mode_ post or `post-07` for the _Hardware Interrupts_ post. For build instructions, see the Readme of the respective branch.
 
 You can check out a branch in a subdirectory using [git worktree]:
 
 [git worktree]: https://git-scm.com/docs/git-worktree
 
 ```
-git worktree add code post-10
+git worktree add code post-09
 ```
 
 The above command creates a subdirectory named `code` that contains the code for the 10th post ("Paging Implementation").
@@ -36,29 +36,24 @@ The goal of this project is to provide step-by-step tutorials in individual blog
     ([source code](https://github.com/phil-opp/blog_os/tree/post-02))
 - [VGA Text Mode](https://os.phil-opp.com/vga-text-mode/)
     ([source code](https://github.com/phil-opp/blog_os/tree/post-03))
-
-**Testing:**
-
-- [Unit Testing](https://os.phil-opp.com/unit-testing/)
+- [Testing](https://os.phil-opp.com/testing/)
     ([source code](https://github.com/phil-opp/blog_os/tree/post-04))
-- [Integration Tests](https://os.phil-opp.com/integration-tests/)
-    ([source code](https://github.com/phil-opp/blog_os/tree/post-05))
 
 **Interrupts:**
 
 - [CPU Exceptions](https://os.phil-opp.com/cpu-exceptions/)
-    ([source code](https://github.com/phil-opp/blog_os/tree/post-06))
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-05))
 - [Double Faults](https://os.phil-opp.com/double-fault-exceptions/)
-    ([source code](https://github.com/phil-opp/blog_os/tree/post-07))
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-06))
 - [Hardware Interrupts](https://os.phil-opp.com/hardware-interrupts/)
-    ([source code](https://github.com/phil-opp/blog_os/tree/post-08))
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-07))
 
 **Memory Management:**
 
 - [Introduction to Paging](https://os.phil-opp.com/paging-introduction/)
-    ([source code](https://github.com/phil-opp/blog_os/tree/post-09))
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-08))
 - [Paging Implementation](https://os.phil-opp.com/paging-implementation/)
-    ([source code](https://github.com/phil-opp/blog_os/tree/post-10))
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-09))
 
 ## First Edition Posts
 
