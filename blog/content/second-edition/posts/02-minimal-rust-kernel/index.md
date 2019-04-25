@@ -345,8 +345,13 @@ So we want to minimize the use of `unsafe` as much as possible. Rust gives us th
 
 [memory safety]: https://en.wikipedia.org/wiki/Memory_safety
 
+## Running our Kernel
+
+Now that we have an executable that does something perceptible, it is time to run it. First, we need to turn our compiled kernel into a bootable disk image by linking it with a bootloader. Then we can run the disk image in the [QEMU] virtual machine or boot it on real hardware using an USB stick.
+
 ### Creating a Bootimage
-Now that we have an executable that does something perceptible, it is time to turn it into a bootable disk image. As we learned in the [section about booting], we need a bootloader for that, which initializes the CPU and loads our kernel.
+
+To turn our compiled kernel into a bootable disk image, we need to link it with a bootloader. As we learned in the [section about booting], the bootloader is responsible for initializing the CPU and loading our kernel.
 
 [section about booting]: #the-boot-process
 
@@ -361,11 +366,11 @@ Instead of writing our own bootloader, which is a project on its own, we use the
 bootloader = "0.5.1"
 ```
 
-Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to combine the bootloader with the kernel after it has been compiled, but cargo has no support for additional build steps after successful compilation (see [this issue][post-build script] for more information).
+Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to link our kernel with the bootloader after compilation, but cargo has no support for [post-build scripts].
 
-[post-build script]: https://github.com/rust-lang/cargo/issues/545
+[post-build scripts]: https://github.com/rust-lang/cargo/issues/545
 
-To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then combines them to create a bootable disk image. To install the tool, execute the following command in your terminal:
+To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then links them together to create a bootable disk image. To install the tool, execute the following command in your terminal:
 
 ```
 cargo install bootimage --version "^0.7.3"
@@ -392,15 +397,15 @@ The `bootimage` tool performs the following steps behind the scenes:
 
 - It compiles our kernel to an [ELF] file.
 - It compiles the bootloader dependency as a standalone executable.
-- It appends the bytes of the kernel ELF file to the bootloader.
+- It links the bytes of the kernel ELF file to the bootloader.
 
 [ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 [rust-osdev/bootloader]: https://github.com/rust-osdev/bootloader
 
 When booted, the bootloader reads and parses the appended ELF file. It then maps the program segments to virtual addresses in the page tables, zeroes the `.bss` section, and sets up a stack. Finally, it reads the entry point address (our `_start` function) and jumps to it.
 
+### Booting it in QEMU
 
-## Booting it!
 We can now boot the disk image in a virtual machine. To boot it in [QEMU], execute the following command:
 
 [QEMU]: https://www.qemu.org/
@@ -423,6 +428,7 @@ By default it invokes the exact same QEMU command as above. Additional QEMU opti
 [Readme file]: https://github.com/rust-osdev/bootimage/blob/master/Readme.md
 
 ### Real Machine
+
 It is also possible to write it to an USB stick and boot it on a real machine:
 
 ```
