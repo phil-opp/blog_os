@@ -962,6 +962,7 @@ TODO:
 - timeout?
 - quiet?
 - macro
+- update post numbers (-1)
 - update date
 
 
