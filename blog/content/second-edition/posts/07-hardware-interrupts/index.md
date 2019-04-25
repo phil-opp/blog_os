@@ -462,7 +462,6 @@ We can now use this `hlt_loop` instead of the endless loops in our `_start` and 
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     […]
@@ -481,7 +480,29 @@ fn panic(info: &PanicInfo) -> ! {
 
 ```
 
-We can also use `hlt_loop` in our double fault exception handler as well:
+Let's update our `lib.rs` as well:
+
+```rust
+// in src/lib.rs
+
+/// Entry point for `cargo xtest`
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    init();
+    test_main();
+    hlt_loop();         // new
+}
+
+pub fn test_panic_handler(info: &PanicInfo) -> ! {
+    serial_println!("[failed]\n");
+    serial_println!("Error: {}\n", info);
+    exit_qemu(QemuExitCode::Failed);
+    hlt_loop();         // new
+}
+```
+
+We can also use `hlt_loop` in our double fault exception handler:
 
 ```rust
 // in src/interrupts.rs
