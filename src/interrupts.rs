@@ -23,3 +23,14 @@ pub fn init_idt() {
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut InterruptStackFrame) {
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
+
+#[cfg(test)]
+use crate::{serial_print, serial_println};
+
+#[test_case]
+fn test_breakpoint_exception() {
+    serial_print!("test_breakpoint_exception...");
+    // invoke a breakpoint exception
+    x86_64::instructions::interrupts::int3();
+    serial_println!("[ok]");
+}
