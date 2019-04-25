@@ -61,7 +61,6 @@ extern "x86-interrupt" fn page_fault_handler(
     stack_frame: &mut InterruptStackFrame,
     _error_code: PageFaultErrorCode,
 ) {
-    use crate::hlt_loop;
     use x86_64::registers::control::Cr2;
 
     println!("EXCEPTION: PAGE FAULT");
