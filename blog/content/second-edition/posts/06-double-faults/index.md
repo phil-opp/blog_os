@@ -398,12 +398,132 @@ That's it! Now the CPU should switch to the double fault stack whenever a double
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` and a dump of the exception stack frame](qemu-double-fault-on-stack-overflow.png)
 
-From now on we should never see a triple fault again!
+From now on we should never see a triple fault again! To ensure that we don't accidentally break the above, we should add a test for this.
 
-To ensure that we don't accidentally break the above, we should add a integration test for this. We don't show the code here for space reasons, but you can find it [on Github][stack overflow test]. The idea is to do a `exit_qemu(QemuExitCode::Success)` from the double fault handler to ensure that it is called. Like our `panic_handler` test, the test requires [disabling the test harness].
+## A Stack Overflow Test
 
-[stack overflow test]: https://github.com/phil-opp/blog_os/blob/post-07/src/tests/stack_overflow.rs
-[disabling the test harness]: ./second-edition/posts/04-testing/index.md#no-harness
+To test our new `gdt` module and ensure that the double fault handler is correctly called on a stack overflow, we can add an integration test. The idea is to do provoke a double fault in the test function and verify that the double fault handler is called.
+
+Let's start with a minimal skeleton:
+
+```rust
+// in tests/stack_overflow.rs
+
+#![no_std]
+#![no_main]
+
+use core::panic::PanicInfo;
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    unimplemented!();
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    blog_os::test_panic_handler(info)
+}
+```
+
+Like our `panic_handler` test, the test will run [without a test harness]. The reason is that we can't continue execution after a double fault, so more than one test doesn't make sense. To disable, the test harness for the test, we add the following to our `Cargo.toml`:
+
+```toml
+# in Cargo.toml
+
+[[test]]
+name = "stack_overflow"
+harness = false
+```
+
+[without a test harness]: ./second-edition/posts/04-testing/index.md#no-harness
+
+Now `cargo xtest --test stack_overflow` should compile successfully. The test fails of course, since the `unimplemented` macro panics.
+
+### Implementing `_start`
+
+The implementation of the `_start` function looks like this:
+
+```rust
+// in tests/stack_overflow.rs
+
+use blog_os::serial_print;
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    serial_print!("stack_overflow... ");
+
+    blog_os::gdt::init();
+    init_test_idt();
+
+    // trigger a stack overflow
+    stack_overflow();
+
+    panic!("Execution continued after stack overflow");
+}
+
+#[allow(unconditional_recursion)]
+fn stack_overflow() {
+    stack_overflow(); // for each recursion, the return address is pushed
+}
+```
+
+We call our `gdt::init` function to initialize a new GDT. Instead of calling our `interrupts::init_idt` function, we call a `init_test_idt` function that will be explained in a moment. The reason is that we want to register a custom double fault handler that does a `exit_qemu(QemuExitCode::Success)` instead of panicking.
+
+The `stack_overflow` function is identical to the function in our `main.rs`. We additionally added the `allow(unconditional_recursion)` attribute to silence the warning that the function recurses endlessly.
+
+### The Test IDT
+
+As noted above, the test needs its own IDT with a custom double fault handler. The implementation looks like this:
+
+```rust
+// in tests/stack_overflow.rs
+
+use lazy_static::lazy_static;
+use x86_64::structures::idt::InterruptDescriptorTable;
+
+lazy_static! {
+    static ref TEST_IDT: InterruptDescriptorTable = {
+        let mut idt = InterruptDescriptorTable::new();
+        unsafe {
+            idt.double_fault
+                .set_handler_fn(test_double_fault_handler)
+                .set_stack_index(blog_os::gdt::DOUBLE_FAULT_IST_INDEX);
+        }
+
+        idt
+    };
+}
+
+pub fn init_test_idt() {
+    TEST_IDT.load();
+}
+```
+
+The implementation is very similar to our normal IDT in `interrupts.rs`. Like in the normal IDT, we set a stack index into the IST for the double fault handler in order to switch to a separate stack. The `init_test_idt` function loads the IDT on the CPU through the `load` method.
+
+### The Double Fault Handler
+
+The only missing piece is our double fault handler. It looks like this:
+
+```rust
+// in tests/stack_overflow.rs
+
+use blog_os::{exit_qemu, QemuExitCode, serial_println};
+use x86_64::structures::idt::InterruptStackFrame;
+
+extern "x86-interrupt" fn test_double_fault_handler(
+    _stack_frame: &mut InterruptStackFrame,
+    _error_code: u64,
+) {
+    serial_println!("[ok]");
+    exit_qemu(QemuExitCode::Success);
+    loop {}
+}
+```
+
+When the double fault handler is called, we exit QEMU with a success exit code, which marks the test as passed. Since integration tests are completely separate executables, we need to set `#![feature(abi_x86_interrupt)]` attribute again at the top of our test file.
+
+Now we can run our test through `cargo xtest --test stack_overflow` (or `cargo xtest` to run all tests). As expected, we see the `stack_overflow... [ok]` output in the console. TRy to comment out the `set_stack_index` line: it should cause the test to fail.
 
 ## Summary
 In this post we learned what a double fault is and under which conditions it occurs. We added a basic double fault handler that prints an error message and added an integration test for it.

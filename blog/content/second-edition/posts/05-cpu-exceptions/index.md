@@ -419,13 +419,12 @@ Let's create a test that ensures that the above continues to work. First, we upd
 ```rust
 // in src/lib.rs
 
+/// Entry point for `cargo xtest`
 #[cfg(test)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    init(); // new
-
+    init();      // new
     test_main();
-
     loop {}
 }
 ```
@@ -453,7 +452,7 @@ Apart from printing status messages through the [serial port], the test invokes 
 
 [serial port]: ./second-edition/posts/04-testing/index.md#serial-port
 
-You can try this new test by running `cargo xtest --lib`. You should see `test_breakpoint_exception...[ok]` in the output.
+You can try this new test by running `cargo xtest` (all tests) or `cargo xtest --lib` (only tests of `lib.rs` and its modules). You should see `test_breakpoint_exception...[ok]` in the output.
 
 ## Too much Magic?
 The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own IDT type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed. Note that these posts are based on the [first edition] of this blog and might be out of date.
