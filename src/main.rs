@@ -14,14 +14,14 @@ pub extern "C" fn _start() -> ! {
 
     blog_os::init();
 
-    #[cfg(test)]
-    test_main();
-
     let (level_4_page_table, _) = Cr3::read();
     println!(
         "Level 4 page table at: {:?}",
         level_4_page_table.start_address()
     );
+
+    #[cfg(test)]
+    test_main();
 
     println!("It did not crash!");
     blog_os::hlt_loop();
