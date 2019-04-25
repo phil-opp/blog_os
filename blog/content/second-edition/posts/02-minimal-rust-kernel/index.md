@@ -281,6 +281,21 @@ We see that `cargo xbuild` cross-compiles the `core`, `compiler_builtin`, and `a
 
 Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
 
+### Set a Default Target
+
+To avoid passing the `--target` parameter on every invocation of `cargo xbuild`, we can override the default target. To do this, we create a [cargo configuration] file at `.cargo/config` with the following content:
+
+[cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# in .cargo/config
+
+[build]
+target = "x86_64-blog_os.json"
+```
+
+This tells `cargo` to use our `x86_64-blog_os.json` target when no explicit `--target` argument is passed. This means that we can now build our kernel with a simple `cargo xbuild`. For more information on cargo configuration options, check out the [official documentation][cargo configuration].
+
 ### Printing to Screen
 The easiest way to print text to the screen at this stage is the [VGA text buffer]. It is a special memory area mapped to the VGA hardware that contains the contents displayed on screen. It normally consists of 25 lines that each contain 80 character cells. Each character cell displays an ASCII character with some foreground and background colors. The screen output looks like this:
 
@@ -384,17 +399,6 @@ The `bootimage` tool performs the following steps behind the scenes:
 
 When booted, the bootloader reads and parses the appended ELF file. It then maps the program segments to virtual addresses in the page tables, zeroes the `.bss` section, and sets up a stack. Finally, it reads the entry point address (our `_start` function) and jumps to it.
 
-#### Bootimage Configuration
-The `bootimage` tool can be configured through a `[package.metadata.bootimage]` table in the `Cargo.toml` file. We can add a `default-target` option so that we no longer need to pass the `--target` argument:
-
-```toml
-# in Cargo.toml
-
-[package.metadata.bootimage]
-default-target = "x86_64-blog_os.json"
-```
-
-Now we can omit the `--target` argument and just run `bootimage build`.
 
 ## Booting it!
 We can now boot the disk image in a virtual machine. To boot it in [QEMU], execute the following command:
