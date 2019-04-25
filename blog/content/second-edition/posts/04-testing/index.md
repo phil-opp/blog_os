@@ -20,9 +20,11 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 ## Requirements
 
-This post assumes that you have a `.cargo/config` file with a default target... TODO
+This post assumes that you have followed the latest version of the ["_A Minimal Rust Kernel_"] post. It requires that you have a `.cargo/config` file that [sets a default target] and [defines a runner executable].
 
-Earlier posts since XX, bootimage runner
+["_A Minimal Rust Kernel_"]: ./second-edition/posts/02-minimal-rust-kernel/index.md
+[sets a default target]: ./second-edition/posts/02-minimal-rust-kernel/index.md#set-a-default-target
+[defines a runner executable]: ./second-edition/posts/02-minimal-rust-kernel/index.md#using-cargo-run
 
 ## Testing in Rust
 
