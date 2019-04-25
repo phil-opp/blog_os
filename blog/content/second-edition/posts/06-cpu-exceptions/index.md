@@ -456,36 +456,6 @@ Apart from printing status messages through the [serial port], the test invokes 
 
 You can try this new test by running `cargo xtest --lib`. You should see `test_breakpoint_exception...[ok]` in the output.
 
-### Fixing `cargo test` on Windows
-
-The `x86-interrupt` calling convention has an annoying problem: There is a bug in LLVM that leads to a "LLVM ERROR: offset is not a multiple of 16" when compiling a function with the `x86-interrupt` calling convention _for a Windows target_. Normally this is no problem, since we only compile for our custom `x86_64-blog_os.json` target. But `cargo test` compiles our crate for the host system, so the error occurs if the host system is Windows.
-
-To fix this problem, we add a conditional compilation attribute, so that the `x86-interrupt` functions are not compiled on Windows systems. We don't have any unit tests that rely on the `interrupts` module, so we can simply skip compilation of the whole module:
-
-```rust
-// in src/interrupts.rs
-
-// LLVM throws an error if a function with the
-// x86-interrupt calling convention is compiled
-// for a Windows system.
-#![cfg(not(windows))]
-```
-
-The bang ("!") after the hash ("#") indicates that this is an [inner attribute] and applies to the module we're in. Without the bang it would only apply to the next item in the file. Note that inner attributes must be right at the beginning of a module.
-
-[inner attribute]: https://doc.rust-lang.org/reference/attributes.html
-
-We could achieve the same effect by using an _outer_ attribute (without a bang) in our `lib.rs`:
-
-```rust
-// in src/lib.rs
-
-#[cfg(not(windows))] // no bang ("!") after the hash ("#")
-pub mod interrupts;
-```
-
-Both variants have the exact same effects, so it comes down to personal preference which one to use. I prefer the inner attribute in this case because it does not clutter our `lib.rs` with a workaround for a LLVM bug, but either way is fine.
-
 ## Too much Magic?
 The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own IDT type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed. Note that these posts are based on the [first edition] of this blog and might be out of date.
 
