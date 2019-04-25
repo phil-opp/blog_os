@@ -1,10 +1,10 @@
-# Blog OS (Unit Testing)
+# Blog OS (Testing)
 
 [![Azure Pipelines CI build](https://img.shields.io/azure-devops/build/phil-opp/blog_os/1/post-04.svg?label=Build&style=flat-square)](https://dev.azure.com/phil-opp/blog_os/_build?definitionId=1)
 
-This repository contains the source code for the [Unit Testing][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
+This repository contains the source code for the [Testing][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
-[post]: https://os.phil-opp.com/unit-testing/
+[post]: https://os.phil-opp.com/testing/
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
@@ -54,7 +54,7 @@ Where `sdX` is the device name of your USB stick. **Be careful** to choose the c
 
 ## Testing
 
-To run the unit tests on the host system, execute `cargo test`.
+To run the unit and integration tests, execute `cargo xtest`.
 
 ## License
 The source code is dual-licensed under MIT or the Apache License (Version 2.0).
