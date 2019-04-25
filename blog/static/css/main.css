@@ -67,10 +67,6 @@ main img {
   border: 2px solid #66f;
 }
 
-.posts.testing {
-  border: 2px solid #0a0;
-}
-
 .posts.memory-management {
   border: 2px solid #fc0
 }
@@ -104,10 +100,6 @@ main img {
 
 .post-category.bare-bones {
   color: #55d;
-}
-
-.post-category.testing {
-  color: #090;
 }
 
 .post-category.memory-management {
