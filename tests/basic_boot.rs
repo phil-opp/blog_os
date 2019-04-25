@@ -4,8 +4,8 @@
 #![test_runner(blog_os::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-use core::panic::PanicInfo;
 use blog_os::{println, serial_print, serial_println};
+use core::panic::PanicInfo;
 
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {

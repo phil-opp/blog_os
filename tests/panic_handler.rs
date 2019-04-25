@@ -2,8 +2,11 @@
 #![no_main]
 #![feature(panic_info_message)]
 
-use core::{fmt::{self, Write}, panic::PanicInfo};
-use blog_os::{serial_print, serial_println, QemuExitCode, exit_qemu};
+use blog_os::{exit_qemu, serial_print, serial_println, QemuExitCode};
+use core::{
+    fmt::{self, Write},
+    panic::PanicInfo,
+};
 
 const MESSAGE: &str = "Example panic message from panic_handler test";
 const PANIC_LINE: u32 = 14; // adjust this when moving the `panic!` call
@@ -11,11 +14,11 @@ const PANIC_LINE: u32 = 14; // adjust this when moving the `panic!` call
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     serial_print!("panic_handler... ");
-    panic!(MESSAGE); // must be in line `PANIC_LINE` 
+    panic!(MESSAGE); // must be in line `PANIC_LINE`
 }
 
 #[panic_handler]
-fn panic(info: &PanicInfo) -> ! {   
+fn panic(info: &PanicInfo) -> ! {
     check_location(info);
     check_message(info);
 
@@ -51,7 +54,7 @@ fn check_message(info: &PanicInfo) {
 }
 
 /// Compares a `fmt::Arguments` instance with the `MESSAGE` string
-/// 
+///
 /// To use this type, write the `fmt::Arguments` instance to it using the
 /// `write` macro. If a message component matches `MESSAGE`, the equals
 /// field is set to true.
