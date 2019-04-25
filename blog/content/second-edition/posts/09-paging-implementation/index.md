@@ -1,6 +1,6 @@
 +++
 title = "Paging Implementation"
-weight = 10
+weight = 9
 path = "paging-implementation"
 date = 2019-03-14
 +++
@@ -9,11 +9,11 @@ This post shows how to implement paging support in our kernel. It first explores
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-10`][post branch] branch.
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-09`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-10
+[post branch]: https://github.com/phil-opp/blog_os/tree/post-09
 
 
 <aside class="post_aside">

@@ -1,6 +1,6 @@
 +++
 title = "CPU Exceptions"
-weight = 6
+weight = 5
 path = "cpu-exceptions"
 date  = 2018-06-17
 
@@ -12,11 +12,11 @@ CPU exceptions occur in various erroneous situations, for example when accessing
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-06`][post branch] branch.
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-05`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-06
+[post branch]: https://github.com/phil-opp/blog_os/tree/post-05
 
 <!-- toc -->
 

@@ -1,6 +1,6 @@
 +++
 title = "Double Faults"
-weight = 7
+weight = 6
 path = "double-fault-exceptions"
 date  = 2018-06-18
 
@@ -10,11 +10,11 @@ This post explores the double fault exception in detail, which occurs when the C
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].  The complete source code for this post can be found in the [`post-07`][post branch] branch.
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].  The complete source code for this post can be found in the [`post-06`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-07
+[post branch]: https://github.com/phil-opp/blog_os/tree/post-06
 
 <!-- toc -->
 
