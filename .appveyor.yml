@@ -55,8 +55,7 @@ install:
   - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
   - rustc -vV
   - cargo -vV
-
-  # Install qemu
+    # Install qemu
   - echo %cd%
   - mkdir "C:\Program Files\qemu"
   - cd "C:\Program Files\qemu"
@@ -85,7 +84,6 @@ before_test:
   - cargo install-latest cargo-xbuild bootimage
 
 test_script:
-  - bootimage build
-  - if %target%==x86_64-pc-windows-gnu cargo test
-  - if %target%==x86_64-pc-windows-msvc cargo test
-  - bootimage test
+  - cargo xbuild
+  - cargo bootimage
+  - cargo xtest
