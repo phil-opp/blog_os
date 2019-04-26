@@ -548,7 +548,7 @@ The `VirtAddr` struct already provides methods to compute the indexes into the p
 
 Inside the loop, we again use the `physical_memory_offset` to convert the frame into a page table reference. We then read the entry of the current page table and use the [`PageTableEntry::frame`] function to retrieve the mapped frame. If the entry is not mapped to a frame we return `None`. If the entry maps a huge 2MiB or 1GiB page we panic for now.
 
-[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
+[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
 Let's test our translation function by translating some addresses:
 
@@ -601,17 +601,17 @@ The base of the abstraction are two traits that define various page table mappin
 - The [`Mapper`] trait is generic over the page size and provides functions that operate on pages. Examples are [`translate_page`], which translates a given page to a frame of the same size, and [`map_to`], which creates a new mapping in the page table.
 - The [`MapperAllSizes`] trait implies that the implementor implements `Mapper` for all pages sizes. In addition, it provides functions that work with multiple page sizes such as [`translate_addr`] or the general [`translate`].
 
-[`Mapper`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.Mapper.html
-[`translate_page`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
-[`map_to`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
-[`MapperAllSizes`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
-[`translate_addr`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
-[`translate`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate
+[`Mapper`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.Mapper.html
+[`translate_page`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
+[`map_to`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
+[`MapperAllSizes`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
+[`translate_addr`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
+[`translate`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate
 
 The traits only define the interface, they don't provide any implementation. The `x86_64` crate currently provides two types that implement the traits: [`MappedPageTable`] and [`RecursivePageTable`]. The former type requires that each page table frame is mapped somewhere (e.g. at an offset). The latter type can be used when the level 4 table is [mapped recursively](#recursive-page-tables).
 
-[`MappedPageTable`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/struct.MappedPageTable.html
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/struct.RecursivePageTable.html
+[`MappedPageTable`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/struct.MappedPageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/struct.RecursivePageTable.html
 
 We have the complete physical memory mapped at `physical_memory_offset`, so we can use the `MappedPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
 
