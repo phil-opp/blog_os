@@ -52,16 +52,14 @@ steps:
 - script: rustup component add rust-src llvm-tools-preview
   displayName: 'Install Rustup Components'
 
-- script: |
-    cargo install cargo-xbuild --debug
-    cargo install bootimage --debug
+- script: cargo install cargo-xbuild bootimage --debug
   displayName: 'Install cargo-xbuild and bootimage'
 
-- script: bootimage build
+- script: cargo xbuild
   displayName: 'Build'
 
-- script: cargo test
-  displayName: 'Unit Tests'
+- script: cargo bootimage
+  displayName: 'Create Bootimage'
 
 - script: sudo apt update && sudo apt install qemu-system-x86
   condition: eq( variables['Agent.OS'], 'Linux' )
@@ -83,8 +81,8 @@ steps:
   condition: eq( variables['Agent.OS'], 'Windows_NT' )
   displayName: 'Install QEMU (Windows)'
 
-- script: bootimage test
-  displayName: 'Integration Tests'
+- script: cargo xtest
+  displayName: 'Test'
 
 - script: rustup component add rustfmt
   displayName: 'Install Rustfmt'

@@ -1,11 +1,12 @@
-#![cfg_attr(not(test), no_std)]
-#![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(unused_imports))]
+#![no_std]
+#![no_main]
+#![feature(custom_test_frameworks)]
+#![test_runner(blog_os::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 use blog_os::println;
 use core::panic::PanicInfo;
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
@@ -14,6 +15,9 @@ pub extern "C" fn _start() -> ! {
 
     // invoke a breakpoint exception
     x86_64::instructions::interrupts::int3();
+
+    #[cfg(test)]
+    test_main();
 
     println!("It did not crash!");
     loop {}
@@ -25,4 +29,10 @@ pub extern "C" fn _start() -> ! {
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     loop {}
+}
+
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    blog_os::test_panic_handler(info)
 }
