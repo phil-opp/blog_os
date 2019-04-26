@@ -19,7 +19,13 @@ cargo install cargo-xbuild bootimage
 Then you can build the project by running:
 
 ```
-bootimage build
+cargo xbuild
+```
+
+To create a bootable disk image, run:
+
+```
+cargo bootimage
 ```
 
 This creates a bootable disk image in the `target/x86_64-blog_os/debug` directory.
@@ -33,7 +39,7 @@ You can run the disk image in [QEMU] through:
 [QEMU]: https://www.qemu.org/
 
 ```
-bootimage run
+cargo xrun
 ```
 
 Of course [QEMU] needs to be installed for this.
