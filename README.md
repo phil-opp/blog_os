@@ -1,6 +1,6 @@
 # Blog OS (Introduction to Paging)
 
-[![Azure Pipelines CI build](https://img.shields.io/azure-devops/build/phil-opp/blog_os/1/post-09.svg?label=Build&style=flat-square)](https://dev.azure.com/phil-opp/blog_os/_build?definitionId=1)
+[![Azure Pipelines CI build](https://img.shields.io/azure-devops/build/phil-opp/blog_os/1/post-07.svg?label=Build&style=flat-square)](https://dev.azure.com/phil-opp/blog_os/_build?definitionId=1)
 
 This repository contains the source code for the [Introduction to Paging][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
@@ -19,7 +19,13 @@ cargo install cargo-xbuild bootimage
 Then you can build the project by running:
 
 ```
-bootimage build
+cargo xbuild
+```
+
+To create a bootable disk image, run:
+
+```
+cargo bootimage
 ```
 
 This creates a bootable disk image in the `target/x86_64-blog_os/debug` directory.
@@ -33,7 +39,7 @@ You can run the disk image in [QEMU] through:
 [QEMU]: https://www.qemu.org/
 
 ```
-bootimage run
+cargo xrun
 ```
 
 Of course [QEMU] needs to be installed for this.
@@ -48,7 +54,7 @@ Where `sdX` is the device name of your USB stick. **Be careful** to choose the c
 
 ## Testing
 
-To run the unit tests on the host system, execute `cargo test`. To run the integration tests in [QEMU], run `bootimage test`.
+To run the unit and integration tests, execute `cargo xtest`.
 
 ## License
 The source code is dual-licensed under MIT or the Apache License (Version 2.0).
