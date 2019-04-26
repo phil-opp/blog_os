@@ -312,6 +312,10 @@ pub extern "C" fn _start() -> ! {
     let ptr = 0xdeadbeaf as *mut u32;
     unsafe { *ptr = 42; }
 
+    // as before
+    #[cfg(test)]
+    test_main();
+
     println!("It did not crash!");
     blog_os::hlt_loop();
 }
@@ -355,8 +359,7 @@ pub extern "C" fn _start() -> ! {
     let (level_4_page_table, _) = Cr3::read();
     println!("Level 4 page table at: {:?}", level_4_page_table.start_address());
 
-    println!("It did not crash!");
-    blog_os::hlt_loop();
+    […] // test_main(), println(…), and hlt_loop()
 }
 ```
 

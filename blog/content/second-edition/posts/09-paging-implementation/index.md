@@ -436,9 +436,10 @@ We can now use this function to print the entries of the level 4 table:
 // in src/main.rs
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […] // initialize GDT, IDT, PICS
-
     use blog_os::memory::active_level_4_table;
+
+    println!("Hello World{}", "!");
+    blog_os::init();
 
     let l4_table = unsafe {
         active_level_4_table(boot_info.physical_memory_offset)
@@ -448,6 +449,10 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
             println!("L4 Entry {}: {:?}", i, entry);
         }
     }
+
+    // as before
+    #[cfg(test)]
+    test_main();
 
     println!("It did not crash!");
     blog_os::hlt_loop();
@@ -576,10 +581,10 @@ Let's test our translation function by translating some addresses:
 // in src/main.rs
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […] // initialize GDT, IDT, PICS
-
     use blog_os::memory::translate_addr;
     use x86_64::VirtAddr;
+
+    […] // hello world and blog_os::init
 
     let addresses = [
         // the identity-mapped vga buffer page
@@ -600,8 +605,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         println!("{:?} -> {:?}", virt, phys);
     }
 
-    println!("It did not crash!");
-    blog_os::hlt_loop();
+    […] // test_main(), "it did not crash" printing, and hlt_loop()
 }
 ```
 
@@ -676,11 +680,11 @@ To use the `MapperAllSizes::translate_addr` method instead of our own `memory::t
 // in src/main.rs
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […] // initialize GDT, IDT, PICS
-
     // new: different imports
     use blog_os::memory;
     use x86_64::{structures::paging::MapperAllSizes, VirtAddr};
+
+    […] // hello world and blog_os::init
 
     // new: initialize a mapper
     let mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
@@ -694,8 +698,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         println!("{:?} -> {:?}", virt, phys);
     }
 
-    println!("It did not crash!");
-    blog_os::hlt_loop();
+    […] // test_main(), "it did not crash" printing, and hlt_loop()
 }
 ```
 
@@ -787,10 +790,10 @@ To test our mapping function, we first map page `0x1000` and then try to write t
 // in src/main.rs
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […] // initialize GDT, IDT, PICS
-
     use blog_os::memory;
     use x86_64::{structures::paging::Page, VirtAddr};
+
+    […] // hello world and blog_os::init
 
     let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
     let mut frame_allocator = memory::EmptyFrameAllocator;
@@ -803,8 +806,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
     unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e)};
 
-    println!("It did not crash!");
-    blog_os::hlt_loop();
+    […] // test_main(), "it did not crash" printing, and hlt_loop()
 }
 ```
 
