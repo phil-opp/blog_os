@@ -13,8 +13,8 @@ entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::memory;
     use x86_64::{structures::paging::Page, VirtAddr};
-    println!("Hello World{}", "!");
 
+    println!("Hello World{}", "!");
     blog_os::init();
 
     let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
