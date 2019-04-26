@@ -73,6 +73,5 @@ before_test:
   - cargo install-latest cargo-xbuild bootimage
 
 test_script:
-  - bootimage build
-  - if %target%==x86_64-pc-windows-gnu cargo test
-  - if %target%==x86_64-pc-windows-msvc cargo test
+  - cargo xbuild
+  - cargo bootimage

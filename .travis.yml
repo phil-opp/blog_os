@@ -30,10 +30,9 @@ cache:
 
 before_script:
   - rustup component add rust-src llvm-tools-preview
-  - (test -x $HOME/.cargo/bin/cargo-install-latest || cargo install cargo-install-latest)
-  - cargo install-latest cargo-xbuild bootimage cargo-cache
+  - cargo install cargo-xbuild bootimage cargo-cache --debug -Z install-upgrade
 
 script:
-  - bootimage build
-  - cargo test
+  - cargo xbuild
+  - cargo bootimage
   - cargo cache --autoclean
