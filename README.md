@@ -1,6 +1,6 @@
 # Blog OS (CPU Exceptions)
 
-[![Azure Pipelines CI build](https://img.shields.io/azure-devops/build/phil-opp/blog_os/1/post-06.svg?label=Build&style=flat-square)](https://dev.azure.com/phil-opp/blog_os/_build?definitionId=1)
+[![Azure Pipelines CI build](https://img.shields.io/azure-devops/build/phil-opp/blog_os/1/post-05.svg?label=Build&style=flat-square)](https://dev.azure.com/phil-opp/blog_os/_build?definitionId=1)
 
 This repository contains the source code for the [CPU Exceptions][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
