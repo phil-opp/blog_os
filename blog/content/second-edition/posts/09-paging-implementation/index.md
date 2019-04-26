@@ -327,7 +327,6 @@ The bootloader passes the `BootInfo` struct to our kernel in the form of a `&'st
 
 use bootloader::BootInfo;
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // new argument
     […]
@@ -351,7 +350,6 @@ use bootloader::{BootInfo, entry_point};
 
 entry_point!(kernel_main);
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […]
 }
@@ -437,7 +435,6 @@ We can now use this function to print the entries of the level 4 table:
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […] // initialize GDT, IDT, PICS
 
@@ -578,7 +575,6 @@ Let's test our translation function by translating some addresses:
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […] // initialize GDT, IDT, PICS
 
@@ -679,7 +675,6 @@ To use the `MapperAllSizes::translate_addr` method instead of our own `memory::t
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […] // initialize GDT, IDT, PICS
 
@@ -791,7 +786,6 @@ To test our mapping function, we first map page `0x1000` and then try to write t
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […] // initialize GDT, IDT, PICS
 
@@ -832,7 +826,6 @@ Creating that mapping only worked because there was already a level 1 table for 
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […]
     let page = Page::containing_address(VirtAddr::new(0xdeadbeaf000));
@@ -924,7 +917,6 @@ We can now modify our `kernel_main` function to pass a `BootInfoFrameAllocator` 
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […]
     let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);
