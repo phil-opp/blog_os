@@ -458,7 +458,31 @@ Now QEMU runs completely in the background and no window is opened anymore. This
 
 [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 
-At this point, we no longer need the `trivial_assertion` test, so we can delete it.
+### Timeouts
+
+Since `cargo xtest` waits until the test runner exits, a test that never returns can block the test runner forever. That's unfortunate, but not a big problem in practice since it's normally easy to avoid endless loops. In our case, however, endless loops can occur in various situations:
+
+- The bootloader fails to load our kernel, which causes the system to reboot endlessly.
+- The BIOS/UEFI firmware fails to load the bootloader, which causes the same endless rebooting.
+- The CPU enters a `loop {}` statement at the end of some of our functions, for example because the QEMU exit device doesn't work properly.
+- The hardware causes a system reset, for example when a CPU exception is not caught (explained in a future post).
+
+Since endless loops can occur in so many situations, the `bootimage` tool sets a timeout of 5 minutes for each test executable by default. If the test does not finish in this time, it is marked as failed and a "Timed Out" error is printed to the console. This feature ensures that tests that are stuck in an endless loop don't block `cargo xtest` forever.
+
+You can try it yourself by adding a `loop {}` statement in the `trivial_assertion` test. When you run `cargo xtest`, you see that the test is marked as timed out after 5 minutes. The timeout duration is [configurable][bootimage config] through a `test-timeout` key in the Cargo.toml:
+
+[bootimage config]: https://github.com/rust-osdev/bootimage#configuration
+
+```toml
+# in Cargo.toml
+
+[package.metadata.bootimage]
+test-timeout = 300          # (in seconds)
+```
+
+If you don't want to wait 5 minutes for the `trivial_assertion` test to time out, you can temporaily decrease the above value.
+
+After this, we no longer need the `trivial_assertion` test, so we can delete it.
 
 ## Testing the VGA Buffer
 
