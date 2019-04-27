@@ -2,7 +2,7 @@
 title = "Testing"
 weight = 4
 path = "testing"
-date  = 0000-01-01
+date = 2019-04-27
 
 +++
 
@@ -986,9 +986,3 @@ We now have a test framework that runs in a realistic environment inside QEMU. B
 ## What's next?
 
 In the next post, we will explore _CPU exceptions_. These exceptions are thrown by the CPU when something illegal happens, such as a division by zero or an access to an unmapped memory page (a so-called “page fault”). Being able to catch and examine these exceptions is very important for debugging future errors. Exception handling is also very similar to the handling of hardware interrupts, which is required for keyboard support.
-
-
-
-
-TODO:
-- update date
