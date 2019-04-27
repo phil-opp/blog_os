@@ -4,6 +4,9 @@ weight = 5
 path = "integration-tests"
 date  = 2018-06-15
 
+[extra]
+warning_short = "Deprecated: "
+warning = "This post is deprecated in favor of the [_Testing_](/testing) post and will no longer receive updates."
 +++
 
 To complete the testing picture we implement a basic integration test framework, which allows us to run tests on the target system. The idea is to run tests inside QEMU and report the results back to the host through the serial port.
@@ -17,6 +20,13 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-05
 
 <!-- toc -->
+
+## Requirements
+
+This post builds upon the [_Unit Testing_] post, so you need to follow it first. Alternatively, consider reading the new [_Testing_] post instead, which replaces both _Unit Testing_ and this post. The new posts implements similar functionality, but integrates it directly in `cargo xtest`, so that both unit and integration tests run in a realistic environment inside QEMU.
+
+[_Unit Testing_]: ./second-edition/posts/deprecated/04-unit-testing/index.md
+[_Testing_]: ./second-edition/posts/04-testing/index.md
 
 ## Overview
 

@@ -1,6 +1,6 @@
 +++
 title = "Introduction to Paging"
-weight = 9
+weight = 8
 path = "paging-introduction"
 date = 2019-01-14
 
@@ -10,11 +10,11 @@ This post introduces _paging_, a very common memory management scheme that we wi
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].  The complete source code for this post can be found in the [`post-09`][post branch] branch.
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].  The complete source code for this post can be found in the [`post-08`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-09
+[post branch]: https://github.com/phil-opp/blog_os/tree/post-08
 
 <!-- toc -->
 
@@ -257,7 +257,7 @@ Paging makes our kernel already relatively safe, since every memory access that 
 
 Let's try to cause a page fault by accessing some memory outside of our kernel. First, we create a page fault handler and register it in our IDT, so that we see a page fault exception instead of a generic [double fault] :
 
-[double fault]: ./second-edition/posts/07-double-faults/index.md
+[double fault]: ./second-edition/posts/06-double-faults/index.md
 
 ```rust
 // in src/interrupts.rs
@@ -280,7 +280,6 @@ extern "x86-interrupt" fn page_fault_handler(
     stack_frame: &mut InterruptStackFrame,
     _error_code: PageFaultErrorCode,
 ) {
-    use crate::hlt_loop;
     use x86_64::registers::control::Cr2;
 
     println!("EXCEPTION: PAGE FAULT");
@@ -296,30 +295,26 @@ The [`CR2`] register is automatically set by the CPU on a page fault and contain
 [`Cr2::read`]: https://docs.rs/x86_64/0.5.2/x86_64/registers/control/struct.Cr2.html#method.read
 [`PageFaultErrorCode`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
-[`hlt_loop`]: ./second-edition/posts/08-hardware-interrupts/index.md#the
+[`hlt_loop`]: ./second-edition/posts/07-hardware-interrupts/index.md#the
 
 Now we can try to access some memory outside our kernel:
 
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    use blog_os::interrupts::PICS;
-
     println!("Hello World{}", "!");
 
-    // set up the IDT first, otherwise we would enter a boot loop instead of
-    // invoking our page fault handler
-    blog_os::gdt::init();
-    blog_os::interrupts::init_idt();
-    unsafe { PICS.lock().initialize() };
-    x86_64::instructions::interrupts::enable();
+    blog_os::init();
 
     // new
     let ptr = 0xdeadbeaf as *mut u32;
     unsafe { *ptr = 42; }
+
+    // as before
+    #[cfg(test)]
+    test_main();
 
     println!("It did not crash!");
     blog_os::hlt_loop();
@@ -353,18 +348,18 @@ Let's try to take a look at the page tables that our kernel runs on:
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    […] // initialize GDT, IDT, PICS
+    println!("Hello World{}", "!");
+
+    blog_os::init();
 
     use x86_64::registers::control::Cr3;
 
     let (level_4_page_table, _) = Cr3::read();
     println!("Level 4 page table at: {:?}", level_4_page_table.start_address());
 
-    println!("It did not crash!");
-    blog_os::hlt_loop();
+    […] // test_main(), println(…), and hlt_loop()
 }
 ```
 

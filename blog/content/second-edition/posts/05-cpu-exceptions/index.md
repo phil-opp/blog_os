@@ -1,6 +1,6 @@
 +++
 title = "CPU Exceptions"
-weight = 6
+weight = 5
 path = "cpu-exceptions"
 date  = 2018-06-17
 
@@ -12,11 +12,11 @@ CPU exceptions occur in various erroneous situations, for example when accessing
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-06`][post branch] branch.
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-05`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-06
+[post branch]: https://github.com/phil-opp/blog_os/tree/post-05
 
 <!-- toc -->
 
@@ -371,21 +371,37 @@ pub fn init_idt() {
 
 Note how this solution requires no `unsafe` blocks. The `lazy_static!` macro does use `unsafe` behind the scenes, but it is abstracted away in a safe interface.
 
-### Testing it
-Now we should be able to handle breakpoint exceptions! Let's try it in our `_start` function:
+### Running it
+
+The last step for making exceptions work in our kernel it to call the `init_idt` function from our `main.rs`. Instead of calling it directly, we introduce a general `init` function in our `lib.rs`:
+
+```rust
+// in src/lib.rs
+
+pub fn init() {
+    interrupts::init_idt();
+}
+```
+
+With this function we now have a central place for initialization routines that can be shared between the different `_start` functions in our `main.rs`, `lib.rs`, and integration tests.
+
+Now we can update the `_start` function of our `main.rs` to call `init` and then trigger a breakpoint exception:
 
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    blog_os::interrupts::init_idt();
+    blog_os::init(); // new
 
     // invoke a breakpoint exception
-    x86_64::instructions::interrupts::int3();
+    x86_64::instructions::interrupts::int3(); // new
+
+    // as before
+    #[cfg(test)]
+    test_main();
 
     println!("It did not crash!");
     loop {}
@@ -402,77 +418,45 @@ We see that the interrupt stack frame tells us the instruction and stack pointer
 
 ### Adding a Test
 
-Let's create an integration test that ensures that the above continues to work. For that we create a file named `test-exception-breakpoint.rs`:
-
-```rust
-// in src/bin/test-exception-breakpoint.rs
-
-#![no_std]
-#![cfg_attr(not(test), no_main)]
-#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
-
-use core::panic::PanicInfo;
-use blog_os::{exit_qemu, serial_println};
-
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    blog_os::interrupts::init_idt();
-
-    x86_64::instructions::interrupts::int3();
-
-    serial_println!("ok");
-
-    unsafe { exit_qemu(); }
-    loop {}
-}
-
-
-#[cfg(not(test))]
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    serial_println!("failed");
-
-    serial_println!("{}", info);
-
-    unsafe { exit_qemu(); }
-    loop {}
-}
-```
-
-It is similar to our `main.rs`, but instead of printing "It did not crash!" to the VGA buffer, it prints "ok" to the serial output and calls `exit_qemu`. This allows the `bootimage` tool to detect that our code successfully continued after invoking the `int3` instruction. If our `panic_handler` is called, we instead print `failed` to signalize the failure to `bootimage`.
-
-You can try this new test by running `bootimage test`.
-
-### Fixing `cargo test` on Windows
-
-The `x86-interrupt` calling convention has an annoying problem: There is a bug in LLVM that leads to a "LLVM ERROR: offset is not a multiple of 16" when compiling a function with the `x86-interrupt` calling convention _for a Windows target_. Normally this is no problem, since we only compile for our custom `x86_64-blog_os.json` target. But `cargo test` compiles our crate for the host system, so the error occurs if the host system is Windows.
-
-To fix this problem, we add a conditional compilation attribute, so that the `x86-interrupt` functions are not compiled on Windows systems. We don't have any unit tests that rely on the `interrupts` module, so we can simply skip compilation of the whole module:
-
-```rust
-// in src/interrupts.rs
-
-// LLVM throws an error if a function with the
-// x86-interrupt calling convention is compiled
-// for a Windows system.
-#![cfg(not(windows))]
-```
-
-The bang ("!") after the hash ("#") indicates that this is an [inner attribute] and applies to the module we're in. Without the bang it would only apply to the next item in the file. Note that inner attributes must be right at the beginning of a module.
-
-[inner attribute]: https://doc.rust-lang.org/reference/attributes.html
-
-We could achieve the same effect by using an _outer_ attribute (without a bang) in our `lib.rs`:
+Let's create a test that ensures that the above continues to work. First, we update the `_start` function to also call `init`:
 
 ```rust
 // in src/lib.rs
 
-#[cfg(not(windows))] // no bang ("!") after the hash ("#")
-pub mod interrupts;
+/// Entry point for `cargo xtest`
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    init();      // new
+    test_main();
+    loop {}
+}
 ```
 
-Both variants have the exact same effects, so it comes down to personal preference which one to use. I prefer the inner attribute in this case because it does not clutter our `lib.rs` with a workaround for a LLVM bug, but either way is fine.
+Remember, this `_start` function is used when running `cargo xtest --lib`, since Rust's tests the `lib.rs` completely independent of the `main.rs`. We need to call `init` here to set up an IDT before running the tests.
+
+Now we can create a `test_breakpoint_exception` test:
+
+```rust
+// in src/interrupts.rs
+
+#[cfg(test)]
+use crate::{serial_print, serial_println};
+
+#[test_case]
+fn test_breakpoint_exception() {
+    serial_print!("test_breakpoint_exception...");
+    // invoke a breakpoint exception
+    x86_64::instructions::interrupts::int3();
+    serial_println!("[ok]");
+}
+```
+
+Apart from printing status messages through the [serial port], the test invokes the `int3` function to trigger a breakpoint exception. By checking that the execution continues afterwards, we verify that our breakpoint handler is working correctly.
+
+[serial port]: ./second-edition/posts/04-testing/index.md#serial-port
+
+You can try this new test by running `cargo xtest` (all tests) or `cargo xtest --lib` (only tests of `lib.rs` and its modules). You should see `test_breakpoint_exception...[ok]` in the output.
 
 ## Too much Magic?
 The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own IDT type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed. Note that these posts are based on the [first edition] of this blog and might be out of date.

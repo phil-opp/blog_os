@@ -1,6 +1,6 @@
 +++
 title = "Double Faults"
-weight = 7
+weight = 6
 path = "double-fault-exceptions"
 date  = 2018-06-18
 
@@ -10,18 +10,18 @@ This post explores the double fault exception in detail, which occurs when the C
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].  The complete source code for this post can be found in the [`post-07`][post branch] branch.
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].  The complete source code for this post can be found in the [`post-06`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-07
+[post branch]: https://github.com/phil-opp/blog_os/tree/post-06
 
 <!-- toc -->
 
 ## What is a Double Fault?
 In simplified terms, a double fault is a special exception that occurs when the CPU fails to invoke an exception handler. For example, it occurs when a page fault is triggered but there is no page fault handler registered in the [Interrupt Descriptor Table][IDT] (IDT). So it's kind of similar to catch-all blocks in programming languages with exceptions, e.g. `catch(...)` in C++ or `catch(Exception e)` in Java or C#.
 
-[IDT]: ./second-edition/posts/06-cpu-exceptions/index.md#the-interrupt-descriptor-table
+[IDT]: ./second-edition/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
 A double fault behaves like a normal exception. It has the vector number `8` and we can define a normal handler function for it in the IDT. It is really important to provide a double fault handler, because if a double fault is unhandled a fatal _triple fault_ occurs. Triple faults can't be caught and most hardware reacts with a system reset.
 
@@ -31,17 +31,20 @@ Let's provoke a double fault by triggering an exception for that we didn't defin
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    blog_os::interrupts::init_idt();
+    blog_os::init();
 
     // trigger a page fault
     unsafe {
         *(0xdeadbeef as *mut u64) = 42;
     };
+
+    // as before
+    #[cfg(test)]
+    test_main();
 
     println!("It did not crash!");
     loop {}
@@ -78,8 +81,7 @@ lazy_static! {
 extern "x86-interrupt" fn double_fault_handler(
     stack_frame: &mut InterruptStackFrame, _error_code: u64)
 {
-    println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
-    loop {}
+    panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
 ```
 
@@ -160,12 +162,11 @@ Let's try it ourselves! We can easily provoke a kernel stack overflow by calling
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    blog_os::interrupts::init_idt();
+    blog_os::init();
 
     fn stack_overflow() {
         stack_overflow(); // for each recursion, the return address is pushed
@@ -174,8 +175,7 @@ pub extern "C" fn _start() -> ! {
     // trigger a stack overflow
     stack_overflow();
 
-    println!("It did not crash!");
-    loop {}
+    […] // test_main(), println(…), and loop {}
 }
 ```
 
@@ -196,7 +196,7 @@ struct InterruptStackTable {
 
 For each exception handler, we can choose a stack from the IST through the `options` field in the corresponding [IDT entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack whenever a double fault occurs. This switch would happen before anything is pushed, so it would prevent the triple fault.
 
-[IDT entry]: ./second-edition/posts/06-cpu-exceptions/index.md#the-interrupt-descriptor-table
+[IDT entry]: ./second-edition/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
 ### The IST and TSS
 The Interrupt Stack Table (IST) is part of an old legacy structure called _[Task State Segment]_ \(TSS). The TSS used to hold various information (e.g. processor register state) about a task in 32-bit mode and was for example used for [hardware context switching]. However, hardware context switching is no longer supported in 64-bit mode and the format of the TSS changed completely.
@@ -301,7 +301,7 @@ We use `lazy_static` again, because Rust's const evaluator is not powerful enoug
 
 #### Loading the GDT
 
-To load our GDT we create a new `gdt::init` function, that we call from our `_start` function:
+To load our GDT we create a new `gdt::init` function, that we call from our `init` function:
 
 ```rust
 // in src/gdt.rs
@@ -310,22 +310,15 @@ pub fn init() {
     GDT.load();
 }
 
-// in src/main.rs
+// in src/lib.rs
 
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    println!("Hello World{}", "!");
-
-    blog_os::gdt::init();
-    blog_os::interrupts::init_idt();
-
-    […]
+pub fn init() {
+    gdt::init();
+    interrupts::init_idt();
 }
-
 ```
 
-Now our GDT is loaded, but we still see the boot loop on stack overflow.
+Now our GDT is loaded (since the `_start` function calls `init`), but we still see the boot loop on stack overflow.
 
 ### The final Steps
 
@@ -408,11 +401,132 @@ That's it! Now the CPU should switch to the double fault stack whenever a double
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` and a dump of the exception stack frame](qemu-double-fault-on-stack-overflow.png)
 
-From now on we should never see a triple fault again!
+From now on we should never see a triple fault again! To ensure that we don't accidentally break the above, we should add a test for this.
 
-To ensure that we don't accidentally break the above, we should add a integration test for this. We don't show the code here for space reasons, but you can find it [on Github][stack overflow test]. The idea is to do a `serial_println!("ok");` from the double fault handler to ensure that it is called. The rest of the file is is very similar to our `main.rs`.
+## A Stack Overflow Test
 
-[stack overflow test]: https://github.com/phil-opp/blog_os/blob/post-07/src/bin/test-exception-double-fault-stack-overflow.rs
+To test our new `gdt` module and ensure that the double fault handler is correctly called on a stack overflow, we can add an integration test. The idea is to do provoke a double fault in the test function and verify that the double fault handler is called.
+
+Let's start with a minimal skeleton:
+
+```rust
+// in tests/stack_overflow.rs
+
+#![no_std]
+#![no_main]
+
+use core::panic::PanicInfo;
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    unimplemented!();
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    blog_os::test_panic_handler(info)
+}
+```
+
+Like our `panic_handler` test, the test will run [without a test harness]. The reason is that we can't continue execution after a double fault, so more than one test doesn't make sense. To disable, the test harness for the test, we add the following to our `Cargo.toml`:
+
+```toml
+# in Cargo.toml
+
+[[test]]
+name = "stack_overflow"
+harness = false
+```
+
+[without a test harness]: ./second-edition/posts/04-testing/index.md#no-harness
+
+Now `cargo xtest --test stack_overflow` should compile successfully. The test fails of course, since the `unimplemented` macro panics.
+
+### Implementing `_start`
+
+The implementation of the `_start` function looks like this:
+
+```rust
+// in tests/stack_overflow.rs
+
+use blog_os::serial_print;
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    serial_print!("stack_overflow... ");
+
+    blog_os::gdt::init();
+    init_test_idt();
+
+    // trigger a stack overflow
+    stack_overflow();
+
+    panic!("Execution continued after stack overflow");
+}
+
+#[allow(unconditional_recursion)]
+fn stack_overflow() {
+    stack_overflow(); // for each recursion, the return address is pushed
+}
+```
+
+We call our `gdt::init` function to initialize a new GDT. Instead of calling our `interrupts::init_idt` function, we call a `init_test_idt` function that will be explained in a moment. The reason is that we want to register a custom double fault handler that does a `exit_qemu(QemuExitCode::Success)` instead of panicking.
+
+The `stack_overflow` function is identical to the function in our `main.rs`. We additionally added the `allow(unconditional_recursion)` attribute to silence the warning that the function recurses endlessly.
+
+### The Test IDT
+
+As noted above, the test needs its own IDT with a custom double fault handler. The implementation looks like this:
+
+```rust
+// in tests/stack_overflow.rs
+
+use lazy_static::lazy_static;
+use x86_64::structures::idt::InterruptDescriptorTable;
+
+lazy_static! {
+    static ref TEST_IDT: InterruptDescriptorTable = {
+        let mut idt = InterruptDescriptorTable::new();
+        unsafe {
+            idt.double_fault
+                .set_handler_fn(test_double_fault_handler)
+                .set_stack_index(blog_os::gdt::DOUBLE_FAULT_IST_INDEX);
+        }
+
+        idt
+    };
+}
+
+pub fn init_test_idt() {
+    TEST_IDT.load();
+}
+```
+
+The implementation is very similar to our normal IDT in `interrupts.rs`. Like in the normal IDT, we set a stack index into the IST for the double fault handler in order to switch to a separate stack. The `init_test_idt` function loads the IDT on the CPU through the `load` method.
+
+### The Double Fault Handler
+
+The only missing piece is our double fault handler. It looks like this:
+
+```rust
+// in tests/stack_overflow.rs
+
+use blog_os::{exit_qemu, QemuExitCode, serial_println};
+use x86_64::structures::idt::InterruptStackFrame;
+
+extern "x86-interrupt" fn test_double_fault_handler(
+    _stack_frame: &mut InterruptStackFrame,
+    _error_code: u64,
+) {
+    serial_println!("[ok]");
+    exit_qemu(QemuExitCode::Success);
+    loop {}
+}
+```
+
+When the double fault handler is called, we exit QEMU with a success exit code, which marks the test as passed. Since integration tests are completely separate executables, we need to set `#![feature(abi_x86_interrupt)]` attribute again at the top of our test file.
+
+Now we can run our test through `cargo xtest --test stack_overflow` (or `cargo xtest` to run all tests). As expected, we see the `stack_overflow... [ok]` output in the console. TRy to comment out the `set_stack_index` line: it should cause the test to fail.
 
 ## Summary
 In this post we learned what a double fault is and under which conditions it occurs. We added a basic double fault handler that prints an error message and added an integration test for it.

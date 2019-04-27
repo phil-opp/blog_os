@@ -1,6 +1,6 @@
 +++
 title = "Paging Implementation"
-weight = 10
+weight = 9
 path = "paging-implementation"
 date = 2019-03-14
 +++
@@ -9,11 +9,11 @@ This post shows how to implement paging support in our kernel. It first explores
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-10`][post branch] branch.
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-09`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-10
+[post branch]: https://github.com/phil-opp/blog_os/tree/post-09
 
 
 <aside class="post_aside">
@@ -37,21 +37,21 @@ I hope that you enjoy this new post!
 
 The [previous post] gave an introduction to the concept of paging. It motivated paging by comparing it with segmentation, explained how paging and page tables work, and then introduced the 4-level page table design of `x86_64`. We found out that the bootloader already set up a page table hierarchy for our kernel, which means that our kernel already runs on virtual addresses. This improves safety since illegal memory accesses cause page fault exceptions instead of modifying arbitrary physical memory.
 
-[previous post]: ./second-edition/posts/09-paging-introduction/index.md
+[previous post]: ./second-edition/posts/08-paging-introduction/index.md
 
 The post ended with the problem that we [can't access the page tables from our kernel][end of previous post] because they are stored in physical memory and our kernel already runs on virtual addresses. This post continues at this point and explores different approaches of making the page table frames accessible to our kernel. We will discuss the advantages and drawbacks of each approach and then decide for an approach for our kernel.
 
-[end of previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
+[end of previous post]: ./second-edition/posts/08-paging-introduction/index.md#accessing-the-page-tables
 
 To implement the approach, we will need support from the bootloader, so we'll configure it first. Afterward, we will implement a function that traverses the page table hierarchy in order to translate virtual to physical addresses. Finally, we learn how to create new mappings in the page tables and how to find unused memory frames for creating new page tables.
 
 ### Dependency Updates
 
-This post requires version 0.5.1 or later of the `bootloader` dependency and version 0.5.2 or later of the `x86_64` dependency. You can update the dependencies in your `Cargo.toml`:
+This post requires version 0.6.0 or later of the `bootloader` dependency and version 0.5.2 or later of the `x86_64` dependency. You can update the dependencies in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bootloader = "0.5.1"
+bootloader = "0.6.0"
 x86_64 = "0.5.2"
 ```
 
@@ -83,7 +83,7 @@ In this example, we see various identity-mapped page table frames. This way the 
 However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at `28 KiB` because it would collide with the already mapped page at `1004 MiB`. So we have to look further until we find a large enough unmapped area, for example at `1008 KiB`. This is a similar fragmentation problem as with [segmentation].
 
 [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
-[segmentation]: ./second-edition/posts/09-paging-introduction/index.md#fragmentation
+[segmentation]: ./second-edition/posts/08-paging-introduction/index.md#fragmentation
 
 Equally, it makes it much more difficult to create new page tables, because we need to find physical frames whose corresponding pages aren't already in use. For example, let's assume that we reserved the _virtual_ 1000 KiB memory region starting at `1008 KiB` for our memory-mapped file. Now we can't use any frame with a _physical_ address between `1000 KiB` and `2008 KiB` anymore, because we can't identity map it.
 
@@ -210,7 +210,7 @@ Whereas `AAA` is the level 4 index, `BBB` the level 3 index, `CCC` the level 2 i
 
 `SSSSSS` are sign extension bits, which means that they are all copies of bit 47. This is a special requirement for valid addresses on the x86_64 architecture. We explained it in the [previous post][sign extension].
 
-[sign extension]: ./second-edition/posts/09-paging-introduction/index.md#paging-on-x86
+[sign extension]: ./second-edition/posts/08-paging-introduction/index.md#paging-on-x86
 
 We use [octal] numbers for representing the addresses since each octal character represents three bits, which allows us to clearly separate the 9-bit indexes of the different page table levels. This isn't possible with the hexadecimal system where each character represents four bits.
 
@@ -305,7 +305,7 @@ We choose the first approach for our kernel since it is simple, platform-indepen
 
 ```toml
 [dependencies]
-bootloader = { version = "0.5.1", features = ["map_physical_memory"]}
+bootloader = { version = "0.6.0", features = ["map_physical_memory"]}
 ```
 
 With this feature enabled, the bootloader maps the complete physical memory to some unused virtual address range. To communicate the virtual address range to our kernel, the bootloader passes a _boot information_ structure.
@@ -327,7 +327,6 @@ The bootloader passes the `BootInfo` struct to our kernel in the form of a `&'st
 
 use bootloader::BootInfo;
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // new argument
     […]
@@ -342,7 +341,7 @@ Since our `_start` function is called externally from the bootloader, no checkin
 
 To make sure that the entry point function has always the correct signature that the bootloader expects, the `bootloader` crate provides an [`entry_point`] macro that provides a type-checked way to define a Rust function as the entry point. Let's rewrite our entry point function to use this macro:
 
-[`entry_point`]: https://docs.rs/bootloader/0.5.1/bootloader/macro.entry_point.html
+[`entry_point`]: https://docs.rs/bootloader/0.6.0/bootloader/macro.entry_point.html
 
 ```rust
 // in src/main.rs
@@ -351,7 +350,6 @@ use bootloader::{BootInfo, entry_point};
 
 entry_point!(kernel_main);
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […]
 }
@@ -359,9 +357,32 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the real lower level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. The important thing is that it is type-checked so that a compilation error occurs when we use a wrong function signature, for example by adding an argument or changing the argument type.
 
+Let's perform the same change in our `lib.rs`:
+
+```rust
+// in src/lib.rs
+
+#[cfg(test)]
+use bootloader::{entry_point, BootInfo};
+
+#[cfg(test)]
+entry_point!(test_kernel_main);
+
+/// Entry point for `cargo xtest`
+#[cfg(test)]
+fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
+    // like before
+    init();
+    test_main();
+    hlt_loop();
+}
+```
+
+Since the entry point is only used in test mode, we add the `#[cfg(test)]` attribute to all items. We give our test entry point the distinct name `test_kernel_main` to avoid confusion with the `kernel_main` of our `main.rs`. We don't use the `BootInfo` parameter for now, so we prefix the parameter name with a `_` to silence the unused variable warning.
+
 ## Implementation
 
-Now that we have access to physical memory, we can finally start our implementation. First, we will take a look at the currently active page tables that our kernel runs on. In the second step, we will create a translation function that returns the physical address that a given virtual address is mapped to. As the last step, we will try to modify the page tables in order to create a new mapping.
+Now that we have access to physical memory, we can finally start to implement our page table code. First, we will take a look at the currently active page tables that our kernel runs on. In the second step, we will create a translation function that returns the physical address that a given virtual address is mapped to. As the last step, we will try to modify the page tables in order to create a new mapping.
 
 Before we begin, we create a new `memory` module for our code:
 
@@ -377,7 +398,7 @@ For the module we create an empty `src/memory.rs` file.
 
 At the [end of the previous post], we tried to take a look at the page tables our kernel runs on, but failed since we couldn't access the physical frame that the `CR3` register points to. We're now able to continue from there by creating an `active_level_4_table` function that returns a reference to the active level 4 page table:
 
-[end of the previous post]: ./second-edition/posts/09-paging-introduction/index.md#accessing-the-page-tables
+[end of the previous post]: ./second-edition/posts/08-paging-introduction/index.md#accessing-the-page-tables
 
 ```rust
 // in src/memory.rs
@@ -414,11 +435,11 @@ We can now use this function to print the entries of the level 4 table:
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […] // initialize GDT, IDT, PICS
-
     use blog_os::memory::active_level_4_table;
+
+    println!("Hello World{}", "!");
+    blog_os::init();
 
     let l4_table = unsafe {
         active_level_4_table(boot_info.physical_memory_offset)
@@ -428,6 +449,10 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
             println!("L4 Entry {}: {:?}", i, entry);
         }
     }
+
+    // as before
+    #[cfg(test)]
+    test_main();
 
     println!("It did not crash!");
     blog_os::hlt_loop();
@@ -548,19 +573,18 @@ The `VirtAddr` struct already provides methods to compute the indexes into the p
 
 Inside the loop, we again use the `physical_memory_offset` to convert the frame into a page table reference. We then read the entry of the current page table and use the [`PageTableEntry::frame`] function to retrieve the mapped frame. If the entry is not mapped to a frame we return `None`. If the entry maps a huge 2MiB or 1GiB page we panic for now.
 
-[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
+[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
 Let's test our translation function by translating some addresses:
 
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […] // initialize GDT, IDT, PICS
-
     use blog_os::memory::translate_addr;
     use x86_64::VirtAddr;
+
+    […] // hello world and blog_os::init
 
     let addresses = [
         // the identity-mapped vga buffer page
@@ -581,8 +605,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         println!("{:?} -> {:?}", virt, phys);
     }
 
-    println!("It did not crash!");
-    blog_os::hlt_loop();
+    […] // test_main(), "it did not crash" printing, and hlt_loop()
 }
 ```
 
@@ -601,17 +624,17 @@ The base of the abstraction are two traits that define various page table mappin
 - The [`Mapper`] trait is generic over the page size and provides functions that operate on pages. Examples are [`translate_page`], which translates a given page to a frame of the same size, and [`map_to`], which creates a new mapping in the page table.
 - The [`MapperAllSizes`] trait implies that the implementor implements `Mapper` for all pages sizes. In addition, it provides functions that work with multiple page sizes such as [`translate_addr`] or the general [`translate`].
 
-[`Mapper`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.Mapper.html
-[`translate_page`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
-[`map_to`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
-[`MapperAllSizes`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
-[`translate_addr`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
-[`translate`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate
+[`Mapper`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.Mapper.html
+[`translate_page`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
+[`map_to`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
+[`MapperAllSizes`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
+[`translate_addr`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
+[`translate`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate
 
 The traits only define the interface, they don't provide any implementation. The `x86_64` crate currently provides two types that implement the traits: [`MappedPageTable`] and [`RecursivePageTable`]. The former type requires that each page table frame is mapped somewhere (e.g. at an offset). The latter type can be used when the level 4 table is [mapped recursively](#recursive-page-tables).
 
-[`MappedPageTable`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/struct.MappedPageTable.html
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.5.1/x86_64/structures/paging/struct.RecursivePageTable.html
+[`MappedPageTable`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/struct.MappedPageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.5.2/x86_64/structures/paging/struct.RecursivePageTable.html
 
 We have the complete physical memory mapped at `physical_memory_offset`, so we can use the `MappedPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
 
@@ -656,13 +679,12 @@ To use the `MapperAllSizes::translate_addr` method instead of our own `memory::t
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […] // initialize GDT, IDT, PICS
-
     // new: different imports
     use blog_os::memory;
     use x86_64::{structures::paging::MapperAllSizes, VirtAddr};
+
+    […] // hello world and blog_os::init
 
     // new: initialize a mapper
     let mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
@@ -676,8 +698,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         println!("{:?} -> {:?}", virt, phys);
     }
 
-    println!("It did not crash!");
-    blog_os::hlt_loop();
+    […] // test_main(), "it did not crash" printing, and hlt_loop()
 }
 ```
 
@@ -732,7 +753,7 @@ In addition to the `page` that should be mapped, the function expects a `mapper`
 
 For the mapping, we set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable. Calling `map_to` is unsafe because it's possible to break memory safety with invalid arguments, so we need to use an `unsafe` block. For a list of all possible flags, see the [_Page Table Format_] section of the previous post.
 
-[_Page Table Format_]: ./second-edition/posts/09-paging-introduction/index.md#page-table-format
+[_Page Table Format_]: ./second-edition/posts/08-paging-introduction/index.md#page-table-format
 
 The `map_to` function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally forget to use it.
 
@@ -768,12 +789,11 @@ To test our mapping function, we first map page `0x1000` and then try to write t
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […] // initialize GDT, IDT, PICS
-
     use blog_os::memory;
     use x86_64::{structures::paging::Page, VirtAddr};
+
+    […] // hello world and blog_os::init
 
     let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
     let mut frame_allocator = memory::EmptyFrameAllocator;
@@ -786,8 +806,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let page_ptr: *mut u64 = page.start_address().as_mut_ptr();
     unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e)};
 
-    println!("It did not crash!");
-    blog_os::hlt_loop();
+    […] // test_main(), "it did not crash" printing, and hlt_loop()
 }
 ```
 
@@ -809,7 +828,6 @@ Creating that mapping only worked because there was already a level 1 table for 
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […]
     let page = Page::containing_address(VirtAddr::new(0xdeadbeaf000));
@@ -889,7 +907,7 @@ This function uses iterator combinator methods to transform the initial `MemoryM
 - The third step is the most complicated: We convert each range to an iterator through the `into_iter` method and then choose every 4096th address using [`step_by`]. Since 4096 bytes (= 4 KiB) is the page size, we get the start address of each frame. The bootloader page aligns all usable memory areas so that we don't need any alignment or rounding code here. By using [`flat_map`] instead of `map`, we get an `Iterator<Item = u64>` instead of an `Iterator<Item = Iterator<Item = u64>>`.
 - In the final step, we convert the start addresses to `PhysFrame` types to construct the desired `Iterator<Item = PhysFrame>`. We then use this iterator to create and return a new `BootInfoFrameAllocator`.
 
-[`MemoryRegion`]: https://docs.rs/bootloader/0.5.1/bootloader/bootinfo/struct.MemoryRegion.html
+[`MemoryRegion`]: https://docs.rs/bootloader/0.6.0/bootloader/bootinfo/struct.MemoryRegion.html
 [`filter`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.filter
 [`map`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.map
 [range syntax]: https://doc.rust-lang.org/core/ops/struct.Range.html
@@ -901,7 +919,6 @@ We can now modify our `kernel_main` function to pass a `BootInfoFrameAllocator` 
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     […]
     let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);

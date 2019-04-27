@@ -1,6 +1,6 @@
 +++
 title = "Hardware Interrupts"
-weight = 8
+weight = 7
 path = "hardware-interrupts"
 date = 2018-10-22
 
@@ -10,11 +10,11 @@ In this post we set up the programmable interrupt controller to correctly forwar
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].  The complete source code for this post can be found in the [`post-08`][post branch] branch.
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].  The complete source code for this post can be found in the [`post-07`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-08
+[post branch]: https://github.com/phil-opp/blog_os/tree/post-07
 
 <!-- toc -->
 
@@ -66,7 +66,7 @@ This graphic shows the typical assignment of interrupt lines. We see that most o
 
 Each controller can be configured through two [I/O ports], one “command” port and one “data” port. For the primary controller these ports are `0x20` (command) and `0x21` (data). For the secondary controller they are `0xa0` (command) and `0xa1` (data). For more information on how the PICs can be configured see the [article on osdev.org].
 
-[I/O ports]: ./second-edition/posts/05-integration-tests/index.md#port-i-o
+[I/O ports]: ./second-edition/posts/04-testing/index.md#i-o-ports
 [article on osdev.org]: https://wiki.osdev.org/8259_PIC
 
 ### Implementation
@@ -109,24 +109,15 @@ We're setting the offsets for the pics to the range 32–47 as we noted above. B
 
 [spin mutex lock]: https://docs.rs/spin/0.4.8/spin/struct.Mutex.html#method.lock
 
-We can now initialize the 8259 PIC from our `_start` function:
+We can now initialize the 8259 PIC in our `init` function:
 
 ```rust
-// in src/main.rs
+// in src/lib.rs
 
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    use blog_os::interrupts::PICS;                  // new
-
-    println!("Hello World{}", "!");
-
-    blog_os::gdt::init();
-    blog_os::interrupts::init_idt();
-    unsafe { PICS.lock().initialize() }; // new
-
-    println!("It did not crash!");
-    loop {}
+pub fn init() {
+    gdt::init();
+    interrupts::init_idt();
+    unsafe { interrupts::PICS.lock().initialize() }; // new
 }
 ```
 
@@ -141,22 +132,13 @@ If all goes well we should continue to see the "It did not crash" message when e
 Until now nothing happened because interrupts are still disabled in the CPU configuration. This means that the CPU does not listen to the interrupt controller at all, so no interrupts can reach the CPU. Let's change that:
 
 ```rust
-// in src/main.rs
+// in src/lib.rs
 
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    use blog_os::interrupts::PICS;
-
-    println!("Hello World{}", "!");
-
-    blog_os::gdt::init();
-    blog_os::interrupts::init_idt();
-    unsafe { PICS.lock().initialize() };
+pub fn init() {
+    gdt::init();
+    interrupts::init_idt();
+    unsafe { interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();     // new
-
-    println!("It did not crash!");
-    loop {}
 }
 ```
 
@@ -309,7 +291,6 @@ We can easily provoke such a deadlock in our kernel by printing something in the
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     […]
@@ -374,6 +355,86 @@ pub fn _print(args: ::core::fmt::Arguments) {
 
 Note that disabling interrupts shouldn't be a general solution. The problem is that it increases the worst case interrupt latency, i.e. the time until the system reacts to an interrupt. Therefore interrupts should be only disabled for a very short time.
 
+## Fixing a Race Condition
+
+If you run `cargo xtest` you might see the `test_println_output` test failing:
+
+```
+> cargo xtest --lib
+[…]
+Running 4 tests
+test_breakpoint_exception...[ok]
+test_println... [ok]
+test_println_many... [ok]
+test_println_output... [failed]
+
+Error: panicked at 'assertion failed: `(left == right)`
+  left: `'.'`,
+ right: `'S'`', src/vga_buffer.rs:205:9
+```
+
+The reason is a _race condition_ between the test and our timer handler. Remember, the test looks like this:
+
+```rust
+// in src/vga_buffer.rs
+
+#[test_case]
+fn test_println_output() {
+    serial_print!("test_println_output... ");
+
+    let s = "Some test string that fits on a single line";
+    println!("{}", s);
+    for (i, c) in s.chars().enumerate() {
+        let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
+        assert_eq!(char::from(screen_char.ascii_character), c);
+    }
+
+    serial_println!("[ok]");
+}
+```
+
+The test prints a string to the VGA buffer and then checks the output by manually iterating over the `buffer_chars` array. The race condition occurs because the timer interrupt handler might run between the `println` and the reading of the screen characters. Note that this isn't a dangerous _data race_, which Rust completely prevents at compile time. See the [_Rustonomicon_][nomicon-races] for details.
+
+[nomicon-races]: https://doc.rust-lang.org/nomicon/races.html
+
+To fix this, we need to keep the `WRITER` locked for the complete duration of the test, so that the timer handler can't write a `.` to the screen in between. The fixed test looks like this:
+
+```rust
+// in src/vga_buffer.rs
+
+#[test_case]
+fn test_println_output() {
+    use core::fmt::Write;
+    use x86_64::instructions::interrupts;
+
+    serial_print!("test_println_output... ");
+
+    let s = "Some test string that fits on a single line";
+    interrupts::without_interrupts(|| {
+        let mut writer = WRITER.lock();
+        writeln!(writer, "\n{}", s).expect("writeln failed");
+        for (i, c) in s.chars().enumerate() {
+            let screen_char = writer.buffer.chars[BUFFER_HEIGHT - 2][i].read();
+            assert_eq!(char::from(screen_char.ascii_character), c);
+        }
+    });
+
+    serial_println!("[ok]");
+}
+```
+
+We performed the following changes:
+
+- We keep the writer locked for the complete test by using the `lock()` method explicitly. Instead of `println`, we use the [`writeln`] marco that allows printing to an already locked writer.
+- To avoid another deadlock, we disable interrupts for the tests duration. Otherwise the test might get interrupted while the writer is still locked.
+- Since the timer interrupt handler can still run before the test, we print an additional newline `\n` before printing the string `s`. This way, we avoid test failure when the timer handler already printed some `.` characters to the current line.
+
+[`writeln`]: https://doc.rust-lang.org/core/macro.writeln.html
+
+With the above changes, `cargo xtest` now deterministically succeeds again.
+
+This was a very harmless race condition that only caused a test failure. As you can imagine, other race conditions can be much more difficult to debug due to their non-deterministic nature. Luckily, Rust prevents us from data races, which are the most serious class of race conditions since they can cause all kinds of undefined behavior, including system crashes and silent memory corruptions.
+
 ## The `hlt` Instruction
 
 Until now we used a simple empty loop statement at the end of our `_start` and `panic` functions. This causes the CPU to spin endlessly and thus works as expected. But it is also very inefficient, because the CPU continues to run at full speed even though there's no work to do. You can see this problem in your task manager when you run your kernel: The QEMU process needs close to 100% CPU the whole time.
@@ -401,7 +462,6 @@ We can now use this `hlt_loop` instead of the endless loops in our `_start` and 
 ```rust
 // in src/main.rs
 
-#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     […]
@@ -420,7 +480,29 @@ fn panic(info: &PanicInfo) -> ! {
 
 ```
 
-We can also use `hlt_loop` in our double fault exception handler as well:
+Let's update our `lib.rs` as well:
+
+```rust
+// in src/lib.rs
+
+/// Entry point for `cargo xtest`
+#[cfg(test)]
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    init();
+    test_main();
+    hlt_loop();         // new
+}
+
+pub fn test_panic_handler(info: &PanicInfo) -> ! {
+    serial_println!("[failed]\n");
+    serial_println!("Error: {}\n", info);
+    exit_qemu(QemuExitCode::Failed);
+    hlt_loop();         // new
+}
+```
+
+We can also use `hlt_loop` in our double fault exception handler:
 
 ```rust
 // in src/interrupts.rs
@@ -497,7 +579,7 @@ We now see that a `k` appears on the screen when we press a key. However, this o
 
 To find out _which_ key was pressed, we need to query the keyboard controller. We do this by reading from the data port of the PS/2 controller, which is the [I/O port] with number `0x60`:
 
-[I/O port]: ./second-edition/posts/05-integration-tests/index.md#port-i-o
+[I/O port]: ./second-edition/posts/04-testing/index.md#i-o-ports
 
 ```rust
 // in src/interrupts.rs
