@@ -20,9 +20,11 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 ## Requirements
 
-This post assumes that you have followed the latest version of the ["_A Minimal Rust Kernel_"] post. It requires that you have a `.cargo/config` file that [sets a default target] and [defines a runner executable].
+This post replaces the (now deprecated) [_Unit Testing_] and [_Integration Tests_] posts. It assumes that you have followed the [_A Minimal Rust Kernel_] post after 2019-04-27. Mainly, it requires that you have a `.cargo/config` file that [sets a default target] and [defines a runner executable].
 
-["_A Minimal Rust Kernel_"]: ./second-edition/posts/02-minimal-rust-kernel/index.md
+[_Unit Testing_]: ./second-edition/posts/deprecated/04-unit-testing/index.md
+[_Integration Tests_]: ./second-edition/posts/deprecated/05-integration-tests/index.md
+[_A Minimal Rust Kernel_]: ./second-edition/posts/02-minimal-rust-kernel/index.md
 [sets a default target]: ./second-edition/posts/02-minimal-rust-kernel/index.md#set-a-default-target
 [defines a runner executable]: ./second-edition/posts/02-minimal-rust-kernel/index.md#using-cargo-run
 
