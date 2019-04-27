@@ -4,6 +4,9 @@ weight = 4
 path = "unit-testing"
 date  = 2018-04-29
 
+[extra]
+warning_short = "Deprecated: "
+warning = "This post is deprecated in favor of the [_Testing_](/testing) post and will no longer receive updates."
 +++
 
 This post explores unit testing in `no_std` executables using Rust's built-in test framework. We will adjust our code so that `cargo test` works and add some basic unit tests to our VGA buffer module.
@@ -20,7 +23,13 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 ## Requirements
 
-In this post we explore how to execute `cargo test` on the host system. This only works if you don't have a default target set in your `.cargo/config` file. If you don't have a `.cargo/config` file in your project, you're fine too.
+In this post we explore how to execute `cargo test` on the host system (as a normal Linux/Windows/macOS executable). This only works if you don't have a `.cargo/config` file that sets a default target. If you followed the [_Minimal Rust Kernel_] post before 2019-04-27, you should be fine. If you followed it after that date, you need to remove the `build.target` key from your `.cargo/config` file and explicitly pass a target argument to `cargo xbuild`.
+
+[_Minimal Rust Kernel_]: ./second-edition/posts/02-minimal-rust-kernel/index.md
+
+Alternatively, consider reading the new [_Testing_] post instead. It sets up a similar functionality as this post, but instead of running the tests on your host system, they are run in a realistic environment inside QEMU.
+
+[_Testing_]: ./second-edition/posts/04-testing/index.md
 
 ## Unit Tests for `no_std` Binaries
 Rust has a [built-in test framework] that is capable of running unit tests without the need to set anything up. Just create a function that checks some results through assertions and add the `#[test]` attribute to the function header. Then `cargo test` will automatically find and execute all test functions of your crate.
