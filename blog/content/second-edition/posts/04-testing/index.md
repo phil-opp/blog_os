@@ -975,40 +975,20 @@ Now we can run the test using `cargo xtest --test panic_handler`. We see that it
 
 ## Summary
 
+Testing is a very useful technique to ensure that certain components have a desired behavior. Even if they cannot show the absence of bugs, they're still an useful tool for finding them and especially for avoiding regressions.
+
+This post explained how to set up a test framework for our Rust kernel. We used the custom test frameworks feature of Rust to implement support for a simple `#[test_case]` attribute in our bare-metal environment. By using the `isa-debug-exit` device of QEMU, our test runner can exit QEMU after running the tests and report the test status out. To print error messages to the console instead of the VGA buffer, we created a basic driver for the serial port.
+
+After creating some tests for our `println` macro, we explored integration tests in the second half of the post. We learned that they live in the `tests` directory and are treated as completely separate executables. To give them access to the `exit_qemu` function and the `serial_println` macro, we moved most of our code into a library that can be imported by all executables and integration tests. Since integration tests run in their own separate environment, they make it possible to test the interactions with the hardware or Rust's panic system.
+
+We now have a test framework that runs in a realistic environment inside QEMU. By creating more tests in future posts, we can keep our kernel maintainable when it becomes more complex.
+
 ## What's next?
+
 In the next post, we will explore _CPU exceptions_. These exceptions are thrown by the CPU when something illegal happens, such as a division by zero or an access to an unmapped memory page (a so-called “page fault”). Being able to catch and examine these exceptions is very important for debugging future errors. Exception handling is also very similar to the handling of hardware interrupts, which is required for keyboard support.
 
 
 
 
-
 TODO:
-- timeout?
-- quiet?
-- macro
-- update post numbers (-1)
 - update date
-
-
-
-## OLD
-
-### Summary
-Unit testing is a very useful technique to ensure that certain components have a desired behavior. Even if they cannot show the absence of bugs, they're still an useful tool for finding them and especially for avoiding regressions.
-
-This post explained how to set up unit testing in a Rust kernel. We now have a functioning test framework and can easily add tests by adding functions with a `#[test]` attribute. To run them, a short `cargo test` suffices. We also added a few basic tests for our VGA buffer as an example how unit tests could look like.
-
-We also learned a bit about conditional compilation, Rust's [lint system], how to [initialize arrays with non-Copy types], and the `dev-dependencies` section of the `Cargo.toml`.
-
-[lint system]: #silencing-the-warnings
-[initialize arrays with non-Copy types]: #buffer-construction
-
-### Summary
-
-In this post we learned about the serial port and port-mapped I/O and saw how to configure QEMU to print serial output to the command line. We also learned a trick how to exit QEMU without needing to implement a proper shutdown.
-
-We then split our crate into a library and binary part in order to create additional executables for integration tests. We added two example tests for testing that the `_start` function is correctly called and that a `panic` invokes our panic handler. Finally, we presented `bootimage test` as a basic test runner for our integration tests.
-
-We now have a working integration test framework and can finally start to implement functionality in our kernel. We will continue to use the test framework over the next posts to test new components we add.
-
-
