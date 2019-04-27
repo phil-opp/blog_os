@@ -393,7 +393,7 @@ We see that the panic message is still printed to the VGA buffer, while the othe
 
 Note that it's no longer possible to exit QEMU from the console through `Ctrl+c` when `serial mon:stdio` is passed. An alternative keyboard shortcut is `Ctrl+a` and then `x`. Or you can just close the QEMU window manually.
 
-### Print a Error Message on Panic
+### Print an Error Message on Panic
 
 To exit QEMU with an error message on a panic, we can use [conditional compilation] to use a different panic handler in testing mode:
 
