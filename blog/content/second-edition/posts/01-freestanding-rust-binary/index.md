@@ -140,7 +140,7 @@ The [`PanicInfo` parameter][PanicInfo] contains the file and line where the pani
 
 ## The `eh_personality` Language Item
 
-Language items are special functions and types that are required internally by the compiler. For example, the [`Copy`] trait is a language item that tells the compiler which types have [_copy semantics_][`Copy`]. When we look at the [implementation][copy code], we see has the special `#[lang = "copy"]` attribute that defines it as a language item.
+Language items are special functions and types that are required internally by the compiler. For example, the [`Copy`] trait is a language item that tells the compiler which types have [_copy semantics_][`Copy`]. When we look at the [implementation][copy code], we see it has the special `#[lang = "copy"]` attribute that defines it as a language item.
 
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
