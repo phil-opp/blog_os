@@ -281,6 +281,21 @@ We see that `cargo xbuild` cross-compiles the `core`, `compiler_builtin`, and `a
 
 Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
 
+### Set a Default Target
+
+To avoid passing the `--target` parameter on every invocation of `cargo xbuild`, we can override the default target. To do this, we create a [cargo configuration] file at `.cargo/config` with the following content:
+
+[cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# in .cargo/config
+
+[build]
+target = "x86_64-blog_os.json"
+```
+
+This tells `cargo` to use our `x86_64-blog_os.json` target when no explicit `--target` argument is passed. This means that we can now build our kernel with a simple `cargo xbuild`. For more information on cargo configuration options, check out the [official documentation][cargo configuration].
+
 ### Printing to Screen
 The easiest way to print text to the screen at this stage is the [VGA text buffer]. It is a special memory area mapped to the VGA hardware that contains the contents displayed on screen. It normally consists of 25 lines that each contain 80 character cells. Each character cell displays an ASCII character with some foreground and background colors. The screen output looks like this:
 
@@ -330,8 +345,13 @@ So we want to minimize the use of `unsafe` as much as possible. Rust gives us th
 
 [memory safety]: https://en.wikipedia.org/wiki/Memory_safety
 
+## Running our Kernel
+
+Now that we have an executable that does something perceptible, it is time to run it. First, we need to turn our compiled kernel into a bootable disk image by linking it with a bootloader. Then we can run the disk image in the [QEMU] virtual machine or boot it on real hardware using an USB stick.
+
 ### Creating a Bootimage
-Now that we have an executable that does something perceptible, it is time to turn it into a bootable disk image. As we learned in the [section about booting], we need a bootloader for that, which initializes the CPU and loads our kernel.
+
+To turn our compiled kernel into a bootable disk image, we need to link it with a bootloader. As we learned in the [section about booting], the bootloader is responsible for initializing the CPU and loading our kernel.
 
 [section about booting]: #the-boot-process
 
@@ -346,17 +366,17 @@ Instead of writing our own bootloader, which is a project on its own, we use the
 bootloader = "0.5.1"
 ```
 
-Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to combine the bootloader with the kernel after it has been compiled, but cargo has no support for additional build steps after successful compilation (see [this issue][post-build script] for more information).
+Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to link our kernel with the bootloader after compilation, but cargo has no support for [post-build scripts].
 
-[post-build script]: https://github.com/rust-lang/cargo/issues/545
+[post-build scripts]: https://github.com/rust-lang/cargo/issues/545
 
-To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then combines them to create a bootable disk image. To install the tool, execute the following command in your terminal:
+To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then links them together to create a bootable disk image. To install the tool, execute the following command in your terminal:
 
 ```
-cargo install bootimage --version "^0.7.1"
+cargo install bootimage --version "^0.7.3"
 ```
 
-The `^0.7.1` is a so-called [_caret requirement_], which means "version `0.7.1` or a later compatible version". So if we find a bug and publish version `0.7.2` or `0.7.3`, cargo would automatically use the latest version, as long as it is still a version `0.7.x`. However, it wouldn't choose version `0.8.0`, because it is not considered as compatible. Note that dependencies in your `Cargo.toml` are caret requirements by default, so the same rules are applied to our bootloader dependency.
+The `^0.7.3` is a so-called [_caret requirement_], which means "version `0.7.3` or a later compatible version". So if we find a bug and publish version `0.7.4` or `0.7.5`, cargo would automatically use the latest version, as long as it is still a version `0.7.x`. However, it wouldn't choose version `0.8.0`, because it is not considered as compatible. Note that dependencies in your `Cargo.toml` are caret requirements by default, so the same rules are applied to our bootloader dependency.
 
 [_caret requirement_]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#caret-requirements
 
@@ -365,7 +385,7 @@ For running `bootimage` and building the bootloader, you need to have the `llvm-
 After installing `bootimage` and adding the `llvm-tools-preview` component, we can create a bootable disk image by executing:
 
 ```
-> bootimage build --target x86_64-blog_os.json
+> cargo bootimage
 ```
 
 We see that the tool recompiles our kernel using `cargo xbuild`, so it will automatically pick up any changes you make. Afterwards it compiles the bootloader, which might take a while. Like all crate dependencies it is only built once and then cached, so subsequent builds will be much faster. Finally, `bootimage` combines the bootloader and your kernel to a bootable disk image.
@@ -377,26 +397,15 @@ The `bootimage` tool performs the following steps behind the scenes:
 
 - It compiles our kernel to an [ELF] file.
 - It compiles the bootloader dependency as a standalone executable.
-- It appends the bytes of the kernel ELF file to the bootloader.
+- It links the bytes of the kernel ELF file to the bootloader.
 
 [ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 [rust-osdev/bootloader]: https://github.com/rust-osdev/bootloader
 
 When booted, the bootloader reads and parses the appended ELF file. It then maps the program segments to virtual addresses in the page tables, zeroes the `.bss` section, and sets up a stack. Finally, it reads the entry point address (our `_start` function) and jumps to it.
 
-#### Bootimage Configuration
-The `bootimage` tool can be configured through a `[package.metadata.bootimage]` table in the `Cargo.toml` file. We can add a `default-target` option so that we no longer need to pass the `--target` argument:
+### Booting it in QEMU
 
-```toml
-# in Cargo.toml
-
-[package.metadata.bootimage]
-default-target = "x86_64-blog_os.json"
-```
-
-Now we can omit the `--target` argument and just run `bootimage build`.
-
-## Booting it!
 We can now boot the disk image in a virtual machine. To boot it in [QEMU], execute the following command:
 
 [QEMU]: https://www.qemu.org/
@@ -406,19 +415,14 @@ We can now boot the disk image in a virtual machine. To boot it in [QEMU], execu
 warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 ```
 
+This opens a separate window with that looks like this:
+
 ![QEMU showing "Hello World!"](qemu.png)
 
-Alternatively, you can invoke the `run` subcommand of the `bootimage` tool:
-
-```
-> bootimage run
-```
-
-By default it invokes the exact same QEMU command as above. Additional QEMU options can be passed after a `--`. For example, `bootimage run -- --help` will show the QEMU help. It's also possible to change the default command through an `run-command` key in the `package.metadata.bootimage` table in the `Cargo.toml`. For more information see the `--help` output or the [Readme file].
-
-[Readme file]: https://github.com/rust-osdev/bootimage/blob/master/Readme.md
+We see that our "Hello World!" is visible on the screen.
 
 ### Real Machine
+
 It is also possible to write it to an USB stick and boot it on a real machine:
 
 ```
@@ -427,5 +431,27 @@ It is also possible to write it to an USB stick and boot it on a real machine:
 
 Where `sdX` is the device name of your USB stick. **Be careful** to choose the correct device name, because everything on that device is overwritten.
 
+After writing the image to the USB stick, you can run it on real hardware by booting from it. You probably need to use a special boot menu or change the boot order in your BIOS configuration to boot from the USB stick. Note that it currently doesn't work for UEFI machines, since the `bootloader` crate has no UEFI support yet.
+
+### Using `cargo run`
+
+To make it easier to run our kernel in QEMU, we can set the `runner` configuration key for cargo:
+
+```toml
+# in .cargo/config
+
+[target.'cfg(target_os = "none")']
+runner = "bootimage runner"
+```
+
+The `target.'cfg(target_os = "none")'` table applies to all targets that have set the `"os"` field of their target configuration file to `"none"`. This includes our `x86_64-blog_os.json` target. The `runner` key specifies the command that should be invoked for `cargo run`. The command is run after a successful build with the executable path passed as first argument. See the [cargo documentation][cargo configuration] for more details.
+
+The `bootimage runner` command is specifically designed to be usable as a `runner` executable. It links the given executable with the project's bootloader dependency and then launches QEMU. See the [Readme of `bootimage`] for more details and possible configuration options.
+
+[Readme of `bootimage`]: https://github.com/rust-osdev/bootimage
+
+Now we can use `cargo xrun` to compile our kernel and boot it in QEMU. Like `xbuild`, the `xrun` subcommand builds the sysroot crates before invoking the actual cargo command. The subcommand is also provided by `cargo-xbuild`, so you don't need to install an additional tool.
+
 ## What's next?
+
 In the next post, we will explore the VGA text buffer in more detail and write a safe interface for it. We will also add support for the `println` macro.

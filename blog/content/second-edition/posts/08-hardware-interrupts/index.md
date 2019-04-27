@@ -134,7 +134,7 @@ We use the [`initialize`] function to perform the PIC initialization. Like the `
 
 [`initialize`]: https://docs.rs/pic8259_simple/0.1.1/pic8259_simple/struct.ChainedPics.html#method.initialize
 
-If all goes well we should continue to see the "It did not crash" message when executing `bootimage run`.
+If all goes well we should continue to see the "It did not crash" message when executing `cargo xrun`.
 
 ## Enabling Interrupts
 
@@ -160,7 +160,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-The `interrupts::enable` function of the `x86_64` crate executes the special `sti` instruction (“set interrupts”) to enable external interrupts. When we try `bootimage run` now, we see that a double fault occurs:
+The `interrupts::enable` function of the `x86_64` crate executes the special `sti` instruction (“set interrupts”) to enable external interrupts. When we try `cargo xrun` now, we see that a double fault occurs:
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` because of hardware timer](qemu-hardware-timer-double-fault.png)
 
@@ -256,7 +256,7 @@ The `notify_end_of_interrupt` figures out whether the primary or secondary PIC s
 
 We need to be careful to use the correct interrupt vector number, otherwise we could accidentally delete an important unsent interrupt or cause our system to hang. This is the reason that the function is unsafe.
 
-When we now execute `bootimage run` we see dots periodically appearing on the screen:
+When we now execute `cargo xrun` we see dots periodically appearing on the screen:
 
 ![QEMU printing consequtive dots showing the hardware timer](qemu-hardware-timer-dots.gif)
 
