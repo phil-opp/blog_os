@@ -923,6 +923,8 @@ Checking the reported panic message is a bit more complicated. The reason is tha
 ```rust
 // in tests/panic_handler.rs
 
+use core::fmt;
+
 /// Compares a `fmt::Arguments` instance with the `MESSAGE` string.
 ///
 /// To use this type, write the `fmt::Arguments` instance to it using the
@@ -955,6 +957,8 @@ With the `CompareMessage` type, we can finally implement our `check_message` fun
 // in tests/panic_handler.rs
 
 #![feature(panic_info_message)] // at the top of the file
+
+use core::fmt::Write;
 
 fn check_message(info: &PanicInfo) {
     let message = info.message().unwrap_or_else(|| fail("no message"));
