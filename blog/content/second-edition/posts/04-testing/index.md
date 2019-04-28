@@ -971,7 +971,7 @@ fn check_message(info: &PanicInfo) {
 }
 ```
 
-The function uses the [`PanicInfo::message`] function to get the panic message. If no message is reported, it calls `fail` to fail the test. Since the function is unstable, we need to add the `#![feature(panic_info_message)]` attribute at the top of our test file.
+The function uses the [`PanicInfo::message`] function to get the panic message. If no message is reported, it calls `fail` to fail the test. Since the function is unstable, we need to add the `#![feature(panic_info_message)]` attribute at the top of our test file. Note that you need to adjust the `PANIC_INFO` line number after adding the attribute and the imports on top.
 
 [`PanicInfo::message`]: https://doc.rust-lang.org/core/panic/struct.PanicInfo.html#method.message
 
