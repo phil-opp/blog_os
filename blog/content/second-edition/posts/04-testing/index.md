@@ -144,7 +144,7 @@ test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 
 The `bootimage runner` appends the `test-args` to the default QEMU command for all test executables. For a normal `cargo xrun`, the arguments are ignored.
 
-Together with the device name (`isa-debug-exit`), we pass the two parameters `iobase` and `iozize` that specify the _I/O port_ through which the device can be reached from our kernel.
+Together with the device name (`isa-debug-exit`), we pass the two parameters `iobase` and `iosize` that specify the _I/O port_ through which the device can be reached from our kernel.
 
 ### I/O Ports
 
