@@ -11,14 +11,14 @@ use core::panic::PanicInfo;
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    use blog_os::memory;
+    use blog_os::memory::{self, BootInfoFrameAllocator};
     use x86_64::{structures::paging::Page, VirtAddr};
 
     println!("Hello World{}", "!");
     blog_os::init();
 
     let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
-    let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);
+    let mut frame_allocator = BootInfoFrameAllocator::init(&boot_info.memory_map);
 
     // map a previously unmapped page
     let page = Page::containing_address(VirtAddr::new(0xdeadbeaf000));
