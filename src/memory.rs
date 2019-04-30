@@ -68,7 +68,7 @@ impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
 /// A FrameAllocator that returns usable frames from the bootloader's memory map.
 pub struct BootInfoFrameAllocator {
     memory_map: &'static MemoryMap,
-    last_yielded_frame: PhysFrame,
+    next: usize,
 }
 
 impl BootInfoFrameAllocator {
@@ -76,7 +76,7 @@ impl BootInfoFrameAllocator {
     pub fn init(memory_map: &'static MemoryMap) -> Self {
         BootInfoFrameAllocator {
             memory_map,
-            last_yielded_frame: PhysFrame::containing_address(PhysAddr::new(0)),
+            next: 0,
         }
     }
 
@@ -96,12 +96,8 @@ impl BootInfoFrameAllocator {
 
 impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
-        let usable_frames = self.usable_frames();
-        let mut frames = usable_frames.filter(|frame| frame > &self.last_yielded_frame);
-        let frame = frames.next();
-        if let Some(frame) = frame {
-            self.last_yielded_frame = frame.clone();
-        }
+        let frame = self.usable_frames().nth(self.next);
+        self.next += 1;
         frame
     }
 }
