@@ -845,67 +845,67 @@ To map pages that don't have a level 1 page table yet we need to create a proper
 
 ### Allocating Frames
 
-In order to create new page tables, we need to create a proper frame allocator. We start with a generic skeleton:
+In order to create new page tables, we need to create a proper frame allocator. For that we use the `memory_map` that is passed by the bootloader as part of the `BootInfo` struct:
 
 ```rust
 // in src/memory.rs
 
-pub struct BootInfoFrameAllocator<I> where I: Iterator<Item = PhysFrame> {
-    frames: I,
+/// A FrameAllocator that returns usable frames from the bootloader's memory map.
+pub struct BootInfoFrameAllocator {
+    memory_map: &'static MemoryMap,
+    next: usize,
 }
 
-impl<I> FrameAllocator<Size4KiB> for BootInfoFrameAllocator<I>
-    where I: Iterator<Item = PhysFrame>
-{
-    fn allocate_frame(&mut self) -> Option<PhysFrame> {
-        self.frames.next()
+impl BootInfoFrameAllocator {
+    /// Create a FrameAllocator from the passed memory map.
+    pub fn init(memory_map: &'static MemoryMap) -> Self {
+        BootInfoFrameAllocator {
+            memory_map,
+            next: 0,
+        }
     }
 }
 ```
 
-The `frames` field can be initialized with an arbitrary [`Iterator`] of frames. This allows us to just delegate `alloc` calls to the [`Iterator::next`] method.
+The struct has two fields: A `'static` reference to the memory map passed by the bootloader and a `next` field that keeps track of number of the next frame that the allocator should return.
 
-[`Iterator`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html
-[`Iterator::next`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#tymethod.next
+As we explained in the [_Boot Information_](#boot-information) section, the memory map is provided by the BIOS/UEFI firmware. It can only be queried very early in the boot process, so the bootloader already calls the respective functions for us. The memory map consists of a list of [`MemoryRegion`] structs, which contain the start address, the length, and the type (e.g. unused, reserved, etc.) of each memory region.
 
-For initializing the `BootInfoFrameAllocator` we use the `memory_map` that is passed by the bootloader as part of the `BootInfo` struct. As we explained in the [_Boot Information_](#boot-information) section, the memory map is provided by the BIOS/UEFI firmware. It can only be queried very early in the boot process, so the bootloader already calls the respective functions for us.
+The `init` function initializes a `BootInfoFrameAllocator` with a given memory map. The `next` field is initialized with `0` and will be increased for every frame allocation to avoid returning the same frame twice.
 
-The memory map consists of a list of [`MemoryRegion`] structs, which contain the start address, the length, and the type (e.g. unused, reserved, etc.) of each memory region. By creating an iterator that yields frames from unused regions, we can instantiate a valid `BootInfoFrameAllocator`.
+#### A `usable_frames` Method
 
-The initialization of the `BootInfoFrameAllocator` happens in a new `init_frame_allocator` function:
+Before we implement the `FrameAllocator` trait, we add an auxiliary method that converts the memory map into an iterator of usable frames:
 
 ```rust
 // in src/memory.rs
 
-use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
-
-/// Create a FrameAllocator from the passed memory map
-pub fn init_frame_allocator(
-    memory_map: &'static MemoryMap,
-) -> BootInfoFrameAllocator<impl Iterator<Item = PhysFrame>> {
-    // get usable regions from memory map
-    let regions = memory_map
-        .iter()
-        .filter(|r| r.region_type == MemoryRegionType::Usable);
-    // map each region to its address range
-    let addr_ranges = regions.map(|r| r.range.start_addr()..r.range.end_addr());
-    // transform to an iterator of frame start addresses
-    let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
-    // create `PhysFrame` types from the start addresses
-    let frames = frame_addresses.map(|addr| {
-        PhysFrame::containing_address(PhysAddr::new(addr))
-    });
-
-    BootInfoFrameAllocator { frames }
+impl BootInfoFrameAllocator {
+    /// Returns an iterator over the usable frames specified in the memory map.
+    fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
+        // get usable regions from memory map
+        let regions = self.memory_map.iter();
+        let usable_regions = regions
+            .filter(|r| r.region_type == MemoryRegionType::Usable);
+        // map each region to its address range
+        let addr_ranges = usable_regions
+            .map(|r| r.range.start_addr()..r.range.end_addr());
+        // transform to an iterator of frame start addresses
+        let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
+        // create `PhysFrame` types from the start addresses
+        frame_addresses
+            .map(|addr|PhysFrame::containing_address(PhysAddr::new(addr)))
+    }
 }
 ```
 
 This function uses iterator combinator methods to transform the initial `MemoryMap` into an iterator of usable physical frames:
 
-- First, we call the `iter` method to convert the memory map to an iterator of [`MemoryRegion`]s. Then we use the [`filter`] method to skip any reserved or otherwise unavailable regions. The bootloader updates the memory map for all the mappings it creates, so frames that are used by our kernel (code, data or stack) or to store the boot information are already marked as `InUse` or similar. Thus we can be sure that `Usable` frames are not used somewhere else.
-- In the second step, we use the [`map`] combinator and Rust's [range syntax] to transform our iterator of memory regions to an iterator of address ranges.
-- The third step is the most complicated: We convert each range to an iterator through the `into_iter` method and then choose every 4096th address using [`step_by`]. Since 4096 bytes (= 4 KiB) is the page size, we get the start address of each frame. The bootloader page aligns all usable memory areas so that we don't need any alignment or rounding code here. By using [`flat_map`] instead of `map`, we get an `Iterator<Item = u64>` instead of an `Iterator<Item = Iterator<Item = u64>>`.
-- In the final step, we convert the start addresses to `PhysFrame` types to construct the desired `Iterator<Item = PhysFrame>`. We then use this iterator to create and return a new `BootInfoFrameAllocator`.
+- First, we call the `iter` method to convert the memory map to an iterator of [`MemoryRegion`]s.
+- Then we use the [`filter`] method to skip any reserved or otherwise unavailable regions. The bootloader updates the memory map for all the mappings it creates, so frames that are used by our kernel (code, data or stack) or to store the boot information are already marked as `InUse` or similar. Thus we can be sure that `Usable` frames are not used somewhere else.
+- Afterwards, we use the [`map`] combinator and Rust's [range syntax] to transform our iterator of memory regions to an iterator of address ranges.
+- The next step is the most complicated: We convert each range to an iterator through the `into_iter` method and then choose every 4096th address using [`step_by`]. Since 4096 bytes (= 4 KiB) is the page size, we get the start address of each frame. The bootloader page aligns all usable memory areas so that we don't need any alignment or rounding code here. By using [`flat_map`] instead of `map`, we get an `Iterator<Item = u64>` instead of an `Iterator<Item = Iterator<Item = u64>>`.
+- Finally, we convert the start addresses to `PhysFrame` types to construct the desired `Iterator<Item = PhysFrame>`. We then use this iterator to create and return a new `BootInfoFrameAllocator`.
 
 [`MemoryRegion`]: https://docs.rs/bootloader/0.6.0/bootloader/bootinfo/struct.MemoryRegion.html
 [`filter`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.filter
@@ -914,19 +914,52 @@ This function uses iterator combinator methods to transform the initial `MemoryM
 [`step_by`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.step_by
 [`flat_map`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.flat_map
 
+The return type of the function uses the [`impl Trait`] feature. This way, we can specify that we return some type that implements the [`Iterator`] trait with item type `PhysFrame`, but don't need to name the concrete return type. This is important here because we _can't_ name the conrete type since it depends on unnamable closure types.
+
+[`impl Trait`]: https://doc.rust-lang.org/book/ch10-02-traits.html#returning-types-that-implement-traits
+[`Iterator`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html
+
+#### Implementing the `FrameAllocator` Trait
+
+Now we can implement the `FrameAllocator` trait:
+
+```rust
+// in src/memory.rs
+
+impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
+        let frame = self.usable_frames().nth(self.next);
+        self.next += 1;
+        frame
+    }
+}
+```
+
+We first use an `usable_frames` method to get an iterator of usable frames from the memory map. Then, we use the [`Iterator::nth`] function to get the frame with index `self.next` (thereby skipping `(self.next - 1)` frames). Before returning that frame, we increase `self.next` by one so that we return the following frame on the next call.
+
+[`Iterator::nth`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.nth
+
+This implementation is not quite optimal since it recreates the `usable_frame` allocator on every allocation. It would be better to directly store the iterator as a struct field instead. Then we wouldn't need the `nth` method and could just call [`next`] on every allocation. The problem with this approach is that it's not possible to store an `impl Trait` type in a struct field currently. It might work someday when [_named existential types_] are fully implemented.
+
+[`next`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#tymethod.next
+[_named existential types_]: https://github.com/rust-lang/rfcs/pull/2071
+
+#### Using the `BootInfoFrameAllocator`
+
 We can now modify our `kernel_main` function to pass a `BootInfoFrameAllocator` instance instead of an `EmptyFrameAllocator`:
 
 ```rust
 // in src/main.rs
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    use blog_os::memory::BootInfoFrameAllocator;
     […]
-    let mut frame_allocator = memory::init_frame_allocator(&boot_info.memory_map);
+    let mut frame_allocator = BootInfoFrameAllocator::init(&boot_info.memory_map);
     […]
 }
 ```
 
-Now the mapping succeeds and we see the black-on-white _"New!"_ on the screen again. Behind the scenes, the `map_to` method creates the missing page tables in the following way:
+With the boot info frame allocator, the mapping succeeds and we see the black-on-white _"New!"_ on the screen again. Behind the scenes, the `map_to` method creates the missing page tables in the following way:
 
 - Allocate an unused frame from the passed `frame_allocator`.
 - Zero the frame to create a new, empty page table.
