@@ -1,0 +1,39 @@
+{% extends "second-edition/base.html" %}
+
+{% import "macros.html" as macros %}
+
+{% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+
+{% block main %}
+    <h1>{{ page.title }}</h1>
+    <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
+        {{ page.date | date(format="%b %d, %Y") }}
+        {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
+    </time>
+    {{ page.content | safe }}
+
+    <div>
+        <h2>Thank You!</h2>
+        <p>I want to thank all the people who support me on <a href="https://donorbox.org/phil-opp">Donorbox</a>, <a href="https://www.patreon.com/phil_opp">Patreon</a>, and <a href="https://liberapay.com/phil-opp/">Liberapay</a>. It means a lot to me!</p>
+    </div>
+{% endblock main %}
+
+{% block after_main %}
+    <hr>
+    <div class="PageNavigation">
+        {% if page.lighter %}
+            <a class="prev" href="/{{ page.lighter.path | safe }}">&laquo; {{ page.lighter.title }}</a>
+        {% endif %}
+        {% if page.heavier %}
+            <a class="next" href="/{{ page.heavier.path | safe }}">{{ page.heavier.title }} &raquo;</a>
+        {% endif %}
+    </div>
+    <hr>
+    <section>
+        <h2 id="comments">Comments</h2>
+        {{ macros::utterances() }}
+    </section>
+
+{% endblock after_main %}
+
+
