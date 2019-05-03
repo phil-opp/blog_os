@@ -775,12 +775,14 @@ Let's start with the simple case and assume that we don't need to create new pag
 /// A FrameAllocator that always returns `None`.
 pub struct EmptyFrameAllocator;
 
-impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
+unsafe impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         None
     }
 }
 ```
+
+Implementing the `FrameAllocator` is unsafe because the implementer must guarantee that the allocator yields only unused frames. Otherwise undefined behavior might occur, for example when two virtual pages are mapped to the same physical frame. Our `EmptyFrameAllocator` only returns `None`, so this isn't a problem in this case.
 
 We now need to find a page that we can map without creating new page tables. The bootloader loads itself in the first megabyte of the virtual address space, so we know that a valid level 1 table exists for this region. We can choose any unused page in this memory region for our example mapping, for example, the page at address `0x1000`.
 
@@ -858,7 +860,11 @@ pub struct BootInfoFrameAllocator {
 
 impl BootInfoFrameAllocator {
     /// Create a FrameAllocator from the passed memory map.
-    pub fn init(memory_map: &'static MemoryMap) -> Self {
+    ///
+    /// This function is unsafe because the caller must guarantee that the passed
+    /// memory map is valid. The main requirement is that all frames that are marked
+    /// as `USABLE` in it are really unused.
+    pub unsafe fn init(memory_map: &'static MemoryMap) -> Self {
         BootInfoFrameAllocator {
             memory_map,
             next: 0,
@@ -871,7 +877,7 @@ The struct has two fields: A `'static` reference to the memory map passed by the
 
 As we explained in the [_Boot Information_](#boot-information) section, the memory map is provided by the BIOS/UEFI firmware. It can only be queried very early in the boot process, so the bootloader already calls the respective functions for us. The memory map consists of a list of [`MemoryRegion`] structs, which contain the start address, the length, and the type (e.g. unused, reserved, etc.) of each memory region.
 
-The `init` function initializes a `BootInfoFrameAllocator` with a given memory map. The `next` field is initialized with `0` and will be increased for every frame allocation to avoid returning the same frame twice.
+The `init` function initializes a `BootInfoFrameAllocator` with a given memory map. The `next` field is initialized with `0` and will be increased for every frame allocation to avoid returning the same frame twice. Since we don't know if the usable frames of the memory map were already used somewhere else, our `init` function must be `unsafe` to require additional guarantees from the caller.
 
 #### A `usable_frames` Method
 
@@ -926,7 +932,7 @@ Now we can implement the `FrameAllocator` trait:
 ```rust
 // in src/memory.rs
 
-impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
+unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         let frame = self.usable_frames().nth(self.next);
         self.next += 1;
@@ -954,7 +960,9 @@ We can now modify our `kernel_main` function to pass a `BootInfoFrameAllocator` 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::memory::BootInfoFrameAllocator;
     […]
-    let mut frame_allocator = BootInfoFrameAllocator::init(&boot_info.memory_map);
+    let mut frame_allocator = unsafe {
+        BootInfoFrameAllocator::init(&boot_info.memory_map)
+    };
     […]
 }
 ```
