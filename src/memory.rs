@@ -59,7 +59,7 @@ pub fn create_example_mapping(
 /// A FrameAllocator that always returns `None`.
 pub struct EmptyFrameAllocator;
 
-impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
+unsafe impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         None
     }
@@ -73,7 +73,11 @@ pub struct BootInfoFrameAllocator {
 
 impl BootInfoFrameAllocator {
     /// Create a FrameAllocator from the passed memory map.
-    pub fn init(memory_map: &'static MemoryMap) -> Self {
+    ///
+    /// This function is unsafe because the caller must guarantee that the passed
+    /// memory map is valid. The main requirement is that all frames that are marked
+    /// as `USABLE` in it are really unused.
+    pub unsafe fn init(memory_map: &'static MemoryMap) -> Self {
         BootInfoFrameAllocator {
             memory_map,
             next: 0,
@@ -94,7 +98,7 @@ impl BootInfoFrameAllocator {
     }
 }
 
-impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
+unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         let frame = self.usable_frames().nth(self.next);
         self.next += 1;
