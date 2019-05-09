@@ -365,7 +365,7 @@ To see the serial output from QEMU, we need use the `-serial` argument to redire
 
 [package.metadata.bootimage]
 test-args = [
-    "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "mon:stdio"
+    "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "stdio"
 ]
 ```
 
@@ -379,7 +379,7 @@ Building bootloader
     Finished release [optimized + debuginfo] target(s) in 0.02s
 Running: `qemu-system-x86_64 -drive format=raw,file=/…/target/x86_64-blog_os/debug/
     deps/bootimage-blog_os-7b7c37b4ad62551a.bin -device
-    isa-debug-exit,iobase=0xf4,iosize=0x04 -serial mon:stdio`
+    isa-debug-exit,iobase=0xf4,iosize=0x04 -serial stdio`
 Running 1 tests
 trivial assertion... [ok]
 ```
@@ -390,8 +390,6 @@ However, when a test fails we still see the output inside QEMU because our panic
     left: `0`, right: `1`', src/main.rs:55:5](qemu-failed-test.png)
 
 We see that the panic message is still printed to the VGA buffer, while the other test output is printed to the serial port. The panic message is quite useful, so it would be useful to see it in the console too.
-
-Note that it's no longer possible to exit QEMU from the console through `Ctrl+c` when `serial mon:stdio` is passed. An alternative keyboard shortcut is `Ctrl+a` and then `x`. Or you can just close the QEMU window manually.
 
 ### Print an Error Message on Panic
 
@@ -431,7 +429,7 @@ Building bootloader
     Finished release [optimized + debuginfo] target(s) in 0.02s
 Running: `qemu-system-x86_64 -drive format=raw,file=/…/target/x86_64-blog_os/debug/
     deps/bootimage-blog_os-7b7c37b4ad62551a.bin -device
-    isa-debug-exit,iobase=0xf4,iosize=0x04 -serial mon:stdio`
+    isa-debug-exit,iobase=0xf4,iosize=0x04 -serial stdio`
 Running 1 tests
 trivial assertion... [failed]
 
@@ -451,7 +449,7 @@ Since we report out the complete test results using the `isa-debug-exit` device 
 
 [package.metadata.bootimage]
 test-args = [
-    "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "mon:stdio",
+    "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "stdio",
     "-display", "none"
 ]
 ```
@@ -593,7 +591,7 @@ We use the [`unimplemented`] macro that always panics as a placeholder for the `
 
 [`unimplemented`]: https://doc.rust-lang.org/core/macro.unimplemented.html
 
-If you run `cargo xtest` at this stage, you will get an endless loop because the panic handler loops endlessly. You need to use the `Ctrl-a` and then `x` keyboard shortcut for exiting QEMU.
+If you run `cargo xtest` at this stage, you will get an endless loop because the panic handler loops endlessly. You need to use the `Ctrl+c` keyboard shortcut for exiting QEMU.
 
 ### Create a Library
 
@@ -729,7 +727,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 The library is usable like a normal external crate. It is called like our crate, which is `blog_os` in our case. The above code uses the `blog_os::test_runner` function in the `test_runner` attribute and the `blog_os::test_panic_handler` function in our `cfg(test)` panic handler. It also imports the `println` macro to make it available to our `_start` and `panic` functions.
 
-At this point, `cargo xrun` and `cargo xtest` should work again. Of course, `cargo xtest` still loops endlessly (remember the `ctrl+a` and then `x` shortcut to exit). Let's fix this by using the required library functions in our integration test.
+At this point, `cargo xrun` and `cargo xtest` should work again. Of course, `cargo xtest` still loops endlessly (you can exit with `ctrl+c`). Let's fix this by using the required library functions in our integration test.
 
 ### Completing the Integration Test
 
