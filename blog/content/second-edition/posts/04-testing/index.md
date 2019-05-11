@@ -80,7 +80,7 @@ fn test_runner(tests: &[&dyn Fn()]) {
 Our runner just prints a short debug message and then calls each test function in the list. The argument type `&[&dyn Fn()]` is a [_slice_] of [_trait object_] references of the [_Fn()_] trait. It is basically a list of references to types that can be called like a function. Since the function is useless for non-test runs, we use the `#[cfg(test)]` attribute to include it only for tests.
 
 [_slice_]: https://doc.rust-lang.org/std/primitive.slice.html
-[_trait object_]: https://doc.rust-lang.org/1.30.0/book/first-edition/trait-objects.html
+[_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
 [_Fn()_]: https://doc.rust-lang.org/std/ops/trait.Fn.html
 
 When we run `cargo xtest` now, we see that it now succeeds. However, we still see our "Hello World" instead of the message from our `test_runner`. The reason is that our `_start` function is still used as entry point. The custom test frameworks feature generates a `main` function that calls `test_runner`, but this function is ignored because we use the `#[no_main]` attribute and provide our own entry point.
