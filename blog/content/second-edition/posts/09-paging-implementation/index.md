@@ -852,6 +852,8 @@ In order to create new page tables, we need to create a proper frame allocator. 
 ```rust
 // in src/memory.rs
 
+use bootloader::bootinfo::MemoryMap;
+
 /// A FrameAllocator that returns usable frames from the bootloader's memory map.
 pub struct BootInfoFrameAllocator {
     memory_map: &'static MemoryMap,
@@ -885,6 +887,8 @@ Before we implement the `FrameAllocator` trait, we add an auxiliary method that 
 
 ```rust
 // in src/memory.rs
+
+use bootloader::bootinfo::MemoryRegionType;
 
 impl BootInfoFrameAllocator {
     /// Returns an iterator over the usable frames specified in the memory map.
