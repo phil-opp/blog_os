@@ -66,6 +66,8 @@ impl fmt::Write for CompareMessage {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         if s == MESSAGE {
             self.equals = true;
+        } else {
+            self.equals = false;
         }
         Ok(())
     }
