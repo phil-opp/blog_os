@@ -46,26 +46,28 @@ fn check_location(info: &PanicInfo) {
 
 fn check_message(info: &PanicInfo) {
     let message = info.message().unwrap_or_else(|| fail("no message"));
-    let mut compare_message = CompareMessage { equals: false };
+    let mut compare_message = CompareMessage { expected: MESSAGE };
     write!(&mut compare_message, "{}", message).unwrap_or_else(|_| fail("write failed"));
-    if !compare_message.equals {
-        fail("message not equal to expected message");
+    if compare_message.expected.len() != 0 {
+        fail("message shorter than expected message");
     }
 }
 
 /// Compares a `fmt::Arguments` instance with the `MESSAGE` string
 ///
 /// To use this type, write the `fmt::Arguments` instance to it using the
-/// `write` macro. If a message component matches `MESSAGE`, the equals
-/// field is set to true.
+/// `write` macro. If the message component matches `MESSAGE`, the `expected`
+/// field is the empty string.
 struct CompareMessage {
-    equals: bool,
+    expected: &'static str,
 }
 
 impl fmt::Write for CompareMessage {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        if s == MESSAGE {
-            self.equals = true;
+        if self.expected.starts_with(s) {
+            self.expected = &self.expected[s.len()..];
+        } else {
+            fail("message not equal to expected message");
         }
         Ok(())
     }
