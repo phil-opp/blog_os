@@ -923,31 +923,38 @@ Checking the reported panic message is a bit more complicated. The reason is tha
 
 use core::fmt;
 
-/// Compares a `fmt::Arguments` instance with the `MESSAGE` string.
+/// Compares a `fmt::Arguments` instance with the `MESSAGE` string
 ///
 /// To use this type, write the `fmt::Arguments` instance to it using the
-/// `write` macro. If a message component matches `MESSAGE`, the equals
-/// field is set to true.
+/// `write` macro. If the message component matches `MESSAGE`, the `expected`
+/// field is the empty string.
 struct CompareMessage {
-    equals: bool,
+    expected: &'static str,
 }
 
 impl fmt::Write for CompareMessage {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        if s == MESSAGE {
-            self.equals = true;
+        if self.expected.starts_with(s) {
+            self.expected = &self.expected[s.len()..];
+        } else {
+            fail("message not equal to expected message");
         }
         Ok(())
     }
 }
 ```
 
-The trick is to implement the [`fmt::Write`] trait, which is called by the [`write`] macro with `&str` arguments. This makes it possible to compare the panic arguments with `MESSAGE`. By the way, this is the same trait that we implemented for our VGA buffer writer in order to print to the screen.
+The trick is to implement the [`fmt::Write`] trait like we did for our [VGA buffer writer]. The [`write_str`] method is called with a `&str` parameter that we can compare with the expected message. An important detail is that the method is called _multiple times_ with the individual string components. For example, when we do `print!("{}z", "xy")` the method on our VGA buffer writer is invoked once with the string `"xy"` and once with the string `"z"`.
 
 [`fmt::Write`]: https://doc.rust-lang.org/core/fmt/trait.Write.html
-[`write`]: https://doc.rust-lang.org/core/macro.write.html
+[VGA buffer writer]: ./second-edition/posts/03-vga-text-buffer/index.md#formatting-macros
+[`write_str`]: https://doc.rust-lang.org/core/fmt/trait.Write.html#tymethod.write_str
 
-The above code only works for messages with a single component. This means that it works for `panic!("some message")`, but not for `panic!("some {}", message)`. This isn't ideal, but good enough for our test.
+This means that we can't directly compare the `s` argument with the expected message, since it might only be a substring. Instead, we use the [`starts_with`] method to verify that the given string component is a substring of the expected message. Then we use [string slicing] to remove the already printed characters from the `expected` string. If the `expected` field is an empty string after writing the panic message, it means that it matches the expected message.
+
+[`starts_with`]: https://doc.rust-lang.org/std/primitive.str.html#method.starts_with
+[string slicing]: https://doc.rust-lang.org/book/ch04-03-slices.html#string-slices
+
 
 With the `CompareMessage` type, we can finally implement our `check_message` function:
 
@@ -960,11 +967,11 @@ use core::fmt::Write;
 
 fn check_message(info: &PanicInfo) {
     let message = info.message().unwrap_or_else(|| fail("no message"));
-    let mut compare_message = CompareMessage { equals: false };
+    let mut compare_message = CompareMessage { expected: MESSAGE };
     write!(&mut compare_message, "{}", message)
         .unwrap_or_else(|_| fail("write failed"));
-    if !compare_message.equals {
-        fail("message not equal to expected message");
+    if !compare_message.expected.is_empty() {
+        fail("message shorter than expected message");
     }
 }
 ```
@@ -973,7 +980,9 @@ The function uses the [`PanicInfo::message`] function to get the panic message. 
 
 [`PanicInfo::message`]: https://doc.rust-lang.org/core/panic/struct.PanicInfo.html#method.message
 
-After querying the message, the function constructs a `CompareMessage` instance and writes the message to it using the `write!` macro. Afterwards it reads the `equals` field and fails the test if the panic message does not equal `MESSAGE`.
+After querying the message, the function constructs a `CompareMessage` instance with the `expected` field set to the `MESSAGE` string. Then it writes the message to it using the [`write!`] macro. After the write, it reads the `expected` field and fails the test if it is not the empty string.
+
+[`write!`]: https://doc.rust-lang.org/core/macro.write.html
 
 Now we can run the test using `cargo xtest --test panic_handler`. We see that it passes, which means that the reported panic info is correct. If we use a wrong line number in `PANIC_LINE` or panic with an additional character through `panic!("{}x", MESSAGE)`, we see that the test indeed fails.
 
