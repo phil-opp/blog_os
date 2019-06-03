@@ -45,7 +45,7 @@ In this post we will implement a very basic test framework that runs integration
 
 ## The Serial Port
 
-The naive way of doing an integration test would be to add some assertions in the code, launch QEMU, and manually check if a panic occured or not. This is very cumbersome and not practical if we have hundreds of integration tests. So we want an automated solution that runs all tests and fails if not all of them pass.
+The naive way of doing an integration test would be to add some assertions in the code, launch QEMU, and manually check if a panic occurred or not. This is very cumbersome and not practical if we have hundreds of integration tests. So we want an automated solution that runs all tests and fails if not all of them pass.
 
 Such an automated test framework needs to know whether a test succeeded or failed. It can't look at the screen output of QEMU, so we need a different way of retrieving the test results on the host system. A simple way to achieve this is by using the [serial port], an old interface standard which is no longer found in modern computers. It is easy to program and QEMU can redirect the bytes sent over serial to the host's standard output or a file.
 
@@ -187,7 +187,7 @@ Instead of standard output, QEMU supports [many more target devices][QEMU -seria
 
 ## Shutting Down QEMU
 
-Right now we have an endless loop at the end of our `_start` function and need to close QEMU manually. This does not work for automated tests. We could try to kill QEMU automatically from the host, for example after some special output was sent over serial, but this would be a bit hacky and difficult to get right. The cleaner solution would be to implement a way to shutdown our OS. Unfortunatly this is relatively complex, because it requires implementing support for either the [APM] or [ACPI] power management standard.
+Right now we have an endless loop at the end of our `_start` function and need to close QEMU manually. This does not work for automated tests. We could try to kill QEMU automatically from the host, for example after some special output was sent over serial, but this would be a bit hacky and difficult to get right. The cleaner solution would be to implement a way to shutdown our OS. Unfortunately this is relatively complex, because it requires implementing support for either the [APM] or [ACPI] power management standard.
 
 [APM]: https://wiki.osdev.org/APM
 [ACPI]: https://wiki.osdev.org/ACPI

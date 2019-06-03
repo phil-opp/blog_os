@@ -171,7 +171,7 @@ check_long_mode:
     mov al, "2"
     jmp error
 ```
-Like many low-level things, CPUID is a bit strange. Instead of taking a parameter, the `cpuid` instruction implicitely uses the `eax` register as argument. To test if long mode is available, we need to call `cpuid` with `0x80000001` in `eax`. This loads some information to the `ecx` and `edx` registers. Long mode is supported if the 29th bit in `edx` is set. [Wikipedia][cpuid long mode] has detailed information.
+Like many low-level things, CPUID is a bit strange. Instead of taking a parameter, the `cpuid` instruction implicitly uses the `eax` register as argument. To test if long mode is available, we need to call `cpuid` with `0x80000001` in `eax`. This loads some information to the `ecx` and `edx` registers. Long mode is supported if the 29th bit in `edx` is set. [Wikipedia][cpuid long mode] has detailed information.
 
 [cpuid long mode]: https://en.wikipedia.org/wiki/CPUID#EAX.3D80000001h:_Extended_Processor_Info_and_Feature_Bits
 

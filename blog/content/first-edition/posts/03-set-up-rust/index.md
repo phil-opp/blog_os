@@ -117,7 +117,7 @@ The `llvm-target` field specifies the target triple that is passed to LLVM. [Tar
 [Target triples]: http://llvm.org/docs/LangRef.html#target-triple
 [ABI]: https://en.wikipedia.org/wiki/Application_binary_interface
 
-The `data-layout` field is also passed to LLVM and specifies how data should be laid out in memory. It consists of various specifications seperated by a `-` character. For example, the `e` means little endian and `S128` specifies that the stack should be 128 bits (= 16 byte) aligned. The format is described in detail in the [LLVM documentation][data layout] but there shouldn't be a reason to change this string.
+The `data-layout` field is also passed to LLVM and specifies how data should be laid out in memory. It consists of various specifications separated by a `-` character. For example, the `e` means little endian and `S128` specifies that the stack should be 128 bits (= 16 byte) aligned. The format is described in detail in the [LLVM documentation][data layout] but there shouldn't be a reason to change this string.
 
 The `linker-flavor` field was recently introduced in [#40018] with the intention to add support for the LLVM linker [LLD], which is platform independent. In the future, this might allow easy cross compilation without the need to install a gcc cross compiler for linking.
 
@@ -189,7 +189,7 @@ By using such SIMD standards, programs can often speed up significantly. Good co
 
 [auto-vectorization]: https://en.wikipedia.org/wiki/Automatic_vectorization
 
-However, the large SIMD registers lead to problems in OS kernels. The reason is that the kernel has to backup all registers that it uses on each hardware interrupt (we will look into this in the [“Handling Exceptions”] post). So if the kernel uses SIMD registers, it has to backup a lot more data, which noticably decreases performance. To avoid this performance loss, we disable the `sse` and `mmx` features (the `avx` feature is disabled by default).
+However, the large SIMD registers lead to problems in OS kernels. The reason is that the kernel has to backup all registers that it uses on each hardware interrupt (we will look into this in the [“Handling Exceptions”] post). So if the kernel uses SIMD registers, it has to backup a lot more data, which noticeably decreases performance. To avoid this performance loss, we disable the `sse` and `mmx` features (the `avx` feature is disabled by default).
 
 As noted above, floating point operations on `x86_64` use SSE registers, so floats are no longer usable without SSE. Unfortunately, the Rust core library already uses floats (e.g., it implements traits for `f32` and `f64`), so we need an alternative way to implement float operations. The `soft-float` feature solves this problem by emulating all floating point operations through software functions based on normal integers.
 
@@ -348,7 +348,7 @@ target/x86_64-blog_os/debug/libblog_os.a(core-92335f822fa6c9a6.0.o):
 [crates.io]: https://crates.io
 
 #### --gc-sections
-The new errors are linker errors about various missing functions such as `__floatundisf` or `__muloti4`. These functions are part of LLVM's [`compiler-rt` builtins] and are normally linked by the standard library. For `no_std` crates like ours, one has to link the `compiler-rt` library manually. Unfortunatly, this library is implemented in C and the build process is a bit cumbersome. Alternatively, there is the [compiler-builtins] crate that tries to port the library to Rust, but it isn't complete yet.
+The new errors are linker errors about various missing functions such as `__floatundisf` or `__muloti4`. These functions are part of LLVM's [`compiler-rt` builtins] and are normally linked by the standard library. For `no_std` crates like ours, one has to link the `compiler-rt` library manually. Unfortunately, this library is implemented in C and the build process is a bit cumbersome. Alternatively, there is the [compiler-builtins] crate that tries to port the library to Rust, but it isn't complete yet.
 
 [`compiler-rt` builtins]: https://compiler-rt.llvm.org/
 [compiler-builtins]: https://github.com/rust-lang-nursery/compiler-builtins
@@ -365,7 +365,7 @@ Now we can do a `make run` again and it compiles without errors again. However, 
 ```
 GRUB error: no multiboot header found.
 ```
-What happened? Well, the linker removed unused sections. And since we don't use the Multiboot section anywhere, `ld` removes it, too. So we need to tell the linker explicitely that it should keep this section. The `KEEP` command does exactly that, so we add it to the linker script (`linker.ld`):
+What happened? Well, the linker removed unused sections. And since we don't use the Multiboot section anywhere, `ld` removes it, too. So we need to tell the linker explicitly that it should keep this section. The `KEEP` command does exactly that, so we add it to the linker script (`linker.ld`):
 
 ```
 .boot :

@@ -379,7 +379,7 @@ This error message tells us that the linker can't find an entry point function w
 cargo rustc -- -C link-args="-e __start"
 ```
 
-The `-e` flag specifies the name of the entry point function. Since all functions have an additonal `_` prefix on macOS, we need to set the entry point to `__start` instead of `_start`.
+The `-e` flag specifies the name of the entry point function. Since all functions have an additional `_` prefix on macOS, we need to set the entry point to `__start` instead of `_start`.
 
 Now the following linker error occurs:
 
@@ -435,7 +435,7 @@ rustflags = ["-C", "link-args=/ENTRY:_start /SUBSYSTEM:console"]
 rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 ```
 
-The `rustflags` key contains arguments that are automatically added to every invocation of `rustc`. For more information on the `.cargo/config` file check out the [offical documentation](https://doc.rust-lang.org/cargo/reference/config.html).
+The `rustflags` key contains arguments that are automatically added to every invocation of `rustc`. For more information on the `.cargo/config` file check out the [official documentation](https://doc.rust-lang.org/cargo/reference/config.html).
 
 Now our program should be buildable on all three platforms with a simple `cargo build`.
 

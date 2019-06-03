@@ -41,7 +41,7 @@ Unlike exceptions, hardware interrupts occur _asynchronously_. This means that t
 
 ## The 8259 PIC
 
-The [Intel 8259] is a programmable interrupt controller (PIC) introduced in 1976. It has long been replaced by the newer [APIC], but its interface is still supported on current systems for backwards compatibiliy reasons. The 8259 PIC is significantly easier to set up than the APIC, so we will use it to introduce ourselves to interrupts before we switch to the APIC in a later post.
+The [Intel 8259] is a programmable interrupt controller (PIC) introduced in 1976. It has long been replaced by the newer [APIC], but its interface is still supported on current systems for backwards compatibility reasons. The 8259 PIC is significantly easier to set up than the APIC, so we will use it to introduce ourselves to interrupts before we switch to the APIC in a later post.
 
 [APIC]: https://en.wikipedia.org/wiki/Intel_APIC_Architecture
 
@@ -240,7 +240,7 @@ We need to be careful to use the correct interrupt vector number, otherwise we c
 
 When we now execute `cargo xrun` we see dots periodically appearing on the screen:
 
-![QEMU printing consequtive dots showing the hardware timer](qemu-hardware-timer-dots.gif)
+![QEMU printing consecutive dots showing the hardware timer](qemu-hardware-timer-dots.gif)
 
 ### Configuring the Timer
 
@@ -251,7 +251,7 @@ The hardware timer that we use is called the _Progammable Interval Timer_ or PIT
 
 ## Deadlocks
 
-We now have a form of concurrency in our kernel: The timer interrupts occur asynchronously, so they can interrupt our `_start` function at any time. Fortunately Rust's ownership system prevents many types of concurrency related bugs at compile time. One notable exception are deadlocks. Deadlocks occur if a thread tries to aquire a lock that will never become free. Thus the thread hangs indefinitely.
+We now have a form of concurrency in our kernel: The timer interrupts occur asynchronously, so they can interrupt our `_start` function at any time. Fortunately Rust's ownership system prevents many types of concurrency related bugs at compile time. One notable exception are deadlocks. Deadlocks occur if a thread tries to acquire a lock that will never become free. Thus the thread hangs indefinitely.
 
 We can already provoke a deadlock in our kernel. Remember, our `println` macro calls the `vga_buffer::_print` function, which [locks a global `WRITER`][vga spinlock] using a spinlock:
 
@@ -571,7 +571,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-As we see from the graphic [above](#the-8259-pic), the keyboard uses line 1 of the primary PIC. This means that it arrives at the CPU as interrupt 33 (1 + offset 32). We add this index as a new `Keyboard` variant to the `InterruptIndex` enum. We don't need to specify the value explicitely, since it defaults to the previous value plus one, which is also 33. In the interrupt handler, we print a `k` and send the end of interrupt signal to the interrupt controller.
+As we see from the graphic [above](#the-8259-pic), the keyboard uses line 1 of the primary PIC. This means that it arrives at the CPU as interrupt 33 (1 + offset 32). We add this index as a new `Keyboard` variant to the `InterruptIndex` enum. We don't need to specify the value explicitly, since it defaults to the previous value plus one, which is also 33. In the interrupt handler, we print a `k` and send the end of interrupt signal to the interrupt controller.
 
 We now see that a `k` appears on the screen when we press a key. However, this only works for the first key we press, even if we continue to press keys no more `k`s appear on the screen. This is because the keyboard controller won't send another interrupt until we have read the so-called _scancode_ of the pressed key.
 
