@@ -21,11 +21,11 @@
 {% block after_main %}
     <hr>
     <div class="PageNavigation">
-        {% if page.lighter %}
-            <a class="prev" href="/{{ page.lighter.path | safe }}">&laquo; {{ page.lighter.title }}</a>
+        {% if page.earlier %}
+            <a class="prev" href="/{{ page.earlier.path | safe }}">&laquo; {{ page.earlier.title }}</a>
         {% endif %}
-        {% if page.heavier %}
-            <a class="next" href="/{{ page.heavier.path | safe }}">{{ page.heavier.title }} &raquo;</a>
+        {% if page.later %}
+            <a class="next" href="/{{ page.later.path | safe }}">{{ page.later.title }} &raquo;</a>
         {% endif %}
     </div>
     <hr>
@@ -35,5 +35,3 @@
     </section>
 
 {% endblock after_main %}
-
-
