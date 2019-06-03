@@ -40,3 +40,9 @@ steps:
   inputs:
     artifactName: 'generated_site'
     targetPath: 'blog/public'
+
+- script: curl -L https://git.io/misspell | bash
+  displayName: "Install misspell"
+
+- script: bin/misspell -error blog/content
+  displayName: "Check for common typos"
