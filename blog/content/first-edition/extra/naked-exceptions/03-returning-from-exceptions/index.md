@@ -443,7 +443,7 @@ We don't use any multimedia registers explicitly, but the Rust compiler might au
 
 ![example: program uses mm0, mm1, and mm2. Then the exception handler clobbers mm1.](xmm-overwrite.svg)
 
-This example shows a program that is using the first three multimedia registers (`mm0` to `mm2`). At some point, an exception occurs and control is transfered to the exception handler. The exception handler uses `mm1` for its own data and thus overwrites the previous value. When the exception is resolved, the CPU continues the interrupted program again. However, the program is now corrupt since it relies on the original `mm1` value.
+This example shows a program that is using the first three multimedia registers (`mm0` to `mm2`). At some point, an exception occurs and control is transferred to the exception handler. The exception handler uses `mm1` for its own data and thus overwrites the previous value. When the exception is resolved, the CPU continues the interrupted program again. However, the program is now corrupt since it relies on the original `mm1` value.
 
 ### Saving and Restoring Multimedia Registers
 In order to fix this problem, we need to backup all caller-saved multimedia registers before we call the exception handler. The problem is that the set of multimedia registers varies between CPUs. There are different standards:
@@ -514,7 +514,7 @@ A minimal target specification that describes the `x86_64-unknown-linux-gnu` tar
 }
 ```
 
-The `llvm-target` field specifies the target triple that is passed to LLVM. We want to derive a 64-bit Linux target, so we choose `x86_64-unknown-linux-gnu`. The `data-layout` field is also passed to LLVM and specifies how data should be laid out in memory. It consists of various specifications seperated by a `-` character. For example, the `e` means little endian and `S128` specifies that the stack should be 128 bits (= 16 byte) aligned. The format is described in detail in the [LLVM documentation][data layout] but there shouldn't be a reason to change this string.
+The `llvm-target` field specifies the target triple that is passed to LLVM. We want to derive a 64-bit Linux target, so we choose `x86_64-unknown-linux-gnu`. The `data-layout` field is also passed to LLVM and specifies how data should be laid out in memory. It consists of various specifications separated by a `-` character. For example, the `e` means little endian and `S128` specifies that the stack should be 128 bits (= 16 byte) aligned. The format is described in detail in the [LLVM documentation][data layout] but there shouldn't be a reason to change this string.
 
 The other fields are used for conditional compilation. This allows crate authors to use `cfg` variables to write special code for depending on the OS or the architecture. There isn't any up-to-date documentation about these fields but the [corresponding source code][target specification] is quite readable.
 

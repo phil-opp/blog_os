@@ -804,7 +804,7 @@ Let's cross our fingers and run it…
 … and it fails with a boot loop.
 
 ### Debugging
-A QEMU boot loop indicates that some CPU exception occured. We can see all thrown CPU exception by starting QEMU with `-d int` (as described [here][qemu debugging]):
+A QEMU boot loop indicates that some CPU exception occurred. We can see all thrown CPU exception by starting QEMU with `-d int` (as described [here][qemu debugging]):
 
 [qemu debugging]: ./first-edition/posts/03-set-up-rust/index.md#debugging
 
@@ -839,7 +839,7 @@ So let's find out which function caused the exception:
 ```
 objdump -d build/kernel-x86_64.bin | grep -B100 "10ab97"
 ```
-We disassemble our kernel and search for `10ab97`. The `-B100` option prints the 100 preceeding lines too. The output tells us the responsible function:
+We disassemble our kernel and search for `10ab97`. The `-B100` option prints the 100 preceding lines too. The output tells us the responsible function:
 
 ```
 ...

@@ -228,7 +228,7 @@ impl<'a> Alloc for &'a LockedBumpAllocator {
 }
 ```
 
-However, there is a more interesting solution for our bump allocator that avoids locking alltogether. The idea is to exploit that we only need to update a single `usize` field byusing an `AtomicUsize` type. This type uses special synchronized hardware instructions to ensure data race freedom without requiring locks.
+However, there is a more interesting solution for our bump allocator that avoids locking altogether. The idea is to exploit that we only need to update a single `usize` field byusing an `AtomicUsize` type. This type uses special synchronized hardware instructions to ensure data race freedom without requiring locks.
 
 #### A lock-free Bump Allocator
 A lock-free implementation looks like this:
@@ -413,7 +413,7 @@ pub fn init(boot_info: &BootInformation) {
 
 We've just moved the code to a new function. However, we've sneaked some improvements in:
 
-- An additional `.filter(|s| s.is_allocated())` in the calculation of `kernel_start` and `kernel_end`. This ignores all sections that aren't loaded to memory (such as debug sections). Thus, the kernel end address is no longer artifically increased by such sections.
+- An additional `.filter(|s| s.is_allocated())` in the calculation of `kernel_start` and `kernel_end`. This ignores all sections that aren't loaded to memory (such as debug sections). Thus, the kernel end address is no longer artificially increased by such sections.
 - We use the `start_address()` and `end_address()` methods of `boot_info` instead of calculating the adresses manually.
 - We use the alternate `{:#x}` form when printing kernel/multiboot addresses. Before, we used `0x{:x}`, which leads to the same result. For a complete list of these “alternate” formatting forms, check out the [std::fmt documentation].
 
