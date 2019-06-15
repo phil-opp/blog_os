@@ -220,11 +220,16 @@ aside#all-posts-link {
 
   aside#recent-updates {
     position: absolute;
+    min-width: 11rem;
     max-width: 17rem;
     top: 4rem;
     margin-left: 45rem;
     margin-right: 2rem;
     font-size: 90%;
+  }
+
+  aside#recent-updates .block {
+    margin-bottom: 1.5rem;
   }
 
   aside#recent-updates h2 {
@@ -330,4 +335,50 @@ details summary {
 
 details summary h3, details summary h4, details summary h5, details summary h6 {
   display: inline;
+}
+
+.gh-repo-box {
+  border: 1px solid #d1d5da;
+  border-radius: 3px;
+  padding: 16px;
+  margin-top: 0.5rem;
+  color: #586069;
+  font-size: 80%;
+}
+
+.gh-repo-box .repo-link {
+  color: #0366d6;
+  font-weight: 600;
+  font-size: 120%;
+}
+
+.gh-repo-box .subtitle {
+  margin-bottom: 16px;
+}
+
+.gh-repo-box .stars-forks {
+  margin-bottom: 0;
+}
+
+.gh-repo-box .stars-forks a {
+  color: #586069;
+}
+
+.gh-repo-box .stars-forks a:hover {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.gh-repo-box .stars-forks svg {
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.gh-repo-box .stars {
+  display: inline-block;
+}
+
+.gh-repo-box .forks {
+  display: inline-block;
+  margin-left: 16px;
 }

@@ -12,7 +12,13 @@ one_month_ago = datetime.now() - timedelta(days=32)
 def filter_date(issue):
     return issue.closed_at > one_month_ago
 
-with io.open("templates/recent-updates.html", 'w', encoding='utf8') as recent_updates:
+def format_number(number):
+    if number > 1000:
+        return u"{:.1f}k".format(float(number) / 1000)
+    else:
+        return u"{}".format(number)
+
+with io.open("templates/auto/recent-updates.html", 'w', encoding='utf8') as recent_updates:
     recent_updates.truncate()
 
     recent_updates.write(u"<ul>\n")
@@ -27,3 +33,13 @@ with io.open("templates/recent-updates.html", 'w', encoding='utf8') as recent_up
         recent_updates.write(u"  <li>" + link + datetime + "</li>\n")
 
     recent_updates.write(u"</ul>")
+
+repo = g.get_repo("phil-opp/blog_os")
+
+with io.open("templates/auto/stars.html", 'w', encoding='utf8') as stars:
+    stars.truncate()
+    stars.write(format_number(repo.stargazers_count))
+
+with io.open("templates/auto/forks.html", 'w', encoding='utf8') as forks:
+    forks.truncate()
+    forks.write(format_number(repo.forks_count))
