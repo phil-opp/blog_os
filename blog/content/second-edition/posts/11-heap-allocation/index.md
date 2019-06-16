@@ -75,7 +75,7 @@ However, this property of static variables brings a crucial drawback: They are r
 Local and static variables are already very powerful together and enable most use cases. However, we saw that they both have their limitations:
 
 - Local variables only live until the end of the surrounding function or block (or shorter with [non lexical lifetimes]). This is because they live on the call stack and are destroyed after the surrounding function returns.
-- Static variables always life for the complete runtime of the program, so there is no way to reclaim and reuse their memory when they're no longer needed. Also, they have unclear ownership semantics and are accessible from all functions, so they need to be protected by a [`Mutex`] when we want to modify them.
+- Static variables always live for the complete runtime of the program, so there is no way to reclaim and reuse their memory when they're no longer needed. Also, they have unclear ownership semantics and are accessible from all functions, so they need to be protected by a [`Mutex`] when we want to modify them.
 
 [non lexical lifetimes]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/ownership-and-lifetimes/non-lexical-lifetimes.html
 
@@ -89,13 +89,13 @@ Let's go through an example:
 
 ![TODO](call-stack-heap.svg)
 
-Here the `inner` function uses heap memory instead of static variables for storing `z`. It first allocates a memory block of the required size, which returns a `*mut u8` [raw pointer]. It then uses the [`ptr::write`] method to write the array `[1,2,3]` to it. In the last step, it uses the [`offset`] function to calculate a pointer to the `i`th element and returns it.
+Here the `inner` function uses heap memory instead of static variables for storing `z`. It first allocates a memory block of the required size, which returns a `*mut u8` [raw pointer]. It then uses the [`ptr::write`] method to write the array `[1,2,3]` to it. In the last step, it uses the [`offset`] function to calculate a pointer to the `i`th element and returns it. (Note that we omitted some required casts and unsafe blocks in this example function for brevity.)
 
 [raw pointer]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`ptr::write`]: https://doc.rust-lang.org/core/ptr/fn.write.html
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
-The allocated memory lives until it is explicitly freed through a call to `deallocate`. Thus, the returned pointer is still valid even after `inner` returned and its part of the call stack was destroyed. The advantage of using heap memory instead of static memory is that the memory can be reused after it is freed, which we do through the `deallocate` call in `outer`. After that call, the situation looks like this:
+The allocated memory lives until it is explicitly freed through a call to `deallocate`. Thus, the returned pointer is still valid even after `inner` returned and its part of the call stack was destroyed. The advantage of using heap memory compared to static memory is that the memory can be reused after it is freed, which we do through the `deallocate` call in `outer`. After that call, the situation looks like this:
 
 ![TODO](call-stack-heap-freed.svg)
 
@@ -116,7 +116,7 @@ To avoid these issues, many languages such as Java or Python manage dynamic memo
 
 [_garbage collection_]: https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)
 
-Rust takes a different approach to the problem: It uses a concept called [_ownership_] that is able to check the correctness of dynamic memory operations at compile time. Thus no garbage collection is needed and the programmer has fine-grained control over the use of dynamic memory just like in C or C++, but the compiler guarantees that no of the vulnerabilites mentioned above can occur.
+Rust takes a different approach to the problem: It uses a concept called [_ownership_] that is able to check the correctness of dynamic memory operations at compile time. Thus no garbage collection is needed and the programmer has fine-grained control over the use of dynamic memory just like in C or C++, but the compiler guarantees that none of the mentioned vulnerabilites can occur.
 
 [_ownership_]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
 
@@ -130,8 +130,8 @@ First, instead of letting the programmer manually call `allocate` and `deallocat
 
 ```rust
 {
-let z = Box::new([1,2,3]);
-[…]
+    let z = Box::new([1,2,3]);
+    […]
 } // z goes out of scope and `deallocate` is called
 ```
 
@@ -143,24 +143,24 @@ This pattern has the strange name [_resource acquisition is initialization_] (or
 Such a type alone does not suffice to prevent all use-after-free bugs since programmers can still hold on to references after the `Box` goes out of scope and the corresponding heap memory slot is deallocated:
 
 ```rust
-let z_1 = {
+let x = {
     let z = Box::new([1,2,3]);
     &z[1]
 }; // z goes out of scope and `deallocate` is called
-println!("{}", z_1);
+println!("{}", x);
 ```
 
-This is where Rust's ownership comes in. It assigns an abstract [lifetime] to each reference, which is the scope in which the reference is valid. In the above example, the `z_1` reference is taken from the `z` variable, so it becomes invalid after `z` goes out of scope. When you [run the above example on the playground][playground-2] you see that the Rust compiler indeed throws an error:
+This is where Rust's ownership comes in. It assigns an abstract [lifetime] to each reference, which is the scope in which the reference is valid. In the above example, the `x` reference is taken from the `z` array, so it becomes invalid after `z` goes out of scope. When you [run the above example on the playground][playground-2] you see that the Rust compiler indeed throws an error:
 
 [lifetime]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html
-[playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=8a4cebfcf6a1fbf0cf3ccbe115326201
+[playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=28180d8de7b62c6b4a681a7b1f745a48
 
 ```
 error[E0597]: `z[_]` does not live long enough
  --> src/main.rs:4:9
   |
-2 |     let z_1 = {
-  |         --- borrow later stored here
+2 |     let x = {
+  |         - borrow later stored here
 3 |         let z = Box::new([1,2,3]);
 4 |         &z[1]
   |         ^^^^^ borrowed value does not live long enough
@@ -179,7 +179,7 @@ Rust's ownership system goes even further and does not only prevent use-after-fr
 
 We now know the basics of dynamic memory allocation in Rust, but when should we use it? We've come really far with our kernel without dynamic memory allocation, so why do we need it now?
 
-First, dynamic memory allocation always comes with a bit of performace overhead, since we need to find a free slot on the heap for every allocation. For this reason local and static variables are generally preferable. However, there are cases where dynamic memory allocation is needed or where using it is preferable.
+First, dynamic memory allocation always comes with a bit of performace overhead, since we need to find a free slot on the heap for every allocation. For this reason local variables are generally preferable. However, there are cases where dynamic memory allocation is needed or where using it is preferable.
 
 As a basic rule, dynamic memory is required for variables that have a dynamic lifetime or a variable size. The most important type with a dynamic lifetime is [**`Rc`**], which counts the references to its wrapped value and deallocates it after all references went out of scope. Examples for types with a variable size are [**`Vec`**], [**`String`**], and other [collection types] that dynamically grow when more elements are added. These types work by allocating a larger amount of memory when they become full, copying all elements over, and then deallocating the old allocation.
 
