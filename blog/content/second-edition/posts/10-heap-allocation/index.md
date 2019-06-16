@@ -192,11 +192,158 @@ For our kernel we will mostly need the collection types, for example for storing
 
 ## The Allocator Interface
 
+The first step in implementing a heap allocator is to add a dependency on the built-in [`alloc`] crate. Like the [`core`] crate, it is a subset of the standard library that additionally contains the allocation and collection types. To add the dependency on `alloc`, we add the following to our `lib.rs`:
+
+[`alloc`]: https://doc.rust-lang.org/alloc/
+[`core`]: https://doc.rust-lang.org/core/
+
+```rust
+// in src/lib.rs
+
+extern crate alloc;
+```
+
+Contrary to normal dependencies, we don't need to modify the `Cargo.toml`. The reason is that the `alloc` crate ships with the Rust compiler as part of the standard library, so we just need to enable it. This is what this `extern crate` statement does. (Historically, all dependencies needed an `extern crate` statement, which is now optional).
+
+The reason that the `alloc` crate is disabled by default in `#[no_std]` crates is that it has additional requirements. We can see these requirements by trying to compile our project. We see that the following errors occur:
+
+```
+error: no global memory allocator found but one is required; link to std or add
+       #[global_allocator] to a static item that implements the GlobalAlloc trait.
+
+error: `#[alloc_error_handler]` function required, but not found
+```
+
+The first error occurs because the `alloc` crate requires an heap allocator. A heap allocator is an object that provides the `allocate` and `deallocate` functions that we mentioned above. In Rust, the heap allocator is described by the [`GlobalAlloc`] trait, which is mentioned in the error message. TODO explain trait
+
+The second error occurs because calls to `allocate` can fail, most commonly when there is no more memory available. Our program must be able to react to this case, which is what the `#[alloc_error_handler]` function is for. It marks a function that is called when an allocation error occurs, similar to how our panic handler is called when a panic occurs.
+
+Let's start with the second error, because it's easier to fix. We just need to add a small error handler method to our `lib.rs`:
+
+```rust
+// in src/lib.rs
+
+TODO
+```
+
+This function will be called whenever a call to `allocate` yields an error.
+
+Fixing the first error is more complicated. We need to create a type that manages the available heap memory and keeps track of which areas are allocated and unused. We start by creating a new `allocator` module:
+
+```rust
+// in src/lib.rs
+
+pub mod allocator;
+```
+
+Now we're ready to create our first allocator.
+
 ### A DummyAllocator
+
+We start with a very simple allocator that always returns an error when `allocate` is called. This will also help us to test our `#[alloc_error_handler]` function. The allocator looks like this:
+
+```rust
+// in src/allocator.rs
+
+use alloc::alloc::{GlobalAlloc, Layout};
+use core::ptr::null_mut;
+
+struct Dummy;
+
+unsafe impl GlobalAlloc for Dummy {
+    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
+        null_mut()
+    }
+
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
+        panic!("dealloc called")
+    }
+}
+```
+
+Our dummy allocator does not need any fields since it never allocates anything. Instead of an explicit error value, the `alloc` function returns the null pointer to signal an allocation error. This is a bit non-idiomatic, but it has the advantage that wrapping existing system allocators is easy, since they use the same convention.
+
+To use this `Dummy` struct as global allocator, we create a `static` from it and annotate it with the `#[global_allocator]` attribute:
+
+```rust
+// in TODO
+
+#[global_allocator]
+static ALLOCATOR: Dummy = Dummy;
+```
+
+This should fix the compilation errors. Now we can use the allocation and collection types of `alloc`, for example we can use a [`Box`] to allocate a value on the heap:
+
+```rust
+// in src/main.rs
+
+extern crate alloc;
+
+TODO
+
+```
+
+Note that we need to specify the `extern crate alloc` statement in our `main.rs` too. This is required because the `lib.rs` and `main.rs` part are treated as separate crates. However, we don't need to create another `#[global_allocator]` static because the global allocator applies to all crates in the project. In fact, specifying an additional allocator in another crate would be an error.
+
+TODO
+
+When we run the above code, we see that our `alloc_error_handler` function is called:
+
+TODO screenshot
+
+The function is called because the `Box::new` function implicitly calls the `alloc` function of the global allocator. Our dummy allocator always returns a null pointer, so every allocation fails. Let's fix this by creating an allocator that actually returns memory from `alloc`.
+
+## Heap Memory
+
+Before we can return heap memory from an allocator, we first need to create a heap memory region. TODO
+
+## Allocator Designs
+
+The responsibility of an allocator is to manage the available heap memory. It needs to return unused memory on `alloc` calls and keep track of memory freed by `dealloc` so that it can be reused again. Most importantly, it must never hand out memory that is already in use somewhere else because this would cause undefined behavior.
+
+There are many different ways to design an allocator. While some approaches are obviously useless like our `Dummy` allocator, most allocator designs have their use case. For this reason we present multiple possible designs and explain where they could be useful.
 
 ### A BumpAllocator
 
-## Allocator Designs
+The most simple allocator design is a _bump allocator_. It allocates memory linearly and only keeps track of the heap bounds and number of allocated bytes. It is only useful in very specific use cases because it has a severe limitation: it doesn't reuse any memory freed by `deallocate`.
+
+The implementation looks like this:
+
+```rust
+
+pub struct Bump {
+    start: *mut u8,
+    end: *mut u8,
+    current: *mut,
+}
+
+unsafe impl GlobalAlloc for Dummy {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let alloc_start = align_up(self.current, layout.align);
+        let alloc_end = alloc_start.offset(layout.size)
+        if alloc_end <= self.end {
+            self.current = alloc_end;
+            alloc_start
+        } else {
+            null_mut()
+        }
+    }
+
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
+        // just leak it
+    }
+}
+```
+
+TODO explanation
+
+TODO &self problem
+
+In this form the allocator is not useful since the deallocated memory is never freed. This isn't something that we can add easily, because memory regions might be deallocated in a different order than they were allocated. So a single pointer does not suffice to hold this information.
+
+However, there is one possible way to free memory with a bump allocator: We can reset the whole heap after the last memory region is deallocated. To implement this, we add an additional counter field:
+
+TODO
 
 ### Bitmap
 
