@@ -30,7 +30,7 @@ Local variables are stored on the [call stack], which is a [stack data structure
 
 ![An outer() and an inner(i: usize) function. Both have some local variables. Outer calls inner(1). The call stack contains the following slots: the local variables of outer, then the argument `i = 1`, then the return address, then the local variables of inner.](call-stack.svg)
 
-The above example shows the call stack after an `outer` function called an `inner` function. We see that the call stack contains the local variables of `outer` first. On the `inner` call, the parameter `1` and the return address for the function were pushed. Then control was transfered to `inner`, which pushed its local variables.
+The above example shows the call stack after an `outer` function called an `inner` function. We see that the call stack contains the local variables of `outer` first. On the `inner` call, the parameter `1` and the return address for the function were pushed. Then control was transferred to `inner`, which pushed its local variables.
 
 After the `inner` function returns, its part of the call stack is popped again and only the local variables of `outer` remain:
 
@@ -57,7 +57,7 @@ Static variables are stored at a fixed memory location separate from the stack. 
 
 ![TODO](call-stack-static.svg)
 
-When the `inner` function returns in the above example, it's part of the call stack is destroyed. The static variables live in a seperate memory range that is never destroyed, so the `&Z[1]` reference is still valid after the return.
+When the `inner` function returns in the above example, it's part of the call stack is destroyed. The static variables live in a separate memory range that is never destroyed, so the `&Z[1]` reference is still valid after the return.
 
 Apart from the `'static` lifetime, static variables also have the useful property that their location is known at compile time, so that no reference is needed for accessing it. We utilized that property for our `println` macro: By using a [static `Writer`] internally there is no `&mut Writer` reference needed to invoke the macro, which is very useful in [exception handlers] where we don't have access to any non-local references.
 
@@ -108,15 +108,15 @@ Apart from memory leaks, which are unfortunate but don't make the program vulner
 - When we accidentally continue to use a variable after calling `deallocate` on it, we have a so-called **use-after-free** vulnerability. Such a bug can often exploited by attackers to execute arbitrary code.
 - When we accidentally free a variable twice, we have a **double-free** vulnerability. This is problematic because it might free a different a different allocation that was allocated in the same spot after the first `deallocate` call. Thus, it can lead to an use-after-free vulnerability again.
 
-These types of vulnerabilities are commonly known, so one might expect that people learned how to avoid them by now. But no, there are still new such vulnerabilities found today, for example this recent [use-after-free vulnerabilty in Linux][linux vulnerability] that allowed arbitrary code execution. This shows that even the best programmers are not always able to correctly handle dynamic memory in complex projects.
+These types of vulnerabilities are commonly known, so one might expect that people learned how to avoid them by now. But no, there are still new such vulnerabilities found today, for example this recent [use-after-free vulnerability in Linux][linux vulnerability] that allowed arbitrary code execution. This shows that even the best programmers are not always able to correctly handle dynamic memory in complex projects.
 
 [linux vulnerability]: https://securityboulevard.com/2019/02/linux-use-after-free-vulnerability-found-in-linux-2-6-through-4-20-11/
 
-To avoid these issues, many languages such as Java or Python manage dynamic memory automatically using a technique called [_garbage collection_]. The idea is that the programmer never invokes `deallocate` manually. Instead, the programm is regularly paused and scanned for unused heap variables, which are then automatically deallocated. Thus, the above vulnerabilites can never occur. The drawbacks are the performance overhead of the regular scan and the probaby long pause times.
+To avoid these issues, many languages such as Java or Python manage dynamic memory automatically using a technique called [_garbage collection_]. The idea is that the programmer never invokes `deallocate` manually. Instead, the programm is regularly paused and scanned for unused heap variables, which are then automatically deallocated. Thus, the above vulnerabilities can never occur. The drawbacks are the performance overhead of the regular scan and the probaby long pause times.
 
 [_garbage collection_]: https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)
 
-Rust takes a different approach to the problem: It uses a concept called [_ownership_] that is able to check the correctness of dynamic memory operations at compile time. Thus no garbage collection is needed and the programmer has fine-grained control over the use of dynamic memory just like in C or C++, but the compiler guarantees that none of the mentioned vulnerabilites can occur.
+Rust takes a different approach to the problem: It uses a concept called [_ownership_] that is able to check the correctness of dynamic memory operations at compile time. Thus no garbage collection is needed and the programmer has fine-grained control over the use of dynamic memory just like in C or C++, but the compiler guarantees that none of the mentioned vulnerabilities can occur.
 
 [_ownership_]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
 
@@ -179,7 +179,7 @@ Rust's ownership system goes even further and does not only prevent use-after-fr
 
 We now know the basics of dynamic memory allocation in Rust, but when should we use it? We've come really far with our kernel without dynamic memory allocation, so why do we need it now?
 
-First, dynamic memory allocation always comes with a bit of performace overhead, since we need to find a free slot on the heap for every allocation. For this reason local variables are generally preferable. However, there are cases where dynamic memory allocation is needed or where using it is preferable.
+First, dynamic memory allocation always comes with a bit of performance overhead, since we need to find a free slot on the heap for every allocation. For this reason local variables are generally preferable. However, there are cases where dynamic memory allocation is needed or where using it is preferable.
 
 As a basic rule, dynamic memory is required for variables that have a dynamic lifetime or a variable size. The most important type with a dynamic lifetime is [**`Rc`**], which counts the references to its wrapped value and deallocates it after all references went out of scope. Examples for types with a variable size are [**`Vec`**], [**`String`**], and other [collection types] that dynamically grow when more elements are added. These types work by allocating a larger amount of memory when they become full, copying all elements over, and then deallocating the old allocation.
 
@@ -415,7 +415,7 @@ impl<'a> Alloc for &'a LockedBumpAllocator {
 }
 ```
 
-However, there is a more interesting solution for our bump allocator that avoids locking alltogether. The idea is to exploit that we only need to update a single `usize` field byusing an `AtomicUsize` type. This type uses special synchronized hardware instructions to ensure data race freedom without requiring locks.
+However, there is a more interesting solution for our bump allocator that avoids locking altogether. The idea is to exploit that we only need to update a single `usize` field byusing an `AtomicUsize` type. This type uses special synchronized hardware instructions to ensure data race freedom without requiring locks.
 
 #### A lock-free Bump Allocator
 A lock-free implementation looks like this:
@@ -600,7 +600,7 @@ pub fn init(boot_info: &BootInformation) {
 
 We've just moved the code to a new function. However, we've sneaked some improvements in:
 
-- An additional `.filter(|s| s.is_allocated())` in the calculation of `kernel_start` and `kernel_end`. This ignores all sections that aren't loaded to memory (such as debug sections). Thus, the kernel end address is no longer artifically increased by such sections.
+- An additional `.filter(|s| s.is_allocated())` in the calculation of `kernel_start` and `kernel_end`. This ignores all sections that aren't loaded to memory (such as debug sections). Thus, the kernel end address is no longer artificially increased by such sections.
 - We use the `start_address()` and `end_address()` methods of `boot_info` instead of calculating the adresses manually.
 - We use the alternate `{:#x}` form when printing kernel/multiboot addresses. Before, we used `0x{:x}`, which leads to the same result. For a complete list of these “alternate” formatting forms, check out the [std::fmt documentation].
 
