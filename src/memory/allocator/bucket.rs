@@ -2,6 +2,7 @@ use super::MutGlobalAlloc;
 use core::alloc::Layout;
 use core::mem::size_of;
 use core::fmt::{self, Debug};
+use core::cmp;
 
 #[derive(Debug)]
 pub struct BucketAllocator<A> where A: MutGlobalAlloc + Debug {
@@ -45,6 +46,10 @@ impl Bucket {
             head: None,
         }
     }
+
+    fn layout(&self) -> Layout {
+        Layout::from_size_align(self.size, self.size).unwrap()
+    }
 }
 
 impl fmt::Debug for Bucket {
@@ -82,8 +87,9 @@ impl Region {
 }
 
 impl<A> BucketAllocator<A> where A: MutGlobalAlloc + Debug {
-    fn get_bucket_index(&self, size: usize) -> Option<usize> {
-        match self.buckets.binary_search_by(|bucket| bucket.size.cmp(&size)) {
+    fn get_bucket_index(&self, layout: &Layout) -> Option<usize> {
+        let required_bucket_size = cmp::max(layout.size(), layout.align());
+        match self.buckets.binary_search_by(|bucket| bucket.size.cmp(&required_bucket_size)) {
             Ok(index) => Some(index),
             Err(index) if index < self.buckets.len() => Some(index),
             Err(_) => None,
@@ -93,19 +99,22 @@ impl<A> BucketAllocator<A> where A: MutGlobalAlloc + Debug {
 
 impl<A> MutGlobalAlloc for BucketAllocator<A> where A: MutGlobalAlloc + Debug {
     fn alloc(&mut self, layout: Layout) -> *mut u8 {
-        if let Some(bucket_index) = self.get_bucket_index(layout.size()) {
+        if let Some(bucket_index) = self.get_bucket_index(&layout) {
             let bucket = &mut self.buckets[bucket_index];
             if let Some(head) = bucket.head.take() {
                 let next = head.next.take();
                 bucket.head = next;
                 return head.as_mut_u8();
+            } else {
+                self.underlying.alloc(bucket.layout())
             }
+        } else {
+            self.underlying.alloc(layout)
         }
-        self.underlying.alloc(layout)
     }
 
     fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
-        if let Some(bucket_index) = self.get_bucket_index(layout.size()) {
+        if let Some(bucket_index) = self.get_bucket_index(&layout) {
             let bucket = &mut self.buckets[bucket_index];
             let region = unsafe {Region::from_mut_u8(ptr)};
             region.next = bucket.head.take();
