@@ -205,7 +205,7 @@ extern crate alloc;
 
 Contrary to normal dependencies, we don't need to modify the `Cargo.toml`. The reason is that the `alloc` crate ships with the Rust compiler as part of the standard library, so we just need to enable it. This is what this `extern crate` statement does. (Historically, all dependencies needed an `extern crate` statement, which is now optional).
 
-The reason that the `alloc` crate is disabled by default in `#[no_std]` crates is that it has additional requirements. We can see these requirements by trying to compile our project. We see that the following errors occur:
+The reason that the `alloc` crate is disabled by default in `#[no_std]` crates is that it has additional requirements. We can see these requirements as errors when we try to compile our project now:
 
 ```
 error: no global memory allocator found but one is required; link to std or add
@@ -214,21 +214,61 @@ error: no global memory allocator found but one is required; link to std or add
 error: `#[alloc_error_handler]` function required, but not found
 ```
 
-The first error occurs because the `alloc` crate requires an heap allocator. A heap allocator is an object that provides the `allocate` and `deallocate` functions that we mentioned above. In Rust, the heap allocator is described by the [`GlobalAlloc`] trait, which is mentioned in the error message. TODO explain trait
+The first error occurs because the `alloc` crate requires an heap allocator. A heap allocator is an object that provides the `allocate` and `deallocate` functions that we mentioned above. In Rust, the heap allocator is described by the [`GlobalAlloc`] trait, which is mentioned in the error message. To set the heap allocator for the crate, the `#[global_allocator]` attribute must be applied to a `static` variable that implements the `GlobalAlloc` trait.
 
-The second error occurs because calls to `allocate` can fail, most commonly when there is no more memory available. Our program must be able to react to this case, which is what the `#[alloc_error_handler]` function is for. It marks a function that is called when an allocation error occurs, similar to how our panic handler is called when a panic occurs.
+The second error occurs because calls to `allocate` can fail, most commonly when there is no more memory available. Our program must be able to react to this case, which is what the `#[alloc_error_handler]` function is for.
 
-Let's start with the second error, because it's easier to fix. We just need to add a small error handler method to our `lib.rs`:
+[`GlobalAlloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html
+
+We will describe these traits and attributes in detail in the following sections.
+
+### The `GlobalAlloc` Trait
+
+The [`GlobalAlloc`] trait defines the functions that a heap allocator must provide. All heap allocators must implement it. The trait is special because it is almost never used directly by the programmer. Instead, the compiler will automatically insert the appropriate calls to the trait methods when using the allocation and collection types of `alloc`.
+
+Since we will need to implement the trait for all our allocator types, it is worth taking a closer look at its declaration:
 
 ```rust
-// in src/lib.rs
+pub unsafe trait GlobalAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8;
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout);
 
-TODO
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 { ... }
+    unsafe fn realloc(
+        &self,
+        ptr: *mut u8,
+        layout: Layout,
+        new_size: usize
+    ) -> *mut u8 { ... }
+}
 ```
 
-This function will be called whenever a call to `allocate` yields an error.
+It defines the two required methods [`alloc`] and [`dealloc`], which correspond to the `allocate` and `deallocate` functions we used in our examples:
+- The [`alloc`] method takes a [`Layout`] instance as argument, which describes the desired size and alignment that the allocated memory should have. It returns a [raw pointer] to the first byte of the allocated memory block. Instead of an explicit error value, the `alloc` method returns a null pointer to signal an allocation error. This is a bit non-idiomatic, but it has the advantage that wrapping existing system allocators is easy, since they use the same convention.
+- The [`dealloc`] method is the counterpart and responsible for freeing a memory block again. It receives the pointer returned by `alloc` and the `Layout` that was used for the allocation as arguments.
 
-Fixing the first error is more complicated. We need to create a type that manages the available heap memory and keeps track of which areas are allocated and unused. We start by creating a new `allocator` module:
+[`alloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.alloc
+[`dealloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.dealloc
+[`Layout`]: https://doc.rust-lang.org/alloc/alloc/struct.Layout.html
+
+The trait additionally defines the two methods [`alloc_zeroed`] and [`realloc`] with default implementations:
+
+- The [`alloc_zeroed`] method is equivalent to calling `alloc` and then setting the allocated memory block to zero, which is exactly what the provided default implementation does. An allocator implementations can override the default implementations with a more efficient custom implementation if possible.
+- The [`realloc`] method allows to grow or shrink an allocation. The default implementation allocates a new memory block with the desired size and copies over all the content from the previous allocation. Again, an allocator implementation can probably provide a more efficient implementation of this method, for example by growing/shrinking the allocation in-place if possible.
+
+[`alloc_zeroed`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#method.alloc_zeroed
+[`realloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#method.realloc
+
+#### Unsafety
+
+One thing to notice is that both the trait itself and all trait methods are declared as `unsafe`:
+
+- The reason for declaring the trait as `unsafe` is that the programmer must guarantee that the trait implementation for an allocator type is correct. For example, the `alloc` method must never return a memory block that is already used somewhere else because this would cause undefined behavior.
+- Similarly, the reason that the methods are `unsafe` is that the caller must ensure various invariants when calling the methods, for example that the `Layout` passed to `alloc` specifies a non-zero size. This is not really relevant in practice since the methods are normally called directly by the compiler, which ensures that the requirements are met.
+
+### A `DummyAllocator`
+
+Now that we know what an allocator type should provide, we can create a simple dummy allocator. For that we create a new `allocator` module:
 
 ```rust
 // in src/lib.rs
@@ -236,11 +276,7 @@ Fixing the first error is more complicated. We need to create a type that manage
 pub mod allocator;
 ```
 
-Now we're ready to create our first allocator.
-
-### A DummyAllocator
-
-We start with a very simple allocator that always returns an error when `allocate` is called. This will also help us to test our `#[alloc_error_handler]` function. The allocator looks like this:
+Our dummy allocator will do the absolute minimum to implement the trait and always return an error when `alloc` is called. It looks like this:
 
 ```rust
 // in src/allocator.rs
@@ -248,7 +284,7 @@ We start with a very simple allocator that always returns an error when `allocat
 use alloc::alloc::{GlobalAlloc, Layout};
 use core::ptr::null_mut;
 
-struct Dummy;
+pub struct Dummy;
 
 unsafe impl GlobalAlloc for Dummy {
     unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
@@ -256,46 +292,92 @@ unsafe impl GlobalAlloc for Dummy {
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        panic!("dealloc called")
+        panic!("dealloc should be never called")
     }
 }
 ```
 
-Our dummy allocator does not need any fields since it never allocates anything. Instead of an explicit error value, the `alloc` function returns the null pointer to signal an allocation error. This is a bit non-idiomatic, but it has the advantage that wrapping existing system allocators is easy, since they use the same convention.
+The struct does not need any fields, so we create it as a [zero sized type]. As mentioned above, we always return the null pointer from `alloc`, which corresponds to an allocation error. Since the allocator never returns any memory, a call to `dealloc` should never occur. For this reason we simply panic in the `dealloc` method. The `alloc_zeroed` and `realloc` methods have default implementations, so we don't need to provide implementations for them.
 
-To use this `Dummy` struct as global allocator, we create a `static` from it and annotate it with the `#[global_allocator]` attribute:
+[zero sized type]: https://doc.rust-lang.org/nomicon/exotic-sizes.html#zero-sized-types-zsts
+
+We now have a simple allocator, but we still have to tell the Rust compiler that it should use this allocator. This is where the `#[global_allocator]` attribute comes in.
+
+### The `#[global_allocator]` Attribute
+
+The `#[global_allocator]` attribute tells the Rust compiler which allocator instance it should use as the global heap allocator. The attribute is only applicable to a `static` that implements the `GlobalAlloc` trait. Let's register an instance of our `Dummy` allocator as the global allocator:
 
 ```rust
-// in TODO
+// in src/lib.rs
 
 #[global_allocator]
-static ALLOCATOR: Dummy = Dummy;
+static ALLOCATOR: allocator::Dummy = allocator::Dummy;
 ```
 
-This should fix the compilation errors. Now we can use the allocation and collection types of `alloc`, for example we can use a [`Box`] to allocate a value on the heap:
+Since the `Dummy` allocator is a [zero sized type], we don't need to specify any fields in the initialization expression. Note that the `#[global_allocator]` module [cannot be used in submodules][pr51335], so we need to put it into the `lib.rs`.
+
+[pr51335]: https://github.com/rust-lang/rust/pull/51335
+
+When we now try to compile it, the first error should be gone. Let's fix the remaining second error:
+
+```
+error: `#[alloc_error_handler]` function required, but not found
+```
+
+### The `#[alloc_error_handler]` Attribute
+
+As we learned when discussing the `GlobalAlloc` trait, the `alloc` function can signal an allocation error by returning a null pointer. The question is: how should the Rust runtime react to such an allocation failure. This is where the `#[alloc_error_handler]` attribute comes in. It specifies a function that is called when an allocation error occurs, similar to how our panic handler is called when a panic occurs.
+
+Let's add such a function to fix the compilation error:
+
+```rust
+// in src/lib.rs
+
+#![feature(alloc_error_handler)] // at the top of the file
+
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
+}
+```
+
+The `alloc_error_handler` function is still unsafe, so we need a feature gate to enable it. The function receives a single argument: the `Layout` instance that was passed to `alloc` when the allocation failure occurred. There's nothing we can do to resolve that failure, so we just panic with a message that contains the `Layout` instance.
+
+With this function, compilation errors should be fixed. Now we can use the allocation and collection types of `alloc`, for example we can use a [`Box`] to allocate a value on the heap:
+
+[`Box`]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html
 
 ```rust
 // in src/main.rs
 
 extern crate alloc;
 
-TODO
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    // […] print "Hello World!", call `init`, create `mapper` and `frame_allocator`
+
+    let x = Box::new(41);
+
+    // […] call `test_main` in test mode
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
 
 ```
 
 Note that we need to specify the `extern crate alloc` statement in our `main.rs` too. This is required because the `lib.rs` and `main.rs` part are treated as separate crates. However, we don't need to create another `#[global_allocator]` static because the global allocator applies to all crates in the project. In fact, specifying an additional allocator in another crate would be an error.
 
-TODO
-
 When we run the above code, we see that our `alloc_error_handler` function is called:
 
-TODO screenshot
+![QEMU printing "panicked at `allocation error: Layout { size_: 4, align_: 4 }, src/lib.rs:89:5"](qemu-dummy-output.png)
 
-The function is called because the `Box::new` function implicitly calls the `alloc` function of the global allocator. Our dummy allocator always returns a null pointer, so every allocation fails. Let's fix this by creating an allocator that actually returns memory from `alloc`.
+The error handler is called because the `Box::new` function implicitly calls the `alloc` function of the global allocator. Our dummy allocator always returns a null pointer, so every allocation fails. Let's fix this by creating an allocator that actually returns memory from `alloc`.
 
 ## Heap Memory
 
-Before we can return heap memory from an allocator, we first need to create a heap memory region. TODO
+Before we can return heap memory from an allocator, we first need to create a heap memory region from which the allocator can allocate memory.
+
+ TODO
 
 ## Allocator Designs
 
