@@ -16,6 +16,9 @@ pub mod memory;
 pub mod serial;
 pub mod vga_buffer;
 
+#[global_allocator]
+static ALLOCATOR: allocator::Dummy = allocator::Dummy;
+
 pub fn init() {
     gdt::init();
     interrupts::init_idt();
