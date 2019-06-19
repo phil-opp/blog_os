@@ -36,7 +36,7 @@ After the `inner` function returns, its part of the call stack is popped again a
 
 ![The call stack containing only the local variables of outer](call-stack-return.svg)
 
-We see that the local variables of `inner` only live until the function returns. The Rust compiler enforces these lifetimes and throws an error when we for example try to to return a reference to a local variable:
+We see that the local variables of `inner` only live until the function returns. The Rust compiler enforces these lifetimes and throws an error when we for example try to return a reference to a local variable:
 
 ```rust
 fn inner(i: usize) -> &'static u32 {
