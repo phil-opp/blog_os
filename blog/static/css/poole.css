@@ -111,6 +111,14 @@ ul, ol, dl {
   margin-bottom: 1rem;
 }
 
+li {
+  margin-top: .5rem;
+}
+
+li > ul > li:first-child {
+  margin-top: .2rem;
+}
+
 /* Nested lists */
 li ul, li ol, li dl {
   margin-bottom: 0;

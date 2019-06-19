@@ -169,6 +169,10 @@ a.anchorjs-link:hover {
   margin-bottom: .2rem;
 }
 
+#toc-aside li, #toc-inline li {
+  margin-top: 0;
+}
+
 aside#all-posts-link {
   font-size: 90%;
   margin-top: 0.5rem;
