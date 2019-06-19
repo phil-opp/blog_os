@@ -371,23 +371,133 @@ When we run the above code, we see that our `alloc_error_handler` function is ca
 
 ![QEMU printing "panicked at `allocation error: Layout { size_: 4, align_: 4 }, src/lib.rs:89:5"](qemu-dummy-output.png)
 
-The error handler is called because the `Box::new` function implicitly calls the `alloc` function of the global allocator. Our dummy allocator always returns a null pointer, so every allocation fails. Let's fix this by creating an allocator that actually returns memory from `alloc`.
+The error handler is called because the `Box::new` function implicitly calls the `alloc` function of the global allocator. Our dummy allocator always returns a null pointer, so every allocation fails. To fix this we need to create an allocator that actually returns usable memory.
 
 ## Heap Memory
 
-Before we can return heap memory from an allocator, we first need to create a heap memory region from which the allocator can allocate memory.
+Before we can create a proper allocator, we first need to create a heap memory region from which the allocator can allocate memory. To do this, we need to define a virtual memory range for the heap region and then map this region to physical frames. See the [_"Introduction To Paging"_] post for an overview of virtual memory and page tables.
 
- TODO
+[_"Introduction To Paging"_]: ./second-edition/posts/08-paging-introduction/index.md
+
+The first step is to define a virtual memory region for the heap. We can choose any virtual address range that we like, as long as it is not already used for a different memory region. Let's define it as the memory starting at address `0x_cccc_cccc_0000` so that we can easily recognize a heap pointer later:
+
+```rust
+// in src/allocator.rs
+
+const HEAP_START: *mut u8 = 0x_cccc_cccc_0000 as *mut u8;
+const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
+```
+
+We set the heap size to 1 KiB for now. If we need more space in the future, we can simply increase it. We set the type of the `HEAP_START` constant to `*mut u8` to avoid casts when we implement allocators later.
+
+If we tried to use this heap region now, a page fault would occur since the virtual memory region is not mapped to physical memory yet. To resolve this, we create an `init_heap` function that maps the heap pages using the [`Mapper` API] that we introduced in the [_"Paging Implementation"_] post:
+
+[`Mapper` API]: ./second-edition/posts/09-paging-implementation/index.md#using-mappedpagetable
+[_"Paging Implementation"_]: ./second-edition/posts/09-paging-implementation/index.md
+
+```rust
+// in src/allocator.rs
+
+pub fn init_heap(
+    mapper: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+) -> Result<(), MapToError> {
+    let page_range = {
+        let heap_start = VirtAddr::from_ptr(HEAP_START);
+        let heap_end = heap_start + HEAP_SIZE - 1u64;
+        let heap_start_page = Page::containing_address(heap_start);
+        let heap_end_page = Page::containing_address(heap_end);
+        Page::range_inclusive(heap_start_page, heap_end_page)
+    };
+
+    for page in page_range {
+        let frame = frame_allocator
+            .allocate_frame()
+            .ok_or(MapToError::FrameAllocationFailed)?;
+        let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
+        unsafe { mapper.map_to(page, frame, flags, frame_allocator)?.flush() };
+    }
+
+    Ok(())
+}
+```
+
+The function takes mutable references to a [`Mapper`] and a [`FrameAllocator`] instance, both limited to 4KiB pages by using [`Size4KiB`] as generic parameter. The return value of the function is a [`Result`] with the unit type `()` as success variant and a [`MapToError`] as error variant, which is the error type returned by the [`Mapper::map_to`] method. Reusing the error type makes sense here because the `map_to` method is the main source of errors in this function.
+
+[`Mapper`]:https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/trait.Mapper.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/trait.FrameAllocator.html
+[`Size4KiB`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page/enum.Size4KiB.html
+[`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
+[`MapToError`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/enum.MapToError.html
+[`Mapper::map_to`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
+
+The implementation can be broken down into two parts:
+
+- **Creating the page range:**: To create a range of the pages that we want to map, we convert the `HEAP_START` pointer to a [`VirtAddr`] type using the [`from_ptr`] function. Then we calculate the heap end address from it by adding the `HEAP_SIZE`. We want an inclusive bound (the address of the last byte of the heap), so we subtract 1. Next, we convert the addresses into [`Page`] types using the [`containing_address`] function. Finally, we create a page range from the start and end pages using the [`Page::range_inclusive`] function.
+- **Mapping the pages:** The second step is to map all pages of the page range we just created. For that we iterate over the pages in that range using a `for` loop. For each page, we do the following:
+    - We allocate a physical frame that the page should be mapped to using the [`FrameAllocator::allocate_frame`] method. This method returns [`None`] when there are no more frames left. We deal with that case by mapping it to a [`MapToError::FrameAllocationFailed`] error through the [`Option::ok_or`] method and then apply the [question mark operator] to return early in the case of an error.
+    - We set the required `PRESENT` flag and the `WRITABLE` flag for the page. With these flags both read and write accesses are allowed, which makes sense for heap memory.
+    - We use the unsafe [`Mapper::map_to`] method for creating the mapping in the active page table. The method can fail, therefore we use the [question mark operator] again to forward the error to the caller. On success, the method returns a [`MapperFlush`] instance that we can use to update the [_translation lookaside buffer_] using the [`flush`] method.
+
+[`VirtAddr`]: https://docs.rs/x86_64/0.7.0/x86_64/struct.VirtAddr.html
+[`from_ptr`]: https://docs.rs/x86_64/0.7.0/x86_64/struct.VirtAddr.html#method.from_ptr
+[`Page`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page/struct.Page.html
+[`containing_address`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page/struct.Page.html#method.containing_address
+[`Page::range_inclusive`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
+[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
+[`None`]: https://doc.rust-lang.org/core/option/enum.Option.html#variant.None
+[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
+[`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
+[question mark operator]: https://doc.rust-lang.org/edition-guide/rust-2018/error-handling-and-panics/the-question-mark-operator-for-easier-error-handling.html
+[`MapperFlush`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[_translation lookaside buffer_]: ./second-edition/posts/08-paging-introduction/index.md#the-translation-lookaside-buffer
+[`flush`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+
+The final step is to call this function from our `kernel_main`:
+
+```rust
+// in src/main.rs
+
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    use blog_os::allocator; // new import
+    use blog_os::memory::{self, BootInfoFrameAllocator};
+
+    println!("Hello World{}", "!");
+    blog_os::init();
+
+    let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
+    let mut frame_allocator = unsafe {
+        BootInfoFrameAllocator::init(&boot_info.memory_map)
+    };
+
+    // new
+    allocator::init_heap(&mut mapper, &mut frame_allocator)
+        .expect("heap initialization failed");
+
+    let x = Box::new(41);
+
+    // […] call `test_main` in test mode
+
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+We show the full function for context here. The only new lines are the `blog_os::allocator` import and the call to `allocator::init_heap` function. In case the `init_heap` function returns an error, we panic using the [`Result::expect`] method since there is currently no sensible way for us to handle this error.
+
+[`Result::expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
+
+We now have a mapped heap memory region that is ready to be used. The `Box::new` call still uses our old `Dummy` allocator, so you will still see the "out of memory" error when you run it. Let's fix this by creating some proper allocators.
 
 ## Allocator Designs
 
 The responsibility of an allocator is to manage the available heap memory. It needs to return unused memory on `alloc` calls and keep track of memory freed by `dealloc` so that it can be reused again. Most importantly, it must never hand out memory that is already in use somewhere else because this would cause undefined behavior.
 
-There are many different ways to design an allocator. While some approaches are obviously useless like our `Dummy` allocator, most allocator designs have their use case. For this reason we present multiple possible designs and explain where they could be useful.
+There are many different ways to design an allocator. While some approaches are obviously useless like our `Dummy` allocator, there are many different allocator designs with valid use cases. For this reason we present multiple possible designs and explain where they could be useful.
 
 ### A BumpAllocator
 
-The most simple allocator design is a _bump allocator_. It allocates memory linearly and only keeps track of the heap bounds and number of allocated bytes. It is only useful in very specific use cases because it has a severe limitation: it doesn't reuse any memory freed by `deallocate`.
+The most simple allocator design is a _bump allocator_. It allocates memory linearly and only keeps track of the number of allocated bytes and the number of allocations. It is only useful in very specific use cases because it has a severe limitation: it can only free all memory at once.
 
 The implementation looks like this:
 
