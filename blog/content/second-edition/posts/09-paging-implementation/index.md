@@ -755,13 +755,13 @@ For the mapping, we set the `PRESENT` flag because it is required for all valid 
 
 [_Page Table Format_]: ./second-edition/posts/08-paging-introduction/index.md#page-table-format
 
-The `map_to` function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`] attribute to emit a warning when we accidentally forget to use it.
+The `map_to` function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`][must_use] attribute to emit a warning when we accidentally forget to use it.
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
 [`MapperFlush`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/struct.MapperFlush.html
 [`flush`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/struct.MapperFlush.html#method.flush
-[`#[must_use]`]: https://doc.rust-lang.org/std/result/#results-must-be-used
+[must_use]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
 #### A dummy `FrameAllocator`
 
