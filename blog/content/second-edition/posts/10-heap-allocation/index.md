@@ -500,33 +500,204 @@ TODO userspace vs kernel allocators
 
 The most simple allocator design is a _bump allocator_. It allocates memory linearly and only keeps track of the number of allocated bytes and the number of allocations. It is only useful in very specific use cases because it has a severe limitation: it can only free all memory at once.
 
-The implementation looks like this:
+The base type looks like this:
 
 ```rust
+// in src/allocator.rs
 
-pub struct Bump {
-    start: *mut u8,
-    end: *mut u8,
-    current: *mut,
+pub struct BumpAllocator {
+    heap_start: usize,
+    heap_end: usize,
+    next: usize,
+    allocations: usize,
 }
 
-unsafe impl GlobalAlloc for Dummy {
+impl BumpAllocator {
+    /// Creates a new bump allocator with the given heap bounds.
+    ///
+    /// This method is unsafe because the caller must ensure that the given
+    /// memory range is unused.
+    pub const unsafe fn new(heap_start: usize, heap_size: usize) -> Self {
+        BumpAllocator {
+            heap_start,
+            heap_end: heap_start + heap_size,
+            next: heap_start,
+            allocations: 0,
+        }
+    }
+}
+```
+
+Instead of using the `HEAP_START` and `HEAP_SIZE` constants directly, we use separate `heap_start` and `heap_end` fields. This makes the type more flexible, for example it also works when we only want to assign a part of the heap region. The purpose of the `next` field is to always point to the first unused byte of the heap, i.e. the start address of the next allocation. The `allocations` field is a simple counter for the active allocations with the goal of resetting the allocator after the last allocation was freed.
+
+We provide a simple constructor function that creates a new `BumpAllocator`. It initializes the `heap_start` and `heap_end` fields with the given values and the `allocations` counter with 0. The `next` field is set to `heap_start` since the whole heap should be unused at this point. Since this is something that the caller must guarantee, the function needs to be unsafe. Given an invalid memory range, the planned implementation of the `GlobalAlloc` trait would cause undefined behavior when it is used as global allocator.
+
+#### A `Locked` Wrapper
+
+Implementing the [`GlobalAlloc`] trait directly for the `BumpAllocator` struct is not possible. The problem is that the `alloc` and `dealloc` methods of the trait only take an immutable `&self` reference, but we need to update the `next` and `allocations` fields for every allocation. The reason that the `GlobalAlloc` trait is specified this way is that the global allocator needs to be stored in an immutable `static` that only allows `&self` references.
+
+To be able to implement the trait for our `BumpAllocator` struct, we need to add synchronized [interior mutability] to get mutable field access through the `&self` reference. A type that adds the required synchronization and allows interior mutabilty is the [`spin::Mutex`] spinlock that we already used multiple times for our kernel, for example [for our VGA buffer writer][vga-mutex]. To use it, we create a `Locked` wrapper type:
+
+[interior mutability]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html
+[`spin::Mutex`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html
+[vga-mutex]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
+
+```rust
+// in src/allocator.rs
+
+pub struct Locked<A> {
+    inner: spin::Mutex<A>,
+}
+
+impl<A> Locked<A> {
+    pub const fn new(inner: A) -> Self {
+        Locked {
+            inner: spin::Mutex::new(inner),
+        }
+    }
+}
+```
+
+The type is a generic wrapper around a `spin::Mutex<A>`. It imposes no restrictions on the wrapped type `A`, so it can be used to wrap all kinds of types, not just allocators. It provides a simple `new` constructor function that wraps a given value.
+
+#### Implementing `GlobalAlloc`
+
+With the help of the `Locked` wrapper type we now can implement the `GlobalAlloc` trait for our bump allocator. The trick is to implement the trait not for the `BumpAllocator` directly, but for the wrapped `Locked<BumpAllocator>` type. The implementation looks like this:
+
+```rust
+// in src/allocator.rs
+
+unsafe impl GlobalAlloc for Locked<BumpAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let alloc_start = align_up(self.current, layout.align);
-        let alloc_end = alloc_start.offset(layout.size)
-        if alloc_end <= self.end {
-            self.current = alloc_end;
-            alloc_start
+        let mut bump = self.inner.lock();
+
+        let alloc_start = align_up(bump.next, layout.align());
+        let alloc_end = alloc_start + layout.size();
+
+        if alloc_end > bump.heap_end {
+            null_mut() // out of memory
         } else {
-            null_mut()
+            bump.next = alloc_end;
+            bump.allocations += 1;
+            alloc_start as *mut u8
         }
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        // just leak it
+        let mut bump = self.inner.lock();
+
+        bump.allocations -= 1;
+        if bump.allocations == 0 {
+            bump.next = bump.heap_start;
+        }
     }
 }
 ```
+
+The first step for both `alloc` and `dealloc` is to call the [`Mutex::lock`] method to get a mutable reference to the wrapped allocator type. The instance remains locked until the end of the method, so that no data race can occur in multithreaded contexts (we will add threading support soon).
+
+[`Mutex::lock`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html#method.lock
+
+The `alloc` implementation first performs the required alignment on the `next` address, specified through the given [`Layout`]. The code for the `align_up` function is shown below. This yields the start address of the allocation. Next, we add the requested allocation size to `alloc_start` to get the end address of the allocation. If it is larger than the end address of the heap, we return a null pointer since there is not enough memory available. Otherwise, we update the `next` address (the next allocation should start after the current allocation), increase the `allocations` counter by 1, and return the `alloc_start` address converted to a `*mut u8` pointer.
+
+The `dealloc` function ignores the given pointer and `Layout` arguments. Instead, it just decreases the `allocations` counter. If the counter reaches `0` again, it means that all allocations were freed again. In this case, it resets the `next` address to the `heap_start` address to make the complete heap memory available again.
+
+The last remaining part of the implementation is the `align_up` function, which looks like this:
+
+```rust
+// in src/allocator.rs
+
+fn align_up(addr: usize, align: usize) -> usize {
+    let remainder = addr % align;
+    if remainder == 0 {
+        addr // addr already aligned
+    } else {
+        addr - remainder + align
+    }
+}
+```
+
+The function first computes the [remainder] of the division of `addr` by `align`. If the remainder is `0`, the address is already aligned with the given alignment. Otherwise, we align the address by subtracting the remainder (so that the new remainder is 0) and then adding the alignment (so that the address does not become smaller than the original address).
+
+[remainder]: https://en.wikipedia.org/wiki/Euclidean_division
+
+#### Using It
+
+To use the bump allocator instead of the dummy allocator, we need to update the `ALLOCATOR` static in `lib.rs`:
+
+```rust
+// in src/lib.rs
+
+use allocator::{Locked, BumpAllocator, HEAP_START, HEAP_SIZE};
+
+#[global_allocator]
+static ALLOCATOR: Locked<BumpAllocator> =
+    Locked::new(BumpAllocator::new(HEAP_START, HEAP_SIZE));
+```
+
+Here it becomes important that we declared both the `Locked::new` and the `BumpAllocator::new` as [`const` functions]. If they were normal functions, a compilation error would occur because the initialization expression of a `static` must evaluatable at compile time.
+
+[`const` functions]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
+
+Now we can perform heap allocation without runtime errors:
+
+```rust
+// in src/main.rs
+
+use alloc::{boxed::Box, vec::Vec, collections::BTreeMap};
+
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    // […] initialize interrupts, mapper, frame_allocator, heap
+
+    // allocate a number on the heap
+    let heap_value = Box::new(41);
+    println!("heap_value at {:p}", heap_value);
+
+    // create a dynamically sized vector
+    let mut vec = Vec::new();
+    for i in 0..500 {
+        vec.push(i);
+    }
+    println!("vec at {:p}", vec.as_slice());
+
+    // create a map that maps keys to values
+    let mut rust_os = BTreeMap::new();
+    rust_os.insert("RedoxOS", "https://redox-os.org/");
+    rust_os.insert("Tock Embedded Operating System", "https://www.tockos.org/");
+    rust_os.insert("Fuchsia (partly)", "https://fuchsia.googlesource.com/fuchsia/");
+    println!("Some Rust operating systems and their websites:\n{:#?}", rust_os);
+
+    // try to create one billion boxes
+    for _ in 0..1_000_000_000 {
+        let _ = Box::new(1);
+    }
+
+    // […] call `test_main` in test context
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+When we run it now, we see the following:
+
+![](qemu-bump-allocator.png)
+
+As expected, we see that the `Box` and `Vec` values live on the heap, as indicated by the pointer starting with `0x_4444_4444`. The reason that the vector starts at offset `0x800` is not that the boxed value is `0x800` bytes large, but the [reallocations] that occur when the vector needs to increase its capacity. For example, when the vectors capacity is 32 and we try to add the next element, the vector allocates a new backing array with capacity 64 behind the scenes and copies all elements over. Then it frees the old allocation, which in our case is equivalent to leaking it since our bump allocator doesn't reuse freed memory.
+
+[reallocations]: https://doc.rust-lang.org/alloc/vec/struct.Vec.html#capacity-and-reallocation
+
+The `BTreeMap` type works as expected. Our loop that tries to create one billion boxes causes a panic, however. The reason is that the bump allocator never reuses freed memory, so that for each created `Box` a few bytes are leaked. This makes the bump allocator unsuitable for many applications in practice, apart from some very specific use cases.
+
+#### When to use a Bump Allocator
+
+The big advantage of bump allocation is that it's very fast. Compared to other allocator designs (see below) that need to actively look for a fitting memory block and perform various bookkeeping tasks on `alloc` and `dealloc`, a bump allocator can be optimized to just a few assembly instructions. This makes bump allocators useful for optimizing the allocation performance, for example when creating a [virtual DOM library].
+
+[virtual DOM library]: https://hacks.mozilla.org/2019/03/fast-bump-allocated-virtual-doms-with-rust-and-wasm/
+
+While a bump allocator is seldom used as the global allocator, the principle of bump allocation is often applied in form of [arena allocation], which in principle batches individual allocations together to improve performance. An example for an arena allocator for Rust is the [`toolshed`] crate.
+
+[arena allocation]: https://mgravell.github.io/Pipelines.Sockets.Unofficial/docs/arenas.html
+[`toolshed`]: https://docs.rs/toolshed/0.8.1/toolshed/index.html
 
 TODO explanation
 
@@ -538,11 +709,11 @@ However, there is one possible way to free memory with a bump allocator: We can 
 
 TODO
 
-### Bitmap
+### Bitmap Allocator
 
-### LinkedList
+### LinkedList Allocator
 
-### Bucket
+### Bucket Allocator
 
 ## Summary
 
