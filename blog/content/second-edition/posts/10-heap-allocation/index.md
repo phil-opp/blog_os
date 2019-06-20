@@ -379,16 +379,16 @@ Before we can create a proper allocator, we first need to create a heap memory r
 
 [_"Introduction To Paging"_]: ./second-edition/posts/08-paging-introduction/index.md
 
-The first step is to define a virtual memory region for the heap. We can choose any virtual address range that we like, as long as it is not already used for a different memory region. Let's define it as the memory starting at address `0x_cccc_cccc_0000` so that we can easily recognize a heap pointer later:
+The first step is to define a virtual memory region for the heap. We can choose any virtual address range that we like, as long as it is not already used for a different memory region. Let's define it as the memory starting at address `0x_4444_4444_0000` so that we can easily recognize a heap pointer later:
 
 ```rust
 // in src/allocator.rs
 
-const HEAP_START: *mut u8 = 0x_cccc_cccc_0000 as *mut u8;
-const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
+pub const HEAP_START: usize = 0x_4444_4444_0000;
+pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 ```
 
-We set the heap size to 1 KiB for now. If we need more space in the future, we can simply increase it. We set the type of the `HEAP_START` constant to `*mut u8` to avoid casts when we implement allocators later.
+We set the heap size to 1 KiB for now. If we need more space in the future, we can simply increase it.
 
 If we tried to use this heap region now, a page fault would occur since the virtual memory region is not mapped to physical memory yet. To resolve this, we create an `init_heap` function that maps the heap pages using the [`Mapper` API] that we introduced in the [_"Paging Implementation"_] post:
 
@@ -403,7 +403,7 @@ pub fn init_heap(
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
 ) -> Result<(), MapToError> {
     let page_range = {
-        let heap_start = VirtAddr::from_ptr(HEAP_START);
+        let heap_start = VirtAddr::new(HEAP_START as u64);
         let heap_end = heap_start + HEAP_SIZE - 1u64;
         let heap_start_page = Page::containing_address(heap_start);
         let heap_end_page = Page::containing_address(heap_end);
@@ -433,14 +433,13 @@ The function takes mutable references to a [`Mapper`] and a [`FrameAllocator`] i
 
 The implementation can be broken down into two parts:
 
-- **Creating the page range:**: To create a range of the pages that we want to map, we convert the `HEAP_START` pointer to a [`VirtAddr`] type using the [`from_ptr`] function. Then we calculate the heap end address from it by adding the `HEAP_SIZE`. We want an inclusive bound (the address of the last byte of the heap), so we subtract 1. Next, we convert the addresses into [`Page`] types using the [`containing_address`] function. Finally, we create a page range from the start and end pages using the [`Page::range_inclusive`] function.
+- **Creating the page range:**: To create a range of the pages that we want to map, we convert the `HEAP_START` pointer to a [`VirtAddr`] type. Then we calculate the heap end address from it by adding the `HEAP_SIZE`. We want an inclusive bound (the address of the last byte of the heap), so we subtract 1. Next, we convert the addresses into [`Page`] types using the [`containing_address`] function. Finally, we create a page range from the start and end pages using the [`Page::range_inclusive`] function.
 - **Mapping the pages:** The second step is to map all pages of the page range we just created. For that we iterate over the pages in that range using a `for` loop. For each page, we do the following:
     - We allocate a physical frame that the page should be mapped to using the [`FrameAllocator::allocate_frame`] method. This method returns [`None`] when there are no more frames left. We deal with that case by mapping it to a [`MapToError::FrameAllocationFailed`] error through the [`Option::ok_or`] method and then apply the [question mark operator] to return early in the case of an error.
     - We set the required `PRESENT` flag and the `WRITABLE` flag for the page. With these flags both read and write accesses are allowed, which makes sense for heap memory.
     - We use the unsafe [`Mapper::map_to`] method for creating the mapping in the active page table. The method can fail, therefore we use the [question mark operator] again to forward the error to the caller. On success, the method returns a [`MapperFlush`] instance that we can use to update the [_translation lookaside buffer_] using the [`flush`] method.
 
 [`VirtAddr`]: https://docs.rs/x86_64/0.7.0/x86_64/struct.VirtAddr.html
-[`from_ptr`]: https://docs.rs/x86_64/0.7.0/x86_64/struct.VirtAddr.html#method.from_ptr
 [`Page`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page/struct.Page.html
 [`containing_address`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page/struct.Page.html#method.containing_address
 [`Page::range_inclusive`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
@@ -495,7 +494,9 @@ The responsibility of an allocator is to manage the available heap memory. It ne
 
 There are many different ways to design an allocator. While some approaches are obviously useless like our `Dummy` allocator, there are many different allocator designs with valid use cases. For this reason we present multiple possible designs and explain where they could be useful.
 
-### A BumpAllocator
+TODO userspace vs kernel allocators
+
+### Bump Allocator
 
 The most simple allocator design is a _bump allocator_. It allocates memory linearly and only keeps track of the number of allocated bytes and the number of allocations. It is only useful in very specific use cases because it has a severe limitation: it can only free all memory at once.
 
