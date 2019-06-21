@@ -496,9 +496,15 @@ We now have a mapped heap memory region that is ready to be used. The `Box::new`
 
 The responsibility of an allocator is to manage the available heap memory. It needs to return unused memory on `alloc` calls and keep track of memory freed by `dealloc` so that it can be reused again. Most importantly, it must never hand out memory that is already in use somewhere else because this would cause undefined behavior.
 
-There are many different ways to design an allocator. While some approaches are obviously useless like our `Dummy` allocator, there are many different allocator designs with valid use cases. For this reason we present multiple possible designs and explain where they could be useful.
+Apart from correctness, there are many secondary design goals. For example, it should effectively utilize the available memory and keep [fragmentation] low. Furthermore, it should work well for concurrent applications and scale to any number of processors. For maximal performance, it could even optimize the memory layout with respect to the CPU caches to improve [cache locality] and avoid [false sharing].
 
-TODO userspace vs kernel allocators
+[cache locality]: http://docs.cray.com/books/S-2315-50/html-S-2315-50/qmeblljm.html
+[fragmentation]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
+[false sharing]: http://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
+
+These requirements can make good allocators very complex. For example, [jemalloc] has over 30.000 lines of code. This complexity often undesired in kernel code where a single bug can lead to severe security vulnerabilities. Fortunately, the allocation patterns of kernel code are often much simpler compared to userspace code, so that relatively simple allocator design often suffice. In the following we explain three possible kernel allocator designs and explain their advantages and drawbacks.
+
+[jemalloc]: http://jemalloc.net/
 
 ### Bump Allocator
 
