@@ -680,7 +680,17 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 When we run it now, we see the following:
 
-![](qemu-bump-allocator.png)
+![QEMU printing `
+heap_value at 0x444444440000
+vec at 0x4444444408000
+Some Rust operating systems and their websites:
+{
+    "Fuchsia (partly)": "https://fuchsia.googlesource.com/fuchsia/",
+    "RedoxOS": "https://redox-os.org/",
+    "Tock Embedded Operating System", "https://www.tockos.org/",
+}
+panicked at 'allocation error: Layout { size_: 4, align_: 4 }', src/lib.rs:91:5
+](qemu-bump-allocator.png)
 
 As expected, we see that the `Box` and `Vec` values live on the heap, as indicated by the pointer starting with `0x_4444_4444`. The reason that the vector starts at offset `0x800` is not that the boxed value is `0x800` bytes large, but the [reallocations] that occur when the vector needs to increase its capacity. For example, when the vectors capacity is 32 and we try to add the next element, the vector allocates a new backing array with capacity 64 behind the scenes and copies all elements over. Then it frees the old allocation, which in our case is equivalent to leaking it since our bump allocator doesn't reuse freed memory.
 
