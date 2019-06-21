@@ -664,13 +664,6 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     }
     println!("vec at {:p}", vec.as_slice());
 
-    // create a map that maps keys to values
-    let mut rust_os = BTreeMap::new();
-    rust_os.insert("RedoxOS", "https://redox-os.org/");
-    rust_os.insert("Tock Embedded Operating System", "https://www.tockos.org/");
-    rust_os.insert("Fuchsia (partly)", "https://fuchsia.googlesource.com/fuchsia/");
-    println!("Some Rust operating systems and their websites:\n{:#?}", rust_os);
-
     // try to create one billion boxes
     for _ in 0..1_000_000_000 {
         let _ = Box::new(1);
@@ -682,17 +675,30 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-When we run it now, we see the following:
+This code example showcases a few collection types of the `alloc` crate. Of course, there are many more allocation and collection types in that crate that we can now all use in our kernel, including:
+
+- the reference counted pointers [`Rc`] and [`Arc`]
+- the owned string type [`String`] and the [`format!`] macro
+- [`LinkedList`]
+- the growable ring buffer [`VecDeque`]
+- [`BinaryHeap`]
+- [`BTreeMap`] and [`BTreeSet`]
+
+[`Rc`]: https://doc.rust-lang.org/alloc/rc/
+[`Arc`]: https://doc.rust-lang.org/alloc/arc/
+[`String`]: https://doc.rust-lang.org/collections/string/struct.String.html
+[`format!`]: https://doc.rust-lang.org/alloc/macro.format.html
+[`LinkedList`]: https://doc.rust-lang.org/collections/linked_list/struct.LinkedList.html
+[`VecDeque`]: https://doc.rust-lang.org/collections/vec_deque/struct.VecDeque.html
+[`BinaryHeap`]: https://doc.rust-lang.org/collections/binary_heap/struct.BinaryHeap.html
+[`BTreeMap`]: https://doc.rust-lang.org/collections/btree_map/struct.BTreeMap.html
+[`BTreeSet`]: https://doc.rust-lang.org/collections/btree_set/struct.BTreeSet.html
+
+When we run our project now, we see the following:
 
 ![QEMU printing `
 heap_value at 0x444444440000
 vec at 0x4444444408000
-Some Rust operating systems and their websites:
-{
-    "Fuchsia (partly)": "https://fuchsia.googlesource.com/fuchsia/",
-    "RedoxOS": "https://redox-os.org/",
-    "Tock Embedded Operating System", "https://www.tockos.org/",
-}
 panicked at 'allocation error: Layout { size_: 4, align_: 4 }', src/lib.rs:91:5
 ](qemu-bump-allocator.png)
 
@@ -700,7 +706,7 @@ As expected, we see that the `Box` and `Vec` values live on the heap, as indicat
 
 [reallocations]: https://doc.rust-lang.org/alloc/vec/struct.Vec.html#capacity-and-reallocation
 
-The `BTreeMap` type works as expected. Our loop that tries to create one billion boxes causes a panic, however. The reason is that the bump allocator never reuses freed memory, so that for each created `Box` a few bytes are leaked. This makes the bump allocator unsuitable for many applications in practice, apart from some very specific use cases.
+While the basic `Box` and `Vec` examples work as expected, our loop that tries to create one billion boxes causes a panic. The reason is that the bump allocator never reuses freed memory, so that for each created `Box` a few bytes are leaked. This makes the bump allocator unsuitable for many applications in practice, apart from some very specific use cases.
 
 #### When to use a Bump Allocator
 
