@@ -124,7 +124,7 @@ By writing to the identity-mapped level 1 table, our kernel can create up to 511
 - By mapping the 0th entry of the level 1 table to the frame with address `24 KiB`, it created a temporary mapping of the virtual page at `0 KiB` to the physical frame of the level 2 page table, indicated by the dashed arrow.
 - By mapping the 9th entry of the level 1 table to the frame with address `4 KiB`, it created a temporary mapping of the virtual page at `36 KiB` to the physical frame of the level 4 page table, indicated by the dashed arrow.
 
-Now the kernel can access the level 2 page table by writing to page `0 KiB` and the level 4 page table by writing to page `33 KiB`.
+Now the kernel can access the level 2 page table by writing to page `0 KiB` and the level 4 page table by writing to page `36 KiB`.
 
 The process for accessing an arbitrary page table frame with temporary mappings would be:
 
