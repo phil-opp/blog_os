@@ -36,6 +36,7 @@ addons:
   homebrew:
     packages:
       - qemu
+    update: true
 
 install:
   - if [ $TRAVIS_OS_NAME = windows ]; then choco install qemu; export PATH="/c/Program Files/qemu:$PATH"; fi
