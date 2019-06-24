@@ -741,109 +741,215 @@ Normally when we have a potentially unbounded number of items, we can just use a
 
 ### LinkedList Allocator
 
-pub struct PageIter {
-    start: Page,
-    end: Page,
+A common trick to keep track of an arbitrary number of free memory areas is to use these areas itself as backing storage. This utilizes the fact that the regions are still mapped to a virtual address and backed by a physical frame, but the stored information is not needed anymore. By storing the information about the freed region in the region itself, we can keep track of an unbounded number of freed regions without needing additional memory.
+
+The most common implementation approach is to construct a single linked list in the freed memory, with each node being a freed memory region:
+
+![](linked-list-allocation.svg)
+
+Each list node contains two fields: The size of the memory region and a pointer to the next unused memory region. With this approach, we only need a pointer to the first unused region (called `head`), independent of the number of memory regions.
+
+#### The Allocator Type
+
+Let's construct an allocator that uses such a linked list. We start by creating a private `ListNode` struct:
+
+```rust
+// in src/allocator.rs
+
+struct ListNode {
+    size: usize,
+    next: Option<&'static mut ListNode>,
 }
 
-impl Iterator for PageIter {
-    type Item = Page;
-
-    fn next(&mut self) -> Option<Page> {
-        if self.start <= self.end {
-            let page = self.start;
-            self.start.number += 1;
-            Some(page)
-        } else {
-            None
+impl ListNode {
+    const fn new(size: usize) -> Self {
+        ListNode {
+            size,
+            next: None,
         }
+    }
+
+    fn start_addr(&self) -> usize {
+        self as *const Self as usize
+    }
+
+    fn end_addr(&self) -> usize {
+        self.start_addr() + self.size
     }
 }
 ```
 
-Now we map the whole heap to physical pages. This needs some time and might introduce a noticeable delay when we increase the heap size in the future. Another drawback is that we consume a large amount of physical frames even though we might not need the whole heap space. We will fix these problems in a future post by mapping the pages lazily.
+Like in the graphic, a list node has a `size` field and an optional pointer to the next node. The type has a simple constructor function and methods to calculate the start and end addresses of the represented region.
 
-### It works!
-
-Now `Box` and `Vec` should work. For example:
+With the `ListNode` struct as building block, we can now create the `LinkedListAllocator` struct:
 
 ```rust
-// in rust_main in src/lib.rs
+// in src/allocator.rs
 
-use alloc::boxed::Box;
-let mut heap_test = Box::new(42);
-*heap_test -= 15;
-let heap_test2 = Box::new("hello");
-println!("{:?} {:?}", heap_test, heap_test2);
+pub struct LinkedListAllocator {
+    head: ListNode,
+}
 
-let mut vec_test = vec![1,2,3,4,5,6,7];
-vec_test[3] = 42;
-for i in &vec_test {
-    print!("{} ", i);
+impl LinkedListAllocator {
+    pub const fn new() -> Self {
+        Self {
+            head: ListNode::new(0),
+        }
+    }
+
+    /// Initialize the allocator with the given heap bounds.
+    ///
+    /// This function is unsafe because the caller must guarantee that the given
+    /// heap bounds are valid and that the heap is unused. This method must be
+    /// called only once.
+    pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
+        self.add_free_region(heap_start, heap_size);
+    }
 }
 ```
 
-We can also use all other types of the `alloc` crate, including:
+The struct contains a `head` pointer that points to the first heap region. Instead of using a reference type for the field, we create an dummy list node with size 0 to simplify the implementation of `alloc`. Like the dummy allocator, the linked list allocator provides a constructor function that returns an empty allocator. We can't initialize it right away because the `new` function needs to be a [`const` function] so that it can be used in statics. Instead, the type has a non-const `init` function to initialize it at runtime.
 
-- the reference counted pointers [Rc] and [Arc]
-- the owned string type [String] and the [format!] macro
-- [Linked List]
-- the growable ring buffer [VecDeque]
-- [BinaryHeap]
-- [BTreeMap] and [BTreeSet]
+[`const` function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-[Rc]: https://doc.rust-lang.org/nightly/alloc/rc/
-[Arc]: https://doc.rust-lang.org/nightly/alloc/arc/
-[String]: https://doc.rust-lang.org/nightly/collections/string/struct.String.html
-[Linked List]: https://doc.rust-lang.org/nightly/collections/linked_list/struct.LinkedList.html
-[VecDeque]: https://doc.rust-lang.org/nightly/collections/vec_deque/struct.VecDeque.html
-[BinaryHeap]: https://doc.rust-lang.org/nightly/collections/binary_heap/struct.BinaryHeap.html
-[BTreeMap]: https://doc.rust-lang.org/nightly/collections/btree_map/struct.BTreeMap.html
-[BTreeSet]: https://doc.rust-lang.org/nightly/collections/btree_set/struct.BTreeSet.html
+#### The `add_free_region` Method
 
-## A better Allocator
-Right now, we leak every freed memory block. Thus, we run out of memory quickly, for example, by creating a new `String` in each iteration of a loop:
+The `add_free_region` method provides the fundamental _push_ operation on the linked list. We will reuse this method when we implement `alloc` and `dealloc` later, so it needs to work on both empty and non-empty lists. The implementation looks like this:
 
 ```rust
-// in rust_main in src/lib.rs
+// in src/allocator.rs
 
-for i in 0..10000 {
-    format!("Some String");
+impl LinkedListAllocator {
+    /// Adds the given memory region to the front of the list.
+    unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
+        // ensure that freed region is capable of holding ListNode
+        assert!(align_up(addr, mem::align_of::<ListNode>()) == addr);
+        assert!(size >= mem::size_of::<ListNode>());
+
+        // create a new list node and append it at the start of the list
+        let mut node = ListNode::new(size);
+        node.next = self.head.next.take();
+        let node_ptr = addr as *mut ListNode;
+        node_ptr.write(node);
+        self.head.next = Some(&mut *node_ptr)
+    }
 }
 ```
 
-To fix this, we need to create an allocator that keeps track of freed memory blocks and reuses them if possible. This introduces some challenges:
+The method takes a memory region represented by an address and size as argument and adds it to the front of the list. First, we ensure that the given region has the neccessary size and alignment for storing a `ListNode`. Then we create the node and insert it to the list through the following steps:
 
-- We need to keep track of a possibly unlimited number of freed blocks. For example, an application could allocate `n` one-byte sized blocks and free every second block, which creates `n/2` freed blocks. We can't rely on any upper bound of freed block since `n` could be arbitrarily large.
-- We can't use any of the collections from above, since they rely on allocations themselves. (It might be possible as soon as [RFC #1398] is [implemented][#32838], which allows user-defined allocators for specific collection instances.)
-- We need to merge adjacent freed blocks if possible. Otherwise, the freed memory is no longer usable for large allocations. We will discuss this point in more detail below.
-- Our allocator should search the set of freed blocks quickly and keep fragmentation low.
+![](linked-list-allocator-push.svg)
 
-[RFC #1398]: https://github.com/rust-lang/rfcs/blob/master/text/1398-kinds-of-allocators.md
-[#32838]: https://github.com/rust-lang/rust/issues/32838
+Step 0 shows the state of the heap before `add_free_region` is called. In step 1, the method is called with the memory region marked as `freed` in the graphic. After the initial checks, the method creates a new `node` on its stack with the size of the freed region. It then uses the [`Option::take`] method to set the `next` pointer of the node to the current `head` pointer, thereby resetting the `head` pointer to `None`.
 
-### Creating a List of freed Blocks
+[`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-Where do we store the information about an unlimited number of freed blocks? We can't use any fixed size data structure since it could always be too small for some allocation sequences. So we need some kind of dynamically growing set.
+In step 2, the method writes the newly created `node` to the beginning of the freed memory region through the [`write`] method. It then points the `head` pointer to the node in the freed region. The resulting pointer structure looks a bit chaotic because the freed region is always inserted at the beginning of the list, but if we follow the pointers we see that each free region is still reachable from the `head` pointer.
 
-One possible solution could be to use an array-like data structure that starts at some unused virtual address. If the array becomes full, we increase its size and map new physical frames as backing storage. This approach would require a large part of the virtual address space since the array could grow significantly. We would need to create a custom implementation of a growable array and manipulate the page tables when deallocating. It would also consume a possibly large number of physical frames as backing storage.
+[`write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
 
-We will choose another solution with different tradoffs. It's not clearly “better” than the approach above and has significant disadvantages itself. However, it has one big advantage: It does not need any additional physical or virtual memory at all. This makes it less complex since we don't need to manipulate any page tables. The idea is the following:
+#### The `find_region` Method
 
-A freed memory block is not used anymore and no one needs the stored information. It is still mapped to a virtual address and backed by a physical page. So we just store the information about the freed block _in the block itself_.  We keep a pointer to the first block and store a pointer to the next block in each block. Thus, we create a single linked list:
+The second fundamental operation on a linked list is finding an entry and removing it from the list. We will need this operation for implementing the `alloc` method. The `find_region` method provides this operation. It looks like this:
 
-![Linked List Allocator](overview.svg)
+```rust
+// in src/allocator.rs
 
-In the following, we call a freed block a _hole_. Each hole stores its size and a pointer to the next hole. If a hole is larger than needed, we leave the remaining memory unused. By storing a pointer to the first hole, we are able to traverse the complete list.
+impl LinkedListAllocator {
+    /// Looks for a free region with the given size and alignment and removes it
+    /// from the list.
+    ///
+    /// Returns a tuple of the list node and the start address of the allocation.
+    fn find_region(&mut self, size: usize, align: usize)
+        -> Option<(&'static mut ListNode, usize)>
+    {
+        let mut found_region = None;
+        // reference to current list node, updated for each iteration
+        let mut current = &mut self.head;
+        // look for a large enough memory region in linked list
+        loop {
+            let region = match current.next {
+                Some(ref mut next) => next,
+                None => break,
+            };
 
-#### Initialization
-When the heap is created, all of its memory is unused. Thus, it forms a single large hole:
+            let alloc_start = align_up(region.start_addr(), align);
+            let alloc_end = alloc_start + size;
 
-![Heap Initialization](initialization.svg)
+            if alloc_end <= region.end_addr() {
+                // region large enough -> remove node from list
+                let next = region.next.take();
+                found_region = Some((current.next.take().unwrap(), alloc_start));
+                current.next = next;
+                break
+            }
 
-The optional pointer to the next hole is set to `None`.
+            // region too small -> continue with next region
+            current = current.next.as_mut().unwrap();
+        }
 
-#### Allocation
+        found_region
+    }
+}
+```
+
+
+TODO explanation
+
+
+#### Implementing `GlobalAlloc`
+
+With the fundamental operations provided by the `add_free_region` and `find_region` methods, we can now finally implement the `GlobalAlloc` trait:
+
+```rust
+// in src/allocator.rs
+
+unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        // layout adjustments
+        let (size, align) = LinkedListAllocator::size_align(layout);
+        let mut allocator = self.inner.lock();
+
+        if let Some((region, alloc_start)) = allocator.find_region(size, align) {
+            let alloc_end = alloc_start + size;
+            let remainder = region.end_addr() - alloc_end;
+            if remainder > 0 {
+                if remainder >= mem::size_of::<ListNode>() {
+                    allocator.add_free_region(alloc_end, remainder)
+                } else {
+                    // leak it for now
+                }
+            }
+
+            alloc_start as *mut u8
+        } else {
+            null_mut()
+        }
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        // perform layout adjustments
+        let (size, _) = LinkedListAllocator::size_align(layout);
+
+        self.inner.lock().add_free_region(ptr as usize, size)
+    }
+}
+```
+
+TODO locked, explanation
+
+
+
+
+
+
+
+
+
+
+
+
+##### Allocation
 In order to allocate a block of memory, we need to find a hole that satisfies the size and alignment requirements. If the found hole is larger than required, we split it into two smaller holes. For example, when we allocate a 24 byte block right after initialization, we split the single hole into a hole of size 24 and a hole with the remaining size:
 
 ![split hole](split-hole.svg)
