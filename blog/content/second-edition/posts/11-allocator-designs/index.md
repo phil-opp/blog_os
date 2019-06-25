@@ -487,9 +487,58 @@ impl LinkedListAllocator {
 }
 ```
 
+The method uses a `current` variable and a [`while let` loop] to iterate over the list elements. At the beginning, `current` is set to the (dummy) `head` node. On each iteration, it is then updated to to the `next` field of the current node (in the `else` block). If the region is suitable for an allocation with the given size and alignment, the region is removed from the list and returned together with the `alloc_start` address.
 
-TODO explanation
+[`while let` loop]: https://doc.rust-lang.org/reference/expressions/loop-expr.html#predicate-pattern-loops
 
+When the `current.next` pointer becomes `None`, the loop exits. This means that we iterated over the whole list but found no region that is suitable for an allocation. In that case, we return `None`. The check whether a region is suitable is done by a `alloc_from_region` function, whose implementation will be shown in a moment.
+
+Let's take a more detailed look at how a suitable region is removed from the list:
+
+![](linked-list-allocator-remove-region.svg)
+
+Step 0 shows the situation before any pointer adjustments. The `region` and `current` regions and the `region.next` and `current.next` pointers are marked in the graphic. In step 1, both the `region.next` and `current.next` pointers are reset to `None` by using the [`Option::take`] method. The original pointers are stored in local variables called `next` and `ret`.
+
+In step 2, the `current.next` pointer is set to the local `next` pointer, which is the original `region.next` pointer. The effect is that `current` now directly points to the region after `region`, so that `region` is no longer element of the linked list. The function then returns the pointer to `region` stored in the local `ret` variable.
+
+### The `alloc_from_region` Function
+
+The `alloc_from_region` function returns whether a region is suitable for an allocation with given size and alignment. It is defined like this:
+
+```rust
+// in src/allocator.rs
+
+impl LinkedListAllocator {
+    /// Try to use the given region for an allocation with given size and alignment.
+    ///
+    /// Returns the allocation start address on success.
+    fn alloc_from_region(region: &ListNode, size: usize, align: usize)
+        -> Result<usize, ()>
+    {
+        let alloc_start = align_up(region.start_addr(), align);
+        let alloc_end = alloc_start + size;
+
+        if alloc_end > region.end_addr() {
+            // region too small
+            return Err(());
+        }
+
+        let excess_size = region.end_addr() - alloc_end;
+        if excess_size > 0 && excess_size < mem::size_of::<ListNode>() {
+            // rest of region too small to hold a ListNode (required because the
+            // allocation splits the region in a used and a free part)
+            return Err(());
+        }
+
+        // region suitable for allocation
+        Ok(alloc_start)
+    }
+}
+```
+
+First, the function calculates the start and end address of a potential allocation, using the `align_up` function we defined earlier. If the end address is behind the end address of the region, the allocation doesn't fit in the region and we return an error.
+
+The function performs a less obvious check after that. This check is neccessary because most of the time an allocation does not fit a suitable region perfectly, so that a part of the region remains usable after the allocation. This part of the region must store its own `ListNode` after the allocation, so it must be large enough to do so. The check verifies exactly that: either the allocation fits perfectly (`excess_size == 0`) or the excess size is large enough to store a `ListNode`.
 
 ### Implementing `GlobalAlloc`
 
@@ -500,21 +549,16 @@ With the fundamental operations provided by the `add_free_region` and `find_regi
 
 unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        // layout adjustments
+        // perform layout adjustments
         let (size, align) = LinkedListAllocator::size_align(layout);
         let mut allocator = self.inner.lock();
 
         if let Some((region, alloc_start)) = allocator.find_region(size, align) {
             let alloc_end = alloc_start + size;
-            let remainder = region.end_addr() - alloc_end;
-            if remainder > 0 {
-                if remainder >= mem::size_of::<ListNode>() {
-                    allocator.add_free_region(alloc_end, remainder)
-                } else {
-                    // leak it for now
-                }
+            let excess_size = region.end_addr() - alloc_end;
+            if excess_size > 0 {
+                allocator.add_free_region(alloc_end, excess_size);
             }
-
             alloc_start as *mut u8
         } else {
             null_mut()
@@ -530,9 +574,31 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
 }
 ```
 
-TODO locked, explanation
+Let's start with the `dealloc` method because it is simpler: First, it performs some layout adjustments, which we will explain in a moment, and retrieves a `&mut LinkedListAllocator` reference by calling the [`Mutex::lock`] function on the [`Locked` wrapper]. Then it calls the `add_free_region` function to add the deallocated region to the free list.
 
+The `alloc` method is a bit more complex. It starts with the same layout adjustments and also calls the [`Mutex::lock`] function to receive a mutable allocator reference. Then it uses the `find_region` method to find a suitable memory region for the allocation and remove it from the list. If this doesn't succeed and `None` is returned, it returns `null_mut` to signal an error as there is no suitable memory region.
 
+In the success case, the `find_region` method returns a tuple of the suitable region (no longer in the list) and the start address of the allocation. Using `alloc_start`, the allocation size, and the end address of the region, it calculates the end address of the allocation and the excess size again. If the excess size is not null, it calls `add_free_region` to add the excess size of the memory region back to the free list. Finally, it returns the `alloc_start` address casted as a `*mut u8` pointer.
+
+### Layout Adjustments
+
+```rust
+// in src/allocator.rs
+
+impl LinkedListAllocator {
+    /// Adjust the given layout so that the resulting allocated memory
+    /// region is also capable of storing a `ListNode`.
+    ///
+    /// Returns the adjusted size    and alignment as a (size, align) tuple.
+    fn size_align(layout: Layout) -> (usize, usize) {
+        let layout = layout.align_to(mem::align_of::<ListNode>())
+            .and_then(|l| l.pad_to_align())
+            .expect("adjusting alignment failed");
+        let size = layout.size().max(mem::size_of::<ListNode>());
+        (size, layout.align())
+    }
+}
+```
 
 
 
