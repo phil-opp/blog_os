@@ -201,8 +201,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     }
     println!("vec at {:p}", vec.as_slice());
 
-    // try to create one billion boxes
-    for _ in 0..1_000_000_000 {
+    // try to create one million boxes
+    for _ in 0..1_000_000 {
         let _ = Box::new(1);
     }
 
@@ -243,7 +243,7 @@ As expected, we see that the `Box` and `Vec` values live on the heap, as indicat
 
 [reallocations]: https://doc.rust-lang.org/alloc/vec/struct.Vec.html#capacity-and-reallocation
 
-While the basic `Box` and `Vec` examples work as expected, our loop that tries to create one billion boxes causes a panic. The reason is that the bump allocator never reuses freed memory, so that for each created `Box` a few bytes are leaked. This makes the bump allocator unsuitable for many applications in practice, apart from some very specific use cases.
+While the basic `Box` and `Vec` examples work as expected, our loop that tries to create one million boxes causes a panic. The reason is that the bump allocator never reuses freed memory, so that for each created `Box` a few bytes are leaked. This makes the bump allocator unsuitable for many applications in practice, apart from some very specific use cases.
 
 ### When to use a Bump Allocator
 
