@@ -280,9 +280,11 @@ The most common implementation approach is to construct a single linked list in 
 
 Each list node contains two fields: The size of the memory region and a pointer to the next unused memory region. With this approach, we only need a pointer to the first unused region (called `head`), independent of the number of memory regions.
 
+In the following, we will create a simple `LinkedListAllocator` type that uses the above approach for keeping track of freed memory regions. Since the implementation is a bit longer, we will start with a simple placeholder type before we start to implement the `alloc` and `dealloc` operations.
+
 ### The Allocator Type
 
-Let's construct an allocator that uses such a linked list. We start by creating a private `ListNode` struct:
+We start by creating a private `ListNode` struct:
 
 ```rust
 // in src/allocator.rs
@@ -336,16 +338,85 @@ impl LinkedListAllocator {
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         self.add_free_region(heap_start, heap_size);
     }
+
+    /// Adds the given memory region to the front of the list.
+    unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
+        unimplemented!();
+    }
 }
 ```
 
-The struct contains a `head` pointer that points to the first heap region. Instead of using a reference type for the field, we create an dummy list node with size 0 to simplify the implementation of `alloc`. Like the dummy allocator, the linked list allocator provides a constructor function that returns an empty allocator. We can't initialize it right away because the `new` function needs to be a [`const` function] so that it can be used in statics. Instead, the type has a non-const `init` function to initialize it at runtime.
+The struct contains a `head` node that points to the first heap region. We are only interested in the value of the `next` pointer, so we set the `size` to 0 in the `new` function. Making `head` a `ListNode` instead of just a `&'static mut ListNode` has the advantage that the implementation of the `alloc` method will be simpler.
+
+In contrast to the bump allocator, the `new` function doesn't initialize the allocator with the heap bounds. The reason is that the initialization requires to write a node to the heap memory, which can only happen at runtime. The `new` function, however, needs to be a [`const` function] that can be evaluated at compile time, because it will be used for initializing the `ALLOCATOR` static. To work around this, we provide a separate `init` method that can be called at runtime.
 
 [`const` function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
+The `init` method uses a `add_free_region` method, whose implementation will be shown in a moment. For now, we use the [`unimplemented!`] macro to provide a placeholder implementation that always panics.
+
+[`unimplemented!`]: https://doc.rust-lang.org/core/macro.unimplemented.html
+
+Our first goal is to set a prototype of the `LinkedListAllocator` as the global allocator. In order to be able to do that, we need to provide a placeholder implementation of the `GlobalAlloc` trait:
+
+```rust
+// in src/allocator.rs
+
+unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        unimplemented!();
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        unimplemented!();
+    }
+}
+```
+
+Like with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator`, but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references. Instead of providing an implementation, we use the [`unimplemented!`] macro again to get a minimal prototype.
+
+[`Locked` wrapper]: ./second-edition/posts/10-heap-allocation/index.md#a-locked-wrapper
+
+With this placeholder implementation, we can now change the global allocator to a `LinkedListAllocator`:
+
+```rust
+// in src/lib.rs
+
+use allocator::{Locked, LinkedListAllocator};
+
+#[global_allocator]
+static ALLOCATOR: Locked<LinkedListAllocator> =
+    Locked::new(LinkedListAllocator::new());
+```
+
+Since the `new` method creates an empty allocator, we also need to update our `allocator::init` function to call `LinkedListAllocator::init` with the heap bounds:
+
+```rust
+// in src/allocator.rs
+
+pub fn init_heap(
+    mapper: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+) -> Result<(), MapToError> {
+    // […] map all heap pages
+
+    // new
+    unsafe {
+        super::ALLOCATOR.inner.lock().init(HEAP_START, HEAP_SIZE);
+    }
+
+    Ok(())
+}
+```
+
+It's important to call the `init` function after the mapping of the heap pages, because the function will already write to the heap (once we'll properly implement it). The `unsafe` block is safe here because we just mapped the heap region to unused frames, so that the passed heap region is valid.
+
+When we run our code now, it will of course panic since it runs into the `unimplemented!` in `add_free_region`. Let's fix that by providing a proper implementation for that method.
+
 ### The `add_free_region` Method
 
-The `add_free_region` method provides the fundamental _push_ operation on the linked list. We will reuse this method when we implement `alloc` and `dealloc` later, so it needs to work on both empty and non-empty lists. The implementation looks like this:
+The `add_free_region` method provides the fundamental _push_ operation on the linked list. We currently only call this method from `init`, but it will also be the central method in our `dealloc` implementation. Remember, the `dealloc` method is called when an allocated memory region is freed again. To keep track of this freed memory region, we want to push it to the linked list.
+
+The implementation of the `add_free_region` method looks like this:
 
 ```rust
 // in src/allocator.rs
@@ -353,7 +424,7 @@ The `add_free_region` method provides the fundamental _push_ operation on the li
 impl LinkedListAllocator {
     /// Adds the given memory region to the front of the list.
     unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
-        // ensure that freed region is capable of holding ListNode
+        // ensure that the freed region is capable of holding ListNode
         assert!(align_up(addr, mem::align_of::<ListNode>()) == addr);
         assert!(size >= mem::size_of::<ListNode>());
 
@@ -367,7 +438,7 @@ impl LinkedListAllocator {
 }
 ```
 
-The method takes a memory region represented by an address and size as argument and adds it to the front of the list. First, we ensure that the given region has the neccessary size and alignment for storing a `ListNode`. Then we create the node and insert it to the list through the following steps:
+The method takes a memory region represented by an address and size as argument and adds it to the front of the list. First, it ensures that the given region has the neccessary size and alignment for storing a `ListNode`. Then it creates the node and inserts it to the list through the following steps:
 
 ![](linked-list-allocator-push.svg)
 
@@ -375,51 +446,43 @@ Step 0 shows the state of the heap before `add_free_region` is called. In step 1
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-In step 2, the method writes the newly created `node` to the beginning of the freed memory region through the [`write`] method. It then points the `head` pointer to the node in the freed region. The resulting pointer structure looks a bit chaotic because the freed region is always inserted at the beginning of the list, but if we follow the pointers we see that each free region is still reachable from the `head` pointer.
+In step 2, the method writes the newly created `node` to the beginning of the freed memory region through the [`write`] method. It then points the `head` pointer to the new node. The resulting pointer structure looks a bit chaotic because the freed region is always inserted at the beginning of the list, but if we follow the pointers we see that each free region is still reachable from the `head` pointer.
 
 [`write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
 
 ### The `find_region` Method
 
-The second fundamental operation on a linked list is finding an entry and removing it from the list. We will need this operation for implementing the `alloc` method. The `find_region` method provides this operation. It looks like this:
+The second fundamental operation on a linked list is finding an entry and removing it from the list. This is the central operation needed for implementing the `alloc` method. We implement the operation as a `find_region` method in the following way:
 
 ```rust
 // in src/allocator.rs
 
 impl LinkedListAllocator {
-    /// Looks for a free region with the given size and alignment and removes it
-    /// from the list.
+    /// Looks for a free region with the given size and alignment and removes
+    /// it from the list.
     ///
     /// Returns a tuple of the list node and the start address of the allocation.
     fn find_region(&mut self, size: usize, align: usize)
         -> Option<(&'static mut ListNode, usize)>
     {
-        let mut found_region = None;
         // reference to current list node, updated for each iteration
         let mut current = &mut self.head;
         // look for a large enough memory region in linked list
-        loop {
-            let region = match current.next {
-                Some(ref mut next) => next,
-                None => break,
-            };
-
-            let alloc_start = align_up(region.start_addr(), align);
-            let alloc_end = alloc_start + size;
-
-            if alloc_end <= region.end_addr() {
-                // region large enough -> remove node from list
+        while let Some(ref mut region) = current.next {
+            if let Ok(alloc_start) = Self::alloc_from_region(&region, size, align) {
+                // region suitable for allocation -> remove node from list
                 let next = region.next.take();
-                found_region = Some((current.next.take().unwrap(), alloc_start));
+                let ret = Some((current.next.take().unwrap(), alloc_start));
                 current.next = next;
-                break
+                return ret;
+            } else {
+                // region not suitable -> continue with next region
+                current = current.next.as_mut().unwrap();
             }
-
-            // region too small -> continue with next region
-            current = current.next.as_mut().unwrap();
         }
 
-        found_region
+        // no suitable region found
+        None
     }
 }
 ```
