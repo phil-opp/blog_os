@@ -636,6 +636,133 @@ Of course there are many more allocation and collection types in the `alloc` cra
 
 These types will become very useful when we want to implement thread lists, scheduling queues, or support for async/await.
 
+## Adding a Test
+
+To ensure that we don't accidentally break our new allocation code, we should add an integration test for it. We start by creating a new `tests/heap_allocation.rs` file with the following content:
+
+```rust
+// in tests/heap_allocation.rs
+
+#![no_std]
+#![no_main]
+#![feature(custom_test_frameworks)]
+#![test_runner(blog_os::test_runner)]
+#![reexport_test_harness_main = "test_main"]
+
+extern crate alloc;
+
+use bootloader::{entry_point, BootInfo};
+use core::panic::PanicInfo;
+
+entry_point!(main);
+
+fn main(boot_info: &'static BootInfo) -> ! {
+    unimplemented!();
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    blog_os::test_panic_handler(info)
+}
+```
+
+We reuse the `test_runner` and `test_panic_handler` functions from our `lib.rs`. Since we want to test allocations, we enable the `alloc` crate through the `extern crate alloc` statement. For more information about the test boilerplate check out the [_Testing_] post.
+
+[_Testing_]: ./second-edition/posts/04-testing/index.md
+
+The implementation of the `main` function looks like this:
+
+```rust
+// in tests/heap_allocation.rs
+
+fn main(boot_info: &'static BootInfo) -> ! {
+    use blog_os::allocator;
+    use blog_os::memory::{self, BootInfoFrameAllocator};
+
+    blog_os::init();
+    let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
+    let mut frame_allocator = unsafe {
+        BootInfoFrameAllocator::init(&boot_info.memory_map)
+    };
+    allocator::init_heap(&mut mapper, &mut frame_allocator)
+        .expect("heap initialization failed");
+
+    test_main();
+    loop {}
+}
+```
+
+It is very similar to the `kernel_main` function in our `main.rs`, with the differences that we don't invoke `println`, don't include any example allocations, and call `test_main` unconditionally.
+
+Now we're ready to add a few test cases. First, we add a test that performs a simple allocation using [`Box`] and checks the allocated value, to ensure that basic allocations work:
+
+```rust
+// in tests/heap_allocation.rs
+
+#[test_case]
+fn simple_allocation() {
+    serial_print!("simple_allocation... ");
+    let heap_value = Box::new(41);
+    assert_eq!(*heap_value, 41);
+    serial_println!("[ok]");
+}
+```
+
+Most importantly, this test verifies that no allocation error occurs.
+
+Next, we iteratively build a large vector, to test both large allocations and multiple allocations (due to reallocations):
+
+```rust
+// in tests/heap_allocation.rs
+
+#[test_case]
+fn large_vec() {
+    serial_print!("large_vec... ");
+    let n = 1000;
+    let mut vec = Vec::new();
+    for i in 0..n {
+        vec.push(i);
+    }
+    assert_eq!(vec.iter().sum::<u64>(), (n - 1) * n / 2);
+    serial_println!("[ok]");
+}
+```
+
+We verify the sum by comparing it with the formula for the [n-th partial sum]. This gives us some confidence that the allocated values are all correct.
+
+[n-th partial sum]: https://en.wikipedia.org/wiki/1_%2B_2_%2B_3_%2B_4_%2B_%E2%8B%AF#Partial_sums
+
+As a third test, we create ten thousand allocations after each other:
+
+```rust
+// in tests/heap_allocation.rs
+
+#[test_case]
+fn many_boxes() {
+    serial_print!("many_boxes... ");
+    for i in 0..10_000 {
+        let x = Box::new(i);
+        assert_eq!(*x, i);
+    }
+    serial_println!("[ok]");
+}
+```
+
+This test ensures that the allocator reuses freed memory for subsequent allocations since it would run out of memory otherwise. This might seem like an obvious requirement for an allocator, but there are allocator designs that don't do this. An example is the bump allocator design that will be presented in the next post.
+
+Let's run our new integration test:
+
+```
+> carge xtest --test heap_allocation
+[…]
+Running 3 tests
+simple_allocation... [ok]
+large_vec... [ok]
+many_boxes... [ok]
+```
+
+All three tests succeeded! You can also invoke just `cargo xtest` to run all unit and integration tests.
+
 ## Summary
 
 This post gave an introduction to dynamic memory and explained why and where it is needed. We saw how Rust's borrow checker prevents common vulnerabilities and learned how Rust's allocation API works.
