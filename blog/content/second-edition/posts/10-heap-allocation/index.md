@@ -373,7 +373,7 @@ When we run the above code, we see that our `alloc_error_handler` function is ca
 
 The error handler is called because the `Box::new` function implicitly calls the `alloc` function of the global allocator. Our dummy allocator always returns a null pointer, so every allocation fails. To fix this we need to create an allocator that actually returns usable memory.
 
-## Heap Memory
+## Creating a Kernel Heap
 
 Before we can create a proper allocator, we first need to create a heap memory region from which the allocator can allocate memory. To do this, we need to define a virtual memory range for the heap region and then map this region to physical frames. See the [_"Introduction To Paging"_] post for an overview of virtual memory and page tables.
 
@@ -497,9 +497,9 @@ We show the full function for context here. The only new lines are the `blog_os:
 
 [`Result::expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
 
-We now have a mapped heap memory region that is ready to be used. The `Box::new` call still uses our old `Dummy` allocator, so you will still see the "out of memory" error when you run it. Let's fix this by creating some proper allocators.
+We now have a mapped heap memory region that is ready to be used. The `Box::new` call still uses our old `Dummy` allocator, so you will still see the "out of memory" error when you run it. Let's fix this by using a proper allocator.
 
-## The LinkedListAllocator Crate
+## Using an Allocator Crate
 
 TODO
 
