@@ -1,3 +1,10 @@
+h1 code, h2 code, h3 code, h4 code, h5 code, h6 code {
+  padding: 0;
+  color: #a0565c;
+  font-size: 95%;
+  background-color: inherit;
+}
+
 .masthead-title {
   font-size: 1.25rem;
   display: inline;
