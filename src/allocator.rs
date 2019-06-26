@@ -30,6 +30,10 @@ pub fn init_heap(
         unsafe { mapper.map_to(page, frame, flags, frame_allocator)?.flush() };
     }
 
+    unsafe {
+        super::ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
+    }
+
     Ok(())
 }
 

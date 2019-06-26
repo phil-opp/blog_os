@@ -9,6 +9,7 @@
 extern crate alloc;
 
 use core::panic::PanicInfo;
+use linked_list_allocator::LockedHeap;
 
 pub mod allocator;
 pub mod gdt;
@@ -18,7 +19,7 @@ pub mod serial;
 pub mod vga_buffer;
 
 #[global_allocator]
-static ALLOCATOR: allocator::Dummy = allocator::Dummy;
+static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 pub fn init() {
     gdt::init();

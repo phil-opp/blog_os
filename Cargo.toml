@@ -20,6 +20,7 @@ x86_64 = "0.7.0"
 uart_16550 = "0.2.0"
 pic8259_simple = "0.1.1"
 pc-keyboard = "0.3.1"
+linked_list_allocator = "0.6.4"
 
 [dependencies.lazy_static]
 version = "1.0"
