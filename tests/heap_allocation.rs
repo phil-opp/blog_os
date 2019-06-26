@@ -20,7 +20,6 @@ fn main(boot_info: &'static BootInfo) -> ! {
     blog_os::init();
     let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
-
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 
     test_main();

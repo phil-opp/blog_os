@@ -36,7 +36,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     }
     println!("vec at {:p}", vec.as_slice());
 
-    // create a reference counted vector -> will be deallocated when count reaches 0
+    // create a reference counted vector -> will be freed when count reaches 0
     let reference_counted = Rc::new(vec![1, 2, 3]);
     let cloned_reference = reference_counted.clone();
     println!(
