@@ -5,7 +5,7 @@ path = "heap-allocation"
 date = 0000-01-01
 +++
 
-TODO
+This post adds support for heap allocation to our kernel. First, it provides an introduction to dynamic memory and explains how Rust's borrow checker prevents common allocation errors. Then it shows how to implement the basic allocation interface and create a heap memory region. Finally, it makes the various allocation and collection types of the built-in `alloc` crate available to our kernel by using an allocator crate.
 
 <!-- more -->
 
