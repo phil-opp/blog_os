@@ -112,7 +112,7 @@ These types of vulnerabilities are commonly known, so one might expect that peop
 
 [linux vulnerability]: https://securityboulevard.com/2019/02/linux-use-after-free-vulnerability-found-in-linux-2-6-through-4-20-11/
 
-To avoid these issues, many languages such as Java or Python manage dynamic memory automatically using a technique called [_garbage collection_]. The idea is that the programmer never invokes `deallocate` manually. Instead, the programm is regularly paused and scanned for unused heap variables, which are then automatically deallocated. Thus, the above vulnerabilities can never occur. The drawbacks are the performance overhead of the regular scan and the probaby long pause times.
+To avoid these issues, many languages such as Java or Python manage dynamic memory automatically using a technique called [_garbage collection_]. The idea is that the programmer never invokes `deallocate` manually. Instead, the program is regularly paused and scanned for unused heap variables, which are then automatically deallocated. Thus, the above vulnerabilities can never occur. The drawbacks are the performance overhead of the regular scan and the probably long pause times.
 
 [_garbage collection_]: https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)
 
@@ -753,7 +753,7 @@ This test ensures that the allocator reuses freed memory for subsequent allocati
 Let's run our new integration test:
 
 ```
-> carge xtest --test heap_allocation
+> cargo xtest --test heap_allocation
 […]
 Running 3 tests
 simple_allocation... [ok]
@@ -778,5 +778,4 @@ While we already added heap allocation support in this post, we left most of the
 TODO:
 - update date
 - resolve todos
-- check spelling
 - create post-10 tag
