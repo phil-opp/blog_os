@@ -2,7 +2,7 @@
 title = "Heap Allocation"
 weight = 10
 path = "heap-allocation"
-date = 0000-01-01
+date = 2019-06-26
 +++
 
 This post adds support for heap allocation to our kernel. First, it gives an introduction to dynamic memory and shows how the borrow checker prevents common allocation errors. It then implements the basic allocation interface of Rust, creates a heap memory region, and sets up an allocator crate. At the end of this post all the allocation and collection types of the built-in `alloc` crate will be available to our kernel.
@@ -779,7 +779,3 @@ Finally, we added a dependency on the `linked_list_allocator` crate to add a pro
 ## What's next?
 
 While we already added heap allocation support in this post, we left most of the work to the `linked_list_allocator` crate. The next post will show in detail how an allocator can be implemented from scratch. It will present multiple possible allocator designs, shows how to implement simple versions of them, and explain their advantages and drawbacks.
-
-TODO:
-- update date
-- create post-10 tag
