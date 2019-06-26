@@ -501,9 +501,155 @@ We now have a mapped heap memory region that is ready to be used. The `Box::new`
 
 ## Using an Allocator Crate
 
-TODO
+Since implementing an allocator is somewhat complex, we start by using an external allocator crate. We will learn how to implement our own allocator in the next post.
+
+A simple allocator crate for `no_std` applications is the [`linked_list_allocator`] crate. It's name comes from the fact that it uses a linked list data structure to keep track of deallocated memory regions. See the next post for a more detailed explanation of this approach.
+
+To use the, we first need to add a dependency on it in our `Cargo.toml`:
+
+[`linked_list_allocator`]: https://github.com/phil-opp/linked-list-allocator/
+
+```toml
+# in Cargo.toml
+
+[dependencies]
+linked_list_allocator = "0.6.4"
+```
+
+Then we can replace our dummy allocator with the allocator provided by the crate:
+
+```rust
+// in src/lib.rs
+
+use linked_list_allocator::LockedHeap;
+
+#[global_allocator]
+static ALLOCATOR: LockedHeap = LockedHeap::empty();
+```
+
+The struct is named `LockedHeap` because it uses a [`spin::Mutex`] for synchronization. This is required because multiple threads could access the `ALLOCATOR` static at the same time. As always when using a `Mutex`, we need to be careful to not accidentally cause a deadlock. This means that we shouldn't perform any allocations in interrupt handlers, since they can run at an arbitrary time and might interrupt an in-progress allocation.
+
+[`spin::Mutex`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html
+
+Setting the `LockedHeap` as global allocator is not enough. The reason is that we use the [`empty`] constructor function, which creates an allocator without any backing memory. Like our dummy allocator, it always returns an error on `alloc`. To fix this, we need to initialize the allocator after creating the heap:
+
+[`empty`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.LockedHeap.html#method.empty
+
+```rust
+// in src/allocator.rs
+
+pub fn init_heap(
+    mapper: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+) -> Result<(), MapToError> {
+    // […] map all heap pages to physical frames
+
+    // new
+    unsafe {
+        super::ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
+    }
+
+    Ok(())
+}
+```
+
+We use the [`LockedHeap::lock`] method to get an exclusive reference to the wrapped [`Heap`] instance, on which we then call the [`init`] method with the heap bounds arguments. It is important that we initialize the heap _after_ mapping the heap pages, since the [`init`] function already tries to write to the heap memory.
+
+[`LockedHeap::lock`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.LockedHeap.html#method.lock
+[`Heap`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html
+[`init`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html#method.init
+
+After initializing the heap, we can now use all allocation and collection types of the built-in [`alloc`] crate without error:
+
+```rust
+// in src/main.rs
+
+use alloc::{boxed::Box, vec::{vec, Vec}, rc::Rc};
+
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    // […] initialize interrupts, mapper, frame_allocator, heap
+
+    // allocate a number on the heap
+    let heap_value = Box::new(41);
+    println!("heap_value at {:p}", heap_value);
+
+    // create a dynamically sized vector
+    let mut vec = Vec::new();
+    for i in 0..500 {
+        vec.push(i);
+    }
+    println!("vec at {:p}", vec.as_slice());
+
+    // create a reference counted vector -> will be freed when count reaches 0
+    let reference_counted = Rc::new(vec![1, 2, 3]);
+    let cloned_reference = reference_counted.clone();
+    println!("current reference count is {}", Rc::strong_count(&cloned_reference));
+    core::mem::drop(reference_counted);
+    println!("reference count is {} now", Rc::strong_count(&cloned_reference));
+
+    // […] call `test_main` in test context
+    println!("It did not crash!");
+    blog_os::hlt_loop();
+}
+```
+
+This code example shows some uses of the [`Box`], [`Vec`], and [`Rc`] types. For the `Box` and `Vec` types we print the underlying heap pointers using the [`{:p}` formatting specifier]. For showcasing `Rc`, we create a reference counted heap value and use the [`Rc::strong_count`] function to print the current reference count, before and after dropping an instance (using [`core::mem::drop`]).
+
+[`Vec`]: https://doc.rust-lang.org/alloc/vec/
+[`Rc`]: https://doc.rust-lang.org/alloc/rc/
+[`{:p}` formatting specifier]: https://doc.rust-lang.org/core/fmt/trait.Pointer.html
+[`Rc::strong_count`]: https://doc.rust-lang.org/alloc/rc/struct.Rc.html#method.strong_count
+[`core::mem::drop`]: https://doc.rust-lang.org/core/mem/fn.drop.html
+
+When we run it, we see the following:
+
+![QEMU printing `
+heap_value at 0x444444440000
+vec at 0x4444444408000
+current reference count is 2
+reference count is 1 now
+](qemu-alloc-showcase.png)
+
+As expected, we see that the `Box` and `Vec` values live on the heap, as indicated by the pointer starting with `0x_4444_4444`. The reference counted value also behaves as expected, with the reference count being two after the `clone` call, and 1 again after one of the instances was dropped.
+
+The reason that the vector starts at offset `0x800` is not that the boxed value is `0x800` bytes large, but the [reallocations] that occur when the vector needs to increase its capacity. For example, when the vector's capacity is 32 and we try to add the next element, the vector allocates a new backing array with capacity 64 behind the scenes and copies all elements over. Then it frees the old allocation, which in our case is equivalent to leaking it since our bump allocator doesn't reuse freed memory.
+
+[reallocations]: https://doc.rust-lang.org/alloc/vec/struct.Vec.html#capacity-and-reallocation
+
+Of course there are many more allocation and collection types in the `alloc` crate that we can now all use in our kernel, including:
+
+- the thread-safe reference counted pointer [`Arc`]
+- the owned string type [`String`] and the [`format!`] macro
+- [`LinkedList`]
+- the growable ring buffer [`VecDeque`]
+- the [`BinaryHeap`] priority queue
+- [`BTreeMap`] and [`BTreeSet`]
+
+[`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
+[`String`]: https://doc.rust-lang.org/collections/string/struct.String.html
+[`format!`]: https://doc.rust-lang.org/alloc/macro.format.html
+[`LinkedList`]: https://doc.rust-lang.org/collections/linked_list/struct.LinkedList.html
+[`VecDeque`]: https://doc.rust-lang.org/collections/vec_deque/struct.VecDeque.html
+[`BinaryHeap`]: https://doc.rust-lang.org/collections/binary_heap/struct.BinaryHeap.html
+[`BTreeMap`]: https://doc.rust-lang.org/collections/btree_map/struct.BTreeMap.html
+[`BTreeSet`]: https://doc.rust-lang.org/collections/btree_set/struct.BTreeSet.html
+
+These types will become very useful when we want to implement thread lists, scheduling queues, or support for async/await.
 
 ## Summary
 
+This post gave an introduction to dynamic memory and explained why and where it is needed. We saw how Rust's borrow checker prevents common vulnerabilities and learned how Rust's allocation API works.
+
+After creating a minimal implementation of Rust's allocator interface using a dummy allocator, we created a proper heap memory region for our kernel. For that we defined a virtual address range for the heap and then mapped all pages of that range to physical frames using the `Mapper` and `FrameAllocator` from the previous post.
+
+Finally, we added a dependency on the `linked_list_allocator` crate to add a proper allocator to our kernel. With this allocator, we were able to use `Box`, `Vec`, and other allocation and collection types from the `alloc` crate.
+
 ## What's next?
-allocator designs (optional)
+
+While we already added heap allocation support in this post, we left most of the work to the `linked_list_allocator` crate. The next post will show in detail how an allocator can be implemented from scratch. It will present multiple possible allocator designs, shows how to implement simple versions of them, and explain their advantages and drawbacks.
+
+TODO:
+- update date
+- resolve todos
+- check spelling
+- create post-10 tag
