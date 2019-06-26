@@ -5,7 +5,7 @@ path = "heap-allocation"
 date = 0000-01-01
 +++
 
-This post adds support for heap allocation to our kernel. First, it provides an introduction to dynamic memory and explains how Rust's borrow checker prevents common allocation errors. Then it shows how to implement the basic allocation interface and create a heap memory region. Finally, it makes the various allocation and collection types of the built-in `alloc` crate available to our kernel by using an allocator crate.
+This post adds support for heap allocation to our kernel. First, it gives an introduction to dynamic memory and shows how the borrow checker prevents common allocation errors. It then implements the basic allocation interface of Rust, creates a heap memory region, and sets up an allocator crate. At the end of this post all the allocation and collection types of the built-in `alloc` crate will be available to our kernel.
 
 <!-- more -->
 
@@ -36,7 +36,7 @@ After the `inner` function returns, its part of the call stack is popped again a
 
 ![The call stack containing only the local variables of outer](call-stack-return.svg)
 
-We see that the local variables of `inner` only live until the function returns. The Rust compiler enforces these lifetimes and throws an error when we for example try to return a reference to a local variable:
+We see that the local variables of `inner` only live until the function returns. The Rust compiler enforces these lifetimes and throws an error when we use a value too long, for example when we try to return a reference to a local variable:
 
 ```rust
 fn inner(i: usize) -> &'static u32 {
@@ -59,12 +59,12 @@ Static variables are stored at a fixed memory location separate from the stack. 
 
 When the `inner` function returns in the above example, it's part of the call stack is destroyed. The static variables live in a separate memory range that is never destroyed, so the `&Z[1]` reference is still valid after the return.
 
-Apart from the `'static` lifetime, static variables also have the useful property that their location is known at compile time, so that no reference is needed for accessing it. We utilized that property for our `println` macro: By using a [static `Writer`] internally there is no `&mut Writer` reference needed to invoke the macro, which is very useful in [exception handlers] where we don't have access to any non-local references.
+Apart from the `'static` lifetime, static variables also have the useful property that their location is known at compile time, so that no reference is needed for accessing it. We utilized that property for our `println` macro: By using a [static `Writer`] internally there is no `&mut Writer` reference needed to invoke the macro, which is very useful in [exception handlers] where we don't have access to any additional variables.
 
 [static `Writer`]: ./second-edition/posts/03-vga-text-buffer/index.md#a-global-interface
 [exception handlers]: ./second-edition/posts/05-cpu-exceptions/index.md#implementation
 
-However, this property of static variables brings a crucial drawback: They are read-only by default. Rust enforces this because a [data race] would occur if e.g. two threads modify a static variable at the same time. The only way to modify a static variable is to encapsulate it in a [`Mutex`] type, which ensures that only a single `&mut` reference exists at any point in time. We used a `Mutex` for our [static VGA buffer `Writer`][vga mutex].
+However, this property of static variables brings a crucial drawback: They are read-only by default. Rust enforces this because a [data race] would occur if e.g. two threads modify a static variable at the same time. The only way to modify a static variable is to encapsulate it in a [`Mutex`] type, which ensures that only a single `&mut` reference exists at any point in time. We already used a `Mutex` for our [static VGA buffer `Writer`][vga mutex].
 
 [data race]: https://doc.rust-lang.org/nomicon/races.html
 [`Mutex`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html
@@ -74,10 +74,8 @@ However, this property of static variables brings a crucial drawback: They are r
 
 Local and static variables are already very powerful together and enable most use cases. However, we saw that they both have their limitations:
 
-- Local variables only live until the end of the surrounding function or block (or shorter with [non lexical lifetimes]). This is because they live on the call stack and are destroyed after the surrounding function returns.
+- Local variables only live until the end of the surrounding function or block. This is because they live on the call stack and are destroyed after the surrounding function returns.
 - Static variables always live for the complete runtime of the program, so there is no way to reclaim and reuse their memory when they're no longer needed. Also, they have unclear ownership semantics and are accessible from all functions, so they need to be protected by a [`Mutex`] when we want to modify them.
-
-[non lexical lifetimes]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/ownership-and-lifetimes/non-lexical-lifetimes.html
 
 Another limitation of local and static variables is that they have a fixed size. So they can't store a collection that dynamically grows when more elements are added. (There are proposals for [unsized rvalues] in Rust that would allow dynamically sized local variables, but they only work in some specific cases.)
 
@@ -89,7 +87,7 @@ Let's go through an example:
 
 ![The inner function calls `allocate(size_of([u32; 3]))`, writes `z.write([1,2,3]);`, and returns `(z as *mut u32).offset(i)`. The outer function does `deallocate(y, size_of(u32))` on the returned value `y`.](call-stack-heap.svg)
 
-Here the `inner` function uses heap memory instead of static variables for storing `z`. It first allocates a memory block of the required size, which returns a `*mut u8` [raw pointer]. It then uses the [`ptr::write`] method to write the array `[1,2,3]` to it. In the last step, it uses the [`offset`] function to calculate a pointer to the `i`th element and returns it. (Note that we omitted some required casts and unsafe blocks in this example function for brevity.)
+Here the `inner` function uses heap memory instead of static variables for storing `z`. It first allocates a memory block of the required size, which returns a `*mut u8` [raw pointer]. It then uses the [`ptr::write`] method to write the array `[1,2,3]` to it. In the last step, it uses the [`offset`] function to calculate a pointer to the `i`th element and then returns it. (Note that we omitted some required casts and unsafe blocks in this example function for brevity.)
 
 [raw pointer]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`ptr::write`]: https://doc.rust-lang.org/core/ptr/fn.write.html
@@ -99,16 +97,16 @@ The allocated memory lives until it is explicitly freed through a call to `deall
 
 ![The call stack contains the local variables of outer, the heap contains z[0] and z[2], but no longer z[1].](call-stack-heap-freed.svg)
 
-We see that the `z[1]` slot is free again and can be reused for the next `allocate` call. However, we also see that `z[0]` and `z[2]` are never freed because we never deallocate them. Such a bug is called a _memory leak_ and often the cause of excessive memory consumption of programs (just imagine what happens when we call `inner` repeatedly in a loop). This might seem bad, but there much more dangerous types of bugs that can happen with dynamic allocation.
+We see that the `z[1]` slot is free again and can be reused for the next `allocate` call. However, we also see that `z[0]` and `z[2]` are never freed because we never deallocate them. Such a bug is called a _memory leak_ and often the cause of excessive memory consumption of programs (just imagine what happens when we call `inner` repeatedly in a loop). This might seem bad, but there are much more dangerous types of bugs that can happen with dynamic allocation.
 
 ### Common Errors
 
 Apart from memory leaks, which are unfortunate but don't make the program vulnerable to attackers, there are two common types of bugs with more severe consequences:
 
-- When we accidentally continue to use a variable after calling `deallocate` on it, we have a so-called **use-after-free** vulnerability. Such a bug can often exploited by attackers to execute arbitrary code.
+- When we accidentally continue to use a variable after calling `deallocate` on it, we have a so-called **use-after-free** vulnerability. Such a bug causes undefined behavior and can often exploited by attackers to execute arbitrary code.
 - When we accidentally free a variable twice, we have a **double-free** vulnerability. This is problematic because it might free a different a different allocation that was allocated in the same spot after the first `deallocate` call. Thus, it can lead to an use-after-free vulnerability again.
 
-These types of vulnerabilities are commonly known, so one might expect that people learned how to avoid them by now. But no, there are still new such vulnerabilities found today, for example this recent [use-after-free vulnerability in Linux][linux vulnerability] that allowed arbitrary code execution. This shows that even the best programmers are not always able to correctly handle dynamic memory in complex projects.
+These types of vulnerabilities are commonly known, so one might expect that people learned how to avoid them by now. But no, such vulnerabilities are still regularly found, for example this recent [use-after-free vulnerability in Linux][linux vulnerability] that allowed arbitrary code execution. This shows that even the best programmers are not always able to correctly handle dynamic memory in complex projects.
 
 [linux vulnerability]: https://securityboulevard.com/2019/02/linux-use-after-free-vulnerability-found-in-linux-2-6-through-4-20-11/
 
@@ -116,13 +114,13 @@ To avoid these issues, many languages such as Java or Python manage dynamic memo
 
 [_garbage collection_]: https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)
 
-Rust takes a different approach to the problem: It uses a concept called [_ownership_] that is able to check the correctness of dynamic memory operations at compile time. Thus no garbage collection is needed and the programmer has fine-grained control over the use of dynamic memory just like in C or C++, but the compiler guarantees that none of the mentioned vulnerabilities can occur.
+Rust takes a different approach to the problem: It uses a concept called [_ownership_] that is able to check the correctness of dynamic memory operations at compile time. Thus no garbage collection is needed to avoid the mentioned vulnerabilities, which means that there is no performance overhead. Another advantage of this approach is that the programmer still has fine-grained control over the use of dynamic memory, just like with C or C++.
 
 [_ownership_]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
 
 ### Allocations in Rust
 
-First, instead of letting the programmer manually call `allocate` and `deallocate`, the Rust standard library provides abstraction types that call these functions implicitly. The most important type is [**`Box`**], which is an abstraction for a heap-allocated value. It provides a [`Box::new`] constructor function that takes a value, calls `allocate` with the size of the value, and then moves the value to the newly allocated slot on the heap. To free the heap memory again, the `Box` type implements the [`Drop` trait] to call `deallocate` when it goes out of scope:
+Instead of letting the programmer manually call `allocate` and `deallocate`, the Rust standard library provides abstraction types that call these functions implicitly. The most important type is [**`Box`**], which is an abstraction for a heap-allocated value. It provides a [`Box::new`] constructor function that takes a value, calls `allocate` with the size of the value, and then moves the value to the newly allocated slot on the heap. To free the heap memory again, the `Box` type implements the [`Drop` trait] to call `deallocate` when it goes out of scope:
 
 [**`Box`**]: https://doc.rust-lang.org/std/boxed/index.html
 [`Box::new`]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html#method.new
@@ -179,7 +177,7 @@ Rust's ownership system goes even further and does not only prevent use-after-fr
 
 We now know the basics of dynamic memory allocation in Rust, but when should we use it? We've come really far with our kernel without dynamic memory allocation, so why do we need it now?
 
-First, dynamic memory allocation always comes with a bit of performance overhead, since we need to find a free slot on the heap for every allocation. For this reason local variables are generally preferable. However, there are cases where dynamic memory allocation is needed or where using it is preferable.
+First, dynamic memory allocation always comes with a bit of performance overhead, since we need to find a free slot on the heap for every allocation. For this reason local variables are generally preferable, especially in performance sensitive kernel code. However, there are cases where dynamic memory allocation is the best choice.
 
 As a basic rule, dynamic memory is required for variables that have a dynamic lifetime or a variable size. The most important type with a dynamic lifetime is [**`Rc`**], which counts the references to its wrapped value and deallocates it after all references went out of scope. Examples for types with a variable size are [**`Vec`**], [**`String`**], and other [collection types] that dynamically grow when more elements are added. These types work by allocating a larger amount of memory when they become full, copying all elements over, and then deallocating the old allocation.
 
@@ -188,7 +186,7 @@ As a basic rule, dynamic memory is required for variables that have a dynamic li
 [**`String`**]: https://doc.rust-lang.org/alloc/string/index.html
 [collection types]: https://doc.rust-lang.org/alloc/collections/index.html
 
-For our kernel we will mostly need the collection types, for example for storing a list of active tasks when implementing multitasking in the next posts.
+For our kernel we will mostly need the collection types, for example for storing a list of active tasks when implementing multitasking in future posts.
 
 ## The Allocator Interface
 
@@ -214,7 +212,7 @@ error: no global memory allocator found but one is required; link to std or add
 error: `#[alloc_error_handler]` function required, but not found
 ```
 
-The first error occurs because the `alloc` crate requires an heap allocator. A heap allocator is an object that provides the `allocate` and `deallocate` functions that we mentioned above. In Rust, the heap allocator is described by the [`GlobalAlloc`] trait, which is mentioned in the error message. To set the heap allocator for the crate, the `#[global_allocator]` attribute must be applied to a `static` variable that implements the `GlobalAlloc` trait.
+The first error occurs because the `alloc` crate requires an heap allocator, which is an object that provides the `allocate` and `deallocate` functions. In Rust, heap allocators are described by the [`GlobalAlloc`] trait, which is mentioned in the error message. To set the heap allocator for the crate, the `#[global_allocator]` attribute must be applied to a `static` variable that implements the `GlobalAlloc` trait.
 
 The second error occurs because calls to `allocate` can fail, most commonly when there is no more memory available. Our program must be able to react to this case, which is what the `#[alloc_error_handler]` function is for.
 
@@ -224,7 +222,7 @@ We will describe these traits and attributes in detail in the following sections
 
 ### The `GlobalAlloc` Trait
 
-The [`GlobalAlloc`] trait defines the functions that a heap allocator must provide. All heap allocators must implement it. The trait is special because it is almost never used directly by the programmer. Instead, the compiler will automatically insert the appropriate calls to the trait methods when using the allocation and collection types of `alloc`.
+The [`GlobalAlloc`] trait defines the functions that a heap allocator must provide. The trait is special because it is almost never used directly by the programmer. Instead, the compiler will automatically insert the appropriate calls to the trait methods when using the allocation and collection types of `alloc`.
 
 Since we will need to implement the trait for all our allocator types, it is worth taking a closer look at its declaration:
 
@@ -245,7 +243,7 @@ pub unsafe trait GlobalAlloc {
 
 It defines the two required methods [`alloc`] and [`dealloc`], which correspond to the `allocate` and `deallocate` functions we used in our examples:
 - The [`alloc`] method takes a [`Layout`] instance as argument, which describes the desired size and alignment that the allocated memory should have. It returns a [raw pointer] to the first byte of the allocated memory block. Instead of an explicit error value, the `alloc` method returns a null pointer to signal an allocation error. This is a bit non-idiomatic, but it has the advantage that wrapping existing system allocators is easy, since they use the same convention.
-- The [`dealloc`] method is the counterpart and responsible for freeing a memory block again. It receives the pointer returned by `alloc` and the `Layout` that was used for the allocation as arguments.
+- The [`dealloc`] method is the counterpart and responsible for freeing a memory block again. It receives two arguments, the pointer returned by `alloc` and the `Layout` that was used for the allocation.
 
 [`alloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.alloc
 [`dealloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.dealloc
@@ -276,7 +274,7 @@ Now that we know what an allocator type should provide, we can create a simple d
 pub mod allocator;
 ```
 
-Our dummy allocator will do the absolute minimum to implement the trait and always return an error when `alloc` is called. It looks like this:
+Our dummy allocator does the absolute minimum to implement the trait and always return an error when `alloc` is called. It looks like this:
 
 ```rust
 // in src/allocator.rs
@@ -326,7 +324,7 @@ error: `#[alloc_error_handler]` function required, but not found
 
 ### The `#[alloc_error_handler]` Attribute
 
-As we learned when discussing the `GlobalAlloc` trait, the `alloc` function can signal an allocation error by returning a null pointer. The question is: how should the Rust runtime react to such an allocation failure. This is where the `#[alloc_error_handler]` attribute comes in. It specifies a function that is called when an allocation error occurs, similar to how our panic handler is called when a panic occurs.
+As we learned when discussing the `GlobalAlloc` trait, the `alloc` function can signal an allocation error by returning a null pointer. The question is: how should the Rust runtime react to such an allocation failure? This is where the `#[alloc_error_handler]` attribute comes in. It specifies a function that is called when an allocation error occurs, similar to how our panic handler is called when a panic occurs.
 
 Let's add such a function to fix the compilation error:
 
@@ -341,9 +339,9 @@ fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
 }
 ```
 
-The `alloc_error_handler` function is still unstable, so we need a feature gate to enable it. The function receives a single argument: the `Layout` instance that was passed to `alloc` when the allocation failure occurred. There's nothing we can do to resolve that failure, so we just panic with a message that contains the `Layout` instance.
+The `alloc_error_handler` function is still unstable, so we need a feature gate to enable it. The function receives a single argument: the `Layout` instance that was passed to `alloc` when the allocation failure occurred. There's nothing we can do to resolve the failure, so we just panic with a message that contains the `Layout` instance.
 
-With this function, compilation errors should be fixed. Now we can use the allocation and collection types of `alloc`, for example we can use a [`Box`] to allocate a value on the heap:
+With this function, the compilation errors should be fixed. Now we can use the allocation and collection types of `alloc`, for example we can use a [`Box`] to allocate a value on the heap:
 
 [`Box`]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html
 
@@ -351,6 +349,8 @@ With this function, compilation errors should be fixed. Now we can use the alloc
 // in src/main.rs
 
 extern crate alloc;
+
+use alloc::boxed::Box;
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     // […] print "Hello World!", call `init`, create `mapper` and `frame_allocator`
@@ -505,7 +505,7 @@ Since implementing an allocator is somewhat complex, we start by using an extern
 
 A simple allocator crate for `no_std` applications is the [`linked_list_allocator`] crate. It's name comes from the fact that it uses a linked list data structure to keep track of deallocated memory regions. See the next post for a more detailed explanation of this approach.
 
-To use the, we first need to add a dependency on it in our `Cargo.toml`:
+To use the crate, we first need to add a dependency on it in our `Cargo.toml`:
 
 [`linked_list_allocator`]: https://github.com/phil-opp/linked-list-allocator/
 
@@ -553,7 +553,7 @@ pub fn init_heap(
 }
 ```
 
-We use the [`LockedHeap::lock`] method to get an exclusive reference to the wrapped [`Heap`] instance, on which we then call the [`init`] method with the heap bounds arguments. It is important that we initialize the heap _after_ mapping the heap pages, since the [`init`] function already tries to write to the heap memory.
+We use the [`LockedHeap::lock`] method to get an exclusive reference to the wrapped [`Heap`] instance, on which we then call the [`init`] method with the heap bounds as arguments. It is important that we initialize the heap _after_ mapping the heap pages, since the [`init`] function already tries to write to the heap memory.
 
 [`LockedHeap::lock`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.LockedHeap.html#method.lock
 [`Heap`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html
@@ -564,7 +564,7 @@ After initializing the heap, we can now use all allocation and collection types 
 ```rust
 // in src/main.rs
 
-use alloc::{boxed::Box, vec::{vec, Vec}, rc::Rc};
+use alloc::{boxed::Box, vec, vec::Vec, rc::Rc};
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     // […] initialize interrupts, mapper, frame_allocator, heap
@@ -610,9 +610,9 @@ current reference count is 2
 reference count is 1 now
 ](qemu-alloc-showcase.png)
 
-As expected, we see that the `Box` and `Vec` values live on the heap, as indicated by the pointer starting with `0x_4444_4444`. The reference counted value also behaves as expected, with the reference count being two after the `clone` call, and 1 again after one of the instances was dropped.
+As expected, we see that the `Box` and `Vec` values live on the heap, as indicated by the pointer starting with `0x_4444_4444`. The reference counted value also behaves as expected, with the reference count being 2 after the `clone` call, and 1 again after one of the instances was dropped.
 
-The reason that the vector starts at offset `0x800` is not that the boxed value is `0x800` bytes large, but the [reallocations] that occur when the vector needs to increase its capacity. For example, when the vector's capacity is 32 and we try to add the next element, the vector allocates a new backing array with capacity 64 behind the scenes and copies all elements over. Then it frees the old allocation, which in our case is equivalent to leaking it since our bump allocator doesn't reuse freed memory.
+The reason that the vector starts at offset `0x800` is not that the boxed value is `0x800` bytes large, but the [reallocations] that occur when the vector needs to increase its capacity. For example, when the vector's capacity is 32 and we try to add the next element, the vector allocates a new backing array with capacity 64 behind the scenes and copies all elements over. Then it frees the old allocation.
 
 [reallocations]: https://doc.rust-lang.org/alloc/vec/struct.Vec.html#capacity-and-reallocation
 
@@ -699,6 +699,9 @@ Now we're ready to add a few test cases. First, we add a test that performs a si
 ```rust
 // in tests/heap_allocation.rs
 
+use blog_os::{serial_print, serial_println};
+use alloc::boxed::Box;
+
 #[test_case]
 fn simple_allocation() {
     serial_print!("simple_allocation... ");
@@ -714,6 +717,8 @@ Next, we iteratively build a large vector, to test both large allocations and mu
 
 ```rust
 // in tests/heap_allocation.rs
+
+use alloc::vec::Vec;
 
 #[test_case]
 fn large_vec() {
@@ -748,7 +753,7 @@ fn many_boxes() {
 }
 ```
 
-This test ensures that the allocator reuses freed memory for subsequent allocations since it would run out of memory otherwise. This might seem like an obvious requirement for an allocator, but there are allocator designs that don't do this. An example is the bump allocator design that will be presented in the next post.
+This test ensures that the allocator reuses freed memory for subsequent allocations since it would run out of memory otherwise. This might seem like an obvious requirement for an allocator, but there are allocator designs that don't do this. An example is the bump allocator design that will be explained in the next post.
 
 Let's run our new integration test:
 
@@ -761,7 +766,7 @@ large_vec... [ok]
 many_boxes... [ok]
 ```
 
-All three tests succeeded! You can also invoke just `cargo xtest` to run all unit and integration tests.
+All three tests succeeded! You can also invoke `cargo xtest` (without `--test` argument) to run all unit and integration tests.
 
 ## Summary
 
