@@ -388,7 +388,7 @@ pub const HEAP_START: usize = 0x_4444_4444_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 ```
 
-We set the heap size to 1 KiB for now. If we need more space in the future, we can simply increase it.
+We set the heap size to 100 KiB for now. If we need more space in the future, we can simply increase it.
 
 If we tried to use this heap region now, a page fault would occur since the virtual memory region is not mapped to physical memory yet. To resolve this, we create an `init_heap` function that maps the heap pages using the [`Mapper` API] that we introduced in the [_"Paging Implementation"_] post:
 
