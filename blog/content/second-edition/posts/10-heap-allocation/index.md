@@ -55,7 +55,7 @@ While returning a reference makes no sense in this example, there are cases wher
 
 Static variables are stored at a fixed memory location separate from the stack. This memory location is assigned at compile time by the linker and encoded in the executable. Statics live for the complete runtime of the program, so they have the `'static` lifetime and can always be referenced from local variables:
 
-![TODO](call-stack-static.svg)
+![The same outer/inner example with the difference that inner has a `static Z: [u32; 3] = [1,2,3];` and returns a `&Z[i]` reference](call-stack-static.svg)
 
 When the `inner` function returns in the above example, it's part of the call stack is destroyed. The static variables live in a separate memory range that is never destroyed, so the `&Z[1]` reference is still valid after the return.
 
@@ -87,7 +87,7 @@ To circumvent these drawbacks, programming languages often support a third memor
 
 Let's go through an example:
 
-![TODO](call-stack-heap.svg)
+![The inner function calls `allocate(size_of([u32; 3]))`, writes `z.write([1,2,3]);`, and returns `(z as *mut u32).offset(i)`. The outer function does `deallocate(y, size_of(u32))` on the returned value `y`.](call-stack-heap.svg)
 
 Here the `inner` function uses heap memory instead of static variables for storing `z`. It first allocates a memory block of the required size, which returns a `*mut u8` [raw pointer]. It then uses the [`ptr::write`] method to write the array `[1,2,3]` to it. In the last step, it uses the [`offset`] function to calculate a pointer to the `i`th element and returns it. (Note that we omitted some required casts and unsafe blocks in this example function for brevity.)
 
@@ -97,7 +97,7 @@ Here the `inner` function uses heap memory instead of static variables for stori
 
 The allocated memory lives until it is explicitly freed through a call to `deallocate`. Thus, the returned pointer is still valid even after `inner` returned and its part of the call stack was destroyed. The advantage of using heap memory compared to static memory is that the memory can be reused after it is freed, which we do through the `deallocate` call in `outer`. After that call, the situation looks like this:
 
-![TODO](call-stack-heap-freed.svg)
+![The call stack contains the local variables of outer, the heap contains z[0] and z[2], but no longer z[1].](call-stack-heap-freed.svg)
 
 We see that the `z[1]` slot is free again and can be reused for the next `allocate` call. However, we also see that `z[0]` and `z[2]` are never freed because we never deallocate them. Such a bug is called a _memory leak_ and often the cause of excessive memory consumption of programs (just imagine what happens when we call `inner` repeatedly in a loop). This might seem bad, but there much more dangerous types of bugs that can happen with dynamic allocation.
 
@@ -777,5 +777,4 @@ While we already added heap allocation support in this post, we left most of the
 
 TODO:
 - update date
-- resolve todos
 - create post-10 tag
