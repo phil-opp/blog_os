@@ -1,10 +1,10 @@
-# Blog OS (Paging Implementation)
+# Blog OS (Heap Allocation)
 
 [![Azure Pipelines CI build](https://img.shields.io/azure-devops/build/phil-opp/blog_os/1/post-08.svg?label=Build&style=flat-square)](https://dev.azure.com/phil-opp/blog_os/_build?definitionId=1)
 
-This repository contains the source code for the [Paging Implementation][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
+This repository contains the source code for the [Heap Allocation][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
-[post]: https://os.phil-opp.com/paging-implementation/
+[post]: https://os.phil-opp.com/heap-allocation/
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
