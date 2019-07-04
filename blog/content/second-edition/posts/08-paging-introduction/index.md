@@ -135,7 +135,7 @@ Now that we know how paging and multilevel page tables works, we can look at how
 
 ## Paging on x86_64
 
-The x86_64 architecture uses a 4-level page table and a page size of 4KiB. Each page table, independent of the level, has a fixed sized of 512 entries. Each entry has a size of 8 bytes, so each table is 512 * 8B = 4KiB large and thus fits exactly into one page.
+The x86_64 architecture uses a 4-level page table and a page size of 4KiB. Each page table, independent of the level, has a fixed size of 512 entries. Each entry has a size of 8 bytes, so each table is 512 * 8B = 4KiB large and thus fits exactly into one page.
 
 The page table index for level is derived directly from the virtual address:
 
