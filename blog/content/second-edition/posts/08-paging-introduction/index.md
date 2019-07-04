@@ -145,7 +145,7 @@ We see that each table index consists of 9 bits, which makes sense because each 
 
 [5-level page table]: https://en.wikipedia.org/wiki/Intel_5-level_paging
 
-Even though bits 48 to 64 are discarded, they can't be set to arbitrary values. Instead all bits in this range have to be copies of bit 47 in order to keep addresses unique and allow future extensions like the 5-level page table. This is called _sign-extension_ because it's very similar to the [sign extension in two's complement]. When a address is not correctly sign-extended, the CPU throws an exception.
+Even though bits 48 to 64 are discarded, they can't be set to arbitrary values. Instead all bits in this range have to be copies of bit 47 in order to keep addresses unique and allow future extensions like the 5-level page table. This is called _sign-extension_ because it's very similar to the [sign extension in two's complement]. When an address is not correctly sign-extended, the CPU throws an exception.
 
 [sign extension in two's complement]: https://en.wikipedia.org/wiki/Two's_complement#Sign_extension
 
