@@ -9,12 +9,14 @@ use core::{
 };
 
 const MESSAGE: &str = "Example panic message from panic_handler test";
-const PANIC_LINE: u32 = 17; // adjust this when moving the `panic!` call
+static mut PANIC_LINE: u32 = 0;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     serial_print!("panic_handler... ");
-    panic!(MESSAGE); // must be in line `PANIC_LINE`
+    // The PANIC_LINE assignment and the panic macro invocation have
+    // to be on the same line:
+    unsafe { PANIC_LINE = line!(); } panic!(MESSAGE);
 }
 
 #[panic_handler]
@@ -39,8 +41,10 @@ fn check_location(info: &PanicInfo) {
     if location.file() != file!() {
         fail("file name wrong");
     }
-    if location.line() != PANIC_LINE {
-        fail("file line wrong");
+    unsafe {
+        if location.line() != PANIC_LINE {
+            fail("file line wrong");
+        }
     }
 }
 
