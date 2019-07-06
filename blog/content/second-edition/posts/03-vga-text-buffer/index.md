@@ -31,7 +31,12 @@ Bit(s) | Value
 12-14  | Background color
 15     | Blink
 
-The following colors are available:
+The first byte represents the character that should be printed in the [ASCII encoding]. To be exact, it isn't exactly ASCII, but a character set named [_code page 437_] with some additional characters and slight modifications. For simplicity, we proceed to call it an ASCII character in this post.
+
+[ASCII encoding]: https://en.wikipedia.org/wiki/ASCII
+[_code page 437_]: https://en.wikipedia.org/wiki/Code_page_437
+
+The second byte defines how the character is displayed. The first four bits define the foreground color, the next three bits the background color, and the last bit whether the character should blink. The following colors are available:
 
 Number | Color      | Number + Bright Bit | Bright Color
 ------ | ---------- | ------------------- | -------------
@@ -44,7 +49,7 @@ Number | Color      | Number + Bright Bit | Bright Color
 0x6    | Brown      | 0xe                 | Yellow
 0x7    | Light Gray | 0xf                 | White
 
-Bit 4 is the _bright bit_, which turns for example blue into light blue.
+Bit 4 is the _bright bit_, which turns for example blue into light blue. For the background color, this bit is repurposed as the blink bit.
 
 The VGA text buffer is accessible via [memory-mapped I/O] to the address `0xb8000`. This means that reads and writes to that address don't access the RAM, but directly the text buffer on the VGA hardware. This means that we can read and write it through normal memory operations to that address.
 
