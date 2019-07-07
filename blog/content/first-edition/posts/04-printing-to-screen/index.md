@@ -190,7 +190,7 @@ When printing a byte, the writer checks if the current line is full. In that cas
 
 The `buffer()` auxiliary method converts the raw pointer in the `buffer` field into a safe mutable buffer reference. The unsafe block is needed because the [as_mut()] method of `Unique` is unsafe. But our `buffer()` method itself isn't marked as unsafe, so it must not introduce any unsafety (e.g. cause segfaults). To guarantee that, it's very important that the `buffer` field always points to a valid `Buffer`. It's like a contract that we must stand to every time we create a `Writer`. To ensure that it's not possible to create an invalid `Writer` from outside of the module, the struct must have at least one private field and public creation functions are not allowed either.
 
-[as_mut()]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html#method.as_mut
+[as_mut()]: https://doc.rust-lang.org/1.10.0/core/ptr/struct.Unique.html#method.as_mut
 
 ### Cannot Move out of Borrowed Content
 When we try to compile it, we get the following error:

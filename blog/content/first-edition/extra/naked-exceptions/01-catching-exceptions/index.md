@@ -299,7 +299,7 @@ By returning a mutual reference to the entry's options, we allow the caller to o
 ### Loading the IDT
 Now we're able to create new interrupt descriptor tables with registered handler functions. We just need a way to load an IDT, so that the CPU uses it. The x86 architecture uses a special register to store the active IDT and its length. In order to load a new IDT we need to update this register through the [lidt] instruction.
 
-[lidt]: http://x86.renejeschke.de/html/file_module_x86_id_156.html
+[lidt]: https://www.felixcloutier.com/x86/lgdt:lidt
 
 The `lidt` instruction expects a pointer to a special data structure, which specifies the start address of the IDT and its length:
 
