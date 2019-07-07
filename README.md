@@ -10,7 +10,7 @@ The code for each post lives in a separate git branch. This makes it possible to
 
 **The code for the latest post is available [here][latest-post].**
 
-[latest-post]: https://github.com/phil-opp/blog_os/tree/post-09
+[latest-post]: https://github.com/phil-opp/blog_os/tree/post-10
 
 You can find the branch for each post by following the `(source code)` link in the [post list](#posts) below. The branches are named `post-XX` where `XX` is the post number, for example `post-03` for the _VGA Text Mode_ post or `post-07` for the _Hardware Interrupts_ post. For build instructions, see the Readme of the respective branch.
 
@@ -19,10 +19,10 @@ You can check out a branch in a subdirectory using [git worktree]:
 [git worktree]: https://git-scm.com/docs/git-worktree
 
 ```
-git worktree add code post-09
+git worktree add code post-10
 ```
 
-The above command creates a subdirectory named `code` that contains the code for the 10th post ("Paging Implementation").
+The above command creates a subdirectory named `code` that contains the code for the 10th post ("Heap Allocation").
 
 ## Posts
 
@@ -54,6 +54,8 @@ The goal of this project is to provide step-by-step tutorials in individual blog
     ([source code](https://github.com/phil-opp/blog_os/tree/post-08))
 - [Paging Implementation](https://os.phil-opp.com/paging-implementation/)
     ([source code](https://github.com/phil-opp/blog_os/tree/post-09))
+- [Heap Allocation](https://os.phil-opp.com/heap-allocation/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-10))
 
 ## First Edition Posts
 
