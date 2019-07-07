@@ -247,9 +247,7 @@ You can test it on real hardware, too. Just burn the ISO to a disk or USB stick 
 
 ## Build Automation
 
-Right now we need to execute 4 commands in the right order every time we change a file. That's bad. So let's automate the build using a [Makefile][Makefile tutorial]. But first we should create some clean directory structure for our source files to separate the architecture specific files:
-
-[Makefile tutorial]: http://mrbook.org/blog/tutorials/make/
+Right now we need to execute 4 commands in the right order every time we change a file. That's bad. So let's automate the build using a `Makefile`. But first we should create some clean directory structure for our source files to separate the architecture specific files:
 
 ```
 …

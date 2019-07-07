@@ -229,7 +229,7 @@ Let's take a closer look at the available flags:
 
 The `x86_64` crate provides types for [page tables] and their [entries], so we don't need to create these structures ourselves.
 
-[page tables]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/struct.PageTable.html
+[page tables]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page_table/struct.PageTable.html
 [entries]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
 ### The Translation Lookaside Buffer

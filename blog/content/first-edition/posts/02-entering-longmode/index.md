@@ -410,9 +410,7 @@ gdt64:
     dq 0 ; zero entry
     dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; code segment
 ```
-We chose the `.rodata` section here because it's initialized read-only data. The `dq` command stands for `define quad` and outputs a 64-bit constant (similar to `dw` and `dd`). And the `(1<<43)` is a [bit shift] that sets bit 43.
-
-[bit shift]: http://www.cs.umd.edu/class/sum2003/cmsc311/Notes/BitOp/bitshift.html
+We chose the `.rodata` section here because it's initialized read-only data. The `dq` command stands for `define quad` and outputs a 64-bit constant (similar to `dw` and `dd`). And the `(1<<43)` is a bit shift that sets bit 43.
 
 ### Loading the GDT
 To load our new 64-bit GDT, we have to tell the CPU its address and length. We do this by passing the memory location of a special pointer structure to the `lgdt` (load GDT) instruction. The pointer structure looks like this:

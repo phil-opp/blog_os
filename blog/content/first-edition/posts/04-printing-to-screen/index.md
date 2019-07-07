@@ -93,9 +93,7 @@ We use a [C-like enum] here to explicitly specify the number for each color. Bec
 
 Normally the compiler would issue a warning for each unused variant. By using the `#[allow(dead_code)]` attribute we disable these warnings for the `Color` enum.
 
-To represent a full color code that specifies foreground and background color, we create a [newtype] on top of `u8`:
-
-[newtype]: https://aturon.github.io/features/types/newtype.html
+To represent a full color code that specifies foreground and background color, we create a newtype on top of `u8`:
 
 ```rust
 struct ColorCode(u8);

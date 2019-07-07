@@ -459,7 +459,7 @@ In order to fix this problem, we need to backup all caller-saved multimedia regi
 
 The Rust compiler (and LLVM) assume that the `x86_64-unknown-linux-gnu` target supports only MMX and SSE, so we don't need to save the `ymm0` through `ymm15`. But we need to save `xmm0` through `xmm15` and also `mm0` through `mm7`. There is a special instruction to do this: [fxsave]. This instruction saves the floating point and multimedia state to a given address. It needs _512 bytes_ to store that state.
 
-[fxsave]: http://x86.renejeschke.de/html/file_module_x86_id_128.html
+[fxsave]: https://www.felixcloutier.com/x86/fxsave
 
 In order to save/restore the multimedia registers, we _could_ add new macros:
 
@@ -482,7 +482,7 @@ macro_rules! restore_multimedia_registers {
 ```
 First, we reserve the 512 bytes on the stack and then we use `fxsave` to backup the multimedia registers. In order to restore them later, we use the [fxrstor] instruction. Note that `fxsave` and `fxrstor` require a 16 byte aligned memory address.
 
-[fxrstor]: http://x86.renejeschke.de/html/file_module_x86_id_127.html
+[fxrstor]: https://www.felixcloutier.com/x86/fxrstor
 
 However, _we won't do it that way_. The problem is the large amount of memory required. We will reuse the same code when we handle hardware interrupts in a future post. So for each mouse click, pressed key, or arrived network package we need to write 512 bytes to memory. This would be a huge performance problem.
 

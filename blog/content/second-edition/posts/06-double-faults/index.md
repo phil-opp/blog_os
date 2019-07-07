@@ -268,7 +268,7 @@ Note that this double fault stack has no guard page that protects against stack 
 Now that we created a new TSS, we need a way to tell the CPU that it should use it. Unfortunately this is a bit cumbersome, since the TSS uses the segmentation system (for historical reasons). Instead of loading the table directly, we need to add a new segment descriptor to the [Global Descriptor Table] \(GDT). Then we can load our TSS invoking the [`ltr` instruction] with the respective GDT index. (This is the reason why we named our module `gdt`.)
 
 [Global Descriptor Table]: http://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
-[`ltr` instruction]: http://x86.renejeschke.de/html/file_module_x86_id_163.html
+[`ltr` instruction]: https://www.felixcloutier.com/x86/ltr
 
 ### The Global Descriptor Table
 The Global Descriptor Table (GDT) is a relict that was used for [memory segmentation] before paging became the de facto standard. It is still needed in 64-bit mode for various things such as kernel/user mode configuration or TSS loading.

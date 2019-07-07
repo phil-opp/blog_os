@@ -99,13 +99,13 @@ pub enum Color {
 ```
 We use a [C-like enum] here to explicitly specify the number for each color. Because of the `repr(u8)` attribute each enum variant is stored as an `u8`. Actually 4 bits would be sufficient, but Rust doesn't have an `u4` type.
 
-[C-like enum]: http://rustbyexample.com/custom_types/enum/c_like.html
+[C-like enum]: https://doc.rust-lang.org/rust-by-example/custom_types/enum/c_like.html
 
 Normally the compiler would issue a warning for each unused variant. By using the `#[allow(dead_code)]` attribute we disable these warnings for the `Color` enum.
 
 By [deriving] the [`Copy`], [`Clone`], [`Debug`], [`PartialEq`], and [`Eq`] traits, we enable [copy semantics] for the type and make it printable and comparable.
 
-[deriving]: http://rustbyexample.com/trait/derive.html
+[deriving]: https://doc.rust-lang.org/rust-by-example/trait/derive.html
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [`Clone`]: https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html
 [`Debug`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html
@@ -115,7 +115,7 @@ By [deriving] the [`Copy`], [`Clone`], [`Debug`], [`PartialEq`], and [`Eq`] trai
 
 To represent a full color code that specifies foreground and background color, we create a [newtype] on top of `u8`:
 
-[newtype]: https://rustbyexample.com/generics/new_types.html
+[newtype]: https://doc.rust-lang.org/rust-by-example/generics/new_types.html
 
 ```rust
 // in src/vga_buffer.rs

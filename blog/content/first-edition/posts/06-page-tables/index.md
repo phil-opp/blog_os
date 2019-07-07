@@ -130,7 +130,7 @@ bitflags! {
 ```
 To extract the flags from the entry we create an `Entry::flags` method that uses [from_bits_truncate]:
 
-[from_bits_truncate]: https://doc.rust-lang.org/bitflags/bitflags/index.html#methods-1
+[from_bits_truncate]: https://docs.rs/bitflags/0.9.1/bitflags/example_generated/struct.Flags.html#method.from_bits_truncate
 
 ```rust
 pub fn flags(&self) -> EntryFlags {
@@ -653,7 +653,7 @@ pub struct ActivePageTable {
 We can't store the `Table<Level4>` directly because it needs to be at a special memory location (like the [VGA text buffer]). We could use a raw pointer or `&mut` instead of [Unique], but Unique indicates ownership better.
 
 [VGA text buffer]: ./first-edition/posts/04-printing-to-screen/index.md#the-text-buffer
-[Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
+[Unique]: https://doc.rust-lang.org/1.10.0/core/ptr/struct.Unique.html
 
 Because the `ActivePageTable` owns the unique recursive mapped P4 table, there must be only one `ActivePageTable` instance. Thus we make the constructor function unsafe:
 
