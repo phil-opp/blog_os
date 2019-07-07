@@ -274,7 +274,7 @@ This error occurs because the `x86-interrupt` calling convention is still unstab
 ### Loading the IDT
 In order that the CPU uses our new interrupt descriptor table, we need to load it using the [`lidt`] instruction. The `Idt` struct of the `x86_64` provides a [`load`][Idt::load] method function for that. Let's try to use it:
 
-[`lidt`]: http://x86.renejeschke.de/html/file_module_x86_id_156.html
+[`lidt`]: https://www.felixcloutier.com/x86/lgdt:lidt
 [Idt::load]: https://docs.rs/x86_64/0.1.1/x86_64/structures/idt/struct.Idt.html#method.load
 
 ```rust

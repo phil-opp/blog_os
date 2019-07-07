@@ -626,7 +626,7 @@ Of course there are many more allocation and collection types in the `alloc` cra
 - [`BTreeMap`] and [`BTreeSet`]
 
 [`Arc`]: https://doc.rust-lang.org/alloc/sync/struct.Arc.html
-[`String`]: https://doc.rust-lang.org/alloc/collections/string/struct.String.html
+[`String`]: https://doc.rust-lang.org/alloc/string/struct.String.html
 [`format!`]: https://doc.rust-lang.org/alloc/macro.format.html
 [`LinkedList`]: https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.html
 [`VecDeque`]: https://doc.rust-lang.org/alloc/collections/vec_deque/struct.VecDeque.html

@@ -250,7 +250,7 @@ However, there is a major difference between exceptions and function calls: A fu
 [Calling conventions] specify the details of a function call. For example, they specify where function parameters are placed (e.g. in registers or on the stack) and how results are returned. On x86_64 Linux, the following rules apply for C functions (specified in the [System V ABI]):
 
 [Calling conventions]: https://en.wikipedia.org/wiki/Calling_convention
-[System V ABI]: http://refspecs.linuxbase.org/elf/x86-64-abi-0.99.pdf
+[System V ABI]: http://refspecs.linuxbase.org/elf/gabi41.pdf
 
 - the first six integer arguments are passed in registers `rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`
 - additional arguments are passed on the stack

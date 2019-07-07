@@ -84,7 +84,7 @@ We're using [inline assembly] here to load the value from the `rsp` register int
 - After the third colon, the macro expects so called [clobbers]. We don't change any register values, so we leave it empty too.
 - The last block (after the 4th colon) specifies options. The `intel` option tells the compiler that our code is in Intel assembly syntax (instead of the default AT&T syntax).
 
-[clobbers]: https://doc.rust-lang.org/nightly/book/inline-assembly.html#clobbers
+[clobbers]: https://doc.rust-lang.org/1.10.0/book/inline-assembly.html#clobbers
 
 So the inline assembly loads the stack pointer value to `stack_frame` at the very beginning of our function. Thus we have a pointer to the exception stack frame and are able to pretty-print its `Debug` formatting through the `{:#?}` argument.
 

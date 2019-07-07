@@ -136,7 +136,7 @@ First Exception | Second Exception
 [Page Fault]: http://wiki.osdev.org/Exceptions#Page_Fault
 
 
-[AMD64 manual]: http://developer.amd.com/wordpress/media/2012/10/24593_APM_v21.pdf
+[AMD64 manual]: https://www.amd.com/system/files/TechDocs/24593.pdf
 
 So for example a divide-by-zero fault followed by a page fault is fine (the page fault handler is invoked), but a divide-by-zero fault followed by a general-protection fault leads to a double fault.
 
@@ -357,7 +357,7 @@ impl MemoryController {
 The `MemoryController` struct holds the three types that are required for `alloc_stack` and provides a simpler interface (only one argument). The `alloc_stack` wrapper just takes the tree types as `&mut` through [destructuring] and forwards them to the `stack_allocator`. The [ref mut]-s are needed to take the inner fields by mutable reference. Note that we're re-exporting the `Stack` type since it is returned by `alloc_stack`.
 
 [destructuring]: https://doc.rust-lang.org/1.10.0/book/patterns.html#destructuring
-[ref mut]: http://rust-lang.github.io/book/ch18-00-patterns.html#ref-and-ref-mut
+[ref mut]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch18-03-pattern-syntax.html#creating-references-in-patterns-with-ref-and-ref-mut
 
 The last step is to create a `StackAllocator` and return a `MemoryController` from `memory::init`:
 
@@ -496,7 +496,7 @@ We define that the 0th IST entry is the double fault stack (any other IST index 
 Now that we created a new TSS, we need a way to tell the CPU that it should use it. Unfortunately, this is a bit cumbersome, since the TSS is a Task State _Segment_ (for historical reasons). So instead of loading the table directly, we need to add a new segment descriptor to the [Global Descriptor Table] \(GDT). Then we can load our TSS invoking the [`ltr` instruction] with the respective GDT index.
 
 [Global Descriptor Table]: http://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
-[`ltr` instruction]: http://x86.renejeschke.de/html/file_module_x86_id_163.html
+[`ltr` instruction]: https://www.felixcloutier.com/x86/ltr
 
 ### The Global Descriptor Table (again)
 The Global Descriptor Table (GDT) is a relict that was used for [memory segmentation] before paging became the de facto standard. It is still needed in 64-bit mode for various things such as kernel/user mode configuration or TSS loading.

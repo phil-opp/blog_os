@@ -89,7 +89,7 @@ pub enum Color {
 ```
 We use a [C-like enum] here to explicitly specify the number for each color. Because of the `repr(u8)` attribute each enum variant is stored as an `u8`. Actually 4 bits would be sufficient, but Rust doesn't have an `u4` type.
 
-[C-like enum]: http://rustbyexample.com/custom_types/enum/c_like.html
+[C-like enum]: https://doc.rust-lang.org/rust-by-example/custom_types/enum/c_like.html
 
 Normally the compiler would issue a warning for each unused variant. By using the `#[allow(dead_code)]` attribute we disable these warnings for the `Color` enum.
 
@@ -142,7 +142,7 @@ pub struct Writer {
 ```
 The writer will always write to the last line and shift lines up when a line is full (or on `\n`). The `column_position` field keeps track of the current position in the last row. The current foreground and background colors are specified by `color_code` and a pointer to the VGA buffer is stored in `buffer`. To make it possible to create a `static` Writer later, the `buffer` field stores an `Unique<Buffer>` instead of a plain `*mut Buffer`. [Unique] is a wrapper that implements Send/Sync and is thus usable as a `static`. Since it's unstable, you may need to add the `unique` feature to `lib.rs`:
 
-[Unique]: https://doc.rust-lang.org/nightly/core/ptr/struct.Unique.html
+[Unique]: https://doc.rust-lang.org/1.10.0/core/ptr/struct.Unique.html
 
 ```rust
 // in src/lib.rs
@@ -210,7 +210,7 @@ The reason it that Rust _moves_ values by default instead of copying them like o
 To fix it, we can implement the [Copy] trait for the `ColorCode` type. The easiest way to do this is to use the built-in [derive macro]:
 
 [Copy]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
-[derive macro]: http://rustbyexample.com/trait/derive.html
+[derive macro]: https://doc.rust-lang.org/rust-by-example/custom_types/enum/c_like.html
 
 ```rust
 #[derive(Debug, Clone, Copy)]

@@ -670,7 +670,7 @@ We can't directly return a `MappedPageTable` from the function because it is gen
 
 The [`MappedPageTable::new`] function expects two parameters: a mutable reference to the level 4 page table and a `phys_to_virt` closure that converts a physical frame to a page table pointer `*mut PageTable`. For the first parameter we can reuse our `active_level_4_table` function. For the second parameter, we create a closure that uses the `physical_memory_offset` to perform the conversion.
 
-[`MappedPageTable::new`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/struct.MappedPageTable.html#method.new
+[`MappedPageTable::new`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.MappedPageTable.html#method.new
 
 We also make the `active_level_4_table` private because it should only be called from the `init` function from now on.
 
@@ -760,7 +760,7 @@ The `map_to` function can fail, so it returns a [`Result`]. Since this is just s
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
 [`MapperFlush`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[`flush`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/struct.MapperFlush.html#method.flush
+[`flush`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 [must_use]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
 #### A dummy `FrameAllocator`
