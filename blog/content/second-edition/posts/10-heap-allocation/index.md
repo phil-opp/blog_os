@@ -625,14 +625,14 @@ Of course there are many more allocation and collection types in the `alloc` cra
 - the [`BinaryHeap`] priority queue
 - [`BTreeMap`] and [`BTreeSet`]
 
-[`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
-[`String`]: https://doc.rust-lang.org/collections/string/struct.String.html
+[`Arc`]: https://doc.rust-lang.org/alloc/sync/struct.Arc.html
+[`String`]: https://doc.rust-lang.org/alloc/collections/string/struct.String.html
 [`format!`]: https://doc.rust-lang.org/alloc/macro.format.html
-[`LinkedList`]: https://doc.rust-lang.org/collections/linked_list/struct.LinkedList.html
-[`VecDeque`]: https://doc.rust-lang.org/collections/vec_deque/struct.VecDeque.html
-[`BinaryHeap`]: https://doc.rust-lang.org/collections/binary_heap/struct.BinaryHeap.html
-[`BTreeMap`]: https://doc.rust-lang.org/collections/btree_map/struct.BTreeMap.html
-[`BTreeSet`]: https://doc.rust-lang.org/collections/btree_set/struct.BTreeSet.html
+[`LinkedList`]: https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.html
+[`VecDeque`]: https://doc.rust-lang.org/alloc/collections/vec_deque/struct.VecDeque.html
+[`BinaryHeap`]: https://doc.rust-lang.org/alloc/collections/binary_heap/struct.BinaryHeap.html
+[`BTreeMap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
+[`BTreeSet`]: https://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html
 
 These types will become very useful when we want to implement thread lists, scheduling queues, or support for async/await.
 

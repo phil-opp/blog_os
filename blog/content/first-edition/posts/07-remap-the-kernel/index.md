@@ -328,7 +328,7 @@ impl InactivePageTable {
 ```
 We added two new arguments, `active_table` and `temporary_page`. We need an [inner scope] to ensure that the `table` variable is dropped before we try to unmap the temporary page again. This is required since the `table` variable exclusively borrows `temporary_page` as long as it's alive.
 
-[inner scope]: http://rustbyexample.com/variable_bindings/scope.html
+[inner scope]: https://doc.rust-lang.org/rust-by-example/variable_bindings/scope.html
 
 Now we are able to create valid inactive page tables, which are zeroed and recursively mapped. But we still can't modify them. To resolve this problem, we need to look at recursive mapping again.
 
@@ -622,7 +622,7 @@ impl Iterator for FrameIter {
 Instead of creating a custom iterator, we could have used the [Range] struct of the standard library. But it requires that we implement the [One] and [Add] traits for `Frame`. Then every module could perform arithmetic operations on frames, for example `let frame3 = frame1 + frame2`. This would violate our safety invariants because `frame3` could be already in use. The `range_inclusive` function does not have these problems because it is only available inside the `memory` module.
 
 [Range]: https://doc.rust-lang.org/nightly/core/ops/struct.Range.html
-[One]: https://doc.rust-lang.org/nightly/core/num/trait.One.html
+[One]: https://doc.rust-lang.org/1.10.0/core/num/trait.One.html
 [Add]: https://doc.rust-lang.org/nightly/core/ops/trait.Add.html
 
 ### Page Align Sections
@@ -784,7 +784,7 @@ pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
 ```
 This function activates the given inactive table and returns the previous active table as a `InactivePageTable`. We don't need to flush the TLB here, as the CPU does it automatically when the P4 table is switched. In fact, the `tlb::flush_all` function, which we used above, does nothing more than [reloading the CR3 register].
 
-[reloading the CR3 register]: https://github.com/gz/rust-x86/blob/master/src/shared/tlb.rs#L19
+[reloading the CR3 register]: https://docs.rs/x86_64/0.1.2/src/x86_64/instructions/tlb.rs.html#11-14
 
 Now we are finally able to switch to the new table. We do it by adding the following lines to our `remap_the_kernel` function:
 
@@ -1093,8 +1093,8 @@ Now that we have a (mostly) safe kernel stack and a working page table module, w
 
 [next post]: ./first-edition/posts/08-kernel-heap/index.md
 [Box]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html
-[Vec]: https://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html
-[BTreeMap]: https://doc.rust-lang.org/nightly/collections/btree_map/struct.BTreeMap.html
+[Vec]: https://doc.rust-lang.org/1.10.0/collections/vec/struct.Vec.html
+[BTreeMap]: https://doc.rust-lang.org/1.10.0/collections/btree_map/struct.BTreeMap.html
 
 ## Footnotes
 [^fn-debug-notes]: For this post the most useful GDB command is probably `p/x *((long int*)0xfffffffffffff000)@512`. It prints all entries of the recursively mapped P4 table by interpreting it as an array of 512 long ints (the `@512` is GDB's array syntax). Of course you can also print other tables by adjusting the address.

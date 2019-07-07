@@ -377,7 +377,7 @@ We can't know when the next IDT will be loaded. Maybe never. So in the worst cas
 
 This is exactly the definition of a [static lifetime]. So we can easily ensure that the IDT lives long enough by adding a `'static` requirement to the signature of the `load` function:
 
-[static lifetime]: http://rustbyexample.com/scope/lifetime/static_lifetime.html
+[static lifetime]: https://doc.rust-lang.org/rust-by-example/scope/lifetime/static_lifetime.html
 
 ```rust
 pub fn load(&'static self) {...}
@@ -517,9 +517,9 @@ That's a not our exception handler. The reason is that Rust itself checks for a 
 ### Inline Assembly
 In order to cause a divide-by-zero exception, we need to execute a [div] or [idiv] assembly instruction with operand 0. We could write a small assembly function and call it from our Rust code. An easier way is to use Rust's [inline assembly] macro.
 
-[div]: http://x86.renejeschke.de/html/file_module_x86_id_72.html
-[idiv]: http://x86.renejeschke.de/html/file_module_x86_id_137.html
-[inline assembly]: https://doc.rust-lang.org/book/inline-assembly.html
+[div]: https://www.felixcloutier.com/x86/div
+[idiv]: https://www.felixcloutier.com/x86/idiv
+[inline assembly]: https://doc.rust-lang.org/1.10.0/book/inline-assembly.html
 
 Inline assembly allows us to write raw x86 assembly within a Rust function. The feature is unstable, so we need to add `#![feature(asm)]` to our `src/lib.rs`. Then we're able to write a `divide_by_zero` function:
 

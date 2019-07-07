@@ -78,7 +78,7 @@ Let's break it down:
 [attribute]: https://doc.rust-lang.org/book/attributes.html
 [name mangling]: https://en.wikipedia.org/wiki/Name_mangling
 [calling convention]: https://en.wikipedia.org/wiki/Calling_convention
-[language item]: https://doc.rust-lang.org/book/lang-items.html
+[language item]: https://doc.rust-lang.org/1.10.0/book/lang-items.html
 [unwinding]: https://doc.rust-lang.org/nomicon/unwinding.html
 
 ## Building Rust
@@ -265,7 +265,7 @@ We add a new `kernel` target that just executes `xargo build` and modify the `$(
 
 But now `xargo build` is executed on every `make`, even if no source file was changed. And the ISO is recreated on every `make iso`/`make run`, too. We could try to avoid this by adding dependencies on all rust source and cargo configuration files to the `kernel` target, but the ISO creation takes only half a second on my machine and most of the time we will have changed a Rust file when we run `make`. So we keep it simple for now and let cargo do the bookkeeping of changed files (it does it anyway).
 
-[github makefile]: https://github.com/phil-opp/blog_os/blob/post_3/Makefile
+[github makefile]: https://github.com/phil-opp/blog_os/blob/first_edition_post_3/Makefile
 
 ### Calling Rust
 Now we can call the main method in `long_mode_start`:
@@ -299,7 +299,7 @@ pub extern fn rust_main() {
 ```
 When we test it using `make run`, it fails with `undefined reference to 'memcpy'`. The `memcpy` function is one of the basic functions of the C library (`libc`). Usually the `libc` crate is linked to every Rust program together with the standard library, but we opted out through `#![no_std]`. We could try to fix this by adding the [libc crate] as `extern crate`. But `libc` is just a wrapper for the system `libc`, for example `glibc` on Linux, so this won't work for us. Instead we need to recreate the basic `libc` functions such as `memcpy`, `memmove`, `memset`, and `memcmp` in Rust.
 
-[libc crate]: https://doc.rust-lang.org/nightly/libc/index.html
+[libc crate]: https://doc.rust-lang.org/1.10.0/libc/index.html
 
 #### rlibc
 Fortunately there already is a crate for that: [rlibc]. When we look at its [source code][rlibc source] we see that it contains no magic, just some [raw pointer] operations in a while loop. To add `rlibc` as a dependency we just need to add two lines to the `Cargo.toml`:
@@ -343,7 +343,7 @@ target/x86_64-blog_os/debug/libblog_os.a(core-92335f822fa6c9a6.0.o):
 ```
 
 [rlibc]: https://crates.io/crates/rlibc
-[rlibc source]: https://github.com/rust-lang/rlibc/blob/master/src/lib.rs
+[rlibc source]: https://github.com/alexcrichton/rlibc/blob/defb486e765846417a8e73329e8c5196f1dca49a/src/lib.rs
 [raw pointer]: https://doc.rust-lang.org/book/raw-pointers.html
 [crates.io]: https://crates.io
 

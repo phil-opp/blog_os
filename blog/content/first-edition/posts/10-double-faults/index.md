@@ -356,7 +356,7 @@ impl MemoryController {
 ```
 The `MemoryController` struct holds the three types that are required for `alloc_stack` and provides a simpler interface (only one argument). The `alloc_stack` wrapper just takes the tree types as `&mut` through [destructuring] and forwards them to the `stack_allocator`. The [ref mut]-s are needed to take the inner fields by mutable reference. Note that we're re-exporting the `Stack` type since it is returned by `alloc_stack`.
 
-[destructuring]: http://rust-lang.github.io/book/ch18-00-patterns.html#Destructuring
+[destructuring]: https://doc.rust-lang.org/1.10.0/book/patterns.html#destructuring
 [ref mut]: http://rust-lang.github.io/book/ch18-00-patterns.html#ref-and-ref-mut
 
 The last step is to create a `StackAllocator` and return a `MemoryController` from `memory::init`:
@@ -554,7 +554,7 @@ pub enum Descriptor {
 
 The flag bits are common between all descriptor types, so we create a general `DescriptorFlags` type (using the [bitflags] macro):
 
-[bitflags]: https://doc.rust-lang.org/bitflags/bitflags/macro.bitflags.html
+[bitflags]: https://docs.rs/bitflags/0.9.1/bitflags/macro.bitflags.html
 
 ```rust
 // in src/interrupts/gdt.rs
@@ -882,8 +882,8 @@ pub fn init(memory_controller: &mut MemoryController) {
 
 We first set the descriptors to `empty` and then update them from inside the closure (which implicitly borrows them as `&mut`). Now we're able to reload the code segment register using [`set_cs`] and to load the TSS using [`load_tss`].
 
-[`set_cs`]: https://docs.rs/x86/0.8.0/x86/shared/segmentation/fn.set_cs.html
-[`load_tss`]: https://docs.rs/x86/0.8.0/x86/shared/task/fn.load_tss.html
+[`set_cs`]: https://docs.rs/x86_64/0.1.2/x86_64/instructions/segmentation/fn.set_cs.html
+[`load_tss`]: https://docs.rs/x86_64/0.1.2/x86_64/instructions/tables/fn.load_tss.html
 
 Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 

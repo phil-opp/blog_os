@@ -24,9 +24,9 @@ As always, you can find the complete source code on [GitHub]. Please file [issue
 ## Introduction
 The _heap_ is the memory area for long-lived allocations. The programmer can access it by using types like [Box][Box rustbyexample] or [Vec]. Behind the scenes, the compiler manages that memory by inserting calls to some memory allocator. By default, Rust links to the [jemalloc] allocator (for binaries) or the system allocator (for libraries). However, both rely on [system calls] such as [sbrk] and are thus unusable in our kernel. So we need to create and link our own allocator.
 
-[Box rustbyexample]: http://rustbyexample.com/std/box.html
+[Box rustbyexample]: https://doc.rust-lang.org/rust-by-example/std/box.html
 [Vec]: https://doc.rust-lang.org/book/vectors.html
-[jemalloc]: http://www.canonware.com/jemalloc/
+[jemalloc]: http://jemalloc.net/
 [system calls]: https://en.wikipedia.org/wiki/System_call
 [sbrk]: https://en.wikipedia.org/wiki/Sbrk
 
@@ -42,7 +42,7 @@ These requirements make good allocators pretty complex. For example, [jemalloc] 
 
 The allocator interface in Rust is defined through the [`Alloc` trait], which looks like this:
 
-[`Alloc` trait]: https://doc.rust-lang.org/nightly/alloc/allocator/trait.Alloc.html
+[`Alloc` trait]: https://doc.rust-lang.org/1.20.0/alloc/allocator/trait.Alloc.html
 
 ```rust
 pub unsafe trait Alloc {
@@ -87,8 +87,8 @@ extern crate alloc;
 
 We don't need to add anything to our Cargo.toml, since the `alloc` crate is part of the standard library and shipped with the Rust compiler. The `alloc` crate provides the [format!] and [vec!] macros, so we use `#[macro_use]` to import them.
 
-[format!]: //doc.rust-lang.org/nightly/collections/macro.format!.html
-[vec!]: https://doc.rust-lang.org/nightly/collections/macro.vec!.html
+[format!]: https://doc.rust-lang.org/1.10.0/collections/macro.format!.html
+[vec!]: https://doc.rust-lang.org/1.10.0/collections/macro.vec!.html
 
 When we try to compile our crate now, the following error occurs:
 
@@ -573,14 +573,14 @@ We can also use all other types of the `alloc` crate, including:
 - [BinaryHeap]
 - [BTreeMap] and [BTreeSet]
 
-[Rc]: https://doc.rust-lang.org/nightly/alloc/rc/
-[Arc]: https://doc.rust-lang.org/nightly/alloc/arc/
-[String]: https://doc.rust-lang.org/nightly/collections/string/struct.String.html
-[Linked List]: https://doc.rust-lang.org/nightly/collections/linked_list/struct.LinkedList.html
-[VecDeque]: https://doc.rust-lang.org/nightly/collections/vec_deque/struct.VecDeque.html
-[BinaryHeap]: https://doc.rust-lang.org/nightly/collections/binary_heap/struct.BinaryHeap.html
-[BTreeMap]: https://doc.rust-lang.org/nightly/collections/btree_map/struct.BTreeMap.html
-[BTreeSet]: https://doc.rust-lang.org/nightly/collections/btree_set/struct.BTreeSet.html
+[Rc]: https://doc.rust-lang.org/1.10.0/alloc/rc/
+[Arc]: https://doc.rust-lang.org/1.10.0/alloc/arc/
+[String]: https://doc.rust-lang.org/1.10.0/collections/string/struct.String.html
+[Linked List]: https://doc.rust-lang.org/1.10.0/collections/linked_list/struct.LinkedList.html
+[VecDeque]: https://doc.rust-lang.org/1.10.0/collections/vec_deque/struct.VecDeque.html
+[BinaryHeap]: https://doc.rust-lang.org/1.10.0/collections/binary_heap/struct.BinaryHeap.html
+[BTreeMap]: https://doc.rust-lang.org/1.10.0/collections/btree_map/struct.BTreeMap.html
+[BTreeSet]: https://doc.rust-lang.org/1.10.0/collections/btree_set/struct.BTreeSet.html
 
 ## A better Allocator
 Right now, we leak every freed memory block. Thus, we run out of memory quickly, for example, by creating a new `String` in each iteration of a loop:

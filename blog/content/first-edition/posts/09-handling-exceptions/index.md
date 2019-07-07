@@ -128,7 +128,7 @@ However, there is a major difference between exceptions and function calls: A fu
 [Calling conventions] specify the details of a function call. For example, they specify where function parameters are placed (e.g. in registers or on the stack) and how results are returned. On x86_64 Linux, the following rules apply for C functions (specified in the [System V ABI]):
 
 [Calling conventions]: https://en.wikipedia.org/wiki/Calling_convention
-[System V ABI]: http://refspecs.linuxbase.org/elf/x86-64-abi-0.99.pdf
+[System V ABI]: http://refspecs.linuxbase.org/elf/gabi41.pdf
 
 - the first six integer arguments are passed in registers `rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`
 - additional arguments are passed on the stack
@@ -449,7 +449,7 @@ The reason for the diffent instruction pointer values is that the stored value i
 In some cases, the distinction between faults and traps is vague. For example, the [debug exception] behaves like a fault in some cases, but like a trap in others. So to find out the meaning of the saved instruction pointer, it is a good idea to read the official documentation for the exception, which can be found in the [AMD64 manual] in Section 8.2. For example, for the breakpoint exception it says:
 
 [debug exception]: http://wiki.osdev.org/Exceptions#Debug
-[AMD64 manual]: http://developer.amd.com/wordpress/media/2012/10/24593_APM_v21.pdf
+[AMD64 manual]: https://www.amd.com/system/files/TechDocs/24593.pdf
 
 > `#BP` is a trap-type exception. The saved instruction pointer points to the byte after the `INT3` instruction.
 

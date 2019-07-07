@@ -75,7 +75,7 @@ extern "C" fn divide_by_zero_handler() -> ! {
 ```
 We're using [inline assembly] here to load the value from the `rsp` register into `stack_frame`. The syntax is a bit strange, so here's a quick explanation:
 
-[inline assembly]: https://doc.rust-lang.org/nightly/book/inline-assembly.html
+[inline assembly]: https://doc.rust-lang.org/1.10.0/book/inline-assembly.html
 
 - The `asm!` macro emits raw assembly instructions. This is the only way to read raw register values in Rust.
 - We insert a single assembly instruction: `mov $0, rsp`. It moves the value of `rsp` to some register (the `$0` is a placeholder for an arbitrary register, which gets filled by the compiler).
@@ -339,7 +339,7 @@ objdump -d build/kernel-x86_64.bin | grep "10cf08:"
 ```
 The [movaps] instruction is an [SSE] instruction that moves aligned 128bit values. It can fail for a number of reasons:
 
-[movaps]: http://x86.renejeschke.de/html/file_module_x86_id_180.html
+[movaps]: https://www.felixcloutier.com/x86/movaps
 [SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
 
 1. For an illegal memory operand effective address in the CS, DS, ES, FS or GS segments.
@@ -497,7 +497,7 @@ Invalid opcode faults have the vector number 6, so we set the 6th IDT entry. Thi
 
 We can test our new handler with the special [ud2] instruction, which generates a invalid opcode:
 
-[ud2]: http://x86.renejeschke.de/html/file_module_x86_id_318.html
+[ud2]: https://www.felixcloutier.com/x86/ud
 
 ```rust
 // in src/lib.rs
