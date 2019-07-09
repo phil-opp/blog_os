@@ -240,14 +240,12 @@ We can now build the kernel for our new target by passing the name of the JSON f
 ```
 > cargo build --target x86_64-blog_os.json
 
-error[E0463]: can't find crate for `core` OR
-error[E0463]: can't find crate for `compiler_builtins`
+error[E0463]: can't find crate for `core`
 ```
 
-It fails! The error tells us that the Rust compiler no longer finds the `core` or the `compiler_builtins` library. Both libraries are implicitly linked to all `no_std` crates. The [`core` library] contains basic Rust types such as `Result`, `Option`, and iterators, whereas the [`compiler_builtins` library] provides various lower level functions expected by LLVM, such as `memcpy`.
+It fails! The error tells us that the Rust compiler no longer finds the [`core` library]. This library contains basic Rust types such as `Result`, `Option`, and iterators, and is implicitly linked to all `no_std` crates.
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
-[`compiler_builtins` library]: https://github.com/rust-lang-nursery/compiler-builtins
 
 The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for supported host triples (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for other targets, we need to recompile `core` for these targets first.
 
