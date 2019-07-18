@@ -13,7 +13,7 @@ name = "stack_overflow"
 harness = false
 
 [dependencies]
-bootloader = { version = "0.6.0", features = ["map_physical_memory"]}
+bootloader = { version = "0.6.4", features = ["map_physical_memory"]}
 volatile = "0.2.3"
 spin = "0.4.9"
 x86_64 = "0.7.0"
