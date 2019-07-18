@@ -9,7 +9,7 @@ name = "panic_handler"
 harness = false
 
 [dependencies]
-bootloader = "0.6.0"
+bootloader = "0.6.4"
 volatile = "0.2.3"
 spin = "0.4.9"
 x86_64 = "0.7.0"
