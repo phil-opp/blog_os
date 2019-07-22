@@ -278,18 +278,19 @@ use x86_64::structures::idt::PageFaultErrorCode;
 
 extern "x86-interrupt" fn page_fault_handler(
     stack_frame: &mut InterruptStackFrame,
-    _error_code: PageFaultErrorCode,
+    error_code: PageFaultErrorCode,
 ) {
     use x86_64::registers::control::Cr2;
 
     println!("EXCEPTION: PAGE FAULT");
     println!("Accessed Address: {:?}", Cr2::read());
+    println!("Error Code: {:?}", error_code);
     println!("{:#?}", stack_frame);
     hlt_loop();
 }
 ```
 
-The [`CR2`] register is automatically set by the CPU on a page fault and contains the accessed virtual address that caused the page fault. We use the [`Cr2::read`] function of the `x86_64` crate to read and print it. Normally the [`PageFaultErrorCode`] type would provide more information about the type of memory access that caused the page fault, but there is currently an [LLVM bug] that passes an invalid error code, so we ignore it for now. We can't continue execution without resolving the page fault, so we enter a [`hlt_loop`] at the end.
+The [`CR2`] register is automatically set by the CPU on a page fault and contains the accessed virtual address that caused the page fault. We use the [`Cr2::read`] function of the `x86_64` crate to read and print it. The [`PageFaultErrorCode`] type provides more information about the type of memory access that caused the page fault, for example whether it was caused by a read or write operation. For this reason we print it too. We can't continue execution without resolving the page fault, so we enter a [`hlt_loop`] at the end.
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
 [`Cr2::read`]: https://docs.rs/x86_64/0.7.0/x86_64/registers/control/struct.Cr2.html#method.read
@@ -323,27 +324,39 @@ pub extern "C" fn _start() -> ! {
 
 When we run it, we see that our page fault handler is called:
 
-![EXCEPTION: Page Fault, Accessed Address: VirtAddr(0xdeadbeaf), InterruptStackFrame: {…}](qemu-page-fault.png)
+![EXCEPTION: Page Fault, Accessed Address: VirtAddr(0xdeadbeaf), Error Code: CAUSED_BY_WRITE, InterruptStackFrame: {…}](qemu-page-fault.png)
 
-The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access.
+The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access. The error code tells us through the [`CAUSED_BY_WRITE`] that the fault occurred while trying to perform a write operation. It tells us even more through the [bits that are _not_ set][`PageFaultErrorCode`]. For example, the fact that the `PROTECTION_VIOLATION` flag is not set means that the page fault occurred because the target page wasn't present.
 
-We see that the current instruction pointer is `0x20430a`, so we know that this address points to a code page. Code pages are mapped read-only by the bootloader, so reading from this address works but writing causes a page fault. You can try this by changing the `0xdeadbeaf` pointer to `0x20430a`:
+[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
+
+We see that the current instruction pointer is `0x2031b2`, so we know that this address points to a code page. Code pages are mapped read-only by the bootloader, so reading from this address works but writing causes a page fault. You can try this by changing the `0xdeadbeaf` pointer to `0x2031b2`:
 
 ```rust
 // Note: The actual address might be different for you. Use the address that
 // your page fault handler reports.
-let ptr = 0x20430a as *mut u32;
-// read from a code page -> works
+let ptr = 0x2031b2 as *mut u32;
+
+// read from a code page
 unsafe { let x = *ptr; }
-// write to a code page -> page fault
+println!("read worked");
+
+// write to a code page
 unsafe { *ptr = 42; }
+println!("write worked");
 ```
 
-By commenting out the last line, we see that the read access works, but the write access causes a page fault.
+By commenting out the last line, we see that the read access works, but the write access causes a page fault:
+
+![QEMU with output: "read worked, EXCEPTION: Page Fault, Accessed Address: VirtAddr(0x2031b2), Error Code: PROTECTION_VIOLATION | CAUSED_BY_WRITE, InterruptStackFrame: {…}"](qemu-page-fault-protection.png)
+
+We see that the _"read worked"_ message is printed, which indicates that the read operation did not cause any errors. However, instead of the _"write worked"_ message a page fault occurs. This time the [`PROTECTION_VIOLATION`] flag is set in addition to the [`CAUSED_BY_WRITE`] flag, which indicates that the page was present, but the operation was not allowed on it. In this case, writes to the page are not allowed since code pages are mapped as read-only.
+
+[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
 ### Accessing the Page Tables
 
-Let's try to take a look at the page tables that our kernel runs on:
+Let's try to take a look at the page tables that define how our kernel is mapped:
 
 ```rust
 // in src/main.rs
