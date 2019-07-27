@@ -5,7 +5,7 @@ path = "red-zone"
 
 +++
 
-The [red zone] is an optimization of the [System V ABI] that allows functions to temporary use the 128 bytes below its stack frame without adjusting the stack pointer:
+The [red zone] is an optimization of the [System V ABI] that allows functions to temporarily use the 128 bytes below its stack frame without adjusting the stack pointer:
 
 [red zone]: http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
 [System V ABI]: http://wiki.osdev.org/System_V_ABI
