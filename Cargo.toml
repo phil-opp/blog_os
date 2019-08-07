@@ -5,7 +5,7 @@ authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 edition = "2018"
 
 [[test]]
-name = "panic_handler"
+name = "should_panic"
 harness = false
 
 [[test]]
