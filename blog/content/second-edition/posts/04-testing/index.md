@@ -781,210 +781,131 @@ Our `basic_boot` test is a very simple example for an integration test. In the f
 
 As you can imagine, many more tests are possible. By adding such tests, we can ensure that we don't break them accidentally when we add new features to our kernel or refactor our code. This is especially important when our kernel becomes larger and more complex.
 
-## Testing Our Panic Handler
+### Tests that Should Panic
 
-Another thing that we can test with an integration test is that our panic handler is called correctly. The idea is to deliberately cause a panic in the test function and exit with a success exit code in the panic handler.
+The test framework of the standard library supports a [`#[should_panic]` attribute][should_panic] that allows to construct tests that should fail. This is useful for example to verify that a function fails when an invalid argument is passed. Unfortunately this attribute isn't supported in `#[no_std]` crates since it requires support from the standard library.
 
-Since we exit from our panic handler, the panicking test never returns to the test runner. For this reason, it does not make sense to add more than one test because subsequent tests are never executed. For cases like this, where only a single test function exists, we can disable the test runner completely and run our test directly in the `_start` function.
+[should_panic]: https://doc.rust-lang.org/rust-by-example/testing/unit_testing.html#testing-panics
 
-### No Harness
-
-The `harness` flag defines whether a test runner is used for an integration test. When it's set to `false`, both the default test runner and the custom test runner feature are disabled, so that the test is treated like a normal executable.
-
-Let's create a panic handler test with a disabled `harness` flag. First, we create a skeleton for the test at `tests/panic_handler.rs`:
+While we can't use the `#[should_panic]` attribute in our kernel, we can get similar behavior by creating an integration test that exits with a success error code from the panic handler. Let's start creating such a test with the name `should_panic`:
 
 ```rust
-// in tests/panic_handler.rs
+// in tests/should_panic.rs
 
 #![no_std]
 #![no_main]
 
 use core::panic::PanicInfo;
-use blog_os::{QemuExitCode, exit_qemu};
-
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    exit_qemu(QemuExitCode::Failed);
-    loop {}
-}
+use blog_os::{QemuExitCode, exit_qemu, serial_println};
 
 #[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    exit_qemu(QemuExitCode::Failed);
+fn panic(_info: &PanicInfo) -> ! {
+    serial_println!("[ok]");
+    exit_qemu(QemuExitCode::Success);
     loop {}
 }
 ```
 
-The code is similar to the `basic_boot` test with the difference that no test attributes are needed and no runner function is called. We immediately exit with an error from the `_start` entry point and the panic handler for now and first try to get it to compile.
+This test is still incomplete as it doesn't define a `_start` function or any of the custom test runner attributes yet. Let's add the missing parts:
 
-If you run `cargo xtest` now, you will get an error that the `test` crate is missing. This error occurs because we didn't set a custom test framework, so that the compiler tries to use the default test framework, which is unavailable for our panic. By setting the `harness` flag to `false` for the test in our `Cargo.toml`, we can fix this error:
+```rust
+// in tests/should_panic.rs
+
+#![feature(custom_test_frameworks)]
+#![test_runner(test_runner)]
+#![reexport_test_harness_main = "test_main"]
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    test_main();
+
+    loop {}
+}
+
+pub fn test_runner(tests: &[&dyn Fn()]) {
+    serial_println!("Running {} tests", tests.len());
+    for test in tests {
+        test();
+        serial_println!("[test did not panic]");
+        exit_qemu(QemuExitCode::Failed);
+    }
+    exit_qemu(QemuExitCode::Success);
+}
+```
+
+Instead of reusing the `test_runner` from our `lib.rs`, the test defines its own `test_runner` function that exits with a failure exit code when a test returns without panicking (we want our tests to panic). If no test function is defined, the runner exits with a success error code. Since the runner always exits after running a single test, it does not make sense to define more than one `#[test_case]` function.
+
+Now we can create a test that should fail:
+
+```rust
+// in tests/should_panic.rs
+
+use blog_os::serial_print;
+
+#[test_case]
+fn should_fail() {
+    serial_print!("should_fail... ");
+    assert_eq!(0, 1);
+}
+```
+
+The test uses the `assert_eq` to assert that `0` and `1` are equal. This of course fails, so that our test panics as desired.
+
+When we run the test through `cargo xtest --test should_panic` we see that it is successful because the test panicked as expected. When we comment out the assertion and run the test again, we see that it indeed fails with the _"test did not panic"_ message.
+
+A significant drawback of this approach is that it only works for a single test function. With multiple `#[test_case]` functions, only the first function is executed because the execution cannot continue after the panic handler has been called. I currently don't know of a good way to solve this problem, so let me know if you have an idea!
+
+### No Harness Tests
+
+For integration tests that only have a single test function (like our `should_panic` test), the test runner isn't really needed. For cases like this, we can disable the test runner completely and run our test directly in the `_start` function.
+
+The key to this is disable the `harness` flag for the test in the `Cargo.toml`, which defines whether a test runner is used for an integration test. When it's set to `false`, both the default test runner and the custom test runner feature are disabled, so that the test is treated like a normal executable.
+
+Let's disable the `harness` flag for our `should_panic` test:
 
 ```toml
 # in Cargo.toml
 
 [[test]]
-name = "panic_handler"
+name = "should_panic"
 harness = false
 ```
 
-Now the test compiles fine, but fails of course since we always exit with an error exit code.
-
-### Implementing the Test
-
-Let's complete the implementation of our panic handler test:
+Now we vastly simplify our `should_panic` test by removing the test runner related code. The result looks like this:
 
 ```rust
-// in tests/panic_handler.rs
+// in tests/should_panic.rs
 
-use blog_os::{serial_print, serial_println, QemuExitCode, exit_qemu};
+#![no_std]
+#![no_main]
 
-const MESSAGE: &str = "Example panic message from panic_handler test";
-const PANIC_LINE: u32 = 14; // adjust this when moving the `panic!` call
+use core::panic::PanicInfo;
+use blog_os::{QemuExitCode, exit_qemu, serial_println};
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    serial_print!("panic_handler... ");
-    panic!(MESSAGE); // must be in line `PANIC_LINE`
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    serial_println!("[ok]");
-    exit_qemu(QemuExitCode::Success);
-    loop {}
-}
-```
-
-We immediately `panic` in our `_start` function with a `MESSAGE`. In the panic handler, we exit with a success exit code. We don't need a `qemu_exit` call at the end of our `_start` function, since the Rust compiler knows for sure that the code after the `panic` is unreachable. If we run the test with `cargo xtest --test panic_handler` now, we see that it succeeds as expected.
-
-We will need the `MESSAGE` and `PANIC_LINE` constants in the next section. The `PANIC_LINE` constant specifies the line number that contains the `panic!` invocation, which is `14` in our case (but it might be different for you).
-
-### Checking the `PanicInfo`
-
-To ensure that the given `PanicInfo` is correct, we can extend the `panic` function to check that the reported message and file/line information are correct:
-
-```rust
-// in tests/panic_handler.rs
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    check_message(info);
-    check_location(info);
-
-    // same as before
-    serial_println!("[ok]");
-    exit_qemu(QemuExitCode::Success);
-    loop {}
-}
-```
-
-We will show the implementation of `check_message` and `check_location` in a moment. Before that, we create a `fail` helper function that can be used to print an error message and exit QEMU with an failure exit code:
-
-```rust
-// in tests/panic_handler.rs
-
-fn fail(error: &str) -> ! {
-    serial_println!("[failed]");
-    serial_println!("{}", error);
+    should_panic();
+    serial_println!("[test did not panic]");
     exit_qemu(QemuExitCode::Failed);
+    loop{}
+}
+
+fn should_fail() {
+    serial_print!("should_fail... ");
+    assert_eq!(0, 1);
+}
+
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    serial_println!("[ok]");
+    exit_qemu(QemuExitCode::Success);
     loop {}
 }
 ```
 
-Now we can implement our `check_location` function:
+We now call the `should_panic` function directly from our `_start` function and exit with a failure exit code if it returns. When we run `cargo xtest --test should_panic` now, we see that the test behaves exactly as before.
 
-```rust
-// in tests/panic_handler.rs
-
-fn check_location(info: &PanicInfo) {
-    let location = info.location().unwrap_or_else(|| fail("no location"));
-    if location.file() != file!() {
-        fail("file name wrong");
-    }
-    if location.line() != PANIC_LINE {
-        fail("file line wrong");
-    }
-}
-```
-
-The function takes queries the location information from the `PanicInfo` and fails if it does not exist. It then checks that the reported file name is correct by comparing it with the output of the compiler-provided [`file!`] macro. To check the reported line number, it compares it with the `PANIC_LINE` constant that we manually defined above.
-
-[`file!`]: https://doc.rust-lang.org/core/macro.file.html
-
-#### Checking the Panic Message
-
-Checking the reported panic message is a bit more complicated. The reason is that the [`PanicInfo::message`] function returns a [`fmt::Arguments`] instance that can't be compared with our `MESSAGE` string directly. To work around this, we need to create a `CompareMessage` struct:
-
-[`PanicInfo::message`]: https://doc.rust-lang.org/core/macro.file.html
-[`fmt::Arguments`]: https://doc.rust-lang.org/core/fmt/struct.Arguments.html
-
-```rust
-// in tests/panic_handler.rs
-
-use core::fmt;
-
-/// Compares a `fmt::Arguments` instance with the `MESSAGE` string
-///
-/// To use this type, write the `fmt::Arguments` instance to it using the
-/// `write` macro. If the message component matches `MESSAGE`, the `expected`
-/// field is the empty string.
-struct CompareMessage {
-    expected: &'static str,
-}
-
-impl fmt::Write for CompareMessage {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        if self.expected.starts_with(s) {
-            self.expected = &self.expected[s.len()..];
-        } else {
-            fail("message not equal to expected message");
-        }
-        Ok(())
-    }
-}
-```
-
-The trick is to implement the [`fmt::Write`] trait like we did for our [VGA buffer writer]. The [`write_str`] method is called with a `&str` parameter that we can compare with the expected message. An important detail is that the method is called _multiple times_ with the individual string components. For example, when we do `print!("{}z", "xy")` the method on our VGA buffer writer is invoked once with the string `"xy"` and once with the string `"z"`.
-
-[`fmt::Write`]: https://doc.rust-lang.org/core/fmt/trait.Write.html
-[VGA buffer writer]: ./second-edition/posts/03-vga-text-buffer/index.md#formatting-macros
-[`write_str`]: https://doc.rust-lang.org/core/fmt/trait.Write.html#tymethod.write_str
-
-This means that we can't directly compare the `s` argument with the expected message, since it might only be a substring. Instead, we use the [`starts_with`] method to verify that the given string component is a substring of the expected message. Then we use [string slicing] to remove the already printed characters from the `expected` string. If the `expected` field is an empty string after writing the panic message, it means that it matches the expected message.
-
-[`starts_with`]: https://doc.rust-lang.org/std/primitive.str.html#method.starts_with
-[string slicing]: https://doc.rust-lang.org/book/ch04-03-slices.html#string-slices
-
-
-With the `CompareMessage` type, we can finally implement our `check_message` function:
-
-```rust
-// in tests/panic_handler.rs
-
-#![feature(panic_info_message)] // at the top of the file
-
-use core::fmt::Write;
-
-fn check_message(info: &PanicInfo) {
-    let message = info.message().unwrap_or_else(|| fail("no message"));
-    let mut compare_message = CompareMessage { expected: MESSAGE };
-    write!(&mut compare_message, "{}", message)
-        .unwrap_or_else(|_| fail("write failed"));
-    if !compare_message.expected.is_empty() {
-        fail("message shorter than expected message");
-    }
-}
-```
-
-The function uses the [`PanicInfo::message`] function to get the panic message. If no message is reported, it calls `fail` to fail the test. Since the function is unstable, we need to add the `#![feature(panic_info_message)]` attribute at the top of our test file. Note that you need to adjust the `PANIC_INFO` line number after adding the attribute and the imports on top.
-
-[`PanicInfo::message`]: https://doc.rust-lang.org/core/panic/struct.PanicInfo.html#method.message
-
-After querying the message, the function constructs a `CompareMessage` instance with the `expected` field set to the `MESSAGE` string. Then it writes the message to it using the [`write!`] macro. After the write, it reads the `expected` field and fails the test if it is not the empty string.
-
-[`write!`]: https://doc.rust-lang.org/core/macro.write.html
-
-Now we can run the test using `cargo xtest --test panic_handler`. We see that it passes, which means that the reported panic info is correct. If we use a wrong line number in `PANIC_LINE` or panic with an additional character through `panic!("{}x", MESSAGE)`, we see that the test indeed fails.
+Apart from creating `should_panic` tests, disabling the `harness` attribute can also be useful for complex integration tests, for example when the individual test functions have side effects and need to be run in a specified order.
 
 ## Summary
 
@@ -992,7 +913,7 @@ Testing is a very useful technique to ensure that certain components have a desi
 
 This post explained how to set up a test framework for our Rust kernel. We used the custom test frameworks feature of Rust to implement support for a simple `#[test_case]` attribute in our bare-metal environment. By using the `isa-debug-exit` device of QEMU, our test runner can exit QEMU after running the tests and report the test status out. To print error messages to the console instead of the VGA buffer, we created a basic driver for the serial port.
 
-After creating some tests for our `println` macro, we explored integration tests in the second half of the post. We learned that they live in the `tests` directory and are treated as completely separate executables. To give them access to the `exit_qemu` function and the `serial_println` macro, we moved most of our code into a library that can be imported by all executables and integration tests. Since integration tests run in their own separate environment, they make it possible to test the interactions with the hardware or Rust's panic system.
+After creating some tests for our `println` macro, we explored integration tests in the second half of the post. We learned that they live in the `tests` directory and are treated as completely separate executables. To give them access to the `exit_qemu` function and the `serial_println` macro, we moved most of our code into a library that can be imported by all executables and integration tests. Since integration tests run in their own separate environment, they make it possible to test interactions with the hardware or to create tests that should panic.
 
 We now have a test framework that runs in a realistic environment inside QEMU. By creating more tests in future posts, we can keep our kernel maintainable when it becomes more complex.
 
