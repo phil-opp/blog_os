@@ -4,10 +4,6 @@ version = "0.1.0"
 authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 edition = "2018"
 
-[[test]]
-name = "panic_handler"
-harness = false
-
 [dependencies]
 bootloader = "0.6.4"
 volatile = "0.2.3"
