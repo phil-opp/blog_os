@@ -373,7 +373,7 @@ Note how this solution requires no `unsafe` blocks. The `lazy_static!` macro doe
 
 ### Running it
 
-The last step for making exceptions work in our kernel it to call the `init_idt` function from our `main.rs`. Instead of calling it directly, we introduce a general `init` function in our `lib.rs`:
+The last step for making exceptions work in our kernel is to call the `init_idt` function from our `main.rs`. Instead of calling it directly, we introduce a general `init` function in our `lib.rs`:
 
 ```rust
 // in src/lib.rs
