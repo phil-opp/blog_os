@@ -884,7 +884,7 @@ use blog_os::{QemuExitCode, exit_qemu, serial_println};
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    should_panic();
+    should_fail();
     serial_println!("[test did not panic]");
     exit_qemu(QemuExitCode::Failed);
     loop{}
@@ -903,7 +903,7 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 ```
 
-We now call the `should_panic` function directly from our `_start` function and exit with a failure exit code if it returns. When we run `cargo xtest --test should_panic` now, we see that the test behaves exactly as before.
+We now call the `should_fail` function directly from our `_start` function and exit with a failure exit code if it returns. When we run `cargo xtest --test should_panic` now, we see that the test behaves exactly as before.
 
 Apart from creating `should_panic` tests, disabling the `harness` attribute can also be useful for complex integration tests, for example when the individual test functions have side effects and need to be run in a specified order.
 
