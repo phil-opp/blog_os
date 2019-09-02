@@ -299,7 +299,7 @@ The easiest way to print text to the screen at this stage is the [VGA text buffe
 
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
 
-![screen output for common ASCII characters](https://upload.wikimedia.org/wikipedia/commons/6/6d/Codepage-737.png)
+![screen output for common ASCII characters](https://upload.wikimedia.org/wikipedia/commons/f/f8/Codepage-437.png)
 
 We will discuss the exact layout of the VGA buffer in the next post, where we write a first small driver for it. For printing “Hello World!”, we just need to know that the buffer is located at address `0xb8000` and that each character cell consists of an ASCII byte and a color byte.
 
