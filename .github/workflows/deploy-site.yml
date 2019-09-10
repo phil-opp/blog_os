@@ -25,14 +25,13 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
           ssh-add - <<< "$deploy_key"
+          echo ::set-env name=SSH_AUTH_SOCK::$SSH_AUTH_SOCK
       env:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         deploy_key: ${{ secrets.DEPLOY_SSH_KEY }}
 
     - name: "Clone blog_os_deploy Repo"
       run: git clone git@github.com:phil-opp/blog_os_deploy.git --branch gh-pages
-      env:
-        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
 
     - name: "Set Up Git Identity"
       run: |
@@ -62,8 +61,6 @@ jobs:
     - name: "Push Changes"
       run: "git push"
       working-directory: "blog_os_deploy"
-      env:
-        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
 
   # TODO: Reuse artifact by `build-site` workflow when
   # https://github.com/actions/download-artifact/issues/3 is resolved.
