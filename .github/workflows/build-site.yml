@@ -1,6 +1,13 @@
 name: Build Site
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - '*'
+      - '!master'   # TODO re-enable when reusing artifacts for deploying
+    tags:
+      - '*'
+  pull_request:
 
 jobs:
   build_site:
