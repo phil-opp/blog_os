@@ -1,0 +1,59 @@
+name: Build Code
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: "Test"
+
+    strategy:
+      matrix:
+        platform: [
+          ubuntu-latest,
+          macos-latest,
+          windows-latest
+        ]
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+    - name: "Checkout Repository"
+      uses: actions/checkout@v1
+
+    - name: Install Rustup
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
+        echo ::add-path::$HOME/.cargo/bin
+      if: runner.os == 'macOS'
+
+    - name: "Print Rust Version"
+      run: |
+        rustc -Vv
+        cargo -Vv
+
+    - name: "Add thumbv7em-none-eabihf Target"
+      run: rustup target add thumbv7em-none-eabihf
+
+    - name: "Build for thumbv7em-none-eabihf"
+      run: cargo build --target thumbv7em-none-eabihf
+
+    - name: "Build for Linux"
+      if: runner.os == 'Linux'
+      run: cargo rustc -- -C link-arg=-nostartfiles
+
+    - name: "Build for macOS"
+      if: runner.os == 'macOS'
+      run: cargo rustc -- -C link-args="-e __start -static -nostartfiles"
+
+    - name: "Build for Windows"
+      if: runner.os == 'Windows'
+      run: cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
+
+
+  check_formatting:
+    name: "Check Formatting"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: rustup component add rustfmt
+    - run: cargo fmt -- --check
