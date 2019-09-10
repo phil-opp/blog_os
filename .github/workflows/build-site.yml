@@ -1,0 +1,44 @@
+name: Build Site
+
+on: [push, pull_request]
+
+jobs:
+  build_site:
+    name: "Zola Build"
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: 'Download Zola'
+      run: curl -sL https://github.com/getzola/zola/releases/download/v0.7.0/zola-v0.7.0-x86_64-unknown-linux-gnu.tar.gz | tar zxv
+    - name: "Install Python Tools"
+      run: python -m pip install --upgrade pip setuptools wheel
+    - name: 'Install Python Libraries'
+      run: python -m pip install --user -r requirements.txt
+      working-directory: "blog"
+
+    - name: "Run before_build.py script"
+      run: python before_build.py
+      working-directory: "blog"
+    - name: "Build Site"
+      run: ../zola build
+      working-directory: "blog"
+
+    - name: Upload Generated Site
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: generated_site
+        path: blog/public
+
+  check_spelling:
+    name: "Check Spelling"
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - run: curl -L https://git.io/misspell | bash
+      name: "Install misspell"
+    - run: bin/misspell -error blog/content
+      name: "Check for common typos"
