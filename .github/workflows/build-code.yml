@@ -31,23 +31,17 @@ jobs:
         rustc -Vv
         cargo -Vv
 
-    - name: "Add thumbv7em-none-eabihf Target"
-      run: rustup target add thumbv7em-none-eabihf
+    - name: "Install Rustup Components"
+      run: rustup component add rust-src llvm-tools-preview
+    - name: "Install cargo-xbuild"
+      run: cargo install cargo-xbuild --debug
+    - name: "Install bootimage"
+      run: cargo install bootimage --debug
 
-    - name: "Build for thumbv7em-none-eabihf"
-      run: cargo build --target thumbv7em-none-eabihf
-
-    - name: "Build for Linux"
-      if: runner.os == 'Linux'
-      run: cargo rustc -- -C link-arg=-nostartfiles
-
-    - name: "Build for macOS"
-      if: runner.os == 'macOS'
-      run: cargo rustc -- -C link-args="-e __start -static -nostartfiles"
-
-    - name: "Build for Windows"
-      if: runner.os == 'Windows'
-      run: cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
+    - name: "Run cargo xbuild"
+      run: cargo xbuild
+    - name: "Create Bootimage"
+      run: cargo bootimage
 
 
   check_formatting:
