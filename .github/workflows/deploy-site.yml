@@ -62,6 +62,8 @@ jobs:
     - name: "Push Changes"
       run: "git push"
       working-directory: "blog_os_deploy"
+      env:
+        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
 
   # TODO: Reuse artifact by `build-site` workflow when
   # https://github.com/actions/download-artifact/issues/3 is resolved.
