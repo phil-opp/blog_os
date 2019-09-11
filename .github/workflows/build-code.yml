@@ -2,6 +2,17 @@ name: Build Code
 
 on: [push, pull_request]
 
+on:
+  push:
+    branches:
+      - '*'
+      - '!staging.tmp'
+    tags:
+      - '*'
+  pull_request:
+  schedule:
+    - cron: '40 3 * * *'   # every day at 3:40
+
 jobs:
   test:
     name: "Test"
