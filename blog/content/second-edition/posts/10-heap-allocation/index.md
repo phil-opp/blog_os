@@ -67,7 +67,7 @@ Apart from the `'static` lifetime, static variables also have the useful propert
 However, this property of static variables brings a crucial drawback: They are read-only by default. Rust enforces this because a [data race] would occur if e.g. two threads modify a static variable at the same time. The only way to modify a static variable is to encapsulate it in a [`Mutex`] type, which ensures that only a single `&mut` reference exists at any point in time. We already used a `Mutex` for our [static VGA buffer `Writer`][vga mutex].
 
 [data race]: https://doc.rust-lang.org/nomicon/races.html
-[`Mutex`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html
+[`Mutex`]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html
 [vga mutex]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
 
 ## Dynamic Memory
@@ -529,7 +529,7 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 The struct is named `LockedHeap` because it uses a [`spin::Mutex`] for synchronization. This is required because multiple threads could access the `ALLOCATOR` static at the same time. As always when using a `Mutex`, we need to be careful to not accidentally cause a deadlock. This means that we shouldn't perform any allocations in interrupt handlers, since they can run at an arbitrary time and might interrupt an in-progress allocation.
 
-[`spin::Mutex`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html
+[`spin::Mutex`]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html
 
 Setting the `LockedHeap` as global allocator is not enough. The reason is that we use the [`empty`] constructor function, which creates an allocator without any backing memory. Like our dummy allocator, it always returns an error on `alloc`. To fix this, we need to initialize the allocator after creating the heap:
 

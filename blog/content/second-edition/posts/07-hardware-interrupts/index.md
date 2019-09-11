@@ -107,7 +107,7 @@ pub static PICS: spin::Mutex<ChainedPics> =
 
 We're setting the offsets for the pics to the range 32–47 as we noted above. By wrapping the `ChainedPics` struct in a `Mutex` we are able to get safe mutable access (through the [`lock` method][spin mutex lock]), which we need in the next step. The `ChainedPics::new` function is unsafe because wrong offsets could cause undefined behavior.
 
-[spin mutex lock]: https://docs.rs/spin/0.4.8/spin/struct.Mutex.html#method.lock
+[spin mutex lock]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html#method.lock
 
 We can now initialize the 8259 PIC in our `init` function:
 
