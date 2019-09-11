@@ -1,0 +1,79 @@
+name: Build Code
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: "Test"
+
+    strategy:
+      matrix:
+        platform: [
+          ubuntu-latest,
+          macos-latest,
+          windows-latest
+        ]
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+    - name: "Checkout Repository"
+      uses: actions/checkout@v1
+
+    - name: Install Rustup
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
+        echo ::add-path::$HOME/.cargo/bin
+      if: runner.os == 'macOS'
+
+    - name: "Print Rust Version"
+      run: |
+        rustc -Vv
+        cargo -Vv
+
+    - name: "Install Rustup Components"
+      run: rustup component add rust-src llvm-tools-preview
+    - name: "Install cargo-xbuild"
+      run: cargo install cargo-xbuild --debug
+    - name: "Install bootimage"
+      run: cargo install bootimage --debug
+
+    - name: "Run cargo xbuild"
+      run: cargo xbuild
+    - name: "Create Bootimage"
+      run: cargo bootimage
+
+     # install QEMU
+    - name: Install QEMU (Linux)
+      run: sudo apt update && sudo apt install qemu-system-x86
+      if: runner.os == 'Linux'
+    - name: Install QEMU (macOS)
+      run: brew install qemu
+      if: runner.os == 'macOS'
+      env:
+        HOMEBREW_NO_AUTO_UPDATE: 1
+        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: 1
+        HOMEBREW_NO_INSTALL_CLEANUP: 1
+    - name: Install Scoop (Windows)
+      run: |
+        Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
+        echo ::add-path::$HOME\scoop\shims
+      if: runner.os == 'Windows'
+      shell: pwsh
+    - name: Install QEMU (Windows)
+      run: scoop install qemu
+      if: runner.os == 'Windows'
+      shell: pwsh
+    - name: "Print QEMU Version"
+      run: qemu-system-x86_64 --version
+
+    - name: "Run cargo xtest"
+      run: cargo xtest
+
+  check_formatting:
+    name: "Check Formatting"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: rustup component add rustfmt
+    - run: cargo fmt -- --check
