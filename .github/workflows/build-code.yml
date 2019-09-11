@@ -2,6 +2,15 @@ name: Build Code
 
 on: [push, pull_request]
 
+on:
+  push:
+    branches:
+      - '*'
+      - '!staging.tmp'
+    tags:
+      - '*'
+  pull_request:
+
 jobs:
   test:
     name: "Test"
