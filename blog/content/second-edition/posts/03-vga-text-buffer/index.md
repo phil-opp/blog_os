@@ -300,7 +300,7 @@ We can add a dependency on the `volatile` crate by adding it to the `dependencie
 # in Cargo.toml
 
 [dependencies]
-volatile = "0.2.3"
+volatile = "0.2.6"
 ```
 
 The `0.2.3` is the [semantic] version number. For more information, see the [Specifying Dependencies] guide of the cargo documentation.
@@ -538,7 +538,7 @@ To use a spinning mutex, we can add the [spin crate] as a dependency:
 ```toml
 # in Cargo.toml
 [dependencies]
-spin = "0.4.9"
+spin = "0.5.2"
 ```
 
 Then we can use the spinning Mutex to add safe [interior mutability] to our static `WRITER`:
