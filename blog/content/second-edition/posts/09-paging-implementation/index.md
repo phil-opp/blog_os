@@ -47,11 +47,11 @@ To implement the approach, we will need support from the bootloader, so we'll co
 
 ### Dependency Updates
 
-This post requires version 0.6.4 or later of the `bootloader` dependency and version 0.6.0 or later of the `x86_64` dependency. You can update the dependencies in your `Cargo.toml`:
+This post requires version 0.8.0 or later of the `bootloader` dependency and version 0.6.0 or later of the `x86_64` dependency. You can update the dependencies in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bootloader = "0.6.4"
+bootloader = "0.8.0"
 x86_64 = "0.6.0"
 ```
 
@@ -305,7 +305,7 @@ We choose the first approach for our kernel since it is simple, platform-indepen
 
 ```toml
 [dependencies]
-bootloader = { version = "0.6.4", features = ["map_physical_memory"]}
+bootloader = { version = "0.8.0", features = ["map_physical_memory"]}
 ```
 
 With this feature enabled, the bootloader maps the complete physical memory to some unused virtual address range. To communicate the virtual address range to our kernel, the bootloader passes a _boot information_ structure.
