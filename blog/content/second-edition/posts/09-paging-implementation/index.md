@@ -401,7 +401,10 @@ At the [end of the previous post], we tried to take a look at the page tables ou
 ```rust
 // in src/memory.rs
 
-use x86_64::structures::paging::PageTable;
+use x86_64::{
+    structures::paging::PageTable,
+    VirtAddr,
+};
 
 /// Returns a mutable reference to the active level 4 table.
 ///
@@ -409,22 +412,22 @@ use x86_64::structures::paging::PageTable;
 /// complete physical memory is mapped to virtual memory at the passed
 /// `physical_memory_offset`. Also, this function must be only called once
 /// to avoid aliasing `&mut` references (which is undefined behavior).
-pub unsafe fn active_level_4_table(physical_memory_offset: u64)
+pub unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
     -> &'static mut PageTable
 {
-    use x86_64::{registers::control::Cr3, VirtAddr};
+    use x86_64::registers::control::Cr3;
 
     let (level_4_table_frame, _) = Cr3::read();
 
     let phys = level_4_table_frame.start_address();
-    let virt = VirtAddr::new(phys.as_u64() + physical_memory_offset);
+    let virt = physical_memory_offset + phys.as_u64();
     let page_table_ptr: *mut PageTable = virt.as_mut_ptr();
 
     &mut *page_table_ptr // unsafe
 }
 ```
 
-First, we read the physical frame of the active level 4 table from the `CR3` register. We then take its physical start address and convert it to a virtual address by adding the passed `physical_memory_offset`. Finally, we convert the address to a `*mut PageTable` raw pointer through the `as_mut_ptr` method and then unsafely create a `&mut PageTable` reference from it. We create a `&mut` reference instead of a `&` reference because we will mutate the page tables later in this post.
+First, we read the physical frame of the active level 4 table from the `CR3` register. We then take its physical start address, convert it to an `u64`, and add it to `physical_memory_offset` to get the virtual address where the page table frame is mapped. Finally, we convert the virtual address to a `*mut PageTable` raw pointer through the `as_mut_ptr` method and then unsafely create a `&mut PageTable` reference from it. We create a `&mut` reference instead of a `&` reference because we will mutate the page tables later in this post.
 
 We don't need to use an unsafe block here because Rust treats the complete body of an `unsafe fn` like a large `unsafe` block. This makes our code more dangerous since we could accidentally introduce an unsafe operation in previous lines without noticing. It also makes it much more difficult to spot the unsafe operations. There is an [RFC](https://github.com/rust-lang/rfcs/pull/2585) to change this behavior.
 
@@ -435,13 +438,14 @@ We can now use this function to print the entries of the level 4 table:
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::memory::active_level_4_table;
+    use x86_64::VirtAddr;
 
     println!("Hello World{}", "!");
     blog_os::init();
 
-    let l4_table = unsafe {
-        active_level_4_table(boot_info.physical_memory_offset)
-    };
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let l4_table = unsafe { active_level_4_table(phys_mem_offset) };
+
     for (i, entry) in l4_table.iter().enumerate() {
         if !entry.is_unused() {
             println!("L4 Entry {}: {:?}", i, entry);
@@ -457,8 +461,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-As `physical_memory_offset` we pass the respective field of the `BootInfo` struct. We then use the `iter` function to iterate over the page table entries and the [`enumerate`] combinator to additionally add an index `i` to each element. We only print non-empty entries because all 512 entries wouldn't fit on the screen.
+First, we convert the `physical_memory_offset` of the `BootInfo` struct to a [`VirtAddr`] and pass it to the `active_level_4_table` function. We then use the `iter` function to iterate over the page table entries and the [`enumerate`] combinator to additionally add an index `i` to each element. We only print non-empty entries because all 512 entries wouldn't fit on the screen.
 
+[`VirtAddr`]: https://docs.rs/x86_64/0.7.5/x86_64/struct.VirtAddr.html
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
 When we run it, we see the following output:
@@ -511,7 +516,7 @@ use x86_64::{PhysAddr, VirtAddr};
 /// This function is unsafe because the caller must guarantee that the
 /// complete physical memory is mapped to virtual memory at the passed
 /// `physical_memory_offset`.
-pub unsafe fn translate_addr(addr: VirtAddr, physical_memory_offset: u64)
+pub unsafe fn translate_addr(addr: VirtAddr, physical_memory_offset: VirtAddr)
     -> Option<PhysAddr>
 {
     translate_addr_inner(addr, physical_memory_offset)
@@ -530,7 +535,7 @@ The private inner function contains the real implementation:
 /// This function is safe to limit the scope of `unsafe` because Rust treats
 /// the whole body of unsafe functions as an unsafe block. This function must
 /// only be reachable through `unsafe fn` from outside of this module.
-fn translate_addr_inner(addr: VirtAddr, physical_memory_offset: u64)
+fn translate_addr_inner(addr: VirtAddr, physical_memory_offset: VirtAddr)
     -> Option<PhysAddr>
 {
     use x86_64::structures::paging::page_table::FrameError;
@@ -547,8 +552,8 @@ fn translate_addr_inner(addr: VirtAddr, physical_memory_offset: u64)
     // traverse the multi-level page table
     for &index in &table_indexes {
         // convert the frame into a page table reference
-        let virt = frame.start_address().as_u64() + physical_memory_offset;
-        let table_ptr: *const PageTable = VirtAddr::new(virt).as_ptr();
+        let virt = physical_memory_offset + frame.start_address().as_u64();
+        let table_ptr: *const PageTable = virt.as_ptr();
         let table = unsafe {&*table_ptr};
 
         // read the page table entry and update `frame`
@@ -584,6 +589,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     […] // hello world and blog_os::init
 
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+
     let addresses = [
         // the identity-mapped vga buffer page
         0xb8000,
@@ -597,9 +604,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     for &address in &addresses {
         let virt = VirtAddr::new(address);
-        let phys = unsafe {
-            translate_addr(virt, boot_info.physical_memory_offset)
-        };
+        let phys = unsafe { translate_addr(virt, phys_mem_offset) };
         println!("{:?} -> {:?}", virt, phys);
     }
 
@@ -613,7 +618,7 @@ When we run it, we see the following output:
 
 As expected, the identity-mapped address `0xb8000` translates to the same physical address. The code page and the stack page translate to some arbitrary physical addresses, which depend on how the bootloader created the initial mapping for our kernel. The translation of the `physical_memory_offset` should point to physical address `0`, but the translation fails because the mapping uses huge pages for efficiency. Future bootloader version might use the same optimization for kernel and stack pages.
 
-### Using `MappedPageTable`
+### Using `OffsetPageTable`
 
 Translating virtual to physical addresses is a common task in an OS kernel, therefore the `x86_64` crate provides an abstraction for it. The implementation already supports huge pages and several other page table functions apart from `translate_addr`, so we will use it in the following instead of adding huge page support to our own implementation.
 
@@ -629,50 +634,44 @@ The base of the abstraction are two traits that define various page table mappin
 [`translate_addr`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
 [`translate`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate
 
-The traits only define the interface, they don't provide any implementation. The `x86_64` crate currently provides two types that implement the traits: [`MappedPageTable`] and [`RecursivePageTable`]. The former type requires that each page table frame is mapped somewhere (e.g. at an offset). The latter type can be used when the level 4 table is [mapped recursively](#recursive-page-tables).
+The traits only define the interface, they don't provide any implementation. The `x86_64` crate currently provides three types that implement the traits with different requirements. The [`OffsetPageTable`] type assumes that the complete physical memory is mapped to the virtual address space at some offset. The [`MappedPageTable`] is a bit more flexible: It only requires that each page table frame is mapped to the virtual address space at a calculatable address. Finally, the [`RecursivePageTable`] type can be used to access page table frames through [recursive page tables](#recursive-page-tables).
 
+[`OffsetPageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
 [`MappedPageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html
 [`RecursivePageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
-We have the complete physical memory mapped at `physical_memory_offset`, so we can use the `MappedPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
+In our case, the bootloader maps the complete physical memory at an virtual address specfied by the `physical_memory_offset` variable, so we can use the `OffsetPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
 
 ```rust
-use x86_64::structures::paging::{PhysFrame, MapperAllSizes, MappedPageTable};
-use x86_64::PhysAddr;
+use x86_64::structures::paging::{PhysFrame, OffsetPageTable};
+use x86_64::{PhysAddr, VirtAddr};
 
-/// Initialize a new MappedPageTable.
+/// Initialize a new OffsetPageTable.
 ///
 /// This function is unsafe because the caller must guarantee that the
 /// complete physical memory is mapped to virtual memory at the passed
 /// `physical_memory_offset`. Also, this function must be only called once
 /// to avoid aliasing `&mut` references (which is undefined behavior).
-pub unsafe fn init(physical_memory_offset: u64) -> impl MapperAllSizes {
+pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static> {
     let level_4_table = active_level_4_table(physical_memory_offset);
-    let phys_to_virt = move |frame: PhysFrame| -> *mut PageTable {
-        let phys = frame.start_address().as_u64();
-        let virt = VirtAddr::new(phys + physical_memory_offset);
-        virt.as_mut_ptr()
-    };
-    MappedPageTable::new(level_4_table, phys_to_virt)
+    OffsetPageTable::new(level_4_table, physical_memory_offset)
 }
 
 // make private
-unsafe fn active_level_4_table(physical_memory_offset: u64)
+unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
     -> &'static mut PageTable
 {…}
 ```
 
-We can't directly return a `MappedPageTable` from the function because it is generic over a closure type, which can't be named. We avoid this problem by using the [`impl Trait`] syntax. This also has the advantage that we can switch our kernel to use `RecursivePageTable` without changing the signature of the function.
-
 [`impl Trait`]: https://doc.rust-lang.org/book/ch10-02-traits.html#returning-traits
 
-The [`MappedPageTable::new`] function expects two parameters: a mutable reference to the level 4 page table and a `phys_to_virt` closure that converts a physical frame to a page table pointer `*mut PageTable`. For the first parameter we can reuse our `active_level_4_table` function. For the second parameter, we create a closure that uses the `physical_memory_offset` to perform the conversion.
+The function takes the `physical_memory_offset` as an argument and returns a new `OffsetPageTable` instance with a `'static` lifetime. This means that the instance stays valid for the complete runtime of our kernel. In the function body, we first call the `active_level_4_table` function to retrieve a mutable reference to the level 4 page table. We then invoke the [`OffsetPageTable::new`] function with this reference. As the second parameter, the `new` function expects the virtual address at which the mapping of the physical memory starts, which is given in the `physical_memory_offset` variable.
 
-[`MappedPageTable::new`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html#method.new
+[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
 
-We also make the `active_level_4_table` private because it should only be called from the `init` function from now on.
+The `active_level_4_table` function should be only called from the `init` function from now on because it can easily to aliased mutable references when called multiple times, which can cause undefined behavior. For this reason, we make the function private by removing the `pub` specifier.
 
-To use the `MapperAllSizes::translate_addr` method instead of our own `memory::translate_addr` function, we only need to change a few lines in our `kernel_main`:
+We now can use the `MapperAllSizes::translate_addr` method instead of our own `memory::translate_addr` function. We only need to change a few lines in our `kernel_main`:
 
 ```rust
 // in src/main.rs
@@ -684,8 +683,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     […] // hello world and blog_os::init
 
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     // new: initialize a mapper
-    let mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
 
     let addresses = […]; // same as before
 
