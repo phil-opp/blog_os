@@ -1,4 +1,4 @@
 status = [
-  "phil-opp.blog_os",
+  "Zola Build", "Check Spelling"
 ]
 delete_merged_branches = true
