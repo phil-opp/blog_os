@@ -47,18 +47,16 @@ To implement the approach, we will need support from the bootloader, so we'll co
 
 ### Dependency Updates
 
-This post requires version 0.8.0 or later of the `bootloader` dependency and version 0.6.0 or later of the `x86_64` dependency. You can update the dependencies in your `Cargo.toml`:
+This post requires version 0.8.0 or later of the `bootloader` dependency. You can update the dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
 bootloader = "0.8.0"
-x86_64 = "0.6.0"
 ```
 
-For an overview of the changes in these versions, check out the [`bootloader` changelog] and the [`x86_64` changelog].
+For an overview of the changes in recent versions, check out the [`bootloader` changelog].
 
 [`bootloader` changelog]: https://github.com/rust-osdev/bootloader/blob/master/Changelog.md
-[`x86_64` changelog]: https://github.com/rust-osdev/x86_64/blob/master/Changelog.md
 
 ## Accessing Page Tables
 
