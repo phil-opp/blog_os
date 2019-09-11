@@ -14,9 +14,9 @@ harness = false
 
 [dependencies]
 bootloader = "0.8.0"
-volatile = "0.2.3"
-spin = "0.4.9"
-x86_64 = "0.7.0"
+volatile = "0.2.6"
+spin = "0.5.2"
+x86_64 = "0.7.5"
 uart_16550 = "0.2.0"
 pic8259_simple = "0.1.1"
 pc-keyboard = "0.3.1"
