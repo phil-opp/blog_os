@@ -43,6 +43,32 @@ jobs:
     - name: "Create Bootimage"
       run: cargo bootimage
 
+     # install QEMU
+    - name: Install QEMU (Linux)
+      run: sudo apt update && sudo apt install qemu-system-x86
+      if: runner.os == 'Linux'
+    - name: Install QEMU (macOS)
+      run: brew install qemu
+      if: runner.os == 'macOS'
+      env:
+        HOMEBREW_NO_AUTO_UPDATE: 1
+        HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: 1
+        HOMEBREW_NO_INSTALL_CLEANUP: 1
+    - name: Install Scoop (Windows)
+      run: |
+        Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
+        echo ::add-path::$HOME\scoop\shims
+      if: runner.os == 'Windows'
+      shell: pwsh
+    - name: Install QEMU (Windows)
+      run: scoop install qemu
+      if: runner.os == 'Windows'
+      shell: pwsh
+    - name: "Print QEMU Version"
+      run: qemu-system-x86_64 --version
+
+    - name: "Run cargo xtest"
+      run: cargo xtest
 
   check_formatting:
     name: "Check Formatting"
