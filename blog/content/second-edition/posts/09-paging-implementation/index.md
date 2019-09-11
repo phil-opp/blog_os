@@ -245,7 +245,7 @@ The above code assumes that the last level 4 entry with index `0o777` (511) is r
 
 Alternatively to performing the bitwise operations by hand, you can use the [`RecursivePageTable`] type of the `x86_64` crate, which provides safe abstractions for various page table operations. For example, the code below shows how to translate a virtual address to its mapped physical address:
 
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 ```rust
 // in src/memory.rs
@@ -571,7 +571,7 @@ The `VirtAddr` struct already provides methods to compute the indexes into the p
 
 Inside the loop, we again use the `physical_memory_offset` to convert the frame into a page table reference. We then read the entry of the current page table and use the [`PageTableEntry::frame`] function to retrieve the mapped frame. If the entry is not mapped to a frame we return `None`. If the entry maps a huge 2MiB or 1GiB page we panic for now.
 
-[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
+[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
 Let's test our translation function by translating some addresses:
 
@@ -631,8 +631,8 @@ The base of the abstraction are two traits that define various page table mappin
 
 The traits only define the interface, they don't provide any implementation. The `x86_64` crate currently provides two types that implement the traits: [`MappedPageTable`] and [`RecursivePageTable`]. The former type requires that each page table frame is mapped somewhere (e.g. at an offset). The latter type can be used when the level 4 table is [mapped recursively](#recursive-page-tables).
 
-[`MappedPageTable`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.MappedPageTable.html
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`MappedPageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 We have the complete physical memory mapped at `physical_memory_offset`, so we can use the `MappedPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
 
@@ -668,7 +668,7 @@ We can't directly return a `MappedPageTable` from the function because it is gen
 
 The [`MappedPageTable::new`] function expects two parameters: a mutable reference to the level 4 page table and a `phys_to_virt` closure that converts a physical frame to a page table pointer `*mut PageTable`. For the first parameter we can reuse our `active_level_4_table` function. For the second parameter, we create a closure that uses the `physical_memory_offset` to perform the conversion.
 
-[`MappedPageTable::new`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.MappedPageTable.html#method.new
+[`MappedPageTable::new`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html#method.new
 
 We also make the `active_level_4_table` private because it should only be called from the `init` function from now on.
 
@@ -712,8 +712,8 @@ Until now we only looked at the page tables without modifying anything. Let's ch
 
 We will use the [`map_to`] function of the [`Mapper`] trait for our implementation, so let's take a look at that function first. The documentation tells us that it takes four arguments: the page that we want to map, the frame that the page should be mapped to, a set of flags for the page table entry, and a `frame_allocator`. The frame allocator is needed because mapping the given page might require creating additional page tables, which need unused frames as backing storage.
 
-[`map_to`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
-[`Mapper`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/trait.Mapper.html
+[`map_to`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
+[`Mapper`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/trait.Mapper.html
 
 #### A `create_example_mapping` Function
 
@@ -747,7 +747,7 @@ pub fn create_example_mapping(
 In addition to the `page` that should be mapped, the function expects a `mapper` instance and a `frame_allocator`. The `mapper` is a type that implements the `Mapper<Size4KiB>` trait, which provides the `map_to` method. The generic `Size4KiB` parameter is needed because the [`Mapper`] trait is [generic] over the [`PageSize`] trait to work with both standard 4KiB pages and huge 2MiB/1GiB pages. We only want to create 4KiB pages, so we can use `Mapper<Size4KiB>` instead of requiring `MapperAllSizes`.
 
 [generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
-[`PageSize`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/page/trait.PageSize.html
+[`PageSize`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/page/trait.PageSize.html
 
 For the mapping, we set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable. Calling `map_to` is unsafe because it's possible to break memory safety with invalid arguments, so we need to use an `unsafe` block. For a list of all possible flags, see the [_Page Table Format_] section of the previous post.
 
@@ -757,8 +757,8 @@ The `map_to` function can fail, so it returns a [`Result`]. Since this is just s
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
-[`MapperFlush`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[`flush`]: https://docs.rs/x86_64/0.7.0/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`MapperFlush`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`flush`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 [must_use]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
 #### A dummy `FrameAllocator`
