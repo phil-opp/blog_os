@@ -24,6 +24,7 @@ jobs:
         ]
 
     runs-on: ${{ matrix.platform }}
+    timeout-minutes: 15
 
     steps:
     - name: "Checkout Repository"
@@ -56,6 +57,7 @@ jobs:
   check_formatting:
     name: "Check Formatting"
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
     - uses: actions/checkout@v1
     - run: rustup component add rustfmt
