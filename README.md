@@ -94,7 +94,7 @@ The current version of the blog is already the second edition. The first edition
 
 - [Cross Compile Binutils](https://os.phil-opp.com/cross-compile-binutils.html)
 - [Cross Compile libcore](https://os.phil-opp.com/cross-compile-libcore.html)
-- [Set Up GDB](https://os.phil-opp.com/set-up-gdb.html)
+- [Set Up GDB](https://os.phil-opp.com/set-up-gdb)
 - [Handling Exceptions using Naked Functions](https://os.phil-opp.com/handling-exceptions-with-naked-fns.html)
     - [Catching Exceptions](https://os.phil-opp.com/catching-exceptions.html)
           ([source code](https://github.com/phil-opp/blog_os/tree/catching_exceptions))
