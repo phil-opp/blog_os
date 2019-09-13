@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - '*'
+      - '!staging.tmp'
       - '!master'   # TODO re-enable when reusing artifacts for deploying
     tags:
       - '*'
