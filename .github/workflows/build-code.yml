@@ -7,9 +7,9 @@ on:
       - '!staging.tmp'
     tags:
       - '*'
-  pull_request:
   schedule:
     - cron: '40 3 * * *'   # every day at 3:40
+  pull_request:
 
 jobs:
   test:
