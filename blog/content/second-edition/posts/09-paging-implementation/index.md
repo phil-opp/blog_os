@@ -459,9 +459,9 @@ We see that there are various non-empty entries, which all map to different leve
 To traverse the page tables further and take a look at a level 3 table, we can take the mapped frame of an entry convert it to a virtual address again:
 
 ```rust
-// in the for loop in src/main.rs
+// in the `for` loop in src/main.rs
 
-use x86_64::{structures::paging::PageTable, VirtAddr};
+use x86_64::structures::paging::PageTable;
 
 if !entry.is_unused() {
     println!("L4 Entry {}: {:?}", i, entry);
@@ -492,7 +492,7 @@ For translating a virtual to a physical address, we have to traverse the four-le
 ```rust
 // in src/memory.rs
 
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::PhysAddr;
 
 /// Translates the given virtual address to the mapped physical address, or
 /// `None` if the address is not mapped.
@@ -568,6 +568,7 @@ Let's test our translation function by translating some addresses:
 // in src/main.rs
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    // new imports
     use blog_os::memory::translate_addr;
     use x86_64::VirtAddr;
 
@@ -579,9 +580,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         // the identity-mapped vga buffer page
         0xb8000,
         // some code page
-        0x20010a,
+        0x201008,
         // some stack page
-        0x57ac_001f_fe48,
+        0x0100_0020_1a10,
         // virtual address mapped to physical address 0
         boot_info.physical_memory_offset,
     ];
@@ -598,9 +599,13 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 When we run it, we see the following output:
 
-![0xb8000 -> 0xb8000, 0x20010a -> 0x40010a, 0x57ac001ffe48 -> 0x27be48, "panicked at 'huge pages not supported'](qemu-translate-addr.png)
+![0xb8000 -> 0xb8000, 0x201008 -> 0x401008, 0x10000201a10 -> 0x279a10, "panicked at 'huge pages not supported'](qemu-translate-addr.png)
 
-As expected, the identity-mapped address `0xb8000` translates to the same physical address. The code page and the stack page translate to some arbitrary physical addresses, which depend on how the bootloader created the initial mapping for our kernel. The translation of the `physical_memory_offset` should point to physical address `0`, but the translation fails because the mapping uses huge pages for efficiency. Future bootloader version might use the same optimization for kernel and stack pages.
+As expected, the identity-mapped address `0xb8000` translates to the same physical address. The code page and the stack page translate to some arbitrary physical addresses, which depend on how the bootloader created the initial mapping for our kernel. It's worth noting that the last 12 bits always stay the same after translation, which makes sense because these bits are the [_page offset_] and not part of the translation.
+
+[_page offset_]: ./second-edition/posts/08-paging-introduction/index.md#paging-on-x86-64
+
+Since each physical address can be accessed by adding the `physical_memory_offset`, the translation of the `physical_memory_offset` address itself should point to physical address `0`. However, the translation fails because the mapping uses huge pages for efficiency, which is not supported in our implementation yet.
 
 ### Using `OffsetPageTable`
 
@@ -618,7 +623,7 @@ The base of the abstraction are two traits that define various page table mappin
 [`translate_addr`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
 [`translate`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate
 
-The traits only define the interface, they don't provide any implementation. The `x86_64` crate currently provides three types that implement the traits with different requirements. The [`OffsetPageTable`] type assumes that the complete physical memory is mapped to the virtual address space at some offset. The [`MappedPageTable`] is a bit more flexible: It only requires that each page table frame is mapped to the virtual address space at a calculatable address. Finally, the [`RecursivePageTable`] type can be used to access page table frames through [recursive page tables](#recursive-page-tables).
+The traits only define the interface, they don't provide any implementation. The `x86_64` crate currently provides three types that implement the traits with different requirements. The [`OffsetPageTable`] type assumes that the complete physical memory is mapped to the virtual address space at some offset. The [`MappedPageTable`] is a bit more flexible: It only requires that each page table frame is mapped to the virtual address space at a calculable address. Finally, the [`RecursivePageTable`] type can be used to access page table frames through [recursive page tables](#recursive-page-tables).
 
 [`OffsetPageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
 [`MappedPageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html
@@ -627,8 +632,7 @@ The traits only define the interface, they don't provide any implementation. The
 In our case, the bootloader maps the complete physical memory at an virtual address specfied by the `physical_memory_offset` variable, so we can use the `OffsetPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
 
 ```rust
-use x86_64::structures::paging::{PhysFrame, OffsetPageTable};
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::structures::paging::OffsetPageTable;
 
 /// Initialize a new OffsetPageTable.
 ///
@@ -646,8 +650,6 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
     -> &'static mut PageTable
 {…}
 ```
-
-[`impl Trait`]: https://doc.rust-lang.org/book/ch10-02-traits.html#returning-traits
 
 The function takes the `physical_memory_offset` as an argument and returns a new `OffsetPageTable` instance with a `'static` lifetime. This means that the instance stays valid for the complete runtime of our kernel. In the function body, we first call the `active_level_4_table` function to retrieve a mutable reference to the level 4 page table. We then invoke the [`OffsetPageTable::new`] function with this reference. As the second parameter, the `new` function expects the virtual address at which the mapping of the physical memory starts, which is given in the `physical_memory_offset` variable.
 
@@ -669,7 +671,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     // new: initialize a mapper
-    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+    let mapper = unsafe { memory::init(phys_mem_offset) };
 
     let addresses = […]; // same as before
 
@@ -684,11 +686,17 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
+We need to import the `MapperAllSizes` trait in order to use the [`translate_addr`] method it provides.
+
 When we run it now, we see the same translation results as before, with the difference that the huge page translation now also works:
 
-![0xb8000 -> 0xb8000, 0x20010a -> 0x40010a, 0x57ac001ffe48 -> 0x27be48, 0xfffffc0000000000 -> 0x0](qemu-mapper-translate-addr.png)
+![0xb8000 -> 0xb8000, 0x201008 -> 0x401008, 0x10000201a10 -> 0x279a10, 0x18000000000 -> 0x0](qemu-mapper-translate-addr.png)
 
-As expected the virtual address `physical_memory_offset` translates to the physical address `0x0`. By using the translation function of the `MappedPageTable` type we can spare ourselves the work of implementing huge page support. We also have access to other page functions such as `map_to`, which we will use in the next section. At this point we no longer need our `memory::translate_addr` function, so you can delete it if you want.
+As expected, the translations of `0xb8000` and the code and stack addresses stay the same as with our own translation function. Additionally, we now see that the virtual address `physical_memory_offset` is mapped to the physical address `0x0`.
+
+By using the translation function of the `MappedPageTable` type we can spare ourselves the work of implementing huge page support. We also have access to other page functions such as `map_to`, which we will use in the next section.
+
+At this point we no longer need our `memory::translate_addr` function, so we can delete it.
 
 ### Creating a new Mapping
 
@@ -701,19 +709,22 @@ We will use the [`map_to`] function of the [`Mapper`] trait for our implementati
 
 #### A `create_example_mapping` Function
 
-The first step of our implementation is to create a new `create_example_mapping` function that maps a given page to `0xb8000`, the physical frame of the VGA text buffer. We choose that frame because it allows us to easily test if the mapping was created correctly: We just need to write to the newly mapped page and see whether we see the write appear on the screen.
+The first step of our implementation is to create a new `create_example_mapping` function that maps a given virtual page to `0xb8000`, the physical frame of the VGA text buffer. We choose that frame because it allows us to easily test if the mapping was created correctly: We just need to write to the newly mapped page and see whether we see the write appear on the screen.
 
 The `create_example_mapping` function looks like this:
 
 ```rust
 // in src/memory.rs
 
-use x86_64::structures::paging::{Page, Size4KiB, Mapper, FrameAllocator};
+use x86_64::{
+    PhysAddr,
+    structures::paging::{Page, PhysFrame, Mapper, Size4KiB, FrameAllocator}
+};
 
 /// Creates an example mapping for the given page to frame `0xb8000`.
 pub fn create_example_mapping(
     page: Page,
-    mapper: &mut impl Mapper<Size4KiB>,
+    mapper: &mut OffsetPageTable,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
 ) {
     use x86_64::structures::paging::PageTableFlags as Flags;
@@ -728,16 +739,18 @@ pub fn create_example_mapping(
 }
 ```
 
-In addition to the `page` that should be mapped, the function expects a `mapper` instance and a `frame_allocator`. The `mapper` is a type that implements the `Mapper<Size4KiB>` trait, which provides the `map_to` method. The generic `Size4KiB` parameter is needed because the [`Mapper`] trait is [generic] over the [`PageSize`] trait to work with both standard 4KiB pages and huge 2MiB/1GiB pages. We only want to create 4KiB pages, so we can use `Mapper<Size4KiB>` instead of requiring `MapperAllSizes`.
+In addition to the `page` that should be mapped, the function expects a mutable reference to an `OffsetPageTable` instance and a `frame_allocator`. The `frame_allocator` parameter uses the [`impl Trait`][impl-trait-arg] syntax to be [generic] over all types that implement the [`FrameAllocator`] trait. The trait is generic over the [`PageSize`] trait to work with both standard 4KiB pages and huge 2MiB/1GiB pages. We only want to create a 4KiB mapping, so we set the generic parameter to `Size4KiB`.
 
+[impl-trait-arg]: https://doc.rust-lang.org/book/ch10-02-traits.html#traits-as-parameters
 [generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/trait.FrameAllocator.html
 [`PageSize`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/page/trait.PageSize.html
 
-For the mapping, we set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable. Calling `map_to` is unsafe because it's possible to break memory safety with invalid arguments, so we need to use an `unsafe` block. For a list of all possible flags, see the [_Page Table Format_] section of the previous post.
+For the mapping, we set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable. Calling [`map_to`] is unsafe because it's possible to break memory safety with invalid arguments, so we need to use an `unsafe` block. For a list of all possible flags, see the [_Page Table Format_] section of the previous post.
 
 [_Page Table Format_]: ./second-edition/posts/08-paging-introduction/index.md#page-table-format
 
-The `map_to` function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`][must_use] attribute to emit a warning when we accidentally forget to use it.
+The [`map_to`] function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`][must_use] attribute to emit a warning when we accidentally forget to use it.
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
@@ -747,7 +760,7 @@ The `map_to` function can fail, so it returns a [`Result`]. Since this is just s
 
 #### A dummy `FrameAllocator`
 
-To be able to call `create_example_mapping` we need to create a `FrameAllocator` first. As noted above, the difficulty of creating a new mapping depends on the virtual page that we want to map. In the easiest case, the level 1 page table for the page already exists and we just need to write a single entry. In the most difficult case, the page is in a memory region for that no level 3 exists yet so that we need to create new level 3, level 2 and level 1 page tables first.
+To be able to call `create_example_mapping` we need to create a type that implements the `FrameAllocator` trait first. As noted above, the trait is responsible for allocating frames for new page table if they are needed by `map_to`.
 
 Let's start with the simple case and assume that we don't need to create new page tables. For this case, a frame allocator that always returns `None` suffices. We create such an `EmptyFrameAllocator` for testing our mapping function:
 
@@ -766,20 +779,39 @@ unsafe impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
 
 Implementing the `FrameAllocator` is unsafe because the implementer must guarantee that the allocator yields only unused frames. Otherwise undefined behavior might occur, for example when two virtual pages are mapped to the same physical frame. Our `EmptyFrameAllocator` only returns `None`, so this isn't a problem in this case.
 
-We now need to find a page that we can map without creating new page tables. The bootloader loads itself in the first megabyte of the virtual address space, so we know that a valid level 1 table exists for this region. We can choose any unused page in this memory region for our example mapping, for example, the page at address `0x1000`.
+#### Choosing a Virtual Page
 
-To test our mapping function, we first map page `0x1000` and then try to write to the screen through that mapping:
+We now have a simple frame allocator that we can pass to our `create_example_mapping` function. However, the allocator always returns `None`, so this will only work if no additional page table frames are needed for creating the mapping. To understand when additional page table frames are needed and when not, let's consider an example:
+
+![A virtual and a physical address space with a single mapped page and the page tables of all four levels](required-page-frames-example.svg)
+
+The graphic shows the virtual address space on the left, the physical address space on the right, and the page tables in between. The page tables are stored in physical memory frames, indicated by the dashed lines. The virtual address space contains a single mapped page at address `0x803fe00000`, marked in blue. To translate this page to its frame, the CPU walks the 4-level page table until it reaches the frame at address 36 KiB.
+
+Additionally, the graphic shows the physical frame of the VGA text buffer in red. Our goal is to map a previously unmapped virtual page to this frame using our `create_example_mapping` function. Since our `EmptyFrameAllocator` always returns `None`, we want to create the mapping so that no additional frames are needed from the allocator. This depends on the virtual page that we select for the mapping.
+
+The graphic shows two canditate pages in the virtual address space, both marked in yellow. One page is at address `0x803fdfd000`, which is 3 pages before the mapped page (in blue). While the level 4 and level 3 page table indices are the same as for the blue page, the level 2 and level 1 indices are different (see the [previous post][page-table-indices]). The different index into the level 2 table means that a different level 1 table is used for this page. Since this level 1 table does not exist yet, we would need to create it if we chose that page for our example mapping, which would require an additional unused physical frame. In contrast, the second candidate page at address `0x803fe02000` does not have this problem because it uses the same level 1 page table than the blue page. Thus, all required page tables already exist.
+
+[page-table-indices]: ./second-edition/posts/08-paging-introduction/index.md#paging-on-x86-64
+
+In summary, the difficulty of creating a new mapping depends on the virtual page that we want to map. In the easiest case, the level 1 page table for the page already exists and we just need to write a single entry. In the most difficult case, the page is in a memory region for that no level 3 exists yet so that we need to create new level 3, level 2 and level 1 page tables first.
+
+For calling our `create_example_mapping` function with the `EmptyFrameAllocator`, we need to choose a page for that all page tables already exist. To find such a page, we can utilize the fact that the bootloader loads itself in the first megabyte of the virtual address space. This means that a valid level 1 table exists for all pages this region. Thus, we can choose any unused page in this memory region for our example mapping, such as the page at address `0`. Normally, this page should stay unused to guarantee that dereferencing a null pointer causes a page fault, so we know that the bootloader leaves it unmapped.
+
+#### Creating the Mapping
+
+We now have all the required parameters for calling our `create_example_mapping` function, so let's modify our `kernel_main` function to map the page at virtual address `0`. Since we map the page to the frame of the VGA text buffer, we should be able to write to the screen through it afterwards. The implementation looks like this:
 
 ```rust
 // in src/main.rs
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::memory;
-    use x86_64::{structures::paging::Page, VirtAddr};
+    use x86_64::{structures::paging::Page, VirtAddr}; // new import
 
     […] // hello world and blog_os::init
 
-    let mut mapper = unsafe { memory::init(boot_info.physical_memory_offset) };
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
     let mut frame_allocator = memory::EmptyFrameAllocator;
 
     // map an unused page
@@ -805,9 +837,9 @@ When we run it in QEMU, we see the following output:
 
 ![QEMU printing "It did not crash!" with four completely white cells in the middle of the screen](qemu-new-mapping.png)
 
-The _"New!"_ on the screen is by our write to page `0x1000`, which means that we successfully created a new mapping in the page tables.
+The _"New!"_ on the screen is by our write to page `0`, which means that we successfully created a new mapping in the page tables.
 
-Creating that mapping only worked because there was already a level 1 table for mapping page `0x1000`. When we try to map a page for that no level 1 table exists yet, the `map_to` function fails because it tries to allocate frames from the `EmptyFrameAllocator` for creating new page tables. We can see that happen when we try to map page `0xdeadbeaf000` instead of `0x1000`:
+Creating that mapping only worked because the level 1 table responsible for the page at address `0` already exists. When we try to map a page for that no level 1 table exists yet, the `map_to` function fails because it tries to allocate frames from the `EmptyFrameAllocator` for creating new page tables. We can see that happen when we try to map page `0xdeadbeaf000` instead of `0`:
 
 ```rust
 // in src/main.rs
