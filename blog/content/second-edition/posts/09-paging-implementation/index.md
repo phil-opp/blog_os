@@ -15,22 +15,6 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 [at the bottom]: #comments
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-09
 
-
-<aside class="post_aside">
-
-## Another Paging Post?
-
-If you follow this blog, you have probably seen the [_Advanced Paging_](/advanced-paging) post that was published at the end of January. After receiving some [negative feedback] about the use of recursive page tables in that post, I decided to rewrite that post using a [different approach] for accessing the page table frames.
-
-[negative feedback]: https://news.ycombinator.com/item?id=19017995
-[different approach]: https://github.com/phil-opp/blog_os/issues/545
-
-This post is the result of the rewrite. It still explains how recursive page tables work, but it chooses a different approach for the implementation that is both simpler and more powerful. The _Advanced Paging_ post will still be available, but it is marked as deprecated and will no longer receive updates.
-
-I hope that you enjoy this new post!
-
-</aside>
-
 <!-- toc -->
 
 ## Introduction
