@@ -38,7 +38,7 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut
 /// Creates an example mapping for the given page to frame `0xb8000`.
 pub fn create_example_mapping(
     page: Page,
-    mapper: &mut impl Mapper<Size4KiB>,
+    mapper: &mut OffsetPageTable,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
 ) {
     use x86_64::structures::paging::PageTableFlags as Flags;
