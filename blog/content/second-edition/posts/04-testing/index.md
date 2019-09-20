@@ -880,7 +880,7 @@ Now we vastly simplify our `should_panic` test by removing the test runner relat
 #![no_main]
 
 use core::panic::PanicInfo;
-use blog_os::{QemuExitCode, exit_qemu, serial_println};
+use blog_os::{exit_qemu, serial_print, serial_println, QemuExitCode};
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
