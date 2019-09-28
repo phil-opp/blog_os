@@ -137,7 +137,7 @@ We also target `x86_64` systems with our kernel, so our target specification wil
     "target-pointer-width": "64",
     "target-c-int-width": "32",
     "os": "none",
-    "executables": true,
+    "executables": true
 }
 ```
 

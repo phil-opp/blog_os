@@ -655,7 +655,7 @@ The function takes the `physical_memory_offset` as an argument and returns a new
 
 [`OffsetPageTable::new`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
 
-The `active_level_4_table` function should be only called from the `init` function from now on because it can easily to aliased mutable references when called multiple times, which can cause undefined behavior. For this reason, we make the function private by removing the `pub` specifier.
+The `active_level_4_table` function should be only called from the `init` function from now on because it can easily lead to aliased mutable references when called multiple times, which can cause undefined behavior. For this reason, we make the function private by removing the `pub` specifier.
 
 We now can use the `MapperAllSizes::translate_addr` method instead of our own `memory::translate_addr` function. We only need to change a few lines in our `kernel_main`:
 
