@@ -804,9 +804,7 @@ Let's cross our fingers and run it…
 … and it fails with a boot loop.
 
 ### Debugging
-A QEMU boot loop indicates that some CPU exception occurred. We can see all thrown CPU exception by starting QEMU with `-d int` (as described [here][qemu debugging]):
-
-[qemu debugging]: @/first-edition/posts/03-set-up-rust/index.md#debugging
+A QEMU boot loop indicates that some CPU exception occurred. We can see all thrown CPU exception by starting QEMU with `-d int`:
 
 ```bash
 > qemu-system-x86_64 -d int -no-reboot -cdrom build/os-x86_64.iso
@@ -1030,7 +1028,7 @@ The final step is to create a guard page for our kernel stack.
 
 The decision to place the kernel stack right above the page tables was already useful to detect a silent stack overflow in the [previous post][silent stack overflow]. Now we profit from it again. Let's look at our assembly `.bss` section again to understand why:
 
-[silent stack overflow]: @/first-edition/posts/06-page-tables/index.md#translate
+[silent stack overflow]: @/first-edition/posts/06-page-tables/index.md
 
 ```nasm
 ; in src/arch/x86_64/boot.asm
