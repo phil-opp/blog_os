@@ -11,7 +11,7 @@ updated = "2016-10-31"
 
 In the [previous post] we switched from assembly to [Rust], a systems programming language that provides great safety. But so far we are using unsafe features like [raw pointers] whenever we want to print to screen. In this post we will create a Rust module that provides a safe and easy-to-use interface for the VGA text buffer. It will support Rust's [formatting macros], too.
 
-[previous post]: ./first-edition/posts/03-set-up-rust/index.md
+[previous post]: @/first-edition/posts/03-set-up-rust/index.md
 [Rust]: https://www.rust-lang.org/
 [raw pointers]: https://doc.rust-lang.org/book/raw-pointers.html
 [formatting macros]: https://doc.rust-lang.org/std/fmt/#related-macros
@@ -642,7 +642,7 @@ In the next posts we will map the kernel pages correctly so that accessing `0x0`
 
 The [next post] describes the Multiboot information structure and creates a frame allocator using the information about memory areas.
 
-[next post]: ./first-edition/posts/05-allocating-frames/index.md
+[next post]: @/first-edition/posts/05-allocating-frames/index.md
 
 ## Other Rust OS Projects
 Now that you know the very basics of OS development in Rust, you should also check out the following projects:
@@ -658,7 +658,7 @@ _Note_: You need to [cross compile binutils] to build it (or you create some sym
 
 [Rust Bare-Bones Kernel]: https://github.com/thepowersgang/rust-barebones-kernel
 [higher half]: http://wiki.osdev.org/Higher_Half_Kernel
-[cross compile binutils]: ./first-edition/extra/cross-compile-binutils.md
+[cross compile binutils]: @/first-edition/extra/cross-compile-binutils.md
 [RustOS]: https://github.com/RustOS-Fork-Holding-Ground/RustOS
 ["Tifflin" Experimental Kernel]:https://github.com/thepowersgang/rust_os
 [Redox]: https://github.com/redox-os/redox

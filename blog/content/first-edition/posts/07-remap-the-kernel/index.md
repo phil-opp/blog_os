@@ -21,18 +21,18 @@ As always, you can find the source code on [GitHub]. Don't hesitate to file issu
 
 In the [previous post], we had a strange bug in the `unmap` function. Its reason was a silent stack overflow, which corrupted the page tables. Fortunately, our kernel stack is right above the page tables so that we noticed the overflow relatively quickly. This won't be the case when we add threads with new stacks in the future. Then a silent stack overflow could overwrite some data without us noticing. But eventually some completely unrelated function fails because a variable changed its value.
 
-[previous post]: ./first-edition/posts/06-page-tables/index.md
+[previous post]: @/first-edition/posts/06-page-tables/index.md
 
 As you can imagine, these kinds of bugs are horrendous to debug. For that reason we will create a new hierarchical page table in this post, which has _guard page_ below the stack. A guard page is basically an unmapped page that causes a page fault when accessed. Thus we can catch stack overflows right when they happen.
 
 Also, we will use the [information about kernel sections] to map the various sections individually instead of blindly mapping the first gigabyte. To improve safety even further, we will set the correct page table flags for the various sections. Thus it won't be possible to modify the contents of `.text` or to execute code from `.data` anymore.
 
-[information about kernel sections]: ./first-edition/posts/05-allocating-frames/index.md#kernel-elf-sections
+[information about kernel sections]: @/first-edition/posts/05-allocating-frames/index.md#kernel-elf-sections
 
 ## Preparation
 There are many things that can go wrong when we switch to a new table. Therefore it's a good idea to [set up a debugger][set up gdb]. You should not need it when you follow this post, but it's good to know how to debug a problem when it occurs[^fn-debug-notes].
 
-[set up gdb]: ./first-edition/extra/set-up-gdb/index.md
+[set up gdb]: @/first-edition/extra/set-up-gdb/index.md
 
 We also update the `Page` and `Frame` types to make our lives easier. The `Page` struct gets some derived traits:
 
@@ -281,7 +281,7 @@ pub fn map_table_frame(&mut self,
 ```
 This function interprets the given frame as a page table frame and returns a `Table` reference. We return a table of level 1 because it [forbids calling the `next_table` methods][some clever solution]. Calling `next_table` must not be possible since it's not a page of the recursive mapping. To be able to return a `Table<Level1>`, we need to make the `Level1` enum in `memory/paging/table.rs` public.
 
-[some clever solution]: ./first-edition/posts/06-page-tables/index.md#some-clever-solution
+[some clever solution]: @/first-edition/posts/06-page-tables/index.md#some-clever-solution
 
 
 The `unsafe` block is safe since the `VirtualAddress` returned by the `map` function is always valid and the type cast just reinterprets the frame's content.
@@ -554,7 +554,7 @@ First, we create a temporary page at page number `0xcafebabe`. We could use `0xd
 
 Then we use the `with` function to temporary change the recursive mapping and execute the closure as if the `new_table` were active. This allows us to map the sections in the new table without changing the active mapping. To get the kernel sections, we use the [Multiboot information structure].
 
-[Multiboot information structure]: ./first-edition/posts/05-allocating-frames/index.md#the-multiboot-information-structure
+[Multiboot information structure]: @/first-edition/posts/05-allocating-frames/index.md#the-multiboot-information-structure
 
 Let's resolve the above `TODO` by identity mapping the sections:
 
@@ -806,7 +806,7 @@ Let's cross our fingers and run it…
 ### Debugging
 A QEMU boot loop indicates that some CPU exception occurred. We can see all thrown CPU exception by starting QEMU with `-d int` (as described [here][qemu debugging]):
 
-[qemu debugging]: ./first-edition/posts/03-set-up-rust/index.md#debugging
+[qemu debugging]: @/first-edition/posts/03-set-up-rust/index.md#debugging
 
 ```bash
 > qemu-system-x86_64 -d int -no-reboot -cdrom build/os-x86_64.iso
@@ -831,8 +831,8 @@ These lines are the important ones. We can read many useful information from the
 [osdev exception overview]: http://wiki.osdev.org/Exceptions
 [page fault]: http://wiki.osdev.org/Exceptions#Page_Fault
 [page fault error code]: http://wiki.osdev.org/Exceptions#Error_code
-[GDT segment]: ./first-edition/posts/02-entering-longmode/index.md#loading-the-gdt
-[VGA text buffer]: ./first-edition/posts/04-printing-to-screen/index.md#the-vga-text-buffer
+[GDT segment]: @/first-edition/posts/02-entering-longmode/index.md#loading-the-gdt
+[VGA text buffer]: @/first-edition/posts/04-printing-to-screen/index.md#the-vga-text-buffer
 
 So let's find out which function caused the exception:
 
@@ -1030,7 +1030,7 @@ The final step is to create a guard page for our kernel stack.
 
 The decision to place the kernel stack right above the page tables was already useful to detect a silent stack overflow in the [previous post][silent stack overflow]. Now we profit from it again. Let's look at our assembly `.bss` section again to understand why:
 
-[silent stack overflow]: ./first-edition/posts/06-page-tables/index.md#translate
+[silent stack overflow]: @/first-edition/posts/06-page-tables/index.md#translate
 
 ```nasm
 ; in src/arch/x86_64/boot.asm
@@ -1091,7 +1091,7 @@ Unfortunately stack probes require compiler support. They already work on Window
 ## What's next?
 Now that we have a (mostly) safe kernel stack and a working page table module, we can add a virtual memory allocator. The [next post] will explore Rust's allocator API and create a very basic allocator. At the end of that post, we will be able to use Rust's allocation and collections types such as [Box], [Vec], or even [BTreeMap].
 
-[next post]: ./first-edition/posts/08-kernel-heap/index.md
+[next post]: @/first-edition/posts/08-kernel-heap/index.md
 [Box]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html
 [Vec]: https://doc.rust-lang.org/1.10.0/collections/vec/struct.Vec.html
 [BTreeMap]: https://doc.rust-lang.org/1.10.0/collections/btree_map/struct.BTreeMap.html

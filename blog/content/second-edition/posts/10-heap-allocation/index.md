@@ -49,7 +49,7 @@ fn inner(i: usize) -> &'static u32 {
 
 While returning a reference makes no sense in this example, there are cases where we want a variable to live longer than the function. We already saw such a case in our kernel when we tried to [load an interrupt descriptor table] and had to use a `static` variable to extend the lifetime.
 
-[load an interrupt descriptor table]: ./second-edition/posts/05-cpu-exceptions/index.md#loading-the-idt
+[load an interrupt descriptor table]: @/second-edition/posts/05-cpu-exceptions/index.md#loading-the-idt
 
 ### Static Variables
 
@@ -61,14 +61,14 @@ When the `inner` function returns in the above example, it's part of the call st
 
 Apart from the `'static` lifetime, static variables also have the useful property that their location is known at compile time, so that no reference is needed for accessing it. We utilized that property for our `println` macro: By using a [static `Writer`] internally there is no `&mut Writer` reference needed to invoke the macro, which is very useful in [exception handlers] where we don't have access to any additional variables.
 
-[static `Writer`]: ./second-edition/posts/03-vga-text-buffer/index.md#a-global-interface
-[exception handlers]: ./second-edition/posts/05-cpu-exceptions/index.md#implementation
+[static `Writer`]: @/second-edition/posts/03-vga-text-buffer/index.md#a-global-interface
+[exception handlers]: @/second-edition/posts/05-cpu-exceptions/index.md#implementation
 
 However, this property of static variables brings a crucial drawback: They are read-only by default. Rust enforces this because a [data race] would occur if e.g. two threads modify a static variable at the same time. The only way to modify a static variable is to encapsulate it in a [`Mutex`] type, which ensures that only a single `&mut` reference exists at any point in time. We already used a `Mutex` for our [static VGA buffer `Writer`][vga mutex].
 
 [data race]: https://doc.rust-lang.org/nomicon/races.html
 [`Mutex`]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html
-[vga mutex]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
+[vga mutex]: @/second-edition/posts/03-vga-text-buffer/index.md#spinlocks
 
 ## Dynamic Memory
 
@@ -377,7 +377,7 @@ The error handler is called because the `Box::new` function implicitly calls the
 
 Before we can create a proper allocator, we first need to create a heap memory region from which the allocator can allocate memory. To do this, we need to define a virtual memory range for the heap region and then map this region to physical frames. See the [_"Introduction To Paging"_] post for an overview of virtual memory and page tables.
 
-[_"Introduction To Paging"_]: ./second-edition/posts/08-paging-introduction/index.md
+[_"Introduction To Paging"_]: @/second-edition/posts/08-paging-introduction/index.md
 
 The first step is to define a virtual memory region for the heap. We can choose any virtual address range that we like, as long as it is not already used for a different memory region. Let's define it as the memory starting at address `0x_4444_4444_0000` so that we can easily recognize a heap pointer later:
 
@@ -392,8 +392,8 @@ We set the heap size to 100 KiB for now. If we need more space in the future, we
 
 If we tried to use this heap region now, a page fault would occur since the virtual memory region is not mapped to physical memory yet. To resolve this, we create an `init_heap` function that maps the heap pages using the [`Mapper` API] that we introduced in the [_"Paging Implementation"_] post:
 
-[`Mapper` API]: ./second-edition/posts/09-paging-implementation/index.md#using-mappedpagetable
-[_"Paging Implementation"_]: ./second-edition/posts/09-paging-implementation/index.md
+[`Mapper` API]: @/second-edition/posts/09-paging-implementation/index.md#using-mappedpagetable
+[_"Paging Implementation"_]: @/second-edition/posts/09-paging-implementation/index.md
 
 ```rust
 // in src/allocator.rs
@@ -460,7 +460,7 @@ The implementation can be broken down into two parts:
 [`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
 [question mark operator]: https://doc.rust-lang.org/edition-guide/rust-2018/error-handling-and-panics/the-question-mark-operator-for-easier-error-handling.html
 [`MapperFlush`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[_translation lookaside buffer_]: ./second-edition/posts/08-paging-introduction/index.md#the-translation-lookaside-buffer
+[_translation lookaside buffer_]: @/second-edition/posts/08-paging-introduction/index.md#the-translation-lookaside-buffer
 [`flush`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 
 The final step is to call this function from our `kernel_main`:
@@ -668,7 +668,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 We reuse the `test_runner` and `test_panic_handler` functions from our `lib.rs`. Since we want to test allocations, we enable the `alloc` crate through the `extern crate alloc` statement. For more information about the test boilerplate check out the [_Testing_] post.
 
-[_Testing_]: ./second-edition/posts/04-testing/index.md
+[_Testing_]: @/second-edition/posts/04-testing/index.md
 
 The implementation of the `main` function looks like this:
 

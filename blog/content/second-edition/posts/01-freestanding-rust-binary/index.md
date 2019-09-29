@@ -513,4 +513,4 @@ Note that this is just a minimal example of a freestanding Rust binary. This bin
 
 The [next post] explains the steps needed for turning our freestanding binary into a minimal operating system kernel. This includes creating a custom target, combining our executable with a bootloader, and learning how to print something to the screen.
 
-[next post]: ./second-edition/posts/02-minimal-rust-kernel/index.md
+[next post]: @/second-edition/posts/02-minimal-rust-kernel/index.md

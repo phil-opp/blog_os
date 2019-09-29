@@ -20,7 +20,7 @@ As always, the complete source code is available on [GitHub]. Please file [issue
 ## What is a Double Fault?
 In simplified terms, a double fault is a special exception that occurs when the CPU fails to invoke an exception handler. For example, it occurs when a page fault is triggered but there is no page fault handler registered in the [Interrupt Descriptor Table][IDT] (IDT). So it's kind of similar to catch-all blocks in programming languages with exceptions, e.g. `catch(...)` in C++ or `catch(Exception e)` in Java or C#.
 
-[IDT]: ./first-edition/posts/09-handling-exceptions/index.md#the-interrupt-descriptor-table
+[IDT]: @/first-edition/posts/09-handling-exceptions/index.md#the-interrupt-descriptor-table
 
 A double fault behaves like a normal exception. It has the vector number `8` and we can define a normal handler function for it in the IDT. It is really important to provide a double fault handler, because if a double fault is unhandled a fatal _triple fault_ occurs. Triple faults can't be caught and most hardware reacts with a system reset.
 
@@ -119,7 +119,7 @@ For example, what happens if… :
 3. a divide-by-zero handler causes a breakpoint exception, but the breakpoint handler is swapped out?
 4. our kernel overflows its stack and the [guard page] is hit?
 
-[guard page]: ./first-edition/posts/07-remap-the-kernel/index.md#creating-a-guard-page
+[guard page]: @/first-edition/posts/07-remap-the-kernel/index.md#creating-a-guard-page
 
 Fortunately, the AMD64 manual ([PDF][AMD64 manual]) has an exact definition (in Section 8.2.9). According to it, a “double fault exception _can_ occur when a second exception occurs during the handling of a prior (first) exception handler”. The _“can”_ is important: Only very specific combinations of exceptions lead to a double fault. These combinations are:
 
@@ -199,7 +199,7 @@ struct InterruptStackTable {
 
 For each exception handler, we can choose a stack from the IST through the `options` field in the corresponding [IDT entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack whenever a double fault occurs. This switch would happen before anything is pushed, so it would prevent the triple fault.
 
-[IDT entry]: ./first-edition/posts/09-handling-exceptions/index.md#the-interrupt-descriptor-table
+[IDT entry]: @/first-edition/posts/09-handling-exceptions/index.md#the-interrupt-descriptor-table
 
 ### Allocating a new Stack
 In order to fill an Interrupt Stack Table later, we need a way to allocate new stacks. Therefore we extend our `memory` module with a new `stack_allocator` submodule:
@@ -230,7 +230,7 @@ impl StackAllocator {
 ```
 We create a simple `StackAllocator` that allocates stacks from a given range of pages (`PageIter` is an Iterator over a range of pages; we introduced it [in the kernel heap post].).
 
-[in the kernel heap post]:  ./first-edition/posts/08-kernel-heap/index.md#mapping-the-heap
+[in the kernel heap post]:  @/first-edition/posts/08-kernel-heap/index.md#mapping-the-heap
 
 We add a `alloc_stack` method that allocates a new stack:
 
@@ -285,8 +285,8 @@ impl StackAllocator {
 ```
 The method takes mutable references to the [ActivePageTable] and a [FrameAllocator], since it needs to map the new virtual stack pages to physical frames. We define that the stack size is a multiple of the page size.
 
-[ActivePageTable]: ./first-edition/posts/06-page-tables/index.md#page-table-ownership
-[FrameAllocator]: ./first-edition/posts/05-allocating-frames/index.md#a-frame-allocator
+[ActivePageTable]: @/first-edition/posts/06-page-tables/index.md#page-table-ownership
+[FrameAllocator]: @/first-edition/posts/05-allocating-frames/index.md#a-frame-allocator
 
 Instead of operating directly on `self.range`, we [clone] it and only write it back on success. This way, subsequent stack allocations can still succeed if there are pages left (e.g., a call with `size_in_pages = 3` can still succeed after a failed call with `size_in_pages = 100`).
 
@@ -297,7 +297,7 @@ In order to be able to clone `PageIter`, we add a `#[derive(Clone)]` to its defi
 The actual allocation is straightforward: First, we choose the next page as [guard page]. Then we choose the next `size_in_pages` pages as stack pages using [Iterator::nth]. If all three variables are `Some`, the allocation succeeded and we map the stack pages to physical frames using [ActivePageTable::map]. The guard page remains unmapped.
 
 [Iterator::nth]: https://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html#method.nth
-[ActivePageTable::map]: ./first-edition/posts/06-page-tables/index.md#more-mapping-functions
+[ActivePageTable::map]: @/first-edition/posts/06-page-tables/index.md#more-mapping-functions
 
 Finally, we create and return a new `Stack`, which we define as follows:
 
@@ -505,7 +505,7 @@ The Global Descriptor Table (GDT) is a relict that was used for [memory segmenta
 
 We already created a GDT [when switching to long mode]. Back then, we used assembly to create valid code and data segment descriptors, which were required to enter 64-bit mode. We could just edit that assembly file and add an additional TSS descriptor. However, we now have the expressiveness of Rust, so let's do it in Rust instead.
 
-[when switching to long mode]: ./first-edition/posts/02-entering-longmode/index.md#the-global-descriptor-table
+[when switching to long mode]: @/first-edition/posts/02-entering-longmode/index.md#the-global-descriptor-table
 
 We start by creating a new `interrupts::gdt` submodule. For that we need to rename the `src/interrupts.rs` file to `src/interrupts/mod.rs`. Then we can create a new submodule:
 

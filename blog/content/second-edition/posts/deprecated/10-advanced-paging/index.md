@@ -23,11 +23,11 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 In the [previous post] we learned about the principles of paging and how the 4-level page tables on x86_64 work. We also found out that the bootloader already set up a page table hierarchy for our kernel, which means that our kernel already runs on virtual addresses. This improves safety since illegal memory accesses cause page fault exceptions instead of modifying arbitrary physical memory.
 
-[previous post]: ./second-edition/posts/08-paging-introduction/index.md
+[previous post]: @/second-edition/posts/08-paging-introduction/index.md
 
 However, it also causes a problem when we try to access the page tables from our kernel because we can't directly access the physical addresses that are stored in page table entries or the `CR3` register. We experienced that problem already [at the end of the previous post] when we tried to inspect the active page tables.
 
-[at the end of the previous post]: ./second-edition/posts/08-paging-introduction/index.md#accessing-the-page-tables
+[at the end of the previous post]: @/second-edition/posts/08-paging-introduction/index.md#accessing-the-page-tables
 
 The next section discusses the problem in detail and provides different approaches to a solution. Afterward, we implement a function that traverses the page table hierarchy in order to translate virtual to physical addresses. Finally, we learn how to create new mappings in the page tables and how to find unused memory frames for creating new page tables.
 
@@ -63,7 +63,7 @@ So in order to access page table frames, we need to map some virtual pages to th
   However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at `28 KiB` because it would collide with the already mapped page at `1004 MiB`. So we have to look further until we find a large enough unmapped area, for example at `1008 KiB`. This is a similar fragmentation problem as with [segmentation].
 
   [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
-  [segmentation]: ./second-edition/posts/08-paging-introduction/index.md#fragmentation
+  [segmentation]: @/second-edition/posts/08-paging-introduction/index.md#fragmentation
 
   Equally, it makes it much more difficult to create new page tables, because we need to find physical frames whose corresponding pages aren't already in use. For example, let's assume that we reserved the _virtual_ 1000 KiB memory region starting at `1008 KiB` for our memory-mapped file. Now we can't use any frame with a _physical_ address between `1000 KiB` and `2008 KiB` anymore, because we can't identity map it.
 
@@ -156,7 +156,7 @@ Whereas `AAA` is the level 4 index, `BBB` the level 3 index, `CCC` the level 2 i
 
 `SSSSSS` are sign extension bits, which means that they are all copies of bit 47. This is a special requirement for valid addresses on the x86_64 architecture. We explained it in the [previous post][sign extension].
 
-[sign extension]: ./second-edition/posts/08-paging-introduction/index.md#paging-on-x86
+[sign extension]: @/second-edition/posts/08-paging-introduction/index.md#paging-on-x86
 
 We use [octal] numbers for representing the addresses since each octal character represents three bits, which allows us to clearly separate the 9-bit indexes of the different page table levels. This isn't possible with the hexadecimal system where each character represents four bits.
 
@@ -505,7 +505,7 @@ We first create the mapping for the page at `0x1000` by calling our `create_exam
 
 Then we write the value `0xf021_f077_f065_f04e` to this page, which represents the string _"New!"_ on white background. We don't write directly to the beginning of the page at `0x1000` since the top line is directly shifted off the screen by the next `println`. Instead, we write to offset `0x900`, which is about in the middle of the screen. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile, so we use the [`write_volatile`] method.
 
-[in the _“VGA Text Mode”_ post]: ./second-edition/posts/03-vga-text-buffer/index.md#volatile
+[in the _“VGA Text Mode”_ post]: @/second-edition/posts/03-vga-text-buffer/index.md#volatile
 [`write_volatile`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write_volatile
 
 When we run it in QEMU, we see the following output:

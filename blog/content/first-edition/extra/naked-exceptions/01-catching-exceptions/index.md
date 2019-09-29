@@ -20,8 +20,8 @@ As always, the complete source code is on [GitHub]. Please file [issues] for any
 
 > **Note**: This post describes how to handle exceptions using naked functions (see [“Handling Exceptions with Naked Functions”] for an overview). Our new way of handling exceptions can be found in the [“Handling Exceptions”] post.
 
-[“Handling Exceptions with Naked Functions”]: ./first-edition/extra/naked-exceptions/_index.md
-[“Handling Exceptions”]: ./first-edition/posts/09-handling-exceptions/index.md
+[“Handling Exceptions with Naked Functions”]: @/first-edition/extra/naked-exceptions/_index.md
+[“Handling Exceptions”]: @/first-edition/posts/09-handling-exceptions/index.md
 
 ## Exceptions
 An exception signals that something is wrong with the current instruction. For example, the CPU issues an exception if the current instruction tries to divide by 0. When an exception occurs, the CPU interrupts its current work and immediately calls a specific exception handler function, depending on the exception type.

@@ -349,7 +349,7 @@ Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at 
 
 We already imported the `lazy_static` crate when we [created an abstraction for the VGA text buffer][vga text buffer lazy static]. So we can directly use the `lazy_static!` macro to create our static IDT:
 
-[vga text buffer lazy static]: ./second-edition/posts/03-vga-text-buffer/index.md#lazy-statics
+[vga text buffer lazy static]: @/second-edition/posts/03-vga-text-buffer/index.md#lazy-statics
 
 ```rust
 // in src/interrupts.rs
@@ -454,16 +454,16 @@ fn test_breakpoint_exception() {
 
 Apart from printing status messages through the [serial port], the test invokes the `int3` function to trigger a breakpoint exception. By checking that the execution continues afterwards, we verify that our breakpoint handler is working correctly.
 
-[serial port]: ./second-edition/posts/04-testing/index.md#serial-port
+[serial port]: @/second-edition/posts/04-testing/index.md#serial-port
 
 You can try this new test by running `cargo xtest` (all tests) or `cargo xtest --lib` (only tests of `lib.rs` and its modules). You should see `test_breakpoint_exception...[ok]` in the output.
 
 ## Too much Magic?
 The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own IDT type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed. Note that these posts are based on the [first edition] of this blog and might be out of date.
 
-[“Handling Exceptions with Naked Functions”]: ./first-edition/extra/naked-exceptions/_index.md
+[“Handling Exceptions with Naked Functions”]: @/first-edition/extra/naked-exceptions/_index.md
 [`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
-[first edition]: ./first-edition/_index.md
+[first edition]: @/first-edition/_index.md
 
 ## What's next?
 We've successfully caught our first exception and returned from it! The next step is to ensure that we catch all exceptions, because an uncaught exception causes a fatal [triple fault], which leads to a system reset. The next post explains how we can avoid this by correctly catching [double faults].

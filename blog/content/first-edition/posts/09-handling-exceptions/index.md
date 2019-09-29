@@ -229,7 +229,7 @@ The breakpoint exception is commonly used in debuggers: When the user sets a bre
 
 For our use case, we don't need to overwrite any instructions (it wouldn't even be possible since we [set the page table flags] to read-only). Instead, we just want to print a message when the breakpoint instruction is executed and then continue the program.
 
-[set the page table flags]: ./first-edition/posts/07-remap-the-kernel/index.md#using-the-correct-flags
+[set the page table flags]: @/first-edition/posts/07-remap-the-kernel/index.md#using-the-correct-flags
 
 So let's create a simple `breakpoint_handler` function and add it to our IDT:
 
@@ -461,7 +461,7 @@ The documentation of the [`Idt`] struct and the [OSDev Wiki][osdev wiki exceptio
 ## Too much Magic?
 The `x86-interrupt` calling convention and the [`Idt`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own `Idt` type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed.
 
-[“Handling Exceptions with Naked Functions”]: ./first-edition/extra/naked-exceptions/_index.md
+[“Handling Exceptions with Naked Functions”]: @/first-edition/extra/naked-exceptions/_index.md
 
 ## What's next?
 We've successfully caught our first exception and returned from it! The next step is to add handlers for other common exceptions such as page faults. We also need to make sure that we never cause a [triple fault], since it causes a complete system reset. The next post explains how we can avoid this by correctly catching [double faults].

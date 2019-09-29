@@ -8,7 +8,7 @@ date = 2018-02-10
 
 In this post we create a minimal 64-bit Rust kernel for the x86 architecture. We build upon the [freestanding Rust binary] from the previous post to create a bootable disk image, that prints something to the screen.
 
-[freestanding Rust binary]: ./second-edition/posts/01-freestanding-rust-binary/index.md
+[freestanding Rust binary]: @/second-edition/posts/01-freestanding-rust-binary/index.md
 
 <!-- more -->
 
@@ -74,7 +74,7 @@ To make a kernel Multiboot compliant, one just needs to insert a so-called [Mult
 
 Because of these drawbacks we decided to not use GRUB or the Multiboot standard. However, we plan to add Multiboot support to our [bootimage] tool, so that it's possible to load your kernel on a GRUB system too. If you're interested in writing a Multiboot compliant kernel, check out the [first edition] of this blog series.
 
-[first edition]: ./first-edition/_index.md
+[first edition]: @/first-edition/_index.md
 
 ### UEFI
 
@@ -169,7 +169,7 @@ This setting specifies that the target doesn't support [stack unwinding] on pani
 
 We're writing a kernel, so we'll need to handle interrupts at some point. To do that safely, we have to disable a certain stack pointer optimization called the _“red zone”_, because it would cause stack corruptions otherwise. For more information, see our separate post about [disabling the red zone].
 
-[disabling the red zone]: ./second-edition/extra/disable-red-zone/index.md
+[disabling the red zone]: @/second-edition/extra/disable-red-zone/index.md
 
 ```json
 "features": "-mmx,-sse,+soft-float",
@@ -183,7 +183,7 @@ The `mmx` and `sse` features determine support for [Single Instruction Multiple 
 
 A problem with disabling SIMD is that floating point operations on `x86_64` require SIMD registers by default. To solve this problem, we add the `soft-float` feature, which emulates all floating point operations through software functions based on normal integers.
 
-For more information, see our post on [disabling SIMD](./second-edition/extra/disable-simd/index.md).
+For more information, see our post on [disabling SIMD](@/second-edition/extra/disable-simd/index.md).
 
 #### Putting it Together
 Our target specification file now looks like this:
@@ -209,7 +209,7 @@ Our target specification file now looks like this:
 ### Building our Kernel
 Compiling for our new target will use Linux conventions (I'm not quite sure why, I assume that it's just LLVM's default). This means that we need an entry point named `_start` as described in the [previous post]:
 
-[previous post]: ./second-edition/posts/01-freestanding-rust-binary/index.md
+[previous post]: @/second-edition/posts/01-freestanding-rust-binary/index.md
 
 ```rust
 // src/main.rs
@@ -275,7 +275,7 @@ Now we can rerun the above command with `xbuild` instead of `build`:
 
 We see that `cargo xbuild` cross-compiles the `core`, `compiler_builtin`, and `alloc` libraries for our new custom target. Since these libraries use a lot of unstable features internally, this only works with a [nightly Rust compiler]. Afterwards, `cargo xbuild` successfully compiles our `blog_os` crate.
 
-[nightly Rust compiler]: ./second-edition/posts/01-freestanding-rust-binary/index.md#installing-rust-nightly
+[nightly Rust compiler]: @/second-edition/posts/01-freestanding-rust-binary/index.md#installing-rust-nightly
 
 Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
 
