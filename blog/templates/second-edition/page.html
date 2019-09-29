@@ -35,7 +35,7 @@
         </div>
     {% endif %}
 
-    {{ page.content | safe | replace(from="<!-- toc -->", to=macros::toc(toc=toc))}}
+    {{ page.content | replace(from="<!-- toc -->", to=macros::toc(toc=toc))  | safe }}
 
     <div class="post-footer-support">
         <h2>Support Me</h2>
@@ -61,5 +61,3 @@
     </section>
 
 {% endblock after_main %}
-
-
