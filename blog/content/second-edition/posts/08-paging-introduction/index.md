@@ -247,7 +247,7 @@ It is important to remember flushing the TLB on each page table modification bec
 
 One thing that we did not mention yet: **Our kernel already runs on paging**. The bootloader that we added in the ["A minimal Rust Kernel"] post already set up a 4-level paging hierarchy that maps every page of our kernel to a physical frame. The bootloader does this because paging is mandatory in 64-bit mode on x86_64.
 
-["A minimal Rust kernel"]: ./second-edition/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
+["A minimal Rust kernel"]: @/second-edition/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
 
 This means that every memory address that we used in our kernel was a virtual address. Accessing the VGA buffer at address `0xb8000` only worked because the bootloader _identity mapped_ that memory page, which means that it mapped the virtual page `0xb8000` to the physical frame `0xb8000`.
 
@@ -257,7 +257,7 @@ Paging makes our kernel already relatively safe, since every memory access that 
 
 Let's try to cause a page fault by accessing some memory outside of our kernel. First, we create a page fault handler and register it in our IDT, so that we see a page fault exception instead of a generic [double fault] :
 
-[double fault]: ./second-edition/posts/06-double-faults/index.md
+[double fault]: @/second-edition/posts/06-double-faults/index.md
 
 ```rust
 // in src/interrupts.rs
@@ -296,7 +296,7 @@ The [`CR2`] register is automatically set by the CPU on a page fault and contain
 [`Cr2::read`]: https://docs.rs/x86_64/0.7.5/x86_64/registers/control/struct.Cr2.html#method.read
 [`PageFaultErrorCode`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
-[`hlt_loop`]: ./second-edition/posts/07-hardware-interrupts/index.md#the
+[`hlt_loop`]: @/second-edition/posts/07-hardware-interrupts/index.md#the-hlt-instruction
 
 Now we can try to access some memory outside our kernel:
 

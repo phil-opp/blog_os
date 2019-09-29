@@ -66,7 +66,7 @@ This graphic shows the typical assignment of interrupt lines. We see that most o
 
 Each controller can be configured through two [I/O ports], one “command” port and one “data” port. For the primary controller these ports are `0x20` (command) and `0x21` (data). For the secondary controller they are `0xa0` (command) and `0xa1` (data). For more information on how the PICs can be configured see the [article on osdev.org].
 
-[I/O ports]: ./second-edition/posts/04-testing/index.md#i-o-ports
+[I/O ports]: @/second-edition/posts/04-testing/index.md#i-o-ports
 [article on osdev.org]: https://wiki.osdev.org/8259_PIC
 
 ### Implementation
@@ -255,7 +255,7 @@ We now have a form of concurrency in our kernel: The timer interrupts occur asyn
 
 We can already provoke a deadlock in our kernel. Remember, our `println` macro calls the `vga_buffer::_print` function, which [locks a global `WRITER`][vga spinlock] using a spinlock:
 
-[vga spinlock]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
+[vga spinlock]: @/second-edition/posts/03-vga-text-buffer/index.md#spinlocks
 
 ```rust
 // in src/vga_buffer.rs
@@ -579,7 +579,7 @@ We now see that a `k` appears on the screen when we press a key. However, this o
 
 To find out _which_ key was pressed, we need to query the keyboard controller. We do this by reading from the data port of the PS/2 controller, which is the [I/O port] with number `0x60`:
 
-[I/O port]: ./second-edition/posts/04-testing/index.md#i-o-ports
+[I/O port]: @/second-edition/posts/04-testing/index.md#i-o-ports
 
 ```rust
 // in src/interrupts.rs

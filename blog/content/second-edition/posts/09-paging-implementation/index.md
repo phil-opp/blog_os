@@ -21,11 +21,11 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 The [previous post] gave an introduction to the concept of paging. It motivated paging by comparing it with segmentation, explained how paging and page tables work, and then introduced the 4-level page table design of `x86_64`. We found out that the bootloader already set up a page table hierarchy for our kernel, which means that our kernel already runs on virtual addresses. This improves safety since illegal memory accesses cause page fault exceptions instead of modifying arbitrary physical memory.
 
-[previous post]: ./second-edition/posts/08-paging-introduction/index.md
+[previous post]: @/second-edition/posts/08-paging-introduction/index.md
 
 The post ended with the problem that we [can't access the page tables from our kernel][end of previous post] because they are stored in physical memory and our kernel already runs on virtual addresses. This post continues at this point and explores different approaches of making the page table frames accessible to our kernel. We will discuss the advantages and drawbacks of each approach and then decide for an approach for our kernel.
 
-[end of previous post]: ./second-edition/posts/08-paging-introduction/index.md#accessing-the-page-tables
+[end of previous post]: @/second-edition/posts/08-paging-introduction/index.md#accessing-the-page-tables
 
 To implement the approach, we will need support from the bootloader, so we'll configure it first. Afterward, we will implement a function that traverses the page table hierarchy in order to translate virtual to physical addresses. Finally, we learn how to create new mappings in the page tables and how to find unused memory frames for creating new page tables.
 
@@ -65,7 +65,7 @@ In this example, we see various identity-mapped page table frames. This way the 
 However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at `28 KiB` because it would collide with the already mapped page at `1004 KiB`. So we have to look further until we find a large enough unmapped area, for example at `1008 KiB`. This is a similar fragmentation problem as with [segmentation].
 
 [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
-[segmentation]: ./second-edition/posts/08-paging-introduction/index.md#fragmentation
+[segmentation]: @/second-edition/posts/08-paging-introduction/index.md#fragmentation
 
 Equally, it makes it much more difficult to create new page tables, because we need to find physical frames whose corresponding pages aren't already in use. For example, let's assume that we reserved the _virtual_ 1000 KiB memory region starting at `1008 KiB` for our memory-mapped file. Now we can't use any frame with a _physical_ address between `1000 KiB` and `2008 KiB` anymore, because we can't identity map it.
 
@@ -192,7 +192,7 @@ Whereas `AAA` is the level 4 index, `BBB` the level 3 index, `CCC` the level 2 i
 
 `SSSSSS` are sign extension bits, which means that they are all copies of bit 47. This is a special requirement for valid addresses on the x86_64 architecture. We explained it in the [previous post][sign extension].
 
-[sign extension]: ./second-edition/posts/08-paging-introduction/index.md#paging-on-x86
+[sign extension]: @/second-edition/posts/08-paging-introduction/index.md#paging-on-x86-64
 
 We use [octal] numbers for representing the addresses since each octal character represents three bits, which allows us to clearly separate the 9-bit indexes of the different page table levels. This isn't possible with the hexadecimal system where each character represents four bits.
 
@@ -380,7 +380,7 @@ For the module we create an empty `src/memory.rs` file.
 
 At the [end of the previous post], we tried to take a look at the page tables our kernel runs on, but failed since we couldn't access the physical frame that the `CR3` register points to. We're now able to continue from there by creating an `active_level_4_table` function that returns a reference to the active level 4 page table:
 
-[end of the previous post]: ./second-edition/posts/08-paging-introduction/index.md#accessing-the-page-tables
+[end of the previous post]: @/second-edition/posts/08-paging-introduction/index.md#accessing-the-page-tables
 
 ```rust
 // in src/memory.rs
@@ -603,7 +603,7 @@ When we run it, we see the following output:
 
 As expected, the identity-mapped address `0xb8000` translates to the same physical address. The code page and the stack page translate to some arbitrary physical addresses, which depend on how the bootloader created the initial mapping for our kernel. It's worth noting that the last 12 bits always stay the same after translation, which makes sense because these bits are the [_page offset_] and not part of the translation.
 
-[_page offset_]: ./second-edition/posts/08-paging-introduction/index.md#paging-on-x86-64
+[_page offset_]: @/second-edition/posts/08-paging-introduction/index.md#paging-on-x86-64
 
 Since each physical address can be accessed by adding the `physical_memory_offset`, the translation of the `physical_memory_offset` address itself should point to physical address `0`. However, the translation fails because the mapping uses huge pages for efficiency, which is not supported in our implementation yet.
 
@@ -748,7 +748,7 @@ In addition to the `page` that should be mapped, the function expects a mutable 
 
 For the mapping, we set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable. Calling [`map_to`] is unsafe because it's possible to break memory safety with invalid arguments, so we need to use an `unsafe` block. For a list of all possible flags, see the [_Page Table Format_] section of the previous post.
 
-[_Page Table Format_]: ./second-edition/posts/08-paging-introduction/index.md#page-table-format
+[_Page Table Format_]: @/second-edition/posts/08-paging-introduction/index.md#page-table-format
 
 The [`map_to`] function can fail, so it returns a [`Result`]. Since this is just some example code that does not need to be robust, we just use [`expect`] to panic when an error occurs. On success, the function returns a [`MapperFlush`] type that provides an easy way to flush the newly mapped page from the translation lookaside buffer (TLB) with its [`flush`] method. Like `Result`, the type uses the [`#[must_use]`][must_use] attribute to emit a warning when we accidentally forget to use it.
 
@@ -791,7 +791,7 @@ Additionally, the graphic shows the physical frame of the VGA text buffer in red
 
 The graphic shows two canditate pages in the virtual address space, both marked in yellow. One page is at address `0x803fdfd000`, which is 3 pages before the mapped page (in blue). While the level 4 and level 3 page table indices are the same as for the blue page, the level 2 and level 1 indices are different (see the [previous post][page-table-indices]). The different index into the level 2 table means that a different level 1 table is used for this page. Since this level 1 table does not exist yet, we would need to create it if we chose that page for our example mapping, which would require an additional unused physical frame. In contrast, the second candidate page at address `0x803fe02000` does not have this problem because it uses the same level 1 page table than the blue page. Thus, all required page tables already exist.
 
-[page-table-indices]: ./second-edition/posts/08-paging-introduction/index.md#paging-on-x86-64
+[page-table-indices]: @/second-edition/posts/08-paging-introduction/index.md#paging-on-x86-64
 
 In summary, the difficulty of creating a new mapping depends on the virtual page that we want to map. In the easiest case, the level 1 page table for the page already exists and we just need to write a single entry. In the most difficult case, the page is in a memory region for that no level 3 exists yet so that we need to create new level 3, level 2 and level 1 page tables first.
 
@@ -830,7 +830,7 @@ We first create the mapping for the page at address `0` by calling our `create_e
 
 Then we convert the page to a raw pointer and write a value to offset `400`. We don't write to the start of the page because the top line of the VGA buffer is directly shifted off the screen by the next `println`. We write the value `0x_f021_f077_f065_f04e`, which represents the string _"New!"_ on white background. As we learned [in the _“VGA Text Mode”_ post], writes to the VGA buffer should be volatile, so we use the [`write_volatile`] method.
 
-[in the _“VGA Text Mode”_ post]: ./second-edition/posts/03-vga-text-buffer/index.md#volatile
+[in the _“VGA Text Mode”_ post]: @/second-edition/posts/03-vga-text-buffer/index.md#volatile
 [`write_volatile`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write_volatile
 
 When we run it in QEMU, we see the following output:

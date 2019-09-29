@@ -52,7 +52,7 @@ pub struct Page {
 ```
 We import the `PAGE_SIZE` and define a constant for the number of entries per table. To make future function signatures more expressive, we can use the type aliases `PhysicalAddress` and `VirtualAddress`. The `Page` struct is similar to the `Frame` struct in the [previous post], but represents a virtual page instead of a physical frame.
 
-[previous post]: ./first-edition/posts/05-allocating-frames/index.md#a-memory-module
+[previous post]: @/first-edition/posts/05-allocating-frames/index.md#a-memory-module
 
 ### Page Table Entries
 To model page table entries, we create a new `entry` submodule:
@@ -652,7 +652,7 @@ pub struct ActivePageTable {
 ```
 We can't store the `Table<Level4>` directly because it needs to be at a special memory location (like the [VGA text buffer]). We could use a raw pointer or `&mut` instead of [Unique], but Unique indicates ownership better.
 
-[VGA text buffer]: ./first-edition/posts/04-printing-to-screen/index.md#the-text-buffer
+[VGA text buffer]: @/first-edition/posts/04-printing-to-screen/index.md#the-text-buffer
 [Unique]: https://doc.rust-lang.org/1.10.0/core/ptr/struct.Unique.html
 
 Because the `ActivePageTable` owns the unique recursive mapped P4 table, there must be only one `ActivePageTable` instance. Thus we make the constructor function unsafe:
@@ -881,7 +881,7 @@ This post has become pretty long. So let's summarize what we've done:
 ## What's next?
 In the [next post] we will extend this module and add a function to modify inactive page tables. Through that function, we will create a new page table hierarchy that maps the kernel correctly using 4KiB pages. Then we will switch to the new table to get a safer kernel environment.
 
-[next post]: ./first-edition/posts/07-remap-the-kernel/index.md
+[next post]: @/first-edition/posts/07-remap-the-kernel/index.md
 
 Afterwards, we will use this paging module to build a heap allocator. This will allow us to use allocation and collection types such as `Box` and `Vec`.
 

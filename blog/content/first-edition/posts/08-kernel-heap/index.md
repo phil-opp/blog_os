@@ -10,8 +10,8 @@ template = "first-edition/page.html"
 
 In the previous posts we created a [frame allocator] and a [page table module]. Now we are ready to create a kernel heap and a memory allocator. Thus, we will unlock `Box`, `Vec`, `BTreeMap`, and the rest of the [alloc] crate.
 
-[frame allocator]: ./first-edition/posts/05-allocating-frames/index.md
-[page table module]: ./first-edition/posts/06-page-tables/index.md
+[frame allocator]: @/first-edition/posts/05-allocating-frames/index.md
+[page table module]: @/first-edition/posts/06-page-tables/index.md
 [alloc]: https://doc.rust-lang.org/nightly/alloc/index.html
 
 <!-- more -->
@@ -460,8 +460,8 @@ That's it. Now our `memory::init` function can only be called once. The macro wo
 ### Mapping the Heap
 Now we're ready to map the heap pages. In order to do it, we need access to the `ActivePageTable` or `Mapper` instance (see the [page table] and [kernel remapping] posts). For that we return it from the `paging::remap_the_kernel` function:
 
-[page table]: ./first-edition/posts/06-page-tables/index.md
-[kernel remapping]: ./first-edition/posts/07-remap-the-kernel/index.md
+[page table]: @/first-edition/posts/06-page-tables/index.md
+[kernel remapping]: @/first-edition/posts/07-remap-the-kernel/index.md
 
 ```rust
 // in src/memory/paging/mod.rs
@@ -736,4 +736,4 @@ Now we're able to use heap storage in our kernel without leaking memory. This al
 ## What's next?
 This post concludes the section about memory management for now. We will revisit this topic eventually, but now it's time to explore other topics. The upcoming posts will be about CPU exceptions and interrupts. We will catch all page, double, and triple faults and create a driver to read keyboard input. The [next post] starts by setting up a so-called _Interrupt Descriptor Table_.
 
-[next post]: ./first-edition/posts/09-handling-exceptions/index.md
+[next post]: @/first-edition/posts/09-handling-exceptions/index.md

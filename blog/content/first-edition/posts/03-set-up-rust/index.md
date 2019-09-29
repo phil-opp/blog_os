@@ -11,8 +11,8 @@ updated = "2017-04-12"
 
 In the previous posts we created a [minimal Multiboot kernel][multiboot post] and [switched to Long Mode][long mode post]. Now we can finally switch to [Rust] code. Rust is a high-level language without runtime. It allows us to not link the standard library and write bare metal code. Unfortunately the setup is not quite hassle-free yet.
 
-[multiboot post]: ./first-edition/posts/01-multiboot-kernel/index.md
-[long mode post]: ./first-edition/posts/02-entering-longmode/index.md
+[multiboot post]: @/first-edition/posts/01-multiboot-kernel/index.md
+[long mode post]: @/first-edition/posts/02-entering-longmode/index.md
 [Rust]: https://www.rust-lang.org/
 
 <!-- more -->
@@ -92,7 +92,7 @@ Let's define some properties of our target system:
 - **No SSE**: Our target might not have [SSE] support. Even if it does, we probably don't want to use SSE instructions in our kernel, because it makes interrupt handling much slower. We will explain this in detail in the [“Handling Exceptions”] post.
 - **No hardware floats**: The `x86_64` architecture uses SSE instructions for floating point operations, which we don't want to use (see the previous point). So we also need to avoid hardware floating point operations in our kernel. Instead, we will use _soft floats_, which are basically software functions that emulate floating point operations using normal integers.
 
-[“Handling Exceptions”]: ./first-edition/posts/09-handling-exceptions/index.md
+[“Handling Exceptions”]: @/first-edition/posts/09-handling-exceptions/index.md
 
 ### Target Specifications
 Rust allows us to define [custom targets] through a JSON configuration file. A minimal target specification equal to `x86_64-unknown-linux-gnu` (the default 64-bit Linux target) looks like this:
@@ -486,10 +486,10 @@ Some notes:
 ### Stack Overflows
 Since we still use the small 64 byte [stack from the last post], we must be careful not to [overflow] it. Normally, Rust tries to avoid stack overflows through _guard pages_: The page below the stack isn't mapped and such a stack overflow triggers a page fault (instead of silently overwriting random memory). But we can't unmap the page below our stack right now since we currently use only a single big page. Fortunately the stack is located just above the page tables. So some important page table entry would probably get overwritten on stack overflow and then a page fault occurs, too.
 
-[stack from the last post]: ./first-edition/posts/02-entering-longmode/index.md#creating-a-stack
+[stack from the last post]: @/first-edition/posts/02-entering-longmode/index.md#creating-a-stack
 [overflow]: https://en.wikipedia.org/wiki/Stack_overflow
 
 ## What's next?
 Until now we write magic bits to some memory location when we want to print something to screen. In the [next post] we create a abstraction for the VGA text buffer that allows us to print strings in different colors and provides a simple interface.
 
-[next post]: ./first-edition/posts/04-printing-to-screen/index.md
+[next post]: @/first-edition/posts/04-printing-to-screen/index.md
