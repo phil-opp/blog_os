@@ -167,8 +167,8 @@ With these indices, we can now walk the page table hierarchy to determine the ma
 - The level 4 index is 1, so we look at the entry with index 1 of that table, which tells us that the level 3 table is stored at address 16KiB.
 - We load the level 3 table from that address and look at the entry with index 0, which points us to the level 2 table at 24KiB.
 - The level 2 index is 511, so we look at the last entry of that page to find out the address of the level 1 table.
-- Through the entry with index 127 of the level 1 table we finally find out that the page is mapped to frame 12KiB, or 0xc000 in hexadecimal.
-- The final step is to add the page offset to the frame address to get the physical address 0xc000 + 0x5ce = 0xc5ce.
+- Through the entry with index 127 of the level 1 table we finally find out that the page is mapped to frame 12KiB, or 0x3000 in hexadecimal.
+- The final step is to add the page offset to the frame address to get the physical address 0x3000 + 0x5ce = 0x35ce.
 
 ![The same example 4-level page hierarchy with 5 additional arrows: "Step 0" from the CR3 register to the level 4 table, "Step 1" from the level 4 entry to the level 3 table, "Step 2" from the level 3 entry to the level 2 table, "Step 3" from the level 2 entry to the level 1 table, and "Step 4" from the level 1 table to the mapped frames.](x86_64-page-table-translation-steps.svg)
 
