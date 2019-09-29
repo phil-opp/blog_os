@@ -438,7 +438,7 @@ name = "stack_overflow"
 harness = false
 ```
 
-[without a test harness]: @/second-edition/posts/04-testing/index.md#no-harness
+[without a test harness]: @/second-edition/posts/04-testing/index.md#no-harness-tests
 
 Now `cargo xtest --test stack_overflow` should compile successfully. The test fails of course, since the `unimplemented` macro panics.
 

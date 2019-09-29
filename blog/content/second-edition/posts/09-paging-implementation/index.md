@@ -192,7 +192,7 @@ Whereas `AAA` is the level 4 index, `BBB` the level 3 index, `CCC` the level 2 i
 
 `SSSSSS` are sign extension bits, which means that they are all copies of bit 47. This is a special requirement for valid addresses on the x86_64 architecture. We explained it in the [previous post][sign extension].
 
-[sign extension]: @/second-edition/posts/08-paging-introduction/index.md#paging-on-x86
+[sign extension]: @/second-edition/posts/08-paging-introduction/index.md#paging-on-x86-64
 
 We use [octal] numbers for representing the addresses since each octal character represents three bits, which allows us to clearly separate the 9-bit indexes of the different page table levels. This isn't possible with the hexadecimal system where each character represents four bits.
 

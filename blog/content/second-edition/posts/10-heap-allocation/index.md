@@ -392,7 +392,7 @@ We set the heap size to 100 KiB for now. If we need more space in the future, we
 
 If we tried to use this heap region now, a page fault would occur since the virtual memory region is not mapped to physical memory yet. To resolve this, we create an `init_heap` function that maps the heap pages using the [`Mapper` API] that we introduced in the [_"Paging Implementation"_] post:
 
-[`Mapper` API]: @/second-edition/posts/09-paging-implementation/index.md#using-mappedpagetable
+[`Mapper` API]: @/second-edition/posts/09-paging-implementation/index.md#using-offsetpagetable
 [_"Paging Implementation"_]: @/second-edition/posts/09-paging-implementation/index.md
 
 ```rust

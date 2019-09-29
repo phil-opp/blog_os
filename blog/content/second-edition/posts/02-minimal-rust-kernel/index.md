@@ -275,7 +275,7 @@ Now we can rerun the above command with `xbuild` instead of `build`:
 
 We see that `cargo xbuild` cross-compiles the `core`, `compiler_builtin`, and `alloc` libraries for our new custom target. Since these libraries use a lot of unstable features internally, this only works with a [nightly Rust compiler]. Afterwards, `cargo xbuild` successfully compiles our `blog_os` crate.
 
-[nightly Rust compiler]: @/second-edition/posts/01-freestanding-rust-binary/index.md#installing-rust-nightly
+[nightly Rust compiler]: #installing-rust-nightly
 
 Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
 
