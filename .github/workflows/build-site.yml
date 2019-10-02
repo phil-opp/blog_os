@@ -53,6 +53,7 @@ jobs:
     - name: "Run zola check"
       run: ../zola check
       working-directory: "blog"
+      continue-on-error: true
 
   check_spelling:
     name: "Check Spelling"
