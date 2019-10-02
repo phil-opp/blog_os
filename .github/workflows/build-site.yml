@@ -5,10 +5,11 @@ on:
     branches:
       - '*'
       - '!staging.tmp'
-      - '!master'   # TODO re-enable when reusing artifacts for deploying
     tags:
       - '*'
   pull_request:
+  schedule:
+    - cron: '0 0 1/4 * *'   # every 4 days
 
 jobs:
   build_site:
@@ -64,3 +65,58 @@ jobs:
       name: "Install misspell"
     - run: bin/misspell -error blog/content
       name: "Check for common typos"
+
+  deploy_site:
+    name: "Deploy Generated Site"
+    runs-on: ubuntu-latest
+    needs: [build_site, check_spelling]
+    if: github.ref == 'master' && github.event_name == 'push'
+
+    steps:
+    - name: "Download Generated Site"
+      uses: actions/download-artifact@v1
+      with:
+        name: generated_site
+
+    - name: Setup SSH Keys and known_hosts
+      run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "$deploy_key"
+          echo ::set-env name=SSH_AUTH_SOCK::$SSH_AUTH_SOCK
+      env:
+        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        deploy_key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+    - name: "Clone blog_os_deploy Repo"
+      run: git clone git@github.com:phil-opp/blog_os_deploy.git --branch gh-pages
+
+    - name: "Set Up Git Identity"
+      run: |
+        git config --local user.name "GitHub Actions Deploy"
+        git config --local user.email "github-actions-deploy@phil-opp.com"
+      working-directory: "blog_os_deploy"
+
+    - name: "Delete Old Content"
+      run: "rm -r ./*"
+      working-directory: "blog_os_deploy"
+
+    - name: "Add New Content"
+      run: cp -r generated_site/* blog_os_deploy
+
+    - name: "Commit New Content"
+      run: |
+        git add .
+        git commit --allow-empty -m "Deploy ${GITHUB_SHA}
+
+        Deploy of commit https://github.com/phil-opp/blog_os/commit/${GITHUB_SHA}"
+      working-directory: "blog_os_deploy"
+
+    - name: "Show Changes"
+      run: "git show"
+      working-directory: "blog_os_deploy"
+
+    - name: "Push Changes"
+      run: "git push"
+      working-directory: "blog_os_deploy"
