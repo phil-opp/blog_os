@@ -194,7 +194,7 @@ struct InterruptStackTable {
 }
 ```
 
-For each exception handler, we can choose a stack from the IST through the `options` field in the corresponding [IDT entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack whenever a double fault occurs. This switch would happen before anything is pushed, so it would prevent the triple fault.
+For each exception handler, we can choose a stack from the IST through the `stack_pointers` field in the corresponding [IDT entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack whenever a double fault occurs. This switch would happen before anything is pushed, so it would prevent the triple fault.
 
 [IDT entry]: @/second-edition/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
