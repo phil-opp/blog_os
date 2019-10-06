@@ -49,6 +49,10 @@ main img {
   margin-bottom: 0em;
 }
 
+.frontpage-section {
+  margin-bottom: 2rem;
+}
+
 .posts {
   padding: 1.5rem 1rem 0.5rem 1rem;
   border-radius: 10px;

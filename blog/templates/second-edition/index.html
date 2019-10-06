@@ -59,23 +59,34 @@
     You are viewing the second edition of “Writing an OS in Rust”, which is still in progress. The <a href="{{ get_url(path = "/first-edition") }}">first edition</a> has more content, but is no longer updated. We try our best to incorporate the missing content soon.
 </div>
 
-<div class="posts support">
-    <h2 class="post-title">Support Me</h2>
-    <p>In case you would like to support me, you can do so on <a href="https://donorbox.org/phil-opp">Donorbox</a>, <a href="https://www.patreon.com/phil_opp">Patreon</a>, or <a href="https://liberapay.com/phil-opp/">Liberapay</a>. Thanks!</p>
+<hr>
+
+<div class="frontpage-section">
+    {% set extra = get_section(path = "second-edition/extra/_index.md") %}
+    <h1>{{ extra.title }}</h1>
+    <ul>
+        {% for subsection in extra.subsections %}
+            <li><a href="/{{ subsection.path | safe }}">{{ subsection.title }}</a></li>
+        {% endfor %}
+        {% for page in extra.pages %}
+            <li><a href="/{{ page.path | safe }}">{{ page.title }}</a></li>
+        {% endfor %}
+        <li><a href="/status-update">Status Updates</a></li>
+    </ul>
 </div>
 
-<hr>
-{% set extra = get_section(path = "second-edition/extra/_index.md") %}
-<h1>{{ extra.title }}</h1>
-<ul>
-    {% for subsection in extra.subsections %}
-        <li><a href="/{{ subsection.path | safe }}">{{ subsection.title }}</a></li>
-    {% endfor %}
-    {% for page in extra.pages %}
-        <li><a href="/{{ page.path | safe }}">{{ page.title }}</a></li>
-    {% endfor %}
-    <li><a href="/status-update">Status Updates</a></li>
-</ul>
+<div class="frontpage-section">
+    <h1>Support Me</h1>
+    <p>
+        Creating this blog and the libraries and tools behind the scenes takes a lot of time. I really enjoy it and I'm committed to keep working on it. By supporting me, you allow me to invest more time into new content, new features, and continuous maintainance.
+    </p>
+    <p>
+        The best way to support me is to <a href="https://github.com/users/phil-opp/sponsorship"><em>sponsor me on GitHub</em></a>. GitHub will even match sponsorships until October 2020! If you prefer other platforms, I also have <a href="https://www.patreon.com/phil_opp"><em>Patreon</em></a> and <a href="https://donorbox.org/phil-opp"><em>Donorbox</em></a> accounts. The latter is the most flexible as it supports multiple currencies and one-time contributions.
+    </p>
+    <p>
+        Thank you!
+    </p>
+</div>
 
 <aside id="recent-updates">
     <div class="block">
