@@ -71,7 +71,18 @@
         {% for page in extra.pages %}
             <li><a href="/{{ page.path | safe }}">{{ page.title }}</a></li>
         {% endfor %}
-        <li><a href="/status-update">Status Updates</a></li>
+    </ul>
+</div>
+
+<div class="frontpage-section">
+    <h1>Status Updates</h1>
+    {% set status_updates = get_section(path = "status-update/_index.md") %}
+    <p>{{ status_updates.description }}</p>
+    <ul>
+        {% for page in status_updates.pages | slice(end=3) %}
+            <li><b><a href="/{{ page.path | safe }}">{{ page.title }}</a></b></li>
+        {% endfor %}
+        <li><a href="{{ get_url(path="@/status-update/_index.md") }}"><em>view all »</em></a></li>
     </ul>
 </div>
 
