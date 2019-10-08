@@ -4,7 +4,7 @@
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block header %}
-    <aside id="all-posts-link"><a href="{{ config.base_url }}" title="All Posts">« All Posts</a></aside>
+    <aside id="all-posts-link"><a href="{{ config.base_url | safe }}" title="All Posts">« All Posts</a></aside>
 {% endblock header %}
 
 {% block main %}
@@ -31,7 +31,7 @@
     {% if page.extra.warning %}
         <div class="warning">
             {% if page.extra.warning_short %} <b>{{ page.extra.warning_short }}</b> {% endif %}
-            {{ page.extra.warning | markdown(inline=true)}}
+            {{ page.extra.warning | markdown(inline=true) | safe }}
         </div>
     {% endif %}
 

@@ -56,7 +56,7 @@
 
 <div class="posts first-edition">
     <h2 class="post-title">First Edition</h2>
-    You are viewing the second edition of “Writing an OS in Rust”, which is still in progress. The <a href="{{ get_url(path = "/first-edition") }}">first edition</a> has more content, but is no longer updated. We try our best to incorporate the missing content soon.
+    You are viewing the second edition of “Writing an OS in Rust”, which is still in progress. The <a href="{{ get_url(path = "/first-edition") | safe }}">first edition</a> has more content, but is no longer updated. We try our best to incorporate the missing content soon.
 </div>
 
 <hr>
@@ -82,7 +82,7 @@
         {% for page in status_updates.pages | slice(end=3) %}
             <li><b><a href="/{{ page.path | safe }}">{{ page.title }}</a></b></li>
         {% endfor %}
-        <li><a href="{{ get_url(path="@/status-update/_index.md") }}"><em>view all »</em></a></li>
+        <li><a href="{{ get_url(path="@/status-update/_index.md") | safe }}"><em>view all »</em></a></li>
     </ul>
 </div>
 
