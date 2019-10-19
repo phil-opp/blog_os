@@ -1,5 +1,12 @@
 # Blog OS
 
+[![Build Status](https://travis-ci.org/phil-opp/blog_os.svg?branch=master)](https://travis-ci.org/phil-opp/blog_os)
+[![Build Status](https://ci.appveyor.com/api/projects/status/phil-opp/blog_os)]()
+[![Gitter](https://badges.gitter.im/phil-opp/blog_os.svg)](https://gitter.im/phil-opp/blog_os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/phil-opp/blog_os)
+![](https://img.shields.io/badge/license-MIT%2FApache%202-brightgreen)
+![](https://img.shields.io/github/v/tag/phil-opp/blog_os?include_prereleases)
+
 This repository contains the source code for the _Writing an OS in Rust_ series at [os.phil-opp.com](https://os.phil-opp.com).
 
 If you have questions, open an issue or chat with us [on Gitter](https://gitter.im/phil-opp/blog_os).
