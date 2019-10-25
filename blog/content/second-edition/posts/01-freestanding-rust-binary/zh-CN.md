@@ -6,16 +6,16 @@ date = 2018-02-10
 
 +++
 
-创建我们自己的操作系统内核的第一步是创建一个不链接标准库的Rust可执行文件。 这使得无需基础操作系统即可在[裸机]]上运行Rust代码。
+创建我们自己的操作系统内核的第一步是创建一个不链接标准库的Rust可执行文件。 这使得无需基础操作系统即可在[裸机][bare metal]上运行Rust代码。
 
-[裸机]: https://en.wikipedia.org/wiki/Bare_machine
+[bare metal]: https://en.wikipedia.org/wiki/Bare_machine
 
 <!-- more -->
 
-此博客在[GitHub]上公开开发. 如果您有任何问题或疑问，请在此处打开一个问题。 您也可以在[底部]发表评论. 这篇文章的完整源代码可以在[`post-01`] [post branch]分支中找到。
+此博客在[GitHub]上公开开发. 如果您有任何问题或疑问，请在此处打开一个问题。 您也可以在[底部][at the bottom]发表评论. 这篇文章的完整源代码可以在[`post-01`] [post branch]分支中找到。
 
 [GitHub]: https://github.com/phil-opp/blog_os
-[底部]: #comments
+[at the bottom]: #comments
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-01
 
 <!-- toc -->
@@ -23,28 +23,28 @@ date = 2018-02-10
 ## 介绍
 要编写操作系统内核，我们需要不依赖于任何操作系统功能的代码。 这意味着我们不能使用线程，文件，堆内存，网络，随机数，标准输出或任何其他需要操作系统抽象或特定硬件的功能。这很有意义，因为我们正在尝试编写自己的OS和我们的驱动程序。
 
-这意味着我们不能使用大多数[Rust标准库]，但是我们可以使用很多Rust功能。 例如，我们可以使用[迭代器]，[闭包]，[模式匹配]，[option]和[result]，[string formatting]，当然也可以使用[所有权系统]。 这些功能使以一种非常有表现力的高级方式编写内核成为可能，而无需担心[不确定的行为]或[内存安全性]。
+这意味着我们不能使用大多数[Rust标准库][Rust standard library]，但是我们可以使用很多Rust功能。 例如，我们可以使用[迭代器][iterators]，[闭包][closures]，[模式匹配][pattern matching]，[option]和[result]，[string formatting]，当然也可以使用[所有权系统][ownership system]。 这些功能使以一种非常有表现力的高级方式编写内核成为可能，而无需担心[不确定的行为][undefined behavior]或[内存安全性][memory safety]。
 
 [option]: https://doc.rust-lang.org/core/option/
 [result]:https://doc.rust-lang.org/core/result/
-[Rust标准库]: https://doc.rust-lang.org/std/
-[迭代器]: https://doc.rust-lang.org/book/ch13-02-iterators.html
-[闭包]: https://doc.rust-lang.org/book/ch13-01-closures.html
-[模式匹配]: https://doc.rust-lang.org/book/ch06-00-enums.html
+[Rust standard library]: https://doc.rust-lang.org/std/
+[iterators]: https://doc.rust-lang.org/book/ch13-02-iterators.html
+[closures]: https://doc.rust-lang.org/book/ch13-01-closures.html
+[pattern matching]: https://doc.rust-lang.org/book/ch06-00-enums.html
 [string formatting]: https://doc.rust-lang.org/core/macro.write.html
-[所有权系统]: https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html
-[不确定的行为]: https://www.nayuki.io/page/undefined-behavior-in-c-and-cplusplus-programs
-[内存安全性]: https://tonyarcieri.com/it-s-time-for-a-memory-safety-intervention
+[ownership system]: https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html
+[undefined behavior]: https://www.nayuki.io/page/undefined-behavior-in-c-and-cplusplus-programs
+[memory safety]: https://tonyarcieri.com/it-s-time-for-a-memory-safety-intervention
 
 为了在Rust中创建OS内核，我们需要创建一个无需底层操作系统即可运行的可执行文件。 此类可执行文件通常称为“独立式”或“裸机”可执行文件。
 
 这篇文章描述了创建一个独立的Rust二进制文件的必要步骤，并解释了为什么需要这些步骤。 如果您仅对一个最小的示例感兴趣，可以 **[跳转到摘要](＃summary)**。
 
 ## 禁用标准库
-默认情况下，所有Rust crate都链接[标准库]，该库取决于操作系统的线程，文件或网络等功能。 它还依赖于C标准库“ libc”，该库与OS服务紧密交互。 由于我们的计划是编写一个操作系统，因此我们不能使用任何依赖于OS的库。因此，我们必须通过[`no_std` 属性]禁用自动包含标准库。
+默认情况下，所有Rust crate都链接[标准库][standard library]，该库取决于操作系统的线程，文件或网络等功能。 它还依赖于C标准库“ libc”，该库与OS服务紧密交互。 由于我们的计划是编写一个操作系统，因此我们不能使用任何依赖于OS的库。因此，我们必须通过[`no_std` 属性][`no_std` attribute]禁用自动包含标准库。
 
-[标准库]: https://doc.rust-lang.org/std/
-[`no_std` 属性]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
+[standard library]: https://doc.rust-lang.org/std/
+[`no_std` attribute]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
 
 我们首先创建一个新的货物应用项目。 最简单的方法是通过命令行：
 
@@ -52,9 +52,9 @@ date = 2018-02-10
 cargo new blog_os --bin --edition 2018
 ```
 
-我将项目命名为`blog_os`，但是您当然可以选择自己的名字。 --bin标志指定我们要创建一个可执行二进制文件（与库相反），而--edition 2018标志指定我们要为crate使用Rust的[2018版]。 当我们运行命令时，cargo为我们创建以下目录结构：
+我将项目命名为`blog_os`，但是您当然可以选择自己的名字。 --bin标志指定我们要创建一个可执行二进制文件（与库相反），而--edition 2018标志指定我们要为crate使用Rust的[2018版][2018 edition]。 当我们运行命令时，cargo为我们创建以下目录结构：
 
-[2018版]: https://rust-lang-nursery.github.io/edition-guide/rust-2018/index.html
+[2018 edition]: https://rust-lang-nursery.github.io/edition-guide/rust-2018/index.html
 
 ```
 blog_os
@@ -63,8 +63,8 @@ blog_os
     └── main.rs
 ```
 
-在`Cargo.toml`包含crate构造，例如crate名称，作者，[语义化版本]号码，和依赖关系。 `src/main.rs`文件包含crate的根模块和main函数。您可以通过`cargo build`来编译crate，然后在`target/debug`子文件夹中运行已编译的`blog_os`二进制文件。
-[语义化版本]: http://semver.org/
+在`Cargo.toml`包含crate构造，例如crate名称，作者，[语义化版本][semantic version]号码，和依赖关系。 `src/main.rs`文件包含crate的根模块和main函数。您可以通过`cargo build`来编译crate，然后在`target/debug`子文件夹中运行已编译的`blog_os`二进制文件。
+[semantic version]: http://semver.org/
 
 ### `no_std` 属性
 
@@ -90,10 +90,10 @@ error: cannot find macro `println!` in this scope
   |     ^^^^^^^
 ```
 
-发生此错误的原因是[`println`宏]是标准库的一部分，我们不再包含这个库。 因此我们无法再打印东西。这是有道理的，因为`println`写入[标准输出]，这是操作系统提供的特殊文件描述符。
+发生此错误的原因是[`println`宏]是标准库的一部分，我们不再包含这个库。 因此我们无法再打印东西。这是有道理的，因为`println`写入[标准输出][standard output]，这是操作系统提供的特殊文件描述符。
 
 [`println` macro]: https://doc.rust-lang.org/std/macro.println.html
-[标准输出]: https://en.wikipedia.org/wiki/Standard_streams#Standard_output_.28stdout.29
+[standard output]: https://en.wikipedia.org/wiki/Standard_streams#Standard_output_.28stdout.29
 
 因此，让我们删除打印件，然后使用空的main函数重试：
 
@@ -131,30 +131,30 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 ```
 
-[`PanicInfo`参数] [PanicInfo]包含发生异常的文件和行以及可选的异常消息。该函数永远不应该返回，因此通过返回[“never” type] `!`将其标记为[diverging function]。 目前，我们无法在此函数中执行太多操作，因此我们只是做无限循环。
+[`PanicInfo`参数][PanicInfo]包含发生异常的文件和行以及可选的异常消息。该函数永远不应该返回，因此通过返回[“never” type] `!`将其标记为[diverging function]。 目前，我们无法在此函数中执行太多操作，因此我们只是做无限循环。
 
-[`PanicInfo`参数]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
+[PanicInfo]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-## The `eh_personality` Language Item
+## `eh_personality` 语言项
 
-Language items are special functions and types that are required internally by the compiler. For example, the [`Copy`] trait is a language item that tells the compiler which types have [_copy semantics_][`Copy`]. When we look at the [implementation][copy code], we see it has the special `#[lang = "copy"]` attribute that defines it as a language item.
+语言项是编译器内部所需的特殊功能和类型。例如，[`Copy`]特征是一种语言项目，它告诉编译器哪些类型具有 [_copy语义_][`Copy`]。当我们查看[实现][copy code]时，我们看到它具有特殊的`#[lang = "copy"]`属性，将该属性定义为语言项。
 
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
 
-Providing own implementations of language items would be possible, but this should only be done as a last resort. The reason is that language items are highly unstable implementation details and not even type checked (so the compiler doesn't even check if a function has the right argument types). Fortunately, there is a more stable way to fix the above language item error.
+提供自己的语言项目实现是可能的，但这只能作为最后的选择。 原因是语言项是高度不稳定的实现细节，甚至没有类型检查（因此编译器甚至不检查函数是否具有正确的参数类型）。幸运的是，有更稳定的方法来修复上述语言项错误。
 
-The `eh_personality` language item marks a function that is used for implementing [stack unwinding]. By default, Rust uses unwinding to run the destructors of all live stack variables in case of a [panic]. This ensures that all used memory is freed and allows the parent thread to catch the panic and continue execution. Unwinding, however, is a complicated process and requires some OS specific libraries (e.g. [libunwind] on Linux or [structured exception handling] on Windows), so we don't want to use it for our operating system.
+`eh_personality`语言项标记了用于实现[堆栈展开][stack unwinding]的功能。默认情况下，Rust使用展开来运行所有活动堆栈变量的析构函数，以防出现[panic]情况。 这样可以确保释放所有使用的内存，并允许父线程捕获紧急情况并继续执行。但是，展开是一个复杂的过程，需要某些特定于操作系统的库（例如，Linux上的[libunwind]或Windows上的[结构化异常处理][structured exception handling]），因此我们不想在操作系统中使用它。
 
 [stack unwinding]: http://www.bogotobogo.com/cplusplus/stackunwinding.php
 [libunwind]: http://www.nongnu.org/libunwind/
 [structured exception handling]: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx
 
-### Disabling Unwinding
+### 禁用展开
 
-There are other use cases as well for which unwinding is undesirable, so Rust provides an option to [abort on panic] instead. This disables the generation of unwinding symbol information and thus considerably reduces binary size. There are multiple places where we can disable unwinding. The easiest way is to add the following lines to our `Cargo.toml`:
+还有其他一些用例，不希望展开，因此Rust提供了[中止异常][abort on panic]的选项。 这禁用了展开符号信息的生成，因此大大减小了二进制大小。我们可以在多个地方禁用展开功能。 最简单的方法是将以下几行添加到我们的`Cargo.toml`:
 
 ```toml
 [profile.dev]
@@ -164,26 +164,26 @@ panic = "abort"
 panic = "abort"
 ```
 
-This sets the panic strategy to `abort` for both the `dev` profile (used for `cargo build`) and the `release` profile (used for `cargo build --release`). Now the `eh_personality` language item should no longer be required.
+这会将`dev`配置文件（用于`cargo build`）和`release`配置文件（用于`cargo build --release`）的应急策略设置为`abort`。 现在，不再需要`eh_personality`语言项目了。
 
 [abort on panic]: https://github.com/rust-lang/rust/pull/32900
 
-Now we fixed both of the above errors. However, if we try to compile it now, another error occurs:
+现在，我们修复了以上两个错误。 但是，如果我们现在尝试对其进行编译，则会发生另一个错误：
 
 ```
 > cargo build
 error: requires `start` lang_item
 ```
 
-Our program is missing the `start` language item, which defines the entry point.
+我们的程序缺少定义入口点的`start`语言项。
 
-## The `start` attribute
+## `start` 属性
 
-One might think that the `main` function is the first function called when you run a program. However, most languages have a [runtime system], which is responsible for things such as garbage collection (e.g. in Java) or software threads (e.g. goroutines in Go). This runtime needs to be called before `main`, since it needs to initialize itself.
+可能会认为`main`函数是运行程序时调用的第一个函数。 但是，大多数语言都有一个[运行时系统][runtime system]，它负责诸如垃圾回收（例如Java）或软件线程（例如Go中的goroutines）之类的事情。 这个运行时需要在`main`之前调用，因为它需要初始化自己。
 
 [runtime system]: https://en.wikipedia.org/wiki/Runtime_system
 
-In a typical Rust binary that links the standard library, execution starts in a C runtime library called `crt0` (“C runtime zero”), which sets up the environment for a C application. This includes creating a stack and placing the arguments in the right registers. The C runtime then invokes the [entry point of the Rust runtime][rt::lang_start], which is marked by the `start` language item. Rust only has a very minimal runtime, which takes care of some small things such as setting up stack overflow guards or printing a backtrace on panic. The runtime then finally calls the `main` function.
+在链接标准库的典型Rust二进制文件中，执行从名为`crt0`（“ C运行时零”）的C运行时库开始，该运行时库为C应用程序设置了环境。这包括创建堆栈并将参数放在正确的寄存器中。 然后，C运行时调用[Rust运行时的入口点][rt::lang_start]，该入口由`start`语言项标记。Rust的运行时非常短，它可以处理一些小事情，例如设置堆栈溢出防护或在紧急情况下打印回溯。 然后，运行时最终调用`start`函数。
 
 [rt::lang_start]: https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73
 
