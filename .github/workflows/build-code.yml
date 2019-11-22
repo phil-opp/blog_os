@@ -86,15 +86,11 @@ jobs:
     timeout-minutes: 2
     steps:
     - uses: actions/checkout@v1
-    - name: "Find latest Nightly with rustfmt"
-      id: component
-      uses: actions-rs/components-nightly@v1
-      with:
-        component: rustfmt
-    - name: "Add a rustup override for rustfmt nightly"
+    - name: "Use the latest Rust nightly with rustfmt"
       uses: actions-rs/toolchain@v1
       with:
-          toolchain: ${{ steps.component.outputs.toolchain }}
+          toolchain: nightly
+          profile: minimal
+          components: rustfmt
           override: true
-    - run: rustup component add rustfmt
     - run: cargo fmt -- --check
