@@ -502,22 +502,6 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 }
 ```
 
-We can also use `hlt_loop` in our double fault exception handler:
-
-```rust
-// in src/interrupts.rs
-
-use crate::hlt_loop; // new
-
-extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: &mut InterruptStackFrame,
-    _error_code: u64,
-) {
-    println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
-    hlt_loop(); // new
-}
-```
-
 When we run our kernel now in QEMU, we see a much lower CPU usage.
 
 ## Keyboard Input
