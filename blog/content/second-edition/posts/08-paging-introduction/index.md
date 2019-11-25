@@ -275,6 +275,7 @@ lazy_static! {
 }
 
 use x86_64::structures::idt::PageFaultErrorCode;
+use crate::hlt_loop;
 
 extern "x86-interrupt" fn page_fault_handler(
     stack_frame: &mut InterruptStackFrame,
