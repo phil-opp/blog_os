@@ -35,6 +35,13 @@
         </div>
     {% endif %}
 
+    {% if page.lang != "en" %}
+        <div class="warning">
+            <b>Translated Content</b>
+            This page was translated from english. TODO
+        </div>
+    {% endif %}
+
     {{ page.content | replace(from="<!-- toc -->", to=macros::toc(toc=page.toc))  | safe }}
 
     <div class="post-footer-support">
