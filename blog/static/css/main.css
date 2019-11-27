@@ -102,6 +102,10 @@ main img {
   margin-left: 5px;
 }
 
+.post-translation {
+  margin-top: .3rem;
+}
+
 .post-category {
   margin-right: 0.5rem;
   text-transform: uppercase;

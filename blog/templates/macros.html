@@ -4,6 +4,14 @@
         <div class="post-summary">
             {{ page.summary | safe}}
             <a class="read-more" href="/{{ page.path | safe }}">read&nbsp;more…</a>
+
+            {% set translations = page.translations | filter(attribute="lang", value=lang) %}
+            {% if translations %}
+            <div class="post-translation">
+                {% set post = translations.0 %}
+                <b>Community Translation: <a href="{{ post.permalink }}">{{ post.title }}</a></b>
+            </div>
+            {% endif %}
         </div>
     </div>
 {% endmacro post_link %}
