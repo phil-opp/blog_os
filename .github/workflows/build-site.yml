@@ -19,8 +19,8 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: 'Download Zola'
-      run: curl -sL https://github.com/getzola/zola/releases/download/v0.9.0/zola-v0.9.0-x86_64-unknown-linux-gnu.tar.gz | tar zxv
+    - name: 'Clone Zola'
+      run: git clone https://github.com/getzola/zola.git --branch next
     - name: "Install Python Tools"
       run: python -m pip install --upgrade pip setuptools wheel
     - name: 'Install Python Libraries'
@@ -31,7 +31,7 @@ jobs:
       run: python before_build.py
       working-directory: "blog"
     - name: "Build Site"
-      run: ../zola build
+      run: cargo run --manifest-path=../zola/Cargo.toml -- build
       working-directory: "blog"
 
     - name: Upload Generated Site
@@ -47,11 +47,11 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: 'Download Zola'
-      run: curl -sL https://github.com/getzola/zola/releases/download/v0.9.0/zola-v0.9.0-x86_64-unknown-linux-gnu.tar.gz | tar zxv
+    - name: 'Clone Zola'
+      run: git clone https://github.com/getzola/zola.git --branch next
 
     - name: "Run zola check"
-      run: ../zola check
+      run: cargo run --manifest-path=../zola/Cargo.toml -- check
       working-directory: "blog"
       continue-on-error: true
 
