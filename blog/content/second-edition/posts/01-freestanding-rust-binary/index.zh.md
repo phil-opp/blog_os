@@ -1,7 +1,7 @@
 +++
 title = "独立的Rust二进制"
 weight = 1
-path = "freestanding-rust-binary"
+path = "zh/freestanding-rust-binary"
 date = 2018-02-10
 
 +++
