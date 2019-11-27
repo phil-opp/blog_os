@@ -4,7 +4,11 @@
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block header %}
+    {% if lang != "en" %}
+    <aside id="all-posts-link"><a href="{{ config.base_url | safe }}/{{ lang }}" title="All Posts">« All Posts</a></aside>
+    {% else %}
     <aside id="all-posts-link"><a href="{{ config.base_url | safe }}" title="All Posts">« All Posts</a></aside>
+    {% endif %}
 {% endblock header %}
 
 {% block main %}
