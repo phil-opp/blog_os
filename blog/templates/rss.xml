@@ -4,7 +4,7 @@
         <link>{{ config.base_url | safe }}</link>
         <description>{{ config.description }}</description>
         <generator>Zola</generator>
-        <language>{{ config.default_language }}</language>
+        <language>{{ lang }}</language>
         <atom:link href="{{ feed_url | safe }}" rel="self" type="application/rss+xml"/>
         <lastBuildDate>{{ last_build_date | date(format="%a, %d %b %Y %H:%M:%S %z") }}</lastBuildDate>
         {% for page in pages %}
