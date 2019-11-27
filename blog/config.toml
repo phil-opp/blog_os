@@ -6,7 +6,7 @@ highlight_theme = "visual-studio-dark"
 generate_rss = true
 
 languages = [
-    { code = "zh" }, # Chinese
+    { code = "zh-CN" }, # Chinese (simplified)
 ]
 
 [extra]
