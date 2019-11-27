@@ -37,8 +37,10 @@
 
     {% if page.lang != "en" %}
         <div class="warning">
-            <b>Translated Content</b>
-            This page was translated from english. TODO
+            {% set translations = page.translations | filter(attribute="lang", value="en") %}
+            {% set original = translations.0 %}
+            <b>Translated Content:</b>
+            This is a community translation of the <strong><a href="{{ original.permalink }}">{{ original.title }}</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!
         </div>
     {% endif %}
 
