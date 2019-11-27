@@ -17,7 +17,7 @@
     <aside id="toc-aside">
         <h2>Table of Contents</h2>
         <ol>
-            {% for h2 in toc %}<li>
+            {% for h2 in page.toc %}<li>
                 <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
                 {% if h2.children %}<ol>
                     {% for h3 in h2.children %}<li>
@@ -35,7 +35,7 @@
         </div>
     {% endif %}
 
-    {{ page.content | replace(from="<!-- toc -->", to=macros::toc(toc=toc))  | safe }}
+    {{ page.content | replace(from="<!-- toc -->", to=macros::toc(toc=page.toc))  | safe }}
 
     <div class="post-footer-support">
         <h2>Support Me</h2>
