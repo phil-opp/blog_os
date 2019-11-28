@@ -4,7 +4,7 @@
 name = "blog_os"
 version = "0.1.0"
 dependencies = [
- "bootloader 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bootloader",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "spin 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "volatile 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -12,9 +12,9 @@ dependencies = [
 
 [[package]]
 name = "bootloader"
-version = "0.8.1"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
+checksum = "d596849a47f28abdea62d7a6a25c4f6e69c3d9b09b0a2877db6e9cda004ca993"
 [[package]]
 name = "lazy_static"
 version = "1.4.0"
@@ -33,8 +33,6 @@ name = "volatile"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
-[metadata]
-"checksum bootloader 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "45dd858bd74a742ec0fe887722952c263abd0825aa8d33a3704917a97d7bd41e"
 "checksum lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 "checksum spin 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 "checksum volatile 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "6af0edf5b4faacc31fc51159244d78d65ec580f021afcef7bd53c04aeabc7f29"
