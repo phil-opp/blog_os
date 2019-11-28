@@ -4,13 +4,11 @@
 name = "blog_os"
 version = "0.1.0"
 dependencies = [
- "bootloader 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bootloader",
 ]
 
 [[package]]
 name = "bootloader"
-version = "0.8.1"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[metadata]
-"checksum bootloader 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "45dd858bd74a742ec0fe887722952c263abd0825aa8d33a3704917a97d7bd41e"
+checksum = "d596849a47f28abdea62d7a6a25c4f6e69c3d9b09b0a2877db6e9cda004ca993"
