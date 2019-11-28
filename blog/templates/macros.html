@@ -1,16 +1,21 @@
 {% macro post_link(page) %}
     <div>
-        <h2 class="post-title"><a href="/{{ page.path | safe }}">{{ page.title }}</a></h2>
+        {% set translations = page.translations | filter(attribute="lang", value=lang) %}
+        {% if translations %}
+            {% set post = get_page(path = translations.0.path) %}
+        {% else %}
+            {% set post = page %}
+            {% set not_translated = true %}
+        {% endif %}
+        <h2 class="post-title"><a href="/{{ post.path | safe }}">{{ post.title }}</a></h2>
         <div class="post-summary">
-            {{ page.summary | safe}}
-            <a class="read-more" href="/{{ page.path | safe }}">read&nbsp;more…</a>
+            {{ post.summary | safe}}
+            <a class="read-more" href="/{{ post.path | safe }}">read&nbsp;more…</a>
 
-            {% set translations = page.translations | filter(attribute="lang", value=lang) %}
-            {% if translations %}
-            <div class="post-translation">
-                {% set post = translations.0 %}
-                <b>Community Translation: <a href="{{ post.permalink }}">{{ post.title }}</a></b>
-            </div>
+            {% if not_translated %}
+            <aside class="no-translation">
+                (This post is not translated yet.)
+            </aside>
             {% endif %}
         </div>
     </div>
