@@ -27,7 +27,7 @@ version = "0.1.0"
 dependencies = [
  "bootloader",
  "lazy_static",
- "linked_list_allocator 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "linked_list_allocator",
  "pc-keyboard",
  "pic8259_simple",
  "spin",
@@ -70,8 +70,9 @@ dependencies = [
 name = "linked_list_allocator"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47314ec1d29aa869ee7cb5a5be57be9b1055c56567d59c3fb6689926743e0bea"
 dependencies = [
- "spin 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spin",
 ]
 
 [[package]]
@@ -159,5 +160,3 @@ dependencies = [
  "cast",
  "ux",
 ]
-
-"checksum linked_list_allocator 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)" = "47314ec1d29aa869ee7cb5a5be57be9b1055c56567d59c3fb6689926743e0bea"
