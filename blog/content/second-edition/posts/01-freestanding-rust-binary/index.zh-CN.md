@@ -22,13 +22,13 @@ date = 2018-02-10
 
 ## 简介
 
-要编写一个操作系统内核，我们需要不基于任何操作系统特性的代码。这意味着我们不能使用线程、文件、堆内存、网络、随机数、标准输出，或其它任何需要操作系统抽象和特定硬件的特性；这其实讲得通，因为我们正在编写自己的操作系统和硬件驱动。
+要编写一个操作系统内核，我们需要编写不依赖任何操作系统特性的代码。这意味着我们不能使用线程、文件、堆内存、网络、随机数、标准输出，或其它任何需要操作系统抽象和特定硬件的特性；这其实讲得通，因为我们正在编写自己的操作系统和硬件驱动。
 
 实现这一点，意味着我们不能使用[Rust标准库](https://doc.rust-lang.org/std/)的大部分；但还有很多Rust特性是我们依然可以使用的。比如说，我们可以使用[迭代器](https://doc.rust-lang.org/book/ch13-02-iterators.html)、[闭包](https://doc.rust-lang.org/book/ch13-01-closures.html)、[模式匹配](https://doc.rust-lang.org/book/ch06-00-enums.html)、[Option](https://doc.rust-lang.org/core/option/)、[Result](https://doc.rust-lang.org/core/result/index.html)、[字符串格式化](https://doc.rust-lang.org/core/macro.write.html)，当然还有[所有权系统](https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html)。这些功能让我们能够编写表达性强、高层抽象的操作系统，而无需操心[未定义行为](https://www.nayuki.io/page/undefined-behavior-in-c-and-cplusplus-programs)和[内存安全](https://tonyarcieri.com/it-s-time-for-a-memory-safety-intervention)。
 
 为了用Rust编写一个操作系统内核，我们需要创建一个独立于操作系统的可执行程序。这样的可执行程序常被称作**独立式可执行程序**（freestanding executable）或**裸机程序**(bare-metal executable)。
 
-在这篇文章里，我们将逐步地创建一个独立式可执行程序，并且详细解释为什么每个步骤都是必须的。如果读者只对最终的代码感兴趣，可以跳转到本篇文章的小结部分。
+在这篇文章里，我们将逐步地创建一个独立式可执行程序，并且详细解释为什么需要这样做。如果读者只对最终的代码感兴趣，可以跳转到本篇文章的小结部分。
 
 ## 禁用标准库
 
@@ -75,7 +75,7 @@ error: cannot find macro `println!` in this scope
   |     ^^^^^^^
 ```
 
-出现这个错误的原因是，[println!宏](https://doc.rust-lang.org/std/macro.println.html)是标准库的一部分，而我们的项目不再依赖于标准库。我们选择不再打印字符串。这也能解释得通，因为`println!`将会向**标准输出**（[standard output](https://en.wikipedia.org/wiki/Standard_streams#Standard_output_.28stdout.29)）打印字符，它依赖于特殊的文件描述符，而这是由操作系统提供的特性。
+出现这个错误的原因是：[println!宏](https://doc.rust-lang.org/std/macro.println.html)是标准库的一部分，而我们的项目不再依赖于标准库。我们选择不再打印字符串。这也能解释得通，因为`println!`将会向**标准输出**（[standard output](https://en.wikipedia.org/wiki/Standard_streams#Standard_output_.28stdout.29)）打印字符，它依赖于特殊的文件描述符，而这是由操作系统提供的特性。
 
 所以我们可以移除这行代码，使用一个空的main函数再次尝试编译：
 
@@ -111,15 +111,15 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 ```
 
-类型为[PanicInfo](https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html)的参数包含了panic发生的文件名、代码行数和可选的错误信息。这个函数从不返回，所以他被标记为**发散函数**（[diverging function](https://doc.rust-lang.org/book/first-edition/functions.html#diverging-functions)）。发散函数的返回类型称作**Never类型**（["never" type](https://doc.rust-lang.org/nightly/std/primitive.never.html)），记为`!`。对这个函数，我们目前能做的事情很少，所以我们只需编写一个无限循环`loop {}`。
+类型为[PanicInfo](https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html)的参数包含了panic发生的文件名、代码行数和可选的错误信息。这个函数从不返回，所以他被标记为**发散函数**（[diverging function](https://doc.rust-lang.org/book/first-edition/functions.html#diverging-functions)）。发散函数的返回类型称作**Never类型**（["never" type](https://doc.rust-lang.org/nightly/std/primitive.never.html)），记为`!`。对这个函数，我们目前能做的很少，所以我们只需编写一个无限循环`loop {}`。
 
 ## eh_personality语言项
 
 语言项是一些编译器需求的特殊函数或类型。举例来说，Rust的[Copy](https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html) trait是一个这样的语言项，告诉编译器哪些类型需要遵循**复制语义**（[copy semantics](https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html)）——当我们查找`Copy` trait的[实现](https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299)时，我们会发现，一个特殊的`#[lang = "copy"]`属性将它定义为了一个语言项，达到与编译器联系的目的。
 
-我们可以自己实现语言项，但这只应该是最后的手段：目前来看，语言项是高度不稳定的语言细节实现，它们不会经过编译期类型检查（所以编译器甚至不确保它们的参数类型是否正确）。幸运的是，我们有更稳定的方式，来修复上面的语言项错误。
+我们可以自己实现语言项，但这是下下策：目前来看，语言项是高度不稳定的语言细节实现，它们不会经过编译期类型检查（所以编译器甚至不确保它们的参数类型是否正确）。幸运的是，我们有更稳定的方式，来修复上面的语言项错误。
 
-`eh_personality`语言项标记的函数，将被用于实现**栈展开**（[stack unwinding](http://www.bogotobogo.com/cplusplus/stackunwinding.php)）。在使用标准库的情况下，当panic发生时，Rust将使用栈展开，来运行在栈上活跃的所有变量的**析构函数**（destructor）——这确保了所有使用的内存都被释放，允许调用程序的**父进程**（parent thread）捕获panic，处理并继续运行。但是，栈展开是一个复杂的过程，如Linux的[libunwind](http://www.nongnu.org/libunwind/)或Windows的**结构化异常处理**（[structured exception handling, SEH](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx)），通常需要依赖于操作系统的库；所以我们不在自己编写的操作系统中使用它。
+`eh_personality`语言项标记的函数，将被用于实现**栈展开**（[stack unwinding](http://www.bogotobogo.com/cplusplus/stackunwinding.php)）。在使用标准库的情况下，当panic发生时，Rust将使用栈展开，来运行在栈上活跃的所有变量的**析构函数**（destructor）——这确保了所有使用的内存都被释放，允许调用程序的**父进程**（parent thread）捕获panic，处理问题并继续运行。但是，栈展开是一个复杂的过程，如Linux的[libunwind](http://www.nongnu.org/libunwind/)或Windows的**结构化异常处理**（[structured exception handling, SEH](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx)），通常需要依赖于操作系统的库；所以我们不在自己编写的操作系统中使用它。
 
 ### 禁用栈展开
 
@@ -135,7 +135,7 @@ panic = "abort"
 
 这些选项能将**dev配置**（dev profile）和**release配置**（release profile）的panic策略设为`abort`。`dev`配置适用于`cargo build`，而`release`配置适用于`cargo build --release`。现在编译器应该不再要求我们提供`eh_personality`语言项实现。
 
-现在我们已经修复了出现的两个错误，可以信心满满地开始编译了。然而，尝试编译运行后，一个新的错误出现了：
+现在我们已经修复了出现的两个错误，可以尝试开始编译了。然而，尝试编译运行后，一个新的错误出现了：
 
 ```bash
 > cargo build
@@ -230,7 +230,7 @@ cargo build --target thumbv7em-none-eabihf
 
 ### 链接器参数
 
-我们也可以选择不编译到裸机系统，因为传递特定的参数也能解决链接器错误问题。虽然我们不将在后文中使用这个方法，为了教程的完整性，我们也撰写了专门的短文，来提供这个途径的解决方案。
+我们也可以选择不编译到裸机系统，因为传递特定的参数也能解决链接器错误问题。虽然我们不会在后文中使用这个方法，为了教程的完整性，我们也撰写了专门的短文，来提供这个途径的解决方案。
 
 [链接器参数](./appendix-a-linker-arguments.md)
 
