@@ -12,7 +12,7 @@ date = 2018-02-10
 
 <!-- more -->
 
-此網誌在 [GitHub] 上公開開發，如果您有任何問題或疑問，請在那開一個 issue，您也可以在[下面][at the bottom]發表評論，這篇文章的完整開源程式碼可以在 [`post-01`] [post branch] 分支中找到。
+此網誌在 [GitHub] 上公開開發，如果您有任何問題或疑問，請在那開一個 issue，您也可以在[下面][at the bottom]發表評論，這篇文章的完整開源程式碼可以在 [`post-01`][post branch] 分支中找到。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
