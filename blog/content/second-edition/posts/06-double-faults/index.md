@@ -79,13 +79,15 @@ lazy_static! {
 
 // new
 extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: &mut InterruptStackFrame, _error_code: u64)
+    stack_frame: &mut InterruptStackFrame, _error_code: u64) -> !
 {
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
 ```
 
-Our handler prints a short error message and dumps the exception stack frame. The error code of the double fault handler is always zero, so there's no reason to print it.
+Our handler prints a short error message and dumps the exception stack frame. The error code of the double fault handler is always zero, so there's no reason to print it. One difference to the breakpoint handler is that the double fault handler is [_diverging_]. The reason is that the `x86_64` architecture does not permit returning from a double fault exception.
+
+[_diverging_]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
 When we start our kernel now, we should see that the double fault handler is invoked:
 
@@ -517,7 +519,7 @@ use x86_64::structures::idt::InterruptStackFrame;
 extern "x86-interrupt" fn test_double_fault_handler(
     _stack_frame: &mut InterruptStackFrame,
     _error_code: u64,
-) {
+) -> ! {
     serial_println!("[ok]");
     exit_qemu(QemuExitCode::Success);
     loop {}
