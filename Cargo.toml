@@ -16,7 +16,7 @@ harness = false
 bootloader = { version = "0.8.0", features = ["map_physical_memory"]}
 volatile = "0.2.6"
 spin = "0.5.2"
-x86_64 = "0.7.5"
+x86_64 = "0.8.0"
 uart_16550 = "0.2.0"
 pic8259_simple = "0.1.1"
 pc-keyboard = "0.3.1"
