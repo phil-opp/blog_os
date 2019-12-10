@@ -1,7 +1,7 @@
 +++
 title = "獨立的 Rust 二進制檔"
 weight = 1
-path = "zh-tw/freestanding-rust-binary"
+path = "zh-TW/freestanding-rust-binary"
 date = 2018-02-10
 
 +++

@@ -7,7 +7,7 @@ generate_rss = true
 
 languages = [
     { code = "zh-CN" }, # Chinese (simplified)
-    { code = "zh-tw" }, # Chinese (tradictional))
+    { code = "zh-TW" }, # Chinese (tradictional)
 ]
 
 [extra]
