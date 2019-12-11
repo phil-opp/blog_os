@@ -229,7 +229,7 @@ The above code assumes that the last level 4 entry with index `0o777` (511) is r
 
 Alternatively to performing the bitwise operations by hand, you can use the [`RecursivePageTable`] type of the `x86_64` crate, which provides safe abstractions for various page table operations. For example, the code below shows how to translate a virtual address to its mapped physical address:
 
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 ```rust
 // in src/memory.rs
@@ -447,7 +447,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 First, we convert the `physical_memory_offset` of the `BootInfo` struct to a [`VirtAddr`] and pass it to the `active_level_4_table` function. We then use the `iter` function to iterate over the page table entries and the [`enumerate`] combinator to additionally add an index `i` to each element. We only print non-empty entries because all 512 entries wouldn't fit on the screen.
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.7.5/x86_64/struct.VirtAddr.html
+[`VirtAddr`]: https://docs.rs/x86_64/0.8.1/x86_64/struct.VirtAddr.html
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
 When we run it, we see the following output:
@@ -560,7 +560,7 @@ The `VirtAddr` struct already provides methods to compute the indexes into the p
 
 Inside the loop, we again use the `physical_memory_offset` to convert the frame into a page table reference. We then read the entry of the current page table and use the [`PageTableEntry::frame`] function to retrieve the mapped frame. If the entry is not mapped to a frame we return `None`. If the entry maps a huge 2MiB or 1GiB page we panic for now.
 
-[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
+[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
 Let's test our translation function by translating some addresses:
 
@@ -616,18 +616,18 @@ The base of the abstraction are two traits that define various page table mappin
 - The [`Mapper`] trait is generic over the page size and provides functions that operate on pages. Examples are [`translate_page`], which translates a given page to a frame of the same size, and [`map_to`], which creates a new mapping in the page table.
 - The [`MapperAllSizes`] trait implies that the implementor implements `Mapper` for all pages sizes. In addition, it provides functions that work with multiple page sizes such as [`translate_addr`] or the general [`translate`].
 
-[`Mapper`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/trait.Mapper.html
-[`translate_page`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
-[`map_to`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
-[`MapperAllSizes`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
-[`translate_addr`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
-[`translate`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate
+[`Mapper`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/trait.Mapper.html
+[`translate_page`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
+[`map_to`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
+[`MapperAllSizes`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
+[`translate_addr`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
+[`translate`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate
 
 The traits only define the interface, they don't provide any implementation. The `x86_64` crate currently provides three types that implement the traits with different requirements. The [`OffsetPageTable`] type assumes that the complete physical memory is mapped to the virtual address space at some offset. The [`MappedPageTable`] is a bit more flexible: It only requires that each page table frame is mapped to the virtual address space at a calculable address. Finally, the [`RecursivePageTable`] type can be used to access page table frames through [recursive page tables](#recursive-page-tables).
 
-[`OffsetPageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
-[`MappedPageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`OffsetPageTable`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
+[`MappedPageTable`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/struct.MappedPageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 In our case, the bootloader maps the complete physical memory at an virtual address specfied by the `physical_memory_offset` variable, so we can use the `OffsetPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
 
@@ -653,7 +653,7 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
 
 The function takes the `physical_memory_offset` as an argument and returns a new `OffsetPageTable` instance with a `'static` lifetime. This means that the instance stays valid for the complete runtime of our kernel. In the function body, we first call the `active_level_4_table` function to retrieve a mutable reference to the level 4 page table. We then invoke the [`OffsetPageTable::new`] function with this reference. As the second parameter, the `new` function expects the virtual address at which the mapping of the physical memory starts, which is given in the `physical_memory_offset` variable.
 
-[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
+[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
 
 The `active_level_4_table` function should be only called from the `init` function from now on because it can easily lead to aliased mutable references when called multiple times, which can cause undefined behavior. For this reason, we make the function private by removing the `pub` specifier.
 
@@ -704,8 +704,8 @@ Until now we only looked at the page tables without modifying anything. Let's ch
 
 We will use the [`map_to`] function of the [`Mapper`] trait for our implementation, so let's take a look at that function first. The documentation tells us that it takes four arguments: the page that we want to map, the frame that the page should be mapped to, a set of flags for the page table entry, and a `frame_allocator`. The frame allocator is needed because mapping the given page might require creating additional page tables, which need unused frames as backing storage.
 
-[`map_to`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
-[`Mapper`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/trait.Mapper.html
+[`map_to`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
+[`Mapper`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/trait.Mapper.html
 
 #### A `create_example_mapping` Function
 
@@ -743,8 +743,8 @@ In addition to the `page` that should be mapped, the function expects a mutable 
 
 [impl-trait-arg]: https://doc.rust-lang.org/book/ch10-02-traits.html#traits-as-parameters
 [generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/trait.FrameAllocator.html
-[`PageSize`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/page/trait.PageSize.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/trait.FrameAllocator.html
+[`PageSize`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/page/trait.PageSize.html
 
 Instead of a normal `PhysFrame`, the [`map_to`] method requires an [`UnusedPhysFrame`] wrapper type to ensure that the frame is not already in use. The reason for this is that mapping the same frame twice could result in undefined behavior, for example when two different `&mut` references point to the same physical memory location. In our case, we reuse the VGA text buffer frame, which is already mapped, so we break the required condition when calling the unsafe [`UnusedPhysFrame::new`] function. However, the `create_example_mapping` function is only a temporary testing function and will be removed after this post, so it is ok. To remind us of the unsafety, we put a `FIXME` comment on the line. 
 
@@ -759,8 +759,8 @@ The [`map_to`] function can fail, so it returns a [`Result`]. Since this is just
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
-[`MapperFlush`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[`flush`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`MapperFlush`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`flush`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 [must_use]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
 #### A dummy `FrameAllocator`
