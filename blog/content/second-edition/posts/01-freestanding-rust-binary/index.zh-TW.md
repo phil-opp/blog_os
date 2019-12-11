@@ -4,6 +4,9 @@ weight = 1
 path = "zh-TW/freestanding-rust-binary"
 date = 2018-02-10
 
+[extra]
+commit = 24d04e0e39a3395ecdce795bab0963cb6afe1bfd
+
 +++
 
 建立我們自己的作業系統核心的第一步是建立一個不連結標準函式庫的 Rust 執行檔，這使得無需基礎作業系統即可在[裸機][bare metal]上執行 Rust 程式碼。
