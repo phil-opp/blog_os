@@ -422,7 +422,7 @@ pub fn init_heap(
             .allocate_frame()
             .ok_or(MapToError::FrameAllocationFailed)?;
         let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
-        unsafe { mapper.map_to(page, frame, flags, frame_allocator)?.flush() };
+        mapper.map_to(page, frame, flags, frame_allocator)?.flush();
     }
 
     Ok(())
@@ -448,7 +448,7 @@ The implementation can be broken down into two parts:
 
     - We set the required `PRESENT` flag and the `WRITABLE` flag for the page. With these flags both read and write accesses are allowed, which makes sense for heap memory.
 
-    - We use the unsafe [`Mapper::map_to`] method for creating the mapping in the active page table. The method can fail, therefore we use the [question mark operator] again to forward the error to the caller. On success, the method returns a [`MapperFlush`] instance that we can use to update the [_translation lookaside buffer_] using the [`flush`] method.
+    - We use the [`Mapper::map_to`] method for creating the mapping in the active page table. The method can fail, therefore we use the [question mark operator] again to forward the error to the caller. On success, the method returns a [`MapperFlush`] instance that we can use to update the [_translation lookaside buffer_] using the [`flush`] method.
 
 [`VirtAddr`]: https://docs.rs/x86_64/0.8.1/x86_64/struct.VirtAddr.html
 [`Page`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/page/struct.Page.html
