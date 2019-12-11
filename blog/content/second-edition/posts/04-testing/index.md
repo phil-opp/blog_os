@@ -172,7 +172,7 @@ Instead of manually invoking the `in` and `out` assembly instructions, we use th
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.7.5"
+x86_64 = "0.8.1"
 ```
 
 Now we can use the [`Port`] type provided by the crate to create an `exit_qemu` function:
