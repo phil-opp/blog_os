@@ -1,6 +1,6 @@
 # Blog OS (VGA Text Mode)
 
-[![Azure Pipelines CI build](https://img.shields.io/azure-devops/build/phil-opp/blog_os/1/post-03.svg?label=Build&style=flat-square)](https://dev.azure.com/phil-opp/blog_os/_build?definitionId=1)
+[![Build Status](https://github.com/phil-opp/blog_os/workflows/Build%20Code/badge.svg?branch=post-02)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Build+Code%22+branch%3Apost-02)
 
 This repository contains the source code for the [VGA Text Mode][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
