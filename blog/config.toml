@@ -5,6 +5,8 @@ highlight_code = true
 highlight_theme = "visual-studio-dark"
 generate_rss = true
 
+ignored_content = ["*/README.md"]
+
 [extra]
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }
