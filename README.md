@@ -1,6 +1,6 @@
 # Blog OS (CPU Exceptions)
 
-[![Build Status](https://github.com/phil-opp/blog_os/workflows/Build%20Code/badge.svg?branch=post-04)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Build+Code%22+branch%3Apost-04)
+[![Build Status](https://github.com/phil-opp/blog_os/workflows/Build%20Code/badge.svg?branch=post-05)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Build+Code%22+branch%3Apost-05)
 
 This repository contains the source code for the [CPU Exceptions][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
