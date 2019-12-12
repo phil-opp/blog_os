@@ -1,6 +1,6 @@
 # Blog OS (Testing)
 
-[![Build Status](https://github.com/phil-opp/blog_os/workflows/Build%20Code/badge.svg?branch=post-03)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Build+Code%22+branch%3Apost-03)
+[![Build Status](https://github.com/phil-opp/blog_os/workflows/Build%20Code/badge.svg?branch=post-04)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Build+Code%22+branch%3Apost-04)
 
 This repository contains the source code for the [Testing][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
