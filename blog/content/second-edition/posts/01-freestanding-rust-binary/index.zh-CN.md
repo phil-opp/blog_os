@@ -6,13 +6,13 @@ date = 2018-02-10
 
 +++
 
-创建一个不链接标准库的 Rust 可执行文件，将是我们迈出的第一步。无需底层操作系统的支撑，这样才能在**裸机**（[bare metal]）上运行Rust代码。
+创建一个不链接标准库的 Rust 可执行文件，将是我们迈出的第一步。无需底层操作系统的支撑，这样才能在**裸机**（[bare metal]）上运行 Rust 代码。
 
 [bare metal]: https://en.wikipedia.org/wiki/Bare_machine
 
 <!-- more -->
 
-此博客在[GitHub]上公开开发. 如果您有任何问题或疑问，请在此处打开一个 issue。 您也可以在[底部][at the bottom]发表评论. 这篇文章的完整源代码可以在[`post-01`] [post branch]分支中找到。
+此博客在 [GitHub] 上公开开发. 如果您有任何问题或疑问，请在此处打开一个 issue。 您也可以在[底部][at the bottom]发表评论. 这篇文章的完整源代码可以在 [`post-01`] [post branch] 分支中找到。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
