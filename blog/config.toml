@@ -9,6 +9,8 @@ languages = [
     { code = "zh-CN" }, # Chinese (simplified)
 ]
 
+ignored_content = ["*/README.md"]
+
 [extra]
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }

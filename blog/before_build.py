@@ -21,18 +21,22 @@ def format_number(number):
 with io.open("templates/auto/recent-updates.html", 'w', encoding='utf8') as recent_updates:
     recent_updates.truncate()
 
-    recent_updates.write(u"<ul>\n")
+    relnotes_issues = g.search_issues("is:merged", repo="phil-opp/blog_os", type="pr", label="relnotes")[:10]
+    recent_relnotes_issues = filter(filter_date, relnotes_issues)
 
-    issues = g.search_issues("is:merged", repo="phil-opp/blog_os", type="pr", label="relnotes")[:10]
+    if len(recent_relnotes_issues) == 0:
+        recent_updates.write(u"No notable updates recently.")
+    else:
+        recent_updates.write(u"<ul>\n")
 
-    for pr in filter(filter_date, issues):
-        link = '<a href="' + pr.html_url + '">' + pr.title + "</a> "
-        iso_date = pr.closed_at.isoformat()
-        readable_date = pr.closed_at.strftime("%b&nbsp;%d")
-        datetime = '<time datetime="' + iso_date + '">' + readable_date + '</time>'
-        recent_updates.write(u"  <li>" + link + datetime + "</li>\n")
+        for pr in recent_relnotes_issues:
+            link = '<a href="' + pr.html_url + '">' + pr.title + "</a> "
+            iso_date = pr.closed_at.isoformat()
+            readable_date = pr.closed_at.strftime("%b&nbsp;%d")
+            datetime = '<time datetime="' + iso_date + '">' + readable_date + '</time>'
+            recent_updates.write(u"  <li>" + link + datetime + "</li>\n")
 
-    recent_updates.write(u"</ul>")
+        recent_updates.write(u"</ul>")
 
 repo = g.get_repo("phil-opp/blog_os")
 
