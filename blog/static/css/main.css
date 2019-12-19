@@ -102,8 +102,9 @@ main img {
   margin-left: 5px;
 }
 
-.post-translation {
+.no-translation {
   margin-top: .3rem;
+  color: #999999;
 }
 
 .post-category {
