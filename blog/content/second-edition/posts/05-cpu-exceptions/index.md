@@ -193,12 +193,6 @@ In the `x86_64` crate, the interrupt stack frame is represented by the [`Interru
 
 [`InterruptStackFrame`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/struct.InterruptStackFrame.html
 
-Note that there is currently [a bug in LLVM] that leads to wrong error code arguments. The cause of the issue is already known and a solution is [being worked on].
-
-[a bug in LLVM]: https://github.com/rust-lang/rust/issues/57270
-[being worked on]: https://reviews.llvm.org/D56275
-
-
 ### Behind the Scenes
 The `x86-interrupt` calling convention is a powerful abstraction that hides almost all of the messy details of the exception handling process. However, sometimes it's useful to know what's happening behind the curtain. Here is a short overview of the things that the `x86-interrupt` calling convention takes care of:
 
