@@ -339,7 +339,7 @@ While a bump allocator is seldom used as the global allocator, the principle of 
 
 The main limitation of a bump allocator is that it never reuses deallocated memory. The question is: Can we extend our bump allocator somehow to remove this limitation?
 
-As we learned at the beginning of this post, allocations can live arbitarily long and can be freed in an arbitrary order. This means that we need to keep track of a potentially unbounded number of non-continuous, unused memory regions, as illustrated by the following example:
+As we learned at the beginning of this post, allocations can live arbitrarily long and can be freed in an arbitrary order. This means that we need to keep track of a potentially unbounded number of non-continuous, unused memory regions, as illustrated by the following example:
 
 ![](allocation-fragmentation.svg)
 
@@ -517,7 +517,7 @@ impl LinkedListAllocator {
 }
 ```
 
-The method takes a memory region represented by an address and size as argument and adds it to the front of the list. First, it ensures that the given region has the neccessary size and alignment for storing a `ListNode`. Then it creates the node and inserts it to the list through the following steps:
+The method takes a memory region represented by an address and size as argument and adds it to the front of the list. First, it ensures that the given region has the necessary size and alignment for storing a `ListNode`. Then it creates the node and inserts it to the list through the following steps:
 
 ![](linked-list-allocator-push.svg)
 
@@ -617,7 +617,7 @@ impl LinkedListAllocator {
 
 First, the function calculates the start and end address of a potential allocation, using the `align_up` function we defined earlier. If the end address is behind the end address of the region, the allocation doesn't fit in the region and we return an error.
 
-The function performs a less obvious check after that. This check is neccessary because most of the time an allocation does not fit a suitable region perfectly, so that a part of the region remains usable after the allocation. This part of the region must store its own `ListNode` after the allocation, so it must be large enough to do so. The check verifies exactly that: either the allocation fits perfectly (`excess_size == 0`) or the excess size is large enough to store a `ListNode`.
+The function performs a less obvious check after that. This check is necessary because most of the time an allocation does not fit a suitable region perfectly, so that a part of the region remains usable after the allocation. This part of the region must store its own `ListNode` after the allocation, so it must be large enough to do so. The check verifies exactly that: either the allocation fits perfectly (`excess_size == 0`) or the excess size is large enough to store a `ListNode`.
 
 ### Implementing `GlobalAlloc`
 
