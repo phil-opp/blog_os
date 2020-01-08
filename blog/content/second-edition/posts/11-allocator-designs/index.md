@@ -41,9 +41,11 @@ Apart from correctness, there are many secondary design goals. For example, it s
 [fragmentation]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
 [false sharing]: http://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 
-These requirements can make good allocators very complex. For example, [jemalloc] has over 30.000 lines of code. This complexity often undesired in kernel code where a single bug can lead to severe security vulnerabilities. Fortunately, the allocation patterns of kernel code are often much simpler compared to userspace code, so that relatively simple allocator design often suffice. In the following we explain three possible kernel allocator designs and explain their advantages and drawbacks.
+These requirements can make good allocators very complex. For example, [jemalloc] has over 30.000 lines of code. This complexity often undesired in kernel code where a single bug can lead to severe security vulnerabilities. Fortunately, the allocation patterns of kernel code are often much simpler compared to userspace code, so that relatively simple allocator designs often suffice.
 
 [jemalloc]: http://jemalloc.net/
+
+In the following we present three possible kernel allocator designs and explain their advantages and drawbacks.
 
 ## Bump Allocator
 
