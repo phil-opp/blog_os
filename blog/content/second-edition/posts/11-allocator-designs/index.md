@@ -23,9 +23,15 @@ TODO optional
 
 ## Introduction
 
-TODO
+In the [previous post] we added basic support for heap allocations to our kernel. For that, we [created a new memory region][map-heap] in the page tables and [used the `linked_list_allocator` crate][use-alloc-crate] to manage that memory. While we have a working heap now, we left most of the work to the allocator crate without understanding how it works.
 
-## Design Goals
+[previous post]: @/second-edition/posts/10-heap-allocation/index.md
+[map-heap]: @/second-edition/posts/10-heap-allocation/index.md#creating-a-kernel-heap
+[use-alloc-crate]: @/second-edition/posts/10-heap-allocation/index.md#using-an-allocator-crate
+
+In this post, we will show how to create our own heap allocator from scratch instead of relying on an existing allocator crate. We will discuss different allocator designs, including a simplistic _bump allocator_ and a basic _fixed-size block allocator_, and use this knowledge to implement an allocator with improved performance.
+
+### Design Goals
 
 The responsibility of an allocator is to manage the available heap memory. It needs to return unused memory on `alloc` calls and keep track of memory freed by `dealloc` so that it can be reused again. Most importantly, it must never hand out memory that is already in use somewhere else because this would cause undefined behavior.
 
