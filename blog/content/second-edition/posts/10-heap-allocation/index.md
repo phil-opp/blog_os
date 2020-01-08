@@ -306,15 +306,13 @@ We now have a simple allocator, but we still have to tell the Rust compiler that
 The `#[global_allocator]` attribute tells the Rust compiler which allocator instance it should use as the global heap allocator. The attribute is only applicable to a `static` that implements the `GlobalAlloc` trait. Let's register an instance of our `Dummy` allocator as the global allocator:
 
 ```rust
-// in src/lib.rs
+// in src/allocator.rs
 
 #[global_allocator]
 static ALLOCATOR: allocator::Dummy = allocator::Dummy;
 ```
 
-Since the `Dummy` allocator is a [zero sized type], we don't need to specify any fields in the initialization expression. Note that the `#[global_allocator]` module [cannot be used in submodules][pr51335], so we need to put it into the `lib.rs`.
-
-[pr51335]: https://github.com/rust-lang/rust/pull/51335
+Since the `Dummy` allocator is a [zero sized type], we don't need to specify any fields in the initialization expression.
 
 When we now try to compile it, the first error should be gone. Let's fix the remaining second error:
 
@@ -520,7 +518,7 @@ linked_list_allocator = "0.6.4"
 Then we can replace our dummy allocator with the allocator provided by the crate:
 
 ```rust
-// in src/lib.rs
+// in src/allocator.rs
 
 use linked_list_allocator::LockedHeap;
 
@@ -547,7 +545,7 @@ pub fn init_heap(
 
     // new
     unsafe {
-        super::ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
+        ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
     }
 
     Ok(())
