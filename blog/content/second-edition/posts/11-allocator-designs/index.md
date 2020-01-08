@@ -5,6 +5,8 @@ path = "allocator-designs"
 date = 0000-01-01
 +++
 
+This post explains how to implement heap allocators from scratch. It presents different allocator designs and explains their advantages and drawbacks. We then use this knowledge to create a kernel allocator with improved performance.
+
 TODO
 
 <!-- more -->
