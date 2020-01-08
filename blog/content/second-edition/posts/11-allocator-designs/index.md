@@ -81,7 +81,7 @@ To be able to implement the trait for our `BumpAllocator` struct, we need to add
 
 [interior mutability]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html
 [`spin::Mutex`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html
-[vga-mutex]: ./second-edition/posts/03-vga-text-buffer/index.md#spinlocks
+[vga-mutex]: @/second-edition/posts/03-vga-text-buffer/index.md#spinlocks
 
 ```rust
 // in src/allocator.rs
@@ -374,7 +374,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
 
 Like with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator`, but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references. Instead of providing an implementation, we use the [`unimplemented!`] macro again to get a minimal prototype.
 
-[`Locked` wrapper]: ./second-edition/posts/10-heap-allocation/index.md#a-locked-wrapper
+[`Locked` wrapper]: #a-locked-wrapper
 
 With this placeholder implementation, we can now change the global allocator to a `LinkedListAllocator`:
 
