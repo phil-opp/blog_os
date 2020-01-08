@@ -51,10 +51,27 @@ In the following we present three possible kernel allocator designs and explain 
 
 The most simple allocator design is a _bump allocator_. It allocates memory linearly and only keeps track of the number of allocated bytes and the number of allocations. It is only useful in very specific use cases because it has a severe limitation: it can only free all memory at once.
 
-The base type looks like this:
+### Idea
+
+TODO
+
+
+![TODO](bump-allocation.svg)
+
+### Implementation
+
+We start by creating a new `allocator::bump` submodule:
 
 ```rust
 // in src/allocator.rs
+
+pub mod bump;
+```
+
+Now we can create the base type in a `src/allocator/bump.rs` file, which looks like this:
+
+```rust
+// in src/allocator/bump.rs
 
 pub struct BumpAllocator {
     heap_start: usize,
@@ -68,10 +85,10 @@ impl BumpAllocator {
     ///
     /// This method is unsafe because the caller must ensure that the given
     /// memory range is unused.
-    pub const unsafe fn new(heap_start: usize, heap_size: usize) -> Self {
+    pub const unsafe fn new(heap_start: usize, heap_end: usize) -> Self {
         BumpAllocator {
             heap_start,
-            heap_end: heap_start + heap_size,
+            heap_end,
             next: heap_start,
             allocations: 0,
         }
@@ -79,48 +96,94 @@ impl BumpAllocator {
 }
 ```
 
-Instead of using the `HEAP_START` and `HEAP_SIZE` constants directly, we use separate `heap_start` and `heap_end` fields. This makes the type more flexible, for example it also works when we only want to assign a part of the heap region. The purpose of the `next` field is to always point to the first unused byte of the heap, i.e. the start address of the next allocation. The `allocations` field is a simple counter for the active allocations with the goal of resetting the allocator after the last allocation was freed.
+The `heap_start` and `heap_end` fields keep track of the lower and upper bound of the heap memory region. The caller need to ensure that these addresses are valid, otherwise the allocator would return invalid memory. For this reason, the `new` function needs to be `unsafe` to call.
 
-We provide a simple constructor function that creates a new `BumpAllocator`. It initializes the `heap_start` and `heap_end` fields using the given start address and size. The `allocations` counter is initialized with 0. The `next` field is set to `heap_start` since the whole heap should be unused at this point. Since this is something that the caller must guarantee, the function needs to be unsafe. Given an invalid memory range, the planned implementation of the `GlobalAlloc` trait would cause undefined behavior when it is used as global allocator.
+The purpose of the `next` field is to always point to the first unused byte of the heap, i.e. the start address of the next allocation. It is set to `heap_start` in the `new` function because at the beginning the complete heap is unused. On each allocation, this field will be increased by the allocation size (_"bumped"_) to ensure that we don't return the same memory region twice.
 
-### A `Locked` Wrapper
+The `allocations` field is a simple counter for the active allocations with the goal of resetting the allocator after the last allocation was freed. It is initialized with 0.
 
-Implementing the [`GlobalAlloc`] trait directly for the `BumpAllocator` struct is not possible. The problem is that the `alloc` and `dealloc` methods of the trait only take an immutable `&self` reference, but we need to update the `next` and `allocations` fields for every allocation, which is only possible with an exclusive `&mut self` reference. The reason that the `GlobalAlloc` trait is specified this way is that the global allocator needs to be stored in an immutable `static` that only allows `&self` references.
+### Implementing `GlobalAlloc`
 
-To be able to implement the trait for our `BumpAllocator` struct, we need to add synchronized [interior mutability] to get mutable field access through the `&self` reference. A type that adds the required synchronization and allows interior mutabilty is the [`spin::Mutex`] spinlock that we already used multiple times for our kernel, for example [for our VGA buffer writer][vga-mutex]. To use it, we create a `Locked` wrapper type:
+As [explained in the previous post][global-alloc], all heap allocators need to implement the [`GlobalAlloc`] trait, which is defined like this:
 
-[interior mutability]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html
-[`spin::Mutex`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html
-[vga-mutex]: @/second-edition/posts/03-vga-text-buffer/index.md#spinlocks
+[global-alloc]: @/second-edition/posts/10-heap-allocation/index.md#the-allocator-interface
+[`GlobalAlloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html
 
 ```rust
-// in src/allocator.rs
+pub unsafe trait GlobalAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8;
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout);
 
-pub struct Locked<A> {
-    inner: spin::Mutex<A>,
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 { ... }
+    unsafe fn realloc(
+        &self,
+        ptr: *mut u8,
+        layout: Layout,
+        new_size: usize
+    ) -> *mut u8 { ... }
 }
+```
 
-impl<A> Locked<A> {
-    pub const fn new(inner: A) -> Self {
-        Locked {
-            inner: spin::Mutex::new(inner),
-        }
+Only the `alloc` and `dealloc` methods are required, the other two methods have default implementations and can be omitted.
+
+#### First Implementation Attempt
+
+Let's try to implement the `alloc` method for our `BumpAllocator`:
+
+```rust
+// in src/allocator/bump.rs
+
+unsafe impl GlobalAlloc for BumpAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        // TODO alignment and bounds check
+        let alloc_start = self.next;
+        self.next = alloc_start + layout.size();
+        self.allocations += 1;
+        alloc_start as *mut u8
+    }
+
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
+        unimplemented!();
     }
 }
 ```
 
-The type is a generic wrapper around a `spin::Mutex<A>`. It imposes no restrictions on the wrapped type `A`, so it can be used to wrap all kinds of types, not just allocators. It provides a simple `new` constructor function that wraps a given value.
+First, we use the `next` field as the start address for our allocation. Then we update the `next` field to point at the end address of the allocation, which is the next unused address on the heap. Before returning the start address of the allocation as a `*mut u8` pointer, we increase the `allocations` counter by 1.
 
-### Implementing `GlobalAlloc`
+Note that we don't perform any bounds checks or alignment adjustments, so this implementation is not safe yet. This does not matter much because it fails to compile anyway with the following error:
 
-With the help of the `Locked` wrapper type we now can implement the `GlobalAlloc` trait for our bump allocator. The trick is to implement the trait not for the `BumpAllocator` directly, but for the wrapped `Locked<BumpAllocator>` type. The implementation looks like this:
+TODO
+
+This error occurs because the [`alloc`] and [`dealloc`] methods of the `GlobalAlloc` trait only operate on an immutable `&self` reference, so updating the `next` and `allocations` fields is not possible. This is problematic because updating `next` on every allocation is the essential principle of a bump allocator.
+
+[`alloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.alloc
+[`dealloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.dealloc
+
+#### `GlobalAlloc` and Mutability
+
+Before we look at a possible solution to this, let's try to understand why the `GlobalAlloc` trait is defined this way: As we saw [in the previous post][global-allocator], the global heap allocator is defined by adding the `#[global_allocator]` attribute to a `static` that implements the `GlobalAlloc` trait. Static variables are immutable in Rust, so there is no way to call a method that takes `&mut self` on the allocator `static`. For this reason, all the methods of `GlobalAlloc` only take an immutable `&self` reference.
+
+[global-allocator]:  @/second-edition/posts/10-heap-allocation/index.md#the-global-allocator-attribute
+
+Fortunately there is a way how to get a `&mut self` reference from a `&self` reference: We can use synchronized [interior mutability] by wrapping the allocator in a [`spin::Mutex`] spinlock. This type provides a `lock` method that performs [mutual exclusion] and thus safely turns a `&self` reference to a `&mut self` reference. We already used the wrapper type multiple times in our kernel, for example for the [VGA text buffer][vga-mutex].
+
+[interior mutability]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html
+[vga-mutex]: @/second-edition/posts/03-vga-text-buffer/index.md#spinlocks
+[`spin::Mutex`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html
+[mutual exclusion]: https://en.wikipedia.org/wiki/Mutual_exclusion
+
+#### Implementation for `Spin<BumpAllocator>`
+
+With the help of the `spin::Mutex` wrapper type we now can implement the `GlobalAlloc` trait for our bump allocator. The trick is to implement the trait not for the `BumpAllocator` directly, but for the wrapped `Spin<BumpAllocator>` type. The full implementation looks like this:
 
 ```rust
-// in src/allocator.rs
+// in src/allocator/bump.rs
 
-unsafe impl GlobalAlloc for Locked<BumpAllocator> {
+use super::align_up;
+
+unsafe impl GlobalAlloc for Spin<BumpAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let mut bump = self.inner.lock();
+        let mut bump = self.lock(); // get a mutable
 
         let alloc_start = align_up(bump.next, layout.align());
         let alloc_end = alloc_start + layout.size();
@@ -135,7 +198,7 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        let mut bump = self.inner.lock();
+        let mut bump = self.lock();
 
         bump.allocations -= 1;
         if bump.allocations == 0 {
@@ -149,11 +212,13 @@ The first step for both `alloc` and `dealloc` is to call the [`Mutex::lock`] met
 
 [`Mutex::lock`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html#method.lock
 
-The `alloc` implementation first performs the required alignment on the `next` address, as specified by the given [`Layout`]. This yields the start address of the allocation. The code for the `align_up` function is shown below. Next, we add the requested allocation size to `alloc_start` to get the end address of the allocation. If it is larger than the end address of the heap, we return a null pointer since there is not enough memory available. Otherwise, we update the `next` address (the next allocation should start after the current allocation), increase the `allocations` counter by 1, and return the `alloc_start` address converted to a `*mut u8` pointer.
+Compared to the previous prototype, the `alloc` implementation now respects alignment requirements and performs a bounds check to ensure that the allocations stay inside the heap memory region. The first step is to round up the `next` address to the alignment specified by the `Layout` argument. The code for the `align_up` function is shown in a moment. Like before, we then add the requested allocation size to `alloc_start` to get the end address of the allocation. If it is larger than the end address of the heap, we return a null pointer to signal an out-of-memory situation. Otherwise, we update the `next` address and increase the `allocations` counter by 1 like before. Finally, we return the `alloc_start` address converted to a `*mut u8` pointer.
+
+[`Layout`]: https://doc.rust-lang.org/alloc/alloc/struct.Layout.html
 
 The `dealloc` function ignores the given pointer and `Layout` arguments. Instead, it just decreases the `allocations` counter. If the counter reaches `0` again, it means that all allocations were freed again. In this case, it resets the `next` address to the `heap_start` address to make the complete heap memory available again.
 
-The last remaining part of the implementation is the `align_up` function, which looks like this:
+The `align_up` function is general enough that we can put it into the parent `allocator` module. It looks like this:
 
 ```rust
 // in src/allocator.rs
@@ -174,23 +239,27 @@ The function first computes the [remainder] of the division of `addr` by `align`
 
 ### Using It
 
-To use the bump allocator instead of the dummy allocator, we need to update the `ALLOCATOR` static in `lib.rs`:
+To use the bump allocator instead of the `linked_list_allocator` crate, we need to update the `ALLOCATOR` static in `allocator.rs`:
 
 ```rust
-// in src/lib.rs
+// in src/allocator.rs
 
-use allocator::{Locked, BumpAllocator, HEAP_START, HEAP_SIZE};
+use allocator::{BumpAllocator, HEAP_START, HEAP_SIZE};
+use spin::Mutex;
 
 #[global_allocator]
-static ALLOCATOR: Locked<BumpAllocator> =
-    Locked::new(BumpAllocator::new(HEAP_START, HEAP_SIZE));
+static ALLOCATOR: Spin<BumpAllocator> =
+    Spin::new(BumpAllocator::new(HEAP_START, HEAP_SIZE));
 ```
 
-Here it becomes important that we declared both the `Locked::new` and the `BumpAllocator::new` as [`const` functions]. If they were normal functions, a compilation error would occur because the initialization expression of a `static` must evaluable at compile time.
+Here it becomes important that we declared `BumpAllocator::new` as a [`const` function]. If it was normal functions, a compilation error would occur because the initialization expression of a `static` must evaluable at compile time.
 
-[`const` functions]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
+[`const` function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-Now we can use `Box` and `Vec` without runtime errors:
+---
+
+
+TODO: Now we can use `Box` and `Vec` without runtime errors:
 
 ```rust
 // in src/main.rs
@@ -371,7 +440,7 @@ Our first goal is to set a prototype of the `LinkedListAllocator` as the global 
 ```rust
 // in src/allocator.rs
 
-unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
+unsafe impl GlobalAlloc for Spin<LinkedListAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         unimplemented!();
     }
@@ -382,7 +451,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
 }
 ```
 
-Like with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator`, but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references. Instead of providing an implementation, we use the [`unimplemented!`] macro again to get a minimal prototype.
+Like with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator`, but only for a wrapped `Spin<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references. Instead of providing an implementation, we use the [`unimplemented!`] macro again to get a minimal prototype.
 
 [`Locked` wrapper]: #a-locked-wrapper
 
@@ -394,8 +463,8 @@ With this placeholder implementation, we can now change the global allocator to 
 use allocator::{Locked, LinkedListAllocator};
 
 #[global_allocator]
-static ALLOCATOR: Locked<LinkedListAllocator> =
-    Locked::new(LinkedListAllocator::new());
+static ALLOCATOR: Spin<LinkedListAllocator> =
+    Spin::new(LinkedListAllocator::new());
 ```
 
 Since the `new` method creates an empty allocator, we also need to update our `allocator::init` function to call `LinkedListAllocator::init` with the heap bounds:
@@ -557,7 +626,7 @@ With the fundamental operations provided by the `add_free_region` and `find_regi
 ```rust
 // in src/allocator.rs
 
-unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
+unsafe impl GlobalAlloc for Spin<LinkedListAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         // perform layout adjustments
         let (size, align) = LinkedListAllocator::size_align(layout);
