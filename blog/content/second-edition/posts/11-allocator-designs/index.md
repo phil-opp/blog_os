@@ -160,7 +160,7 @@ unsafe impl GlobalAlloc for BumpAllocator {
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        unimplemented!();
+        todo!();
     }
 }
 ```
@@ -417,27 +417,44 @@ Normally when we have a potentially unbounded number of items, we can just use a
 
 ## LinkedList Allocator
 
-A common trick to keep track of an arbitrary number of free memory areas is to use these areas itself as backing storage. This utilizes the fact that the regions are still mapped to a virtual address and backed by a physical frame, but the stored information is not needed anymore. By storing the information about the freed region in the region itself, we can keep track of an unbounded number of freed regions without needing additional memory.
+A common trick to keep track of an arbitrary number of free memory areas when implementing allocators is to use these areas itself as backing storage. This utilizes the fact that the regions are still mapped to a virtual address and backed by a physical frame, but the stored information is not needed anymore. By storing the information about the freed region in the region itself, we can keep track of an unbounded number of freed regions without needing additional memory.
 
 The most common implementation approach is to construct a single linked list in the freed memory, with each node being a freed memory region:
 
 ![](linked-list-allocation.svg)
 
-Each list node contains two fields: The size of the memory region and a pointer to the next unused memory region. With this approach, we only need a pointer to the first unused region (called `head`), independent of the number of memory regions.
+Each list node contains two fields: The size of the memory region and a pointer to the next unused memory region. With this approach, we only need a pointer to the first unused region (called `head`) to keep track of all unused regions, independent of their number. As you can guess from the name, this is the technique that the `linked_list_allocator` crate uses.
 
-In the following, we will create a simple `LinkedListAllocator` type that uses the above approach for keeping track of freed memory regions. Since the implementation is a bit longer, we will start with a simple placeholder type before we start to implement the `alloc` and `dealloc` operations.
+In the following, we will create our own simple `LinkedListAllocator` type that uses the above approach for keeping track of freed memory regions. This part of the post isn't required for future posts, so you can skip the details if you like.
 
 ### The Allocator Type
 
-We start by creating a private `ListNode` struct:
+We start by creating a private `ListNode` struct in a new `allocator::linked_list` submodule:
 
 ```rust
 // in src/allocator.rs
+
+pub mod linked_list;
+```
+
+```rust
+// in src/allocator/linked_list.rs
 
 struct ListNode {
     size: usize,
     next: Option<&'static mut ListNode>,
 }
+```
+
+Like in the graphic, a list node has a `size` field and an optional pointer to the next node, represented by the `Option<&'static mut ListNode>` type. The `&'static mut` type semantically describes an [owned] object behind a pointer. Basically, it's a [`Box`] without a destructor that frees the object at the end of the scope.
+
+[owned]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
+[`Box`]: https://doc.rust-lang.org/alloc/boxed/index.html
+
+We implement the following set of methods for `ListNode`:
+
+```rust
+// in src/allocator/linked_list.rs
 
 impl ListNode {
     const fn new(size: usize) -> Self {
@@ -457,18 +474,19 @@ impl ListNode {
 }
 ```
 
-Like in the graphic, a list node has a `size` field and an optional pointer to the next node. The type has a simple constructor function and methods to calculate the start and end addresses of the represented region.
+The type has a simple constructor function and methods to calculate the start and end addresses of the represented region.
 
 With the `ListNode` struct as building block, we can now create the `LinkedListAllocator` struct:
 
 ```rust
-// in src/allocator.rs
+// in src/allocator/linked_list.rs
 
 pub struct LinkedListAllocator {
     head: ListNode,
 }
 
 impl LinkedListAllocator {
+    /// Creates an empty LinkedListAllocator.
     pub const fn new() -> Self {
         Self {
             head: ListNode::new(0),
@@ -486,76 +504,20 @@ impl LinkedListAllocator {
 
     /// Adds the given memory region to the front of the list.
     unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
-        unimplemented!();
+        todo!();
     }
 }
 ```
 
-The struct contains a `head` node that points to the first heap region. We are only interested in the value of the `next` pointer, so we set the `size` to 0 in the `new` function. Making `head` a `ListNode` instead of just a `&'static mut ListNode` has the advantage that the implementation of the `alloc` method will be simpler.
+The struct contains a `head` node that points to the first heap region. We are only interested in the value of the `next` pointer, so we set the `size` to 0 in the `ListNone::new` function. Making `head` a `ListNode` instead of just a `&'static mut ListNode` has the advantage that the implementation of the `alloc` method will be simpler.
 
-In contrast to the bump allocator, the `new` function doesn't initialize the allocator with the heap bounds. The reason is that the initialization requires to write a node to the heap memory, which can only happen at runtime. The `new` function, however, needs to be a [`const` function] that can be evaluated at compile time, because it will be used for initializing the `ALLOCATOR` static. To work around this, we provide a separate `init` method that can be called at runtime.
+Like for the bump allocator, the `new` function doesn't initialize the allocator with the heap bounds. In addition to maintaining API compatibility, the reason is that the initialization routine requires to write a node to the heap memory, which can only happen at runtime. The `new` function, however, needs to be a [`const` function] that can be evaluated at compile time, because it will be used for initializing the `ALLOCATOR` static. For this reason, we again provide a separate, non-constant `init` method.
 
 [`const` function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-The `init` method uses a `add_free_region` method, whose implementation will be shown in a moment. For now, we use the [`unimplemented!`] macro to provide a placeholder implementation that always panics.
+The `init` method uses a `add_free_region` method, whose implementation will be shown in a moment. For now, we use the [`todo!`] macro to provide a placeholder implementation that always panics.
 
-[`unimplemented!`]: https://doc.rust-lang.org/core/macro.unimplemented.html
-
-Our first goal is to set a prototype of the `LinkedListAllocator` as the global allocator. In order to be able to do that, we need to provide a placeholder implementation of the `GlobalAlloc` trait:
-
-```rust
-// in src/allocator.rs
-
-unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        unimplemented!();
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unimplemented!();
-    }
-}
-```
-
-Like with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator`, but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references. Instead of providing an implementation, we use the [`unimplemented!`] macro again to get a minimal prototype.
-
-[`Locked` wrapper]: #a-locked-wrapper
-
-With this placeholder implementation, we can now change the global allocator to a `LinkedListAllocator`:
-
-```rust
-// in src/lib.rs
-
-use allocator::{Locked, LinkedListAllocator};
-
-#[global_allocator]
-static ALLOCATOR: Locked<LinkedListAllocator> =
-    Spin::new(LinkedListAllocator::new());
-```
-
-Since the `new` method creates an empty allocator, we also need to update our `allocator::init` function to call `LinkedListAllocator::init` with the heap bounds:
-
-```rust
-// in src/allocator.rs
-
-pub fn init_heap(
-    mapper: &mut impl Mapper<Size4KiB>,
-    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-) -> Result<(), MapToError> {
-    // […] map all heap pages
-
-    // new
-    unsafe {
-        super::ALLOCATOR.inner.lock().init(HEAP_START, HEAP_SIZE);
-    }
-
-    Ok(())
-}
-```
-
-It's important to call the `init` function after the mapping of the heap pages, because the function will already write to the heap (once we'll properly implement it). The `unsafe` block is safe here because we just mapped the heap region to unused frames, so that the passed heap region is valid.
-
-When we run our code now, it will of course panic since it runs into the `unimplemented!` in `add_free_region`. Let's fix that by providing a proper implementation for that method.
+[`todo!`]: https://doc.rust-lang.org/core/macro.todo.html
 
 ### The `add_free_region` Method
 
@@ -727,6 +689,8 @@ In the success case, the `find_region` method returns a tuple of the suitable re
 
 ### Layout Adjustments
 
+TODO
+
 ```rust
 // in src/allocator.rs
 
@@ -744,6 +708,52 @@ impl LinkedListAllocator {
     }
 }
 ```
+
+TODO
+
+---
+
+
+### Setting the Global Allocator
+
+Our first goal is to set a prototype of the `LinkedListAllocator` as the global allocator. In order to be able to do that, we need to provide a placeholder implementation of the `GlobalAlloc` trait:
+
+```rust
+// in src/allocator/linked_list.rs
+
+use super::Locked;
+
+unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        todo!();
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        todo!();
+    }
+}
+```
+
+As with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator`, but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references. Instead of providing an implementation, we use the [`todo!`] macro again to get a minimal prototype.
+
+[`Locked` wrapper]: @second-edition/posts/11-allocator-designs/index.md#a-locked-wrapper
+
+With this placeholder implementation, we can now change the global allocator to a `LinkedListAllocator`:
+
+```rust
+// in src/allocator.rs
+
+use linked_list::LinkedListAllocator;
+
+#[global_allocator]
+static ALLOCATOR: Locked<LinkedListAllocator> = Locked::new(LinkedListAllocator::new());
+```
+
+Since the `init` function behaves the same for the bump and linked list allocators, we don't need to modify the `init` call in `init_heap`.
+
+When we run our code now, it will of course panic since it runs into the `todo!` in `add_free_region`. Let's fix that by providing a proper implementation for that method.
+
+---
 
 
 
