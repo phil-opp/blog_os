@@ -7,7 +7,7 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, vec::Vec};
-use blog_os::{serial_print, serial_println};
+use blog_os::{allocator::HEAP_SIZE, serial_print, serial_println};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 
@@ -51,7 +51,7 @@ fn large_vec() {
 #[test_case]
 fn many_boxes() {
     serial_print!("many_boxes... ");
-    for i in 0..10_000 {
+    for i in 0..HEAP_SIZE {
         let x = Box::new(i);
         assert_eq!(*x, i);
     }
