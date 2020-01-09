@@ -425,9 +425,11 @@ The most common implementation approach is to construct a single linked list in 
 
 Each list node contains two fields: The size of the memory region and a pointer to the next unused memory region. With this approach, we only need a pointer to the first unused region (called `head`) to keep track of all unused regions, independent of their number. As you can guess from the name, this is the technique that the `linked_list_allocator` crate uses.
 
+### Implementation
+
 In the following, we will create our own simple `LinkedListAllocator` type that uses the above approach for keeping track of freed memory regions. This part of the post isn't required for future posts, so you can skip the details if you like.
 
-### The Allocator Type
+#### The Allocator Type
 
 We start by creating a private `ListNode` struct in a new `allocator::linked_list` submodule:
 
@@ -519,7 +521,7 @@ The `init` method uses a `add_free_region` method, whose implementation will be 
 
 [`todo!`]: https://doc.rust-lang.org/core/macro.todo.html
 
-### The `add_free_region` Method
+#### The `add_free_region` Method
 
 The `add_free_region` method provides the fundamental _push_ operation on the linked list. We currently only call this method from `init`, but it will also be the central method in our `dealloc` implementation. Remember, the `dealloc` method is called when an allocated memory region is freed again. To keep track of this freed memory region, we want to push it to the linked list.
 
@@ -557,7 +559,7 @@ In step 2, the method writes the newly created `node` to the beginning of the fr
 
 [`write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
 
-### The `find_region` Method
+#### The `find_region` Method
 
 The second fundamental operation on a linked list is finding an entry and removing it from the list. This is the central operation needed for implementing the `alloc` method. We implement the operation as a `find_region` method in the following way:
 
@@ -608,7 +610,7 @@ Step 0 shows the situation before any pointer adjustments. The `region` and `cur
 
 In step 2, the `current.next` pointer is set to the local `next` pointer, which is the original `region.next` pointer. The effect is that `current` now directly points to the region after `region`, so that `region` is no longer element of the linked list. The function then returns the pointer to `region` stored in the local `ret` variable.
 
-### The `alloc_from_region` Function
+##### The `alloc_from_region` Function
 
 The `alloc_from_region` function returns whether a region is suitable for an allocation with given size and alignment. It is defined like this:
 
@@ -647,7 +649,7 @@ First, the function calculates the start and end address of a potential allocati
 
 The function performs a less obvious check after that. This check is necessary because most of the time an allocation does not fit a suitable region perfectly, so that a part of the region remains usable after the allocation. This part of the region must store its own `ListNode` after the allocation, so it must be large enough to do so. The check verifies exactly that: either the allocation fits perfectly (`excess_size == 0`) or the excess size is large enough to store a `ListNode`.
 
-### Implementing `GlobalAlloc`
+#### Implementing `GlobalAlloc`
 
 With the fundamental operations provided by the `add_free_region` and `find_region` methods, we can now finally implement the `GlobalAlloc` trait:
 
@@ -687,7 +689,7 @@ The `alloc` method is a bit more complex. It starts with the same layout adjustm
 
 In the success case, the `find_region` method returns a tuple of the suitable region (no longer in the list) and the start address of the allocation. Using `alloc_start`, the allocation size, and the end address of the region, it calculates the end address of the allocation and the excess size again. If the excess size is not null, it calls `add_free_region` to add the excess size of the memory region back to the free list. Finally, it returns the `alloc_start` address casted as a `*mut u8` pointer.
 
-### Layout Adjustments
+#### Layout Adjustments
 
 TODO
 
@@ -711,10 +713,8 @@ impl LinkedListAllocator {
 
 TODO
 
----
 
-
-### Setting the Global Allocator
+#### Setting the Global Allocator
 
 Our first goal is to set a prototype of the `LinkedListAllocator` as the global allocator. In order to be able to do that, we need to provide a placeholder implementation of the `GlobalAlloc` trait:
 
@@ -738,7 +738,8 @@ As with the bump allocator, we don't implement the trait directly for the `Linke
 
 [`Locked` wrapper]: @second-edition/posts/11-allocator-designs/index.md#a-locked-wrapper
 
-With this placeholder implementation, we can now change the global allocator to a `LinkedListAllocator`:
+
+### Using it
 
 ```rust
 // in src/allocator.rs
@@ -751,7 +752,24 @@ static ALLOCATOR: Locked<LinkedListAllocator> = Locked::new(LinkedListAllocator:
 
 Since the `init` function behaves the same for the bump and linked list allocators, we don't need to modify the `init` call in `init_heap`.
 
-When we run our code now, it will of course panic since it runs into the `todo!` in `add_free_region`. Let's fix that by providing a proper implementation for that method.
+### Discussion
+
+#### Implementation Drawbacks
+
+#### The `linked_list_allocator` Crate
+
+
+advantages and drawback (performance!)
+
+-> fixed size blocks
+
+## Fixed-Size Block Allocator
+
+
+## Summary
+
+## What's next?
+
 
 ---
 
@@ -762,7 +780,7 @@ When we run our code now, it will of course panic since it runs into the `todo!`
 
 
 
-
+# Old
 
 ##### Allocation
 In order to allocate a block of memory, we need to find a hole that satisfies the size and alignment requirements. If the found hole is larger than required, we split it into two smaller holes. For example, when we allocate a 24 byte block right after initialization, we split the single hole into a hole of size 24 and a hole with the remaining size:
