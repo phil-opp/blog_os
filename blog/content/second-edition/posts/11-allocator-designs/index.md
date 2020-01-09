@@ -60,13 +60,13 @@ The idea behind a bump allocator is to linearly allocate memory by increasing (_
  2: A second allocation was added right after the first; the `next` pointer points to the end of the second allocation
  3: A third allocation was added right after the second one; the `next pointer points to the end of the third allocation](bump-allocation.svg)
 
-The `next` pointer only moves in a single direction and thus never hands out the same memory region twice. When it reaches the end of the heap, no more memory can be allocated, which results in an out-of-memory error.
+The `next` pointer only moves in a single direction and thus never hands out the same memory region twice. When it reaches the end of the heap, no more memory can be allocated, resulting in an out-of-memory error on the next allocation.
 
-A bump allocator is often implemented with an allocation counter, which is inreased by 1 on each `alloc` call and decreased by 1 on each `dealloc` call. When the allocation counter reaches zero it means that all allocations on the heap were deallocated so that the complete heap is unused again. In this case, the `next` pointer can be reset to the start address of the heap, so that the complete heap memory is available to allocations again.
+A bump allocator is often implemented with an allocation counter, which is inreased by 1 on each `alloc` call and decreased by 1 on each `dealloc` call. When the allocation counter reaches zero it means that all allocations on the heap were deallocated. In this case, the `next` pointer can be reset to the start address of the heap, so that the complete heap memory is available to allocations again.
 
-### Type Implementation
+### Implementation
 
-We start our implementation by creating a new `allocator::bump` submodule:
+We start our implementation by declaring a new `allocator::bump` submodule:
 
 ```rust
 // in src/allocator.rs
@@ -74,7 +74,7 @@ We start our implementation by creating a new `allocator::bump` submodule:
 pub mod bump;
 ```
 
-Now we can create the base type in a `src/allocator/bump.rs` file, which looks like this:
+The content of the submodule lives in a new `src/allocator/bump.rs` file, which we create with the following content:
 
 ```rust
 // in src/allocator/bump.rs
@@ -109,11 +109,13 @@ impl BumpAllocator {
 }
 ```
 
-The `heap_start` and `heap_end` fields keep track of the lower and upper bound of the heap memory region. The caller need to ensure that these addresses are valid, otherwise the allocator would return invalid memory. For this reason, the `init` function needs to be `unsafe` to call.
+The `heap_start` and `heap_end` fields keep track of the lower and upper bound of the heap memory region. The caller needs to ensure that these addresses are valid, otherwise the allocator would return invalid memory. For this reason, the `init` function needs to be `unsafe` to call.
 
 The purpose of the `next` field is to always point to the first unused byte of the heap, i.e. the start address of the next allocation. It is set to `heap_start` in the `init` function because at the beginning the complete heap is unused. On each allocation, this field will be increased by the allocation size (_"bumped"_) to ensure that we don't return the same memory region twice.
 
 The `allocations` field is a simple counter for the active allocations with the goal of resetting the allocator after the last allocation was freed. It is initialized with 0.
+
+We chose to create a separate `init` function instead of performing the initialization directly in `new` in order to keep the interface identical to the allocator provided by the `linked_list_allocator` crate. This way, the allocators can be switched without additional code changes.
 
 ### Implementing `GlobalAlloc`
 
@@ -185,11 +187,11 @@ The error occurs because the [`alloc`] and [`dealloc`] methods of the `GlobalAll
 [`alloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.alloc
 [`dealloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.dealloc
 
-Note that the compiler suggestion to change `&self` to `&mut self` in the method declaration does not work here. The reason is that the method signature is defined by the `GlobalAlloc` trait and can't be changed on the implementation side. I opened an [issue](https://github.com/rust-lang/rust/issues/68049) in the Rust repository about the invalid suggestion.
+Note that the compiler suggestion to change `&self` to `&mut self` in the method declaration does not work here. The reason is that the method signature is defined by the `GlobalAlloc` trait and can't be changed on the implementation side. (I opened an [issue](https://github.com/rust-lang/rust/issues/68049) in the Rust repository about the invalid suggestion.)
 
 #### `GlobalAlloc` and Mutability
 
-Before we look at a possible solution to this mutability problem, let's try to understand why the `GlobalAlloc` trait methods are defined with `&self` arguments: As we saw [in the previous post][global-allocator], the global heap allocator is defined by adding the `#[global_allocator]` attribute to a `static` that implements the `GlobalAlloc` trait. Static variables are immutable in Rust, so there is no way to call a method that takes `&mut self` on the allocator `static`. For this reason, all the methods of `GlobalAlloc` only take an immutable `&self` reference.
+Before we look at a possible solution to this mutability problem, let's try to understand why the `GlobalAlloc` trait methods are defined with `&self` arguments: As we saw [in the previous post][global-allocator], the global heap allocator is defined by adding the `#[global_allocator]` attribute to a `static` that implements the `GlobalAlloc` trait. Static variables are immutable in Rust, so there is no way to call a method that takes `&mut self` on the static allocator. For this reason, all the methods of `GlobalAlloc` only take an immutable `&self` reference.
 
 [global-allocator]:  @/second-edition/posts/10-heap-allocation/index.md#the-global-allocator-attribute
 
@@ -208,7 +210,7 @@ With the help of the `spin::Mutex` wrapper type we can implement the `GlobalAllo
 unsafe impl GlobalAlloc for spin::Mutex<BumpAllocator> {…}
 ```
 
-Unfortunatly, the Rust compiler does not permit trait implementations for types defined in other crates:
+Unfortunatly, this still doesn't work because the Rust compiler does not permit trait implementations for types defined in other crates:
 
 ```
 error[E0117]: only traits defined in the current crate can be implemented for arbitrary types
@@ -325,8 +327,7 @@ To use the bump allocator instead of the `linked_list_allocator` crate, we need 
 use bump::BumpAllocator;
 
 #[global_allocator]
-static ALLOCATOR: Locked<BumpAllocator> =
-    Locked::new(BumpAllocator::new(HEAP_START, HEAP_SIZE));
+static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new());
 ```
 
 Here it becomes important that we declared `BumpAllocator::new` and `Locked::new` as [`const` functions]. If they were normal functions, a compilation error would occur because the initialization expression of a `static` must evaluable at compile time.
@@ -402,7 +403,9 @@ Let's try to understand why this failure occurs in detail: First, the `long_live
 
 The question is: Can we extend our bump allocator somehow to remove this limitation?
 
-As we learned at the beginning of this post, allocations can live arbitrarily long and can be freed in an arbitrary order. This means that we need to keep track of a potentially unbounded number of non-continuous, unused memory regions, as illustrated by the following example:
+As we learned [in the previous post][heap-intro], allocations can live arbitrarily long and can be freed in an arbitrary order. This means that we need to keep track of a potentially unbounded number of non-continuous, unused memory regions, as illustrated by the following example:
+
+[heap-intro]: @/second-edition/posts/10-heap-allocation/index.md#dynamic-memory
 
 ![](allocation-fragmentation.svg)
 
