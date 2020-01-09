@@ -743,10 +743,12 @@ As a third test, we create ten thousand allocations after each other:
 ```rust
 // in tests/heap_allocation.rs
 
+use blog_os::allocator::HEAP_SIZE;
+
 #[test_case]
 fn many_boxes() {
     serial_print!("many_boxes... ");
-    for i in 0..10_000 {
+    for i in 0..HEAP_SIZE {
         let x = Box::new(i);
         assert_eq!(*x, i);
     }
