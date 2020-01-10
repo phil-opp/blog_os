@@ -79,4 +79,27 @@ impl LinkedListAllocator {
         // no suitable region found
         None
     }
+
+    /// Try to use the given region for an allocation with given size and alignment.
+    ///
+    /// Returns the allocation start address on success.
+    fn alloc_from_region(region: &ListNode, size: usize, align: usize) -> Result<usize, ()> {
+        let alloc_start = align_up(region.start_addr(), align);
+        let alloc_end = alloc_start + size;
+
+        if alloc_end > region.end_addr() {
+            // region too small
+            return Err(());
+        }
+
+        let excess_size = region.end_addr() - alloc_end;
+        if excess_size > 0 && excess_size < mem::size_of::<ListNode>() {
+            // rest of region too small to hold a ListNode (required because the
+            // allocation splits the region in a used and a free part)
+            return Err(());
+        }
+
+        // region suitable for allocation
+        Ok(alloc_start)
+    }
 }
