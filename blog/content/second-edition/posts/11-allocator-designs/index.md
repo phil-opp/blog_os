@@ -460,10 +460,7 @@ We implement the following set of methods for `ListNode`:
 
 impl ListNode {
     const fn new(size: usize) -> Self {
-        ListNode {
-            size,
-            next: None,
-        }
+        ListNode { size, next: None }
     }
 
     fn start_addr(&self) -> usize {
@@ -476,7 +473,7 @@ impl ListNode {
 }
 ```
 
-The type has a simple constructor function and methods to calculate the start and end addresses of the represented region.
+The type has a simple constructor function named `new` and methods to calculate the start and end addresses of the represented region. We make the `new` function a [const function], which will be required later when constructing a static linked list allocator. Note that any use of mutable references in const functions (including setting the `next` field to `None`) is still unstable. In order to get it to compile, we need to add **`#![feature(const_fn)]`** to the beginning of our `lib.rs`.
 
 With the `ListNode` struct as building block, we can now create the `LinkedListAllocator` struct:
 
@@ -528,7 +525,10 @@ The `add_free_region` method provides the fundamental _push_ operation on the li
 The implementation of the `add_free_region` method looks like this:
 
 ```rust
-// in src/allocator.rs
+// in src/allocator/linked_list.rs
+
+use super::align_up;
+use core::mem;
 
 impl LinkedListAllocator {
     /// Adds the given memory region to the front of the list.
@@ -564,7 +564,7 @@ In step 2, the method writes the newly created `node` to the beginning of the fr
 The second fundamental operation on a linked list is finding an entry and removing it from the list. This is the central operation needed for implementing the `alloc` method. We implement the operation as a `find_region` method in the following way:
 
 ```rust
-// in src/allocator.rs
+// in src/allocator/linked_list.rs
 
 impl LinkedListAllocator {
     /// Looks for a free region with the given size and alignment and removes
@@ -615,10 +615,11 @@ In step 2, the `current.next` pointer is set to the local `next` pointer, which 
 The `alloc_from_region` function returns whether a region is suitable for an allocation with given size and alignment. It is defined like this:
 
 ```rust
-// in src/allocator.rs
+// in src/allocator/linked_list.rs
 
 impl LinkedListAllocator {
-    /// Try to use the given region for an allocation with given size and alignment.
+    /// Try to use the given region for an allocation with given size and
+    /// alignment.
     ///
     /// Returns the allocation start address on success.
     fn alloc_from_region(region: &ListNode, size: usize, align: usize)
@@ -651,10 +652,18 @@ The function performs a less obvious check after that. This check is necessary b
 
 #### Implementing `GlobalAlloc`
 
-With the fundamental operations provided by the `add_free_region` and `find_region` methods, we can now finally implement the `GlobalAlloc` trait:
+With the fundamental operations provided by the `add_free_region` and `find_region` methods, we can now finally implement the `GlobalAlloc` trait. As with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator`, but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references.
+
+[`Locked` wrapper]: @second-edition/posts/11-allocator-designs/index.md#a-locked-wrapper
+
+The implementation looks like this:
 
 ```rust
-// in src/allocator.rs
+// in src/allocator/linked_list.rs
+
+use super::Locked;
+use alloc::alloc::{GlobalAlloc, Layout};
+use core::ptr;
 
 unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -670,7 +679,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
             }
             alloc_start as *mut u8
         } else {
-            null_mut()
+            ptr::null_mut()
         }
     }
 
@@ -691,55 +700,41 @@ In the success case, the `find_region` method returns a tuple of the suitable re
 
 #### Layout Adjustments
 
-TODO
+So what are these layout adjustments that we do at the beginning of both `alloc` and `dealloc`? They ensure that each allocated block is capable of storing a `ListNode`. This is important because the memory block is going to be deallocated at some point, where we want to write a `ListNode` to it. If the block is smaller than a `ListNode` or does not have the correct alignment, undefined behavior can occur.
+
+The layout adjustments are performed by a `size_align` function, which is defined like this:
 
 ```rust
-// in src/allocator.rs
+// in src/allocator/linked_list.rs
 
 impl LinkedListAllocator {
     /// Adjust the given layout so that the resulting allocated memory
     /// region is also capable of storing a `ListNode`.
     ///
-    /// Returns the adjusted size    and alignment as a (size, align) tuple.
+    /// Returns the adjusted size and alignment as a (size, align) tuple.
     fn size_align(layout: Layout) -> (usize, usize) {
-        let layout = layout.align_to(mem::align_of::<ListNode>())
-            .and_then(|l| l.pad_to_align())
-            .expect("adjusting alignment failed");
+        let layout = layout
+            .align_to(mem::align_of::<ListNode>())
+            .expect("adjusting alignment failed")
+            .pad_to_align();
         let size = layout.size().max(mem::size_of::<ListNode>());
         (size, layout.align())
     }
 }
 ```
 
-TODO
+First, the function uses the [`align_to`] method on the passed [`Layout`] to increase the alignment to the alignment of a `ListNode` if necessary. It then uses the [`pad_to_align`] method to round up the size to a multiple of the alignment to ensure that the start address of the next memory block will have the correct alignment for storing a `ListNode` too.
+In the second step it uses the [`max`] method to enforce a minimum allocation size of `mem::size_of::<ListNode>`. This way, the `dealloc` function can safetly write a `ListNode` to the freed memory block.
 
+[`align_to`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.align_to
+[`pad_to_align`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.pad_to_align
+[`max`]: https://doc.rust-lang.org/std/cmp/trait.Ord.html#method.max
 
-#### Setting the Global Allocator
-
-Our first goal is to set a prototype of the `LinkedListAllocator` as the global allocator. In order to be able to do that, we need to provide a placeholder implementation of the `GlobalAlloc` trait:
-
-```rust
-// in src/allocator/linked_list.rs
-
-use super::Locked;
-
-unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        todo!();
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        todo!();
-    }
-}
-```
-
-As with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator`, but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references. Instead of providing an implementation, we use the [`todo!`] macro again to get a minimal prototype.
-
-[`Locked` wrapper]: @second-edition/posts/11-allocator-designs/index.md#a-locked-wrapper
-
+Both the `align_to` and the `pad_to_align` methods are still unstable. To enable then, we need to add **`#![feature(alloc_layout_extra)]`** to the beginning of our `lib.rs`.
 
 ### Using it
+
+We can now update the `ALLOCATOR` static in the `allocator` module to use our new `LinkedListAllocator`:
 
 ```rust
 // in src/allocator.rs
@@ -747,10 +742,23 @@ As with the bump allocator, we don't implement the trait directly for the `Linke
 use linked_list::LinkedListAllocator;
 
 #[global_allocator]
-static ALLOCATOR: Locked<LinkedListAllocator> = Locked::new(LinkedListAllocator::new());
+static ALLOCATOR: Locked<LinkedListAllocator> =
+    Locked::new(LinkedListAllocator::new());
 ```
 
 Since the `init` function behaves the same for the bump and linked list allocators, we don't need to modify the `init` call in `init_heap`.
+
+When we now run our `heap_allocation` tests again, we see that all tests pass now, including the `many_boxes_long_lived` test that failed with the bump allocator:
+
+```
+> cargo xtest --test heap_allocation
+simple_allocation... [ok]
+large_vec... [ok]
+many_boxes... [ok]
+many_boxes_long_lived... [ok]
+```
+
+This shows that our linked list allocator is able to reuse freed memory for subsequent allocations.
 
 ### Discussion
 
