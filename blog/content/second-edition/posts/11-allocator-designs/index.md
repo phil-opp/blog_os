@@ -210,7 +210,7 @@ With the help of the `spin::Mutex` wrapper type we can implement the `GlobalAllo
 unsafe impl GlobalAlloc for spin::Mutex<BumpAllocator> {…}
 ```
 
-Unfortunatly, this still doesn't work because the Rust compiler does not permit trait implementations for types defined in other crates:
+Unfortunately, this still doesn't work because the Rust compiler does not permit trait implementations for types defined in other crates:
 
 ```
 error[E0117]: only traits defined in the current crate can be implemented for arbitrary types
