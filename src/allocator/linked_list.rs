@@ -8,10 +8,7 @@ struct ListNode {
 
 impl ListNode {
     const fn new(size: usize) -> Self {
-        ListNode {
-            size,
-            next: None,
-        }
+        ListNode { size, next: None }
     }
 
     fn start_addr(&self) -> usize {
