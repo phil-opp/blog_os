@@ -762,12 +762,29 @@ This shows that our linked list allocator is able to reuse freed memory for subs
 
 ### Discussion
 
-#### Implementation Drawbacks
+In contrast to the bump allocator, the linked list allocator is much more suitable as a general purpose allocator, mainly because it is able to directly reuse freed memory. However, it also has some drawbacks. Some of them are only caused by our basic implementation, but there are also fundamental drawbacks of the allocator design itself.
 
-#### The `linked_list_allocator` Crate
+#### Merging Freed Blocks
 
+The main problem of our implementation is that it only splits the heap into smaller blocks, but never merges them back together. Consider this example:
 
-advantages and drawback (performance!)
+TODO
+
+In the first line, three allocations are created on the heap. Two of them are freed again in line 2 and the third is freed in line 3. Now the complete heap is unused again, but it is still split into four individual blocks. At this point, a large allocation might not be possible anymore because none of the four blocks is large enough. Over time, the process continues and the heap is split into smaller and smaller blocks. At some point, the heap is so fragmented that even normal sized allocations will fail.
+
+To fix this problem, we need to merge adjacent freed blocks back together. For the above example, this would mean the following:
+
+TODO
+
+In line 3, we merge the rightmost allocation, which was just freed, together with the adjacent block representing the unused rest of the heap. In line TODO, we can merge all three unused blocks together because they're adjacent, with the result that the unused heap is represented by a single block again.
+
+The `linked_list_allocator` crate implements this merging strategy in the following way: Instead of inserting freed memory blocks at the beginning of the linked list on `deallocate`, it always keeps the list sorted by start address. This way, merging can be performed directly on the `deallocate` call by examining the addresses and sizes of the two neighbor blocks in the list. Of course, the deallocation operation is slower this way, but it prevents the heap fragmentation we saw above.
+
+#### Performance
+
+As we learned above, the bump allocator is extremely fast and can be optimized to just a few assembly operations. The linked list allocator performs much worse in this category. The problem is that an allocation request might need to traverse the complete linked list until it finds a suitable block. Since the list length depends on the number of unused memory blocks, the performance can vary extremely for different programs. A program that only creates a couple of allocations will experience a relatively fast allocation performance. For a program that fragments the heap with many allocations, however, will experience a very bad allocation performance.
+
+This isn't a problem with our allocation, but a fundamental disadvantage of the linked list approach.
 
 -> fixed size blocks
 
@@ -790,105 +807,6 @@ advantages and drawback (performance!)
 
 # Old
 
-##### Allocation
-In order to allocate a block of memory, we need to find a hole that satisfies the size and alignment requirements. If the found hole is larger than required, we split it into two smaller holes. For example, when we allocate a 24 byte block right after initialization, we split the single hole into a hole of size 24 and a hole with the remaining size:
-
-![split hole](split-hole.svg)
-
-Then we use the new 24 byte hole to perform the allocation:
-
-![24 bytes allocated](allocate.svg)
-
-To find a suitable hole, we can use several search strategies:
-
-- **best fit**: Search the whole list and choose the _smallest_ hole that satisfies the requirements.
-- **worst fit**: Search the whole list and choose the _largest_ hole that satisfies the requirements.
-- **first fit**: Search the list from the beginning and choose the _first_ hole that satisfies the requirements.
-
-Each strategy has its advantages and disadvantages. Best fit uses the smallest hole possible and leaves larger holes for large allocations. But splitting the smallest hole might create a tiny hole, which is too small for most allocations. In contrast, the worst fit strategy always chooses the largest hole. Thus, it does not create tiny holes, but it consumes the large block, which might be required for large allocations.
-
-For our use case, the best fit strategy is better than worst fit. The reason is that we have a minimal hole size of 16 bytes, since each hole needs to be able to store a size (8 bytes) and a pointer to the next hole (8 bytes). Thus, even the best fit strategy leads to holes of usable size. Furthermore, we will need to allocate very large blocks occasionally (e.g. for [DMA] buffers).
-
-[DMA]: https://en.wikipedia.org/wiki/Direct_memory_access
-
-However, both best fit and worst fit have a significant problem: They need to scan the whole list for each allocation in order to find the optimal block. This leads to long allocation times if the list is long. The first fit strategy does not have this problem, as it returns as soon as it finds a suitable hole. It is fairly fast for small allocations and might only need to scan the whole list for large allocations.
-
-### Deallocation
-To deallocate a block of memory, we can just insert its corresponding hole somewhere into the list. However, we need to merge adjacent holes. Otherwise, we are unable to reuse the freed memory for larger allocations. For example:
-
-![deallocate memory, which leads to adjacent holes](deallocate.svg)
-
-In order to use these adjacent holes for a large allocation, we need to merge them to a single large hole first:
-
-![merge adjacent holes and allocate large block](merge-holes-and-allocate.svg)
-
-The easiest way to ensure that adjacent holes are always merged, is to keep the hole list sorted by address. Thus, we only need to check the predecessor and the successor in the list when we free a memory block. If they are adjacent to the freed block, we merge the corresponding holes. Else, we insert the freed block as a new hole at the correct position.
-
-## Implementation
-The detailed implementation would go beyond the scope of this post, since it contains several hidden difficulties. For example:
-
-- Several merge cases: Merge with the previous hole, merge with the next hole, merge with both holes.
-- We need to satisfy the alignment requirements, which requires additional splitting logic.
-- The minimal hole size of 16 bytes: We must not create smaller holes when splitting a hole.
-
-I created the [linked_list_allocator] crate to handle all of these cases. It consists of a [Heap struct] that provides an `allocate_first_fit` and a `deallocate` method. It also contains a [LockedHeap] type that wraps `Heap` into spinlock so that it's usable as a static system allocator. If you are interested in the implementation details, check out the [source code][linked_list_allocator source].
-
-[linked_list_allocator]: https://docs.rs/crate/linked_list_allocator/0.4.1
-[Heap struct]: https://docs.rs/linked_list_allocator/0.4.1/linked_list_allocator/struct.Heap.html
-[LockedHeap]: https://docs.rs/linked_list_allocator/0.4.1/linked_list_allocator/struct.LockedHeap.html
-[linked_list_allocator source]: https://github.com/phil-opp/linked-list-allocator
-
-We need to add the extern crate to our `Cargo.toml` and our `lib.rs`:
-
-``` shell
-> cargo add linked_list_allocator
-```
-
-```rust
-// in src/lib.rs
-extern crate linked_list_allocator;
-```
-
-Now we can change our global allocator:
-
-```rust
-use linked_list_allocator::LockedHeap;
-
-#[global_allocator]
-static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
-```
-
-We can't initialize the linked list allocator statically, since it needs to initialize the first hole (like described [above](#initialization)). This can't be done at compile time, so the function can't be a `const` function. Therefore we can only create an empty heap and initialize it later at runtime. For that, we add the following lines to our `rust_main` function:
-
-```rust
-// in src/lib.rs
-
-#[no_mangle]
-pub extern "C" fn rust_main(multiboot_information_address: usize) {
-    […]
-
-    // set up guard page and map the heap pages
-    memory::init(boot_info);
-
-    // initialize the heap allocator
-    unsafe {
-        HEAP_ALLOCATOR.lock().init(HEAP_START, HEAP_START + HEAP_SIZE);
-    }
-    […]
-}
-```
-
-It is important that we initialize the heap _after_ mapping the heap pages, since the init function writes to the heap memory (the first hole).
-
-Our kernel uses the new allocator now, so we can deallocate memory without leaking it. The example from above should work now without causing an OOM situation:
-
-```rust
-// in rust_main in src/lib.rs
-
-for i in 0..10000 {
-    format!("Some String");
-}
-```
 
 ## Performance
 The linked list based approach has some performance problems. Each allocation or deallocation might need to scan the complete list of holes in the worst case. However, I think it's good enough for now, since our heap will stay relatively small for the near future. When our allocator becomes a performance problem eventually, we can just replace it with a faster alternative.
