@@ -768,13 +768,13 @@ In contrast to the bump allocator, the linked list allocator is much more suitab
 
 The main problem of our implementation is that it only splits the heap into smaller blocks, but never merges them back together. Consider this example:
 
-TODO
+![](linked-list-allocator-fragmentation-on-dealloc.svg)
 
 In the first line, three allocations are created on the heap. Two of them are freed again in line 2 and the third is freed in line 3. Now the complete heap is unused again, but it is still split into four individual blocks. At this point, a large allocation might not be possible anymore because none of the four blocks is large enough. Over time, the process continues and the heap is split into smaller and smaller blocks. At some point, the heap is so fragmented that even normal sized allocations will fail.
 
 To fix this problem, we need to merge adjacent freed blocks back together. For the above example, this would mean the following:
 
-TODO
+![](linked-list-allocator-merge-on-dealloc.svg)
 
 In line 3, we merge the rightmost allocation, which was just freed, together with the adjacent block representing the unused rest of the heap. In line TODO, we can merge all three unused blocks together because they're adjacent, with the result that the unused heap is represented by a single block again.
 
