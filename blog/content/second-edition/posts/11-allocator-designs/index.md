@@ -796,7 +796,7 @@ In the following, we present an allocator design that uses fixed-size memory blo
 
 The idea behind a _fixed-size block allocator_ is the following: Instead of allocating exactly as much memory as requested, we define a small number of block sizes and round up each allocation to the next block size. For example, with block sizes of 16, 64, and 512, an allocation of 4 bytes would return a 16-byte block, an allocation of 48 bytes a 64-byte block, and an allocation of 128 bytes an 512-byte block.
 
-Like the linked list allocator, we keep track of the unused memory by creating a linked list in the unused memory. Howver, instead of using a single list with different block sizes, we create a separate list for each block size. Each list then only stores blocks of a single size. For example, with block sizes 16, 64, and 512 there would be three separate linked lists in memory:
+Like the linked list allocator, we keep track of the unused memory by creating a linked list in the unused memory. However, instead of using a single list with different block sizes, we create a separate list for each block size. Each list then only stores blocks of a single size. For example, with block sizes 16, 64, and 512 there would be three separate linked lists in memory:
 
 ![](fixed-size-block-example.svg).
 
