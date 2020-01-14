@@ -782,11 +782,11 @@ The `linked_list_allocator` crate implements this merging strategy in the follow
 
 #### Performance
 
-As we learned above, the bump allocator is extremely fast and can be optimized to just a few assembly operations. The linked list allocator performs much worse in this category. The problem is that an allocation request might need to traverse the complete linked list until it finds a suitable block. Since the list length depends on the number of unused memory blocks, the performance can vary extremely for different programs. A program that only creates a couple of allocations will experience a relatively fast allocation performance. For a program that fragments the heap with many allocations, however, will experience a very bad allocation performance.
+As we learned above, the bump allocator is extremely fast and can be optimized to just a few assembly operations. The linked list allocator performs much worse in this category. The problem is that an allocation request might need to traverse the complete linked list until it finds a suitable block.
 
-This isn't a problem with our allocation, but a fundamental disadvantage of the linked list approach.
+Since the list length depends on the number of unused memory blocks, the performance can vary extremely for different programs. A program that only creates a couple of allocations will experience a relatively fast allocation performance. For a program that fragments the heap with many allocations, however, will experience a very bad allocation performance.
 
--> fixed size blocks
+It's worth noting that this performance issue isn't a problem with our implementation, but a fundamental disadvantage of the linked list approach. Since allocation performance can be very important for kernel-level code, we explore a third allocator design in the following that trades improved performance for reduced memory effiency.
 
 ## Fixed-Size Block Allocator
 
