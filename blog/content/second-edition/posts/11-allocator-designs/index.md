@@ -826,7 +826,42 @@ Like allocation, deallocation is also very performant. It involves the following
 
 Most notably, no traversal of the list is required for deallocation either. This means that the time required for a `dealloc` call stays the same regardless of the list length.
 
-### Fall-back Allocator
+#### Fallback Allocator
+
+Given that large allocations (>1KB) are often rare, especially in operating system kernels, it might make sense to fall back to a different allocator for these allocations. For example, we could fall back to a linked list allocator for allocations greater than 512 bytes in order to reduce memory waste. Since only very few allocations of that size are expected, the the linked list would stay small so that (de)allocations would be still reasonably fast.
+
+#### Creating new Blocks
+
+Above, we always assumed that there are always enough blocks of a specific size in the list to fulfill all allocation requests. However, at some point the linked list for a block size becomes empty. At this point, there are two ways how we can create new unused blocks of a specific size to fulfil an allocation request:
+
+- Allocate a new block from the fallback allocator (if there is one).
+- Split a larger block from a different list. This best works if block sizes are powers of two. For example, a 32-byte block can be split into two 16-byte blocks.
+
+For our implementation, we will allocate new blocks from the fallback allocator since the implementation is much simpler.
+
+### Implementation
+
+Now that we know how a fixed-size block allocator works, we can start our implementation. We won't depend on the implementation of the linked list allocator created in the previous section, so you can follow this part even if you skipped the linked list allocator implementation.
+
+We start our implementation in a new `allocator::fixed_size_block` module:
+
+```rust
+// in src/allocator.rs
+
+pub mod fixed_size_block;
+```
+
+```rust
+// in src/allocator/fixed_size_block.rs
+
+/// The block sizes to use.
+///
+/// The sizes must each be power of 2 because they are also used as
+/// the block alignment (alignments must be always powers of 2).
+const BLOCK_SIZES: &[usize] = &[8, 16, 32, 64, 128, 256, 512];
+```
+
+
 
 ## Summary
 
