@@ -833,26 +833,8 @@ Most notably, no traversal of the list is required for deallocation either. This
 ## What's next?
 
 
----
 
 
-
-
-
-
-
-
-# Old
-
-
-## Performance
-The linked list based approach has some performance problems. Each allocation or deallocation might need to scan the complete list of holes in the worst case. However, I think it's good enough for now, since our heap will stay relatively small for the near future. When our allocator becomes a performance problem eventually, we can just replace it with a faster alternative.
-
-## Summary
-Now we're able to use heap storage in our kernel without leaking memory. This allows us to effectively process dynamic data such as user supplied strings in the future. We can also use `Rc` and `Arc` to create types with shared ownership. And we have access to various data structures such as `Vec` or `Linked List`, which will make our lives much easier. We even have some well tested and optimized [binary heap] and [B-tree] implementations!
-
-[binary heap]:https://en.wikipedia.org/wiki/Binary_heap
-[B-tree]: https://en.wikipedia.org/wiki/B-tree
 
 
 ---
