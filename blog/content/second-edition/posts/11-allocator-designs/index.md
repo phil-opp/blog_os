@@ -776,7 +776,7 @@ To fix this problem, we need to merge adjacent freed blocks back together. For t
 
 ![](linked-list-allocator-merge-on-dealloc.svg)
 
-In line 3, we merge the rightmost allocation, which was just freed, together with the adjacent block representing the unused rest of the heap. In line TODO, we can merge all three unused blocks together because they're adjacent, with the result that the unused heap is represented by a single block again.
+Like before, two of the three allocations are freed in line `2`. Instead of keeping the fragmented heap, we now perform an additional step in line `2a` to merge the two rightmost blocks back together. In line `3`, the third allocation is freed (like before), resulting in a completely unused heap represented by three distinct blocks. In an additional merging step in line `3a` we then merge the three adjacent blocks back together.
 
 The `linked_list_allocator` crate implements this merging strategy in the following way: Instead of inserting freed memory blocks at the beginning of the linked list on `deallocate`, it always keeps the list sorted by start address. This way, merging can be performed directly on the `deallocate` call by examining the addresses and sizes of the two neighbor blocks in the list. Of course, the deallocation operation is slower this way, but it prevents the heap fragmentation we saw above.
 
