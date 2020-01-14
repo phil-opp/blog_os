@@ -790,6 +790,43 @@ It's worth noting that this performance issue isn't a problem with our implement
 
 ## Fixed-Size Block Allocator
 
+In the following, we present an allocator design that uses fixed-size memory blocks for fulfilling allocation requests. This way, the allocator often returns blocks that are larger than needed for allocations, which results in wasted memory. On the other hand, it drastly reduces the time required to find a suitable block (compared to the linked list allocator), resulting in much better allocation performance.
+
+### Introduction
+
+The idea behind a _fixed-size block allocator_ is the following: Instead of allocating exactly as much memory as requested, we define a small number of block sizes and round up each allocation to the next block size. For example, with block sizes of 16, 64, and 512, an allocation of 4 bytes would return a 16-byte block, an allocation of 48 bytes a 64-byte block, and an allocation of 128 bytes an 512-byte block.
+
+Like the linked list allocator, we keep track of the unused memory by creating a linked list in the unused memory. Howver, instead of using a single list with different block sizes, we create a separate list for each block size. Each list then only stores blocks of a single size. For example, with block sizes 16, 64, and 512 there would be three separate linked lists in memory:
+
+![](fixed-size-block-example.svg).
+
+Instead of a single `head` pointer, we have the three head pointers `head_16`, `head_64`, and `head_512` that each point to the first unused block of the corresponding size. All nodes in a single list have the same size. For example, the list started by the `head_16` pointer only contains 16-byte blocks. This means that we no longer need to store the size in each list node since it is already specified by the name of the head pointer.
+
+Since each element in a list has the same size, each list element is equally suitable for an allocation request. This means that we can very efficiently perform an allocation using the following steps:
+
+- Round up the requested allocation size to the next block size. For example, when an allocation of 12 bytes is requested, we would choose the block size 16 in the above example.
+- Retrieve the head pointer for the list, e.g. from an array. For block size 16, we need to use `head_16`.
+- Remove the first block from the list and return it.
+
+Most notably, we can always return the first element of the list and no longer need to traverse the full list. Thus, allocations are much faster than on the linked list allocator.
+
+#### Block Sizes and Wasted Memory
+
+Depending on the block sizes, we lose a lot of memory by rounding up. For example, when a 512-byte block is returned for a 128 byte allocation, three quarters of the allocated memory are unused. By defining reasonable block sizes, it is possible to limit the amount of wasted memory to some degree. For example, when using the powers of 2 (4, 8, 16, 32, 64, 128, …) as block sizes, we can limit the memory waste to half of the allocation size in the worst case and a quarter of the allocation size in the average case.
+
+It is also common to optimize block sizes based on common allocation sizes in a program. For example, we could additionally add block size 24 to improve memory usage for programs that often perform allocations of 24 bytes. This way, the amount of wasted memory can be often reduced without losing the performance benefits.
+
+#### Deallocation
+
+Like allocation, deallocation is also very performant. It involves the following steps:
+
+- Round up the freed allocation size to the next block size. This is required since the compiler only passes the requested allocation size to `dealloc`, not the size of the block that was returned by `alloc`. By using the same size-adjustment function in both `alloc` and `dealloc` we can make sure that we always free the correct amount of memory.
+- Retrieve the head pointer for the list, e.g. from an array.
+- Add the freed block to the front of the list by updating the head pointer.
+
+Most notably, no traversal of the list is required for deallocation either. This means that the time required for a `dealloc` call stays the same regardless of the list length.
+
+### Fall-back Allocator
 
 ## Summary
 
