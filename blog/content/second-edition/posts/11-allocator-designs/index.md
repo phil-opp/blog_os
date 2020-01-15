@@ -1118,7 +1118,8 @@ To use our new `FixedSizeBlockAllocator`, we need to update the `ALLOCATOR` stat
 use fixed_size_block::FixedSizeBlockAllocator;
 
 #[global_allocator]
-static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(FixedSizeBlockAllocator::new());
+static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(
+    FixedSizeBlockAllocator::new());
 ```
 
 Since the `init` function behaves the same for all allocators we implemented, we don't need to modify the `init` call in `init_heap`.
