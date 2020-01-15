@@ -1103,6 +1103,29 @@ There are a few things worth noting:
 
 ### Using it
 
+To use our new `FixedSizeBlockAllocator`, we need to update the `ALLOCATOR` static in the `allocator` module:
+
+```rust
+// in src/allocator.rs
+
+use fixed_size_block::FixedSizeBlockAllocator;
+
+#[global_allocator]
+static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(FixedSizeBlockAllocator::new());
+```
+
+Since the `init` function behaves the same for all allocators we implemented, we don't need to modify the `init` call in `init_heap`.
+
+When we now run our `heap_allocation` tests again, all tests should still pass:
+
+```
+> cargo xtest --test heap_allocation
+simple_allocation... [ok]
+large_vec... [ok]
+many_boxes... [ok]
+many_boxes_long_lived... [ok]
+```
+
 ### Discussion
 
 ## Summary
