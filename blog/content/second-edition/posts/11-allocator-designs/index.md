@@ -843,13 +843,37 @@ For our implementation, we will allocate new blocks from the fallback allocator 
 
 Now that we know how a fixed-size block allocator works, we can start our implementation. We won't depend on the implementation of the linked list allocator created in the previous section, so you can follow this part even if you skipped the linked list allocator implementation.
 
-We start our implementation in a new `allocator::fixed_size_block` module:
+#### List Node
+
+We start our implementation by creating a `ListNode` type in a new `allocator::fixed_size_block` module:
 
 ```rust
 // in src/allocator.rs
 
 pub mod fixed_size_block;
 ```
+
+```rust
+// in src/allocator/fixed_size_block.rs
+
+struct ListNode {
+    next: Option<&'static mut ListNode>,
+}
+
+impl ListNode {
+    const fn new() -> Self {
+        Self { next: None }
+    }
+}
+```
+
+This type is similar to the `ListNode` type of our [linked list allocator implementation], with the difference that we don't have a second `size` field. The `size` field isn't needed because every block in a list has the same size with the fixed-size block allocator design.
+
+[linked list allocator implementation]: #the-allocator-type
+
+#### Block Sizes
+
+Next, we define a constant `BLOCK_SIZES` slice with the block sizes used for our implementation:
 
 ```rust
 // in src/allocator/fixed_size_block.rs
@@ -861,7 +885,231 @@ pub mod fixed_size_block;
 const BLOCK_SIZES: &[usize] = &[8, 16, 32, 64, 128, 256, 512];
 ```
 
+As block sizes, we use powers of 2 starting from 8 up to 512. We don't define any block sizes smaller than 8 because each block must be capable of storing a 64-bit pointer to the next block when freed. For allocations greater than 512 bytes we will fall back to a linked list allocator.
 
+To simplify the implementation, we define that the size of a block is also its required alignment in memory. So a 16 byte block is always aligned on a 16-byte boundary and a 512 byte block is aligned on a 512-byte boundary. Since alignments always need to be powers of 2, this rules out any other block sizes. If we need block sizes that are not powers of 2 in the future, we can still adjust our implementation for this (e.g. by defining a second `BLOCK_ALIGNMENTS` array).
+
+#### The Allocator Type
+
+Using the `ListNode` type and the `BLOCK_SIZES` slice, we can now define our allocator type:
+
+```rust
+// in src/allocator/fixed_size_block.rs
+
+pub struct FixedSizeBlockAllocator {
+    list_heads: [ListNode; BLOCK_SIZES.len()],
+    fallback_allocator: linked_list_allocator::Heap,
+}
+```
+
+The `list_heads` field is an array of `head` pointers, one for each block size. This is implemented by using the `len()` of the `BLOCK_SIZES` slice as the array length. As a backup allocator for allocations larger than the largest block size we use the allocator provided by the `linked_list_allocator` as fallback. We could also used the `LinkedListAllocator` we implemented ourselves instead, but it has the disadvantage that it does not [merge freed blocks].
+
+[merge freed blocks]: #merging-freed-blocks
+
+For constructing a `FixedSizeBlockAllocator`, we provide the same `new` and `init` functions that we implemented for the other allocator types too:
+
+```rust
+// in src/allocator/fixed_size_block.rs
+
+impl FixedSizeBlockAllocator {
+    /// Creates an empty FixedSizeBlockAllocator.
+    pub const fn new() -> Self {
+        FixedSizeBlockAllocator {
+            list_heads: [ListNode::new(); BLOCK_SIZES.len()],
+            fallback_allocator: linked_list_allocator::Heap::empty(),
+        }
+    }
+
+    /// Initialize the allocator with the given heap bounds.
+    ///
+    /// This function is unsafe because the caller must guarantee that the given
+    /// heap bounds are valid and that the heap is unused. This method must be
+    /// called only once.
+    pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
+        self.fallback_allocator.init(heap_start, heap_size);
+    }
+}
+```
+
+The `new` function just initializes the `list_heads` array with empty nodes and creates an [`empty`] linked list allocator as `fallback_allocator`. The unsafe `init` function only calls the [`init`] function of the `fallback_allocator` without doing any additional initialization of the `list_heads` array.
+
+[`empty`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html#method.empty
+[`init`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html#method.init
+
+For convenience, we also create a private `fallback_alloc` method that allocates using the `fallback_allocator`:
+
+```rust
+// in src/allocator/fixed_size_block.rs
+
+use alloc::alloc::Layout;
+use core::ptr;
+
+impl FixedSizeBlockAllocator {
+    /// Allocates using the fallback allocator.
+    fn fallback_alloc(&mut self, layout: Layout) -> *mut u8 {
+        match self.fallback_allocator.allocate_first_fit(layout) {
+            Ok(ptr) => ptr.as_ptr(),
+            Err(_) => ptr::null_mut(),
+        }
+    }
+}
+```
+
+Since the [`Heap`] type of the `linked_list_allocator` crate does not implement [`GlobalAlloc`] (as it's [not possible without locking]). Instead, it provides an [`allocate_first_fit`] method that has a slightly different interface. Instead of returning a `*mut u8` and using a null pointer to signal an error, it returns a `Result<NonNull<u8>, AllocErr>`. The [`NonNull`] type is an abstraction for a raw pointer that is guaranteed to be not the null pointer. The [`AllocErr`] type a marker type for signaling an allocation error. By mapping the `Ok` case to the [`NonNull::as_ptr`] method and the `Err` case to a null pointer, we can easily translate this back to a `*mut u8` type.
+
+[`Heap`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html
+[not possible without locking]: #globalalloc-and-mutability
+[`allocate_first_fit`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html#method.allocate_first_fit
+[`NonNull`]: https://doc.rust-lang.org/nightly/core/ptr/struct.NonNull.html
+[`AllocErr`]: https://doc.rust-lang.org/nightly/core/alloc/struct.AllocErr.html
+[`NonNull::as_ptr`]: https://doc.rust-lang.org/nightly/core/ptr/struct.NonNull.html#method.as_ptr
+
+#### Calculating the List Index
+
+Before we implement the `GlobalAlloc` trait, we define a `list_index` helper function that returns the lowest possible block size for a given [`Layout`]:
+
+```rust
+// in src/allocator/fixed_size_block.rs
+
+/// Choose an appropriate block size for the given layout.
+///
+/// Returns an index into the `BLOCK_SIZES` array.
+fn list_index(layout: &Layout) -> Option<usize> {
+    let required_block_size = layout.size().max(layout.align());
+    BLOCK_SIZES.iter().position(|&s| s >= required_block_size)
+}
+```
+
+The block must be have at least the size and alignment required by the given `Layout`. Since we defined that the block size is also its alignment, this means that the `required_block_size` is the [maximum] of the layout's [`size()`] and [`align()`] attributes. To find the next-larger block in the `BLOCK_SIZES` slice, we first use the [`iter()`] method to get an iterator and then the [`position()`] method to find the index of the first block that is as least as large as the `required_block_size`.
+
+[maximum]: https://doc.rust-lang.org/core/cmp/trait.Ord.html#method.max
+[`size()`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.size
+[`align()`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.align
+[`iter()`]: https://doc.rust-lang.org/core/primitive.slice.html#method.iter
+[`position()`]:  https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.position
+
+Note that we don't return the block size itself, but the index into the `BLOCK_SIZES` slice. The reason is that we want to use the returned index as an index into the `list_heads` array.
+
+#### Implementing `GlobalAlloc`
+
+The last step is to implement the `GlobalAlloc` trait:
+
+```rust
+// in src/allocator/fixed_size_block.rs
+
+use super::Locked;
+use alloc::alloc::GlobalAlloc;
+
+unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        todo!();
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        todo!();
+    }
+}
+```
+
+Like for the other allocators, we don't implement the `GlobalAlloc` trait directly for our allocator type, but use the [`Locked` wrapper] to add synchronized interior mutability. Since the `alloc` and `dealloc` implementations are relatively large, we introduce them one by one in the following.
+
+##### `alloc`
+
+The implementation of the `alloc` method looks like this:
+
+```rust
+// in `impl` block in src/allocator/fixed_size_block.rs
+
+unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+    let mut allocator = self.lock();
+    match list_index(&layout) {
+        Some(index) => {
+            match allocator.list_heads[index].next.take() {
+                Some(node) => {
+                    allocator.list_heads[index].next = node.next.take();
+                    node as *mut ListNode as *mut u8
+                }
+                None => {
+                    // no block exists in list => allocate new block
+                    let block_size = BLOCK_SIZES[index];
+                    // only works if all block sizes are a power of 2
+                    let block_align = block_size;
+                    let layout = Layout::from_size_align(block_size, block_align)
+                        .unwrap();
+                    allocator.fallback_alloc(layout)
+                }
+            }
+        }
+        None => allocator.fallback_alloc(layout),
+    }
+}
+```
+
+Let's go through it step by step:
+
+First, we use the `Locked::lock` method to get a mutable reference to the wrapped allocator instance. Next, we call the `list_index` function we just defined to calculate the appropriate block size for the given layout and get the corresponding index into the `list_heads` array. If this index is `None`, no block size fits for the allocation, therefore we use the `fallback_allocator` using the `fallback_alloc` function.
+
+If the list index is `Some`, we try to remove the first node in the corresponding list started by `list_heads[index]`. For that, we call the [`Option::take`] method on the `next` field of the list head. If the list is not empty, we enter the `Some(node)` branch of the `match` statement, where we point the head pointer of the list to the successor of the popped `node` (by using [`take`][`Option::take`] again). Finally, we return the popped `node` pointer as a `*mut u8`.
+
+[`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
+
+TODO graphic
+
+If the `next` pointer of the list head is `None`, it indicates that the list of blocks is empty. This means that we need to construct a new block as [described above](#creating-new-blocks). For that, we first get the current block size from the `BLOCK_SIZES` slice and use it as both the size and the alignment for the new block. Then we create a new `Layout` from it and call the `fallback_alloc` method to perform the allocation. The reason for adjusting the layout and alignment is that the block will be added to the block list on deallocation.
+
+TODO graphic
+
+#### `dealloc`
+
+The implementation of the `dealloc` method looks like this:
+
+```rust
+// in `impl` block in src/allocator/fixed_size_block.rs
+
+#[allow(unused_unsafe)]
+unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+    let mut allocator = self.lock();
+    match list_index(&layout) {
+        Some(index) => {
+            let new_node = ListNode {
+                next: allocator.list_heads[index].next.take(),
+            };
+            // verify that block has size and alignment required for storing node
+            assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index]);
+            assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
+            let new_node_ptr = ptr as *mut ListNode;
+            new_node_ptr.write(new_node);
+            allocator.list_heads[index].next = Some(unsafe { &mut *new_node_ptr });
+        }
+        None => {
+            let ptr = NonNull::new(ptr).unwrap();
+            unsafe {
+                allocator.fallback_allocator.deallocate(ptr, layout);
+            }
+        }
+    }
+}
+```
+
+Like in `alloc`, we first use the `lock` method to get a mutable allocator reference and then the `list_index` function to get the block list corresponding to the given `Layout`. If the index is `None`, no fitting block size exists in `BLOCK_SIZES`, which indicates that the allocation was created by the fallback allocator. Therefore we use its [`deallocate`][`Heap::deallocate`] to free the memory again. The method expects a [`NonNull`] instead of a `*mut u8`, so we need to convert the pointer first. (The `unwrap` call only fails when the pointer is null, which should never happen when the compiler calls `dealloc`.)
+
+[`Heap::deallocate`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html#method.deallocate
+
+If `list_index` returns a block index, we need to add the freed memory block to the list. For that, we first create a new `ListNode` that points to the current list head (by using [`Option::take`] again). Before we write the new node into the freed memory block, we first assert that the current block size specified by `index` has the required size and alignment for storing a `ListNode`. Then we perform the write by converting the given `*mut u8` pointer to a `*mut ListNode` pointer and then calling the [`write`][`pointer::write`] method on it. The last step is to set the head pointer of the list, which is currently `None` since we called `take` on it, to our newly written `ListNode`.
+
+[`pointer::write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
+
+TODO graphic
+
+There are a few things worth noting:
+
+- We don't differentiate between blocks allocated from a block list and blocks allocated from the fallback allocator. This means that new blocks created in `alloc` are added to the block list on `dealloc`, thereby increasing the number of blocks of that size.
+- The `alloc` method is the only place where new blocks are created in our implemenation. This means that we initially start with empty block lists and only fill the lists lazily when allocations for that block size are performed.
+- We use `unsafe` blocks in `dealloc`, even though they are not required in functions that are themselves declared as `unsafe`. However, using explicit `unsafe` blocks has the advantage that it's obvious which operations are unsafe and which not. There is also a [proposed RFC](https://github.com/rust-lang/rfcs/pull/2585) to change this behavior. Since the compiler normally warns on unneeded `unsafe` blocks, we add the `#[allow(unused_unsafe)]` to the method to silence that warning.
+
+### Using it
+
+### Discussion
 
 ## Summary
 
