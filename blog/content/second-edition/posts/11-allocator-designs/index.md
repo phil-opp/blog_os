@@ -1126,7 +1126,24 @@ many_boxes... [ok]
 many_boxes_long_lived... [ok]
 ```
 
+Our new allocator seems to work!
+
 ### Discussion
+
+While the fixed-size block approach has a much better performance than the linked list approach, it wastes up to half of the memory when using powers of 2 as block sizes. Whether this tradeoff is worth it heavily depends on the application type. For an operating system kernel
+
++ Better performance
+- Memory waste
+    + Only half of memory in worst case, quarter of memory in average case
++ Fallback allocator makes implementation simple
+    - Performance not fully predictable
++ Fixed-block approach used in Redox
+- Implementation only permits power-of-2 block sizes
+
+#### Variations
+
+- Buddy allocator
+- Slab allocator
 
 ## Summary
 
