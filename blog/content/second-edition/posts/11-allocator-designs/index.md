@@ -654,7 +654,7 @@ The function performs a less obvious check after that. This check is necessary b
 
 With the fundamental operations provided by the `add_free_region` and `find_region` methods, we can now finally implement the `GlobalAlloc` trait. As with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator`, but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references.
 
-[`Locked` wrapper]: @second-edition/posts/11-allocator-designs/index.md#a-locked-wrapper
+[`Locked` wrapper]: @/second-edition/posts/11-allocator-designs/index.md#a-locked-wrapper-type
 
 The implementation looks like this:
 
