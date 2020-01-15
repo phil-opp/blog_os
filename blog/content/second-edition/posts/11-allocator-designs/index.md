@@ -1061,7 +1061,11 @@ TODO graphic
 The implementation of the `dealloc` method looks like this:
 
 ```rust
-// in `impl` block in src/allocator/fixed_size_block.rs
+// in src/allocator/fixed_size_block.rs
+
+use core::{mem, ptr::NonNull};
+
+// inside the `unsafe impl GlobalAlloc` block
 
 #[allow(unused_unsafe)]
 unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
