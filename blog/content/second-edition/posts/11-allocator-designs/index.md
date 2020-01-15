@@ -859,12 +859,6 @@ pub mod fixed_size_block;
 struct ListNode {
     next: Option<&'static mut ListNode>,
 }
-
-impl ListNode {
-    const fn new() -> Self {
-        Self { next: None }
-    }
-}
 ```
 
 This type is similar to the `ListNode` type of our [linked list allocator implementation], with the difference that we don't have a second `size` field. The `size` field isn't needed because every block in a list has the same size with the fixed-size block allocator design.
@@ -897,7 +891,7 @@ Using the `ListNode` type and the `BLOCK_SIZES` slice, we can now define our all
 // in src/allocator/fixed_size_block.rs
 
 pub struct FixedSizeBlockAllocator {
-    list_heads: [ListNode; BLOCK_SIZES.len()],
+    list_heads: [Option<&'static mut ListNode>; BLOCK_SIZES.len()],
     fallback_allocator: linked_list_allocator::Heap,
 }
 ```
@@ -915,7 +909,7 @@ impl FixedSizeBlockAllocator {
     /// Creates an empty FixedSizeBlockAllocator.
     pub const fn new() -> Self {
         FixedSizeBlockAllocator {
-            list_heads: [ListNode::new(); BLOCK_SIZES.len()],
+            list_heads: [None; BLOCK_SIZES.len()],
             fallback_allocator: linked_list_allocator::Heap::empty(),
         }
     }
@@ -1024,9 +1018,9 @@ unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
     let mut allocator = self.lock();
     match list_index(&layout) {
         Some(index) => {
-            match allocator.list_heads[index].next.take() {
+            match allocator.list_heads[index].take() {
                 Some(node) => {
-                    allocator.list_heads[index].next = node.next.take();
+                    allocator.list_heads[index] = node.next.take();
                     node as *mut ListNode as *mut u8
                 }
                 None => {
@@ -1049,13 +1043,13 @@ Let's go through it step by step:
 
 First, we use the `Locked::lock` method to get a mutable reference to the wrapped allocator instance. Next, we call the `list_index` function we just defined to calculate the appropriate block size for the given layout and get the corresponding index into the `list_heads` array. If this index is `None`, no block size fits for the allocation, therefore we use the `fallback_allocator` using the `fallback_alloc` function.
 
-If the list index is `Some`, we try to remove the first node in the corresponding list started by `list_heads[index]`. For that, we call the [`Option::take`] method on the `next` field of the list head. If the list is not empty, we enter the `Some(node)` branch of the `match` statement, where we point the head pointer of the list to the successor of the popped `node` (by using [`take`][`Option::take`] again). Finally, we return the popped `node` pointer as a `*mut u8`.
+If the list index is `Some`, we try to remove the first node in the corresponding list started by `list_heads[index]` using the [`Option::take`] method. If the list is not empty, we enter the `Some(node)` branch of the `match` statement, where we point the head pointer of the list to the successor of the popped `node` (by using [`take`][`Option::take`] again). Finally, we return the popped `node` pointer as a `*mut u8`.
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
 TODO graphic
 
-If the `next` pointer of the list head is `None`, it indicates that the list of blocks is empty. This means that we need to construct a new block as [described above](#creating-new-blocks). For that, we first get the current block size from the `BLOCK_SIZES` slice and use it as both the size and the alignment for the new block. Then we create a new `Layout` from it and call the `fallback_alloc` method to perform the allocation. The reason for adjusting the layout and alignment is that the block will be added to the block list on deallocation.
+If the list head is `None`, it indicates that the list of blocks is empty. This means that we need to construct a new block as [described above](#creating-new-blocks). For that, we first get the current block size from the `BLOCK_SIZES` slice and use it as both the size and the alignment for the new block. Then we create a new `Layout` from it and call the `fallback_alloc` method to perform the allocation. The reason for adjusting the layout and alignment is that the block will be added to the block list on deallocation.
 
 TODO graphic
 
@@ -1072,14 +1066,14 @@ unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
     match list_index(&layout) {
         Some(index) => {
             let new_node = ListNode {
-                next: allocator.list_heads[index].next.take(),
+                next: allocator.list_heads[index].take(),
             };
             // verify that block has size and alignment required for storing node
             assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index]);
             assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
             let new_node_ptr = ptr as *mut ListNode;
             new_node_ptr.write(new_node);
-            allocator.list_heads[index].next = Some(unsafe { &mut *new_node_ptr });
+            allocator.list_heads[index] = Some(unsafe { &mut *new_node_ptr });
         }
         None => {
             let ptr = NonNull::new(ptr).unwrap();
