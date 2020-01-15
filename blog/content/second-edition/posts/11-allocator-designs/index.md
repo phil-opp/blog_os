@@ -925,9 +925,12 @@ impl FixedSizeBlockAllocator {
 }
 ```
 
-The `new` function just initializes the `list_heads` array with empty nodes and creates an [`empty`] linked list allocator as `fallback_allocator`. The unsafe `init` function only calls the [`init`] function of the `fallback_allocator` without doing any additional initialization of the `list_heads` array.
+The `new` function just initializes the `list_heads` array with empty nodes and creates an [`empty`] linked list allocator as `fallback_allocator`. Since array initializations using non-`Copy` types are still unstable, we need to add **`#![feature(const_in_array_repeat_expressions)]`** to the beginning of our `lib.rs`. The reason that `None` is not `Copy` in this case is that `ListNode` does not implement `Copy`. Thus, the `Option` wrapper and its `None` variant are not `Copy` either.
 
 [`empty`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html#method.empty
+
+The unsafe `init` function only calls the [`init`] function of the `fallback_allocator` without doing any additional initialization of the `list_heads` array. Instead, we will initialize the lists lazily on `alloc` and `dealloc` calls.
+
 [`init`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html#method.init
 
 For convenience, we also create a private `fallback_alloc` method that allocates using the `fallback_allocator`:
