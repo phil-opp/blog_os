@@ -7,6 +7,14 @@ use core::ptr;
 /// the block alignment (alignments must be always powers of 2).
 const BLOCK_SIZES: &[usize] = &[8, 16, 32, 64, 128, 256, 512, 1024, 2048];
 
+/// Choose an appropriate block size for the given layout.
+///
+/// Returns an index into the `BLOCK_SIZES` array.
+fn list_index(layout: &Layout) -> Option<usize> {
+    let required_block_size = layout.size().max(layout.align());
+    BLOCK_SIZES.iter().position(|&s| s >= required_block_size)
+}
+
 struct ListNode {
     next: Option<&'static mut ListNode>,
 }
