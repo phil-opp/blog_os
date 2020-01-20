@@ -794,7 +794,7 @@ It's worth noting that this performance issue isn't a problem with our implement
 
 ## Fixed-Size Block Allocator
 
-In the following, we present an allocator design that uses fixed-size memory blocks for fulfilling allocation requests. This way, the allocator often returns blocks that are larger than needed for allocations, which results in wasted memory. On the other hand, it drastly reduces the time required to find a suitable block (compared to the linked list allocator), resulting in much better allocation performance.
+In the following, we present an allocator design that uses fixed-size memory blocks for fulfilling allocation requests. This way, the allocator often returns blocks that are larger than needed for allocations, which results in wasted memory due to [internal fragmentation]. On the other hand, it drastly reduces the time required to find a suitable block (compared to the linked list allocator), resulting in much better allocation performance.
 
 ### Introduction
 
@@ -1142,20 +1142,44 @@ Our new allocator seems to work!
 
 ### Discussion
 
-While the fixed-size block approach has a much better performance than the linked list approach, it wastes up to half of the memory when using powers of 2 as block sizes. Whether this tradeoff is worth it heavily depends on the application type. For an operating system kernel
+While the fixed-size block approach has a much better performance than the linked list approach, it wastes up to half of the memory when using powers of 2 as block sizes. Whether this tradeoff is worth it heavily depends on the application type. For an operating system kernel, where performance is critical, the fixed-size block approach seems to be the better choice.
 
-+ Better performance
-- Memory waste
-    + Only half of memory in worst case, quarter of memory in average case
-+ Fallback allocator makes implementation simple
-    - Performance not fully predictable
-+ Fixed-block approach used in Redox
-- Implementation only permits power-of-2 block sizes
+On the implementation side, there are various things that we could improve in our current implementation:
 
-#### Variations
+- Instead of only allocating blocks lazily using the fallback allocator, it might be better to pre-fill the lists to improve the performance of initial allocations.
+- To simplify the implementation, we only allowed block sizes that are powers of 2 so that we could use them also as the block alignment. By storing (or calculating) the alignment in a different way, we could also allow arbitrary other block sizes. This way, we could introduce blocks for common allocation sizes to minimize the wasted memory.
+- Instead of falling back to a linked list allocator, we could a special allocator for allocations greater than 4KiB. The idea is to utilize [paging], which operates on 4KiB pages, to map a continuous block of virtual memory to non-continuos physical frames. This way, fragmentation of unused memory is no longer a problem for large allocations.
+- With such a page allocator, it might make sense to add block sizes up to 4KiB and drop the linked list allocator completely. The main advantage of this would be performance predictability, i.e. improved worse-case performance.
 
-- Buddy allocator
-- Slab allocator
+[paging]: @/second-edition/posts/08-paging-introduction/index.md
+
+It's important to note that the implementation improvements outlined above are only suggestions. Allocators used in operating system kernels are typically highly optimized to the specific workload of the kernel, which is only possible through extensive profiling.
+
+### Variations
+
+There are also many variations of the fixed-size block allocator design. Two popular examples are the _slab allocator_ and the _buddy allocator_, which are also used in popular kernels such as Linux. In the following, we give a short introduction to these two designs.
+
+#### Slab Allocator
+
+The idea behind a [slab allocator] is to use block sizes that directly correspond to selected types in the kernel. This way, allocations of those types fit a block size exactly and no memory is wasted. Sometimes, it might be even possible to preinitialize type instances in unused blocks to further improve performance.
+
+[slab allocator]: https://en.wikipedia.org/wiki/Slab_allocation
+
+Slab allocation is often combined with other allocators. For example, it can be used together with a fixed-size allocator to further split an allocated block in order to reduce memory waste. It is also often used to implement an [object pool pattern] on top of a single large allocation.
+
+[object pool pattern]: https://en.wikipedia.org/wiki/Object_pool_pattern
+
+#### Buddy Allocator
+
+Instead of using a linked list to manage freed blocks, the [buddy allocator] design uses a [binary tree] data structure together with power-of-2 block sizes. When a new block of a certain size is required, it splits a larger sized block into two halves, thereby creating two child nodes in the tree. Whenever a block is freed again, the neighbor block in the tree is analyzed. If the neighbor is also free, the two blocks are joined back together to a block of twice the size.
+
+The advantage of this merge process is that [external fragmentation] is reduced so that small freed blocks can be reused for a large allocation. It also does not use a fallback allocator, so the performance is more predictable. The biggest drawback is that only power-of-2 block sizes are possible, which might result in a large amount of wasted memory due to [internal fragmentation]. For this reason, buddy allocators are often combined with a slab allocator to further split an allocated block into multiple smaller blocks.
+
+[buddy allocator]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
+[binary tree]: https://en.wikipedia.org/wiki/Binary_tree
+[external fragmentation]: https://en.wikipedia.org/wiki/Fragmentation_(computing)#External_fragmentation
+[internal fragmentation]: https://en.wikipedia.org/wiki/Fragmentation_(computing)#Internal_fragmentation
+
 
 ## Summary
 
