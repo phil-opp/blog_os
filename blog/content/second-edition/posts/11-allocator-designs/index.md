@@ -1148,7 +1148,7 @@ On the implementation side, there are various things that we could improve in ou
 
 - Instead of only allocating blocks lazily using the fallback allocator, it might be better to pre-fill the lists to improve the performance of initial allocations.
 - To simplify the implementation, we only allowed block sizes that are powers of 2 so that we could use them also as the block alignment. By storing (or calculating) the alignment in a different way, we could also allow arbitrary other block sizes. This way, we could introduce blocks for common allocation sizes to minimize the wasted memory.
-- Instead of falling back to a linked list allocator, we could a special allocator for allocations greater than 4KiB. The idea is to utilize [paging], which operates on 4KiB pages, to map a continuous block of virtual memory to non-continuos physical frames. This way, fragmentation of unused memory is no longer a problem for large allocations.
+- Instead of falling back to a linked list allocator, we could a special allocator for allocations greater than 4KiB. The idea is to utilize [paging], which operates on 4KiB pages, to map a continuous block of virtual memory to non-continuous physical frames. This way, fragmentation of unused memory is no longer a problem for large allocations.
 - With such a page allocator, it might make sense to add block sizes up to 4KiB and drop the linked list allocator completely. The main advantage of this would be performance predictability, i.e. improved worse-case performance.
 
 [paging]: @/second-edition/posts/08-paging-introduction/index.md
