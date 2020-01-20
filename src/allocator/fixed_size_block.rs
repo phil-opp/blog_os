@@ -1,4 +1,5 @@
-use alloc::alloc::Layout;
+use super::Locked;
+use alloc::alloc::{GlobalAlloc, Layout};
 use core::ptr;
 
 /// The block sizes to use.
@@ -48,5 +49,15 @@ impl FixedSizeBlockAllocator {
             Ok(ptr) => ptr.as_ptr(),
             Err(_) => ptr::null_mut(),
         }
+    }
+}
+
+unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        todo!();
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        todo!();
     }
 }
