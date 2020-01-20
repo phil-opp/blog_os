@@ -1204,8 +1204,13 @@ There are many more allocator designs with different tradeoffs. [Slab allocation
 
 ## What's next?
 
+With this post, we conclude our memory management implementation for now. Next, we will start exploring [_multitasking_], starting with [_threads_]. In subsequent post we will then explore [_multiprocessing_], [_processes_], and cooperative multitasking in the form of [_async/await_].
 
-
+[_multitasking_]: https://en.wikipedia.org/wiki/Computer_multitasking
+[_threads_]: https://en.wikipedia.org/wiki/Thread_(computing)
+[_processes_]: https://en.wikipedia.org/wiki/Process_(computing)
+[_multiprocessing_]: https://en.wikipedia.org/wiki/Multiprocessing
+[_async/await_]: https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html
 
 
 
