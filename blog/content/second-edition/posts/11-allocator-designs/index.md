@@ -2,7 +2,7 @@
 title = "Allocator Designs"
 weight = 11
 path = "allocator-designs"
-date = 0000-01-01
+date = 2020-01-20
 +++
 
 This post explains how to implement heap allocators from scratch. It presents and discusses different allocator designs, including bump allocation, linked list allocation, and fixed-size block allocation. For each of the three designs, we will create a basic implementation that can be used for our kernel.
@@ -1201,11 +1201,3 @@ With this post, we conclude our memory management implementation for now. Next, 
 [_processes_]: https://en.wikipedia.org/wiki/Process_(computing)
 [_multiprocessing_]: https://en.wikipedia.org/wiki/Multiprocessing
 [_async/await_]: https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html
-
-
-
----
-
-TODO: update date
-
----
