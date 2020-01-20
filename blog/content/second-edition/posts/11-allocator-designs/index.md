@@ -5,9 +5,7 @@ path = "allocator-designs"
 date = 0000-01-01
 +++
 
-This post explains how to implement heap allocators from scratch. It presents different allocator designs and explains their advantages and drawbacks. We then use this knowledge to create a kernel allocator with improved performance.
-
-TODO
+This post explains how to implement heap allocators from scratch. It presents and discusses different allocator designs, including bump allocation, linked list allocation, and fixed-size block allocation. For each of the three designs, we will create a basic implementation that can be used for our kernel.
 
 <!-- more -->
 
