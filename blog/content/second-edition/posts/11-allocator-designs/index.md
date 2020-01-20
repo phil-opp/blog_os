@@ -726,7 +726,7 @@ impl LinkedListAllocator {
 ```
 
 First, the function uses the [`align_to`] method on the passed [`Layout`] to increase the alignment to the alignment of a `ListNode` if necessary. It then uses the [`pad_to_align`] method to round up the size to a multiple of the alignment to ensure that the start address of the next memory block will have the correct alignment for storing a `ListNode` too.
-In the second step it uses the [`max`] method to enforce a minimum allocation size of `mem::size_of::<ListNode>`. This way, the `dealloc` function can safetly write a `ListNode` to the freed memory block.
+In the second step it uses the [`max`] method to enforce a minimum allocation size of `mem::size_of::<ListNode>`. This way, the `dealloc` function can safely write a `ListNode` to the freed memory block.
 
 [`align_to`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.align_to
 [`pad_to_align`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.pad_to_align
@@ -792,7 +792,7 @@ It's worth noting that this performance issue isn't a problem caused by our basi
 
 ## Fixed-Size Block Allocator
 
-In the following, we present an allocator design that uses fixed-size memory blocks for fulfilling allocation requests. This way, the allocator often returns blocks that are larger than needed for allocations, which results in wasted memory due to [internal fragmentation]. On the other hand, it drastly reduces the time required to find a suitable block (compared to the linked list allocator), resulting in much better allocation performance.
+In the following, we present an allocator design that uses fixed-size memory blocks for fulfilling allocation requests. This way, the allocator often returns blocks that are larger than needed for allocations, which results in wasted memory due to [internal fragmentation]. On the other hand, it drastically reduces the time required to find a suitable block (compared to the linked list allocator), resulting in much better allocation performance.
 
 ### Introduction
 
@@ -834,7 +834,7 @@ Given that large allocations (>2KB) are often rare, especially in operating syst
 
 #### Creating new Blocks
 
-Above, we always assumed that there are always enough blocks of a specific size in the list to fulfill all allocation requests. However, at some point the linked list for a block size becomes empty. At this point, there are two ways how we can create new unused blocks of a specific size to fulfil an allocation request:
+Above, we always assumed that there are always enough blocks of a specific size in the list to fulfill all allocation requests. However, at some point the linked list for a block size becomes empty. At this point, there are two ways how we can create new unused blocks of a specific size to fulfill an allocation request:
 
 - Allocate a new block from the fallback allocator (if there is one).
 - Split a larger block from a different list. This best works if block sizes are powers of two. For example, a 32-byte block can be split into two 16-byte blocks.
@@ -1098,7 +1098,7 @@ If `list_index` returns a block index, we need to add the freed memory block to 
 There are a few things worth noting:
 
 - We don't differentiate between blocks allocated from a block list and blocks allocated from the fallback allocator. This means that new blocks created in `alloc` are added to the block list on `dealloc`, thereby increasing the number of blocks of that size.
-- The `alloc` method is the only place where new blocks are created in our implemenation. This means that we initially start with empty block lists and only fill the lists lazily when allocations for that block size are performed.
+- The `alloc` method is the only place where new blocks are created in our implementation. This means that we initially start with empty block lists and only fill the lists lazily when allocations for that block size are performed.
 - We don't need `unsafe` blocks in `alloc` and `dealloc`, even though we perform some `unsafe` operations. The reason is that Rust currently treats the complete body of unsafe functions as one large `unsafe` block. Since using explicit `unsafe` blocks has the advantage that it's obvious which operations are unsafe and which not, there is a [proposed RFC](https://github.com/rust-lang/rfcs/pull/2585) to change this behavior.
 
 ### Using it
