@@ -17,26 +17,24 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 <!-- toc -->
 
-TODO optional
-
 ## Introduction
 
-In the [previous post] we added basic support for heap allocations to our kernel. For that, we [created a new memory region][map-heap] in the page tables and [used the `linked_list_allocator` crate][use-alloc-crate] to manage that memory. While we have a working heap now, we left most of the work to the allocator crate without understanding how it works.
+In the [previous post] we added basic support for heap allocations to our kernel. For that, we [created a new memory region][map-heap] in the page tables and [used the `linked_list_allocator` crate][use-alloc-crate] to manage that memory. While we have a working heap now, we left most of the work to the allocator crate without trying to understand how it works.
 
 [previous post]: @/second-edition/posts/10-heap-allocation/index.md
 [map-heap]: @/second-edition/posts/10-heap-allocation/index.md#creating-a-kernel-heap
 [use-alloc-crate]: @/second-edition/posts/10-heap-allocation/index.md#using-an-allocator-crate
 
-In this post, we will show how to create our own heap allocator from scratch instead of relying on an existing allocator crate. We will discuss different allocator designs, including a simplistic _bump allocator_ and a basic _fixed-size block allocator_, and use this knowledge to implement an allocator with improved performance.
+In this post, we will show how to create our own heap allocator from scratch instead of relying on an existing allocator crate. We will discuss different allocator designs, including a simplistic _bump allocator_ and a basic _fixed-size block allocator_, and use this knowledge to implement an allocator with improved performance (compared to the `linked_list_allocator` crate).
 
 ### Design Goals
 
 The responsibility of an allocator is to manage the available heap memory. It needs to return unused memory on `alloc` calls and keep track of memory freed by `dealloc` so that it can be reused again. Most importantly, it must never hand out memory that is already in use somewhere else because this would cause undefined behavior.
 
-Apart from correctness, there are many secondary design goals. For example, it should effectively utilize the available memory and keep [fragmentation] low. Furthermore, it should work well for concurrent applications and scale to any number of processors. For maximal performance, it could even optimize the memory layout with respect to the CPU caches to improve [cache locality] and avoid [false sharing].
+Apart from correctness, there are many secondary design goals. For example, the allocator should effectively utilize the available memory and keep [_fragmentation_] low. Furthermore, it should work well for concurrent applications and scale to any number of processors. For maximal performance, it could even optimize the memory layout with respect to the CPU caches to improve [cache locality] and avoid [false sharing].
 
 [cache locality]: http://docs.cray.com/books/S-2315-50/html-S-2315-50/qmeblljm.html
-[fragmentation]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
+[_fragmentation_]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
 [false sharing]: http://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 
 These requirements can make good allocators very complex. For example, [jemalloc] has over 30.000 lines of code. This complexity often undesired in kernel code where a single bug can lead to severe security vulnerabilities. Fortunately, the allocation patterns of kernel code are often much simpler compared to userspace code, so that relatively simple allocator designs often suffice.
@@ -60,7 +58,7 @@ The idea behind a bump allocator is to linearly allocate memory by increasing (_
 
 The `next` pointer only moves in a single direction and thus never hands out the same memory region twice. When it reaches the end of the heap, no more memory can be allocated, resulting in an out-of-memory error on the next allocation.
 
-A bump allocator is often implemented with an allocation counter, which is inreased by 1 on each `alloc` call and decreased by 1 on each `dealloc` call. When the allocation counter reaches zero it means that all allocations on the heap were deallocated. In this case, the `next` pointer can be reset to the start address of the heap, so that the complete heap memory is available to allocations again.
+A bump allocator is often implemented with an allocation counter, which is increased by 1 on each `alloc` call and decreased by 1 on each `dealloc` call. When the allocation counter reaches zero it means that all allocations on the heap were deallocated. In this case, the `next` pointer can be reset to the start address of the heap, so that the complete heap memory is available to allocations again.
 
 ### Implementation
 
@@ -413,7 +411,7 @@ Line 5 shows the fundamental problem: We have five unused memory regions with di
 
 Normally when we have a potentially unbounded number of items, we can just use a heap allocated collection. This isn't really possible in our case, since the heap allocator can't depend on itself (it would cause endless recursion or deadlocks). So we need to find a different solution.
 
-## LinkedList Allocator
+## Linked List Allocator
 
 A common trick to keep track of an arbitrary number of free memory areas when implementing allocators is to use these areas itself as backing storage. This utilizes the fact that the regions are still mapped to a virtual address and backed by a physical frame, but the stored information is not needed anymore. By storing the information about the freed region in the region itself, we can keep track of an unbounded number of freed regions without needing additional memory.
 
@@ -429,7 +427,7 @@ As you might guess from the name, this is the technique that the `linked_list_al
 
 ### Implementation
 
-In the following, we will create our own simple `LinkedListAllocator` type that uses the above approach for keeping track of freed memory regions. This part of the post isn't required for future posts, so you can skip the details if you like.
+In the following, we will create our own simple `LinkedListAllocator` type that uses the above approach for keeping track of freed memory regions. This part of the post isn't required for future posts, so you can skip the implementation details if you like.
 
 #### The Allocator Type
 
@@ -476,6 +474,8 @@ impl ListNode {
 ```
 
 The type has a simple constructor function named `new` and methods to calculate the start and end addresses of the represented region. We make the `new` function a [const function], which will be required later when constructing a static linked list allocator. Note that any use of mutable references in const functions (including setting the `next` field to `None`) is still unstable. In order to get it to compile, we need to add **`#![feature(const_fn)]`** to the beginning of our `lib.rs`.
+
+[const function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
 With the `ListNode` struct as building block, we can now create the `LinkedListAllocator` struct:
 
@@ -786,9 +786,9 @@ The `linked_list_allocator` crate implements this merging strategy in the follow
 
 As we learned above, the bump allocator is extremely fast and can be optimized to just a few assembly operations. The linked list allocator performs much worse in this category. The problem is that an allocation request might need to traverse the complete linked list until it finds a suitable block.
 
-Since the list length depends on the number of unused memory blocks, the performance can vary extremely for different programs. A program that only creates a couple of allocations will experience a relatively fast allocation performance. For a program that fragments the heap with many allocations, however, will experience a very bad allocation performance because the linked list will be very long and mostly contain very small blocks.
+Since the list length depends on the number of unused memory blocks, the performance can vary extremely for different programs. A program that only creates a couple of allocations will experience a relatively fast allocation performance. For a program that fragments the heap with many allocations, however, the allocation performance will be very bad because the linked list will be very long and mostly contain very small blocks.
 
-It's worth noting that this performance issue isn't a problem with our implementation, but a fundamental disadvantage of the linked list approach. Since allocation performance can be very important for kernel-level code, we explore a third allocator design in the following that trades improved performance for reduced memory utilization.
+It's worth noting that this performance issue isn't a problem caused by our basic implementation, but a fundamental problem of the linked list approach. Since allocation performance can be very important for kernel-level code, we explore a third allocator design in the following that trades improved performance for reduced memory utilization.
 
 ## Fixed-Size Block Allocator
 
@@ -796,9 +796,9 @@ In the following, we present an allocator design that uses fixed-size memory blo
 
 ### Introduction
 
-The idea behind a _fixed-size block allocator_ is the following: Instead of allocating exactly as much memory as requested, we define a small number of block sizes and round up each allocation to the next block size. For example, with block sizes of 16, 64, and 512, an allocation of 4 bytes would return a 16-byte block, an allocation of 48 bytes a 64-byte block, and an allocation of 128 bytes an 512-byte block.
+The idea behind a _fixed-size block allocator_ is the following: Instead of allocating exactly as much memory as requested, we define a small number of block sizes and round up each allocation to the next block size. For example, with block sizes of 16, 64, and 512 bytes, an allocation of 4 bytes would return a 16-byte block, an allocation of 48 bytes a 64-byte block, and an allocation of 128 bytes an 512-byte block.
 
-Like the linked list allocator, we keep track of the unused memory by creating a linked list in the unused memory. However, instead of using a single list with different block sizes, we create a separate list for each block size. Each list then only stores blocks of a single size. For example, with block sizes 16, 64, and 512 there would be three separate linked lists in memory:
+Like the linked list allocator, we keep track of the unused memory by creating a linked list in the unused memory. However, instead of using a single list with different block sizes, we create a separate list for each size class. Each list then only stores blocks of a single size. For example, with block sizes 16, 64, and 512 there would be three separate linked lists in memory:
 
 ![](fixed-size-block-example.svg).
 
@@ -810,7 +810,7 @@ Since each element in a list has the same size, each list element is equally sui
 - Retrieve the head pointer for the list, e.g. from an array. For block size 16, we need to use `head_16`.
 - Remove the first block from the list and return it.
 
-Most notably, we can always return the first element of the list and no longer need to traverse the full list. Thus, allocations are much faster than on the linked list allocator.
+Most notably, we can always return the first element of the list and no longer need to traverse the full list. Thus, allocations are much faster than with the linked list allocator.
 
 #### Block Sizes and Wasted Memory
 
@@ -830,7 +830,7 @@ Most notably, no traversal of the list is required for deallocation either. This
 
 #### Fallback Allocator
 
-Given that large allocations (>1KB) are often rare, especially in operating system kernels, it might make sense to fall back to a different allocator for these allocations. For example, we could fall back to a linked list allocator for allocations greater than 512 bytes in order to reduce memory waste. Since only very few allocations of that size are expected, the the linked list would stay small so that (de)allocations would be still reasonably fast.
+Given that large allocations (>2KB) are often rare, especially in operating system kernels, it might make sense to fall back to a different allocator for these allocations. For example, we could fall back to a linked list allocator for allocations greater than 2048 bytes in order to reduce memory waste. Since only very few allocations of that size are expected, the the linked list would stay small so that (de)allocations would be still reasonably fast.
 
 #### Creating new Blocks
 
@@ -878,10 +878,10 @@ Next, we define a constant `BLOCK_SIZES` slice with the block sizes used for our
 ///
 /// The sizes must each be power of 2 because they are also used as
 /// the block alignment (alignments must be always powers of 2).
-const BLOCK_SIZES: &[usize] = &[8, 16, 32, 64, 128, 256, 512];
+const BLOCK_SIZES: &[usize] = &[8, 16, 32, 64, 128, 256, 512, 1024, 2048];
 ```
 
-As block sizes, we use powers of 2 starting from 8 up to 512. We don't define any block sizes smaller than 8 because each block must be capable of storing a 64-bit pointer to the next block when freed. For allocations greater than 512 bytes we will fall back to a linked list allocator.
+As block sizes, we use powers of 2 starting from 8 up to 2048. We don't define any block sizes smaller than 8 because each block must be capable of storing a 64-bit pointer to the next block when freed. For allocations greater than 2048 bytes we will fall back to a linked list allocator.
 
 To simplify the implementation, we define that the size of a block is also its required alignment in memory. So a 16 byte block is always aligned on a 16-byte boundary and a 512 byte block is aligned on a 512-byte boundary. Since alignments always need to be powers of 2, this rules out any other block sizes. If we need block sizes that are not powers of 2 in the future, we can still adjust our implementation for this (e.g. by defining a second `BLOCK_ALIGNMENTS` array).
 
@@ -898,7 +898,7 @@ pub struct FixedSizeBlockAllocator {
 }
 ```
 
-The `list_heads` field is an array of `head` pointers, one for each block size. This is implemented by using the `len()` of the `BLOCK_SIZES` slice as the array length. As a backup allocator for allocations larger than the largest block size we use the allocator provided by the `linked_list_allocator` as fallback. We could also used the `LinkedListAllocator` we implemented ourselves instead, but it has the disadvantage that it does not [merge freed blocks].
+The `list_heads` field is an array of `head` pointers, one for each block size. This is implemented by using the `len()` of the `BLOCK_SIZES` slice as the array length. As a fallback allocator for allocations larger than the largest block size we use the allocator provided by the `linked_list_allocator`. We could also used the `LinkedListAllocator` we implemented ourselves instead, but it has the disadvantage that it does not [merge freed blocks].
 
 [merge freed blocks]: #merging-freed-blocks
 
@@ -1052,11 +1052,7 @@ If the list index is `Some`, we try to remove the first node in the correspondin
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-TODO graphic
-
 If the list head is `None`, it indicates that the list of blocks is empty. This means that we need to construct a new block as [described above](#creating-new-blocks). For that, we first get the current block size from the `BLOCK_SIZES` slice and use it as both the size and the alignment for the new block. Then we create a new `Layout` from it and call the `fallback_alloc` method to perform the allocation. The reason for adjusting the layout and alignment is that the block will be added to the block list on deallocation.
-
-TODO graphic
 
 #### `dealloc`
 
@@ -1069,7 +1065,6 @@ use core::{mem, ptr::NonNull};
 
 // inside the `unsafe impl GlobalAlloc` block
 
-#[allow(unused_unsafe)]
 unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
     let mut allocator = self.lock();
     match list_index(&layout) {
@@ -1082,13 +1077,11 @@ unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
             assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
             let new_node_ptr = ptr as *mut ListNode;
             new_node_ptr.write(new_node);
-            allocator.list_heads[index] = Some(unsafe { &mut *new_node_ptr });
+            allocator.list_heads[index] = Some(&mut *new_node_ptr);
         }
         None => {
             let ptr = NonNull::new(ptr).unwrap();
-            unsafe {
-                allocator.fallback_allocator.deallocate(ptr, layout);
-            }
+            allocator.fallback_allocator.deallocate(ptr, layout);
         }
     }
 }
@@ -1098,17 +1091,15 @@ Like in `alloc`, we first use the `lock` method to get a mutable allocator refer
 
 [`Heap::deallocate`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html#method.deallocate
 
-If `list_index` returns a block index, we need to add the freed memory block to the list. For that, we first create a new `ListNode` that points to the current list head (by using [`Option::take`] again). Before we write the new node into the freed memory block, we first assert that the current block size specified by `index` has the required size and alignment for storing a `ListNode`. Then we perform the write by converting the given `*mut u8` pointer to a `*mut ListNode` pointer and then calling the [`write`][`pointer::write`] method on it. The last step is to set the head pointer of the list, which is currently `None` since we called `take` on it, to our newly written `ListNode`.
+If `list_index` returns a block index, we need to add the freed memory block to the list. For that, we first create a new `ListNode` that points to the current list head (by using [`Option::take`] again). Before we write the new node into the freed memory block, we first assert that the current block size specified by `index` has the required size and alignment for storing a `ListNode`. Then we perform the write by converting the given `*mut u8` pointer to a `*mut ListNode` pointer and then calling the unsafe [`write`][`pointer::write`] method on it. The last step is to set the head pointer of the list, which is currently `None` since we called `take` on it, to our newly written `ListNode`. For that we convert the raw `new_node_ptr` to a mutable reference.
 
 [`pointer::write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
-
-TODO graphic
 
 There are a few things worth noting:
 
 - We don't differentiate between blocks allocated from a block list and blocks allocated from the fallback allocator. This means that new blocks created in `alloc` are added to the block list on `dealloc`, thereby increasing the number of blocks of that size.
 - The `alloc` method is the only place where new blocks are created in our implemenation. This means that we initially start with empty block lists and only fill the lists lazily when allocations for that block size are performed.
-- We use `unsafe` blocks in `dealloc`, even though they are not required in functions that are themselves declared as `unsafe`. However, using explicit `unsafe` blocks has the advantage that it's obvious which operations are unsafe and which not. There is also a [proposed RFC](https://github.com/rust-lang/rfcs/pull/2585) to change this behavior. Since the compiler normally warns on unneeded `unsafe` blocks, we add the `#[allow(unused_unsafe)]` to the method to silence that warning.
+- We don't need `unsafe` blocks in `alloc` and `dealloc`, even though we perform some `unsafe` operations. The reason is that Rust currently treats the complete body of unsafe functions as one large `unsafe` block. Since using explicit `unsafe` blocks has the advantage that it's obvious which operations are unsafe and which not, there is a [proposed RFC](https://github.com/rust-lang/rfcs/pull/2585) to change this behavior.
 
 ### Using it
 
@@ -1145,9 +1136,10 @@ While the fixed-size block approach has a much better performance than the linke
 On the implementation side, there are various things that we could improve in our current implementation:
 
 - Instead of only allocating blocks lazily using the fallback allocator, it might be better to pre-fill the lists to improve the performance of initial allocations.
-- To simplify the implementation, we only allowed block sizes that are powers of 2 so that we could use them also as the block alignment. By storing (or calculating) the alignment in a different way, we could also allow arbitrary other block sizes. This way, we could introduce blocks for common allocation sizes to minimize the wasted memory.
+- To simplify the implementation, we only allowed block sizes that are powers of 2 so that we could use them also as the block alignment. By storing (or calculating) the alignment in a different way, we could also allow arbitrary other block sizes. This way, we could add more block sizes, e.g. for common allocation sizes, in order to minimize the wasted memory.
+- We currently only create new blocks, but never free them again. This results in fragmentation and might eventually result in allocation failure for large allocations. It might make sense to enforce a maximum list length for each block size. When the maximum length is reached, subsequent deallocations are freed using the fallback allocator instead of being added to the list.
 - Instead of falling back to a linked list allocator, we could a special allocator for allocations greater than 4KiB. The idea is to utilize [paging], which operates on 4KiB pages, to map a continuous block of virtual memory to non-continuous physical frames. This way, fragmentation of unused memory is no longer a problem for large allocations.
-- With such a page allocator, it might make sense to add block sizes up to 4KiB and drop the linked list allocator completely. The main advantage of this would be performance predictability, i.e. improved worse-case performance.
+- With such a page allocator, it might make sense to add block sizes up to 4KiB and drop the linked list allocator completely. The main advantages of this would be reduced fragmentation and improved performance predictability, i.e. better worse-case performance.
 
 [paging]: @/second-edition/posts/08-paging-introduction/index.md
 
@@ -1163,7 +1155,7 @@ The idea behind a [slab allocator] is to use block sizes that directly correspon
 
 [slab allocator]: https://en.wikipedia.org/wiki/Slab_allocation
 
-Slab allocation is often combined with other allocators. For example, it can be used together with a fixed-size allocator to further split an allocated block in order to reduce memory waste. It is also often used to implement an [object pool pattern] on top of a single large allocation.
+Slab allocation is often combined with other allocators. For example, it can be used together with a fixed-size block allocator to further split an allocated block in order to reduce memory waste. It is also often used to implement an [object pool pattern] on top of a single large allocation.
 
 [object pool pattern]: https://en.wikipedia.org/wiki/Object_pool_pattern
 
@@ -1181,13 +1173,13 @@ The advantage of this merge process is that [external fragmentation] is reduced 
 
 ## Summary
 
-This post gave an overview over different allocator designs. We learned how to implement a basic [bump allocator], which hands out memory linearly by increasing a single `next` pointer. While bump allocation is very fast, it can only reuse memory after all allocations have been freed. For this reason, it is seldom used as a global allocator.
+This post gave an overview over different allocator designs. We learned how to implement a basic [bump allocator], which hands out memory linearly by increasing a single `next` pointer. While bump allocation is very fast, it can only reuse memory after all allocations have been freed. For this reason, it is rarely used as a global allocator.
 
 [bump allocator]: @/second-edition/posts/11-allocator-designs/index.md#bump-allocator
 
-Next, we created a [linked list allocator] that uses the freed memory blocks itself to create a linked list, the so-called [free list]. This list makes it possible to store an arbitrary number of freed blocks of different sizes. While no [internal fragmentation] occurs, the approach suffers from poor performance because an allocation request might require a complete traversal of the list. Our implementation also suffers from [external fragmentation] because it does not merge adjacent freed blocks back together.
+Next, we created a [linked list allocator] that uses the freed memory blocks itself to create a linked list, the so-called [free list]. This list makes it possible to store an arbitrary number of freed blocks of different sizes. While no memory waste occurs, the approach suffers from poor performance because an allocation request might require a complete traversal of the list. Our implementation also suffers from [external fragmentation] because it does not merge adjacent freed blocks back together.
 
-[linked list allocator]: @/second-edition/posts/11-allocator-designs/index.md#linkedlist-allocator
+[linked list allocator]: @/second-edition/posts/11-allocator-designs/index.md#linked-list-allocator
 [free list]: https://en.wikipedia.org/wiki/Free_list
 
 To fix the performance problems of the linked list approach, we created a [fixed-size block allocator] that predefines a fixed set of block sizes. For each block size, a separate [free list] exists so that allocations and deallocations only need to insert/pop at the front of the list and are thus very fast. Since each allocation is rounded up to the next larger block size, some memory is wasted due to [internal fragmentation].
