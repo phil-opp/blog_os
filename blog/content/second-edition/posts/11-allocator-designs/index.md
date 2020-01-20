@@ -1183,6 +1183,25 @@ The advantage of this merge process is that [external fragmentation] is reduced 
 
 ## Summary
 
+This post gave an overview over different allocator designs. We learned how to implement a basic [bump allocator], which hands out memory linearly by increasing a single `next` pointer. While bump allocation is very fast, it can only reuse memory after all allocations have been freed. For this reason, it is seldom used as a global allocator.
+
+[bump allocator]: @/second-edition/posts/11-allocator-designs/index.md#bump-allocator
+
+Next, we created a [linked list allocator] that uses the freed memory blocks itself to create a linked list, the so-called [free list]. This list makes it possible to store an arbitrary number of freed blocks of different sizes. While no [internal fragmentation] occurs, the approach suffers from poor performance because an allocation request might require a complete traversal of the list. Our implementation also suffers from [external fragmentation] because it does not merge adjacent freed blocks back together.
+
+[linked list allocator]: @/second-edition/posts/11-allocator-designs/index.md#linkedlist-allocator
+[free list]: https://en.wikipedia.org/wiki/Free_list
+
+To fix the performance problems of the linked list approach, we created a [fixed-size block allocator] that predefines a fixed set of block sizes. For each block size, a separate [free list] exists so that allocations and deallocations only need to insert/pop at the front of the list and are thus very fast. Since each allocation is rounded up to the next larger block size, some memory is wasted due to [internal fragmentation].
+
+[fixed-size block allocator]: @/second-edition/posts/11-allocator-designs/index.md#fixed-size-block-allocator
+
+There are many more allocator designs with different tradeoffs. [Slab allocation] works well to optimize the allocation of common fixed-size structures, but is not applicable in all situations. [Buddy allocation] uses a binary tree to merge freed blocks back together, but wastes a large amount of memory because it only supports power-of-2 block sizes. It's also important to remember that each kernel implementation has a unique workload, so there is no "best" allocator design that fits all cases.
+
+[Slab allocation]: @/second-edition/posts/11-allocator-designs/index.md#slab-allocator
+[Buddy allocation]: @/second-edition/posts/11-allocator-designs/index.md#buddy-allocator
+
+
 ## What's next?
 
 
