@@ -5,6 +5,7 @@
 #![feature(alloc_error_handler)]
 #![feature(const_fn)]
 #![feature(alloc_layout_extra)]
+#![feature(const_in_array_repeat_expressions)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
