@@ -423,7 +423,11 @@ The most common implementation approach is to construct a single linked list in 
 
 ![](linked-list-allocation.svg)
 
-Each list node contains two fields: The size of the memory region and a pointer to the next unused memory region. With this approach, we only need a pointer to the first unused region (called `head`) to keep track of all unused regions, independent of their number. As you can guess from the name, this is the technique that the `linked_list_allocator` crate uses.
+Each list node contains two fields: The size of the memory region and a pointer to the next unused memory region. With this approach, we only need a pointer to the first unused region (called `head`) to keep track of all unused regions, independent of their number. The resulting data structure is often called a [_free list_].
+
+[_free list_]: https://en.wikipedia.org/wiki/Free_list
+
+As you might guess from the name, this is the technique that the `linked_list_allocator` crate uses.
 
 ### Implementation
 
