@@ -507,7 +507,7 @@ cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
 cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
-Note that this is just a minimal example of a freestanding Rust binary. This binary expects various things, for example that a stack is initialized when the `_start` function is called. **So it probably for any real use of such a binary, more steps are required**.
+Note that this is just a minimal example of a freestanding Rust binary. This binary expects various things, for example that a stack is initialized when the `_start` function is called. **So for any real use of such a binary, more steps are required**.
 
 ## What's next?
 
