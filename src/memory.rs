@@ -36,6 +36,36 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut
     &mut *page_table_ptr // unsafe
 }
 
+pub fn alloc_stack(
+    size_in_pages: u64,
+    mapper: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+) -> Result<VirtAddr, ()> {
+    use core::sync::atomic::{AtomicU64, Ordering};
+    use x86_64::structures::paging::PageTableFlags as Flags;
+
+    const PAGE_SIZE: u64 = 4096;
+    static STACK_ALLOC_NEXT: AtomicU64 = AtomicU64::new(0x_5555_5555_0000);
+
+    let guard_page_start =
+        STACK_ALLOC_NEXT.fetch_add((size_in_pages + 1) * PAGE_SIZE, Ordering::SeqCst);
+    // skip one page as guard page
+    let stack_start_addr = VirtAddr::new(guard_page_start + PAGE_SIZE);
+    let stack_end_addr = stack_start_addr + size_in_pages * PAGE_SIZE;
+
+    let flags = Flags::PRESENT | Flags::WRITABLE;
+    let stack_start_page = Page::from_start_address(stack_start_addr).unwrap();
+    let stack_end_page = Page::from_start_address(stack_end_addr).unwrap();
+    for page in Page::range(stack_start_page, stack_end_page) {
+        let frame = frame_allocator.allocate_frame().ok_or(())?;
+        mapper
+            .map_to(page, frame, flags, frame_allocator)
+            .map_err(|_| ())?
+            .flush();
+    }
+    Ok(stack_end_addr)
+}
+
 /// Creates an example mapping for the given page to frame `0xb8000`.
 pub fn create_example_mapping(
     page: Page,
