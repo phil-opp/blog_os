@@ -294,11 +294,14 @@ Compared to the previous prototype, the `alloc` implementation now respects alig
 
 The `dealloc` function ignores the given pointer and `Layout` arguments. Instead, it just decreases the `allocations` counter. If the counter reaches `0` again, it means that all allocations were freed again. In this case, it resets the `next` address to the `heap_start` address to make the complete heap memory available again.
 
-The `align_up` function is general enough that we can put it into the parent `allocator` module. It looks like this:
+#### Address Alignment
+
+The `align_up` function is general enough that we can put it into the parent `allocator` module. It basic implementation looks like this:
 
 ```rust
 // in src/allocator.rs
 
+/// Align the given address `addr` upwards to alignment `align`.
 fn align_up(addr: usize, align: usize) -> usize {
     let remainder = addr % align;
     if remainder == 0 {
@@ -312,6 +315,35 @@ fn align_up(addr: usize, align: usize) -> usize {
 The function first computes the [remainder] of the division of `addr` by `align`. If the remainder is `0`, the address is already aligned with the given alignment. Otherwise, we align the address by subtracting the remainder (so that the new remainder is 0) and then adding the alignment (so that the address does not become smaller than the original address).
 
 [remainder]: https://en.wikipedia.org/wiki/Euclidean_division
+
+Note that this isn't the most efficient way to implement this function. A slightly faster implementation looks like this:
+
+```rust
+fn align_up(addr: usize, align: usize) -> usize {
+    (addr + align - 1) / align * align;
+}
+```
+
+Here we utilize the fact that dividing and then multiplying by `align` clears the lower bits to zero. To align the address upwards instead of downwards, we add `align - 1` before the division. This approach has the advantage that an already aligned address is not changed so that we don't need an `if` statement that slightly decreases performance. When the compiler is able to prove that `align` is always a power of two, it could even translate the division and multiplication operations to fast [bit shift operations].
+
+[bit shift operations]: https://en.wikipedia.org/wiki/Logical_shift
+
+Given that address alignment is a very general problem, the Rust `core` library also provides an implementation for it through the [`align_offset`] method on raw pointers. With it, we can also implement `align_up`:
+
+[`align_offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.align_offset
+
+```rust
+fn align_up(addr: usize, align: usize) -> usize {
+    let offset = (addr as *const u8).align_offset(align);
+    addr + offset
+}
+```
+
+Here we convert the address to a `*const u8` pointer and then call [`align_offset`] to get the number of bytes that we need to add to align the address. It turns out that the implementation of `align_offset` is [hightly optimized][align-offset-impl], so this `align_up` variant has the best performance compared to the other variants.
+
+[align-offset-impl]: https://github.com/rust-lang/rust/blob/2f688ac602d50129388bb2a5519942049096cbff/src/libcore/ptr/mod.rs#L1031-L1143
+
+Which variant you choose it up to you. They all compute the same result, only using different methods.
 
 ### Using It
 
