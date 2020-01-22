@@ -10,7 +10,6 @@ use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
 use blog_os::{print, println};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use x86_64::structures::paging::{FrameAllocator, Mapper, Size4KiB};
 
 entry_point!(kernel_main);
 
@@ -55,29 +54,14 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     #[cfg(test)]
     test_main();
 
-    create_thread(thread_1, &mut mapper, &mut frame_allocator);
-    create_thread(thread_2, &mut mapper, &mut frame_allocator);
+    use blog_os::multitasking::create_thread;
+
+    create_thread(thread_1, 1, &mut mapper, &mut frame_allocator);
+    create_thread(thread_2, 1, &mut mapper, &mut frame_allocator);
+    create_thread(thread_3, 1, &mut mapper, &mut frame_allocator);
 
     println!("It did not crash!");
     blog_os::hlt_loop();
-}
-
-fn create_thread(
-    f: fn() -> !,
-    mapper: &mut impl Mapper<Size4KiB>,
-    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-) {
-    let mut stack = blog_os::memory::alloc_stack(1, mapper, frame_allocator).unwrap();
-    stack -= core::mem::size_of::<u64>();
-    let ptr: *mut u64 = stack.as_mut_ptr();
-    unsafe { ptr.write(f as u64) };
-    stack -= core::mem::size_of::<u64>();
-    let ptr: *mut u64 = stack.as_mut_ptr();
-    let rflags = 0x200;
-    unsafe { ptr.write(rflags) };
-    unsafe {
-        blog_os::multitasking::add_thread(stack);
-    }
 }
 
 fn thread_1() -> ! {
@@ -90,6 +74,13 @@ fn thread_1() -> ! {
 fn thread_2() -> ! {
     loop {
         print!("2");
+        x86_64::instructions::hlt();
+    }
+}
+
+fn thread_3() -> ! {
+    loop {
+        print!("3");
         x86_64::instructions::hlt();
     }
 }
