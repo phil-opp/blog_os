@@ -1,6 +1,7 @@
 use alloc::collections::VecDeque;
 use x86_64::structures::paging::{FrameAllocator, Mapper, Size4KiB};
 use x86_64::VirtAddr;
+use core::mem;
 
 static SCHEDULER: spin::Mutex<Option<Scheduler>> = spin::Mutex::new(None);
 
@@ -119,12 +120,18 @@ impl Scheduler {
         self.paused_threads.pop_front()
     }
 
-    fn add_paused_thread(&mut self, thread: Thread) {
+    fn add_paused_thread(&mut self, stack_pointer: StackPointer, new_thread_id: ThreadId) {
+        let thread_id = mem::replace(&mut self.current_thread_id, new_thread_id);
+        let thread = Thread { id: thread_id, stack_pointer};
         self.paused_threads.push_back(thread);
     }
 
     fn add_new_thread(&mut self, thread: Thread) {
-        self.add_paused_thread(thread);
+        self.paused_threads.push_back(thread);
+    }
+
+    pub fn current_thread_id(&self) -> ThreadId {
+        self.current_thread_id
     }
 }
 
@@ -170,13 +177,11 @@ pub fn scheduler() {
 static PAUSED_THREADS: spin::Mutex<Option<VecDeque<VirtAddr>>> = spin::Mutex::new(None);
 
 #[no_mangle]
-pub extern "C" fn add_paused_thread(stack_pointer: u64, thread_id: u64) {
-    let thread = Thread {
-        stack_pointer: StackPointer(VirtAddr::new(stack_pointer)),
-        id: ThreadId(thread_id),
-    };
+pub extern "C" fn add_paused_thread(stack_pointer: u64, new_thread_id: u64) {
+    let stack_pointer = StackPointer(VirtAddr::new(stack_pointer));
+    let new_thread_id = ThreadId(new_thread_id);
 
-    SCHEDULER.lock().get_or_insert_with(Scheduler::new).add_paused_thread(thread);
+    SCHEDULER.lock().get_or_insert_with(Scheduler::new).add_paused_thread(stack_pointer, new_thread_id);
 }
 
 pub fn create_thread(
