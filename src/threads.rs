@@ -8,6 +8,12 @@ static SCHEDULER: spin::Mutex<Option<Scheduler>> = spin::Mutex::new(None);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ThreadId(pub u64);
 
+impl ThreadId {
+    pub fn as_u64(&self) -> u64 {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StackPointer(VirtAddr);
 
@@ -165,13 +171,17 @@ global_asm!(
 "
 );
 
-pub fn scheduler() {
+pub fn schedule() {
     let next = SCHEDULER
         .try_lock()
         .and_then(|mut scheduler| scheduler.as_mut().and_then(|s| s.next_thread()));
     if let Some(next) = next {
         unsafe { context_switch(next) };
     }
+}
+
+pub fn with_scheduler<F, T>(f: F) -> T where F: FnOnce(&mut Scheduler) -> T {
+    f(SCHEDULER.lock().get_or_insert_with(Scheduler::new))
 }
 
 static PAUSED_THREADS: spin::Mutex<Option<VecDeque<VirtAddr>>> = spin::Mutex::new(None);
@@ -181,7 +191,7 @@ pub extern "C" fn add_paused_thread(stack_pointer: u64, new_thread_id: u64) {
     let stack_pointer = StackPointer(VirtAddr::new(stack_pointer));
     let new_thread_id = ThreadId(new_thread_id);
 
-    SCHEDULER.lock().get_or_insert_with(Scheduler::new).add_paused_thread(stack_pointer, new_thread_id);
+    with_scheduler(|s| s.add_paused_thread(stack_pointer, new_thread_id));
 }
 
 pub fn create_thread(
@@ -191,7 +201,7 @@ pub fn create_thread(
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
 ) -> Result<(), ()> {
     let thread = Thread::create(entry_point, stack_size, mapper, frame_allocator)?;
-    SCHEDULER.lock().get_or_insert_with(Scheduler::new).add_new_thread(thread);
+    with_scheduler(|s| s.add_new_thread(thread));
     Ok(())
 }
 
@@ -204,8 +214,12 @@ pub fn create_thread_from_closure<F>(
     F: FnOnce() -> ! + 'static + Send + Sync,
 {
     let thread = Thread::create_from_closure(closure, stack_size, mapper, frame_allocator)?;
-    SCHEDULER.lock().get_or_insert_with(Scheduler::new).add_new_thread(thread);
+    with_scheduler(|s| s.add_new_thread(thread));
     Ok(())
+}
+
+pub fn current_thread_id() -> ThreadId {
+    with_scheduler(|s| s.current_thread_id())
 }
 
 type ThreadClosure = alloc::boxed::Box<dyn FnOnce() -> !>;

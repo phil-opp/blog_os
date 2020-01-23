@@ -56,12 +56,12 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     use blog_os::threads::{create_thread, create_thread_from_closure};
 
-    create_thread(thread_1, 2, &mut mapper, &mut frame_allocator);
-    create_thread(thread_2, 2, &mut mapper, &mut frame_allocator);
-    create_thread(thread_3, 2, &mut mapper, &mut frame_allocator);
+    for i in 0..10 {
+        create_thread(thread, 2, &mut mapper, &mut frame_allocator);
+    }
     create_thread_from_closure(
         || loop {
-            print!("4");
+            print!("{}", blog_os::threads::current_thread_id().as_u64());
             x86_64::instructions::hlt();
         },
         2,
@@ -70,26 +70,14 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     );
 
     println!("It did not crash!");
+    thread();
+
     blog_os::hlt_loop();
 }
 
-fn thread_1() -> ! {
+fn thread() -> ! {
     loop {
-        print!("1");
-        x86_64::instructions::hlt();
-    }
-}
-
-fn thread_2() -> ! {
-    loop {
-        print!("2");
-        x86_64::instructions::hlt();
-    }
-}
-
-fn thread_3() -> ! {
-    loop {
-        print!("3");
+        print!("{}", blog_os::threads::current_thread_id().as_u64());
         x86_64::instructions::hlt();
     }
 }
