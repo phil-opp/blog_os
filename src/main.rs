@@ -54,11 +54,20 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     #[cfg(test)]
     test_main();
 
-    use blog_os::multitasking::create_thread;
+    use blog_os::multitasking::{create_thread, create_thread_from_closure};
 
     create_thread(thread_1, 1, &mut mapper, &mut frame_allocator);
     create_thread(thread_2, 1, &mut mapper, &mut frame_allocator);
     create_thread(thread_3, 1, &mut mapper, &mut frame_allocator);
+    create_thread_from_closure(
+        || loop {
+            print!("4");
+            x86_64::instructions::hlt();
+        },
+        1,
+        &mut mapper,
+        &mut frame_allocator,
+    );
 
     println!("It did not crash!");
     blog_os::hlt_loop();

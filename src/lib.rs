@@ -8,6 +8,9 @@
 #![feature(const_in_array_repeat_expressions)]
 #![feature(global_asm)]
 #![feature(asm)]
+#![feature(raw)]
+#![feature(never_type)]
+#![feature(naked_functions)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
