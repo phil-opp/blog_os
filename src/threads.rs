@@ -2,18 +2,34 @@ use alloc::collections::VecDeque;
 use x86_64::structures::paging::{FrameAllocator, Mapper, Size4KiB};
 use x86_64::VirtAddr;
 
-global_asm!(include_str!("multitasking/context_switch.s"));
-
 pub unsafe fn context_switch(stack_pointer: VirtAddr) {
     asm!(
         "call asm_context_switch"
         :
         : "{rdi}"(stack_pointer.as_u64())
         : "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rpb", "r8", "r9", "r10",
-          "r11", "r12", "r13", "r14", "r15", "rflags", "memory"
+        "r11", "r12", "r13", "r14", "r15", "rflags", "memory"
         : "intel", "volatile"
     );
 }
+
+global_asm!(
+    "
+    .intel_syntax noprefix
+
+    asm_context_switch:
+        pushfq
+
+        mov rax, rsp
+        mov rsp, rdi
+
+        mov rdi, rax
+        call add_paused_thread
+
+        popfq
+        ret
+"
+);
 
 pub fn scheduler() {
     let next = PAUSED_THREADS.try_lock().and_then(|mut paused_threads| {
