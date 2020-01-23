@@ -98,6 +98,7 @@ fn thread_3() -> ! {
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    unsafe { blog_os::vga_buffer::WRITER.force_unlock(); }
     println!("{}", info);
     blog_os::hlt_loop();
 }
