@@ -1,8 +1,8 @@
 use scheduler::Scheduler;
 
-pub mod thread;
-pub mod scheduler;
 pub mod context_switch;
+pub mod scheduler;
+pub mod thread;
 
 static SCHEDULER: spin::Mutex<Option<Scheduler>> = spin::Mutex::new(None);
 
@@ -15,6 +15,9 @@ pub fn invoke_scheduler() {
     }
 }
 
-pub fn with_scheduler<F, T>(f: F) -> T where F: FnOnce(&mut Scheduler) -> T {
+pub fn with_scheduler<F, T>(f: F) -> T
+where
+    F: FnOnce(&mut Scheduler) -> T,
+{
     f(SCHEDULER.lock().get_or_insert_with(Scheduler::new))
 }

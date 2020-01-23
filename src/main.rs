@@ -7,8 +7,8 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
-use blog_os::{print, println};
 use blog_os::multitasking::{thread::Thread, with_scheduler};
+use blog_os::{print, println};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 
@@ -59,14 +59,16 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         let thread = Thread::create(thread_entry, 2, &mut mapper, &mut frame_allocator).unwrap();
         with_scheduler(|s| s.add_new_thread(thread));
     }
-    let thread = Thread::create_from_closure(|| loop {
+    let thread = Thread::create_from_closure(
+        || loop {
             print!("{}", with_scheduler(|s| s.current_thread_id()).as_u64());
             x86_64::instructions::hlt();
         },
         2,
         &mut mapper,
         &mut frame_allocator,
-    ).unwrap();
+    )
+    .unwrap();
     with_scheduler(|s| s.add_new_thread(thread));
 
     println!("It did not crash!");
@@ -84,7 +86,9 @@ fn thread_entry() -> ! {
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    unsafe { blog_os::vga_buffer::WRITER.force_unlock(); }
+    unsafe {
+        blog_os::vga_buffer::WRITER.force_unlock();
+    }
     println!("{}", info);
     blog_os::hlt_loop();
 }

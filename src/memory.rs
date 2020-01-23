@@ -1,8 +1,8 @@
 use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 use x86_64::{
     structures::paging::{
-        FrameAllocator, Mapper, OffsetPageTable, Page, PageTable, PhysFrame, Size4KiB,
-        UnusedPhysFrame,mapper,
+        mapper, FrameAllocator, Mapper, OffsetPageTable, Page, PageTable, PhysFrame, Size4KiB,
+        UnusedPhysFrame,
     },
     PhysAddr, VirtAddr,
 };
@@ -62,8 +62,10 @@ pub fn alloc_stack(
 
     static STACK_ALLOC_NEXT: AtomicU64 = AtomicU64::new(0x_5555_5555_0000);
 
-    let guard_page_start =
-        STACK_ALLOC_NEXT.fetch_add((size_in_pages + 1) * Page::<Size4KiB>::SIZE, Ordering::SeqCst);
+    let guard_page_start = STACK_ALLOC_NEXT.fetch_add(
+        (size_in_pages + 1) * Page::<Size4KiB>::SIZE,
+        Ordering::SeqCst,
+    );
     let guard_page = Page::from_start_address(VirtAddr::new(guard_page_start))
         .expect("`STACK_ALLOC_NEXT` not page aligned");
 
@@ -71,9 +73,10 @@ pub fn alloc_stack(
     let stack_end = stack_start + size_in_pages;
     let flags = Flags::PRESENT | Flags::WRITABLE;
     for page in Page::range(stack_start, stack_end) {
-        let frame = frame_allocator.allocate_frame().ok_or(mapper::MapToError::FrameAllocationFailed)?;
-        mapper
-            .map_to(page, frame, flags, frame_allocator)?.flush();
+        let frame = frame_allocator
+            .allocate_frame()
+            .ok_or(mapper::MapToError::FrameAllocationFailed)?;
+        mapper.map_to(page, frame, flags, frame_allocator)?.flush();
     }
     Ok(StackBounds {
         start: stack_start.start_address(),

@@ -1,9 +1,9 @@
-use alloc::boxed::Box;
-use x86_64::VirtAddr;
-use core::raw::TraitObject;
-use crate::multitasking::thread::ThreadId;
-use core::mem;
 use super::with_scheduler;
+use crate::multitasking::thread::ThreadId;
+use alloc::boxed::Box;
+use core::mem;
+use core::raw::TraitObject;
+use x86_64::VirtAddr;
 
 pub struct Stack {
     pointer: VirtAddr,
@@ -11,7 +11,9 @@ pub struct Stack {
 
 impl Stack {
     pub unsafe fn new(stack_pointer: VirtAddr) -> Self {
-        Stack { pointer: stack_pointer, }
+        Stack {
+            pointer: stack_pointer,
+        }
     }
 
     pub fn get_stack_pointer(self) -> VirtAddr {
@@ -22,7 +24,7 @@ impl Stack {
         let trait_object: TraitObject = unsafe { mem::transmute(closure) };
         unsafe { self.push(trait_object.data) };
         unsafe { self.push(trait_object.vtable) };
-    
+
         self.set_up_for_entry_point(call_closure_entry);
     }
 
@@ -76,11 +78,13 @@ pub extern "C" fn add_paused_thread(paused_stack_pointer: VirtAddr, new_thread_i
 
 #[naked]
 fn call_closure_entry() -> ! {
-    unsafe { asm!("
+    unsafe {
+        asm!("
         pop rsi
         pop rdi
         call call_closure
-    " ::: "mem" : "intel", "volatile") };
+    " ::: "mem" : "intel", "volatile")
+    };
     unreachable!();
 }
 
