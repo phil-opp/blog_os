@@ -56,15 +56,15 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     use blog_os::threads::{create_thread, create_thread_from_closure};
 
-    create_thread(thread_1, 1, &mut mapper, &mut frame_allocator);
-    create_thread(thread_2, 1, &mut mapper, &mut frame_allocator);
-    create_thread(thread_3, 1, &mut mapper, &mut frame_allocator);
+    create_thread(thread_1, 2, &mut mapper, &mut frame_allocator);
+    create_thread(thread_2, 2, &mut mapper, &mut frame_allocator);
+    create_thread(thread_3, 2, &mut mapper, &mut frame_allocator);
     create_thread_from_closure(
         || loop {
             print!("4");
             x86_64::instructions::hlt();
         },
-        1,
+        2,
         &mut mapper,
         &mut frame_allocator,
     );
