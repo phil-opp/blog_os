@@ -1,5 +1,4 @@
 use alloc::collections::VecDeque;
-use lazy_static::lazy_static;
 use x86_64::structures::paging::{FrameAllocator, Mapper, Size4KiB};
 use x86_64::VirtAddr;
 
@@ -17,15 +16,15 @@ pub unsafe fn context_switch(stack_pointer: VirtAddr) {
 }
 
 pub fn scheduler() {
-    let next = PAUSED_THREADS.try_lock().and_then(|mut t| t.pop_front());
+    let next = PAUSED_THREADS.try_lock().and_then(|mut paused_threads| {
+        paused_threads.as_mut().and_then(|threads| threads.pop_front())
+    });
     if let Some(next) = next {
         unsafe { context_switch(next) };
     }
 }
 
-lazy_static! {
-    static ref PAUSED_THREADS: spin::Mutex<VecDeque<VirtAddr>> = spin::Mutex::new(VecDeque::new());
-}
+static PAUSED_THREADS: spin::Mutex<Option<VecDeque<VirtAddr>>> = spin::Mutex::new(None);
 
 #[no_mangle]
 fn add_paused_thread(stack_pointer: VirtAddr) {
@@ -33,7 +32,7 @@ fn add_paused_thread(stack_pointer: VirtAddr) {
 }
 
 fn add_thread(stack_pointer: VirtAddr) {
-    PAUSED_THREADS.lock().push_back(stack_pointer);
+    PAUSED_THREADS.lock().get_or_insert_with(VecDeque::new).push_back(stack_pointer);
 }
 
 pub fn create_thread(
