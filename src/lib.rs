@@ -11,6 +11,7 @@
 #![feature(raw)]
 #![feature(never_type)]
 #![feature(naked_functions)]
+#![feature(option_expect_none)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
@@ -23,7 +24,7 @@ pub mod gdt;
 pub mod interrupts;
 pub mod memory;
 pub mod serial;
-pub mod threads;
+pub mod multitasking;
 pub mod vga_buffer;
 
 pub fn init() {

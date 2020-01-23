@@ -2,7 +2,7 @@ use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 use x86_64::{
     structures::paging::{
         FrameAllocator, Mapper, OffsetPageTable, Page, PageTable, PhysFrame, Size4KiB,
-        UnusedPhysFrame,
+        UnusedPhysFrame,mapper,
     },
     PhysAddr, VirtAddr,
 };
@@ -36,34 +36,49 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut
     &mut *page_table_ptr // unsafe
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StackBounds {
+    start: VirtAddr,
+    end: VirtAddr,
+}
+
+impl StackBounds {
+    pub fn start(&self) -> VirtAddr {
+        self.start
+    }
+
+    pub fn end(&self) -> VirtAddr {
+        self.end
+    }
+}
+
 pub fn alloc_stack(
     size_in_pages: u64,
     mapper: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-) -> Result<VirtAddr, ()> {
+) -> Result<StackBounds, mapper::MapToError> {
     use core::sync::atomic::{AtomicU64, Ordering};
     use x86_64::structures::paging::PageTableFlags as Flags;
 
-    const PAGE_SIZE: u64 = 4096;
     static STACK_ALLOC_NEXT: AtomicU64 = AtomicU64::new(0x_5555_5555_0000);
 
     let guard_page_start =
-        STACK_ALLOC_NEXT.fetch_add((size_in_pages + 1) * PAGE_SIZE, Ordering::SeqCst);
-    // skip one page as guard page
-    let stack_start_addr = VirtAddr::new(guard_page_start + PAGE_SIZE);
-    let stack_end_addr = stack_start_addr + size_in_pages * PAGE_SIZE;
+        STACK_ALLOC_NEXT.fetch_add((size_in_pages + 1) * Page::<Size4KiB>::SIZE, Ordering::SeqCst);
+    let guard_page = Page::from_start_address(VirtAddr::new(guard_page_start))
+        .expect("`STACK_ALLOC_NEXT` not page aligned");
 
+    let stack_start = guard_page + 1;
+    let stack_end = stack_start + size_in_pages;
     let flags = Flags::PRESENT | Flags::WRITABLE;
-    let stack_start_page = Page::from_start_address(stack_start_addr).unwrap();
-    let stack_end_page = Page::from_start_address(stack_end_addr).unwrap();
-    for page in Page::range(stack_start_page, stack_end_page) {
-        let frame = frame_allocator.allocate_frame().ok_or(())?;
+    for page in Page::range(stack_start, stack_end) {
+        let frame = frame_allocator.allocate_frame().ok_or(mapper::MapToError::FrameAllocationFailed)?;
         mapper
-            .map_to(page, frame, flags, frame_allocator)
-            .map_err(|_| ())?
-            .flush();
+            .map_to(page, frame, flags, frame_allocator)?.flush();
     }
-    Ok(stack_end_addr)
+    Ok(StackBounds {
+        start: stack_start.start_address(),
+        end: stack_end.start_address(),
+    })
 }
 
 /// Creates an example mapping for the given page to frame `0xb8000`.
