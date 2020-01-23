@@ -17,7 +17,9 @@ pub unsafe fn context_switch(stack_pointer: VirtAddr) {
 
 pub fn scheduler() {
     let next = PAUSED_THREADS.try_lock().and_then(|mut paused_threads| {
-        paused_threads.as_mut().and_then(|threads| threads.pop_front())
+        paused_threads
+            .as_mut()
+            .and_then(|threads| threads.pop_front())
     });
     if let Some(next) = next {
         unsafe { context_switch(next) };
@@ -32,7 +34,10 @@ fn add_paused_thread(stack_pointer: VirtAddr) {
 }
 
 fn add_thread(stack_pointer: VirtAddr) {
-    PAUSED_THREADS.lock().get_or_insert_with(VecDeque::new).push_back(stack_pointer);
+    PAUSED_THREADS
+        .lock()
+        .get_or_insert_with(VecDeque::new)
+        .push_back(stack_pointer);
 }
 
 pub fn create_thread(

@@ -54,7 +54,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     #[cfg(test)]
     test_main();
 
-    use blog_os::multitasking::{create_thread, create_thread_from_closure};
+    use blog_os::threads::{create_thread, create_thread_from_closure};
 
     create_thread(thread_1, 1, &mut mapper, &mut frame_allocator);
     create_thread(thread_2, 1, &mut mapper, &mut frame_allocator);
