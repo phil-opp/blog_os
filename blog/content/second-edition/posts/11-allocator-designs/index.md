@@ -262,7 +262,7 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
         let mut bump = self.lock(); // get a mutable reference
 
         let alloc_start = align_up(bump.next, layout.align());
-        let alloc_end = alloc_start + layout.size();
+        let alloc_end = alloc_start.checked_add(layout.size()).expect("overflow");
 
         if alloc_end > bump.heap_end {
             ptr::null_mut() // out of memory
@@ -288,8 +288,9 @@ The first step for both `alloc` and `dealloc` is to call the [`Mutex::lock`] met
 
 [`Mutex::lock`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html#method.lock
 
-Compared to the previous prototype, the `alloc` implementation now respects alignment requirements and performs a bounds check to ensure that the allocations stay inside the heap memory region. The first step is to round up the `next` address to the alignment specified by the `Layout` argument. The code for the `align_up` function is shown in a moment. Like before, we then add the requested allocation size to `alloc_start` to get the end address of the allocation. If it is larger than the end address of the heap, we return a null pointer to signal an out-of-memory situation. Otherwise, we update the `next` address and increase the `allocations` counter by 1 like before. Finally, we return the `alloc_start` address converted to a `*mut u8` pointer.
+Compared to the previous prototype, the `alloc` implementation now respects alignment requirements and performs a bounds check to ensure that the allocations stay inside the heap memory region. The first step is to round up the `next` address to the alignment specified by the `Layout` argument. The code for the `align_up` function is shown in a moment. We then add the requested allocation size to `alloc_start` to get the end address of the allocation. To prevent integer overflow on large allocations, we use the [`checked_add`] method. If the resulting end address of the allocation is larger than the end address of the heap, we return a null pointer to signal an out-of-memory situation. Otherwise, we update the `next` address and increase the `allocations` counter by 1 like before. Finally, we return the `alloc_start` address converted to a `*mut u8` pointer.
 
+[`checked_add`]: https://doc.rust-lang.org/std/primitive.usize.html#method.checked_add
 [`Layout`]: https://doc.rust-lang.org/alloc/alloc/struct.Layout.html
 
 The `dealloc` function ignores the given pointer and `Layout` arguments. Instead, it just decreases the `allocations` counter. If the counter reaches `0` again, it means that all allocations were freed again. In this case, it resets the `next` address to the `heap_start` address to make the complete heap memory available again.
@@ -628,7 +629,7 @@ impl LinkedListAllocator {
         -> Result<usize, ()>
     {
         let alloc_start = align_up(region.start_addr(), align);
-        let alloc_end = alloc_start + size;
+        let alloc_end = alloc_start.checked_add(size).expect("overflow");
 
         if alloc_end > region.end_addr() {
             // region too small
@@ -648,7 +649,7 @@ impl LinkedListAllocator {
 }
 ```
 
-First, the function calculates the start and end address of a potential allocation, using the `align_up` function we defined earlier. If the end address is behind the end address of the region, the allocation doesn't fit in the region and we return an error.
+First, the function calculates the start and end address of a potential allocation, using the `align_up` function we defined earlier and the [`checked_add`] method. If the end address is behind the end address of the region, the allocation doesn't fit in the region and we return an error.
 
 The function performs a less obvious check after that. This check is necessary because most of the time an allocation does not fit a suitable region perfectly, so that a part of the region remains usable after the allocation. This part of the region must store its own `ListNode` after the allocation, so it must be large enough to do so. The check verifies exactly that: either the allocation fits perfectly (`excess_size == 0`) or the excess size is large enough to store a `ListNode`.
 
@@ -674,7 +675,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
         let mut allocator = self.inner.lock();
 
         if let Some((region, alloc_start)) = allocator.find_region(size, align) {
-            let alloc_end = alloc_start + size;
+            let alloc_end = alloc_start.checked_add(size).expect("overflow");
             let excess_size = region.end_addr() - alloc_end;
             if excess_size > 0 {
                 allocator.add_free_region(alloc_end, excess_size);
