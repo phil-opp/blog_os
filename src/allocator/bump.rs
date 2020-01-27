@@ -26,7 +26,7 @@ impl BumpAllocator {
     /// memory range is unused. Also, this method must be called only once.
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         self.heap_start = heap_start;
-        self.heap_end = heap_start + heap_size;
+        self.heap_end = heap_start.saturating_add(heap_size);
         self.next = heap_start;
     }
 }
@@ -36,7 +36,7 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
         let mut bump = self.lock(); // get a mutable reference
 
         let alloc_start = align_up(bump.next, layout.align());
-        let alloc_end = alloc_start + layout.size();
+        let alloc_end = alloc_start.checked_add(layout.size()).expect("overflow");
 
         if alloc_end > bump.heap_end {
             ptr::null_mut() // out of memory
