@@ -86,7 +86,7 @@ impl LinkedListAllocator {
     /// Returns the allocation start address on success.
     fn alloc_from_region(region: &ListNode, size: usize, align: usize) -> Result<usize, ()> {
         let alloc_start = align_up(region.start_addr(), align);
-        let alloc_end = alloc_start + size;
+        let alloc_end = alloc_start.checked_add(size).expect("overflow");
 
         if alloc_end > region.end_addr() {
             // region too small
@@ -125,7 +125,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
         let mut allocator = self.inner.lock();
 
         if let Some((region, alloc_start)) = allocator.find_region(size, align) {
-            let alloc_end = alloc_start + size;
+            let alloc_end = alloc_start.checked_add(size).expect("overflow");
             let excess_size = region.end_addr() - alloc_end;
             if excess_size > 0 {
                 allocator.add_free_region(alloc_end, excess_size);
