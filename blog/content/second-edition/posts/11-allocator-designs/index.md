@@ -295,11 +295,14 @@ Compared to the previous prototype, the `alloc` implementation now respects alig
 
 The `dealloc` function ignores the given pointer and `Layout` arguments. Instead, it just decreases the `allocations` counter. If the counter reaches `0` again, it means that all allocations were freed again. In this case, it resets the `next` address to the `heap_start` address to make the complete heap memory available again.
 
-The `align_up` function is general enough that we can put it into the parent `allocator` module. It looks like this:
+#### Address Alignment
+
+The `align_up` function is general enough that we can put it into the parent `allocator` module. A basic implementation looks like this:
 
 ```rust
 // in src/allocator.rs
 
+/// Align the given address `addr` upwards to alignment `align`.
 fn align_up(addr: usize, align: usize) -> usize {
     let remainder = addr % align;
     if remainder == 0 {
@@ -313,6 +316,32 @@ fn align_up(addr: usize, align: usize) -> usize {
 The function first computes the [remainder] of the division of `addr` by `align`. If the remainder is `0`, the address is already aligned with the given alignment. Otherwise, we align the address by subtracting the remainder (so that the new remainder is 0) and then adding the alignment (so that the address does not become smaller than the original address).
 
 [remainder]: https://en.wikipedia.org/wiki/Euclidean_division
+
+Note that this isn't the most efficient way to implement this function. A much faster implementation looks like this:
+
+```rust
+/// Align the given address `addr` upwards to alignment `align`.
+///
+/// Requires that `align` is a power of two.
+fn align_up(addr: usize, align: usize) -> usize {
+    (addr + align - 1) & !(align - 1)
+}
+```
+
+This method utilizes that the `GlobalAlloc` trait guarantees that `align` is always a power of two. This makes it possible to create a [bitmask] to align the address in a very efficient way. To understand how it works, let's go through it step by step starting on the right side:
+
+[bitmask]: https://en.wikipedia.org/wiki/Mask_(computing)
+
+- Since `align` is a power of two, its [binary representation] has only a single bit set (e.g. `0b000100000`). This means that `align - 1` has all the lower bits set (e.g. `0b00011111`).
+- By creating the [bitwise `NOT`] through the `!` operator, we get a number that has all the bits set except for the bits lower than `align` (e.g. `0b…111111111100000`).
+- By performing a [bitwise `AND`] on an address and `!(align - 1)`, we align the address _downwards_. This works by clearing all the bits that are lower than `align`.
+- Since we want to align upwards instead of downwards, we increase the `addr` by `align - 1` before performing the bitwise `AND`. This way, already aligned addresses remain the same while non-aligned addresses are rounded to the next alignment boundary.
+
+[binary representation]: https://en.wikipedia.org/wiki/Binary_number#Representation
+[bitwise `NOT`]: https://en.wikipedia.org/wiki/Bitwise_operation#NOT
+[bitwise `AND`]: https://en.wikipedia.org/wiki/Bitwise_operation#AND
+
+Which variant you choose it up to you. Both compute the same result, only using different methods.
 
 ### Using It
 
