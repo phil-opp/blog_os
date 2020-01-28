@@ -4,6 +4,8 @@ weight = 8
 path = "paging-introduction"
 date = 2019-01-14
 
+[extra]
+chapter = "Memory Management"
 +++
 
 This post introduces _paging_, a very common memory management scheme that we will also use for our operating system. It explains why memory isolation is needed, how _segmentation_ works, what _virtual memory_ is, and how paging solves memory fragmentation issues. It also explores the layout of multilevel page tables on the x86_64 architecture.

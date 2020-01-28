@@ -3,6 +3,9 @@ title = "Allocator Designs"
 weight = 11
 path = "allocator-designs"
 date = 2020-01-20
+
+[extra]
+chapter = "Memory Management"
 +++
 
 This post explains how to implement heap allocators from scratch. It presents and discusses different allocator designs, including bump allocation, linked list allocation, and fixed-size block allocation. For each of the three designs, we will create a basic implementation that can be used for our kernel.

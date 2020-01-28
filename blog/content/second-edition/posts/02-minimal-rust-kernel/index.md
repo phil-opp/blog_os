@@ -4,6 +4,8 @@ weight = 2
 path = "minimal-rust-kernel"
 date = 2018-02-10
 
+[extra]
+chapter = "Bare Bones"
 +++
 
 In this post we create a minimal 64-bit Rust kernel for the x86 architecture. We build upon the [freestanding Rust binary] from the previous post to create a bootable disk image, that prints something to the screen.
