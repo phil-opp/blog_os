@@ -86,6 +86,10 @@ main img {
   border: 2px solid #f66;
 }
 
+.posts.multitasking {
+  border: 2px solid #556b2f;
+}
+
 .posts hr {
   margin: 2rem 0;
 }
@@ -119,6 +123,10 @@ main img {
 
 .post-category.interrupts {
   color: #f33;
+}
+
+.post-category.multitasking {
+  color: #556b2f;
 }
 
 .post-footer-support {
