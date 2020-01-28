@@ -74,6 +74,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 fn idle_thread() -> ! {
     loop {
         x86_64::instructions::hlt();
+        multitasking::yield_now();
     }
 }
 

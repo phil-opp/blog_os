@@ -9,6 +9,7 @@ static SCHEDULER: spin::Mutex<Option<Scheduler>> = spin::Mutex::new(None);
 #[repr(u64)]
 pub enum SwitchReason {
     Paused,
+    Yield,
     Blocked,
     Exit,
 }
@@ -29,19 +30,22 @@ pub fn invoke_scheduler() {
 }
 
 pub fn exit_thread() -> ! {
+    synchronous_context_switch(SwitchReason::Exit).expect("can't exit last thread");
+    unreachable!("finished thread continued");
+}
+
+pub fn yield_now() {
+    let _ = synchronous_context_switch(SwitchReason::Yield);
+}
+
+fn synchronous_context_switch(reason: SwitchReason) -> Result<(), ()> {
     let next = with_scheduler(|s| s.schedule());
     match next {
-        Some((next_stack_pointer, prev_thread_id)) => {
-            unsafe {
-                context_switch::context_switch_to(
-                    next_stack_pointer,
-                    prev_thread_id,
-                    SwitchReason::Exit,
-                )
-            }
-            unreachable!("finished thread continued")
-        }
-        None => panic!("can't exit last thread"),
+        Some((next_stack_pointer, prev_thread_id)) => unsafe {
+            context_switch::context_switch_to(next_stack_pointer, prev_thread_id, reason);
+            Ok(())
+        },
+        None => Err(()),
     }
 }
 

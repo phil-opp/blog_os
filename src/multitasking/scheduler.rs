@@ -74,7 +74,9 @@ impl Scheduler {
             return; // do nothing
         }
         match switch_reason {
-            SwitchReason::Paused => self.paused_threads.push_back(paused_thread_id),
+            SwitchReason::Paused | SwitchReason::Yield => {
+                self.paused_threads.push_back(paused_thread_id)
+            }
             SwitchReason::Blocked => {
                 self.blocked_threads.insert(paused_thread_id);
                 self.check_for_wakeup(paused_thread_id);
