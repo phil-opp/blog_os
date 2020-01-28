@@ -309,7 +309,7 @@ The `#[global_allocator]` attribute tells the Rust compiler which allocator inst
 // in src/allocator.rs
 
 #[global_allocator]
-static ALLOCATOR: allocator::Dummy = allocator::Dummy;
+static ALLOCATOR: Dummy = Dummy;
 ```
 
 Since the `Dummy` allocator is a [zero sized type], we don't need to specify any fields in the initialization expression.
