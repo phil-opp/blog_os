@@ -28,7 +28,7 @@ impl Scheduler {
         self.paused_threads.pop_front()
     }
 
-    pub fn schedule(&mut self) -> Option<(ThreadId, VirtAddr)> {
+    pub fn schedule(&mut self) -> Option<(VirtAddr, ThreadId)> {
         if let Some(next_id) = self.next_thread() {
             let next_thread = self
                 .threads
@@ -38,7 +38,8 @@ impl Scheduler {
                 .stack_pointer()
                 .take()
                 .expect("paused thread has no stack pointer");
-            Some((next_id, next_stack_pointer))
+            let prev_thread_id = mem::replace(&mut self.current_thread_id, next_thread.id());
+            Some((next_stack_pointer, prev_thread_id))
         } else {
             None
         }
@@ -47,9 +48,8 @@ impl Scheduler {
     pub(super) fn add_paused_thread(
         &mut self,
         paused_stack_pointer: VirtAddr,
-        next_thread_id: ThreadId,
+        paused_thread_id: ThreadId,
     ) {
-        let paused_thread_id = mem::replace(&mut self.current_thread_id, next_thread_id);
         let paused_thread = self
             .threads
             .get_mut(&paused_thread_id)

@@ -41,11 +41,11 @@ impl Stack {
     }
 }
 
-pub unsafe fn context_switch_to(thread_id: ThreadId, stack_pointer: VirtAddr) {
+pub unsafe fn context_switch_to(new_stack_pointer: VirtAddr, prev_thread_id: ThreadId) {
     asm!(
         "call asm_context_switch"
         :
-        : "{rdi}"(stack_pointer), "{rsi}"(thread_id)
+        : "{rdi}"(new_stack_pointer), "{rsi}"(prev_thread_id)
         : "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rpb", "r8", "r9", "r10",
         "r11", "r12", "r13", "r14", "r15", "rflags", "memory"
         : "intel", "volatile"
@@ -72,8 +72,8 @@ global_asm!(
 );
 
 #[no_mangle]
-pub extern "C" fn add_paused_thread(paused_stack_pointer: VirtAddr, new_thread_id: ThreadId) {
-    with_scheduler(|s| s.add_paused_thread(paused_stack_pointer, new_thread_id));
+pub extern "C" fn add_paused_thread(paused_stack_pointer: VirtAddr, paused_thread_id: ThreadId) {
+    with_scheduler(|s| s.add_paused_thread(paused_stack_pointer, paused_thread_id));
 }
 
 #[naked]
