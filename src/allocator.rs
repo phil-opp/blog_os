@@ -75,7 +75,8 @@ impl<A> Locked<A> {
 }
 
 /// Align the given address `addr` upwards to alignment `align`.
+///
+/// Requires that `align` is a power of two.
 fn align_up(addr: usize, align: usize) -> usize {
-    let offset = (addr as *const u8).align_offset(align);
-    addr + offset
+    (addr + align - 1) & !(align - 1)
 }
