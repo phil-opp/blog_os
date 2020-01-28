@@ -1,12 +1,16 @@
+use super::SwitchReason;
 use crate::multitasking::thread::{Thread, ThreadId};
-use alloc::collections::{BTreeMap, VecDeque};
+use alloc::collections::{BTreeMap, BTreeSet, VecDeque};
 use core::mem;
 use x86_64::VirtAddr;
 
 pub struct Scheduler {
     threads: BTreeMap<ThreadId, Thread>,
+    idle_thread_id: Option<ThreadId>,
     current_thread_id: ThreadId,
     paused_threads: VecDeque<ThreadId>,
+    blocked_threads: BTreeSet<ThreadId>,
+    wakeups: BTreeSet<ThreadId>,
 }
 
 impl Scheduler {
@@ -21,6 +25,9 @@ impl Scheduler {
             threads,
             current_thread_id: root_id,
             paused_threads: VecDeque::new(),
+            blocked_threads: BTreeSet::new(),
+            wakeups: BTreeSet::new(),
+            idle_thread_id: None,
         }
     }
 
@@ -29,7 +36,11 @@ impl Scheduler {
     }
 
     pub fn schedule(&mut self) -> Option<(VirtAddr, ThreadId)> {
-        if let Some(next_id) = self.next_thread() {
+        let mut next_thread_id = self.next_thread();
+        if next_thread_id.is_none() && Some(self.current_thread_id) != self.idle_thread_id {
+            next_thread_id = self.idle_thread_id
+        }
+        if let Some(next_id) = next_thread_id {
             let next_thread = self
                 .threads
                 .get_mut(&next_id)
@@ -49,6 +60,7 @@ impl Scheduler {
         &mut self,
         paused_stack_pointer: VirtAddr,
         paused_thread_id: ThreadId,
+        switch_reason: SwitchReason,
     ) {
         let paused_thread = self
             .threads
@@ -58,7 +70,23 @@ impl Scheduler {
             .stack_pointer()
             .replace(paused_stack_pointer)
             .expect_none("running thread should have stack pointer set to None");
-        self.paused_threads.push_back(paused_thread_id);
+        if Some(paused_thread_id) == self.idle_thread_id {
+            return; // do nothing
+        }
+        match switch_reason {
+            SwitchReason::Paused => self.paused_threads.push_back(paused_thread_id),
+            SwitchReason::Blocked => {
+                self.blocked_threads.insert(paused_thread_id);
+                self.check_for_wakeup(paused_thread_id);
+            }
+            SwitchReason::Exit => {
+                let thread = self
+                    .threads
+                    .remove(&paused_thread_id)
+                    .expect("thread not found");
+                // TODO: free stack memory again
+            }
+        }
     }
 
     pub fn add_new_thread(&mut self, thread: Thread) {
@@ -69,7 +97,24 @@ impl Scheduler {
         self.paused_threads.push_back(thread_id);
     }
 
+    pub fn set_idle_thread(&mut self, thread: Thread) {
+        let thread_id = thread.id();
+        self.threads
+            .insert(thread_id, thread)
+            .expect_none("thread already exists");
+        self.idle_thread_id
+            .replace(thread_id)
+            .expect_none("idle thread should be set only once");
+    }
+
     pub fn current_thread_id(&self) -> ThreadId {
         self.current_thread_id
+    }
+
+    fn check_for_wakeup(&mut self, thread_id: ThreadId) {
+        if self.wakeups.remove(&thread_id) {
+            assert!(self.blocked_threads.remove(&thread_id));
+            self.paused_threads.push_back(thread_id);
+        }
     }
 }

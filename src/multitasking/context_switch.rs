@@ -1,4 +1,4 @@
-use super::with_scheduler;
+use super::{with_scheduler, SwitchReason};
 use crate::multitasking::thread::ThreadId;
 use alloc::boxed::Box;
 use core::mem;
@@ -41,11 +41,15 @@ impl Stack {
     }
 }
 
-pub unsafe fn context_switch_to(new_stack_pointer: VirtAddr, prev_thread_id: ThreadId) {
+pub unsafe fn context_switch_to(
+    new_stack_pointer: VirtAddr,
+    prev_thread_id: ThreadId,
+    switch_reason: SwitchReason,
+) {
     asm!(
         "call asm_context_switch"
         :
-        : "{rdi}"(new_stack_pointer), "{rsi}"(prev_thread_id)
+        : "{rdi}"(new_stack_pointer), "{rsi}"(prev_thread_id), "{rdx}"(switch_reason as u64)
         : "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rpb", "r8", "r9", "r10",
         "r11", "r12", "r13", "r14", "r15", "rflags", "memory"
         : "intel", "volatile"
@@ -72,8 +76,12 @@ global_asm!(
 );
 
 #[no_mangle]
-pub extern "C" fn add_paused_thread(paused_stack_pointer: VirtAddr, paused_thread_id: ThreadId) {
-    with_scheduler(|s| s.add_paused_thread(paused_stack_pointer, paused_thread_id));
+pub extern "C" fn add_paused_thread(
+    paused_stack_pointer: VirtAddr,
+    paused_thread_id: ThreadId,
+    switch_reason: SwitchReason,
+) {
+    with_scheduler(|s| s.add_paused_thread(paused_stack_pointer, paused_thread_id, switch_reason));
 }
 
 #[naked]

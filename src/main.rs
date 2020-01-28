@@ -7,7 +7,7 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
-use blog_os::multitasking::{thread::Thread, with_scheduler};
+use blog_os::multitasking::{self, thread::Thread, with_scheduler};
 use blog_os::{print, println};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
@@ -55,31 +55,35 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     #[cfg(test)]
     test_main();
 
+    let idle_thread = Thread::create(idle_thread, 2, &mut mapper, &mut frame_allocator).unwrap();
+    with_scheduler(|s| s.set_idle_thread(idle_thread));
+
     for _ in 0..10 {
         let thread = Thread::create(thread_entry, 2, &mut mapper, &mut frame_allocator).unwrap();
         with_scheduler(|s| s.add_new_thread(thread));
     }
-    let thread = Thread::create_from_closure(
-        || loop {
-            print!("{}", with_scheduler(|s| s.current_thread_id()).as_u64());
-            x86_64::instructions::hlt();
-        },
-        2,
-        &mut mapper,
-        &mut frame_allocator,
-    )
-    .unwrap();
+    let thread =
+        Thread::create_from_closure(|| thread_entry(), 2, &mut mapper, &mut frame_allocator)
+            .unwrap();
     with_scheduler(|s| s.add_new_thread(thread));
 
     println!("It did not crash!");
     thread_entry();
 }
 
-fn thread_entry() -> ! {
+fn idle_thread() -> ! {
     loop {
-        print!("{}", with_scheduler(|s| s.current_thread_id()).as_u64());
         x86_64::instructions::hlt();
     }
+}
+
+fn thread_entry() -> ! {
+    let thread_id = with_scheduler(|s| s.current_thread_id()).as_u64();
+    for _ in 0..=thread_id {
+        print!("{}", thread_id);
+        x86_64::instructions::hlt();
+    }
+    multitasking::exit_thread();
 }
 
 /// This function is called on panic.
