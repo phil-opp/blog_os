@@ -23,27 +23,22 @@
     </p>
 </div>
 
-<div id="bare-bones" class="post-category bare-bones">Bare Bones</div>
-<div class="posts bare-bones">
-    {{ macros::post_link(page=posts.0) }}
-    {{ macros::post_link(page=posts.1) }}
-    {{ macros::post_link(page=posts.2) }}
-    {{ macros::post_link(page=posts.3) }}
+<div>
+{% set chapter = "none" %}
+{% for post in posts %}
+    {% if post.extra["chapter"] %}
+        {% if post.extra["chapter"] != chapter %}
+            {# Begin new chapter #}
+            {% set_global chapter = post.extra["chapter"] %}
 </div>
 
-<div id="exceptions" class="post-category exceptions">Exceptions</div>
-<div class="posts exceptions">
-    {{ macros::post_link(page=posts.4) }}
-    {{ macros::post_link(page=posts.5) }}
-    {{ macros::post_link(page=posts.6) }}
-</div>
+<div id="{{chapter | slugify}}" class="post-category {{chapter | slugify}}">{{ chapter }}</div>
+<div class="posts {{chapter | slugify}}">
+        {% endif %}
+    {% endif %}
 
-<div id="memory-management" class="post-category memory-management">Memory Management</div>
-<div class="posts memory-management">
-    {{ macros::post_link(page=posts.7) }}
-    {{ macros::post_link(page=posts.8) }}
-    {{ macros::post_link(page=posts.9) }}
-    {{ macros::post_link(page=posts.10) }}
+    {{ macros::post_link(page=post) }}
+{% endfor %}
 </div>
 
 <div class="posts subscribe">
