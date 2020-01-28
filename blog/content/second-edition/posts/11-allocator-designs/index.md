@@ -296,7 +296,7 @@ The `dealloc` function ignores the given pointer and `Layout` arguments. Instead
 
 #### Address Alignment
 
-The `align_up` function is general enough that we can put it into the parent `allocator` module. It basic implementation looks like this:
+The `align_up` function is general enough that we can put it into the parent `allocator` module. A basic implementation looks like this:
 
 ```rust
 // in src/allocator.rs
@@ -316,34 +316,31 @@ The function first computes the [remainder] of the division of `addr` by `align`
 
 [remainder]: https://en.wikipedia.org/wiki/Euclidean_division
 
-Note that this isn't the most efficient way to implement this function. A slightly faster implementation looks like this:
+Note that this isn't the most efficient way to implement this function. A much faster implementation looks like this:
 
 ```rust
+/// Align the given address `addr` upwards to alignment `align`.
+///
+/// Requires that `align` is a power of two.
 fn align_up(addr: usize, align: usize) -> usize {
-    (addr + align - 1) / align * align;
+    (addr + align - 1) & !(align - 1)
 }
 ```
 
-Here we utilize the fact that dividing and then multiplying by `align` clears the lower bits to zero. To align the address upwards instead of downwards, we add `align - 1` before the division. This approach has the advantage that an already aligned address is not changed so that we don't need an `if` statement that slightly decreases performance. When the compiler is able to prove that `align` is always a power of two, it could even translate the division and multiplication operations to fast [bit shift operations].
+This method utilizes that the `GlobalAlloc` trait guarantees that `align` is always a power of two. This makes it possible to create a [bitmask] to align the address in a very efficient way. To understand how it works, let's go through it step by step starting on the right side:
 
-[bit shift operations]: https://en.wikipedia.org/wiki/Logical_shift
+[bitmask]: https://en.wikipedia.org/wiki/Mask_(computing)
 
-Given that address alignment is a very general problem, the Rust `core` library also provides an implementation for it through the [`align_offset`] method on raw pointers. With it, we can also implement `align_up`:
+- Since `align` is a power of two, its [binary representation] has only a single bit set (e.g. `0b000100000`). This means that `align - 1` has all the lower bits set (e.g. `0b00011111`).
+- By creating the [bitwise `NOT`] through the `!` operator, we get a number that has all the bits set except for the bits lower than `align` (e.g. `0b…111111111100000`).
+- By performing a [bitwise `AND`] on an address and `!(align - 1)`, we align the address _downwards_. This works by clearing all the bits that are lower than `align`.
+- Since we want to align upwards instead of downwards, we increase the `addr` by `align - 1` before performing the bitwise `AND`. This way, already aligned addresses remain the same while non-aligned addresses are rounded to the next alignment boundary.
 
-[`align_offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.align_offset
+[binary representation]: https://en.wikipedia.org/wiki/Binary_number#Representation
+[bitwise `NOT`]: https://en.wikipedia.org/wiki/Bitwise_operation#NOT
+[bitwise `AND`]: https://en.wikipedia.org/wiki/Bitwise_operation#AND
 
-```rust
-fn align_up(addr: usize, align: usize) -> usize {
-    let offset = (addr as *const u8).align_offset(align);
-    addr + offset
-}
-```
-
-Here we convert the address to a `*const u8` pointer and then call [`align_offset`] to get the number of bytes that we need to add to align the address. It turns out that the implementation of `align_offset` is [hightly optimized][align-offset-impl], so this `align_up` variant has the best performance compared to the other variants.
-
-[align-offset-impl]: https://github.com/rust-lang/rust/blob/2f688ac602d50129388bb2a5519942049096cbff/src/libcore/ptr/mod.rs#L1031-L1143
-
-Which variant you choose it up to you. They all compute the same result, only using different methods.
+Which variant you choose it up to you. Both compute the same result, only using different methods.
 
 ### Using It
 
