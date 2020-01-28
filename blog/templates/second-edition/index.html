@@ -63,19 +63,6 @@
 <hr>
 
 <div class="frontpage-section">
-    {% set extra = get_section(path = "second-edition/extra/_index.md") %}
-    <h1>{{ extra.title }}</h1>
-    <ul>
-        {% for subsection in extra.subsections %}
-            <li><a href="/{{ subsection.path | safe }}">{{ subsection.title }}</a></li>
-        {% endfor %}
-        {% for page in extra.pages %}
-            <li><a href="/{{ page.path | safe }}">{{ page.title }}</a></li>
-        {% endfor %}
-    </ul>
-</div>
-
-<div class="frontpage-section">
     <h1>Status Updates</h1>
     {% set status_updates = get_section(path = "status-update/_index.md") %}
     <p>{{ status_updates.description }}</p>
