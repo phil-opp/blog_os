@@ -82,15 +82,15 @@ It is common to expose the concept of threads to userspace programs, thereby giv
 [Ruby]: https://docs.ruby-lang.org/en/master/Thread.html
 [`std::thread`]: https://doc.rust-lang.org/std/thread/index.html
 
-## Thread Creation
+## Implementation
 
 ### Stack Allocation
 
-## Switching Stacks
+### Switching Stacks
 
-## Saving Registers
+### Saving Registers
 
-## Scheduler
+### Scheduler
 
 ## Summary
 TODO
