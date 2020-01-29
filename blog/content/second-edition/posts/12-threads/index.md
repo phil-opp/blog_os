@@ -59,7 +59,28 @@ Cooperative multitasking and `async/await` are complex topics on their own, so w
 
 ## Threads
 
-In the previous section, we talked about _tasks_ without specifying them further. The most common task abstraction in operating systems is a _thread of execution_, which is commonly just called "thread". A thread describes a series of instructions that should be executed and a stack for storing itermediate data.
+In the previous section, we talked about _tasks_ without specifying them further. The most common task abstraction in operating systems is a [_thread of execution_], or "thread" for short. A thread is an independent unit of processing, with an own instruction pointer and stack. The instruction pointer points to the program code and specifies the assembly instruction that should be executed next. The stack pointer points to a [call stack] that is exclusive to the thread, i.e. no other thread uses it.
+
+[call stack]: https://en.wikipedia.org/wiki/Call_stack
+
+A thread can be executed by a CPU core by loading the instruction and stack pointer registers of the thread:
+
+[_thread of execution_]: https://en.wikipedia.org/wiki/Thread_%28computing%29
+
+![Two CPU cores with instruction and stack pointer registers and a set of general-purpose registers. Four threads with a instruction and stack pointer fields. Thread 2 is loaded to core 1, thread 4 is loaded to core 2.](thread.svg)
+
+The graphic shows the two CPU cores from the time slicing example above and four threads. Each thread has an instruction pointer field `IP` and a stack pointer field `SP`. The CPU cores have hardware registers for the instruction and stack pointers and a set of additional registers, e.g. for performing calculations. Thread 2 is loaded to core 1 and thread 4 is loaded to core 2.
+
+To switch to a different thread, the current values of the instruction and stack pointer registers are written back to the `IP` and `SP` field of the thread structure. Then the `IP` and `SP` fields of the next thread are loaded. To ensure that the thread can correctly continue when resumed, the contents of the other CPU registers need to be stored too. One way to implement this is to store them on the call stack when pausing a thread.
+
+Depending on the operating system design, the thread structure typically has some additional fields. For example, it is common to give each thread an unique ID to identify it. Also, thread structures often store an priority for the thread, the ID of the parent thread, or information about the thread state. Some implementations also store the register contents in the thread structure instead of pushing them to the call stack.
+
+It is common to expose the concept of threads to userspace programs, thereby giving the program the ability to launch concurrent tasks. Most programming languages thus have support for threads, even high-level languages such as [Java], [Python], or [Ruby]. For normal Rust applications (not `#![no_std]`), thread support is available in the [`std::thread`] module.
+
+[Java]: https://docs.oracle.com/javase/10/docs/api/java/lang/Thread.html
+[Python]: https://docs.python.org/3/library/threading.html
+[Ruby]: https://docs.ruby-lang.org/en/master/Thread.html
+[`std::thread`]: https://doc.rust-lang.org/std/thread/index.html
 
 ## Thread Creation
 
