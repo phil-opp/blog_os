@@ -84,7 +84,176 @@ It is common to expose the concept of threads to userspace programs, thereby giv
 
 ## Implementation
 
+We start our implementation by creating a new `multitasking` module:
+
+```rust
+// in src/lib.rs
+
+pub mod multitasking;
+```
+
+The file for the `multitasking` module can be named either `src/multitasking.rs` or `src/multitasking/mod.rs`, whatever you prefer. (The same is true for the `allocator` module from the [previous post], so you can rename your `src/allocator.rs` to `src/allocator/mod.rs` if you like to have the complete module contained in a folder.)
+
+[previous post]: @/second-edition/posts/11-allocator-designs/index.md
+
+### A Thread Type
+
+Since the `multitasking` module will become quite large, we organize its components into submodules. For our thread type, we create a `multitasking::thread` submodule:
+
+```rust
+// in src/multitasking/mod.rs (or src/multitasking.rs)
+
+pub mod thread;
+```
+
+```rust
+// in src/multitasking/thread.rs
+
+use x86_64::VirtAddr;
+
+#[derive(Debug)]
+pub struct Thread {
+    id: ThreadId,
+    stack_pointer: Option<VirtAddr>,
+    stack_bounds: Option<StackBounds>,
+}
+```
+
+We define a `Thread` struct with three fields. It contains an unique `id` to identify the thread, an optional `stack_pointer` of type [`VirtAddr`], and an optional `stack_bounds` field, which contains the lower and upper bounds of the thread's stack. We don't add a field for the instruction pointer, as we will save it on the call stack instead.
+
+[`VirtAddr`]: https://docs.rs/x86_64/0.8.1/x86_64/struct.VirtAddr.html
+
+#### Stack Bounds
+
+Since the `StackBounds` is related to memory management, we define it in the `memory` module:
+
+```rust
+// in src/memory.rs
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StackBounds {
+    start: VirtAddr,
+    end: VirtAddr,
+}
+
+impl StackBounds {
+    pub fn start(&self) -> VirtAddr {
+        self.start
+    }
+
+    pub fn end(&self) -> VirtAddr {
+        self.end
+    }
+}
+```
+
+The type has fields for the start and end address of the stack. It also defines equally-named methods to read the fields. It does this instead of making the fields public to prevent other modules from modifying the fields.
+
+#### Thread ID
+
+The `ThreadId` type is a wrapper for an `u64` that atomically counts the thread ID up to ensure uniqueness:
+
+```rust
+// in src/multitasking/mod.rs
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ThreadId(u64);
+
+impl ThreadId {
+    pub fn as_u64(&self) -> u64 {
+        self.0
+    }
+
+    fn new() -> Self {
+        use core::sync::atomic::{AtomicU64, Ordering};
+        static NEXT_THREAD_ID: AtomicU64 = AtomicU64::new(1);
+        ThreadId(NEXT_THREAD_ID.fetch_add(1, Ordering::Relaxed))
+    }
+}
+```
+
+We [derive] a number of standard traits for the type to make it usable like an `u64`. To convert ID to an `u64`, we provide a simple `as_u64` method.
+
+[derive]: https://doc.rust-lang.org/rust-by-example/trait/derive.html
+
+The actual work happens in the `new` function: It uses an internal `NEXT_THREAD_ID` static of type [`AtomicU64`] to ensure globally unique IDs. Through the [`fetch_add`] method, we atomically read the value of the static and increase it by 1. Since we used an atomic function, this operation will also work in multithreaded contexts without handing out the same ID twice. The [`Ordering::Relaxed`] parameter tells the compiler that we only care about the atomicity of the single instruction and not about the ordering with preceding and subsequent operations.
+
+[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
+[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
+[`Ordering::Relaxed`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
+
+Note that we initialize the `NEXT_THREAD_ID` static with 1 instead of 0. We do this to reserve the thread ID `0` for the root thread of our kernel, i.e. the thread that executes the `rust_main` function.
+
+Before we show how to create new `Thread` instances, we create a function to allocate a new call stack.
+
 ### Stack Allocation
+
+As we learned [above](#threads), each thread has its separate stack. This means that in order to create new threads, we need to allocate a new stack for them. To do this, we extend our `memory` module. First, we add a `reserve_stack_memory` function to get an unique virtual address range for a new stack:
+
+```rust
+// in src/memory.rs
+
+/// Reserve the specified amount of virtual memory. Returns the start page.
+fn reserve_stack_memory(size_in_pages: u64) -> Page {
+    use core::sync::atomic::{AtomicU64, Ordering};
+    static STACK_ALLOC_NEXT: AtomicU64 = AtomicU64::new(0x_5555_5555_0000);
+    let start_addr = VirtAddr::new(STACK_ALLOC_NEXT.fetch_add(
+        size_in_pages * Page::<Size4KiB>::SIZE,
+        Ordering::Relaxed,
+    ));
+    Page::from_start_address(start_addr)
+        .expect("`STACK_ALLOC_NEXT` not page aligned")
+}
+```
+
+The function takes the stack size in form of a number of pages as argument and returns the first page of the reserved virtual memory region. Its implementation is quite similar to our `ThreadId::new` function: It uses a static [`AtomicU64`] to keep track of the next available virtual memory address and uses [`fetch_add`] to atomically increase it. The static is initialized to address `0x_5555_5555_0000` so that we can easily recognize allocated stack memory later. To convert the `size_in_pages` to a byte number, we multiply it with the page number specified by `Page::<Size4KiB>::SIZE`.
+
+To convert the `u64` returned by `fetch_add` to a `Page`, we first convert it to a [`VirtAddr`] and then use the [`Page::from_start_address`] method. This method returns an error if the address is not aligned on a page boundary. Since we start at an aligned address and only add multiples of the page size, this error should not occur, therefore we use `expect` to panic in this case.
+
+[`Page::from_start_address`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/page/struct.Page.html#method.from_start_address
+
+With the help of the `reserve_stack_memory` function we can now define a `alloc_stack` function to create a new stack:
+
+```rust
+// in src/memory.rs
+
+pub fn alloc_stack(
+    size_in_pages: u64,
+    mapper: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+) -> Result<StackBounds, mapper::MapToError> {
+    use x86_64::structures::paging::PageTableFlags as Flags;
+
+    let guard_page = reserve_stack_memory(size_in_pages + 1);
+    let stack_start = guard_page + 1;
+    let stack_end = stack_start + size_in_pages;
+
+    for page in Page::range(stack_start, stack_end) {
+        let frame = frame_allocator
+            .allocate_frame()
+            .ok_or(mapper::MapToError::FrameAllocationFailed)?;
+        let flags = Flags::PRESENT | Flags::WRITABLE;
+        mapper.map_to(page, frame, flags, frame_allocator)?.flush();
+    }
+
+    Ok(StackBounds {
+        start: stack_start.start_address(),
+        end: stack_end.start_address(),
+    })
+}
+```
+
+To ensure that stack overflows can't cause memory corruptions, we use a so-called _guard page_ at the bottom of the stack. A guard page is a deliberately unmapped page so that every access to it causes a [page fault] exception, which is much better than the corruption of the preceding memory page. To implement the guard page, we simply reserve an additional page and start the stack on the page after the guard page.
+
+[page fault]: https://en.wikipedia.org/wiki/Page_fault
+
+We then loop over each stack page using the [`Page::range`] function. For each page, we allocate a frame from the given [`FrameAllocator`] and then use the [`map_to`] function of the given [`Mapper`] instance to create the mapping in the page table. We set the `PRESENT` and `WRITABLE` flags for the mapping because stack pages should be accessible and writable. Finally, we return the bounds of the created stack wrapped in a `StackBounds` struct.
+
+[`Page::range`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/page/struct.Page.html#method.range
+[`FrameAllocator`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/trait.FrameAllocator.html
+[`map_to`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
+[`Mapper`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/trait.Mapper.html
 
 ### Switching Stacks
 
