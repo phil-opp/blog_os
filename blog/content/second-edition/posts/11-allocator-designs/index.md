@@ -701,7 +701,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         // perform layout adjustments
         let (size, align) = LinkedListAllocator::size_align(layout);
-        let mut allocator = self.inner.lock();
+        let mut allocator = self.lock();
 
         if let Some((region, alloc_start)) = allocator.find_region(size, align) {
             let alloc_end = alloc_start.checked_add(size).expect("overflow");
@@ -719,7 +719,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
         // perform layout adjustments
         let (size, _) = LinkedListAllocator::size_align(layout);
 
-        self.inner.lock().add_free_region(ptr as usize, size)
+        self.lock().add_free_region(ptr as usize, size)
     }
 }
 ```
