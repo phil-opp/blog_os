@@ -177,15 +177,113 @@ We [derive] a number of standard traits for the type to make it usable like an `
 
 [derive]: https://doc.rust-lang.org/rust-by-example/trait/derive.html
 
-The actual work happens in the `new` function: It uses an internal `NEXT_THREAD_ID` static of type [`AtomicU64`] to ensure globally unique IDs. Through the [`fetch_add`] method, we atomically read the value of the static and increase it by 1. Since we used an atomic function, this operation will also work in multithreaded contexts without handing out the same ID twice. The [`Ordering::Relaxed`] parameter tells the compiler that we only care about the atomicity of the single instruction and not about the ordering with preceding and subsequent operations.
+The actual work happens in the `new` function: It uses an internal `NEXT_THREAD_ID` static of type [`AtomicU64`] to ensure globally unique IDs. Through the [`fetch_add`] method, we atomically read the value of the static and increase it by 1. Since we used an atomic function, this operation will also work in multithreaded contexts without handing out the same ID twice. The [`Ordering::Relaxed`] parameter tells the compiler that we only care about the atomicity of the single instruction and not about the ordering with preceding and subsequent operations. Note that we initialize the `NEXT_THREAD_ID` static with 1 instead of 0. We do this to reserve the thread ID `0` for the root thread of our kernel, i.e. the thread that executes the `rust_main` function.
 
 [`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
 [`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
 [`Ordering::Relaxed`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
 
-Note that we initialize the `NEXT_THREAD_ID` static with 1 instead of 0. We do this to reserve the thread ID `0` for the root thread of our kernel, i.e. the thread that executes the `rust_main` function.
+Before we try to create new `Thread` instances, we first look into the most difficult part of our implementation: switching between threads.
 
-Before we show how to create new `Thread` instances, we create a function to allocate a new call stack.
+### Switching Threads
+
+As we learned above, each thread has its own stack. To switch to a different thread, we need to first save the CPU state (including the instruction pointer) to the stack, then switch to the stack of the next thread, and finally restore the CPU state of the loaded thread. To be able to continue the paused thread later, we also need to keep track of its stack pointer before the switch. A pseudo-code implementation of such a switching function could look like this:
+
+```rust
+fn switch_thread(next_thread: Thread) -> VirtAddr {
+    save_instruction_pointer_to_stack();
+    save_registers_to_stack();
+
+    let current_stack_pointer = get_cpu_stack_pointer();
+    set_cpu_stack_pointer(next_thread.stack_pointer);
+
+    restore_registers_from_stack();
+    restore_instruction_pointer_from_stack();
+
+    // return stack pointer so that we can continue the paused thread later
+    current_stack_pointer
+}
+```
+
+Unfortunately, creating such a function is not that simple because the Rust compiler (like most compilers) has the fundamental assumption that the stack remains the same for the complete execution of a function. This means that it will generate code that uses the stack in different ways, for example for storing interim results or backing up [callee-saved registers] before using them. Thus, a stack switch in the middle of a function can easily lead to undefined behavior.
+
+[callee-saved registers]: @/second-edition/posts/07-hardware-interrupts/index.md
+
+To make it more clear how undefined behavior can occur, let's go through an example. The above `switch_thread` function defines the local variable `current_stack_pointer`. The compiler decides to store this variable on the stack, so it adjusts the stack pointer to make room for it at the beginning of the function. To clean up this state before returning, the compiler removes the stack allocated value again at the end of the function before returning. In the middle of the function, however, we switch to a different stack that does not have any local variables stored on it. This means that the clean-up code at the end will corrupt the stack by removing some other data such as the return address. The CPU of course still assumes that there is a return address on the stack, so it will interpret whatever data that comes next on the stack as address and jump to it.
+
+#### Including Assembly Code
+
+Since Rust like most other languages requires a stack that does not change, we need to use a different language that gives us full control over the executed stack operations. The most suitable language in this case is [_assembly_], which allows us to specify the individual CPU instructions itself. Since assembly is very error-prone and difficult to write, we will keep our assembly code to a bare minimum.
+
+[_assembly_]: https://en.wikipedia.org/wiki/Assembly_language
+
+To include assembly code into our kernel, we use a combination of the build-in [`global_asm`] and [`include_str`] macros of Rust. This way, we can define an assembly file that is automatically included and compiled without requiring any additional dependencies. Since the `global_asm` macro is still unstable, we need to add **`#![feature(global_asm)]`** at the top of our `lib.rs`. The code at the Rust side looks like this:
+
+[`global_asm`]: https://doc.rust-lang.org/unstable-book/library-features/global-asm.html
+[`include_str`]: https://doc.rust-lang.org/core/macro.include_str.html
+
+```rust
+// in src/multitasking/mod.rs
+
+pub mod thread_switch
+```
+
+```rust
+// in a new src/multitasking/thread_switch.rs
+
+global_asm!(include_str!(thread_switch.s));
+```
+
+To keep the potentially dangerous thread switching code separate, we define a new `thread_switch` module for it. In it, we use the `global_asm` macro to interpret the content of a `thread_switch.s` file as assembly code. Interestingly, no `unsafe` block is required for this. The reason is that it is not possible to actually call any of the code defined inside the `global_asm` function without using an `unsafe` block at the call side.
+
+Our assembly file looks like this:
+
+```asm
+//; in src/multitasking/thread_switch.s
+
+//; use intel asm syntax
+.intel_syntax noprefix
+```
+
+We use `//;` to denote comments here to get reasonable syntax highlighting. Normally, assembly code uses just a `;` for comments, but the LLVM implementation behind the `global_asm` macro uses `//` for comments. Since most syntax highlighters only support the `;` comment style, we use `//;` as a workaround.
+
+By setting the `.intel_syntax noprefix` directive at the top of the file, we tell the compiler that we want to use the [_Intel syntax_] instead of the default, but more obscure _AT&T syntax_. This is of course a personal preference, so you can omit this statement to use the AT&T syntax if you like.
+
+[_Intel syntax_]: https://en.wikipedia.org/wiki/X86_assembly_language#Syntax
+
+When you execute `cargo xbuild` now, the Rust compiler will automatically compile and link our assembly file. We don't define any code in it yet, so you won't see anything, but there shouldn't be any errors either.
+
+#### Thread Switching in Assembly
+
+Now that we are able to include assembly code in our Rust kernel, we can create a thread switching function in assembly:
+
+```asm
+//; in src/multitasking/thread_switch.s
+
+//; The C-compatible signature of this function is:
+//; asm_thread_switch(stack_pointer: u64)
+asm_thread_switch:
+    pushfq      //; push RFLAGS register to stack
+
+    mov rax, rsp        //; save old stack pointer in `rax` register
+    mov rsp, rdi        //; load new stack pointer (given as argument)
+
+    mov rdi, rax                //; use saved stack pointer as argument
+    call add_paused_thread      //; call function with argument
+
+    popfq       //; pop RFLAGS register to stack
+    ret         //; pop return address from stack and jump to it
+```
+
+First, we use the `pushfq` function to push the content of the [`RFLAGS` register] to the stack. This register hold a variety of status information of the CPU, for example whether interrupts are enabled and whether the last arithmetic operation resulted in a negative number. The reason for backing up this register is that we want to be able to resume the paused thread later, which requires the restoration of the `RFLAGS` state. Normally, the content of all other CPU registers must also be backed up at this point. However, we will use a different approach for this, which will be explained in a moment.
+
+[`RFLAGS` register]: https://en.wikipedia.org/wiki/FLAGS_register
+
+### Saving Registers
+
+
+
+
 
 ### Stack Allocation
 
@@ -254,10 +352,6 @@ We then loop over each stack page using the [`Page::range`] function. For each p
 [`FrameAllocator`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/trait.FrameAllocator.html
 [`map_to`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
 [`Mapper`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/paging/mapper/trait.Mapper.html
-
-### Switching Stacks
-
-### Saving Registers
 
 ### Scheduler
 
