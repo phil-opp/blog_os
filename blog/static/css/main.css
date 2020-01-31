@@ -193,12 +193,19 @@ aside#all-posts-link {
     margin-left: -15rem;
     font-size: 90%;
     line-height: 1.2;
+  }
+
+  #toc-aside li:not(.active) > a, #toc-aside h2 {
     opacity: .5;
     transition: opacity .5s;
   }
 
-  #toc-aside:hover {
+  #toc-aside:hover li:not(.active) > a, #toc-aside:hover h2 {
     opacity: 1;
+  }
+
+  #toc-aside li.active > a {
+    font-weight: bold;
   }
 
   #toc-aside h2 {
@@ -212,7 +219,7 @@ aside#all-posts-link {
     list-style:none;
   }
 
-  #toc-aside ol li:before {
+  #toc-aside ol li a:before {
     content: "";
     border-color: transparent #008eef;
     border-style: solid;
