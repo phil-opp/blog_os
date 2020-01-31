@@ -56,7 +56,7 @@ function toc_scroll_position(container) {
     }
   }
 
-  // set active call for current ToC item
+  // set active class for current ToC item
   if (current_toc_item != null) {
     current_toc_item.classList.add("active");
   }
