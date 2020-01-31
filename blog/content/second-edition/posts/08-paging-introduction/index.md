@@ -141,13 +141,17 @@ The page table index for level is derived directly from the virtual address:
 
 ![Bits 0–12 are the page offset, bits 12–21 the level 1 index, bits 21–30 the level 2 index, bits 30–39 the level 3 index, and bits 39–48 the level 4 index](x86_64-table-indices-from-address.svg)
 
-We see that each table index consists of 9 bits, which makes sense because each table has 2^9 = 512 entries. The lowest 12 bits are the offset in the 4KiB page (2^12 bytes = 4KiB). Bits 48 to 64 are discarded, which means that x86_64 is not really 64-bit since it only supports 48-bit addresses. There are plans to extend the address size to 57 bits through a [5-level page table], but no processor that supports this feature exists yet.
+We see that each table index consists of 9 bits, which makes sense because each table has 2^9 = 512 entries. The lowest 12 bits are the offset in the 4KiB page (2^12 bytes = 4KiB). Bits 48 to 64 are discarded, which means that x86_64 is not really 64-bit since it only supports 48-bit addresses.
 
 [5-level page table]: https://en.wikipedia.org/wiki/Intel_5-level_paging
 
 Even though bits 48 to 64 are discarded, they can't be set to arbitrary values. Instead all bits in this range have to be copies of bit 47 in order to keep addresses unique and allow future extensions like the 5-level page table. This is called _sign-extension_ because it's very similar to the [sign extension in two's complement]. When an address is not correctly sign-extended, the CPU throws an exception.
 
 [sign extension in two's complement]: https://en.wikipedia.org/wiki/Two's_complement#Sign_extension
+
+It's worth noting that the recent "Ice Lake" Intel CPUs optionally support [5-level page tables] to extends virtual addresses from 48-bit to 57-bit. Given that optimizing our kernel for a specific CPU does not make sense at this stage, we will only work with standard 4-level page tables in this post.
+
+[5-level page tables]: https://en.wikipedia.org/wiki/Intel_5-level_paging
 
 ### Example Translation
 
