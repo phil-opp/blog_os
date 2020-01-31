@@ -188,7 +188,7 @@ aside#all-posts-link {
     width: 12rem;
     position: sticky;
     float: left;
-    top: 1rem;
+    top: 3.5rem;
     margin-top: -4rem;
     margin-left: -15rem;
     font-size: 90%;
@@ -258,11 +258,10 @@ aside#all-posts-link {
   }
 
   aside#all-posts-link {
-    float: left;
-    position: absolute;
-    bottom: 0;
-    left: -15rem;
+    position: fixed;
+    top: 1.25rem;
     margin-top: 0;
+    margin-left: -15rem;
   }
 }
 
