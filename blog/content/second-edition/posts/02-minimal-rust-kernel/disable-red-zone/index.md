@@ -10,6 +10,8 @@ The [red zone] is an optimization of the [System V ABI] that allows functions to
 [red zone]: http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
 [System V ABI]: http://wiki.osdev.org/System_V_ABI
 
+<!-- more -->
+
 ![stack frame with red zone](red-zone.svg)
 
 The image shows the stack frame of a function with `n` local variables. On function entry, the stack pointer is adjusted to make room on the stack for the return address and the local variables.
