@@ -86,7 +86,7 @@ impl LinkedListAllocator {
     /// Returns the allocation start address on success.
     fn alloc_from_region(region: &ListNode, size: usize, align: usize) -> Result<usize, ()> {
         let alloc_start = align_up(region.start_addr(), align);
-        let alloc_end = alloc_start.checked_add(size).expect("overflow");
+        let alloc_end = alloc_start.checked_add(size).ok_or(())?;
 
         if alloc_end > region.end_addr() {
             // region too small

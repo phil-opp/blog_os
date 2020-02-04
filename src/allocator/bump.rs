@@ -36,7 +36,10 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
         let mut bump = self.lock(); // get a mutable reference
 
         let alloc_start = align_up(bump.next, layout.align());
-        let alloc_end = alloc_start.checked_add(layout.size()).expect("overflow");
+        let alloc_end = match alloc_start.checked_add(layout.size()) {
+            Some(end) => end,
+            None => return ptr::null_mut(),
+        };
 
         if alloc_end > bump.heap_end {
             ptr::null_mut() // out of memory
