@@ -269,6 +269,7 @@ However, it also has some disadvantages:
 - It occupies a large amount of virtual memory (512GiB). This isn't a big problem in the large 48-bit address space, but it might lead to suboptimal cache behavior.
 - It only allows accessing the currently active address space easily. Accessing other address spaces is still possible by changing the recursive entry, but a temporary mapping is required for switching back. We described how to do this in the (outdated) [_Remap The Kernel_] post.
 - It heavily relies on the page table format of x86 and might not work on other architectures.
+- Changes to the page table layout might require extensive TLB flushes. For example, pointing a level 4 table entry to a different level 3 table requires flushing all TLB entries that used this level 4 entry, including the addresses for accessing page tables of lower levels.
 
 [_Remap The Kernel_]: https://os.phil-opp.com/remap-the-kernel/#overview
 
