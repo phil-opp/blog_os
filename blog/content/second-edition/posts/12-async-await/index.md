@@ -61,7 +61,7 @@ The main advantage of preemptive multitasking is that the operating system can f
 
 The disadvantage of preemption is that each task requires its own stack. Compared to a shared stack, this results in a higher memory usage per task and often limits the number of tasks in the system. Another disadvantage is that the operating system always has to save the complete CPU register state on each task switch, even if the task only used a small subset of the registers.
 
-Preemptive multitasking and threads are fundamental components of an operating system because they make it possible to run untrusted userspace programs. We will therefore discuss these concepts in full detail in future posts. For this post, however, we will focus on cooperative multitasking, which also provides useful capabilities for our kernel.
+Preemptive multitasking and threads are fundamental components of an operating system because they make it possible to run untrusted userspace programs. We will discuss these concepts in full detail in future posts. For this post, however, we will focus on cooperative multitasking, which also provides useful capabilities for our kernel.
 
 ### Cooperative Multitasking
 
@@ -88,13 +88,68 @@ Language-supported implementations of cooperative tasks are often even able to b
 
 The drawback of cooperative multitasking is that an uncooperative task can potentially run for an unlimited amount of time. Thus, a malicious or buggy task can prevent other tasks from running and slow down or even block the whole system. For this reason, cooperative multitasking should only be used when all tasks are known to cooperate. As a counterexample, it's not a good idea to make the operating system rely on the cooperation of arbitrary userlevel programs.
 
-However, the strong performance and memory benefits of cooperative multitasking make it a good approach for usage _within_ a program, especially in combination with asynchronous operations. Since an operating system kernel is a performance-critical program that interacts with asynchronous hardware, cooperative multitasking seems like a good approach for concurrency in our kernel. In the remainder of this post, we will therefore implement a basic async/await based multitasking system.
+However, the strong performance and memory benefits of cooperative multitasking make it a good approach for usage _within_ a program, especially in combination with asynchronous operations. Since an operating system kernel is a performance-critical program that interacts with asynchronous hardware, cooperative multitasking seems like a good approach for concurrency in our kernel.
 
 ## Async/Await in Rust
 
+The Rust language provides first-class support for cooperative multitasking in form of async/await. Before we can explore what async/await is and how it works, we need to understand how _futures_ and asynchronous programming work in Rust.
 
+### Futures
 
+A _future_ represents a value that might not be available yet. This could be for example an integer that is computed by another task or a file that is downloaded from the network. Instead of waiting until the value is available, futures make it possible to continue execution until the value is needed.
 
+#### Example
+
+The concept of futures is best illustrated with a small example:
+
+![Sequence diagram: main calls `read_file` and is blocked until it returns; then it calls `foo()` and is also blocked until it returns. The same process is repeated, but this time `async_read_file` is called, which directly returns a future; then `foo()` is called again, which now runs concurrently to the file load. The file is available before `foo()` returns.](async-example.svg)
+
+This sequence diagram shows a `main` function that reads a file from the file system and then calls a function `foo`. This process is repeated to times: Once with a synchronous `read_file` call and once with an asynchronous `async_read_file` call.
+
+With the synchronous call, the `main` function needs to wait until the file is loaded from the file system. Only then it can call the `foo` function, which requires it to again wait for the result.
+
+With the asynchronous `async_read_file` call, the file system directly returns a future and loads the file asynchronously in the background. This allows the `main` function to call `foo` much earlier, which then runs in parallel with the file load. In this example, the file load even finishes before `foo` returns, so `main` can directly work with the file without further waiting after `foo` returns.
+
+#### Futures in Rust
+
+In Rust, futures are represented by the [`Future`] trait, which looks like this:
+
+[`Future`]: https://doc.rust-lang.org/nightly/core/future/trait.Future.html
+
+```rust
+pub trait Future {
+    type Output;
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>;
+}
+```
+
+The [associated type] `Output` specfies the type of the asynchronous value. For example, the `async_read_file` function in the diagram above would return a `Future` instance with `Output` set to `File`.
+
+[associated type]: https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types
+
+The [`poll`] method allows to check if the value is already available. It returns a [`Poll`] enum, which looks like this:
+
+[`poll`]: https://doc.rust-lang.org/nightly/core/future/trait.Future.html#tymethod.poll
+[`Poll`]: https://doc.rust-lang.org/nightly/core/task/enum.Poll.html
+
+```rust
+pub enum Poll<T> {
+    Ready(T),
+    Pending,
+}
+```
+
+When the value is already available (e.g. the file was fully read from disk), it is returned wrapped in the `Ready` variant. Otherwise, the `Pending` variant is returned, which signals the caller that the value is not yet available.
+
+The `poll` method takes two arguments: `self: Pin<&mut Self>` and `cx: &mut Context`. The former behaves like a normal `&mut self` reference, with the difference that the `Self` value is [_pinned_] to its memory location. Understanding `Pin` and why it is needed is difficult without understanding how async/await works first. We will therefore explain it later in this post.
+
+[_pinned_]: https://doc.rust-lang.org/nightly/core/pin/index.html
+
+The purpose of the `cx: &mut Context` parameter is …
+
+### Async/Await
+
+### Generators
 
 
 
