@@ -145,9 +145,261 @@ The `poll` method takes two arguments: `self: Pin<&mut Self>` and `cx: &mut Cont
 
 [_pinned_]: https://doc.rust-lang.org/nightly/core/pin/index.html
 
-The purpose of the `cx: &mut Context` parameter is …
+The purpose of the `cx: &mut Context` parameter is to pass a [`Waker`] instance to the asynchronous task, e.g. the file system load. This `Waker` allows the asynchronous task to signal that it (or a part of it) is finished, e.g. that the file was loaded from disk. Since the main task knows that it will be notified when the `Future` is ready, it does not need to call `poll` over and over again. We will explain this process in more detail later when we implement an own `Waker` type.
 
-### Async/Await
+[`Waker`]: https://doc.rust-lang.org/nightly/core/task/struct.Waker.html
+
+### Working with Futures
+
+We now know how futures are defined and the rough idea behind the `poll` method. However, we still don't know how to effectively work with futures. The problem is that futures represent results of asynchronous tasks, which might be not available yet. In practice, however, we often need these values directly for further calculations. So the question is: How can we efficiently retrieve the value of a future when we need it?
+
+#### Waiting on Futures
+
+One possible answer is to wait until a future becomes ready. This could look something like this:
+
+```rust
+let future = async_read_file("foo.txt");
+let file_content = loop {
+    match future.poll(…) {
+        Poll::Ready(value) => break value,
+        Poll::Pending => {}, // do nothing
+    }
+}
+```
+
+Here we _actively_ wait for the future by calling `poll` over and over again in a loop. The arguments to `poll` don't matter here, so we omitted them. While this solution works, it is very inefficient because we keep the CPU busy until the value becomes available.
+
+A more effective approach could be to _block_ the current thread until the future becomes available. This is of course only possible if you have threads, so this solution does not work for kernel, at least not yet. Even on systems where blocking is supported, it is often not desired because it turns an asynchronous task into a synchronous task again, thereby inhibiting the potential performance benefits.
+
+#### Future Combinators
+
+An alternative to waiting is to use future combinators. Future combinators are functions like `map` that allow chaining and combining futures together, similar to the functions on [`Iterator`]. Instead of waiting on the future, these combinators return a future themselves, which applies the mapping operation on `poll`.
+
+[`Iterator`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html
+
+As an example, a simple `string_len` combinator for converting `Future<Output = String>` to a `Future<Output = usize` could look like this:
+
+```rust
+struct StringLen<F> {
+    inner_future: F,
+}
+
+impl<F> Future for StringLen<F> where Fut: Future<Output = String> {
+    type Output = usize;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<T> {
+        match self.inner_future.poll(cx) {
+            Poll::Ready(s) => Poll::Ready(s.len()),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+fn string_len(string: impl Future<Output = String>)
+    -> impl Future<Output = usize>
+{
+    StringLen {
+        inner_future: string,
+    }
+}
+
+// Usage
+fn file_len() -> impl Future<Output = usize> {
+    let file_content_future = async_read_file("foo.txt");
+    string_len(file_content_future)
+}
+```
+
+This code does not quite work because it does not handle [_pinning_], but it suffices as an example. The basic idea is that the `string_len` function wraps a given `Future` instance into a new `StringLen` struct, which also implements `Future`. When the wrapped future is polled, it polls the inner future. If the value is not ready yet, `Poll::Pending` is returned from the wrapped future too. If the value is ready, the string is extracted from the `Poll::Ready` variant and its length is calculated. Afterwards, it is wrapped in `Poll::Ready` again and returned.
+
+[_pinning_]: https://doc.rust-lang.org/stable/core/pin/index.html
+
+Manually writing correct combinator methods is difficult, therefore they are often provided by libraries. While the Rust standard library itself provides no combinator methods yet, the semi-official (and `no_std` compatible) [`futures`] crate does. Its [`FutureExt`] trait provides high-level combinator methods such as [`map`] or [`then`], which can be used to manipulate the result with arbitrary closures.
+
+[`futures`]: https://docs.rs/futures/0.3.4/futures/
+[`FutureExt`]: https://docs.rs/futures/0.3.4/futures/future/trait.FutureExt.html
+[`map`]: https://docs.rs/futures/0.3.4/futures/future/trait.FutureExt.html#method.map
+[`then`]: https://docs.rs/futures/0.3.4/futures/future/trait.FutureExt.html#method.then
+
+##### Advantages
+
+The big advantage of future combinators is that they keep the operations asynchronous. In combination with asynchronous I/O interfaces, this approach can lead to very high performance. The fact that future combinators are implemented as normal structs with trait implementations allows the compiler to excessively optimizing them to a efficient state machine. For more details, see the [_Zero-cost futures in Rust_] post, which announced the addition of futures to the Rust ecosystem.
+
+[_Zero-cost futures in Rust_]: https://aturon.github.io/blog/2016/08/11/futures/
+
+##### Drawbacks
+
+While future combinators make it possible to write very efficient code, they can be difficult to use in some situations because of the type system and the closure based interface. For example, consider code like this:
+
+```rust
+async_read_file("foo.txt").then(|content| {
+    if content.len() > 100 {
+        Either::Left(async_read_file("bar.txt"))
+    } else {
+        Either::Right(future::ready(content))
+    }
+})
+```
+
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=97a2d231584113452ff9e67d1b34604c))
+
+Here we read the file `foo.txt` and then use the [`then`] combinator to chain a second future based on the file content. If the content length is greater than 100, we read a different `bar.txt` file and return its content, otherwise we return the content of `foo.txt`.
+
+The reason for the [`Either`] wrapper is that if and else blocks must always have the same type. Since we return different future types in the blocks, we must use the wrapper type to unify them into a single type. The [`ready`] function wraps a value into a future, which is immediately ready. The function is required here because the `Either` wrapper expects that the wrapped value implements `Future`.
+
+[`Either`]: https://docs.rs/futures/0.3.4/futures/future/enum.Either.html
+[`ready`]: https://docs.rs/futures/0.3.4/futures/future/fn.ready.html
+
+As you can imagine, this can quickly lead to very complex code for larger projects. It gets especially complicated if borrowing and different lifetimes are involved. For this reason, a lot of work was invested to add support for async/await to Rust, with the goal of making asynchronous code radically simpler to write.
+
+### The Async/Await Pattern
+
+The idea behind async/await is to let the programmer write code that _looks_ like normal synchronous code, but is turned into asynchronous code by the compiler. It works based on the two keywords `async` and `await`. The `async` keyword can be used in a function signature to turn a synchronous function into an asynchronous function that returns a future:
+
+```rust
+async fn foo() -> u32 {
+    0
+}
+
+// the above is roughly translated by the compiler to:
+fn foo() -> impl Future<Output = u32> {
+    future::ready(0)
+}
+```
+
+This keyword alone wouldn't be that useful. However, inside `async` functions, the `await` keyword can be used to retrieve the asynchronous value of a future:
+
+```rust
+async fn foo() -> String {
+    let content = async_read_file("foo.txt").await;
+    if content.len() > 100 {
+        async_read_file("bar.txt").await
+    } else {
+        content
+    }
+}
+```
+
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=9f94ac348c2b7f5421a50e2a02f33b1d))
+
+This function is a direct translation of the future combinator code example, which required the `Either` wrapper type. Using the `.await` operator, we can retrieve the value of a future without needing any closures. As a result, we can write our code like we write normal synchronous code, with the difference that _this is still asynchronous code_.
+
+#### State Machine Transformation
+
+What the compiler does behind this scenes is to transform the body of the `async` function into a [_state machine_], with each `.await` call representing a different state. For the above `foo` function, the compiler creates a state machine with the following four states:
+
+[_state machine_]: https://en.wikipedia.org/wiki/Finite-state_machine
+
+```
+start   waiting on 1st future    waiting on 2nd future   end
+```
+
+This state machine implements the `Future` trait by making each `poll` call a possible state switch event:
+
+```
+start   waiting on 1st future    waiting on 2nd future    end
+|                 ^                         ^              ^
+|                 |                         |              |
+------------------------------------------------------------
+```
+
+The first `poll` call starts the function and lets it run until it reaches a future that is not ready yet. If all futures are ready, the function can run till its end and return its return value wrapped in `Poll::Ready`. Otherwise, `Poll::Pending` is returned. Internally, the stack machine keeps track of the active state, so that it can continue there on the next `poll` call.
+
+On subsequent calls to `poll`, the state machine continues from the current state and polls the future it currently waits on again. In case it is ready now, it continues execution until it reaches the next future that is not ready. If it is still not ready, it stays in the state and returns `Poll::Pending` again.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### The Async Keyword
+
+The purpose of the async/await pattern is to make working with futures easier. Rust has language-level support for this pattern built on the two keywords `async` and `await`. We will explain them individually, starting with `async`.
+
+The purpose of the `async` keyword is to turn a synchronous function into an asynchronous function that returns a `Future`:
+
+```rust
+fn synchronous() -> u32 {
+    42
+}
+
+async fn asynchronous() -> u32 {
+    42
+}
+```
+
+While both functions specify a return type of `u32`, the `async` keyword turns the return type of the second function into `impl Future<Output = u32>`. So instead of returning an `u32` directly, the `asynchronous` function returns a type that implements the `Future` trait with output type `u32`. We can see this when we try to assign the result to a variable of type `u32`:
+
+```rust
+let val: u32 = asynchronous();
+```
+
+The compiler responds with the following error ([try it on the playground](https://play.rust-lang.org/?version=nightly&mode=debug&edition=2018&gist=590273d2f4ef75eb890c5354f788e29c)):
+
+```
+error[E0308]: mismatched types
+  --> src/main.rs:3:23
+   |
+3  |     let val: u32 = asynchronous();
+   |              ---   ^^^^^^^^^^^^^^ expected `u32`, found opaque type
+   |              |
+   |              expected due to this
+...
+10 | async fn asynchronous() -> u32 {
+   |                            --- the `Output` of this `async fn`'s found opaque type
+   |
+   = note:     expected type `u32`
+           found opaque type `impl std::future::Future`
+```
+
+The relevant part of that error message are the last two lines: It expects an `u32` because of the type annotation, but the function returned an implementation of the `Future` trait instead.
+
+Of course, changing the return type alone would not work. Instead, the compiler also needs to convert the function body, which is `42` in our case, into a future. Since `42` is not asynchronous, the compiler just generates a future that returns the result on the first `poll`. The generated code _could_ look something like this:
+
+```rust
+struct GeneratedFuture;
+
+impl Future for GeneratedFuture {
+    type Output = u32;
+
+    fn poll(self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Self::Output> {
+        Poll::Ready(42)
+    }
+}
+
+fn asynchronous() -> impl Future<Output = u32> {
+    GeneratedFuture
+}
+```
+
+Instead of returning `u32`, the `asynchronous` function now returns an instance of a new `GeneratedFuture` struct. This struct implements the `Future` trait by returning `Poll::Ready(42)` on `poll`. The `42` is the body of `asynchronous` in this case.
+
+Note that this is just an example implementation. The actual code generated by the compiler uses a much more powerful approach, which we will explain in a moment.
+
+In addition to `async` futures, Rust also supports `async` blocks:
+
+```rust
+let future = async {
+    42
+};
+```
+
+The `future` variable also has the type `impl Future<Output = u32>` in this case. The generated code is very similar to the `async fn`, only without a function call: `let future = GeneratedFuture;`.
+
+We now know roughly what the `async` keyword does, but we still don't know why it's useful yet. After all, there is no advantage of returning a `impl Future<Output = u32>` instead of returning the `u32` directly. To answer this question, we have to explore different ways to work with futures.
+
+
+
+
+#### Await
 
 ### Generators
 

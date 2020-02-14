@@ -425,3 +425,8 @@ details summary h3, details summary h4, details summary h5, details summary h6 {
 .hidden {
   display: none;
 }
+
+h5 {
+  font-style: italic;
+  font-size: 0.9rem;
+}
