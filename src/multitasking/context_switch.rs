@@ -50,7 +50,7 @@ pub unsafe fn context_switch_to(
         "call asm_context_switch"
         :
         : "{rdi}"(new_stack_pointer), "{rsi}"(prev_thread_id), "{rdx}"(switch_reason as u64)
-        : "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rpb", "r8", "r9", "r10",
+        : "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "r8", "r9", "r10",
         "r11", "r12", "r13", "r14", "r15", "rflags", "memory"
         : "intel", "volatile"
     );
