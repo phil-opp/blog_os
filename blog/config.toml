@@ -13,6 +13,19 @@ languages = [
 
 ignored_content = ["*/README.md"]
 
+[link_checker]
+skip_prefixes = [
+    "https://crates.io/crates", # see https://github.com/rust-lang/crates.io/issues/788
+    "https://www.amd.com/system/files/TechDocs/", # seems to have problems with PDFs
+    "https://developer.apple.com/library/archive/qa/qa1118/_index.html", # results in a 401 (I don't know why)
+]
+skip_anchor_prefixes = [
+     "https://github.com/", # see https://github.com/getzola/zola/issues/805
+     "https://docs.rs/x86_64/0.1.2/src/", # source code highlight
+     "https://www.math.utah.edu/docs/info/ld_3.html", # see https://github.com/getzola/zola/issues/948
+     "https://web.stanford.edu/class/cs140/projects/pintos/specs/freevga/vga/vgamem.htm", # see https://github.com/getzola/zola/issues/948
+]
+
 [extra]
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }

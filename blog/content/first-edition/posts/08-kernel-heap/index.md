@@ -332,7 +332,7 @@ let heap_test = Box::new(42);
 
 When we run it, a triple fault occurs and causes permanent rebooting. Let's try debug it using QEMU and objdump as described [in the previous post][qemu debugging]:
 
-[qemu debugging]: http://os.phil-opp.com/remap-the-kernel.html#debugging
+[qemu debugging]: @/first-edition/posts/07-remap-the-kernel/index.md#debugging
 
 ```
 > qemu-system-x86_64 -d int -no-reboot -cdrom build/os-x86_64.iso

@@ -323,7 +323,7 @@ We convert the address into raw pointers through `as` casts and then convert the
 
 Note that `self` stays borrowed as long as the returned reference is valid. This is because of Rust's [lifetime elision] rules. Basically, these rules say that the lifetime of an output reference is the same as the lifetime of the input reference by default. So the above function signatures are expanded to:
 
-[lifetime elision]: https://doc.rust-lang.org/book/lifetimes.html#lifetime-elision
+[lifetime elision]: https://doc.rust-lang.org/1.30.0/book/first-edition/lifetimes.html#lifetime-elision
 
 ```rust
 pub fn next_table<'a>(&'a self, index: usize) -> Option<&'a Table> {...}

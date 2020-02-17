@@ -55,7 +55,7 @@ error[E0152]: duplicate lang item found: `panic_impl`.
 
 The problem is that unit tests are built for the host machine, with the `std` library included. This makes sense because they should be able to run as a normal application on the host operating system. Since the standard library has it's own `panic_handler` function, we get the above error. To fix it, we use [conditional compilation] to include our implementation of the panic handler only in non-test environments:
 
-[conditional compilation]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
+[conditional compilation]: https://doc.rust-lang.org/reference/conditional-compilation.html
 
 
 ```rust

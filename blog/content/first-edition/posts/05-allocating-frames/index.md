@@ -394,7 +394,7 @@ Note that we call `choose_next_area` manually here because `allocate_frame` retu
 ### Testing it
 In order to test it in main, we need to [re-export] the `AreaFrameAllocator` in the `memory` module. Then we can create a new allocator:
 
-[re-export]: https://doc.rust-lang.org/book/crates-and-modules.html#re-exporting-with-pub-use
+[re-export]: https://doc.rust-lang.org/1.30.0/book/first-edition/crates-and-modules.html#re-exporting-with-pub-use
 
 ```rust
 let mut frame_allocator = memory::AreaFrameAllocator::new(

@@ -70,7 +70,9 @@ Rust 语言有三个**发行频道**（release channel），分别是 stable、b
 
 要管理安装好的 Rust，我强烈建议使用 [rustup](https://www.rustup.rs/)：它允许你同时安装 nightly、beta 和 stable 版本的编译器，而且让更新 Rust 变得容易。你可以输入 `rustup override add nightly` 来选择在当前目录使用 nightly 版本的 Rust。或者，你也可以在项目根目录添加一个名称为 `rust-toolchain`、内容为 `nightly` 的文件。要检查你是否已经安装了一个 nightly，你可以运行 `rustc --version`：返回的版本号末尾应该包含`-nightly`。
 
-Nightly 版本的编译器允许我们在源码的开头插入**特性标签**（feature flag），来自由选择并使用大量实验性的功能。举个例子，要使用实验性的[内联汇编（asm!宏）](https://doc.rust-lang.org/nightly/unstable-book/language-features/asm.html)，我们可以在 `main.rs` 的顶部添加 `#![feature(asm)]`。要注意的是，这样的实验性功能**不稳定**（unstable），意味着未来的 Rust 版本可能会修改或移除这些功能，而不会有预先的警告过渡。因此我们只有在绝对必要的时候，才应该使用这些特性。
+Nightly 版本的编译器允许我们在源码的开头插入**特性标签**（feature flag），来自由选择并使用大量实验性的功能。举个例子，要使用实验性的[内联汇编（asm!宏）][asm feature]，我们可以在 `main.rs` 的顶部添加 `#![feature(asm)]`。要注意的是，这样的实验性功能**不稳定**（unstable），意味着未来的 Rust 版本可能会修改或移除这些功能，而不会有预先的警告过渡。因此我们只有在绝对必要的时候，才应该使用这些特性。
+
+[asm feature]: https://doc.rust-lang.org/unstable-book/library-features/asm.html
 
 ### 目标配置清单
 
@@ -231,7 +233,9 @@ cargo install cargo-xbuild
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-我们能看到，`cargo xbuild` 为我们自定义的目标交叉编译了 `core`、`compiler_builtin` 和 `alloc` 三个部件。这些部件使用了大量的**不稳定特性**（unstable features），所以只能在[nightly 版本的 Rust 编译器](https://os.phil-opp.com/freestanding-rust-binary/#installing-rust-nightly)中工作。这之后，`cargo xbuild` 成功地编译了我们的 `blog_os` 包。
+我们能看到，`cargo xbuild` 为我们自定义的目标交叉编译了 `core`、`compiler_builtin` 和 `alloc` 三个部件。这些部件使用了大量的**不稳定特性**（unstable features），所以只能在[nightly 版本的 Rust 编译器][installing rust nightly]中工作。这之后，`cargo xbuild` 成功地编译了我们的 `blog_os` 包。
+
+[installing rust nightly]: #an-zhuang-nightly-rust
 
 现在我们可以为裸机编译内核了；但是，我们提供给引导程序的入口点 `_start` 函数还是空的。我们可以添加一些东西进去，不过我们可以先做一些优化工作。
 
@@ -282,9 +286,13 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-在这段代码中，我们预先定义了一个**字节字符串**（byte string）类型的**静态变量**（static variable），名为 `HELLO`。我们首先将整数 `0xb8000` **转换**（cast）为一个**裸指针**（[raw pointer](https://doc.rust-lang.org/stable/book/second-edition/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer)）。这之后，我们迭代 `HELLO` 的每个字节，使用 [enumerate](https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate) 获得一个额外的序号变量 `i`。在 `for` 语句的循环体中，我们使用 [offset](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset) 偏移裸指针，解引用它，来将字符串的每个字节和对应的颜色字节——`0xb` 代表淡青色——写入内存位置。
+在这段代码中，我们预先定义了一个**字节字符串**（byte string）类型的**静态变量**（static variable），名为 `HELLO`。我们首先将整数 `0xb8000` **转换**（cast）为一个**裸指针**（[raw pointer]）。这之后，我们迭代 `HELLO` 的每个字节，使用 [enumerate](https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate) 获得一个额外的序号变量 `i`。在 `for` 语句的循环体中，我们使用 [offset](https://doc.rust-lang.org/std/primitive.pointer.html#method.offset) 偏移裸指针，解引用它，来将字符串的每个字节和对应的颜色字节——`0xb` 代表淡青色——写入内存位置。
 
-要注意的是，所有的裸指针内存操作都被一个 **unsafe 语句块**（[unsafe block](https://doc.rust-lang.org/stable/book/second-edition/ch19-01-unsafe-rust.html)）包围。这是因为，此时编译器不能确保我们创建的裸指针是有效的；一个裸指针可能指向任何一个你内存位置；直接解引用并写入它，也许会损坏正常的数据。使用 `unsafe` 语句块时，程序员其实在告诉编译器，自己保证语句块内的操作是有效的。事实上，`unsafe` 语句块并不会关闭 Rust 的安全检查机制；它允许你多做的事情[只有四件](https://doc.rust-lang.org/stable/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers)。
+[raw pointer]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+
+要注意的是，所有的裸指针内存操作都被一个 **unsafe 语句块**（[unsafe block](https://doc.rust-lang.org/stable/book/second-edition/ch19-01-unsafe-rust.html)）包围。这是因为，此时编译器不能确保我们创建的裸指针是有效的；一个裸指针可能指向任何一个你内存位置；直接解引用并写入它，也许会损坏正常的数据。使用 `unsafe` 语句块时，程序员其实在告诉编译器，自己保证语句块内的操作是有效的。事实上，`unsafe` 语句块并不会关闭 Rust 的安全检查机制；它允许你多做的事情[只有四件][unsafe superpowers]。
+
+[unsafe superpowers]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 使用 `unsafe` 语句块要求程序员有足够的自信，所以必须强调的一点是，**肆意使用 unsafe 语句块并不是 Rust 编程的一贯方式**。在缺乏足够经验的前提下，直接在 `unsafe` 语句块内操作裸指针，非常容易把事情弄得很糟糕；比如，在不注意的情况下，我们很可能会意外地操作缓冲区以外的内存。
 

@@ -103,7 +103,10 @@ pub enum Color {
 
 通常来说，编译器会对每个未使用的变量发出**警告**（warning）；使用 `#[allow(dead_code)]`，我们可以对 `Color` 枚举类型禁用这个警告。
 
-我们还**生成**（[derive](http://rustbyexample.com/trait/derive.html)）了 [`Copy`](https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html)、[`Clone`](https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html)、[`Debug`](https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html)、[`PartialEq`](https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html) 和 [`Eq`](https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html) 这几个 trait：这让我们的类型遵循**复制语义**（[copy semantics](https://doc.rust-lang.org/book/first-edition/ownership.html#copy-types)），也让它可以被比较、被调试和打印。
+我们还**生成**（[derive]）了 [`Copy`](https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html)、[`Clone`](https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html)、[`Debug`](https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html)、[`PartialEq`](https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html) 和 [`Eq`](https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html) 这几个 trait：这让我们的类型遵循**复制语义**（[copy semantics]），也让它可以被比较、被调试和打印。
+
+[derive]: https://doc.rust-lang.org/rust-by-example/trait/derive.html
+[copy semantics]: https://doc.rust-lang.org/1.30.0/book/first-edition/ownership.html#copy-types
 
 为了描述包含前景色和背景色的、完整的**颜色代码**（color code），我们基于 `u8` 创建一个新类型：
 

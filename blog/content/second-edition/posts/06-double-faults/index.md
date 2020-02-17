@@ -155,9 +155,9 @@ Let's look at the fourth question:
 
 A guard page is a special memory page at the bottom of a stack that makes it possible to detect stack overflows. The page is not mapped to any physical frame, so accessing it causes a page fault instead of silently corrupting other memory. The bootloader sets up a guard page for our kernel stack, so a stack overflow causes a _page fault_.
 
-When a page fault occurs the CPU looks up the page fault handler in the IDT and tries to push the [exception stack frame] onto the stack. However, the current stack pointer still points to the non-present guard page. Thus, a second page fault occurs, which causes a double fault (according to the above table).
+When a page fault occurs the CPU looks up the page fault handler in the IDT and tries to push the [interrupt stack frame] onto the stack. However, the current stack pointer still points to the non-present guard page. Thus, a second page fault occurs, which causes a double fault (according to the above table).
 
-[exception stack frame]: http://os.phil-opp.com/better-exception-messages.html#exceptions-in-detail
+[interrupt stack frame]: @/second-edition/posts/05-cpu-exceptions/index.md#the-interrupt-stack-frame
 
 So the CPU tries to call the _double fault handler_ now. However, on a double fault the CPU tries to push the exception stack frame, too. The stack pointer still points to the guard page, so a _third_ page fault occurs, which causes a _triple fault_ and a system reboot. So our current double fault handler can't avoid a triple fault in this case.
 

@@ -56,7 +56,7 @@ cargo new blog_os --bin --edition 2018
 
 I named the project `blog_os`, but of course you can choose your own name. The `--bin` flag specifies that we want to create an executable binary (in contrast to a library) and the `--edition 2018` flag specifies that we want to use the [2018 edition] of Rust for our crate. When we run the command, cargo creates the following directory structure for us:
 
-[2018 edition]: https://rust-lang-nursery.github.io/edition-guide/rust-2018/index.html
+[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
 
 ```
 blog_os
@@ -397,7 +397,7 @@ error: linking with `cc` failed: exit code: 1
 
 macOS [does not officially support statically linked binaries] and requires programs to link the `libSystem` library by default. To override this and link a static binary, we pass the `-static` flag to the linker:
 
-[does not officially support statically linked binaries]: https://developer.apple.com/library/content/qa/qa1118/_index.html
+[does not officially support statically linked binaries]: https://developer.apple.com/library/archive/qa/qa1118/_index.html
 
 ```
 cargo rustc -- -C link-args="-e __start -static"

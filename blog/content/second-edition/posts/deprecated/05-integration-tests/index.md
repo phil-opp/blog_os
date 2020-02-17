@@ -280,7 +280,7 @@ Now QEMU runs completely in the background and no window is opened anymore. This
 Right now we're doing the serial output and the QEMU exit from the `_start` function in our `main.rs` and can no longer run our kernel in a normal way. We could try to fix this by adding an `integration-test` [cargo feature] and using [conditional compilation]:
 
 [cargo feature]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section
-[conditional compilation]: https://doc.rust-lang.org/reference/attributes.html#conditional-compilation
+[conditional compilation]: https://doc.rust-lang.org/reference/conditional-compilation.html
 
 ```toml
 # in Cargo.toml

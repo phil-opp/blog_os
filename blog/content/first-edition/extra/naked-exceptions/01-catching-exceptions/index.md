@@ -245,7 +245,7 @@ It needs to be a function with a defined [calling convention], as it called dire
 
 It is important that the function is [diverging], i.e. it must never return. The reason is that the hardware doesn't _call_ the handler functions, it just _jumps_ to them after pushing some values to the stack. So our stack might look different:
 
-[diverging]: https://doc.rust-lang.org/book/functions.html#diverging-functions
+[diverging]: https://doc.rust-lang.org/rust-by-example/fn/diverging.html
 
 ![normal function return vs interrupt function return](normal-vs-interrupt-function-return.svg)
 
