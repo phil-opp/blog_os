@@ -29,7 +29,7 @@ with io.open("templates/auto/recent-updates.html", 'w', encoding='utf8') as rece
     else:
         recent_updates.write(u"<ul>\n")
 
-        for pr in recent_relnotes_issues:
+        for pr in sorted(recent_relnotes_issues, key=lambda issue: issue.closed_at, reverse=True):
             link = '<a href="' + pr.html_url + '">' + pr.title + "</a> "
             iso_date = pr.closed_at.isoformat()
             readable_date = pr.closed_at.strftime("%b&nbsp;%d")
