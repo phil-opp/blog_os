@@ -4,6 +4,11 @@ weight = 1
 path = "zh-CN/freestanding-rust-binary"
 date = 2018-02-10
 
+[extra]
+# Please update this when updating the translation
+translation_based_on_commit = "bd6fbcb1c36705b2c474d7fcee387bfea1210851"
+# GitHub usernames of the people that translated this post
+translators = ["luojia65", "Rustin-Liu", "TheBegining"]
 +++
 
 创建一个不链接标准库的 Rust 可执行文件，将是我们迈出的第一步。无需底层操作系统的支撑，这样才能在**裸机**（[bare metal]）上运行 Rust 代码。

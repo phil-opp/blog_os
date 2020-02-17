@@ -5,6 +5,7 @@ path = "zh-TW/freestanding-rust-binary"
 date = 2018-02-10
 
 [extra]
+# Please update this when updating the translation
 translation_based_on_commit = "24d04e0e39a3395ecdce795bab0963cb6afe1bfd"
 # GitHub usernames of the people that translated this post
 translators = ["wusyong"]

@@ -328,6 +328,10 @@ div.warning {
   background-color: #ffa50022;
 }
 
+div.warning p:last-child {
+  margin-bottom: 0;
+}
+
 form.subscribe {
   margin: 1rem;
 }
