@@ -3,6 +3,9 @@ title = "Heap Allocation"
 weight = 10
 path = "heap-allocation"
 date = 2019-06-26
+
+[extra]
+chapter = "Memory Management"
 +++
 
 This post adds support for heap allocation to our kernel. First, it gives an introduction to dynamic memory and shows how the borrow checker prevents common allocation errors. It then implements the basic allocation interface of Rust, creates a heap memory region, and sets up an allocator crate. At the end of this post all the allocation and collection types of the built-in `alloc` crate will be available to our kernel.
@@ -251,7 +254,7 @@ It defines the two required methods [`alloc`] and [`dealloc`], which correspond 
 
 The trait additionally defines the two methods [`alloc_zeroed`] and [`realloc`] with default implementations:
 
-- The [`alloc_zeroed`] method is equivalent to calling `alloc` and then setting the allocated memory block to zero, which is exactly what the provided default implementation does. An allocator implementations can override the default implementations with a more efficient custom implementation if possible.
+- The [`alloc_zeroed`] method is equivalent to calling `alloc` and then setting the allocated memory block to zero, which is exactly what the provided default implementation does. An allocator implementation can override the default implementations with a more efficient custom implementation if possible.
 - The [`realloc`] method allows to grow or shrink an allocation. The default implementation allocates a new memory block with the desired size and copies over all the content from the previous allocation. Again, an allocator implementation can probably provide a more efficient implementation of this method, for example by growing/shrinking the allocation in-place if possible.
 
 [`alloc_zeroed`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#method.alloc_zeroed
@@ -306,15 +309,13 @@ We now have a simple allocator, but we still have to tell the Rust compiler that
 The `#[global_allocator]` attribute tells the Rust compiler which allocator instance it should use as the global heap allocator. The attribute is only applicable to a `static` that implements the `GlobalAlloc` trait. Let's register an instance of our `Dummy` allocator as the global allocator:
 
 ```rust
-// in src/lib.rs
+// in src/allocator.rs
 
 #[global_allocator]
-static ALLOCATOR: allocator::Dummy = allocator::Dummy;
+static ALLOCATOR: Dummy = Dummy;
 ```
 
-Since the `Dummy` allocator is a [zero sized type], we don't need to specify any fields in the initialization expression. Note that the `#[global_allocator]` module [cannot be used in submodules][pr51335], so we need to put it into the `lib.rs`.
-
-[pr51335]: https://github.com/rust-lang/rust/pull/51335
+Since the `Dummy` allocator is a [zero sized type], we don't need to specify any fields in the initialization expression.
 
 When we now try to compile it, the first error should be gone. Let's fix the remaining second error:
 
@@ -520,7 +521,7 @@ linked_list_allocator = "0.6.4"
 Then we can replace our dummy allocator with the allocator provided by the crate:
 
 ```rust
-// in src/lib.rs
+// in src/allocator.rs
 
 use linked_list_allocator::LockedHeap;
 
@@ -547,7 +548,7 @@ pub fn init_heap(
 
     // new
     unsafe {
-        super::ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
+        ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
     }
 
     Ok(())
@@ -745,10 +746,12 @@ As a third test, we create ten thousand allocations after each other:
 ```rust
 // in tests/heap_allocation.rs
 
+use blog_os::allocator::HEAP_SIZE;
+
 #[test_case]
 fn many_boxes() {
     serial_print!("many_boxes... ");
-    for i in 0..10_000 {
+    for i in 0..HEAP_SIZE {
         let x = Box::new(i);
         assert_eq!(*x, i);
     }

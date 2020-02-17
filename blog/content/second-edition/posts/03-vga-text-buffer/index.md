@@ -4,6 +4,8 @@ weight = 3
 path = "vga-text-mode"
 date  = 2018-02-26
 
+[extra]
+chapter = "Bare Bones"
 +++
 
 The [VGA text mode] is a simple way to print text to the screen. In this post, we create an interface that makes its usage safe and simple, by encapsulating all unsafety in a separate module. We also implement support for Rust's [formatting macros].
@@ -590,7 +592,7 @@ macro_rules! println {
 
 Macros are defined through one or more rules, which are similar to `match` arms. The `println` macro has two rules: The first rule for is invocations without arguments (e.g `println!()`), which is expanded to `print!("\n")` and thus just prints a newline. the second rule is for invocations with parameters such as `println!("Hello")` or `println!("Number: {}", 4)`. It is also expanded to an invocation of the `print!` macro, passing all arguments and an additional newline `\n` at the end.
 
-The `#[macro_export]` attribute makes the available to the whole crate (not just the module it is defined) and external crates. It also places the macro at the crate root, which means that we have to import the macro through `use std::println` instead of `std::macros::println`.
+The `#[macro_export]` attribute makes the macro available to the whole crate (not just the module it is defined) and external crates. It also places the macro at the crate root, which means that we have to import the macro through `use std::println` instead of `std::macros::println`.
 
 The [`print!` macro] is defined as:
 

@@ -4,6 +4,10 @@
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 
+{% block description -%}
+{{ page.summary | safe | striptags }}
+{%- endblock description %}
+
 {% block main %}
     <h1>{{ page.title }}</h1>
     {{ page.content | safe }}

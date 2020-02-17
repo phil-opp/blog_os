@@ -3,6 +3,9 @@ title = "Paging Implementation"
 weight = 9
 path = "paging-implementation"
 date = 2019-03-14
+
+[extra]
+chapter = "Memory Management"
 +++
 
 This post shows how to implement paging support in our kernel. It first explores different techniques to make the physical page table frames accessible to the kernel and discusses their respective advantages and drawbacks. It then implements an address translation function and a function to create a new mapping.

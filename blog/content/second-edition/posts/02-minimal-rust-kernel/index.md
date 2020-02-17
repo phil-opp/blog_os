@@ -4,6 +4,8 @@ weight = 2
 path = "minimal-rust-kernel"
 date = 2018-02-10
 
+[extra]
+chapter = "Bare Bones"
 +++
 
 In this post we create a minimal 64-bit Rust kernel for the x86 architecture. We build upon the [freestanding Rust binary] from the previous post to create a bootable disk image, that prints something to the screen.
@@ -169,7 +171,7 @@ This setting specifies that the target doesn't support [stack unwinding] on pani
 
 We're writing a kernel, so we'll need to handle interrupts at some point. To do that safely, we have to disable a certain stack pointer optimization called the _“red zone”_, because it would cause stack corruptions otherwise. For more information, see our separate post about [disabling the red zone].
 
-[disabling the red zone]: @/second-edition/extra/disable-red-zone/index.md
+[disabling the red zone]: @/second-edition/posts/02-minimal-rust-kernel/disable-red-zone/index.md
 
 ```json
 "features": "-mmx,-sse,+soft-float",
@@ -183,7 +185,7 @@ The `mmx` and `sse` features determine support for [Single Instruction Multiple 
 
 A problem with disabling SIMD is that floating point operations on `x86_64` require SIMD registers by default. To solve this problem, we add the `soft-float` feature, which emulates all floating point operations through software functions based on normal integers.
 
-For more information, see our post on [disabling SIMD](@/second-edition/extra/disable-simd/index.md).
+For more information, see our post on [disabling SIMD](@/second-edition/posts/02-minimal-rust-kernel/disable-simd/index.md).
 
 #### Putting it Together
 Our target specification file now looks like this:

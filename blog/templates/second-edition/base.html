@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="{{ config.description }}">
+    <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
     <meta name="author" content="{{ config.extra.author.name }}">
 
     {% if current_url %}
@@ -25,7 +25,7 @@
         <header class="masthead">
             <div style="position:relative">
                 <h1 class="masthead-title">
-                    <a href="{{ config.base_url | safe }}" title="Home">{{ config.title | safe }} (Second Edition)</a>
+                    <a href="{{ config.base_url | safe }}" title="Home">{{ config.title | safe }}</a>
                 </h1>
                 <p><small>{{ config.extra.subtitle | replace(from=" ", to="&nbsp;") | safe }}</small></p>
                 {% block header %}{% endblock header %}
@@ -39,7 +39,7 @@
         <footer class="footer">
             <hr>
             <small>
-                &copy; <time datetime="2019">2019</time>. All rights reserved.
+                &copy; <time datetime="2020">2020</time>. All rights reserved.
                 <a href="{{ get_url(path="@/pages/contact.md") | safe }}">Contact</a>
             </small>
         </footer>

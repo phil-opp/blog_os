@@ -4,6 +4,8 @@ weight = 7
 path = "hardware-interrupts"
 date = 2018-10-22
 
+[extra]
+chapter = "Interrupts"
 +++
 
 In this post we set up the programmable interrupt controller to correctly forward hardware interrupts to the CPU. To handle these interrupts we add new entries to our interrupt descriptor table, just like we did for our exception handlers. We will learn how to get periodic timer interrupts and how to get input from the keyboard.

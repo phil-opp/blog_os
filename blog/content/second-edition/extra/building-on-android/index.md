@@ -6,6 +6,8 @@ weight = 3
 
 I finally managed to get `blog_os` building on my Android phone using [termux](https://termux.com/). This post explains the necessary steps to set it up.
 
+<!-- more -->
+
 <img src="building-on-android.png" alt="Screenshot of the compilation output from android" style="height: 50rem;" >
 
 

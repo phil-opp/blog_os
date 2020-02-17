@@ -8,6 +8,8 @@
 {% set posts_section = get_section(path = "second-edition/posts/_index.md") %}
 {% set posts = posts_section.pages %}
 
+<h1 style="visibility: hidden; height: 0px; margin: 0px; padding: 0px;">Posts</h1>
+
 <div class="front-page-introduction">
     <p>
         This blog series creates a small operating system in the
@@ -21,58 +23,36 @@
     </p>
 </div>
 
-<div id="bare-bones" class="post-category bare-bones">Bare Bones</div>
-<div class="posts bare-bones">
-    {{ macros::post_link(page=posts.0) }}
-    {{ macros::post_link(page=posts.1) }}
-    {{ macros::post_link(page=posts.2) }}
-    {{ macros::post_link(page=posts.3) }}
+<div>
+{% set chapter = "none" %}
+{% for post in posts %}
+    {% if post.extra["chapter"] %}
+        {% if post.extra["chapter"] != chapter %}
+            {# Begin new chapter #}
+            {% set_global chapter = post.extra["chapter"] %}
 </div>
 
-<div id="exceptions" class="post-category exceptions">Exceptions</div>
-<div class="posts exceptions">
-    {{ macros::post_link(page=posts.4) }}
-    {{ macros::post_link(page=posts.5) }}
-    {{ macros::post_link(page=posts.6) }}
-</div>
+<div id="{{chapter | slugify}}" class="post-category {{chapter | slugify}}">{{ chapter }}</div>
+<div class="posts {{chapter | slugify}}">
+        {% endif %}
+    {% endif %}
 
-<div id="memory-management" class="post-category memory-management">Memory Management</div>
-<div class="posts memory-management">
-    {{ macros::post_link(page=posts.7) }}
-    {{ macros::post_link(page=posts.8) }}
-    {{ macros::post_link(page=posts.9) }}
+    {{ macros::post_link(page=post) }}
+{% endfor %}
 </div>
 
 <div class="posts subscribe">
     <h2 class="post-title">Subscribe</h2>
     <p>Receive notifications about new posts and other major changes! You can either:</p>
 
-    <p><ul>
+    <ul>
         <li>Subscribe to our <a href="/rss.xml">RSS/Atom Feed</a>,</li>
         <li>Subscribe to <a href="https://github.com/phil-opp/blog_os/issues/479">this GitHub issue</a>, or</li>
         <li>Subscribe to our <a href="https://tinyletter.com/phil-opp/">email newsletter</a>.</li>
-    </ul></p>
-</div>
-
-<div class="posts first-edition">
-    <h2 class="post-title">First Edition</h2>
-    You are viewing the second edition of “Writing an OS in Rust”, which is still in progress. The <a href="{{ get_url(path = "/first-edition") | safe }}">first edition</a> has more content, but is no longer updated. We try our best to incorporate the missing content soon.
+    </ul>
 </div>
 
 <hr>
-
-<div class="frontpage-section">
-    {% set extra = get_section(path = "second-edition/extra/_index.md") %}
-    <h1>{{ extra.title }}</h1>
-    <ul>
-        {% for subsection in extra.subsections %}
-            <li><a href="/{{ subsection.path | safe }}">{{ subsection.title }}</a></li>
-        {% endfor %}
-        {% for page in extra.pages %}
-            <li><a href="/{{ page.path | safe }}">{{ page.title }}</a></li>
-        {% endfor %}
-    </ul>
-</div>
 
 <div class="frontpage-section">
     <h1>Status Updates</h1>
@@ -87,10 +67,17 @@
 </div>
 
 <div class="frontpage-section">
+    <h1 class="post-title">First Edition</h1>
+    <p>You are currently viewing the second edition of “Writing an OS in Rust”. The first edition is very different in many aspects, for example it builds upon the GRUB bootloader instead of using the `bootloader` crate. In case you're interested in it, it is still available. Note that the first edition is no longer updated and might contain outdated information. <a class="read-more" href="{{ get_url(path = "/first-edition") | safe }}"><em>read&nbsp;the&nbsp;first edition&nbsp;»</em></a></p>
+</div>
+
+<div class="">
     <h1>Support Me</h1>
     {% include "support.html" %}
 </div>
+{% endblock main %}
 
+{% block after_main %}
 <aside id="recent-updates">
     <div class="block">
         <h1>Recent Updates</h1>
@@ -121,7 +108,7 @@
                     {% include "auto/forks.html" %}
                 </a>
 
-                <a href="https://github.com/sponsors/phil-opp" class="sponsor" href="#support-me">
+                <a href="https://github.com/sponsors/phil-opp" class="sponsor">
                     <svg viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M9 2c-.97 0-1.69.42-2.2 1-.51.58-.78.92-.8 1-.02-.08-.28-.42-.8-1-.52-.58-1.17-1-2.2-1-1.632.086-2.954 1.333-3 3 0 .52.09 1.52.67 2.67C1.25 8.82 3.01 10.61 6 13c2.98-2.39 4.77-4.17 5.34-5.33C11.91 6.51 12 5.5 12 5c-.047-1.69-1.342-2.913-3-3z"></path></svg>
                     Sponsor
                 </a>
@@ -131,4 +118,4 @@
 
 </aside>
 
-{% endblock main %}
+{% endblock after_main %}

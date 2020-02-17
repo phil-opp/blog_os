@@ -4,6 +4,8 @@ weight = 5
 path = "cpu-exceptions"
 date  = 2018-06-17
 
+[extra]
+chapter = "Interrupts"
 +++
 
 CPU exceptions occur in various erroneous situations, for example when accessing an invalid memory address or when dividing by zero. To react to them we have to set up an _interrupt descriptor table_ that provides handler functions. At the end of this post, our kernel will be able to catch [breakpoint exceptions] and to resume normal execution afterwards.
@@ -168,6 +170,8 @@ In contrast to function calls, exceptions can occur on _any_ instruction. In mos
 
 Since we don't know when an exception occurs, we can't backup any registers before. This means that we can't use a calling convention that relies on caller-saved registers for exception handlers. Instead, we need a calling convention means that preserves _all registers_. The `x86-interrupt` calling convention is such a calling convention, so it guarantees that all register values are restored to their original values on function return.
 
+Note that this does not mean that all registers are saved to the stack at function entry. Instead, the compiler only backs up the registers that are overwritten by the function. This way, very efficient code can be generated for short functions that only use a few registers.
+
 ### The Interrupt Stack Frame
 On a normal function call (using the `call` instruction), the CPU pushes the return address before jumping to the target function. On function return (using the `ret` instruction), the CPU pops this return address and jumps to it. So the stack frame of a normal function call looks like this:
 
@@ -192,12 +196,6 @@ So the _interrupt stack frame_ looks like this:
 In the `x86_64` crate, the interrupt stack frame is represented by the [`InterruptStackFrame`] struct. It is passed to interrupt handlers as `&mut` and can be used to retrieve additional information about the exception's cause. The struct contains no error code field, since only some few exceptions push an error code. These exceptions use the separate [`HandlerFuncWithErrCode`] function type, which has an additional `error_code` argument.
 
 [`InterruptStackFrame`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/struct.InterruptStackFrame.html
-
-Note that there is currently [a bug in LLVM] that leads to wrong error code arguments. The cause of the issue is already known and a solution is [being worked on].
-
-[a bug in LLVM]: https://github.com/rust-lang/rust/issues/57270
-[being worked on]: https://reviews.llvm.org/D56275
-
 
 ### Behind the Scenes
 The `x86-interrupt` calling convention is a powerful abstraction that hides almost all of the messy details of the exception handling process. However, sometimes it's useful to know what's happening behind the curtain. Here is a short overview of the things that the `x86-interrupt` calling convention takes care of:

@@ -4,6 +4,8 @@ weight = 6
 path = "double-fault-exceptions"
 date  = 2018-06-18
 
+[extra]
+chapter = "Interrupts"
 +++
 
 This post explores the double fault exception in detail, which occurs when the CPU fails to invoke an exception handler. By handling this exception we avoid fatal _triple faults_ that cause a system reset. To prevent triple faults in all cases we also set up an _Interrupt Stack Table_ to catch double faults on a separate kernel stack.
