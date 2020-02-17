@@ -21,7 +21,7 @@ def format_number(number):
 with io.open("templates/auto/recent-updates.html", 'w', encoding='utf8') as recent_updates:
     recent_updates.truncate()
 
-    relnotes_issues = g.search_issues("is:merged", repo="phil-opp/blog_os", type="pr", label="relnotes")[:10]
+    relnotes_issues = g.search_issues("is:merged", repo="phil-opp/blog_os", type="pr", label="relnotes")[:100]
     recent_relnotes_issues = filter(filter_date, relnotes_issues)
 
     if len(recent_relnotes_issues) == 0:
