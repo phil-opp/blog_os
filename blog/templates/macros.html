@@ -12,7 +12,7 @@
             {{ post.summary | safe}}
             <a class="read-more" href="/{{ post.path | safe }}"><em>read&nbsp;more&nbsp;»</em></a>
 
-            {% if lang and not_translated %}
+            {% if lang and not_translated and lang != config.default_language %}
             <aside class="no-translation">
                 (This post is not translated yet.)
             </aside>
