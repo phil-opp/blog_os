@@ -249,7 +249,7 @@ aside#all-posts-link {
     display: none;
   }
 
-  aside#recent-updates {
+  aside.page-aside-right {
     position: absolute;
     min-width: 11rem;
     max-width: 17rem;
@@ -259,21 +259,21 @@ aside#all-posts-link {
     font-size: 90%;
   }
 
-  aside#recent-updates .block {
+  aside.page-aside-right .block {
     margin-bottom: 1.5rem;
   }
 
-  aside#recent-updates h1 {
+  aside.page-aside-right h2 {
     font-size: 110%;
     margin-bottom: .2rem;
   }
 
-  aside#recent-updates ul {
+  aside.page-aside-right ul {
     margin: 0 0 .2rem 0;
     padding: 0 0 0 1rem;
   }
 
-  aside#recent-updates ul li {
+  aside.page-aside-right ul li {
     margin-top: .5rem;
   }
 
@@ -285,7 +285,7 @@ aside#all-posts-link {
   }
 }
 
-aside#recent-updates time {
+aside.page-aside-right time {
   color: #9a9a9a;
 }
 
@@ -420,4 +420,8 @@ details summary h3, details summary h4, details summary h5, details summary h6 {
 .gh-repo-box .sponsor {
   display: inline-block;
   margin-left: 16px;
+}
+
+.hidden {
+  display: none;
 }
