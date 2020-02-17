@@ -6,6 +6,11 @@ highlight_code = true
 highlight_theme = "visual-studio-dark"
 generate_rss = true
 
+languages = [
+    { code = "zh-CN" }, # Chinese (simplified)
+    { code = "zh-TW" }, # Chinese (tradictional)
+]
+
 ignored_content = ["*/README.md"]
 
 [extra]

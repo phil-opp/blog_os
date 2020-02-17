@@ -4,7 +4,11 @@
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block header %}
+    {% if lang != "en" %}
+    <aside id="all-posts-link"><a href="{{ config.base_url | safe }}/{{ lang }}" title="All Posts">« All Posts</a></aside>
+    {% else %}
     <aside id="all-posts-link"><a href="{{ config.base_url | safe }}" title="All Posts">« All Posts</a></aside>
+    {% endif %}
 {% endblock header %}
 
 {% block description -%}
@@ -36,6 +40,15 @@
         <div class="warning">
             {% if page.extra.warning_short %} <b>{{ page.extra.warning_short }}</b> {% endif %}
             {{ page.extra.warning | markdown(inline=true) | safe }}
+        </div>
+    {% endif %}
+
+    {% if page.lang != "en" %}
+        <div class="warning">
+            {% set translations = page.translations | filter(attribute="lang", value="en") %}
+            {% set original = translations.0 %}
+            <b>Translated Content:</b>
+            This is a community translation of the <strong><a href="{{ original.permalink }}">{{ original.title }}</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!
         </div>
     {% endif %}
 

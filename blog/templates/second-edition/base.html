@@ -1,6 +1,6 @@
 <!doctype html>
 
-<html lang="{{ config.default_language }}">
+<html lang="{% if lang %}{{ lang }}{% else %}{{ config.default_language }}{% endif %}">
 
 <head>
     <meta charset="UTF-8">
