@@ -90,6 +90,7 @@
     </section>
 
     <aside class="page-aside-right">
+        {% if page.translations -%}
         <div class="block hidden" id="language-selector">
             <h2>Other Languages</h2>
             <ul>
@@ -98,6 +99,7 @@
                 {% endfor %}
             </ul>
         </div>
+        {%- endif %}
     </aside>
 
 {% endblock after_main %}
