@@ -89,4 +89,15 @@
         {{ macros::utterances() }}
     </section>
 
+    <aside class="page-aside-right">
+        <div class="block hidden" id="language-selector">
+            <h2>Other Languages</h2>
+            <ul>
+                {% for translation in page.translations %}
+                    <li data-lang-switch-to="{{ translation.lang }}" class="hidden"><a href="{{ translation.permalink }}">{{ translation.lang }} {% if translation.lang == "en" %}(original){% endif %}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </aside>
+
 {% endblock after_main %}
