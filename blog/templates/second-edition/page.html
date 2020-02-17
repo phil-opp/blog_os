@@ -4,11 +4,11 @@
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block header %}
-    {% if lang != "en" %}
+    {% if lang != "en" -%}
     <aside id="all-posts-link"><a href="{{ config.base_url | safe }}/{{ lang }}" title="All Posts">« All Posts</a></aside>
-    {% else %}
+    {%- else -%}
     <aside id="all-posts-link"><a href="{{ config.base_url | safe }}" title="All Posts">« All Posts</a></aside>
-    {% endif %}
+    {%- endif %}
 {% endblock header %}
 
 {% block description -%}
@@ -43,7 +43,7 @@
         </div>
     {% endif %}
 
-    {% if page.lang != "en" %}
+    {%- if page.lang != "en" %}
         <div class="warning">
             {% set translations = page.translations | filter(attribute="lang", value="en") %}
             {% set original = translations.0 %}
