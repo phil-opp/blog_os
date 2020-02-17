@@ -24,21 +24,21 @@
 </div>
 
 <div>
-{% set chapter = "none" %}
-{% for post in posts %}
-    {% if post.extra["chapter"] %}
-        {% if post.extra["chapter"] != chapter %}
+{%- set chapter = "none" -%}
+{%- for post in posts -%}
+    {%- if post.extra["chapter"] -%}
+        {%- if post.extra["chapter"] != chapter -%}
             {# Begin new chapter #}
-            {% set_global chapter = post.extra["chapter"] %}
+            {%- set_global chapter = post.extra["chapter"] -%}
 </div>
 
 <div id="{{chapter | slugify}}" class="post-category {{chapter | slugify}}">{{ chapter }}</div>
 <div class="posts {{chapter | slugify}}">
-        {% endif %}
-    {% endif %}
+        {%- endif -%}
+    {%- endif -%}
 
     {{ macros::post_link(page=post) }}
-{% endfor %}
+{%- endfor -%}
 </div>
 
 <div class="posts subscribe">
