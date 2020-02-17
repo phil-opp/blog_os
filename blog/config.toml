@@ -13,6 +13,11 @@ languages = [
 
 ignored_content = ["*/README.md"]
 
+[link_checker]
+skip_anchor_prefixes = [
+     "https://github.com/", # see https://github.com/getzola/zola/issues/805
+]
+
 [extra]
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }
