@@ -1,9 +1,12 @@
 title = "Writing an OS in Rust"
 base_url = "https://os.phil-opp.com"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 
 highlight_code = true
 highlight_theme = "visual-studio-dark"
 generate_rss = true
+
+ignored_content = ["*/README.md"]
 
 [extra]
 subtitle = "Philipp Oppermann's blog"

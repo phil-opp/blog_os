@@ -4,6 +4,8 @@ weight = 7
 path = "hardware-interrupts"
 date = 2018-10-22
 
+[extra]
+chapter = "Interrupts"
 +++
 
 In this post we set up the programmable interrupt controller to correctly forward hardware interrupts to the CPU. To handle these interrupts we add new entries to our interrupt descriptor table, just like we did for our exception handlers. We will learn how to get periodic timer interrupts and how to get input from the keyboard.
@@ -206,7 +208,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 Our `timer_interrupt_handler` has the same signature as our exception handlers, because the CPU reacts identically to exceptions and external interrupts (the only difference is that some exceptions push an error code). The [`InterruptDescriptorTable`] struct implements the [`IndexMut`] trait, so we can access individual entries through array indexing syntax.
 
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
 In our timer interrupt handler, we print a dot to the screen. As the timer interrupt happens periodically, we would expect to see a dot appearing on each timer tick. However, when we run it we see that only a single dot is printed:
@@ -331,7 +333,7 @@ pub fn _print(args: fmt::Arguments) {
 
 The [`without_interrupts`] function takes a [closure] and executes it in an interrupt-free environment. We use it to ensure that no interrupt can occur as long as the `Mutex` is locked. When we run our kernel now we see that it keeps running without hanging. (We still don't notice any dots, but this is because they're scrolling by too fast. Try to slow down the printing, e.g. by putting a `for _ in 0..10000 {}` inside the loop.)
 
-[`without_interrupts`]: https://docs.rs/x86_64/0.7.5/x86_64/instructions/interrupts/fn.without_interrupts.html
+[`without_interrupts`]: https://docs.rs/x86_64/0.8.1/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/second-edition/ch13-01-closures.html
 
 We can apply the same change to our serial printing function to ensure that no deadlocks occur with it either:
@@ -586,7 +588,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard's data port. This byte is called the [_scancode_] and is a number that represents the key press/release. We don't do anything with the scancode yet, we just print it to the screen:
 
-[`Port`]: https://docs.rs/x86_64/0.7.5/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.8.1/x86_64/instructions/port/struct.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
 
 ![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)

@@ -4,6 +4,8 @@ weight = 6
 path = "double-fault-exceptions"
 date  = 2018-06-18
 
+[extra]
+chapter = "Interrupts"
 +++
 
 This post explores the double fault exception in detail, which occurs when the CPU fails to invoke an exception handler. By handling this exception we avoid fatal _triple faults_ that cause a system reset. To prevent triple faults in all cases we also set up an _Interrupt Stack Table_ to catch double faults on a separate kernel stack.
@@ -79,13 +81,15 @@ lazy_static! {
 
 // new
 extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: &mut InterruptStackFrame, _error_code: u64)
+    stack_frame: &mut InterruptStackFrame, _error_code: u64) -> !
 {
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
 ```
 
-Our handler prints a short error message and dumps the exception stack frame. The error code of the double fault handler is always zero, so there's no reason to print it.
+Our handler prints a short error message and dumps the exception stack frame. The error code of the double fault handler is always zero, so there's no reason to print it. One difference to the breakpoint handler is that the double fault handler is [_diverging_]. The reason is that the `x86_64` architecture does not permit returning from a double fault exception.
+
+[_diverging_]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
 When we start our kernel now, we should see that the double fault handler is invoked:
 
@@ -225,7 +229,7 @@ The _Privilege Stack Table_ is used by the CPU when the privilege level changes.
 ### Creating a TSS
 Let's create a new TSS that contains a separate double fault stack in its interrupt stack table. For that we need a TSS struct. Fortunately, the `x86_64` crate already contains a [`TaskStateSegment` struct] that we can use.
 
-[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.7.5/x86_64/structures/tss/struct.TaskStateSegment.html
+[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.8.1/x86_64/structures/tss/struct.TaskStateSegment.html
 
 We create the TSS in a new `gdt` module (the name will make sense later):
 
@@ -371,8 +375,8 @@ pub fn init() {
 
 We reload the code segment register using [`set_cs`] and to load the TSS using [`load_tss`]. The functions are marked as `unsafe`, so we need an `unsafe` block to invoke them. The reason is that it might be possible to break memory safety by loading invalid selectors.
 
-[`set_cs`]: https://docs.rs/x86_64/0.7.5/x86_64/instructions/segmentation/fn.set_cs.html
-[`load_tss`]: https://docs.rs/x86_64/0.7.5/x86_64/instructions/tables/fn.load_tss.html
+[`set_cs`]: https://docs.rs/x86_64/0.8.1/x86_64/instructions/segmentation/fn.set_cs.html
+[`load_tss`]: https://docs.rs/x86_64/0.8.1/x86_64/instructions/tables/fn.load_tss.html
 
 Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 
@@ -517,7 +521,7 @@ use x86_64::structures::idt::InterruptStackFrame;
 extern "x86-interrupt" fn test_double_fault_handler(
     _stack_frame: &mut InterruptStackFrame,
     _error_code: u64,
-) {
+) -> ! {
     serial_println!("[ok]");
     exit_qemu(QemuExitCode::Success);
     loop {}

@@ -10,7 +10,7 @@ The code for each post lives in a separate git branch. This makes it possible to
 
 **The code for the latest post is available [here][latest-post].**
 
-[latest-post]: https://github.com/phil-opp/blog_os/tree/post-10
+[latest-post]: https://github.com/phil-opp/blog_os/tree/post-11
 
 You can find the branch for each post by following the `(source code)` link in the [post list](#posts) below. The branches are named `post-XX` where `XX` is the post number, for example `post-03` for the _VGA Text Mode_ post or `post-07` for the _Hardware Interrupts_ post. For build instructions, see the Readme of the respective branch.
 
@@ -56,6 +56,8 @@ The goal of this project is to provide step-by-step tutorials in individual blog
     ([source code](https://github.com/phil-opp/blog_os/tree/post-09))
 - [Heap Allocation](https://os.phil-opp.com/heap-allocation/)
     ([source code](https://github.com/phil-opp/blog_os/tree/post-10))
+- [Allocator Designs](https://os.phil-opp.com/allocator-designs/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-11))
 
 ## First Edition Posts
 
@@ -104,4 +106,17 @@ The current version of the blog is already the second edition. The first edition
           ([source code](https://github.com/phil-opp/blog_os/tree/returning_from_exceptions))
 
 ## License
-The source code is dual-licensed under MIT or the Apache License (Version 2.0). This excludes the `blog` directory.
+
+This project, with exception of the `blog/content` folder, is licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
+  http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
+For licensing of the `blog/content` folder, see the [`blog/content/README.md`](blog/content/README.md).
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.

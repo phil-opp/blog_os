@@ -4,6 +4,8 @@ weight = 5
 path = "cpu-exceptions"
 date  = 2018-06-17
 
+[extra]
+chapter = "Interrupts"
 +++
 
 CPU exceptions occur in various erroneous situations, for example when accessing an invalid memory address or when dividing by zero. To react to them we have to set up an _interrupt descriptor table_ that provides handler functions. At the end of this post, our kernel will be able to catch [breakpoint exceptions] and to resume normal execution afterwards.
@@ -82,7 +84,7 @@ Don't worry about steps 4 and 5 for now, we will learn about the global descript
 ## An IDT Type
 Instead of creating our own IDT type, we will use the [`InterruptDescriptorTable` struct] of the `x86_64` crate, which looks like this:
 
-[`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 
 ``` rust
 #[repr(C)]
@@ -113,10 +115,10 @@ pub struct InterruptDescriptorTable {
 
 The fields have the type [`idt::Entry<F>`], which is a struct that represents the fields of an IDT entry (see the table above). The type parameter `F` defines the expected handler function type. We see that some entries require a [`HandlerFunc`] and some entries require a [`HandlerFuncWithErrCode`]. The page fault even has its own special type: [`PageFaultHandlerFunc`].
 
-[`idt::Entry<F>`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/struct.Entry.html
-[`HandlerFunc`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/type.HandlerFunc.html
-[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
-[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/type.PageFaultHandlerFunc.html
+[`idt::Entry<F>`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/struct.Entry.html
+[`HandlerFunc`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/type.HandlerFunc.html
+[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
+[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/type.PageFaultHandlerFunc.html
 
 Let's look at the `HandlerFunc` type first:
 
@@ -168,6 +170,8 @@ In contrast to function calls, exceptions can occur on _any_ instruction. In mos
 
 Since we don't know when an exception occurs, we can't backup any registers before. This means that we can't use a calling convention that relies on caller-saved registers for exception handlers. Instead, we need a calling convention means that preserves _all registers_. The `x86-interrupt` calling convention is such a calling convention, so it guarantees that all register values are restored to their original values on function return.
 
+Note that this does not mean that all registers are saved to the stack at function entry. Instead, the compiler only backs up the registers that are overwritten by the function. This way, very efficient code can be generated for short functions that only use a few registers.
+
 ### The Interrupt Stack Frame
 On a normal function call (using the `call` instruction), the CPU pushes the return address before jumping to the target function. On function return (using the `ret` instruction), the CPU pops this return address and jumps to it. So the stack frame of a normal function call looks like this:
 
@@ -191,13 +195,7 @@ So the _interrupt stack frame_ looks like this:
 
 In the `x86_64` crate, the interrupt stack frame is represented by the [`InterruptStackFrame`] struct. It is passed to interrupt handlers as `&mut` and can be used to retrieve additional information about the exception's cause. The struct contains no error code field, since only some few exceptions push an error code. These exceptions use the separate [`HandlerFuncWithErrCode`] function type, which has an additional `error_code` argument.
 
-[`InterruptStackFrame`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/struct.InterruptStackFrame.html
-
-Note that there is currently [a bug in LLVM] that leads to wrong error code arguments. The cause of the issue is already known and a solution is [being worked on].
-
-[a bug in LLVM]: https://github.com/rust-lang/rust/issues/57270
-[being worked on]: https://reviews.llvm.org/D56275
-
+[`InterruptStackFrame`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/struct.InterruptStackFrame.html
 
 ### Behind the Scenes
 The `x86-interrupt` calling convention is a powerful abstraction that hides almost all of the messy details of the exception handling process. However, sometimes it's useful to know what's happening behind the curtain. Here is a short overview of the things that the `x86-interrupt` calling convention takes care of:
@@ -279,7 +277,7 @@ This error occurs because the `x86-interrupt` calling convention is still unstab
 In order that the CPU uses our new interrupt descriptor table, we need to load it using the [`lidt`] instruction. The `InterruptDescriptorTable` struct of the `x86_64` provides a [`load`][InterruptDescriptorTable::load] method function for that. Let's try to use it:
 
 [`lidt`]: https://www.felixcloutier.com/x86/lgdt:lidt
-[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
+[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
 
 ```rust
 // in src/interrupts.rs
@@ -462,7 +460,7 @@ You can try this new test by running `cargo xtest` (all tests) or `cargo xtest -
 The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own IDT type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed. Note that these posts are based on the [first edition] of this blog and might be out of date.
 
 [“Handling Exceptions with Naked Functions”]: @/first-edition/extra/naked-exceptions/_index.md
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.7.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.8.1/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [first edition]: @/first-edition/_index.md
 
 ## What's next?

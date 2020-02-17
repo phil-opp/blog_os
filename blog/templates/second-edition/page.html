@@ -7,6 +7,10 @@
     <aside id="all-posts-link"><a href="{{ config.base_url | safe }}" title="All Posts">« All Posts</a></aside>
 {% endblock header %}
 
+{% block description -%}
+{{ page.summary | safe | striptags }}
+{%- endblock description %}
+
 {% block main %}
     <h1>{{ page.title }}</h1>
     <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
