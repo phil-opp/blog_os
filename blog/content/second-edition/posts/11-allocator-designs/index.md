@@ -1026,7 +1026,7 @@ The block must be have at least the size and alignment required by the given `La
 [maximum]: https://doc.rust-lang.org/core/cmp/trait.Ord.html#method.max
 [`size()`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.size
 [`align()`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.align
-[`iter()`]: https://doc.rust-lang.org/core/primitive.slice.html#method.iter
+[`iter()`]: https://doc.rust-lang.org/std/primitive.slice.html#method.iter
 [`position()`]:  https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.position
 
 Note that we don't return the block size itself, but the index into the `BLOCK_SIZES` slice. The reason is that we want to use the returned index as an index into the `list_heads` array.

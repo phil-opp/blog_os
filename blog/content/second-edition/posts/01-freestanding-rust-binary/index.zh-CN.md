@@ -45,7 +45,9 @@ translators = ["luojia65", "Rustin-Liu", "TheBegining"]
 > cargo new blog_os
 ```
 
-在这里我把项目命名为 `blog_os`，当然读者也可以选择自己的项目名称。这里，cargo 默认为我们添加了`--bin` 选项，说明我们将要创建一个可执行文件（而不是一个库）；cargo还为我们添加了`--edition 2018` 标签，指明项目的包要使用 Rust 的 **2018 版次**（[2018 edition](https://rust-lang-nursery.github.io/edition-guide/rust-2018/index.html)）。当我们执行这行指令的时候，cargo 为我们创建的目录结构如下：
+在这里我把项目命名为 `blog_os`，当然读者也可以选择自己的项目名称。这里，cargo 默认为我们添加了`--bin` 选项，说明我们将要创建一个可执行文件（而不是一个库）；cargo还为我们添加了`--edition 2018` 标签，指明项目的包要使用 Rust 的 **2018 版次**（[2018 edition]）。当我们执行这行指令的时候，cargo 为我们创建的目录结构如下：
+
+[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
 
 ```
 blog_os
@@ -116,7 +118,9 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 ```
 
-类型为 [PanicInfo](https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html) 的参数包含了 panic 发生的文件名、代码行数和可选的错误信息。这个函数从不返回，所以他被标记为**发散函数**（[diverging function](https://doc.rust-lang.org/book/first-edition/functions.html#diverging-functions)）。发散函数的返回类型称作 **Never 类型**（["never" type](https://doc.rust-lang.org/nightly/std/primitive.never.html)），记为`!`。对这个函数，我们目前能做的很少，所以我们只需编写一个无限循环 `loop {}`。
+类型为 [PanicInfo](https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html) 的参数包含了 panic 发生的文件名、代码行数和可选的错误信息。这个函数从不返回，所以他被标记为**发散函数**（[diverging function]）。发散函数的返回类型称作 **Never 类型**（["never" type](https://doc.rust-lang.org/nightly/std/primitive.never.html)），记为`!`。对这个函数，我们目前能做的很少，所以我们只需编写一个无限循环 `loop {}`。
+
+[diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 
 ## eh_personality 语言项
 

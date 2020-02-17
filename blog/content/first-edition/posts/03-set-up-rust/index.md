@@ -49,7 +49,7 @@ crate-type = ["staticlib"]
 ```
 The `package` section contains required project metadata such as the [semantic crate version]. The `lib` section specifies that we want to build a static library, i.e. a library that contains all of its dependencies. This is required to link the Rust project with our kernel.
 
-[semantic crate version]: http://doc.crates.io/manifest.html#the-package-section
+[semantic crate version]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-package-section
 
 Now we place our root source file in `src/lib.rs`:
 
@@ -408,7 +408,7 @@ So the linker can't find a function named `_Unwind_Resume` that is referenced e.
 
 By default, the destructors of all stack variables are run when a `panic` occurs. This is called _unwinding_ and allows parent threads to [recover from panics]. However, it requires a platform specific gcc library, which isn't available in our kernel.
 
-[recover from panics]: https://doc.rust-lang.org/book/concurrency.html#panics
+[recover from panics]: https://www.howtobuildsoftware.com/index.php/how-do/fFH/rust-recovering-from-panic-in-another-thread
 
 Fortunately, Rust allows us to disable unwinding for our target. For that we add the following line to our `x86_64-blog_os.json` file:
 
@@ -479,7 +479,7 @@ Some notes:
 - `buffer_ptr` is a [raw pointer] that points to the center of the VGA text buffer
 - Rust doesn't know the VGA buffer and thus can't guarantee that writing to the `buffer_ptr` is safe (it could point to important data). So we need to tell Rust that we know what we are doing by using an [unsafe block].
 
-[byte string]: https://doc.rust-lang.org/reference.html#characters-and-strings
+[byte string]: https://doc.rust-lang.org/reference/tokens.html#characters-and-strings
 [enumerate]: https://doc.rust-lang.org/nightly/core/iter/trait.Iterator.html#method.enumerate
 [unsafe block]: https://doc.rust-lang.org/book/unsafe.html
 

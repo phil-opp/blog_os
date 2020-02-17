@@ -190,7 +190,7 @@ When printing a byte, the writer checks if the current line is full. In that cas
 
 The `buffer()` auxiliary method converts the raw pointer in the `buffer` field into a safe mutable buffer reference. The unsafe block is needed because the [as_mut()] method of `Unique` is unsafe. But our `buffer()` method itself isn't marked as unsafe, so it must not introduce any unsafety (e.g. cause segfaults). To guarantee that, it's very important that the `buffer` field always points to a valid `Buffer`. It's like a contract that we must stand to every time we create a `Writer`. To ensure that it's not possible to create an invalid `Writer` from outside of the module, the struct must have at least one private field and public creation functions are not allowed either.
 
-[as_mut()]: https://doc.rust-lang.org/1.10.0/core/ptr/struct.Unique.html#method.as_mut
+[as_mut()]: https://doc.rust-lang.org/1.26.0/core/ptr/struct.Unique.html#method.as_mut
 
 ### Cannot Move out of Borrowed Content
 When we try to compile it, we get the following error:
@@ -257,7 +257,7 @@ It just creates a new Writer that points to the VGA buffer at `0xb8000`. To use 
 
 Then it writes the byte `b'H'` to it. The `b` prefix creates a [byte character], which represents an ASCII code point. When we call `vga_buffer::print_something` in main, a `H` should be printed in the _lower_ left corner of the screen in light green:
 
-[byte character]: https://doc.rust-lang.org/reference.html#characters-and-strings
+[byte character]: https://doc.rust-lang.org/reference/tokens.html#characters-and-strings
 
 ![QEMU output with a green `H` in the lower left corner](vga-H-lower-left.png)
 
@@ -441,14 +441,14 @@ But we can't use it to print anything! You can try it yourself in the `print_som
 
 To resolve it, we could use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged, there are even proposals to [remove it][remove static mut].
 
-[mutable static]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[mutable static]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
 
 But what are the alternatives? We could try to use a cell type like [RefCell] or even [UnsafeCell] to provide [interior mutability]. But these types aren't [Sync] \(with good reason), so we can't use them in statics.
 
 [RefCell]: https://doc.rust-lang.org/nightly/core/cell/struct.RefCell.html
 [UnsafeCell]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html
-[interior mutability]: https://doc.rust-lang.org/book/mutability.html#interior-vs.-exterior-mutability
+[interior mutability]: https://doc.rust-lang.org/1.30.0/book/first-edition/mutability.html#interior-vs-exterior-mutability
 [Sync]: https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html
 
 To get synchronized interior mutability, users of the standard library can use [Mutex]. It provides mutual exclusion by blocking threads when the resource is already locked. But our basic kernel does not have any blocking support or even a concept of threads, so we can't use it either. However there is a really basic kind of mutex in computer science that requires no operating system features: the [spinlock]. Instead of blocking, the threads simply try to lock it again and again in a tight loop and thus burn CPU time until the mutex is free again.
@@ -529,7 +529,7 @@ The macro expands to a call of the [`_print` function] in the `io` module. The [
 The [`format_args` macro] builds a [fmt::Arguments] type from the passed arguments, which is passed to `_print`. The [`_print` function] of libstd is rather complicated, as it supports different `Stdout` devices. We don't need that complexity since we just want to print to the VGA buffer.
 
 [`_print` function]: https://github.com/rust-lang/rust/blob/46d39f3329487115e7d7dcd37bc64eea6ef9ba4e/src/libstd/io/stdio.rs#L631
-[`$crate` variable]: https://doc.rust-lang.org/book/macros.html#the-variable-crate
+[`$crate` variable]: https://doc.rust-lang.org/1.30.0/book/first-edition/macros.html#the-variable-crate
 [`format_args` macro]: https://doc.rust-lang.org/nightly/std/macro.format_args.html
 [fmt::Arguments]: https://doc.rust-lang.org/nightly/core/fmt/struct.Arguments.html
 

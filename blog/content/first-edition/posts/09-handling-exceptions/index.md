@@ -118,7 +118,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: &mut ExceptionStackFrame);
 It's a [type alias] for an `extern "x86-interrupt" fn` type. The `extern` keyword defines a function with a [foreign calling convention] and is often used to communicate with C code (`extern "C" fn`). But what is the `x86-interrupt` calling convention?
 
 [type alias]: https://doc.rust-lang.org/book/type-aliases.html
-[foreign calling convention]: https://doc.rust-lang.org/book/ffi.html#foreign-calling-conventions
+[foreign calling convention]: https://doc.rust-lang.org/1.30.0/book/first-edition/ffi.html#foreign-calling-conventions
 
 ## The Interrupt Calling Convention
 Exceptions are quite similar to function calls: The CPU jumps to the first instruction of the called function and executes it. Afterwards, if the function is not diverging, the CPU jumps to the return address and continues the execution of the parent function.
@@ -317,7 +317,7 @@ pub fn init() {
 There are two problems with this. First, statics are immutable, so we can't modify the breakpoint entry from our `init` function. Second, the `Idt::new` function is not a [`const` function], so it can't be used to initialize a `static`. We could solve this problem by using a [`static mut`] of type `Option<Idt>`:
 
 [`const` function]: https://github.com/rust-lang/rfcs/blob/master/text/0911-const-fn.md
-[`static mut`]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: Option<Idt> = None;
@@ -334,7 +334,7 @@ pub fn init() {
 
 This variant compiles without errors but it's far from idiomatic. `static mut`s are very prone to data races, so we need an [`unsafe` block] on each access. Also, we need to explicitly `unwrap` the `IDT` on each use, since might be `None`.
 
-[`unsafe` block]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
+[`unsafe` block]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### Lazy Statics to the Rescue
 The one-time initialization of statics with non-const functions is a common problem in Rust. Fortunately, there already exists a good solution in a crate named [lazy_static]. This crate provides a `lazy_static!` macro that defines a lazily initialized `static`. Instead of computing its value at compile time, the `static` laziliy initializes itself when it's accessed the first time. Thus, the initialization happens at runtime so that arbitrarily complex initialization code is possible.

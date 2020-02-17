@@ -126,9 +126,9 @@ Instead of pushing a return address, the CPU pushes the stack and instruction po
 So we can't use a normal `ret` instruction, since it expects a different stack frame layout. Instead, there is a special instruction for returning from exceptions: `iretq`.
 
 ### The `iretq` Instruction
-The `iretq` instruction is the one and only way to return from exceptions and is specifically designed for this purpose. The AMD64 manual ([PDF][amd-manual]) even demands that `iretq` “_must_ be used to terminate the exception or interrupt handler associated with the exception”.
+The `iretq` instruction is the one and only way to return from exceptions and is specifically designed for this purpose. The AMD64 instruction manual ([PDF][amd-manual]) even demands that `iretq` “_must_ be used to terminate the exception or interrupt handler associated with the exception”.
 
-[amd-manual]: https://support.amd.com/TechDocs/24594.pdf
+[amd-manual]: https://www.amd.com/system/files/TechDocs/24594.pdf
 
 IRETQ restores `rip`, `cs`, `rflags`, `rsp`, and `ss` from the values saved on the stack and thus continues the interrupted program. The instruction does not handle the optional error code, so it must be popped from the stack before.
 

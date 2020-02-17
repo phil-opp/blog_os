@@ -641,7 +641,7 @@ SECTIONS {
 ```
 The `.` is the “current location counter” and represents the current virtual address. At the beginning of the `SECTIONS` tag we set it to `1M`, so our kernel starts at 1MiB. We use the [ALIGN][linker align] function to align the current location counter to the next `4K` boundary (`4K` is the page size). Thus the end of the `.text` section – and the beginning of the next section – are page aligned.
 
-[linker align]: http://www.math.utah.edu/docs/info/ld_3.html#SEC12
+[linker align]: https://www.math.utah.edu/docs/info/ld_3.html#SEC12
 
 To put all sections on their own page, we add the `ALIGN` statement to all of them:
 
@@ -882,7 +882,7 @@ Now we should see the `NEW TABLE!!!` message (and also the `It did not crash!` l
 ### Fixing the Frame Allocator
 The same problem as above occurs when we try to use our [AreaFrameAllocator] again. Try to add the following to `rust_main` after switching to the new table:
 
-[AreaFrameAllocator]: http://os.phil-opp.com/allocating-frames.html#the-allocator
+[AreaFrameAllocator]: @/first-edition/posts/05-allocating-frames/index.md#the-allocator
 
 ```rust
 // in src/lib.rs

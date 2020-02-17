@@ -155,7 +155,7 @@ Let's look at the fourth question:
 
 When our kernel overflows its stack and hits the guard page, a _page fault_ occurs. The CPU looks up the page fault handler in the IDT and tries to push the [exception stack frame] onto the stack. However, our current stack pointer still points to the non-present guard page. Thus, a second page fault occurs, which causes a double fault (according to the above table).
 
-[exception stack frame]: http://os.phil-opp.com/better-exception-messages.html#exceptions-in-detail
+[exception stack frame]: @/first-edition/posts/09-handling-exceptions/index.md#the-exception-stack-frame
 
 So the CPU tries to call our _double fault handler_ now. However, on a double fault the CPU tries to push the exception stack frame, too. Our stack pointer still points to the guard page, so a _third_ page fault occurs, which causes a _triple fault_ and a system reboot. So our current double fault handler can't avoid a triple fault in this case.
 

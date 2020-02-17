@@ -113,7 +113,7 @@ By [deriving] the [`Copy`], [`Clone`], [`Debug`], [`PartialEq`], and [`Eq`] trai
 [`Debug`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html
 [`PartialEq`]: https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html
 [`Eq`]: https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html
-[copy semantics]: https://doc.rust-lang.org/book/first-edition/ownership.html#copy-types
+[copy semantics]: https://doc.rust-lang.org/1.30.0/book/first-edition/ownership.html#copy-types
 
 To represent a full color code that specifies foreground and background color, we create a [newtype] on top of `u8`:
 

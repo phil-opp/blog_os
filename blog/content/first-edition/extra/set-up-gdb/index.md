@@ -32,7 +32,7 @@ Remote 'g' packet reply is too long: [a very long number]
 ```
 This issue is known [since 2012][gdb issue patch] but it is still not fixed. Maybe we find the reason in the [issue thread][gdb issue thread]:
 
-[gdb issue patch]: http://www.cygwin.com/ml/gdb-patches/2012-03/msg00116.html
+[gdb issue patch]: https://web.archive.org/web/20190114181420/http://www.cygwin.com/ml/gdb-patches/2012-03/msg00116.html
 [gdb issue thread]: https://sourceware.org/bugzilla/show_bug.cgi?id=13984#c11
 
 > from my (limited) experience, unless you ping the gdb-patches list weekly, this patch is more likely to remain forgotten :-)

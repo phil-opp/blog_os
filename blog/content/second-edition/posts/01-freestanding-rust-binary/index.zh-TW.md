@@ -60,7 +60,7 @@ cargo new blog_os --bin --edition 2018
 
 我將專案命名為 `blog_os`，當然讀者也可以自己的名稱。`--bin` 選項說明我們將要建立一個執行檔（而不是一個函式庫），`--edition 2018` 選項指明我們的 crate 想使用 Rust [2018 版本][2018 edition]。當我們執行這行指令的時候，cargo 會為我們建立以下目錄結構：
 
-[2018 edition]: https://rust-lang-nursery.github.io/edition-guide/rust-2018/index.html
+[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
 
 ```
 blog_os
@@ -397,7 +397,7 @@ error: linking with `cc` failed: exit code: 1
 
 macOS [官方並不支援靜態連結執行檔][does not officially support statically linked binaries]且要求程式預設要連結到 `libSystem` 函式庫。要覆蓋這個設定並連結靜態執行檔，我們傳入 `-static` 給連結器：
 
-[does not officially support statically linked binaries]: https://developer.apple.com/library/content/qa/qa1118/_index.html
+[does not officially support statically linked binaries]: https://developer.apple.com/library/archive/qa/qa1118/_index.html
 
 ```
 cargo rustc -- -C link-args="-e __start -static"
