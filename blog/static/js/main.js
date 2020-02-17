@@ -68,9 +68,7 @@ function show_lang_selector() {
   var show_lang_selector = false;
   for (language_selector of document.querySelectorAll('#language-selector li')) {
     var lang = language_selector.getAttribute("data-lang-switch-to");
-    this.console.log(lang)
     if (this.navigator.languages.includes(lang)) {
-      this.console.log("supported!");
       language_selector.classList.remove("hidden");
       show_lang_selector = true
     }
