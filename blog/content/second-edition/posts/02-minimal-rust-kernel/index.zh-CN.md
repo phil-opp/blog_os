@@ -4,6 +4,11 @@ weight = 2
 path = "zh-CN/minimal-rust-kernel"
 date = 2018-02-10
 
+[extra]
+# Please update this when updating the translation
+translation_based_on_commit = "bd6fbcb1c36705b2c474d7fcee387bfea1210851"
+# GitHub usernames of the people that translated this post
+translators = ["luojia65", "Rustin-Liu"]
 +++
 
 在这篇文章中，我们将基于 **x86架构**（the x86 architecture），使用 Rust 语言，编写一个最小化的 64 位内核。我们将从上一章中构建的独立式可执行程序开始，构建自己的内核；它将向显示器打印字符串，并能被打包为一个能够引导启动的**磁盘映像**（disk image）。

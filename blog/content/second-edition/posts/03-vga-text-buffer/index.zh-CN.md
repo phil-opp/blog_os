@@ -4,6 +4,11 @@ weight = 3
 path = "zh-CN/vga-text-mode"
 date  = 2018-02-26
 
+[extra]
+# Please update this when updating the translation
+translation_based_on_commit = "bd6fbcb1c36705b2c474d7fcee387bfea1210851"
+# GitHub usernames of the people that translated this post
+translators = ["luojia65", "Rustin-Liu"]
 +++
 
 **VGA 字符模式**（[VGA text mode]）是打印字符到屏幕的一种简单方式。在这篇文章中，为了包装这个模式为一个安全而简单的接口，我们将包装 unsafe 代码到独立的模块。我们还将实现对 Rust 语言**格式化宏**（[formatting macros]）的支持。

@@ -47,8 +47,20 @@
         <div class="warning">
             {% set translations = page.translations | filter(attribute="lang", value="en") %}
             {% set original = translations.0 %}
+            <p>
             <b>Translated Content:</b>
-            This is a community translation of the <strong><a href="{{ original.permalink }}">{{ original.title }}</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!
+                This is a community translation of the <strong><a href="{{ original.permalink }}">{{ original.title }}</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!
+            </p>
+            {%- if page.extra.translators %}
+            <p>
+                Translation by {% for user in page.extra.translators -%}
+                    {%- if not loop.first -%}
+                        {%- if loop.last %}, and {% else %}, {% endif -%}
+                    {%- endif -%}
+                    <a href="https://github.com/{{user}}">@{{user}}</a>
+                {%- endfor %}.
+            </p>
+            {% endif -%}
         </div>
     {% endif %}
 
