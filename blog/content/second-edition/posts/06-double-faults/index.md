@@ -58,8 +58,8 @@ We use `unsafe` to write to the invalid address `0xdeadbeef`. The virtual addres
 When we start our kernel now, we see that it enters an endless boot loop. The reason for the boot loop is the following:
 
 1. The CPU tries to write to `0xdeadbeef`, which causes a page fault.
-2. The CPU looks at the corresponding entry in the IDT and sees that the present bit isn't set. Thus, it can't call the page fault handler and a double fault occurs.
-3. The CPU looks at the IDT entry of the double fault handler, but this entry is also non-present. Thus, a _triple_ fault occurs.
+2. The CPU looks at the corresponding entry in the IDT and sees that no handler function is specified. Thus, it can't call the page fault handler and a double fault occurs.
+3. The CPU looks at the IDT entry of the double fault handler, but this entry does not specify a handler function either. Thus, a _triple_ fault occurs.
 4. A triple fault is fatal. QEMU reacts to it like most real hardware and issues a system reset.
 
 So in order to prevent this triple fault, we need to either provide a handler function for page faults or a double fault handler. We want to avoid triple faults in all cases, so let's start with a double fault handler that is invoked for all unhandled exception types.
@@ -98,7 +98,7 @@ When we start our kernel now, we should see that the double fault handler is inv
 It worked! Here is what happens this time:
 
 1. The CPU executes tries to write to `0xdeadbeef`, which causes a page fault.
-2. Like before, the CPU looks at the corresponding entry in the IDT and sees that the present bit isn't set. Thus, a double fault occurs.
+2. Like before, the CPU looks at the corresponding entry in the IDT and sees that no handler function is defined. Thus, a double fault occurs.
 3. The CPU jumps to the – now present – double fault handler.
 
 The triple fault (and the boot-loop) no longer occurs, since the CPU can now call the double fault handler.
@@ -146,7 +146,7 @@ With the help of this table, we can answer the first three of the above question
 2. If a page fault occurs and the page fault handler is swapped out, a _double fault_ occurs and the _double fault handler_ is invoked.
 3. If a divide-by-zero handler causes a breakpoint exception, the CPU tries to invoke the breakpoint handler. If the breakpoint handler is swapped out, a _page fault_ occurs and the _page fault handler_ is invoked.
 
-In fact, even the case of a non-present handler follows this scheme: A non-present handler causes a _segment-not-present_ exception. We didn't define a segment-not-present handler, so another segment-not-present exception occurs. According to the table, this leads to a double fault.
+In fact, even the case of an exception without a handler function in the IDT follows this scheme: When the exception occurs, the CPU tries to read the corresponding IDT entry. Since the entry is 0, which is not a valid IDT entry, a _general protection fault_ occurs. We did not define a handler function for the general protection fault either, so another general protection fault occurs. According to the table, this leads to a double fault.
 
 ### Kernel Stack Overflow
 Let's look at the fourth question:
