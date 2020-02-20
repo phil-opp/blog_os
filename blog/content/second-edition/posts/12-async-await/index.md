@@ -383,8 +383,11 @@ impl Future for ExampleStateMachine {
 }
 ```
 
-TODO
+The `Output` type of the future is `String` because it's the return type of the `example` function. To implement the `poll` function, we use a match statement on the current state inside a `loop`. The idea is that we switch to the next state as long as possible and use an explicit `return Poll::Pending` when we can't continue.
 
+For simplicitly, we only show simplified code and don't handle [pinning][_pinning_], lifetimes, etc. So this and the following code should be treated as pseudo-code and not used directly. Of course, the real compiler-generated code handles everything correctly.
+
+To keep the code excerpts small, we present the code for each match arm separately. Let's begin with the `Start` state:
 
 ```rust
 ExampleStateMachine::Start(state) => {
@@ -398,6 +401,11 @@ ExampleStateMachine::Start(state) => {
     *self = ExampleStateMachine::WaitingOnFooTxt(state);
 }
 ```
+
+The state machine is in the `Start` state when it is right at the beginning of the function. In this case, we execute all the code from the body of the `example` function until the first `.await`. To make the code more readable, we introduce a new `foo_txt_future` to represent the future returned by `async_read_file` right before the `.await`. To handle the `.await` operation, we change the state of `self` to `WaitingOnFooTxt`, which includes the construction of the `WaitingOnFooTxtState` struct.
+
+Since the `match self {…}` statement is executed in a loop, the execution jumps to the `WaitingOnFooTxt` arm next:
+
 ```rust
 ExampleStateMachine::WaitingOnFooTxt(state) => {
     match state.foo_txt_future.poll(cx) {
@@ -420,26 +428,51 @@ ExampleStateMachine::WaitingOnFooTxt(state) => {
     }
 }
 ```
+
+In this match arm we first call the `poll` function of the `foo_txt_future`. If it is not ready, we exit the loop and return `Poll::Pending` too. Since `self` stays in the `WaitingOnFooTxt` state in this case, the next `poll` call on the state machine will enter the same match arm and retry polling the `foo_txt_future`.
+
+When the `foo_txt_future` is ready, we assign the result to the `content` variable and continue to execute the code of the `example` function: If `content.len()` is smaller than the `min_len` saved in the state struct, the `bar.txt` file is read asynchronously. We again translate the `.await` operation into a state change, this time into the `WaitingOnBarTxt` state. Since we're executing the `match` inside a loop, the execution directly jumps to the match arm for the new state afterwards, where the `bar_txt_future` is polled.
+
+In case we enter the `else` branch, no further `.await` operation occurs. We reach the end of the function and return `content` wrapped in `Poll::Ready`. We also change the current state to the `End` state.
+
+The code for the `WaitingOnBarTxt` state looks like this:
+
 ```rust
-ExampleStateMachine::WaitingOnFooTxt(state) => {
+ExampleStateMachine::WaitingOnBarTxt(state) => {
     match state.bar_txt_future.poll(cx) {
-        match state.bar_txt_future.poll(cx) {
-            Poll::Pending => return Poll::Pending,
-            Poll::Ready(bar_txt) => {
-                *self = ExampleStateMachine::End(EndState));
-                // from body of `example`
-                return Poll::Ready(state.content + &bar_txt);
-            }
+        Poll::Pending => return Poll::Pending,
+        Poll::Ready(bar_txt) => {
+            *self = ExampleStateMachine::End(EndState));
+            // from body of `example`
+            return Poll::Ready(state.content + &bar_txt);
         }
     }
 }
 ```
+
+Similar to the `WaitingOnFooTxt` state, we start by polling the `bar_txt_future`. If it is still pending, we exit the loop and return `Poll::Pending` too. Otherwise, we can perform the last operation of the `example` function: Concatenating the `content` variable with the result from the future. We update the state machine to the `End` state and then return the result wrapped in `Poll::Ready`.
+
+Finally, the code for the `End` state looks like this:
+
 ```rust
 ExampleStateMachine::End(_) => {
     panic!("poll called after Poll::Ready was returned");
 }
 ```
 
+Futures should not be polled again after they returned `Poll::Ready`, therefore we panic if `poll` is called when we are already in the `End` state.
+
+We now know how the compiler-generated state machine and its implementation of the `Future` trait _could_ look like. In practice, the compiler generates code in different way. (In case you're interested, the implementation is currently based on [_generators_], but this is only an implementation detail.)
+
+[_generators_]: https://doc.rust-lang.org/nightly/unstable-book/language-features/generators.html
+
+The last piece of the puzzle is the generated code for the `example` function itself. Remember, the function header was defined like this:
+
+```rust
+async fn example(min_len: usize) -> String
+```
+
+Since the complete function body is now implemented by the state machine, the only thing that the function needs to do is to initialize the state machine. The generated code for this could look like this:
 
 ```rust
 fn example(min_len: usize) -> ExampleStateMachine {
@@ -448,6 +481,10 @@ fn example(min_len: usize) -> ExampleStateMachine {
     })
 }
 ```
+
+The function no longer has an `async` modifier since it now explicitly returns a `ExampleStateMachine` type, which implements the `Future` trait. As expected, the state machine is constructed in the `Start` state and the corresponding state struct is initialized with the `min_len` parameter.
+
+Note that this function does not start the execution of the state machine. This is a fundamental design decision of Rust's futures: They do nothing until they are polled for the first time.
 
 ### Pinning
 
