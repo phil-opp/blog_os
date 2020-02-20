@@ -234,21 +234,24 @@ The big advantage of future combinators is that they keep the operations asynchr
 While future combinators make it possible to write very efficient code, they can be difficult to use in some situations because of the type system and the closure based interface. For example, consider code like this:
 
 ```rust
-async_read_file("foo.txt").then(|content| {
-    if content.len() > 100 {
-        Either::Left(async_read_file("bar.txt"))
-    } else {
-        Either::Right(future::ready(content))
-    }
-})
+fn example(min_len: usize) -> impl Future<Output = String> {
+    async_read_file("foo.txt").then(move |content| {
+        if content.len() < min_len {
+            Either::Left(async_read_file("bar.txt").map(|s| content + &s))
+        } else {
+            Either::Right(future::ready(content))
+        }
+    })
+}
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=97a2d231584113452ff9e67d1b34604c))
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=91fc09024eecb2448a85a7ef6a97b8d8))
 
-Here we read the file `foo.txt` and then use the [`then`] combinator to chain a second future based on the file content. If the content length is greater than 100, we read a different `bar.txt` file and return its content, otherwise we return the content of `foo.txt`.
+Here we read the file `foo.txt` and then use the [`then`] combinator to chain a second future based on the file content. If the content length is smaller than the given `min_len`, we read a different `bar.txt` file and append it to `content` using the [`map`] combinator. Otherwise we return only the content of `foo.txt`.
 
-The reason for the [`Either`] wrapper is that if and else blocks must always have the same type. Since we return different future types in the blocks, we must use the wrapper type to unify them into a single type. The [`ready`] function wraps a value into a future, which is immediately ready. The function is required here because the `Either` wrapper expects that the wrapped value implements `Future`.
+We need to use the [`move` keyword] for the closure passed to `then` because otherwise there would be a lifetime error for `min_len`. The reason for the [`Either`] wrapper is that if and else blocks must always have the same type. Since we return different future types in the blocks, we must use the wrapper type to unify them into a single type. The [`ready`] function wraps a value into a future, which is immediately ready. The function is required here because the `Either` wrapper expects that the wrapped value implements `Future`.
 
+[`move` keyword]: https://doc.rust-lang.org/std/keyword.move.html
 [`Either`]: https://docs.rs/futures/0.3.4/futures/future/enum.Either.html
 [`ready`]: https://docs.rs/futures/0.3.4/futures/future/fn.ready.html
 
@@ -272,45 +275,77 @@ fn foo() -> impl Future<Output = u32> {
 This keyword alone wouldn't be that useful. However, inside `async` functions, the `await` keyword can be used to retrieve the asynchronous value of a future:
 
 ```rust
-async fn foo() -> String {
+async fn example(min_len: usize) -> String {
     let content = async_read_file("foo.txt").await;
-    if content.len() > 100 {
-        async_read_file("bar.txt").await
+    if content.len() < min_len {
+        content + &async_read_file("bar.txt").await
     } else {
         content
     }
 }
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=9f94ac348c2b7f5421a50e2a02f33b1d))
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=d93c28509a1c67661f31ff820281d434))
 
-This function is a direct translation of the future combinator code example, which required the `Either` wrapper type. Using the `.await` operator, we can retrieve the value of a future without needing any closures. As a result, we can write our code like we write normal synchronous code, with the difference that _this is still asynchronous code_.
+This function is a direct translation of the `example` function above, which used combinator functions. Using the `.await` operator, we can retrieve the value of a future without needing any closures or `Either` types. As a result, we can write our code like we write normal synchronous code, with the difference that _this is still asynchronous code_.
 
 #### State Machine Transformation
 
-What the compiler does behind this scenes is to transform the body of the `async` function into a [_state machine_], with each `.await` call representing a different state. For the above `foo` function, the compiler creates a state machine with the following four states:
+What the compiler does behind this scenes is to transform the body of the `async` function into a [_state machine_], with each `.await` call representing a different state. For the above `example` function, the compiler creates a state machine with the following four states:
 
 [_state machine_]: https://en.wikipedia.org/wiki/Finite-state_machine
 
+![Four states: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-states.svg)
+
+Each state represents a different pause point of the function. The _"Start"_ and _"End"_ states represent the function at the beginning and end of its execution. The _"Waiting on foo.txt"_ state represents that the function is currently waiting for the first `async_read_file` result. Similarly, the _"Waiting on bar.txt"_ state represents the pause point where the function is waiting on the second `async_read_file` result.
+
+The state machine implements the `Future` trait by making each `poll` call a possible state transition:
+
+![Four states: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-basic.svg)
+
+The diagram uses arrows to represent state switches and diamond shapes to represent alternative ways. For example, if the `foo.txt` file is not ready, the path marked with _"no"_ is takes and the _"Waiting on foo.txt"_ state is reached. Otherwise, the _"yes"_ path is taken. The small red diamond without caption represents the `if content.len() < 100` branch of the `example` function.
+
+We see that the first `poll` call starts the function and lets it run until it reaches a future that is not ready yet. If all futures on the path are ready, the function can run till the _"End"_ state, where it returns its result wrapped in `Poll::Ready`. Otherwise, the state machine enters a waiting state and returns `Poll::Pending`. On the next `poll` call, the state machine then starts from the last waiting state and retries the last operation.
+
+#### Saving State
+
+In order to be able to continue from the last waiting state, the state machine must save it internally. In addition, it must save all the variables that it needs to continue execution on the next `poll` call. This is where the compiler can really shine: Since it knows which variables are used when, it can automatically generate structs with exactly the variables that are needed.
+
+As an example, the compiler generates the following structs for the above `example` function:
+
+```rust
+// The `example` function again so that you don't have to scroll up
+async fn example(min_len: usize) -> String {
+    let content = async_read_file("foo.txt").await;
+    if content.len() < min_len {
+        content + &async_read_file("bar.txt").await
+    } else {
+        content
+    }
+}
+
+// The compiler-generated state structs:
+
+struct StartState {
+    min_len: usize,
+}
+
+struct WaitingOnFooTxtState {
+    min_len: usize,
+}
+
+struct WaitingOnBarTxtState {
+    content: String,
+}
+
+struct EndState {}
 ```
-start   waiting on 1st future    waiting on 2nd future   end
-```
 
-This state machine implements the `Future` trait by making each `poll` call a possible state switch event:
+In the "start" and _"Waiting on foo.txt"_ states, the `min_len` parameter needs to be stored because it is required for the comparison with `content.len()` later. It is no longer stored in the _"Waiting on bar.txt"_ state because `min_len` is no longer needed after the comparison. In the _"end"_ state, no variables are stored because the function did already run to completion.
 
-```
-start   waiting on 1st future    waiting on 2nd future    end
-|                 ^                         ^              ^
-|                 |                         |              |
-------------------------------------------------------------
-```
+Keep in mind that this is only an example for the code that the compiler could generate. The struct names and the field layout are an implementation detail and might be different.
 
-The first `poll` call starts the function and lets it run until it reaches a future that is not ready yet. If all futures are ready, the function can run till its end and return its return value wrapped in `Poll::Ready`. Otherwise, `Poll::Pending` is returned. Internally, the stack machine keeps track of the active state, so that it can continue there on the next `poll` call.
-
-On subsequent calls to `poll`, the state machine continues from the current state and polls the future it currently waits on again. In case it is ready now, it continues execution until it reaches the next future that is not ready. If it is still not ready, it stays in the state and returns `Poll::Pending` again.
-
-
-
+#### The Full State Machine Type
 
 
 
