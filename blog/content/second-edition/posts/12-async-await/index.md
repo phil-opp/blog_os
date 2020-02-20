@@ -332,23 +332,119 @@ struct StartState {
 
 struct WaitingOnFooTxtState {
     min_len: usize,
+    foo_txt_future: impl Future<Output = String>,
 }
 
 struct WaitingOnBarTxtState {
     content: String,
+    bar_txt_future: impl Future<Output = String>,
 }
 
 struct EndState {}
 ```
 
-In the "start" and _"Waiting on foo.txt"_ states, the `min_len` parameter needs to be stored because it is required for the comparison with `content.len()` later. It is no longer stored in the _"Waiting on bar.txt"_ state because `min_len` is no longer needed after the comparison. In the _"end"_ state, no variables are stored because the function did already run to completion.
+In the "start" and _"Waiting on foo.txt"_ states, the `min_len` parameter needs to be stored because it is required for the comparison with `content.len()` later. The _"Waiting on foo.txt"_ state additionally stores a `foo_txt_future`, which represents the future returned by the `async_read_file` call. This future needs to be polled again when the state machine continues, so it needs to be saved.
+
+The _"Waiting on bar.txt"_ state contains the `content` variable because it is needed for the string concatenation after `bar.txt` is ready. It also stores a `bar_txt_future` that represents the in-progress load of `bar.txt`. The struct does not contain the `min_len` variable because it is no longer needed after the `content.len()` comparison. In the _"end"_ state, no variables are stored because the function did already run to completion.
 
 Keep in mind that this is only an example for the code that the compiler could generate. The struct names and the field layout are an implementation detail and might be different.
 
 #### The Full State Machine Type
 
+While the exact compiler-generated code is an implementation detail, it helps in understanding to imagine how the generated state machine _could_ look for the `example` function. We already defined the structs representing the different states and containing the required variables. To create a state machine on top of them, we can combine them into an [`enum`]:
+
+[`enum`]: https://doc.rust-lang.org/book/ch06-01-defining-an-enum.html
+
+```rust
+enum ExampleStateMachine {
+    Start(StartState),
+    WaitingOnFooTxt(WaitingOnFooTxtState),
+    WaitingOnBarTxt(WaitingOnBarTxtState),
+    End(EndState),
+}
+```
+
+We define a separate enum variant for each state and add the corresponding state struct to each variant as a field. To implement the state transitions, the compiler generates an implementation of the `Future` trait based on the `example` function:
+
+```rust
+impl Future for ExampleStateMachine {
+    type Output = String; // return type of `example`
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        loop {
+            match self { // TODO: handle pinning
+                ExampleStateMachine::Start(state) => {…}
+                ExampleStateMachine::WaitingOnFooTxt(state) => {…}
+                ExampleStateMachine::WaitingOnFooTxt(state) => {…}
+                ExampleStateMachine::End(state) => {…}
+            }
+        }
+    }
+}
+```
+
+TODO
 
 
+```rust
+impl Future for ExampleStateMachine {
+    type Output = String; // return type of `example`
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        loop {
+            match self { // TODO: handle pinning
+                ExampleStateMachine::Start(state) => {
+                    // from body of `example`
+                    let foo_txt_future = async_read_file("foo.txt");
+                    // `.await` operation
+                    let state = WaitingOnFooTxtState {
+                        min_len: state.min_len,
+                        foo_txt_future,
+                    };
+                    *self = ExampleStateMachine::WaitingOnFooTxt(state);
+                }
+                ExampleStateMachine::WaitingOnFooTxt(state) => {
+                    match state.foo_txt_future.poll(cx) {
+                        Poll::Pending => return Poll::Pending,
+                        Poll::Ready(content) => {
+                            // from body of `example`
+                            if content.len() < state.min_len {
+                                let bar_txt_future = async_read_file("bar.txt");
+                                // `.await` operation
+                                let state = WaitingOnBarTxtState {
+                                    content,
+                                    bar_txt_future,
+                                };
+                                *self = ExampleStateMachine::WaitingOnBarTxt(state);
+                            } else {
+                                *self = ExampleStateMachine::End(EndState));
+                                return Poll::Ready(content);
+                            }
+                        }
+                    }
+                }
+                ExampleStateMachine::WaitingOnFooTxt(state) => {
+                    match state.bar_txt_future.poll(cx) {
+                        match state.bar_txt_future.poll(cx) {
+                            Poll::Pending => return Poll::Pending,
+                            Poll::Ready(bar_txt) => {
+                                *self = ExampleStateMachine::End(EndState));
+                                // from body of `example`
+                                return Poll::Ready(state.content + &bar_txt);
+                            }
+                        }
+                    }
+                }
+                ExampleStateMachine::End(_) => {
+                    panic!("poll called after Poll::Ready was returned");
+                }
+            }
+        }
+    }
+}
+```
+
+### Pinning
 
 
 
