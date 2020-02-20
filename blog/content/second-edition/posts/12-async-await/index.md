@@ -104,7 +104,7 @@ The concept of futures is best illustrated with a small example:
 
 ![Sequence diagram: main calls `read_file` and is blocked until it returns; then it calls `foo()` and is also blocked until it returns. The same process is repeated, but this time `async_read_file` is called, which directly returns a future; then `foo()` is called again, which now runs concurrently to the file load. The file is available before `foo()` returns.](async-example.svg)
 
-This sequence diagram shows a `main` function that reads a file from the file system and then calls a function `foo`. This process is repeated to times: Once with a synchronous `read_file` call and once with an asynchronous `async_read_file` call.
+This sequence diagram shows a `main` function that reads a file from the file system and then calls a function `foo`. This process is repeated two times: Once with a synchronous `read_file` call and once with an asynchronous `async_read_file` call.
 
 With the synchronous call, the `main` function needs to wait until the file is loaded from the file system. Only then it can call the `foo` function, which requires it to again wait for the result.
 
