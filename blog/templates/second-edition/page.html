@@ -12,7 +12,7 @@
 {% endblock header %}
 
 {% block description -%}
-{{ page.summary | safe | striptags }}
+{{ page.summary | safe | striptags | truncate(length=150) }}
 {%- endblock description %}
 
 {% block main %}
