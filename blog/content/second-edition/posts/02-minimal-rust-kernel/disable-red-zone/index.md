@@ -7,8 +7,8 @@ template = "second-edition/extra.html"
 
 The [red zone] is an optimization of the [System V ABI] that allows functions to temporarily use the 128 bytes below its stack frame without adjusting the stack pointer:
 
-[red zone]: http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
-[System V ABI]: http://wiki.osdev.org/System_V_ABI
+[red zone]: https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
+[System V ABI]: https://wiki.osdev.org/System_V_ABI
 
 <!-- more -->
 
@@ -24,6 +24,6 @@ However, this optimization leads to huge problems with exceptions or hardware in
 
 The CPU and the exception handler overwrite the data in red zone. But this data is still needed by the interrupted function. So the function won't work correctly anymore when we return from the exception handler. This might lead to strange bugs that [take weeks to debug].
 
-[take weeks to debug]: http://forum.osdev.org/viewtopic.php?t=21720
+[take weeks to debug]: https://forum.osdev.org/viewtopic.php?t=21720
 
 To avoid such bugs when we implement exception handling in the future, we disable the red zone right from the beginning. This is achieved by adding the `"disable-redzone": true` line to our target configuration file.

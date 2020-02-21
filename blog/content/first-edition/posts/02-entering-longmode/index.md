@@ -12,7 +12,7 @@ updated = "2015-10-29"
 In the [previous post] we created a minimal multiboot kernel. It just prints `OK` and hangs. The goal is to extend it and call 64-bit [Rust] code. But the CPU is currently in [protected mode] and allows only 32-bit instructions and up to 4GiB memory. So we need to set up _Paging_ and switch to the 64-bit [long mode] first.
 
 [previous post]: @/first-edition/posts/01-multiboot-kernel/index.md
-[Rust]: http://www.rust-lang.org/
+[Rust]: https://www.rust-lang.org/
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
 
@@ -47,7 +47,7 @@ A screen character consists of a 8 bit color code and a 8 bit [ASCII] character.
 
 Now we can add some check _functions_. A function is just a normal label with an `ret` (return) instruction at the end. The `call` instruction can be used to call it. Unlike the `jmp` instruction that just jumps to a memory address, the `call` instruction will push a return address to the stack (and the `ret` will jump to this address). But we don't have a stack yet. The [stack pointer] in the esp register could point to some important data or even invalid memory. So we need to update it and point it to some valid stack memory.
 
-[stack pointer]: http://stackoverflow.com/a/1464052/866447
+[stack pointer]: https://stackoverflow.com/a/1464052/866447
 
 ### Creating a Stack
 To create stack memory we reserve some bytes at the end of our `boot.asm`:
@@ -96,14 +96,14 @@ We use the `cmp` instruction to compare the value in `eax` to the magic value. I
 
 In `no_multiboot`, we use the `jmp` (“jump”) instruction to jump to our error function. We could just as well use the `call` instruction, which additionally pushes the return address. But the return address is not needed because `error` never returns. To pass `0` as error code to the `error` function, we move it into `al` before the jump (`error` will read it from there).
 
-[Multiboot specification]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
+[Multiboot specification]: https://nongnu.askapache.com/grub/phcoder/multiboot.pdf
 [FLAGS register]: https://en.wikipedia.org/wiki/FLAGS_register
 
 ### CPUID check
 [CPUID] is a CPU instruction that can be used to get various information about the CPU. But not every processor supports it. CPUID detection is quite laborious, so we just copy a detection function from the [OSDev wiki][CPUID detection]:
 
-[CPUID]: http://wiki.osdev.org/CPUID
-[CPUID detection]: http://wiki.osdev.org/Setting_Up_Long_Mode#Detection_of_CPUID
+[CPUID]: https://wiki.osdev.org/CPUID
+[CPUID detection]: https://wiki.osdev.org/Setting_Up_Long_Mode#Detection_of_CPUID
 
 ```nasm
 check_cpuid:
@@ -151,7 +151,7 @@ Don't worry, you don't need to understand the details.
 ### Long Mode check
 Now we can use CPUID to detect whether long mode can be used. I use code from [OSDev][long mode detection] again:
 
-[long mode detection]: http://wiki.osdev.org/Setting_Up_Long_Mode#x86_or_x86-64
+[long mode detection]: https://wiki.osdev.org/Setting_Up_Long_Mode#x86_or_x86-64
 
 ```nasm
 check_long_mode:
@@ -400,7 +400,7 @@ Bit(s)                | Name | Meaning
 54 | 32-bit | must be 0 for 64-bit segments
 55-63 | ignored | ignored in 64-bit mode
 
-[ring level]: http://wiki.osdev.org/Security#Rings
+[ring level]: https://wiki.osdev.org/Security#Rings
 
 We need one code segment, a data segment is not necessary in 64-bit mode. Code segments have the following bits set: _descriptor type_, _present_, _executable_ and the _64-bit_ flag. Translated to assembly the long mode GDT looks like this:
 
@@ -451,7 +451,7 @@ gdt64:
 ```
 We can't just use a normal label here, since we need the table _offset_. We calculate this offset using the current address `$` and set the label to this value using [equ]. Now we can use `gdt64.code` instead of 8 and this label will still work if we modify the GDT.
 
-[equ]: http://www.nasm.us/doc/nasmdoc3.html#section-3.2.4
+[equ]: https://www.nasm.us/doc/nasmdoc3.html#section-3.2.4
 
 In order to finally enter the true 64-bit mode, we need to load `cs` with `gdt64.code`. But we can't do it through `mov`. The only way to reload the code selector is a _far jump_ or a _far return_. These instructions work like a normal jump/return but change the code selector. We use a far jump to a long mode label:
 

@@ -10,7 +10,7 @@ chapter = "Interrupts"
 
 CPU exceptions occur in various erroneous situations, for example when accessing an invalid memory address or when dividing by zero. To react to them we have to set up an _interrupt descriptor table_ that provides handler functions. At the end of this post, our kernel will be able to catch [breakpoint exceptions] and to resume normal execution afterwards.
 
-[breakpoint exceptions]: http://wiki.osdev.org/Exceptions#Breakpoint
+[breakpoint exceptions]: https://wiki.osdev.org/Exceptions#Breakpoint
 
 <!-- more -->
 
@@ -37,7 +37,7 @@ On x86 there are about 20 different CPU exception types. The most important are:
 
 For the full list of exceptions check out the [OSDev wiki][exceptions].
 
-[exceptions]: http://wiki.osdev.org/Exceptions
+[exceptions]: https://wiki.osdev.org/Exceptions
 
 ### The Interrupt Descriptor Table
 In order to catch and handle exceptions, we have to set up a so-called _Interrupt Descriptor Table_ (IDT). In this table we can specify a handler function for each CPU exception. The hardware uses this table directly, so we need to follow a predefined format. Each entry must have the following 16-byte structure:
@@ -139,7 +139,7 @@ However, there is a major difference between exceptions and function calls: A fu
 [Calling conventions] specify the details of a function call. For example, they specify where function parameters are placed (e.g. in registers or on the stack) and how results are returned. On x86_64 Linux, the following rules apply for C functions (specified in the [System V ABI]):
 
 [Calling conventions]: https://en.wikipedia.org/wiki/Calling_convention
-[System V ABI]: http://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf
+[System V ABI]: https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf
 
 - the first six integer arguments are passed in registers `rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`
 - additional arguments are passed on the stack
@@ -229,11 +229,11 @@ pub fn init_idt() {
 
 Now we can add handler functions. We start by adding a handler for the [breakpoint exception]. The breakpoint exception is the perfect exception to test exception handling. Its only purpose is to temporarily pause a program when the breakpoint instruction `int3` is executed.
 
-[breakpoint exception]: http://wiki.osdev.org/Exceptions#Breakpoint
+[breakpoint exception]: https://wiki.osdev.org/Exceptions#Breakpoint
 
 The breakpoint exception is commonly used in debuggers: When the user sets a breakpoint, the debugger overwrites the corresponding instruction with the `int3` instruction so that the CPU throws the breakpoint exception when it reaches that line. When the user wants to continue the program, the debugger replaces the `int3` instruction with the original instruction again and continues the program. For more details, see the ["_How debuggers work_"] series.
 
-["_How debuggers work_"]: http://eli.thegreenplace.net/2011/01/27/how-debuggers-work-part-2-breakpoints
+["_How debuggers work_"]: https://eli.thegreenplace.net/2011/01/27/how-debuggers-work-part-2-breakpoints
 
 For our use case, we don't need to overwrite any instructions. Instead, we just want to print a message when the breakpoint instruction is executed and then continue the program. So let's create a simple `breakpoint_handler` function and add it to our IDT:
 
@@ -466,5 +466,5 @@ The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type
 ## What's next?
 We've successfully caught our first exception and returned from it! The next step is to ensure that we catch all exceptions, because an uncaught exception causes a fatal [triple fault], which leads to a system reset. The next post explains how we can avoid this by correctly catching [double faults].
 
-[triple fault]: http://wiki.osdev.org/Triple_Fault
-[double faults]: http://wiki.osdev.org/Double_Fault#Double_Fault
+[triple fault]: https://wiki.osdev.org/Triple_Fault
+[double faults]: https://wiki.osdev.org/Double_Fault#Double_Fault

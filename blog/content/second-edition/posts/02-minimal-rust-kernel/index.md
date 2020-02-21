@@ -163,7 +163,7 @@ Instead of using the platform's default linker (which might not support Linux ta
 
 This setting specifies that the target doesn't support [stack unwinding] on panic, so instead the program should abort directly. This has the same effect as the `panic = "abort"` option in our Cargo.toml, so we can remove it from there. (Note that in contrast to the Cargo.toml option, this target option also applies when we recompile the `core` library later in this post. So be sure to add this option, even if you prefer to keep the Cargo.toml option.)
 
-[stack unwinding]: http://www.bogotobogo.com/cplusplus/stackunwinding.php
+[stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
 
 ```json
 "disable-redzone": true,

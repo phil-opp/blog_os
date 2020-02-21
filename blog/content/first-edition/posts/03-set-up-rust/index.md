@@ -36,7 +36,7 @@ The code from this post (and all following) is [automatically tested](https://tr
 ## Creating a Cargo project
 [Cargo] is Rust's excellent package manager. Normally you would call `cargo new` when you want to create a new project folder. We can't use it because our folder already exists, so we need to do it manually. Fortunately we only need to add a cargo configuration file named `Cargo.toml`:
 
-[Cargo]: http://doc.crates.io/guide.html
+[Cargo]: https://doc.crates.io/guide.html
 
 ```toml
 [package]
@@ -114,7 +114,7 @@ Rust allows us to define [custom targets] through a JSON configuration file. A m
 
 The `llvm-target` field specifies the target triple that is passed to LLVM. [Target triples] are a naming convention that define the CPU architecture (e.g., `x86_64` or `arm`), the vendor (e.g., `apple` or `unknown`), the operating system (e.g., `windows` or `linux`), and the [ABI] \(e.g., `gnu` or `msvc`). For example, the target triple for 64-bit Linux is `x86_64-unknown-linux-gnu` and for 32-bit Windows the target triple is `i686-pc-windows-msvc`.
 
-[Target triples]: http://llvm.org/docs/LangRef.html#target-triple
+[Target triples]: https://llvm.org/docs/LangRef.html#target-triple
 [ABI]: https://en.wikipedia.org/wiki/Application_binary_interface
 
 The `data-layout` field is also passed to LLVM and specifies how data should be laid out in memory. It consists of various specifications separated by a `-` character. For example, the `e` means little endian and `S128` specifies that the stack should be 128 bits (= 16 byte) aligned. The format is described in detail in the [LLVM documentation][data layout] but there shouldn't be a reason to change this string.
@@ -126,7 +126,7 @@ The `linker-flavor` field was recently introduced in [#40018] with the intention
 
 The other fields are used for conditional compilation. This allows crate authors to use `cfg` variables to write special code for depending on the OS or the architecture. There isn't any up-to-date documentation about these fields but the [corresponding source code][target specification] is quite readable.
 
-[data layout]: http://llvm.org/docs/LangRef.html#data-layout
+[data layout]: https://llvm.org/docs/LangRef.html#data-layout
 [target specification]: https://github.com/rust-lang/rust/blob/c772948b687488a087356cb91432425662e034b9/src/librustc_back/target/mod.rs#L194-L214
 
 ### A Kernel Target Specification
@@ -152,8 +152,8 @@ As `llvm-target` we use `x86_64-unknown-none`, which defines the `x86_64` archit
 #### The Red Zone
 The [red zone] is an optimization of the [System V ABI] that allows functions to temporary use the 128 bytes below its stack frame without adjusting the stack pointer:
 
-[red zone]: http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
-[System V ABI]: http://wiki.osdev.org/System_V_ABI
+[red zone]: https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
+[System V ABI]: https://wiki.osdev.org/System_V_ABI
 
 ![stack frame with red zone](red-zone.svg)
 
@@ -167,7 +167,7 @@ However, this optimization leads to huge problems with exceptions or hardware in
 
 The CPU and the exception handler overwrite the data in red zone. But this data is still needed by the interrupted function. So the function won't work correctly anymore when we return from the exception handler. This might lead to strange bugs that [take weeks to debug].
 
-[take weeks to debug]: http://forum.osdev.org/viewtopic.php?t=21720
+[take weeks to debug]: https://forum.osdev.org/viewtopic.php?t=21720
 
 To avoid such bugs when we implement exception handling in the future, we disable the red zone right from the beginning. This is achieved by adding the `"disable-redzone": true` line to our target configuration file.
 

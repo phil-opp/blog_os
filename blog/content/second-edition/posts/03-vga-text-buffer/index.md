@@ -237,7 +237,7 @@ impl Writer {
 The VGA text buffer only supports ASCII and the additional bytes of [code page 437]. Rust strings are [UTF-8] by default, so they might contain bytes that are not supported by the VGA text buffer. We use a match to differentiate printable ASCII bytes (a newline or anything in between a space character and a `~` character) and unprintable bytes. For unprintable bytes, we print a `■` character, which has the hex code `0xfe` on the VGA hardware.
 
 [code page 437]: https://en.wikipedia.org/wiki/Code_page_437
-[UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
+[UTF-8]: https://www.fileformat.info/info/unicode/utf8.htm
 
 #### Try it out!
 To write some characters to the screen, you can create a temporary function:
@@ -307,8 +307,8 @@ volatile = "0.2.6"
 
 The `0.2.6` is the [semantic] version number. For more information, see the [Specifying Dependencies] guide of the cargo documentation.
 
-[semantic]: http://semver.org/
-[Specifying Dependencies]: http://doc.crates.io/specifying-dependencies.html
+[semantic]: https://semver.org/
+[Specifying Dependencies]: https://doc.crates.io/specifying-dependencies.html
 
 Let's use it to make writes to the VGA buffer volatile. We update our `Buffer` type as follows:
 

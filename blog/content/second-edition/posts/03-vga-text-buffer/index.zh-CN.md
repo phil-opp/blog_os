@@ -222,7 +222,7 @@ impl Writer {
 }
 ```
 
-VGA 字符缓冲区只支持 ASCII 码字节和**代码页 437**（[Code page 437](https://en.wikipedia.org/wiki/Code_page_437)）定义的字节。Rust 语言的字符串默认编码为 [UTF-8](http://www.fileformat.info/info/unicode/utf8.htm)，也因此可能包含一些 VGA 字符缓冲区不支持的字节：我们使用 `match` 语句，来区别可打印的 ASCII 码或换行字节，和其它不可打印的字节。对每个不可打印的字节，我们打印一个 `■` 符号；这个符号在 VGA 硬件中被编码为十六进制的 `0xfe`。
+VGA 字符缓冲区只支持 ASCII 码字节和**代码页 437**（[Code page 437](https://en.wikipedia.org/wiki/Code_page_437)）定义的字节。Rust 语言的字符串默认编码为 [UTF-8](https://www.fileformat.info/info/unicode/utf8.htm)，也因此可能包含一些 VGA 字符缓冲区不支持的字节：我们使用 `match` 语句，来区别可打印的 ASCII 码或换行字节，和其它不可打印的字节。对每个不可打印的字节，我们打印一个 `■` 符号；这个符号在 VGA 硬件中被编码为十六进制的 `0xfe`。
 
 我们可以亲自试一试已经编写的代码。为了这样做，我们可以临时编写一个函数：
 
@@ -259,7 +259,7 @@ pub extern "C" fn _start() -> ! {
 
 ![QEMU output with a yellow Hello W■■rld! in the lower left corner](https://os.phil-opp.com/vga-text-mode/vga-hello.png)
 
-需要注意的是，`ö` 字符被打印为两个 `■` 字符。这是因为在 [UTF-8](http://www.fileformat.info/info/unicode/utf8.htm) 编码下，字符 `ö` 是由两个字节表述的——而这两个字节并不处在可打印的 ASCII 码字节范围之内。事实上，这是 UTF-8 编码的基本特点之一：**如果一个字符占用多个字节，那么每个组成它的独立字节都不是有效的 ASCII 码字节**（the individual bytes of multi-byte values are never valid ASCII）。
+需要注意的是，`ö` 字符被打印为两个 `■` 字符。这是因为在 [UTF-8](https://www.fileformat.info/info/unicode/utf8.htm) 编码下，字符 `ö` 是由两个字节表述的——而这两个字节并不处在可打印的 ASCII 码字节范围之内。事实上，这是 UTF-8 编码的基本特点之一：**如果一个字符占用多个字节，那么每个组成它的独立字节都不是有效的 ASCII 码字节**（the individual bytes of multi-byte values are never valid ASCII）。
 
 ### 易失操作
 
@@ -278,7 +278,7 @@ pub extern "C" fn _start() -> ! {
 volatile = "0.2.3"
 ```
 
-`0.2.3` 表示一个**语义版本号**（[semantic version number](http://semver.org/)），在 cargo 文档的[《指定依赖项》章节](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html)可以找到与它相关的使用指南。
+`0.2.3` 表示一个**语义版本号**（[semantic version number](https://semver.org/)），在 cargo 文档的[《指定依赖项》章节](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html)可以找到与它相关的使用指南。
 
 现在，我们使用它来完成 VGA 缓冲区的 volatile 写入操作。我们将 `Buffer` 类型的定义修改为下列代码：
 

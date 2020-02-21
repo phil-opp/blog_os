@@ -128,7 +128,7 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
 "panic-strategy": "abort",
 ```
 
-这个配置项的意思是，我们的编译目标不支持 panic 时的**栈展开**（[stack unwinding](http://www.bogotobogo.com/cplusplus/stackunwinding.php)），所以我们选择直接**在 panic 时中止**（abort on panic）。这和在 `Cargo.toml` 文件中添加 `panic = "abort"` 选项的作用是相同的，所以我们可以不在这里的配置清单中填写这一项。
+这个配置项的意思是，我们的编译目标不支持 panic 时的**栈展开**（[stack unwinding](https://www.bogotobogo.com/cplusplus/stackunwinding.php)），所以我们选择直接**在 panic 时中止**（abort on panic）。这和在 `Cargo.toml` 文件中添加 `panic = "abort"` 选项的作用是相同的，所以我们可以不在这里的配置清单中填写这一项。
 
 ```json
 "disable-redzone": true,

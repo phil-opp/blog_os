@@ -35,7 +35,7 @@ We've already seen several types of exceptions in our kernel:
 
 For the full list of exceptions check out the [OSDev wiki][exceptions].
 
-[exceptions]: http://wiki.osdev.org/Exceptions
+[exceptions]: https://wiki.osdev.org/Exceptions
 
 ### The Interrupt Descriptor Table
 In order to catch and handle exceptions, we have to set up a so-called _Interrupt Descriptor Table_ (IDT). In this table we can specify a handler function for each CPU exception. The hardware uses this table directly, so we need to follow a predefined format. Each entry must have the following 16-byte structure:
@@ -311,8 +311,8 @@ u64     | Offset  | Virtual start address of the table.
 
 This structure is already contained [in the x86_64 crate], so we don't need to create it ourselves. The same is true for the [lidt function]. So we just need to put the pieces together to create a `load`  method:
 
-[in the x86_64 crate]: http://docs.rs/x86_64/0.1.0/x86_64/instructions/tables/struct.DescriptorTablePointer.html
-[lidt function]: http://docs.rs/x86_64/0.1.0/x86_64/instructions/tables/fn.lidt.html
+[in the x86_64 crate]: https://docs.rs/x86_64/0.1.0/x86_64/instructions/tables/struct.DescriptorTablePointer.html
+[lidt function]: https://docs.rs/x86_64/0.1.0/x86_64/instructions/tables/fn.lidt.html
 
 ```rust
 impl Idt {
@@ -422,7 +422,7 @@ extern "C" fn divide_by_zero_handler() -> ! {
 ```
 We register a single handler function for a [divide by zero error] \(index 0). Like the name says, this exception occurs when dividing a number by 0. Thus we have an easy way to test our new exception handler.
 
-[divide by zero error]: http://wiki.osdev.org/Exceptions#Divide-by-zero_Error
+[divide by zero error]: https://wiki.osdev.org/Exceptions#Divide-by-zero_Error
 
 However, it doesn't work this way:
 

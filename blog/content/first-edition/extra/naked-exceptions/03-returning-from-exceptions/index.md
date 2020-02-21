@@ -38,7 +38,7 @@ The breakpoint exception is the perfect exception to test our upcoming return-fr
 
 The breakpoint exception is commonly used in debuggers: When the user sets a breakpoint, the debugger overwrites the corresponding instruction with the `int3` instruction so that the CPU throws the breakpoint exception when it reaches that line. When the user wants to continue the program, the debugger replaces the `int3` instruction with the original instruction again and continues the program. For more details, see the [How debuggers work] series.
 
-[How debuggers work]: http://eli.thegreenplace.net/2011/01/27/how-debuggers-work-part-2-breakpoints
+[How debuggers work]: https://eli.thegreenplace.net/2011/01/27/how-debuggers-work-part-2-breakpoints
 
 For our use case, we don't need to overwrite any instructions (it wouldn't even be possible since we [set the page table flags] to read-only). Instead, we just want to print a message when the breakpoint instruction is executed and then continue the program.
 
@@ -250,7 +250,7 @@ However, there is a major difference between exceptions and function calls: A fu
 [Calling conventions] specify the details of a function call. For example, they specify where function parameters are placed (e.g. in registers or on the stack) and how results are returned. On x86_64 Linux, the following rules apply for C functions (specified in the [System V ABI]):
 
 [Calling conventions]: https://en.wikipedia.org/wiki/Calling_convention
-[System V ABI]: http://refspecs.linuxbase.org/elf/gabi41.pdf
+[System V ABI]: https://refspecs.linuxbase.org/elf/gabi41.pdf
 
 - the first six integer arguments are passed in registers `rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`
 - additional arguments are passed on the stack
@@ -518,7 +518,7 @@ The `llvm-target` field specifies the target triple that is passed to LLVM. We w
 
 The other fields are used for conditional compilation. This allows crate authors to use `cfg` variables to write special code for depending on the OS or the architecture. There isn't any up-to-date documentation about these fields but the [corresponding source code][target specification] is quite readable.
 
-[data layout]: http://llvm.org/docs/LangRef.html#data-layout
+[data layout]: https://llvm.org/docs/LangRef.html#data-layout
 [target specification]: https://github.com/rust-lang/rust/blob/c772948b687488a087356cb91432425662e034b9/src/librustc_back/target/mod.rs#L194-L214
 
 #### Disabling MMX and SSE
@@ -695,7 +695,7 @@ So now our return-from-exception logic works without problems in _most_ cases. H
 ## The Red Zone
 The [red zone] is an optimization of the [System V ABI] that allows functions to temporary use the 128 bytes below its stack frame without adjusting the stack pointer:
 
-[red zone]: http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
+[red zone]: https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
 
 ![stack frame with red zone](red-zone.svg)
 
@@ -709,7 +709,7 @@ However, this optimization leads to huge problems with exceptions. Let's assume 
 
 The CPU and the exception handler overwrite the data in red zone. But this data is still needed by the interrupted function. So the function won't work correctly anymore when we return from the exception handler. It might fail or cause another exception, but it could also lead to strange bugs that [take weeks to debug].
 
-[take weeks to debug]: http://forum.osdev.org/viewtopic.php?t=21720
+[take weeks to debug]: https://forum.osdev.org/viewtopic.php?t=21720
 
 ### Adjusting our Exception Handler?
 The problem is that the [System V ABI] demands that the red zone _“shall not be modified by signal or interrupt handlers.”_ Our current exception handlers do not respect this. We could try to fix it by subtracting 128 from the stack pointer before pushing anything:

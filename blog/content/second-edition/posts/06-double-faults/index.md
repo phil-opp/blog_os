@@ -128,12 +128,12 @@ First Exception | Second Exception
 [Divide-by-zero],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault] | [Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
 [Page Fault] | [Page Fault],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
 
-[Divide-by-zero]: http://wiki.osdev.org/Exceptions#Divide-by-zero_Error
-[Invalid TSS]: http://wiki.osdev.org/Exceptions#Invalid_TSS
-[Segment Not Present]: http://wiki.osdev.org/Exceptions#Segment_Not_Present
-[Stack-Segment Fault]: http://wiki.osdev.org/Exceptions#Stack-Segment_Fault
-[General Protection Fault]: http://wiki.osdev.org/Exceptions#General_Protection_Fault
-[Page Fault]: http://wiki.osdev.org/Exceptions#Page_Fault
+[Divide-by-zero]: https://wiki.osdev.org/Exceptions#Divide-by-zero_Error
+[Invalid TSS]: https://wiki.osdev.org/Exceptions#Invalid_TSS
+[Segment Not Present]: https://wiki.osdev.org/Exceptions#Segment_Not_Present
+[Stack-Segment Fault]: https://wiki.osdev.org/Exceptions#Stack-Segment_Fault
+[General Protection Fault]: https://wiki.osdev.org/Exceptions#General_Protection_Fault
+[Page Fault]: https://wiki.osdev.org/Exceptions#Page_Fault
 
 
 [AMD64 manual]: https://www.amd.com/system/files/TechDocs/24593.pdf
@@ -206,7 +206,7 @@ For each exception handler, we can choose a stack from the IST through the `stac
 The Interrupt Stack Table (IST) is part of an old legacy structure called _[Task State Segment]_ \(TSS). The TSS used to hold various information (e.g. processor register state) about a task in 32-bit mode and was for example used for [hardware context switching]. However, hardware context switching is no longer supported in 64-bit mode and the format of the TSS changed completely.
 
 [Task State Segment]: https://en.wikipedia.org/wiki/Task_state_segment
-[hardware context switching]: http://wiki.osdev.org/Context_Switching#Hardware_Context_Switching
+[hardware context switching]: https://wiki.osdev.org/Context_Switching#Hardware_Context_Switching
 
 On x86_64, the TSS no longer holds any task specific information at all. Instead, it holds two stack tables (the IST is one of them). The only common field between the 32-bit and 64-bit TSS is the pointer to the [I/O port permissions bitmap].
 

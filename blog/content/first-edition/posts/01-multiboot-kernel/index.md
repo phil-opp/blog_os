@@ -9,7 +9,7 @@ template = "first-edition/page.html"
 
 This post explains how to create a minimal x86 operating system kernel using the Multiboot standard. In fact, it will just boot and print `OK` to the screen. In subsequent blog posts we will extend it using the [Rust] programming language.
 
-[Rust]: http://www.rust-lang.org/
+[Rust]: https://www.rust-lang.org/
 
 <!-- more -->
 
@@ -28,19 +28,19 @@ When you turn on a computer, it loads the [BIOS] from some special flash memory.
 
 [BIOS]: https://en.wikipedia.org/wiki/BIOS
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
-[real mode]: http://wiki.osdev.org/Real_Mode
+[real mode]: https://wiki.osdev.org/Real_Mode
 
 We won't write a bootloader because that would be a complex project on its own (if you really want to do it, check out [_Rolling Your Own Bootloader_]). Instead we will use one of the [many well-tested bootloaders][bootloader comparison] out there to boot our kernel from a CD-ROM. But which one?
 
-[_Rolling Your Own Bootloader_]: http://wiki.osdev.org/Rolling_Your_Own_Bootloader
+[_Rolling Your Own Bootloader_]: https://wiki.osdev.org/Rolling_Your_Own_Bootloader
 [bootloader comparison]: https://en.wikipedia.org/wiki/Comparison_of_boot_loaders
 
 ## Multiboot
 Fortunately there is a bootloader standard: the [Multiboot Specification][multiboot]. Our kernel just needs to indicate that it supports Multiboot and every Multiboot-compliant bootloader can boot it. We will use the Multiboot 2 specification ([PDF][Multiboot 2]) together with the well-known [GRUB 2] bootloader.
 
 [multiboot]: https://en.wikipedia.org/wiki/Multiboot_Specification
-[multiboot 2]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
-[grub 2]: http://wiki.osdev.org/GRUB_2
+[multiboot 2]: https://nongnu.askapache.com/grub/phcoder/multiboot.pdf
+[grub 2]: https://wiki.osdev.org/GRUB_2
 
 To indicate our Multiboot 2 support to the bootloader, our kernel must start with a _Multiboot Header_, which has the following format:
 
@@ -130,7 +130,7 @@ Through assembling, viewing and disassembling we can see the CPU [Opcodes] in ac
 To boot our executable later through GRUB, it should be an [ELF] executable. So we want `nasm` to create ELF [object files] instead of plain binaries. To do that, we simply pass the `‑f elf64` argument to it.
 
 [ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
-[object files]: http://wiki.osdev.org/Object_Files
+[object files]: https://wiki.osdev.org/Object_Files
 
 To create the ELF _executable_, we need to [link] the object files together. We use a custom [linker script] named `linker.ld`:
 

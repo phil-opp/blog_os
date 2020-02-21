@@ -34,7 +34,7 @@ A good allocator is fast and reliable. It also effectively utilizes the availabl
 
 [cache locality]: http://docs.cray.com/books/S-2315-50/html-S-2315-50/qmeblljm.html
 [fragmentation]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
-[false sharing]: http://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
+[false sharing]: https://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 
 These requirements make good allocators pretty complex. For example, [jemalloc] has over 30.000 lines of code. This complexity is out of scope for our kernel, so we will create a much simpler allocator. Nevertheless, it should suffice for the foreseeable future, since we'll allocate only when it's absolutely necessary.
 
@@ -344,7 +344,7 @@ check_exception old: 0xffffffff new 0xe
 ```
 Aha! It's a [page fault] \(`v=0e`) and was caused by the code at `0x102860`. The code tried to write (`e=0002`) to address `0x40000000`. This address is `0o_000_001_000_000_0000` in octal, which is the `HEAP_START` address defined above. Of course it page-faults: We have forgotten to map the heap memory to some physical memory.
 
-[page fault]: http://wiki.osdev.org/Exceptions#Page_Fault
+[page fault]: https://wiki.osdev.org/Exceptions#Page_Fault
 
 ### Some Refactoring
 In order to map the heap cleanly, we do a bit of refactoring first. We move all memory initialization from our `rust_main` to a new `memory::init` function. Now our `rust_main` looks like this:

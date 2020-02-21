@@ -38,7 +38,7 @@ Apart from correctness, there are many secondary design goals. For example, the 
 
 [cache locality]: http://docs.cray.com/books/S-2315-50/html-S-2315-50/qmeblljm.html
 [_fragmentation_]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
-[false sharing]: http://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
+[false sharing]: https://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 
 These requirements can make good allocators very complex. For example, [jemalloc] has over 30.000 lines of code. This complexity is often undesired in kernel code where a single bug can lead to severe security vulnerabilities. Fortunately, the allocation patterns of kernel code are often much simpler compared to userspace code, so that relatively simple allocator designs often suffice.
 

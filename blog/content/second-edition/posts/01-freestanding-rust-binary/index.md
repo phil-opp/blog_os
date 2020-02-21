@@ -67,7 +67,7 @@ blog_os
 
 The `Cargo.toml` contains the crate configuration, for example the crate name, the author, the [semantic version] number, and dependencies. The `src/main.rs` file contains the root module of our crate and our `main` function. You can compile your crate through `cargo build` and then run the compiled `blog_os` binary in the `target/debug` subfolder.
 
-[semantic version]: http://semver.org/
+[semantic version]: https://semver.org/
 
 ### The `no_std` Attribute
 
@@ -152,8 +152,8 @@ While providing custom implementations of language items is possible, it should 
 The [`eh_personality` language item] marks a function that is used for implementing [stack unwinding]. By default, Rust uses unwinding to run the destructors of all live stack variables in case of a [panic]. This ensures that all used memory is freed and allows the parent thread to catch the panic and continue execution. Unwinding, however, is a complicated process and requires some OS specific libraries (e.g. [libunwind] on Linux or [structured exception handling] on Windows), so we don't want to use it for our operating system.
 
 [`eh_personality` language item]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
-[stack unwinding]: http://www.bogotobogo.com/cplusplus/stackunwinding.php
-[libunwind]: http://www.nongnu.org/libunwind/
+[stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
+[libunwind]: https://www.nongnu.org/libunwind/
 [structured exception handling]: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx
 
 ### Disabling Unwinding

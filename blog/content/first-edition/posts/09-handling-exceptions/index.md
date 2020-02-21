@@ -9,7 +9,7 @@ template = "first-edition/page.html"
 
 In this post, we start exploring CPU exceptions. Exceptions occur in various erroneous situations, for example when accessing an invalid memory address or when dividing by zero. To catch them, we have to set up an _interrupt descriptor table_ that provides handler functions. At the end of this post, our kernel will be able to catch [breakpoint exceptions] and to resume normal execution afterwards.
 
-[breakpoint exceptions]: http://wiki.osdev.org/Exceptions#Breakpoint
+[breakpoint exceptions]: https://wiki.osdev.org/Exceptions#Breakpoint
 
 <!-- more -->
 
@@ -30,7 +30,7 @@ We've already seen several types of exceptions in our kernel:
 
 For the full list of exceptions check out the [OSDev wiki][exceptions].
 
-[exceptions]: http://wiki.osdev.org/Exceptions
+[exceptions]: https://wiki.osdev.org/Exceptions
 
 ### The Interrupt Descriptor Table
 In order to catch and handle exceptions, we have to set up a so-called _Interrupt Descriptor Table_ (IDT). In this table we can specify a handler function for each CPU exception. The hardware uses this table directly, so we need to follow a predefined format. Each entry must have the following 16-byte structure:
@@ -128,7 +128,7 @@ However, there is a major difference between exceptions and function calls: A fu
 [Calling conventions] specify the details of a function call. For example, they specify where function parameters are placed (e.g. in registers or on the stack) and how results are returned. On x86_64 Linux, the following rules apply for C functions (specified in the [System V ABI]):
 
 [Calling conventions]: https://en.wikipedia.org/wiki/Calling_convention
-[System V ABI]: http://refspecs.linuxbase.org/elf/gabi41.pdf
+[System V ABI]: https://refspecs.linuxbase.org/elf/gabi41.pdf
 
 - the first six integer arguments are passed in registers `rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`
 - additional arguments are passed on the stack
@@ -221,11 +221,11 @@ pub fn init() {
 
 Now we can add handler functions. We start by adding a handler for the [breakpoint exception]. The breakpoint exception is the perfect exception to test exception handling. Its only purpose is to temporary pause a program when the breakpoint instruction `int3` is executed.
 
-[breakpoint exception]: http://wiki.osdev.org/Exceptions#Breakpoint
+[breakpoint exception]: https://wiki.osdev.org/Exceptions#Breakpoint
 
 The breakpoint exception is commonly used in debuggers: When the user sets a breakpoint, the debugger overwrites the corresponding instruction with the `int3` instruction so that the CPU throws the breakpoint exception when it reaches that line. When the user wants to continue the program, the debugger replaces the `int3` instruction with the original instruction again and continues the program. For more details, see the ["_How debuggers work_"] series.
 
-["_How debuggers work_"]: http://eli.thegreenplace.net/2011/01/27/how-debuggers-work-part-2-breakpoints
+["_How debuggers work_"]: https://eli.thegreenplace.net/2011/01/27/how-debuggers-work-part-2-breakpoints
 
 For our use case, we don't need to overwrite any instructions (it wouldn't even be possible since we [set the page table flags] to read-only). Instead, we just want to print a message when the breakpoint instruction is executed and then continue the program.
 
@@ -439,16 +439,16 @@ The answer is that the stored instruction pointer only points to the causing ins
 - **Aborts** are fatal exceptions that can't be recovered. Examples are [machine check exception] or the [double fault].
 - **Traps** are only reported to the kernel, but don't hinder the continuation of the program. Examples are the breakpoint exception and the [overflow exception].
 
-[page fault]: http://wiki.osdev.org/Exceptions#Page_Fault
-[machine check exception]: http://wiki.osdev.org/Exceptions#Machine_Check
-[double fault]: http://wiki.osdev.org/Exceptions#Double_Fault
-[overflow exception]: http://wiki.osdev.org/Exceptions#Overflow
+[page fault]: https://wiki.osdev.org/Exceptions#Page_Fault
+[machine check exception]: https://wiki.osdev.org/Exceptions#Machine_Check
+[double fault]: https://wiki.osdev.org/Exceptions#Double_Fault
+[overflow exception]: https://wiki.osdev.org/Exceptions#Overflow
 
 The reason for the diffent instruction pointer values is that the stored value is also the return address. So for faults, the instruction that caused the exception is restarted and might cause the same exception again if it's not resolved. This would not make much sense for traps, since invoking the breakpoint exception again would just cause another breakpoint exception[^fn-breakpoint-restart-use-cases]. Thus the instruction pointer points to the _next_ instruction for these exceptions.
 
 In some cases, the distinction between faults and traps is vague. For example, the [debug exception] behaves like a fault in some cases, but like a trap in others. So to find out the meaning of the saved instruction pointer, it is a good idea to read the official documentation for the exception, which can be found in the [AMD64 manual] in Section 8.2. For example, for the breakpoint exception it says:
 
-[debug exception]: http://wiki.osdev.org/Exceptions#Debug
+[debug exception]: https://wiki.osdev.org/Exceptions#Debug
 [AMD64 manual]: https://www.amd.com/system/files/TechDocs/24593.pdf
 
 > `#BP` is a trap-type exception. The saved instruction pointer points to the byte after the `INT3` instruction.
@@ -456,7 +456,7 @@ In some cases, the distinction between faults and traps is vague. For example, t
 The documentation of the [`Idt`] struct and the [OSDev Wiki][osdev wiki exceptions] also contain this information.
 
 [`Idt`]: https://docs.rs/x86_64/0.1.1/x86_64/structures/idt/struct.Idt.html
-[osdev wiki exceptions]: http://wiki.osdev.org/Exceptions
+[osdev wiki exceptions]: https://wiki.osdev.org/Exceptions
 
 ## Too much Magic?
 The `x86-interrupt` calling convention and the [`Idt`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own `Idt` type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed.
@@ -466,8 +466,8 @@ The `x86-interrupt` calling convention and the [`Idt`] type made the exception h
 ## What's next?
 We've successfully caught our first exception and returned from it! The next step is to add handlers for other common exceptions such as page faults. We also need to make sure that we never cause a [triple fault], since it causes a complete system reset. The next post explains how we can avoid this by correctly catching [double faults].
 
-[triple fault]: http://wiki.osdev.org/Triple_Fault
-[double faults]: http://wiki.osdev.org/Double_Fault#Double_Fault
+[triple fault]: https://wiki.osdev.org/Triple_Fault
+[double faults]: https://wiki.osdev.org/Double_Fault#Double_Fault
 
 ## Footnotes
 [^fn-breakpoint-restart-use-cases]: There are valid use cases for restarting an instruction that caused a breakpoint. The most common use case is a debugger: When setting a breakpoint on some code line, the debugger overwrites the corresponding instruction with an `int3` instruction, so that the CPU traps when that line is executed. When the user continues execution, the debugger swaps in the original instruction and continues the program from the replaced instruction.

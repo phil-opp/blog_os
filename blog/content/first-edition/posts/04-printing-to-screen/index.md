@@ -205,7 +205,7 @@ error[E0507]: cannot move out of borrowed content
 The reason it that Rust _moves_ values by default instead of copying them like other languages. And we cannot move `color_code` out of `self` because we only borrowed `self`. For more information check out the [ownership section] in the Rust book.
 
 [ownership section]: https://doc.rust-lang.org/book/ownership.html
-[by reference]: http://rust-lang.github.io/book/ch04-02-references-and-borrowing.html
+[by reference]: https://rust-lang.github.io/book/ch04-02-references-and-borrowing.html
 
 To fix it, we can implement the [Copy] trait for the `ColorCode` type. The easiest way to do this is to use the built-in [derive macro]:
 
@@ -287,8 +287,8 @@ volatile = "0.1.0"
 
 The `0.1.0` is the [semantic] version number. For more information, see the [Specifying Dependencies] guide of the cargo documentation.
 
-[semantic]: http://semver.org/
-[Specifying Dependencies]: http://doc.crates.io/specifying-dependencies.html
+[semantic]: https://semver.org/
+[Specifying Dependencies]: https://doc.crates.io/specifying-dependencies.html
 
 Now we've declared that our project depends on the `volatile` crate and are able to import it in `src/lib.rs`:
 
@@ -354,7 +354,7 @@ You can try it yourself in the `print_something` function.
 When you print strings with some special characters like `ä` or `λ`, you'll notice that they cause weird symbols on screen. That's because they are represented by multiple bytes in [UTF-8]. By converting them to bytes, we of course get strange results. But since the VGA buffer doesn't support UTF-8, it's not possible to display these characters anyway.
 
 [core tracking issue]: https://github.com/rust-lang/rust/issues/27701
-[UTF-8]: http://www.fileformat.info/info/unicode/utf8.htm
+[UTF-8]: https://www.fileformat.info/info/unicode/utf8.htm
 
 ### Support Formatting Macros
 It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [core::fmt::Write] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_str` method. To implement the trait, we just need to move it into an `impl fmt::Write for Writer` block and add a return type:
@@ -657,7 +657,7 @@ _Note_: You need to [cross compile binutils] to build it (or you create some sym
 - [Redox]: Probably the most complete Rust OS today. It has an active community and over 1000 Github stars. File systems, network, an audio player, a picture viewer, and much more. Just take a look at the [screenshots][redox screenshots].
 
 [Rust Bare-Bones Kernel]: https://github.com/thepowersgang/rust-barebones-kernel
-[higher half]: http://wiki.osdev.org/Higher_Half_Kernel
+[higher half]: https://wiki.osdev.org/Higher_Half_Kernel
 [cross compile binutils]: @/first-edition/extra/cross-compile-binutils.md
 [RustOS]: https://github.com/RustOS-Fork-Holding-Ground/RustOS
 ["Tifflin" Experimental Kernel]:https://github.com/thepowersgang/rust_os

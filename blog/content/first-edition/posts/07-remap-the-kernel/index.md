@@ -368,7 +368,7 @@ pub fn with<F>(&mut self,
 ```
 It overwrites the 511th P4 entry and points it to the inactive table frame. Then it flushes the [translation lookaside buffer (TLB)][TLB], which still contains some old translations. We need to flush all pages that are part of the recursive mapping, so the easiest way is to flush the TLB completely.
 
-[TLB]: http://wiki.osdev.org/TLB
+[TLB]: https://wiki.osdev.org/TLB
 
 
 Now that the recursive mapping points to the given inactive table, we execute the closure in the new context. The closure can call all active table methods such as `translate` or `map_to`. It could even call `with` again and chain another inactive table! Wait… that would not work:
@@ -466,7 +466,7 @@ let backup = Frame::containing_address(
 ```
 Why is it unsafe? Because reading the CR3 register leads to a CPU exception if the processor is not running in kernel mode ([Ring 0]). But this code will always run in kernel mode, so the `unsafe` block is completely safe here.
 
-[Ring 0]: http://wiki.osdev.org/Security#Low-level_Protection_Mechanisms
+[Ring 0]: https://wiki.osdev.org/Security#Low-level_Protection_Mechanisms
 
 Now that we have a backup of the original P4 frame, we need a way to restore it after the closure has run. So we need to somehow modify the 511th entry of the original P4 frame, which is still the active table in the CPU. But we can't access it because the recursive mapping now points to the inactive table:
 
@@ -826,9 +826,9 @@ These lines are the important ones. We can read many useful information from the
 
 - `CR2=00000000000b8f00`: Finally the most useful register. It tells us which virtual address caused the page fault. In our case it's `0xb8f00`, which is part of the [VGA text buffer].
 
-[osdev exception overview]: http://wiki.osdev.org/Exceptions
-[page fault]: http://wiki.osdev.org/Exceptions#Page_Fault
-[page fault error code]: http://wiki.osdev.org/Exceptions#Error_code
+[osdev exception overview]: https://wiki.osdev.org/Exceptions
+[page fault]: https://wiki.osdev.org/Exceptions#Page_Fault
+[page fault error code]: https://wiki.osdev.org/Exceptions#Error_code
 [GDT segment]: @/first-edition/posts/02-entering-longmode/index.md#loading-the-gdt
 [VGA text buffer]: @/first-edition/posts/04-printing-to-screen/index.md#the-vga-text-buffer
 

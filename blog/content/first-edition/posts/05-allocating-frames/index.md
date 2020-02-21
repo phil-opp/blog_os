@@ -71,7 +71,7 @@ Now we can use it to print available memory areas.
 ### Available Memory
 The boot information structure consists of various _tags_. See section 3.4 of the Multiboot specification ([PDF][multiboot specification]) for a complete list. The _memory map_ tag contains a list of all available RAM areas. Special areas such as the VGA text buffer at `0xb8000` are not available. Note that some of the available memory is already used by our kernel and by the multiboot information structure itself.
 
-[multiboot specification]: http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
+[multiboot specification]: https://nongnu.askapache.com/grub/phcoder/multiboot.pdf
 
 To print all available memory areas, we can use the `multiboot2` crate in our `rust_main` as follows:
 
@@ -100,7 +100,7 @@ So we have one area from `0x0` to `0x9fc00`, which is a bit below the 1MiB mark.
 
 If you give QEMU more than 4GiB of memory by passing `-m 5G`, you get another unusable area below the 4GiB mark. This memory is normally mapped to some hardware devices. See the [OSDev Wiki][Memory_map] for more information.
 
-[Memory_map]: http://wiki.osdev.org/Memory_Map_(x86)
+[Memory_map]: https://wiki.osdev.org/Memory_Map_(x86)
 
 ### Handling Panics
 We used `expect` in the code above, which will panic if there is no memory map tag. But our current panic handler just loops without printing any error message. Of course we could replace `expect` by a `match`, but we should fix the panic handler nonetheless:
@@ -217,7 +217,7 @@ We could create some kind of linked list from the free frames. For example, each
 
 Another approach is to create some kind of data structure such as a [bitmap or a stack] to manage free frames. We could place it in the already identity mapped area right behind the kernel or multiboot structure. That way we would not need to (temporary) map each free frame. But it has the same problem of the slow initial creating/filling. In fact, we will use this approach in a future post to manage frames that are freed again. But for the initial management of free frames, we use a different method.
 
-[bitmap or a stack]: http://wiki.osdev.org/Page_Frame_Allocation#Physical_Memory_Allocators
+[bitmap or a stack]: https://wiki.osdev.org/Page_Frame_Allocation#Physical_Memory_Allocators
 
 In the following, we will use Multiboot's memory map directly. The idea is to maintain a simple counter that starts at frame 0 and is increased constantly. If the current frame is available (part of an available area in the memory map) and not used by the kernel or the multiboot structure (we know their start and end addresses), we know that it's free and return it. Else, we increase the counter to the next possibly free frame. That way, we don't need to create a data structure when booting and the physical frames can remain unmapped. The only problem is that we cannot reasonably free frames again, but we will solve that problem in a future post (by adding an intermediate frame stack that saves freed frames).
 
@@ -421,7 +421,7 @@ for i in 0.. {
 ```
 You can try different amounts of memory by passing e.g. `-m 500M` to QEMU. To compare these numbers, [WolframAlpha] can be very helpful.
 
-[WolframAlpha]: http://www.wolframalpha.com/input/?i=%2832605+*+4096%29+bytes+in+MiB
+[WolframAlpha]: https://www.wolframalpha.com/input/?i=%2832605+*+4096%29+bytes+in+MiB
 
 ## Conclusion
 

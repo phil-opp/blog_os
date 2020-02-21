@@ -152,8 +152,8 @@ Language item 是一些編譯器需求的特殊函式或類型。舉例來說，
 
 `eh_personality` language item 標記的函式將被用於實作[堆疊回溯][stack unwinding]。在預設情況下當 panic 發生時，Rust 會使用堆疊回溯來執行所有存在堆疊上變數的解構子（destructor）。這確保所有使用的記憶體都被釋放，並讓 parent thread 獲取 panic 資訊並繼續運行。但是堆疊回溯是一個複雜的過程，通常會需要一些 OS 的函式庫如 Linux 的 [libunwind] 或 Windows 的 [structured exception handling]。所以我們並不希望在我們的作業系統中使用它。
 
-[stack unwinding]: http://www.bogotobogo.com/cplusplus/stackunwinding.php
-[libunwind]: http://www.nongnu.org/libunwind/
+[stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
+[libunwind]: https://www.nongnu.org/libunwind/
 [structured exception handling]: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx
 
 ### 停用回溯

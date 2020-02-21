@@ -56,7 +56,7 @@ blog_os
     └── main.rs
 ```
 
-在这里，`Cargo.toml` 文件包含了包的**配置**（configuration），比如包的名称、作者、[semver版本](http://semver.org/) 和项目依赖项；`src/main.rs` 文件包含包的**根模块**（root module）和 main 函数。我们可以使用 `cargo build` 来编译这个包，然后在 `target/debug` 文件夹内找到编译好的 `blog_os` 二进制文件。
+在这里，`Cargo.toml` 文件包含了包的**配置**（configuration），比如包的名称、作者、[semver版本](https://semver.org/) 和项目依赖项；`src/main.rs` 文件包含包的**根模块**（root module）和 main 函数。我们可以使用 `cargo build` 来编译这个包，然后在 `target/debug` 文件夹内找到编译好的 `blog_os` 二进制文件。
 
 ### no_std 属性
 
@@ -128,7 +128,7 @@ fn panic(_info: &PanicInfo) -> ! {
 
 我们可以自己实现语言项，但这是下下策：目前来看，语言项是高度不稳定的语言细节实现，它们不会经过编译期类型检查（所以编译器甚至不确保它们的参数类型是否正确）。幸运的是，我们有更稳定的方式，来修复上面的语言项错误。
 
-`eh_personality` 语言项标记的函数，将被用于实现**栈展开**（[stack unwinding](http://www.bogotobogo.com/cplusplus/stackunwinding.php)）。在使用标准库的情况下，当 panic 发生时，Rust 将使用栈展开，来运行在栈上所有活跃的变量的**析构函数**（destructor）——这确保了所有使用的内存都被释放，允许调用程序的**父进程**（parent thread）捕获 panic，处理并继续运行。但是，栈展开是一个复杂的过程，如 Linux 的 [libunwind](http://www.nongnu.org/libunwind/) 或 Windows 的**结构化异常处理**（[structured exception handling, SEH](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx)），通常需要依赖于操作系统的库；所以我们不在自己编写的操作系统中使用它。
+`eh_personality` 语言项标记的函数，将被用于实现**栈展开**（[stack unwinding](https://www.bogotobogo.com/cplusplus/stackunwinding.php)）。在使用标准库的情况下，当 panic 发生时，Rust 将使用栈展开，来运行在栈上所有活跃的变量的**析构函数**（destructor）——这确保了所有使用的内存都被释放，允许调用程序的**父进程**（parent thread）捕获 panic，处理并继续运行。但是，栈展开是一个复杂的过程，如 Linux 的 [libunwind](https://www.nongnu.org/libunwind/) 或 Windows 的**结构化异常处理**（[structured exception handling, SEH](https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx)），通常需要依赖于操作系统的库；所以我们不在自己编写的操作系统中使用它。
 
 ### 禁用栈展开
 
