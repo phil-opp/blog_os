@@ -8,7 +8,7 @@
 {% set posts_section = get_section(path = "second-edition/posts/_index.md") %}
 {% set posts = posts_section.pages %}
 
-<h1 style="visibility: hidden; height: 0px; margin: 0px; padding: 0px;">Posts</h1>
+<h1 style="visibility: hidden; height: 0px; margin: 0px; padding: 0px;">Writing an OS in Rust</h1>
 
 <div class="front-page-introduction">
     <p>
@@ -55,7 +55,7 @@
 <hr>
 
 <div class="frontpage-section">
-    <h1>Status Updates</h1>
+    <h2>Status Updates</h2>
     {% set status_updates = get_section(path = "status-update/_index.md") %}
     <p>{{ status_updates.description }}</p>
     <ul>
@@ -67,12 +67,12 @@
 </div>
 
 <div class="frontpage-section">
-    <h1 class="post-title">First Edition</h1>
+    <h2 class="post-title">First Edition</h2>
     <p>You are currently viewing the second edition of “Writing an OS in Rust”. The first edition is very different in many aspects, for example it builds upon the GRUB bootloader instead of using the `bootloader` crate. In case you're interested in it, it is still available. Note that the first edition is no longer updated and might contain outdated information. <a class="read-more" href="{{ get_url(path = "/first-edition") | safe }}"><em>read&nbsp;the&nbsp;first edition&nbsp;»</em></a></p>
 </div>
 
 <div class="">
-    <h1>Support Me</h1>
+    <h2>Support Me</h2>
     {% include "support.html" %}
 </div>
 {% endblock main %}
