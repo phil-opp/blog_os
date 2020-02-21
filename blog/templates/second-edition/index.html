@@ -79,6 +79,15 @@
 
 {% block after_main %}
 <aside class="page-aside-right">
+    <div class="block hidden" id="language-selector">
+        <h2>Language</h2>
+        <ul>
+            <li><a href="/">English (Original)</a></li>
+            {% for lang in config.languages %}
+                <li data-lang-switch-to="{{ lang.code }}" class="hidden"><a href="/{{ lang.code }}">{{ lang.code }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
     <div class="block">
         <h2>Recent Updates</h2>
         {% include "auto/recent-updates.html" %}
@@ -114,15 +123,6 @@
                 </a>
             </p>
         </div>
-    </div>
-    <div class="block hidden" id="language-selector">
-        <h2>Language</h2>
-        <ul>
-            <li><a href="/">English (Original)</a></li>
-            {% for lang in config.languages %}
-                <li data-lang-switch-to="{{ lang.code }}" class="hidden"><a href="/{{ lang.code }}">{{ lang.code }}</a></li>
-            {% endfor %}
-        </ul>
     </div>
 </aside>
 
