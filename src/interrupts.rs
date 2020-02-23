@@ -72,7 +72,11 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut Interrup
 
     lazy_static! {
         static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::MapLettersToUnicode));
+            Mutex::new(Keyboard::new(
+                layouts::Us104Key,
+                ScancodeSet1,
+                HandleControl::MapLettersToUnicode
+            ));
     }
 
     let mut keyboard = KEYBOARD.lock();
