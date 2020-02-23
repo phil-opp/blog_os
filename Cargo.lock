@@ -73,9 +73,9 @@ checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 
 [[package]]
 name = "pc-keyboard"
-version = "0.3.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fff50ab09ba31bcebc0669f4e64c0952fae1acdca9e6e0587e68e4e8443808ac"
+checksum = "c48392db76c4e9a69e0b3be356c5f97ebb7b14413c5e4fd0af4755dbf86e2fce"
 
 [[package]]
 name = "pic8259_simple"
