@@ -33,6 +33,7 @@
                     </li>{% endfor %}
                 </ol>{% endif %}
             </li>{% endfor %}
+            <li class="toc-comments-link"><a href="#comments">Comments</a></li>
         </ol>
     </aside>
 
@@ -70,9 +71,7 @@
         <h2>Support Me</h2>
         {% include "support.html" %}
     </div>
-{% endblock main %}
 
-{% block after_main %}
     <hr>
     <div class="PageNavigation">
         {% if page.lighter %}
