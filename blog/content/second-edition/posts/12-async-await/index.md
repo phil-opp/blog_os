@@ -488,6 +488,60 @@ Note that this function does not start the execution of the state machine. This 
 
 ### Pinning
 
+We already stumbled across _pinning_ multiple times in this post. Now is finally the time to explore what pinning is and why it is needed.
+
+#### Self-Referential Structs
+
+As explained above, the state machine transformation stores the local variables of each pause point in a struct. For small examples like our `example` function, this was straightforward and did not lead to any problems. However, things become more difficult when variables reference each other. For example, consider this function:
+
+```rust
+async fn pin_example() -> i32 {
+    let array = [1, 2, 3];
+    let element = &array[2];
+    async_write_file("foo.txt", element.to_string()).await;
+    *element
+}
+```
+
+This function creates a small `array` with the contents `1`, `2`, and `3`. It then creates a reference to the last array element and stores it in an `element` variable. Next, it asynchronously writes the number converted to a string to a `foo.txt` file. Finally, it returns the number referenced by `element`.
+
+Since the function uses a single `await` operation, the resulting state machine has three states: start, end, and "waiting on write". The function takes no arguments, so the struct for the start state is empty. Like before, the struct for the end state is empty too because the function is finished at this point. The struct for the "waiting on write" state is more interesting:
+
+```rust
+struct WaitingOnWriteState {
+    array: [1, 2, 3],
+    element: 0x1001a, // address of the last array element
+}
+```
+
+We need to store both the `array` and `element` variables because `element` is required for the return type and `array` is referenced by `element`. Since `element` is a reference, it stores a _pointer_ (i.e. a memory address) to the referenced element. We used `0x1001a` as an example memory address here. In reality it needs to be the address of the last element of the `array` field, so it depends on where the struct lives in memory. Structs with such internal pointers are called _self-referential_ structs because they reference themselves from one of their fields.
+
+#### The Problem with Self-Referential Structs
+
+The internal pointer of our self-referential struct leads to a fundamental problem, which becomes apparent when we look at its memory layout:
+
+![array at 0x10014 with fields 1, 2, and 3; element at address 0x10020, pointing to the last array element at 0x1001a](self-referential-struct.svg)
+
+The `array` field starts at address 0x10014 and the `element` field at address 0x10020. It points to address 0x1001a because the last array element lives at this address. At this point, everything is still fine. However, an issue occurs when we move this struct to a different memory address:
+
+![array at 0x10024 with fields 1, 2, and 3; element at address 0x10030, still pointing to 0x1001a, even though the last array element now lives at 0x1002a](self-referential-struct-moved.svg)
+
+We moved the struct a bit so that it starts at address `0x10024` now. The problem is that the `element` field still points to address `0x1001a` even though the last `array` element now lives at address `0x1002a`. Thus, the pointer is dangling with the result that undefined behavior occurs on the next `poll` call.
+
+#### Possible Solutions
+
+There are two fundamental approaches to solve the dangling pointer problem:
+
+- **Update the pointer on move:** The idea is to update the internal pointer whenever the struct is moved in memory so that it is still valid after the move. Unfortunately, this approach would require extensive changes to Rust that would result in potentially huge performance losses. The reason is that some kind of runtime would need to keep track of the type of all struct fields and check on every move operation whether a pointer update is required.
+- **Forbid moving the struct:** As we saw above, the dangling pointer only occurs when we move the struct in memory. By completely forbidding move operations on self-referential structs, the problem can be also avoided. The big advantage of this approach is that it can be implemented at the type system level without additional runtime costs. The drawback is that it puts the burden of dealing with move operations on possibly self-referential structs on the programmer.
+
+Rust understandably decided for the second solution. The required type system additions were proposed in [RFC 2349](https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md). The result was the [_pinning_] API, which we already encountered a few times in this post. In the following, we will give a short overview of this API and explain how it works with async/await and futures.
+
+#### The `Pin` Type
+
+
+
+
 ### Executors
 
 ## Implementation
