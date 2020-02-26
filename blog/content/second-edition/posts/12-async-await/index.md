@@ -535,12 +535,174 @@ There are two fundamental approaches to solve the dangling pointer problem:
 - **Update the pointer on move:** The idea is to update the internal pointer whenever the struct is moved in memory so that it is still valid after the move. Unfortunately, this approach would require extensive changes to Rust that would result in potentially huge performance losses. The reason is that some kind of runtime would need to keep track of the type of all struct fields and check on every move operation whether a pointer update is required.
 - **Forbid moving the struct:** As we saw above, the dangling pointer only occurs when we move the struct in memory. By completely forbidding move operations on self-referential structs, the problem can be also avoided. The big advantage of this approach is that it can be implemented at the type system level without additional runtime costs. The drawback is that it puts the burden of dealing with move operations on possibly self-referential structs on the programmer.
 
-Rust understandably decided for the second solution. The required type system additions were proposed in [RFC 2349](https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md). The result was the [_pinning_] API, which we already encountered a few times in this post. In the following, we will give a short overview of this API and explain how it works with async/await and futures.
+Rust understandably decided for the second solution. For this, the [_pinning_] API was proposed in [RFC 2349](https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md). In the following, we will give a short overview of this API and explain how it works with async/await and futures.
 
-#### The `Pin` Type
+#### Heap Values
 
+The first observation is that [heap allocated] values already have a fixed memory address most of the time. They are created using a call to `allocate` and are not moved in memory until they are freed through a `deallocate` call again. This is required because a `Box<T>` is essentially a pointer to the heap memory, so that an address change would make the pointer invalid.
 
+[heap allocated]: @/second-edition/posts/10-heap-allocation/index.md
 
+Using heap allocation, we can try to create a self-referential struct:
+
+```rust
+fn main() {
+    let mut heap_value = Box::new(SelfReferential {
+        self_ptr: 0 as *const _,
+    });
+    let ptr = &*heap_value as *const SelfReferential;
+    heap_value.self_ptr = ptr;
+    println!("heap value at: {:p}", heap_value);
+    println!("internal reference: {:p}", heap_value.self_ptr);
+}
+
+struct SelfReferential {
+    self_ptr: *const Self,
+}
+```
+
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=ce1aff3a37fcc1c8188eeaf0f39c97e8))
+
+When we execute this, we see that the address of heap value and its internal pointer are equal, which means that the `self_ptr` field is valid. Since the `heap_value` variable is only a pointer, moving it (e.g. by passing it to a function) does not change the address, so that the `self_ptr` stays valid.
+
+However, there is still a way to break this: We can move out of a `Box<T>` or replace its content:
+
+```rust
+let stack_value = mem::replace(&mut *heap_value, SelfReferential {
+    self_ptr: 0 as *const _,
+});
+println!("value at: {:p}", &stack_value);
+println!("internal reference: {:p}", stack_value.self_ptr);
+```
+
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
+
+Here we use the [`mem::replace`] function to replace the heap allocated value with a new struct instance. This allows us to move the original `heap_value` to the stack, while the `self_ptr` field of of the struct still points to the heap. When you try to run the example on the playground, you see that the printed _"value at:"_ and _"internal reference:"_ lines show indeed different pointers.
+
+[`mem::replace`]: https://doc.rust-lang.org/nightly/core/mem/fn.replace.html
+
+The fundamental problem is that `Box<T>` allows us to get a `&mut T` reference to the heap allocated value. This `&mut` reference allows us to to use methods like [`mem::replace`] or [`mem::swap`] to invalidate the heap allocated value. To resolve this problem, we must prevent that `&mut` references to self-referential structs can be created.
+
+[`mem::swap`]: https://doc.rust-lang.org/nightly/core/mem/fn.swap.html
+
+#### `Pin<Box<T>>` and `Unpin`
+
+The pinning API provides a solution to the `&mut T` problem in form of the [`Pin`] wrapper type and the [`Unpin`] marker trait. The idea behind these types is to gate all methods of `Pin` that can be used to get `&mut` references (e.g. [`get_mut`][pin-get-mut] or [`deref_mut`][pin-deref-mut]) on the `Unpin` trait. The `Unpin` trait is an [_auto trait_], which is automatically implemented for all types except types that explicitly opt-out. By making self-referential structs opt-out of `Unpin`, there is no (safe) way to get a `&mut T` from a `Pin<Box<T>>` type for them. As a result, their internal self-references are guaranteed to stay valid.
+
+[`Pin`]: https://doc.rust-lang.org/stable/core/pin/struct.Pin.html
+[`Unpin`]: https://doc.rust-lang.org/nightly/std/marker/trait.Unpin.html
+[pin-get-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.get_mut
+[pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#impl-DerefMut
+[_auto trait_]: https://doc.rust-lang.org/reference/special-types-and-traits.html#auto-traits
+
+As an example, let's update the `SelfReferential` type from the above example to opt-out of `Unpin`:
+
+```rust
+use core::marker::PhantomPinned;
+
+struct SelfReferential {
+    self_ptr: *const Self,
+    _pin: PhantomPinned,
+}
+```
+
+We opt-out by adding a second `_pin` field of type [`PhantomPinned`]. This type is a zero-sized marker type whose only purpose is to _not_ implement the `Unpin` trait. Because of the way [auto traits][_auto trait_] work, a single field that is not `Unpin` suffices to make the complete struct opt-out of `Unpin`.
+
+[`PhantomPinned`]: https://doc.rust-lang.org/nightly/core/marker/struct.PhantomPinned.html
+
+The second step is to change the `Box<SelfReferential>` type in the example to a `Pin<Box<SelfReferential>>` type. The easiest way to do this is to use the [`Box::pin`] function instead of [`Box::new`] for creating the heap allocated value:
+
+[`Box::pin`]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html#method.pin
+[`Box::new`]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html#method.new
+
+```rust
+let mut heap_value = Box::pin(SelfReferential {
+    self_ptr: 0 as *const _,
+    _pin: PhantomPinned,
+});
+```
+
+In addition to changing `Box::new` to `Box::pin`, we also need to add the new `_pin` field in the struct initializer. Since `PhantomPinned` is a zero sized type, we only need its type name to initialize it.
+
+When we [try to run our adjusted example](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=961b0db194bbe851ff4d0ed08d3bd98a) now, we see that it no longer works:
+
+```
+error[E0594]: cannot assign to data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+  --> src/main.rs:10:5
+   |
+10 |     heap_value.self_ptr = ptr;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^ cannot assign
+   |
+   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+
+error[E0596]: cannot borrow data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>` as mutable
+  --> src/main.rs:16:36
+   |
+16 |     let stack_value = mem::replace(&mut *heap_value, SelfReferential {
+   |                                    ^^^^^^^^^^^^^^^^ cannot borrow as mutable
+   |
+   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+```
+
+Both errors occur because the `Pin<Box<SelfReferential>>` type no longer implements the `DerefMut` trait. This exactly what we wanted because the `DerefMut` trait would return a `&mut` reference, which we want to prevent. This only works because we both opted-out of `Unpin` and changed `Box::new` to `Box::pin`.
+
+The problem now is that the compiler does not only prevent moving the type in line 16, but also forbids to initialize the `self_ptr` field in line 10. This happens because the compiler can't differentiate between valid and invalid uses of `&mut` references. To get the initialization working again, we have to use the unsafe [`get_unchecked_mut`] method:
+
+[`get_unchecked_mut`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.get_unchecked_mut
+
+```rust
+// safe because modifying a field doesn't move the whole struct
+unsafe {
+    let mut_ref = Pin::as_mut(&mut heap_value);
+    Pin::get_unchecked_mut(mut_ref).self_ptr = ptr;
+}
+```
+
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=b9ebbb11429d9d79b3f9fffe819e2018))
+
+The [`get_unchecked_mut`] function works on a `Pin<&mut T>` instead of a `Pin<Box<T>>`, so we have to use the [`Pin::as_mut`] for converting the value before. Then we can set the `self_ptr` field using the `&mut` reference returned by `get_unchecked_mut`.
+
+[`Pin::as_mut`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.as_mut
+
+Now the only error left is the desired error on `mem::replace`. Remember, this operation tries to move the heap allocated value to stack, which would break the self-reference stored in the `self_ptr` field. By opting out of `Unpin` and using `Pin<Box<T>>`, we can prevent this error and safely work with self-referential structs. Note that the compiler is not able to prove that the creation of the self-reference is safe (yet), so we need to use an unsafe block and verify the correctness ourselves.
+
+#### Stack Pinning and `Pin<&mut T>`
+
+In the previous section we learned how to use `Pin<Box<T>>` to safely create a heap allocated self-referential value. While this approach works fine and is relatively safe (apart from the unsafe construction), the required heap allocation comes with a performance cost. Since Rust always wants to provide _zero-cost abstractions_ when possible, the pinning API also allows to create `Pin<&mut T>` instances that point to stack allocated values.
+
+Unlike `Pin<Box<T>>` instances, which have _ownership_ of the wrapped value, `Pin<&mut T>` instances only temporarily borrow the wrapped value. This makes things more compilicated, as it requires the programmer to ensure additional guarantees themself. Most importantly, a `Pin<&mut T>` must stay pinned for the whole lifetime of the referenced `T`, which can be difficult to verify for stack based variables. To help with this, crates like [`pin-utils`] exist, but I still wouldn't recommend pinning to the stack unless you really know what you're doing.
+
+[`pin-utils`]: https://docs.rs/pin-utils/0.1.0-alpha.4/pin_utils/
+
+For further reading, check out the documentation of the [`pin` module] and the [`Pin::new_unchecked`] method.
+
+[`pin` module]: https://doc.rust-lang.org/nightly/core/pin/index.html
+[`Pin::new_unchecked`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.new_unchecked
+
+#### Pinning and Futures
+
+As we already saw in this post, the [`Future::poll`] method uses pinning in form of a `Pin<&mut Self>` parameter:
+
+[`Future::poll`]: https://doc.rust-lang.org/nightly/core/future/trait.Future.html#tymethod.poll
+
+```rust
+fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
+```
+
+The reason that this method takes `self: Pin<&mut Self>` instead of the normal `&mut self` is that future instances created from async/await are often self-referential, as we saw [above][self-ref-async-await]. By wrapping `Self` into `Pin` and letting the compiler opt-out of `Unpin` for self-referentual futures generated from async/await, it is guaranteed that the futures are not moved in memory between `poll` calls. This ensures that all internal references are still valid.
+
+[self-ref-async-await]: @/second-edition/posts/12-async-await/index.md#self-referential-structs
+
+It is worth noting that moving futures before the first `poll` call is fine. This is a result of the fact that futures are lazy and do nothing until they're polled for the first time. The `start` state of the generated state machines therefore only contains the function arguments, but no internal references. In order to call `poll`, the caller must wrap the future into `Pin` first, which ensures that the future cannot moved in memory anymore.
+
+Since the `Pin<&mut Self>` interface is predefined by the `Future` trait, there is no way to use the safer `Pin<Box<Self>>` instead. This can make it quite challenging to safely implement `Future` yourself. For this reason I recommend against implementing `Future` manually and instead sticking to using async/await and the combinator methods of the [`futures`] crate.
+
+[`futures`]: https://docs.rs/futures/0.3.4/futures/
+
+In case you're interested in understanding how to safely implement `Future` yourself, take a look at the relatively short [source of the `map` combinator method][map-src] of the `futures` crate and the section about [projections and structural pinning] of the pin documentation.
+
+[map-src]: https://docs.rs/futures-util/0.3.4/src/futures_util/future/future/map.rs.html
+[projections and structural pinning]: file:///home/philipp/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/share/doc/rust/html/std/pin/index.html#projections-and-structural-pinning
 
 ### Executors
 
