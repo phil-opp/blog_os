@@ -656,13 +656,13 @@ Now we can write numbers:
 
 Translating the other keys works in the same way. Fortunately there is a crate named [`pc-keyboard`] for translating scancodes of scancode sets 1 and 2, so we don't have to implement this ourselves. To use the crate, we add it to our `Cargo.toml` and import it in our `lib.rs`:
 
-[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/
+[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pc-keyboard = "0.3.1"
+pc-keyboard = "0.5.0"
 ```
 
 Now we can use this crate to rewrite our `keyboard_interrupt_handler`:
@@ -673,13 +673,15 @@ Now we can use this crate to rewrite our `keyboard_interrupt_handler`:
 extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: &mut InterruptStackFrame)
 {
-    use x86_64::instructions::port::Port;
-    use pc_keyboard::{Keyboard, ScancodeSet1, DecodedKey, layouts};
+    use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
     use spin::Mutex;
+    use x86_64::instructions::port::Port;
 
     lazy_static! {
         static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1));
+            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1,
+                HandleControl::Ignore)
+            );
     }
 
     let mut keyboard = KEYBOARD.lock();
@@ -702,15 +704,19 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-We use the `lazy_static` macro to create a static [`Keyboard`] object protected by a Mutex. On each interrupt, we lock the Mutex, read the scancode from the keyboard controller and pass it to the [`add_byte`] method, which translates the scancode into an `Option<KeyEvent>`. The [`KeyEvent`] contains which key caused the event and whether it was a press or release event.
+We use the `lazy_static` macro to create a static [`Keyboard`] object protected by a Mutex. We initialize the `Keyboard` with an US keyboard layout and the scancode set 1. The [`HandleControl`] parameter allows to map `ctrl+[a-z]` to the Unicode characters `U+0001` through `U+001A`. We don't want to do that, so we use the `Ignore` option to handle the `ctrl` like normal keys.
 
-[`Keyboard`]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/struct.Keyboard.html
-[`add_byte`]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/struct.Keyboard.html#method.add_byte
-[`KeyEvent`]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/struct.KeyEvent.html
+[`HandleControl`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/enum.HandleControl.html
+
+On each interrupt, we lock the Mutex, read the scancode from the keyboard controller and pass it to the [`add_byte`] method, which translates the scancode into an `Option<KeyEvent>`. The [`KeyEvent`] contains which key caused the event and whether it was a press or release event.
+
+[`Keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html
+[`add_byte`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.add_byte
+[`KeyEvent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.KeyEvent.html
 
 To interpret this key event, we pass it to the [`process_keyevent`] method, which translates the key event to a character if possible. For example, translates a press event of the `A` key to either a lowercase `a` character or an uppercase `A` character, depending on whether the shift key was pressed.
 
-[`process_keyevent`]: https://docs.rs/pc-keyboard/0.3.1/pc_keyboard/struct.Keyboard.html#method.process_keyevent
+[`process_keyevent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
 
 With this modified interrupt handler we can now write text:
 
