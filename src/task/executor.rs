@@ -58,7 +58,9 @@ impl Executor {
                     Poll::Pending => {
                         // add task to pending_tasks list and wait for wakeup
                         let task_id = Self::task_id(&task);
-                        self.pending_tasks.insert(task_id, task);
+                        if self.pending_tasks.insert(task_id, task).is_some() {
+                            panic!("Task with same ID already in pending_tasks queue");
+                        }
                     }
                 }
             }
@@ -75,7 +77,7 @@ impl Executor {
     }
 
     fn task_id(task: &Task) -> TaskId {
-        let future_ref: &dyn Future<Output = ()> = &*task;
+        let future_ref: &dyn Future<Output = ()> = &**task;
         future_ref as *const _ as *const () as usize
     }
 
