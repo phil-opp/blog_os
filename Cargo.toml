@@ -31,6 +31,15 @@ version = "0.2.1"
 default-features = false
 features = ["alloc"]
 
+[dependencies.futures-util]
+version = "0.3.4"
+default-features = false
+features = ["alloc", "async-await"]
+
+[dependencies.conquer-once]
+version = "0.2.0"
+default-features = false
+
 [package.metadata.bootimage]
 test-args = [
     "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "stdio",

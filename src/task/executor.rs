@@ -1,3 +1,4 @@
+use crate::{interrupts, println};
 use alloc::{boxed::Box, collections::BTreeMap, sync::Arc, task::Wake};
 use core::{
     future::Future,
@@ -34,13 +35,19 @@ impl Executor {
 
     pub fn run(&mut self) -> ! {
         loop {
+            // perform wakeups caused by interrupts
+            // the interrupt handlers can't do it themselves since wakers might execute
+            // arbitrary code, e.g. allocate
+            while let Ok(waker) = interrupts::interrupt_wakeups().pop() {
+                waker.wake();
+            }
             // wakeup waiting tasks
             while let Ok(task_id) = self.wake_queue.pop() {
-                let task = self
-                    .pending_tasks
-                    .remove(&task_id)
-                    .expect("woken task not found in pending_tasks");
-                self.task_queue.push(task);
+                if let Some(task) = self.pending_tasks.remove(&task_id) {
+                    self.task_queue.push(task);
+                } else {
+                    println!("WARNING: woken task not found in pending_tasks");
+                }
             }
             // run ready tasks
             while let Ok(mut task) = self.task_queue.pop() {
@@ -57,7 +64,12 @@ impl Executor {
             }
             // wait for next interrupt if there is nothing left to do
             if self.wake_queue.is_empty() {
-                crate::hlt_loop();
+                unsafe { asm!("cli") };
+                if self.wake_queue.is_empty() {
+                    unsafe { asm!("sti; hlt") };
+                } else {
+                    unsafe { asm!("sti") };
+                }
             }
         }
     }

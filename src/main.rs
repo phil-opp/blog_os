@@ -26,6 +26,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
 
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
+    blog_os::interrupts::init_queues();
+    x86_64::instructions::interrupts::enable();
 
     // allocate a number on the heap
     let heap_value = Box::new(41);
@@ -65,6 +67,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     spawner.spawn(async {
         println!("It did not crash!");
     });
+
+    spawner.spawn(blog_os::driver::keyboard::print_keypresses());
 
     executor.run();
 }

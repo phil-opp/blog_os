@@ -7,6 +7,8 @@
 #![feature(alloc_layout_extra)]
 #![feature(wake_trait)]
 #![feature(const_in_array_repeat_expressions)]
+#![feature(type_alias_impl_trait)]
+#![feature(asm)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
@@ -15,6 +17,7 @@ extern crate alloc;
 use core::panic::PanicInfo;
 
 pub mod allocator;
+pub mod driver;
 pub mod gdt;
 pub mod interrupts;
 pub mod memory;
@@ -26,7 +29,6 @@ pub fn init() {
     gdt::init();
     interrupts::init_idt();
     unsafe { interrupts::PICS.lock().initialize() };
-    x86_64::instructions::interrupts::enable();
 }
 
 pub fn test_runner(tests: &[&dyn Fn()]) {

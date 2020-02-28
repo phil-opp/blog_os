@@ -1,4 +1,8 @@
 use crate::{gdt, hlt_loop, print, println};
+use conquer_once::spin::OnceCell;
+use core::task::Waker;
+use crossbeam_queue::ArrayQueue;
+use futures_util::task::AtomicWaker;
 use lazy_static::lazy_static;
 use pic8259_simple::ChainedPics;
 use spin;
@@ -47,6 +51,23 @@ pub fn init_idt() {
     IDT.load();
 }
 
+pub fn init_queues() {
+    INTERRUPT_WAKEUPS
+        .try_init_once(|| ArrayQueue::new(10))
+        .expect("failed to init interrupt wakeup queue");
+    SCANCODE_QUEUE
+        .try_init_once(|| ArrayQueue::new(10))
+        .expect("failed to init scancode queue");
+}
+
+static INTERRUPT_WAKEUPS: OnceCell<ArrayQueue<Waker>> = OnceCell::uninit();
+
+pub(crate) fn interrupt_wakeups() -> &'static ArrayQueue<Waker> {
+    INTERRUPT_WAKEUPS
+        .try_get()
+        .expect("interrupt wakeup queue not initialized")
+}
+
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut InterruptStackFrame) {
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
@@ -79,26 +100,24 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptSt
     }
 }
 
+pub(crate) static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
+pub(crate) static KEYBOARD_INTERRUPT_WAKER: AtomicWaker = AtomicWaker::new();
+
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
-    use pc_keyboard::{layouts, DecodedKey, Keyboard, ScancodeSet1};
-    use spin::Mutex;
     use x86_64::instructions::port::Port;
 
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1));
-    }
-
-    let mut keyboard = KEYBOARD.lock();
     let mut port = Port::new(0x60);
-
     let scancode: u8 = unsafe { port.read() };
-    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
-        if let Some(key) = keyboard.process_keyevent(key_event) {
-            match key {
-                DecodedKey::Unicode(character) => print!("{}", character),
-                DecodedKey::RawKey(key) => print!("{:?}", key),
-            }
+
+    let scancode_queue = SCANCODE_QUEUE
+        .try_get()
+        .expect("scancode queue not initialized");
+    if let Err(_) = scancode_queue.push(scancode) {
+        println!("WARNING: dropping keyboard input");
+    }
+    if let Some(waker) = KEYBOARD_INTERRUPT_WAKER.take() {
+        if let Err(_) = interrupt_wakeups().push(waker) {
+            println!("WARNING: dropping interrupt wakeup");
         }
     }
 
