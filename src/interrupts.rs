@@ -1,6 +1,9 @@
-use crate::{gdt, hlt_loop, print, println};
+use crate::{gdt, hlt_loop, println};
 use conquer_once::spin::OnceCell;
-use core::task::Waker;
+use core::{
+    sync::atomic::{AtomicU64, Ordering},
+    task::Waker,
+};
 use crossbeam_queue::ArrayQueue;
 use futures_util::task::AtomicWaker;
 use lazy_static::lazy_static;
@@ -92,8 +95,16 @@ extern "x86-interrupt" fn double_fault_handler(
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
 
+pub(crate) static TIMER_TICKS: AtomicU64 = AtomicU64::new(0);
+pub(crate) static TIMER_INTERRUPT_WAKER: AtomicWaker = AtomicWaker::new();
+
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
-    print!(".");
+    TIMER_TICKS.fetch_add(1, Ordering::Release);
+    if let Some(waker) = TIMER_INTERRUPT_WAKER.take() {
+        if let Err(_) = interrupt_wakeups().push(waker) {
+            println!("WARNING: dropping interrupt wakeup");
+        }
+    }
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());

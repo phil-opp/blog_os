@@ -68,6 +68,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         println!("It did not crash!");
     });
 
+    spawner.spawn(blog_os::driver::timer::print_ticks());
     spawner.spawn(blog_os::driver::keyboard::print_keypresses());
 
     executor.run();
