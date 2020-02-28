@@ -51,11 +51,22 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         Rc::strong_count(&cloned_reference)
     );
 
-    #[cfg(test)]
-    test_main();
+    use blog_os::task::executor::Executor;
 
-    println!("It did not crash!");
-    blog_os::hlt_loop();
+    let mut executor = Executor::new();
+    let spawner = executor.create_spawner();
+    spawner.spawn(bar());
+
+    spawner.spawn(async {
+        #[cfg(test)]
+        test_main();
+    });
+
+    spawner.spawn(async {
+        println!("It did not crash!");
+    });
+
+    executor.run();
 }
 
 /// This function is called on panic.
@@ -70,4 +81,16 @@ fn panic(info: &PanicInfo) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     blog_os::test_panic_handler(info)
+}
+
+async fn test() -> u32 {
+    42
+}
+
+async fn foo() -> u32 {
+    test().await * 2
+}
+
+async fn bar() {
+    println!("foo result: {}", foo().await);
 }
