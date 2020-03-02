@@ -429,3 +429,7 @@ details summary h3, details summary h4, details summary h5, details summary h6 {
 .toc-comments-link {
   margin-top: .5rem;
 }
+
+.gray {
+  color: gray;
+}
