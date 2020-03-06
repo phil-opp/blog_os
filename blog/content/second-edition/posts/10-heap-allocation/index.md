@@ -529,9 +529,9 @@ use linked_list_allocator::LockedHeap;
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 ```
 
-The struct is named `LockedHeap` because it uses a [`spin::Mutex`] for synchronization. This is required because multiple threads could access the `ALLOCATOR` static at the same time. As always when using a `Mutex`, we need to be careful to not accidentally cause a deadlock. This means that we shouldn't perform any allocations in interrupt handlers, since they can run at an arbitrary time and might interrupt an in-progress allocation.
+The struct is named `LockedHeap` because it uses the [`spinning_top::Spinlock`] type for synchronization. This is required because multiple threads could access the `ALLOCATOR` static at the same time. As always when using a spinlock or a mutex, we need to be careful to not accidentally cause a deadlock. This means that we shouldn't perform any allocations in interrupt handlers, since they can run at an arbitrary time and might interrupt an in-progress allocation.
 
-[`spin::Mutex`]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html
+[`spinning_top::Spinlock`]: https://docs.rs/spinning_top/0.1.0/spinning_top/type.Spinlock.html
 
 Setting the `LockedHeap` as global allocator is not enough. The reason is that we use the [`empty`] constructor function, which creates an allocator without any backing memory. Like our dummy allocator, it always returns an error on `alloc`. To fix this, we need to initialize the allocator after creating the heap:
 
@@ -555,9 +555,9 @@ pub fn init_heap(
 }
 ```
 
-We use the [`LockedHeap::lock`] method to get an exclusive reference to the wrapped [`Heap`] instance, on which we then call the [`init`] method with the heap bounds as arguments. It is important that we initialize the heap _after_ mapping the heap pages, since the [`init`] function already tries to write to the heap memory.
+We use the [`lock`] method on the inner spinlock of the `LockedHeap` type to get an exclusive reference to the wrapped [`Heap`] instance, on which we then call the [`init`] method with the heap bounds as arguments. It is important that we initialize the heap _after_ mapping the heap pages, since the [`init`] function already tries to write to the heap memory.
 
-[`LockedHeap::lock`]: https://docs.rs/linked_list_allocator/0.8.0/linked_list_allocator/struct.LockedHeap.html#method.lock
+[`lock`]: https://docs.rs/lock_api/0.3.3/lock_api/struct.Mutex.html#method.lock
 [`Heap`]: https://docs.rs/linked_list_allocator/0.8.0/linked_list_allocator/struct.Heap.html
 [`init`]: https://docs.rs/linked_list_allocator/0.8.0/linked_list_allocator/struct.Heap.html#method.init
 
