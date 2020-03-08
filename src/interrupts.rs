@@ -116,7 +116,6 @@ pub(crate) static KEYBOARD_INTERRUPT_WAKER: AtomicWaker = AtomicWaker::new();
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
     use x86_64::instructions::port::Port;
-
     let mut port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
 

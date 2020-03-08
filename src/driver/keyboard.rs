@@ -4,7 +4,7 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
-use pc_keyboard::{layouts, DecodedKey, Keyboard, ScancodeSet1};
+use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 
 fn next_scancode() -> impl Future<Output = u8> {
     NextScancode
@@ -33,7 +33,7 @@ impl Future for NextScancode {
 }
 
 pub async fn print_keypresses() {
-    let mut keyboard = Keyboard::new(layouts::Us104Key, ScancodeSet1);
+    let mut keyboard = Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore);
 
     loop {
         if let Ok(Some(key_event)) = keyboard.add_byte(next_scancode().await) {
