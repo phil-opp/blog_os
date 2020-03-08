@@ -36,43 +36,70 @@ impl Executor {
 
     pub fn run(&mut self) -> ! {
         loop {
-            // perform wakeups caused by interrupts
-            // the interrupt handlers can't do it themselves since wakers might execute
-            // arbitrary code, e.g. allocate
-            while let Ok(waker) = interrupts::interrupt_wakeups().pop() {
-                waker.wake();
-            }
-            // wakeup waiting tasks
-            while let Ok(task_id) = self.wake_queue.pop() {
-                if let Some(task) = self.pending_tasks.remove(&task_id) {
-                    self.task_queue.push_back(task);
-                } else {
-                    println!("WARNING: woken task not found in pending_tasks");
-                }
-            }
-            // run ready tasks
-            while let Some(mut task) = self.task_queue.pop_front() {
-                let waker = self.create_waker(&task).into();
-                let mut context = Context::from_waker(&waker);
-                match task.as_mut().poll(&mut context) {
-                    Poll::Ready(()) => {} // task done
-                    Poll::Pending => {
-                        // add task to pending_tasks list and wait for wakeup
-                        let task_id = Self::task_id(&task);
-                        if self.pending_tasks.insert(task_id, task).is_some() {
-                            panic!("Task with same ID already in pending_tasks queue");
-                        }
+            self.run_ready_tasks();
+            self.apply_interrupt_wakeups();
+            self.wake_waiting_tasks();
+            self.hlt_if_idle();
+        }
+    }
+
+    fn run_ready_tasks(&mut self) {
+        while let Some(mut task) = self.task_queue.pop_front() {
+            let waker = self.create_waker(&task).into();
+            let mut context = Context::from_waker(&waker);
+            match task.as_mut().poll(&mut context) {
+                Poll::Ready(()) => {} // task done
+                Poll::Pending => {
+                    // add task to pending_tasks and wait for wakeup
+                    let task_id = Self::task_id(&task);
+                    if self.pending_tasks.insert(task_id, task).is_some() {
+                        panic!("Task with same ID already in pending_tasks");
                     }
                 }
             }
-            // wait for next interrupt if there is nothing left to do
-            if self.wake_queue.is_empty() {
-                unsafe { asm!("cli") };
-                if self.wake_queue.is_empty() {
-                    unsafe { asm!("sti; hlt") };
-                } else {
-                    unsafe { asm!("sti") };
-                }
+        }
+    }
+
+    /// Invoke wakers for tasks woken by interrupts
+    ///
+    /// The interrupt handlers can't invoke the waker directly since wakers
+    /// might execute arbitrary code, e.g. allocate, which should not be done
+    /// in interrupt handlers to avoid deadlocks.
+    fn apply_interrupt_wakeups(&mut self) {
+        while let Ok(waker) = interrupts::interrupt_wakeups().pop() {
+            waker.wake();
+        }
+    }
+
+    fn wake_waiting_tasks(&mut self) {
+        while let Ok(task_id) = self.wake_queue.pop() {
+            if let Some(task) = self.pending_tasks.remove(&task_id) {
+                self.task_queue.push_back(task);
+            } else {
+                println!("WARNING: woken task not found in pending_tasks");
+            }
+        }
+    }
+
+    /// Executes the `hlt` instruction if there are no ready tasks
+    fn hlt_if_idle(&self) {
+        if self.task_queue.is_empty() {
+            // disable interrupts to avoid races
+            x86_64::instructions::interrupts::disable();
+            // check if relevant interrupts occured since the last check
+            if interrupts::interrupt_wakeups().is_empty() {
+                // no interrupts occured -> hlt to wait for next interrupt
+                //
+                // It's important to execute `hlt` directly after `sti` because
+                // otherwise we could miss interrupts between the two
+                // instructions. Since `sti` only enables interrupts after the
+                // subsequent instruction, we can be sure that we don't miss an
+                // interrupt. (One exception are non-maskable interrupts, which
+                // can occur even when interrupts are disabled.)
+                unsafe { asm!("sti; hlt") };
+            } else {
+                // there were some new wakeups -> continue execution
+                x86_64::instructions::interrupts::enable();
             }
         }
     }
