@@ -27,7 +27,6 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
     blog_os::interrupts::init_queues();
-    x86_64::instructions::interrupts::enable();
 
     // allocate a number on the heap
     let heap_value = Box::new(41);
