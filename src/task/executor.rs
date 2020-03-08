@@ -1,5 +1,10 @@
 use crate::{interrupts, println};
-use alloc::{boxed::Box, collections::BTreeMap, sync::Arc, task::Wake};
+use alloc::{
+    boxed::Box,
+    collections::{BTreeMap, VecDeque},
+    sync::Arc,
+    task::Wake,
+};
 use core::{
     future::Future,
     pin::Pin,
@@ -8,29 +13,25 @@ use core::{
 use crossbeam_queue::SegQueue;
 
 pub type Task = Pin<Box<dyn Future<Output = ()>>>;
-type TaskQueue = SegQueue<Task>;
 type TaskId = usize;
-type WakeQueue = SegQueue<TaskId>;
 
 pub struct Executor {
-    task_queue: Arc<TaskQueue>,
-    wake_queue: Arc<WakeQueue>,
+    task_queue: VecDeque<Task>,
+    wake_queue: Arc<SegQueue<TaskId>>,
     pending_tasks: BTreeMap<TaskId, Task>,
 }
 
 impl Executor {
     pub fn new() -> Self {
         Executor {
-            task_queue: Arc::new(TaskQueue::new()),
-            wake_queue: Arc::new(WakeQueue::new()),
+            task_queue: VecDeque::new(),
+            wake_queue: Arc::new(SegQueue::new()),
             pending_tasks: BTreeMap::new(),
         }
     }
 
-    pub fn create_spawner(&self) -> Spawner {
-        Spawner {
-            task_queue: self.task_queue.clone(),
-        }
+    pub fn spawn(&mut self, task: impl Future<Output = ()> + 'static) {
+        self.task_queue.push_back(Box::pin(task))
     }
 
     pub fn run(&mut self) -> ! {
@@ -44,13 +45,13 @@ impl Executor {
             // wakeup waiting tasks
             while let Ok(task_id) = self.wake_queue.pop() {
                 if let Some(task) = self.pending_tasks.remove(&task_id) {
-                    self.task_queue.push(task);
+                    self.task_queue.push_back(task);
                 } else {
                     println!("WARNING: woken task not found in pending_tasks");
                 }
             }
             // run ready tasks
-            while let Ok(mut task) = self.task_queue.pop() {
+            while let Some(mut task) = self.task_queue.pop_front() {
                 let waker = self.create_waker(&task).into();
                 let mut context = Context::from_waker(&waker);
                 match task.as_mut().poll(&mut context) {
@@ -89,19 +90,8 @@ impl Executor {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Spawner {
-    task_queue: Arc<TaskQueue>,
-}
-
-impl Spawner {
-    pub fn spawn(&self, task: impl Future<Output = ()> + 'static) {
-        self.task_queue.push(Box::pin(task))
-    }
-}
-
 pub struct Waker {
-    wake_queue: Arc<WakeQueue>,
+    wake_queue: Arc<SegQueue<TaskId>>,
     task_id: TaskId,
 }
 

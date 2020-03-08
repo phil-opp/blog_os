@@ -56,20 +56,19 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::task::executor::Executor;
 
     let mut executor = Executor::new();
-    let spawner = executor.create_spawner();
-    spawner.spawn(bar());
+    executor.spawn(bar());
 
-    spawner.spawn(async {
+    executor.spawn(async {
         #[cfg(test)]
         test_main();
     });
 
-    spawner.spawn(async {
+    executor.spawn(async {
         println!("It did not crash!");
     });
 
-    spawner.spawn(blog_os::driver::timer::print_ticks());
-    spawner.spawn(blog_os::driver::keyboard::print_keypresses());
+    executor.spawn(blog_os::driver::timer::print_ticks());
+    executor.spawn(blog_os::driver::keyboard::print_keypresses());
 
     executor.run();
 }
