@@ -89,14 +89,7 @@ impl Executor {
             // check if relevant interrupts occured since the last check
             if interrupts::interrupt_wakeups().is_empty() {
                 // no interrupts occured -> hlt to wait for next interrupt
-                //
-                // It's important to execute `hlt` directly after `sti` because
-                // otherwise we could miss interrupts between the two
-                // instructions. Since `sti` only enables interrupts after the
-                // subsequent instruction, we can be sure that we don't miss an
-                // interrupt. (One exception are non-maskable interrupts, which
-                // can occur even when interrupts are disabled.)
-                unsafe { asm!("sti; hlt") };
+                x86_64::instructions::interrupts::enable_interrupts_and_hlt();
             } else {
                 // there were some new wakeups -> continue execution
                 x86_64::instructions::interrupts::enable();
