@@ -30,7 +30,7 @@ While it seems like all tasks run in parallel, only a single task can be execute
 
 While single-core CPUs can only execute a single task at a time, multi-core CPUs can run multiple tasks in a truly parallel way. For example, a CPU with 8 cores can run 8 tasks at the same time. We will explain how to setup multi-core CPUs in a future post. For this post, we will focus on single-core CPUs for simplicity. (It's worth noting that all multi-core CPUs start with only a single active core, so we can treat them as single-core CPUs for now.)
 
-There are two forms of multitasking: _Cooperative_ multitasking requires tasks to regularly give up control of the CPU so that other tasks can make progress. _Preemptive_ multitasking uses operating system capabilities to switch threads at arbitrary points in time by forcibly pausing them. In the following we will explore the two forms of multitasking in more detail and discuss their respective advantages and drawbacks.
+There are two forms of multitasking: _Cooperative_ multitasking requires tasks to regularly give up control of the CPU so that other tasks can make progress. _Preemptive_ multitasking uses operating system functionality to switch threads at arbitrary points in time by forcibly pausing them. In the following we will explore the two forms of multitasking in more detail and discuss their respective advantages and drawbacks.
 
 ### Preemptive Multitasking
 
@@ -46,7 +46,7 @@ In the first row, the CPU is executing task `A1` of program `A`. All other tasks
 
 #### Saving State
 
-Since tasks are interrupted at arbitrary points in time, they might be in the middle of some calculation. In order to be able to resume them later, the operating system must backup the whole state of the task, including its [call stack] and the values of all CPU registers. This process is called a [_context switch_].
+Since tasks are interrupted at arbitrary points in time, they might be in the middle of some calculations. In order to be able to resume them later, the operating system must backup the whole state of the task, including its [call stack] and the values of all CPU registers. This process is called a [_context switch_].
 
 [call stack]: https://en.wikipedia.org/wiki/Call_stack
 [_context switch_]: https://en.wikipedia.org/wiki/Context_switch
@@ -73,16 +73,15 @@ Cooperative multitasking is often used at the language level, for example in for
 [async/await]: https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html
 [_yield_]: https://en.wikipedia.org/wiki/Yield_(multithreading)
 
-It is common to combine cooperative multitasking with [asynchronous operations]. Instead of [blocking] until an operation is finished and preventing other tasks to run in this time, asynchronous operations return a "not ready" status if the operation is not finished yet. In this case, the waiting task can execute a yield operation to let other tasks run.
+It is common to combine cooperative multitasking with [asynchronous operations]. Instead of waiting until an operation is finished and preventing other tasks to run in this time, asynchronous operations return a "not ready" status if the operation is not finished yet. In this case, the waiting task can execute a yield operation to let other tasks run.
 
 [asynchronous operations]: https://en.wikipedia.org/wiki/Asynchronous_I/O
-[blocking]: http://faculty.salina.k-state.edu/tim/ossg/Device/blocking.html
 
 #### Saving State
 
 Since tasks define their pause points themselves, they don't need the operating system to save their state. Instead, they can save exactly the state they need for continuation before they pause themselves, which often results in better performance. For example, a task that just finished a complex computation might only need to backup the final result of the computation since it does not need the intermediate results anymore.
 
-Language-supported implementations of cooperative tasks are often even able to backup up the required parts of the call stack before pausing. As an example, Rust's async/await implementation stores all local variables that are still needed in an automatically generated struct (see below). By backing up the relevant parts of the call stack before pausing, all tasks can share the same call stack, which results in a much smaller memory consumption per task. As a result, it is possible to create an almost arbitrary number of tasks without running out of memory.
+Language-supported implementations of cooperative tasks are often even able to backup up the required parts of the call stack before pausing. As an example, Rust's async/await implementation stores all local variables that are still needed in an automatically generated struct (see below). By backing up the relevant parts of the call stack before pausing, all tasks can share a single call stack, which results in a much smaller memory consumption per task. This makes it possible to create an almost arbitrary number of cooperative tasks without running out of memory.
 
 #### Discussion
 
@@ -145,7 +144,7 @@ The `poll` method takes two arguments: `self: Pin<&mut Self>` and `cx: &mut Cont
 
 [_pinned_]: https://doc.rust-lang.org/nightly/core/pin/index.html
 
-The purpose of the `cx: &mut Context` parameter is to pass a [`Waker`] instance to the asynchronous task, e.g. the file system load. This `Waker` allows the asynchronous task to signal that it (or a part of it) is finished, e.g. that the file was loaded from disk. Since the main task knows that it will be notified when the `Future` is ready, it does not need to call `poll` over and over again. We will explain this process in more detail later in this post when we implement an own `Waker` type.
+The purpose of the `cx: &mut Context` parameter is to pass a [`Waker`] instance to the asynchronous task, e.g. the file system load. This `Waker` allows the asynchronous task to signal that it (or a part of it) is finished, e.g. that the file was loaded from disk. Since the main task knows that it will be notified when the `Future` is ready, it does not need to call `poll` over and over again. We will explain this process in more detail later in this post when we implement an own waker type.
 
 [`Waker`]: https://doc.rust-lang.org/nightly/core/task/struct.Waker.html
 
@@ -177,7 +176,7 @@ An alternative to waiting is to use future combinators. Future combinators are f
 
 [`Iterator`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html
 
-As an example, a simple `string_len` combinator for converting `Future<Output = String>` to a `Future<Output = usize` could look like this:
+As an example, a simple `string_len` combinator for converting `Future<Output = String>` to a `Future<Output = usize>` could look like this:
 
 ```rust
 struct StringLen<F> {
@@ -287,7 +286,7 @@ async fn example(min_len: usize) -> String {
 
 ([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=d93c28509a1c67661f31ff820281d434))
 
-This function is a direct translation of the `example` function above, which used combinator functions. Using the `.await` operator, we can retrieve the value of a future without needing any closures or `Either` types. As a result, we can write our code like we write normal synchronous code, with the difference that _this is still asynchronous code_.
+This function is a direct translation of the `example` function that used combinator functions from [above](#drawbacks). Using the `.await` operator, we can retrieve the value of a future without needing any closures or `Either` types. As a result, we can write our code like we write normal synchronous code, with the difference that _this is still asynchronous code_.
 
 #### State Machine Transformation
 
@@ -303,7 +302,7 @@ The state machine implements the `Future` trait by making each `poll` call a pos
 
 ![Four states: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-basic.svg)
 
-The diagram uses arrows to represent state switches and diamond shapes to represent alternative ways. For example, if the `foo.txt` file is not ready, the path marked with _"no"_ is takes and the _"Waiting on foo.txt"_ state is reached. Otherwise, the _"yes"_ path is taken. The small red diamond without caption represents the `if content.len() < 100` branch of the `example` function.
+The diagram uses arrows to represent state switches and diamond shapes to represent alternative ways. For example, if the `foo.txt` file is not ready, the path marked with _"no"_ is taken and the _"Waiting on foo.txt"_ state is reached. Otherwise, the _"yes"_ path is taken. The small red diamond without caption represents the `if content.len() < 100` branch of the `example` function.
 
 We see that the first `poll` call starts the function and lets it run until it reaches a future that is not ready yet. If all futures on the path are ready, the function can run till the _"End"_ state, where it returns its result wrapped in `Poll::Ready`. Otherwise, the state machine enters a waiting state and returns `Poll::Pending`. On the next `poll` call, the state machine then starts from the last waiting state and retries the last operation.
 
@@ -311,7 +310,7 @@ We see that the first `poll` call starts the function and lets it run until it r
 
 In order to be able to continue from the last waiting state, the state machine must save it internally. In addition, it must save all the variables that it needs to continue execution on the next `poll` call. This is where the compiler can really shine: Since it knows which variables are used when, it can automatically generate structs with exactly the variables that are needed.
 
-As an example, the compiler generates the following structs for the above `example` function:
+As an example, the compiler generates structs like the following for the above `example` function:
 
 ```rust
 // The `example` function again so that you don't have to scroll up
@@ -402,7 +401,7 @@ ExampleStateMachine::Start(state) => {
 }
 ```
 
-The state machine is in the `Start` state when it is right at the beginning of the function. In this case, we execute all the code from the body of the `example` function until the first `.await`. To make the code more readable, we introduce a new `foo_txt_future` to represent the future returned by `async_read_file` right before the `.await`. To handle the `.await` operation, we change the state of `self` to `WaitingOnFooTxt`, which includes the construction of the `WaitingOnFooTxtState` struct.
+The state machine is in the `Start` state when it is right at the beginning of the function. In this case, we execute all the code from the body of the `example` function until the first `.await`. To handle the `.await` operation, we change the state of the `self` state machine to `WaitingOnFooTxt`, which includes the construction of the `WaitingOnFooTxtState` struct.
 
 Since the `match self {…}` statement is executed in a loop, the execution jumps to the `WaitingOnFooTxt` arm next:
 
@@ -429,7 +428,7 @@ ExampleStateMachine::WaitingOnFooTxt(state) => {
 }
 ```
 
-In this match arm we first call the `poll` function of the `foo_txt_future`. If it is not ready, we exit the loop and return `Poll::Pending` too. Since `self` stays in the `WaitingOnFooTxt` state in this case, the next `poll` call on the state machine will enter the same match arm and retry polling the `foo_txt_future`.
+In this match arm we first call the `poll` function of the `foo_txt_future`. If it is not ready, we exit the loop and return `Poll::Pending`. Since `self` stays in the `WaitingOnFooTxt` state in this case, the next `poll` call on the state machine will enter the same match arm and retry polling the `foo_txt_future`.
 
 When the `foo_txt_future` is ready, we assign the result to the `content` variable and continue to execute the code of the `example` function: If `content.len()` is smaller than the `min_len` saved in the state struct, the `bar.txt` file is read asynchronously. We again translate the `.await` operation into a state change, this time into the `WaitingOnBarTxt` state. Since we're executing the `match` inside a loop, the execution directly jumps to the match arm for the new state afterwards, where the `bar_txt_future` is polled.
 
@@ -450,7 +449,7 @@ ExampleStateMachine::WaitingOnBarTxt(state) => {
 }
 ```
 
-Similar to the `WaitingOnFooTxt` state, we start by polling the `bar_txt_future`. If it is still pending, we exit the loop and return `Poll::Pending` too. Otherwise, we can perform the last operation of the `example` function: Concatenating the `content` variable with the result from the future. We update the state machine to the `End` state and then return the result wrapped in `Poll::Ready`.
+Similar to the `WaitingOnFooTxt` state, we start by polling the `bar_txt_future`. If it is still pending, we exit the loop and return `Poll::Pending`. Otherwise, we can perform the last operation of the `example` function: Concatenating the `content` variable with the result from the future. We update the state machine to the `End` state and then return the result wrapped in `Poll::Ready`.
 
 Finally, the code for the `End` state looks like this:
 
@@ -472,7 +471,7 @@ The last piece of the puzzle is the generated code for the `example` function it
 async fn example(min_len: usize) -> String
 ```
 
-Since the complete function body is now implemented by the state machine, the only thing that the function needs to do is to initialize the state machine. The generated code for this could look like this:
+Since the complete function body is now implemented by the state machine, the only thing that the function needs to do is to initialize the state machine and return it. The generated code for this could look like this:
 
 ```rust
 fn example(min_len: usize) -> ExampleStateMachine {
@@ -484,7 +483,7 @@ fn example(min_len: usize) -> ExampleStateMachine {
 
 The function no longer has an `async` modifier since it now explicitly returns a `ExampleStateMachine` type, which implements the `Future` trait. As expected, the state machine is constructed in the `Start` state and the corresponding state struct is initialized with the `min_len` parameter.
 
-Note that this function does not start the execution of the state machine. This is a fundamental design decision of Rust's futures: They do nothing until they are polled for the first time.
+Note that this function does not start the execution of the state machine. This is a fundamental design decision of futures in Rust: They do nothing until they are polled for the first time.
 
 ### Pinning
 
@@ -526,7 +525,7 @@ The `array` field starts at address 0x10014 and the `element` field at address 0
 
 ![array at 0x10024 with fields 1, 2, and 3; element at address 0x10030, still pointing to 0x1001a, even though the last array element now lives at 0x1002a](self-referential-struct-moved.svg)
 
-We moved the struct a bit so that it starts at address `0x10024` now. The problem is that the `element` field still points to address `0x1001a` even though the last `array` element now lives at address `0x1002a`. Thus, the pointer is dangling with the result that undefined behavior occurs on the next `poll` call.
+We moved the struct a bit so that it starts at address `0x10024` now. This could for example happen when we pass the struct as a function argument or assign it to a different stack variable. The problem is that the `element` field still points to address `0x1001a` even though the last `array` element now lives at address `0x1002a`. Thus, the pointer is dangling with the result that undefined behavior occurs on the next `poll` call.
 
 #### Possible Solutions
 
@@ -539,7 +538,7 @@ Rust understandably decided for the second solution. For this, the [_pinning_] A
 
 #### Heap Values
 
-The first observation is that [heap allocated] values already have a fixed memory address most of the time. They are created using a call to `allocate` and are not moved in memory until they are freed through a `deallocate` call again. This is required because a `Box<T>` is essentially a pointer to the heap memory, so that an address change would make the pointer invalid.
+The first observation is that [heap allocated] values already have a fixed memory address most of the time. They are created using a call to `allocate` and then referenced by a pointer type such as `Box<T>`. While moving the pointer type is possible, the heap value that the pointer points to stays at the same memory address until it is freed through a `deallocate` call again.
 
 [heap allocated]: @/second-edition/posts/10-heap-allocation/index.md
 
@@ -561,11 +560,15 @@ struct SelfReferential {
 }
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=ce1aff3a37fcc1c8188eeaf0f39c97e8))
+([Try it on the playground][playground-self-ref])
 
-When we execute this, we see that the address of heap value and its internal pointer are equal, which means that the `self_ptr` field is valid. Since the `heap_value` variable is only a pointer, moving it (e.g. by passing it to a function) does not change the address, so that the `self_ptr` stays valid.
+[playground-self-ref]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=ce1aff3a37fcc1c8188eeaf0f39c97e8
 
-However, there is still a way to break this: We can move out of a `Box<T>` or replace its content:
+We create a simple struct named `SelfReferential` that contains a single pointer field. First, we initialize this struct with a null pointer and then allocate it on the heap using `Box::new`. We then determine the memory address of the heap allocated struct and store it in a `ptr` variable. Finally, we make the struct self-referential by assigning the `ptr` variable to the `self_ptr` field.
+
+When we execute this code [on the playground][playground-self-ref], we see that the address of heap value and its internal pointer are equal, which means that the `self_ptr` field is a valid self-reference. Since the `heap_value` variable is only a pointer, moving it (e.g. by passing it to a function) does not change the address of the struct itself, so the `self_ptr` stays valid even if the pointer is moved.
+
+However, there is still a way to break this example: We can move out of a `Box<T>` or replace its content:
 
 ```rust
 let stack_value = mem::replace(&mut *heap_value, SelfReferential {
@@ -577,17 +580,17 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 
 ([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
 
-Here we use the [`mem::replace`] function to replace the heap allocated value with a new struct instance. This allows us to move the original `heap_value` to the stack, while the `self_ptr` field of of the struct still points to the heap. When you try to run the example on the playground, you see that the printed _"value at:"_ and _"internal reference:"_ lines show indeed different pointers.
+Here we use the [`mem::replace`] function to replace the heap allocated value with a new struct instance. This allows us to move the original `heap_value` to the stack, while the `self_ptr` field of the struct is now a dangling pointer that still points to the old heap address. When you try to run the example on the playground, you see that the printed _"value at:"_ and _"internal reference:"_ lines show indeed different pointers. So heap allpcating a value is not enough to make self-references safe.
 
 [`mem::replace`]: https://doc.rust-lang.org/nightly/core/mem/fn.replace.html
 
-The fundamental problem is that `Box<T>` allows us to get a `&mut T` reference to the heap allocated value. This `&mut` reference allows us to to use methods like [`mem::replace`] or [`mem::swap`] to invalidate the heap allocated value. To resolve this problem, we must prevent that `&mut` references to self-referential structs can be created.
+The fundamental problem that allowed the above breakage is that `Box<T>` allows us to get a `&mut T` reference to the heap allocated value. This `&mut` reference makes it possible to use methods like [`mem::replace`] or [`mem::swap`] to invalidate the heap allocated value. To resolve this problem, we must prevent that `&mut` references to self-referential structs can be created.
 
 [`mem::swap`]: https://doc.rust-lang.org/nightly/core/mem/fn.swap.html
 
 #### `Pin<Box<T>>` and `Unpin`
 
-The pinning API provides a solution to the `&mut T` problem in form of the [`Pin`] wrapper type and the [`Unpin`] marker trait. The idea behind these types is to gate all methods of `Pin` that can be used to get `&mut` references (e.g. [`get_mut`][pin-get-mut] or [`deref_mut`][pin-deref-mut]) on the `Unpin` trait. The `Unpin` trait is an [_auto trait_], which is automatically implemented for all types except types that explicitly opt-out. By making self-referential structs opt-out of `Unpin`, there is no (safe) way to get a `&mut T` from a `Pin<Box<T>>` type for them. As a result, their internal self-references are guaranteed to stay valid.
+The pinning API provides a solution to the `&mut T` problem in form of the [`Pin`] wrapper type and the [`Unpin`] marker trait. The idea behind these types is to gate all methods of `Pin` that can be used to get `&mut` references to the wrapped value (e.g. [`get_mut`][pin-get-mut] or [`deref_mut`][pin-deref-mut]) on the `Unpin` trait. The `Unpin` trait is an [_auto trait_], which is automatically implemented for all types except types that explicitly opt-out. By making self-referential structs opt-out of `Unpin`, there is no (safe) way to get a `&mut T` from a `Pin<Box<T>>` type for them. As a result, their internal self-references are guaranteed to stay valid.
 
 [`Pin`]: https://doc.rust-lang.org/stable/core/pin/struct.Pin.html
 [`Unpin`]: https://doc.rust-lang.org/nightly/std/marker/trait.Unpin.html
@@ -595,7 +598,7 @@ The pinning API provides a solution to the `&mut T` problem in form of the [`Pin
 [pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#impl-DerefMut
 [_auto trait_]: https://doc.rust-lang.org/reference/special-types-and-traits.html#auto-traits
 
-As an example, let's update the `SelfReferential` type from the above example to opt-out of `Unpin`:
+As an example, let's update the `SelfReferential` type from above to opt-out of `Unpin`:
 
 ```rust
 use core::marker::PhantomPinned;
@@ -644,7 +647,7 @@ error[E0596]: cannot borrow data in a dereference of `std::pin::Pin<std::boxed::
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
 ```
 
-Both errors occur because the `Pin<Box<SelfReferential>>` type no longer implements the `DerefMut` trait. This exactly what we wanted because the `DerefMut` trait would return a `&mut` reference, which we want to prevent. This only works because we both opted-out of `Unpin` and changed `Box::new` to `Box::pin`.
+Both errors occur because the `Pin<Box<SelfReferential>>` type no longer implements the `DerefMut` trait. This exactly what we wanted because the `DerefMut` trait would return a `&mut` reference, which we want to prevent. This only happens because we both opted-out of `Unpin` and changed `Box::new` to `Box::pin`.
 
 The problem now is that the compiler does not only prevent moving the type in line 16, but also forbids to initialize the `self_ptr` field in line 10. This happens because the compiler can't differentiate between valid and invalid uses of `&mut` references. To get the initialization working again, we have to use the unsafe [`get_unchecked_mut`] method:
 
@@ -693,13 +696,11 @@ The reason that this method takes `self: Pin<&mut Self>` instead of the normal `
 
 [self-ref-async-await]: @/second-edition/posts/12-async-await/index.md#self-referential-structs
 
-It is worth noting that moving futures before the first `poll` call is fine. This is a result of the fact that futures are lazy and do nothing until they're polled for the first time. The `start` state of the generated state machines therefore only contains the function arguments, but no internal references. In order to call `poll`, the caller must wrap the future into `Pin` first, which ensures that the future cannot moved in memory anymore.
-
-Since the `Pin<&mut Self>` interface is predefined by the `Future` trait, there is no way to use the safer `Pin<Box<Self>>` instead. This can make it quite challenging to safely implement `Future` yourself. For this reason I recommend against implementing `Future` manually and instead sticking to using async/await and the combinator methods of the [`futures`] crate.
+It is worth noting that moving futures before the first `poll` call is fine. This is a result of the fact that futures are lazy and do nothing until they're polled for the first time. The `start` state of the generated state machines therefore only contains the function arguments, but no internal references. In order to call `poll`, the caller must wrap the future into `Pin` first, which ensures that the future cannot be moved in memory anymore. Since stack pinning is more difficult to get right, I recommend to always use [`Box::pin`] combined with [`Pin::as_mut`] for this.
 
 [`futures`]: https://docs.rs/futures/0.3.4/futures/
 
-In case you're interested in understanding how to safely implement `Future` yourself, take a look at the relatively short [source of the `map` combinator method][map-src] of the `futures` crate and the section about [projections and structural pinning] of the pin documentation.
+In case you're interested in understanding how to safely implement a future combinator function using stack pinning yourself, take a look at the relatively short [source of the `map` combinator method][map-src] of the `futures` crate and the section about [projections and structural pinning] of the pin documentation.
 
 [map-src]: https://docs.rs/futures-util/0.3.4/src/futures_util/future/future/map.rs.html
 [projections and structural pinning]: file:///home/philipp/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/share/doc/rust/html/std/pin/index.html#projections-and-structural-pinning
