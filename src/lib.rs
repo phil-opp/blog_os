@@ -31,6 +31,11 @@ pub fn init() {
     unsafe { interrupts::PICS.lock().initialize() };
 }
 
+pub fn init_heap_structures() {
+    task::init();
+    driver::init();
+}
+
 pub fn test_runner(tests: &[&dyn Fn()]) {
     serial_println!("Running {} tests", tests.len());
     for test in tests {

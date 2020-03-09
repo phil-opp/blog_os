@@ -1,4 +1,5 @@
-use crate::{interrupts, println};
+use super::interrupt_wakeups::interrupt_wakeups;
+use crate::println;
 use alloc::{
     boxed::Box,
     collections::{BTreeMap, VecDeque},
@@ -66,7 +67,7 @@ impl Executor {
     /// might execute arbitrary code, e.g. allocate, which should not be done
     /// in interrupt handlers to avoid deadlocks.
     fn apply_interrupt_wakeups(&mut self) {
-        while let Ok(waker) = interrupts::interrupt_wakeups().pop() {
+        while let Ok(waker) = interrupt_wakeups().pop() {
             waker.wake();
         }
     }
@@ -87,7 +88,7 @@ impl Executor {
             // disable interrupts to avoid races
             x86_64::instructions::interrupts::disable();
             // check if relevant interrupts occured since the last check
-            if interrupts::interrupt_wakeups().is_empty() {
+            if interrupt_wakeups().is_empty() {
                 // no interrupts occured -> hlt to wait for next interrupt
                 x86_64::instructions::interrupts::enable_interrupts_and_hlt();
             } else {

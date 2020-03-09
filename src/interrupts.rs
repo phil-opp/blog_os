@@ -1,11 +1,4 @@
 use crate::{gdt, hlt_loop, println};
-use conquer_once::spin::OnceCell;
-use core::{
-    sync::atomic::{AtomicU64, Ordering},
-    task::Waker,
-};
-use crossbeam_queue::ArrayQueue;
-use futures_util::task::AtomicWaker;
 use lazy_static::lazy_static;
 use pic8259_simple::ChainedPics;
 use spin;
@@ -54,23 +47,6 @@ pub fn init_idt() {
     IDT.load();
 }
 
-pub fn init_queues() {
-    INTERRUPT_WAKEUPS
-        .try_init_once(|| ArrayQueue::new(10))
-        .expect("failed to init interrupt wakeup queue");
-    SCANCODE_QUEUE
-        .try_init_once(|| ArrayQueue::new(10))
-        .expect("failed to init scancode queue");
-}
-
-static INTERRUPT_WAKEUPS: OnceCell<ArrayQueue<Waker>> = OnceCell::uninit();
-
-pub(crate) fn interrupt_wakeups() -> &'static ArrayQueue<Waker> {
-    INTERRUPT_WAKEUPS
-        .try_get()
-        .expect("interrupt wakeup queue not initialized")
-}
-
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut InterruptStackFrame) {
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
@@ -95,41 +71,21 @@ extern "x86-interrupt" fn double_fault_handler(
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
 
-pub(crate) static TIMER_TICKS: AtomicU64 = AtomicU64::new(0);
-pub(crate) static TIMER_INTERRUPT_WAKER: AtomicWaker = AtomicWaker::new();
-
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
-    TIMER_TICKS.fetch_add(1, Ordering::Release);
-    if let Some(waker) = TIMER_INTERRUPT_WAKER.take() {
-        if let Err(_) = interrupt_wakeups().push(waker) {
-            println!("WARNING: dropping interrupt wakeup");
-        }
-    }
+    crate::driver::timer::tick();
+
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
     }
 }
 
-pub(crate) static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
-pub(crate) static KEYBOARD_INTERRUPT_WAKER: AtomicWaker = AtomicWaker::new();
-
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
     use x86_64::instructions::port::Port;
     let mut port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
 
-    let scancode_queue = SCANCODE_QUEUE
-        .try_get()
-        .expect("scancode queue not initialized");
-    if let Err(_) = scancode_queue.push(scancode) {
-        println!("WARNING: dropping keyboard input");
-    }
-    if let Some(waker) = KEYBOARD_INTERRUPT_WAKER.take() {
-        if let Err(_) = interrupt_wakeups().push(waker) {
-            println!("WARNING: dropping interrupt wakeup");
-        }
-    }
+    crate::driver::keyboard::keyboard_scancode(scancode);
 
     unsafe {
         PICS.lock()
