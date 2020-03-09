@@ -705,7 +705,48 @@ In case you're interested in understanding how to safely implement a future comb
 [map-src]: https://docs.rs/futures-util/0.3.4/src/futures_util/future/future/map.rs.html
 [projections and structural pinning]: file:///home/philipp/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/share/doc/rust/html/std/pin/index.html#projections-and-structural-pinning
 
-### Executors
+### Executors and Wakers
+
+Using async/await, it is possible to ergonomically work with futures in a completely asynchronous way. However, as we learned above, futures do nothing until they are polled. This means we have to have to call `poll` on them at some point, otherwise the asynchronous code is never executed.
+
+With a single future, we can always wait for the future using a loop [as described above](#waiting-on-futures). However, this approach is very inefficient, especially for programs that create a large number of futures. An example for such a program could be a web server that handles each request using an asynchronous function:
+
+```rust
+async fn handle_request(request: Request) {…}
+```
+
+The function is invoked for each request the webserver receives. It has no return type, so it results in a future with the empty type `()` as output. When the web server receives many concurrent requests, this can easily result in hundreds or thousands of futures in the system. While these futures have no return value that we need for future computations, we still want them to be polled to completion because otherwise the requests would not be handled.
+
+The most common approach for this is to define a global _executor_ that is responsible for polling all futures in the system until they are finished.
+
+#### Executors
+
+The purpose of an executor is to allow spawning futures as independent tasks, typically through some sort of `spawn` method. The executor is then responsible for polling all futures until they are completed. The big advantage of managing all futures in a central place is that the executor can switch to a different future whenever a future returns `Poll::Pending`. Thus, asynchronous operations are run in parallel and the CPU is kept busy.
+
+Many executor implementations can also take advantage of systems with multiple CPU cores. They create a [thread pool] that is able to utilize all cores if there is enough work available and use techniques such as [work stealing] to balance the load between cores. There are also special executor implementations for embedded systems that optimize for low latency and memory overhead.
+
+[thread pool]: https://en.wikipedia.org/wiki/Thread_pool
+[work stealing]: https://en.wikipedia.org/wiki/Work_stealing
+
+To avoid the overhead of polling futures over and over again, executors typically also take advantage of the _waker_ API supported by Rust's futures.
+
+#### Wakers
+
+The idea behind the waker API is that a special [`Waker`] type is passed to each invocation of `poll`, wrapped in a [`Context`] type for future extensibility. This `Waker` type is created by the executor and can be used by the asynchronous task to signal its (partial) completion. As a result, the executor does not need to call `poll` on a future that previously returned `Poll::Pending` again until it is notified by the corresponding waker.
+
+[`Context`]: https://doc.rust-lang.org/nightly/core/task/struct.Context.html
+
+This is best illustrated by a small example:
+
+```rust
+async fn write_file() {
+    async_write_file("foo.txt", "Hello").await;
+}
+```
+
+This function asynchronously writes the string "Hello" to a `foo.txt` file. Since hard disk writes take some time, the first `poll` call on this future will likely return `Poll::Pending`. However, the hard disk driver will internally store the `Waker` passed in the `poll` call and signal it as soon as the file was written to disk. This way, the executor does not need to waste any time trying to `poll` the future again before it receives the waker notification.
+
+We will see how the `Waker` type works in detail when we implement our own executor with waker support in the following section.
 
 ## Implementation
 
