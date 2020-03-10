@@ -746,7 +746,23 @@ async fn write_file() {
 
 This function asynchronously writes the string "Hello" to a `foo.txt` file. Since hard disk writes take some time, the first `poll` call on this future will likely return `Poll::Pending`. However, the hard disk driver will internally store the `Waker` passed in the `poll` call and signal it as soon as the file was written to disk. This way, the executor does not need to waste any time trying to `poll` the future again before it receives the waker notification.
 
-We will see how the `Waker` type works in detail when we implement our own executor with waker support in the following section.
+We will see how the `Waker` type works in detail when we create our own executor with waker support in the implementation section of this post.
+
+### Cooperative Multitasking?
+
+At the beginning of this post we talked about preemptive and cooperative multitasking. While preemptive multitasking relies on the operating system to forcibly switch between running tasks, cooperative multitasking requires that the tasks voluntarily give up control of the CPU through a _yield_ operation on a regular basis. The big advantage of the cooperative approach is that tasks can save their state themselves, which results in more efficient context switches and makes it possible to share the same call stack between tasks.
+
+It might not be immediately apparent, but futures and async/await are an implementation of the cooperative multitasking pattern:
+
+- Each future that is added to the executor is basically an cooperative task.
+- Instead of using an explicit yield operation, futures give up control of the CPU core by returning `Poll::Pending` (or `Poll::Ready` at the end).
+    - There is nothing that forces futures to give up the CPU. If they want, they can never return from `poll`, e.g. by spinning endlessly in a loop.
+    - Since each future can block the execution of the other futures in the executor, we need to trust they are not malicious.
+- Futures internally store all the state they need to continue execution on the next `poll` call. With async/await, the compiler automatically detects all variables that are needed and stores them inside the generated state machine.
+    - Only the minimum state required for continuation is saved.
+    - Since the `poll` method gives up the call stack when it returns, the same stack can be used for polling other futures.
+
+We see that futures and async/await fit the cooperative multitasking pattern perfectly, they just use some different terminology. In the following, we will therefore use the terms "task" and "future" interchangeably.
 
 ## Implementation
 
