@@ -97,7 +97,7 @@ When we start our kernel now, we should see that the double fault handler is inv
 
 It worked! Here is what happens this time:
 
-1. The CPU executes tries to write to `0xdeadbeef`, which causes a page fault.
+1. The CPU tries to write to `0xdeadbeef`, which causes a page fault.
 2. Like before, the CPU looks at the corresponding entry in the IDT and sees that no handler function is defined. Thus, a double fault occurs.
 3. The CPU jumps to the – now present – double fault handler.
 
