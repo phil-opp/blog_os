@@ -279,7 +279,7 @@ Now QEMU runs completely in the background and no window is opened anymore. This
 
 Right now we're doing the serial output and the QEMU exit from the `_start` function in our `main.rs` and can no longer run our kernel in a normal way. We could try to fix this by adding an `integration-test` [cargo feature] and using [conditional compilation]:
 
-[cargo feature]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section
+[cargo feature]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 [conditional compilation]: https://doc.rust-lang.org/reference/conditional-compilation.html
 
 ```toml
@@ -333,7 +333,7 @@ A better solution is to create an additional executable for each test.
 
 Cargo allows to add [additional executables] to a project by putting them inside `src/bin`. We can use that feature to create a separate executable for each integration test. For example, a `test-something` executable could be added like this:
 
-[additional executables]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-project-layout
+[additional executables]: https://doc.rust-lang.org/cargo/guide/project-layout.html
 
 ```rust
 // src/bin/test-something.rs

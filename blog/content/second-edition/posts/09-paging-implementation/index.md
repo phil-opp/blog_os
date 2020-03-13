@@ -281,7 +281,7 @@ All of these approaches require page table modifications for their setup. For ex
 
 This means that we need the help of the bootloader, which creates the page tables that our kernel runs on. The bootloader has access to the page tables, so it can create any mappings that we need. In its current implementation, the `bootloader` crate has support for two of the above approaches, controlled through [cargo features]:
 
-[cargo features]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section
+[cargo features]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 
 - The `map_physical_memory` feature maps the complete physical memory somewhere into the virtual address space. Thus, the kernel can access all physical memory and can follow the [_Map the Complete Physical Memory_](#map-the-complete-physical-memory) approach.
 - With the `recursive_page_table` feature, the bootloader maps an entry of the level 4 page table recursively. This allows the kernel to access the page tables as described in the [_Recursive Page Tables_](#recursive-page-tables) section.
