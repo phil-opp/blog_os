@@ -632,7 +632,7 @@ The traits only define the interface, they don't provide any implementation. The
 [`MappedPageTable`]: https://docs.rs/x86_64/0.9.6/x86_64/structures/paging/mapper/struct.MappedPageTable.html
 [`RecursivePageTable`]: https://docs.rs/x86_64/0.9.6/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
-In our case, the bootloader maps the complete physical memory at an virtual address specfied by the `physical_memory_offset` variable, so we can use the `OffsetPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
+In our case, the bootloader maps the complete physical memory at a virtual address specfied by the `physical_memory_offset` variable, so we can use the `OffsetPageTable` type. To initialize it, we create a new `init` function in our `memory` module:
 
 ```rust
 use x86_64::structures::paging::OffsetPageTable;
