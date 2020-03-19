@@ -982,3 +982,15 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 When we run it, we see that the expected _"async number: 42"_ message is printed to the screen:
 
 ![QEMU printing "Hello World", "async number: 42", and "It did not crash!"](qemu-simple-executor.png)
+
+Let's summarize the various steps that happen for this example:
+
+- First, a new instance of our `SimpleExecutor` type is created with an empty `task_queue`.
+- Next, we call the asynchronous `example_task` function, which returns a future. We wrap this future in the `Task` type, which moves it to the heap and pins it, and then add the task to the `task_queue` of the executor through the `spawn` method.
+- We then wall the `run` method to start the execution of the single task in the queue. This involves:
+    - Popping the task from the front of the `task_queue`.
+    - Creating a `DummyWaker` for the task, converting it to a [`Waker`] instance, and then creating a [`Context`] instance from it.
+    - Calling the [`poll`] method on the future of the task, using the `Context` we just created.
+    - Since the `example_task` does not wait for anything, it can directly run til its end on the first `poll` call. This is where the _"async number: 42"_ line is printed.
+    - Since the `example_task` directly returns `Poll::Ready`, it is not added back to the task queue.
+- The `run` method returns after the `task_queue` becomes empty. The execution of our `kernel_main` function continues and the _"It did not crash!"_ message is printed.
