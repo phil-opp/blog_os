@@ -994,3 +994,21 @@ Let's summarize the various steps that happen for this example:
     - Since the `example_task` does not wait for anything, it can directly run til its end on the first `poll` call. This is where the _"async number: 42"_ line is printed.
     - Since the `example_task` directly returns `Poll::Ready`, it is not added back to the task queue.
 - The `run` method returns after the `task_queue` becomes empty. The execution of our `kernel_main` function continues and the _"It did not crash!"_ message is printed.
+
+### Async Keyboard Input
+
+Our simple executor does not utilize the `Waker` notifications and simply loops over all tasks until they are done. This wasn't a problem for our example since our `example_task` can directly run to finish on the first `poll` call. To see the performance advantages of a proper `Waker` implementation, we first need to create a task that is truly asynchronous, i.e. a task that will probably return `Poll::Pending` on the first `poll` call. 
+
+We already have some kind of asynchronicity in our system that we can use for this: hardware interrupts. As we learned in the [_Interrupts_] post, hardware interrupts can occur at arbitrary points in time, determined by some external device. For example, a hardware timer sends an interrupt to the CPU after some predefined time elapsed. When the CPU receives an interrupt, it immediately transfers control to the corresponding handler function defined in the interrupt descriptor table (IDT).
+
+[_Interrupts_]: @/second-edition/posts/07-hardware-interrupts/index.md
+
+In the following, we will create an asynchronous task based on the keyboard interrupt. The keyboard interrupt is a good candidate for this because it is both non-deterministic and latency-critical. Non-deteministic means that there is no way to predict when the next key press will occur because it is entirely dependent on the user. Latency-critical means that we want to handle the keyboard input in a timely manner, otherwise the user will feel a lag. To support such a task in an efficient way, it will be essential that the executor has proper support for `Waker` notifications.
+
+#### Moving the Keyboard Code
+
+#### Scancode Queue
+
+#### AtomicWaker
+
+### Executor with Waker Support
