@@ -15,7 +15,7 @@ entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::allocator;
     use blog_os::memory::{self, BootInfoFrameAllocator};
-    use blog_os::task::{simple_executor::SimpleExecutor, Task};
+    use blog_os::task::{simple_executor::SimpleExecutor, Task, keyboard::ScancodeStream};
     use x86_64::VirtAddr;
 
     println!("Hello World{}", "!");
@@ -29,6 +29,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     let mut executor = SimpleExecutor::new();
     executor.spawn(Task::new(example_task()));
+    executor.spawn(Task::new(ScancodeStream::new().print_keypresses()));
     executor.run();
 
     #[cfg(test)]
