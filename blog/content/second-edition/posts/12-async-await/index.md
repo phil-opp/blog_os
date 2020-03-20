@@ -1005,9 +1005,79 @@ We already have some kind of asynchronicity in our system that we can use for th
 
 In the following, we will create an asynchronous task based on the keyboard interrupt. The keyboard interrupt is a good candidate for this because it is both non-deterministic and latency-critical. Non-deteministic means that there is no way to predict when the next key press will occur because it is entirely dependent on the user. Latency-critical means that we want to handle the keyboard input in a timely manner, otherwise the user will feel a lag. To support such a task in an efficient way, it will be essential that the executor has proper support for `Waker` notifications.
 
-#### Moving the Keyboard Code
-
 #### Scancode Queue
+
+Currently, we handle the keyboard input directly in the interrupt handler. This is not a good idea for the long term because interrupt handlers should stay as short as possible as they might interrupt important work. Instead, interrupt handlers should only perform the minimal amount of work necessary (e.g. reading the keyboard scancode) and leave the rest of the work (e.g. interpreting the scancode) to a background task.
+
+A common pattern for delegating work to a background task is to create some sort of queue. The interrupt handler pushes work units of work to the queue and the background task handles the work in the queue. Applied to our keyboard interrupt, this means that the interrupt handler only reads the scancode from the keyboard, pushes it to the queue, and then returns. The keyboard task sits on the other end of the queue and interprets and handles each scancode that is pushed to it:
+
+![Scancode queue with 8 slots on the top. Keyboard interupt handler on the bottom left with a "push scancode" arrow to the left of the queue. Keyboard task on the bottom right with a "pop scancode" queue coming from the right side of the queue.](scancode-queue.svg)
+
+A simple implementation of that queue could be a mutex-protected [`VecDeque`]. However, using mutexes in interrupt handlers is not a good idea since it can easily lead to deadlocks. For example, when the user presses a key while the keyboard task has locked the queue, the interrupt handler tries to acquire the lock again and hangs indefinitely. Another problem with this approach is that `VecDeque` automatically increases its capacity by performing a new heap allocation when it becomes full. This can lead to deadlocks again because our allocator also uses a mutex internally. Further problems are that heap allocations can fail or take a considerable amount of time when the heap is fragmented.
+
+To prevent these problems, we need a queue implementation that does not require mutexes or allocations for its `push` operation. Such queues can be implemented by using lock-free [atomic operations] for pushing and popping elements. This way, it is possible to create `push` and `pop` operations that only require a `&self` reference and are thus usable without a mutex. To avoid allocations on `push`, the queue can be backed by a pre-allocated fixed-size buffer. While this makes the queue _bounded_ (i.e. it has a maximum length), it is often possible to define reasonable upper bounds for the queue length in practice so that this isn't a big problem.
+
+[atomic operations]: https://doc.rust-lang.org/core/sync/atomic/index.html
+
+##### Crossbeam
+
+Implementing such a queue in a correct and efficient way is very difficult, so I recommend to stick to existing, well-tested implementations. One popular Rust project that implements various mutex-free types for concurrent programming is [`crossbeam`]. It provides a type named [`ArrayQueue`] that is exactly what we need in this case. And we're lucky: The type is fully compatible to `no_std` crates with allocation support.
+
+[`crossbeam`]: https://github.com/crossbeam-rs/crossbeam
+[`ArrayQueue`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html
+
+To use the type, we need to add a dependency on the `crossbeam-queue` crate:
+
+```toml
+# in Cargo.toml
+
+[dependencies.crossbeam-queue]
+version = "0.2.1"
+default-features = false
+features = ["alloc"]
+```
+
+By default, the crate depends on the standard library. To make it `no_std` compatible, we need to disable its default features and instead enable the `alloc` feature. <span class="gray">(Note that depending on the main `crossbeam` crate does not work here because it is missing an export of the `queue` module for `no_std`. I filed a [pull request](https://github.com/crossbeam-rs/crossbeam/pull/480) to fix this.)</span>
+
+##### Implementation
+
+Using the `ArrayQueue` type, we can now create a global scancode queue in a new `task::keyboard` module:
+
+```rust
+// in src/task/mod.rs
+
+pub mod keyboard;
+```
+
+```rust
+// in src/task/keyboard.rs
+
+use conquer_once::spin::OnceCell;
+use crossbeam_queue::ArrayQueue;
+
+static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
+```
+
+Since the [`ArrayQueue::new`] performs a heap allocation, which are not possible at compile time ([yet][const-heap-alloc]), we can't initialize the static variable directly. Instead, we use the [`OnceCell`] type of the [`conquer_once`] crate, which makes it possible to perform safe one-time initialization of static values. To include the crate, we need to add it as a dependency in our `Cargo.toml`:
+
+[`ArrayQueue::new`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html#method.new
+[const-heap-alloc]: https://github.com/rust-lang/const-eval/issues/20
+[`OnceCell`]: https://docs.rs/conquer-once/0.2.0/conquer_once/raw/struct.OnceCell.html
+[`conquer_once`]: https://docs.rs/conquer-once/0.2.0/conquer_once/index.html
+
+```toml
+# in Cargo.toml
+
+[dependencies.conquer-once]
+version = "0.2.0"
+default-features = false
+```
+
+Instead of the [`OnceCell`] primitive, we could also use the [`lazy_static`] macro here. However, the `OnceCell` type has the advantage that we can ensure that the initialization does not happen in the interrupt handler, thus preventing that the interrupt handler performs a heap allocation.
+
+[`lazy_static`]: https://docs.rs/lazy_static/1.4.0/lazy_static/index.html
+
+#### Scancode Stream
 
 #### AtomicWaker
 
