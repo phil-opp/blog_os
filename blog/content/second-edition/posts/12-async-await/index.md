@@ -1019,7 +1019,7 @@ To prevent these problems, we need a queue implementation that does not require 
 
 [atomic operations]: https://doc.rust-lang.org/core/sync/atomic/index.html
 
-##### Crossbeam
+##### The `crossbeam` Crate
 
 Implementing such a queue in a correct and efficient way is very difficult, so I recommend to stick to existing, well-tested implementations. One popular Rust project that implements various mutex-free types for concurrent programming is [`crossbeam`]. It provides a type named [`ArrayQueue`] that is exactly what we need in this case. And we're lucky: The type is fully compatible to `no_std` crates with allocation support.
 
@@ -1039,7 +1039,7 @@ features = ["alloc"]
 
 By default, the crate depends on the standard library. To make it `no_std` compatible, we need to disable its default features and instead enable the `alloc` feature. <span class="gray">(Note that depending on the main `crossbeam` crate does not work here because it is missing an export of the `queue` module for `no_std`. I filed a [pull request](https://github.com/crossbeam-rs/crossbeam/pull/480) to fix this.)</span>
 
-##### Implementation
+##### Queue Implementation
 
 Using the `ArrayQueue` type, we can now create a global scancode queue in a new `task::keyboard` module:
 
@@ -1076,6 +1076,54 @@ default-features = false
 Instead of the [`OnceCell`] primitive, we could also use the [`lazy_static`] macro here. However, the `OnceCell` type has the advantage that we can ensure that the initialization does not happen in the interrupt handler, thus preventing that the interrupt handler performs a heap allocation.
 
 [`lazy_static`]: https://docs.rs/lazy_static/1.4.0/lazy_static/index.html
+
+#### Filling the Queue
+
+To fill the scancode queue, we create a new `add_scancode` function that we will call from the interrupt handler:
+
+```rust
+// in src/task/keyboard.rs
+
+/// Called by the keyboard interrupt handler
+///
+/// Must not block or allocate.
+pub(crate) add_scancode(scancode: u8) {
+    if let Ok(queue) = SCANCODE_QUEUE.try_get() {
+        if let Err(_) = scancode_queue.push(scancode) {
+            println!("WARNING: scancode queue full; dropping keyboard input");
+        }
+    }
+}
+```
+
+We use the [`OnceCell::try_get`] to get a reference to the initialized queue. If the queue is not initialized yet, we do nothing and ignore the keyboard scancode. It's important that we don't try to initialize the queue in this function because it will be called by the interrupt handler, which should not perform heap allocations. Since this function should not be callable from our `main.rs`, we use the `pub(crate)` visibility to make it only available to our `lib.rs`.
+
+[`OnceCell::try_get`]: https://docs.rs/conquer-once/0.2.0/conquer_once/raw/struct.OnceCell.html#method.try_get
+
+To call the function on keyboard interrupts, we update our `keyboard_interrupt_handler` function in the `interrupts` module:
+
+```rust
+// in src/interrupts.rs
+
+extern "x86-interrupt" fn keyboard_interrupt_handler(
+    _stack_frame: &mut InterruptStackFrame
+) {
+    use x86_64::instructions::port::Port;
+
+    let mut port = Port::new(0x60);
+    let scancode: u8 = unsafe { port.read() };
+    crate::task::keyboard::add_scancode(scancode); // new
+
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
+    }
+}
+```
+
+We removed all the keyboard handling code from this function and instead added a call to the `add_scancode` function. The rest of the function stays the same as before.
+
+As expected, keypresses are no longer printed to the screen when we run our project using `cargo xrun` now. Instead, the scancodes are added to the `SCANCODE_QUEUE`. After 100 keystrokes, the queue becomes full and we see the warning about dropped keyboard input on the screen.
 
 #### Scancode Stream
 
