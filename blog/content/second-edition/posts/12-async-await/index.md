@@ -1302,6 +1302,68 @@ The only change that we performed is to add a call to `WAKER.wake()` if the push
 
 It is important that we call `wake` only after pushing to the queue because otherwise the task might be woken too early when the queue is still empty. This can for example happen when using a multi-threaded executor that starts the woken task concurrently on a different CPU core. While we don't have thread support yet, we will add it soon and we don't want things to break then.
 
+#### Keyboard Task
 
+Now that we implemented the `Stream` trait for our `ScancodeStream`, we can use it to create an asynchronous keyboard task:
+
+```rust
+// in src/task/keyboard.rs
+
+use futures_util::stream::StreamExt;
+use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+use crate::print;
+
+pub async fn print_keypresses() {
+    let mut scancodes = ScancodeStream::new();
+    let mut keyboard = Keyboard::new(layouts::Us104Key, ScancodeSet1,
+        HandleControl::Ignore);
+
+    while let Some(scancode) = scancodes.next().await {
+        if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+            if let Some(key) = keyboard.process_keyevent(key_event) {
+                match key {
+                    DecodedKey::Unicode(character) => print!("{}", character),
+                    DecodedKey::RawKey(key) => print!("{:?}", key),
+                }
+            }
+        }
+    }
+}
+```
+
+The code is very similar to the code we had in our [keyboard interrupt handler] before we modified it in this post. The only difference is that, instead of reading the scancode from an I/O port, we take it from the `ScancodeStream`. For this, we first create a new `Scancode` stream and then repeatedly use the [`next`] method provided by the [`StreamExt`] trait to get a `Future` that resolves to the next element in the stream. By using the `await` operator on it, we asynchronously wait for the result of the future.
+
+[keyboard interrupt handler]: TODO
+[`next`]: TODO
+[`StreamExt`]: TODO
+
+We use `while let` to loop until the stream returns `None` to signal its end. Since our `poll_next` method never returns `None`, this is effectively and endless loop, so the `print_keypresses` task never finishes.
+
+Let's add the `print_keypresses` task to our executor in our `main.rs` to get working keyboard input again:
+
+```rust
+// in src/main.rs
+
+use blog_os::task::keyboard;
+
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    // […] initialization routines, including `init_heap`
+
+    let mut executor = SimpleExecutor::new();
+    executor.spawn(Task::new(example_task()));
+    executor.spawn(Task::new(keyboard::print_keypresses()));
+    executor.run();
+
+    // […] test_main, "it did not crash" message, hlt_loop
+}
+```
+
+When we execute `cargo xrun` now, we see that keyboard input works again:
+
+TODO image
+
+If you keep an eye on the CPU utilization of your computer, you will see that the `QEMU` process now keeps one CPU completely busy. This happens because our `SimpleExecutor` polls tasks over and over again in a loop. So even if we don't press any keys on the keyboard, the executor repeatedly calls `poll` on our `print_keypresses` task, even though the task cannot make any progress and will return `Poll::Pending` each time.
+
+To fix this, we need to create an executor that properly utilizes the `Waker` notifications. This way, the executor is notified when the next keyboard interrupt occurs, so it does not need to keep polling the `print_keypresses` task over and over again.
 
 ### Executor with Waker Support
