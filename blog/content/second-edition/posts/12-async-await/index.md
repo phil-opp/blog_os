@@ -997,7 +997,7 @@ Let's summarize the various steps that happen for this example:
 
 ### Async Keyboard Input
 
-Our simple executor does not utilize the `Waker` notifications and simply loops over all tasks until they are done. This wasn't a problem for our example since our `example_task` can directly run to finish on the first `poll` call. To see the performance advantages of a proper `Waker` implementation, we first need to create a task that is truly asynchronous, i.e. a task that will probably return `Poll::Pending` on the first `poll` call. 
+Our simple executor does not utilize the `Waker` notifications and simply loops over all tasks until they are done. This wasn't a problem for our example since our `example_task` can directly run to finish on the first `poll` call. To see the performance advantages of a proper `Waker` implementation, we first need to create a task that is truly asynchronous, i.e. a task that will probably return `Poll::Pending` on the first `poll` call.
 
 We already have some kind of asynchronicity in our system that we can use for this: hardware interrupts. As we learned in the [_Interrupts_] post, hardware interrupts can occur at arbitrary points in time, determined by some external device. For example, a hardware timer sends an interrupt to the CPU after some predefined time elapsed. When the CPU receives an interrupt, it immediately transfers control to the corresponding handler function defined in the interrupt descriptor table (IDT).
 
@@ -1037,7 +1037,7 @@ default-features = false
 features = ["alloc"]
 ```
 
-By default, the crate depends on the standard library. To make it `no_std` compatible, we need to disable its default features and instead enable the `alloc` feature. <span class="gray">(Note that depending on the main `crossbeam` crate does not work here because it is missing an export of the `queue` module for `no_std`. I filed a [pull request](https://github.com/crossbeam-rs/crossbeam/pull/480) to fix this.)</span>
+By default, the crate depends on the standard library. To make it `no_std` compatible, we need to disable its default features and instead enable the `alloc` feature. <span class="gray">(Note that depending on the main `crossbeam` crate does not work here because it is missing an export of the `queue` module for `no_std`. I filed a [pull request](https://github.com/crossbeam-rs/crossbeam/pull/480) to fix this, but it wasn't released on crates.io yet.)</span>
 
 ##### Queue Implementation
 
@@ -1084,19 +1084,23 @@ To fill the scancode queue, we create a new `add_scancode` function that we will
 ```rust
 // in src/task/keyboard.rs
 
+use crate::println;
+
 /// Called by the keyboard interrupt handler
 ///
 /// Must not block or allocate.
-pub(crate) add_scancode(scancode: u8) {
+pub(crate) fn add_scancode(scancode: u8) {
     if let Ok(queue) = SCANCODE_QUEUE.try_get() {
-        if let Err(_) = scancode_queue.push(scancode) {
+        if let Err(_) = queue.push(scancode) {
             println!("WARNING: scancode queue full; dropping keyboard input");
         }
+    } else {
+        println!("WARNING: scancode queue uninitialized");
     }
 }
 ```
 
-We use the [`OnceCell::try_get`] to get a reference to the initialized queue. If the queue is not initialized yet, we do nothing and ignore the keyboard scancode. It's important that we don't try to initialize the queue in this function because it will be called by the interrupt handler, which should not perform heap allocations. Since this function should not be callable from our `main.rs`, we use the `pub(crate)` visibility to make it only available to our `lib.rs`.
+We use the [`OnceCell::try_get`] to get a reference to the initialized queue. If the queue is not initialized yet, we ignore the keyboard scancode and print a warning. It's important that we don't try to initialize the queue in this function because it will be called by the interrupt handler, which should not perform heap allocations. Since this function should not be callable from our `main.rs`, we use the `pub(crate)` visibility to make it only available to our `lib.rs`.
 
 [`OnceCell::try_get`]: https://docs.rs/conquer-once/0.2.0/conquer_once/raw/struct.OnceCell.html#method.try_get
 
@@ -1127,11 +1131,11 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 We removed all the keyboard handling code from this function and instead added a call to the `add_scancode` function. The rest of the function stays the same as before.
 
-As expected, keypresses are no longer printed to the screen when we run our project using `cargo xrun` now. Instead, the scancodes are added to the `SCANCODE_QUEUE`. After 100 keystrokes, the queue becomes full and we see the warning about dropped keyboard input on the screen.
+As expected, keypresses are no longer printed to the screen when we run our project using `cargo xrun` now. Instead, we see the warning that the scancode queue is uninitialized for every keystroke.
 
 #### Scancode Stream
 
-To read the scancodes from the queue in an asynchronous way, we create a new `ScancodeStream` type:
+To initialize the `SCANCODE_QUEUE` and read the scancodes from the queue in an asynchronous way, we create a new `ScancodeStream` type:
 
 ```rust
 // in src/task/keyboard.rs
@@ -1148,6 +1152,7 @@ impl ScancodeStream {
             _private: (),
         }
     }
+}
 ```
 
 The purpose of the `_private` field is to prevent construction of the struct from outside of the module. This makes the `new` function the only way to construct the type. In the function, we first try to initialize the `SCANCODE_QUEUE` static. We panic if it is already initialized to ensure that only a single `ScancodeStream` type can be created.
@@ -1198,6 +1203,7 @@ Now we can import and implement the `Stream` trait:
 ```rust
 // in src/task/keyboard.rs
 
+use core::{pin::Pin, task::{Poll, Context}};
 use futures_util::stream::Stream;
 
 impl Stream for ScancodeStream {
@@ -1234,6 +1240,8 @@ Let's use the [`AtomicWaker`] type to define a static `WAKER`:
 ```rust
 // in src/task/keyboard.rs
 
+use futures_util::task::AtomicWaker;
+
 static WAKER: AtomicWaker = AtomicWaker::new();
 ```
 
@@ -1249,7 +1257,7 @@ The contract defined by `poll`/`poll_next` requires that the task registers a wa
 impl Stream for ScancodeStream {
     type Item = u8;
 
-    fn poll_next(self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<u8>> {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<u8>> {
         let queue = SCANCODE_QUEUE
             .try_get()
             .expect("scancode queue not initialized");
@@ -1260,8 +1268,8 @@ impl Stream for ScancodeStream {
         }
 
         WAKER.register(&cx.waker());
-        match scancodes.pop() {
-            Ok(scancode) => Poll::Ready(scancode),
+        match queue.pop() {
+            Ok(scancode) => Poll::Ready(Some(scancode)),
             Err(crossbeam_queue::PopError) => Poll::Pending,
         }
     }
@@ -1344,14 +1352,14 @@ Let's add the `print_keypresses` task to our executor in our `main.rs` to get wo
 ```rust
 // in src/main.rs
 
-use blog_os::task::keyboard;
-
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    use blog_os::task::keyboard;
+
     // […] initialization routines, including `init_heap`
 
     let mut executor = SimpleExecutor::new();
     executor.spawn(Task::new(example_task()));
-    executor.spawn(Task::new(keyboard::print_keypresses()));
+    executor.spawn(Task::new(keyboard::print_keypresses())); // new
     executor.run();
 
     // […] test_main, "it did not crash" message, hlt_loop
