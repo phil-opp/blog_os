@@ -19,4 +19,8 @@ impl Task {
     fn poll(&mut self, context: &mut Context) -> Poll<()> {
         self.future.as_mut().poll(context)
     }
+
+    fn id(&self) -> usize {
+        &*self.future as *const _ as *const () as usize
+    }
 }
