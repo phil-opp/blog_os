@@ -24,6 +24,7 @@ version = "0.1.0"
 dependencies = [
  "bootloader",
  "conquer-once",
+ "cooked-waker",
  "crossbeam-queue",
  "futures-util",
  "lazy_static",
@@ -60,6 +61,27 @@ name = "conquer-util"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "654fb2472cc369d311c547103a1fa81d467bef370ae7a0680f65939895b1182a"
+
+[[package]]
+name = "cooked-waker"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0032e8be0680b63daf14b0fd7fd57f85fd6897951e110b041d32e839a831914"
+dependencies = [
+ "cooked-waker-derive",
+ "stowaway",
+]
+
+[[package]]
+name = "cooked-waker-derive"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74ded02b04a8ff53ea7328cd71297cde598bee70d165ad92512bdb7e20be9d74"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "cpuio"
@@ -159,6 +181,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5894c618ce612a3fa23881b152b608bafb8c56cfc22f434a3ba3120b40f7b587"
 
 [[package]]
+name = "proc-macro2"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c09721c6781493a2a492a96b5a5bf19b65917fe6728884e7c44dd0c60ca3435"
+dependencies = [
+ "unicode-xid",
+]
+
+[[package]]
+name = "quote"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bdc6c187c65bca4260c9011c9e3132efe4909da44726bad24cf7572ae338d7f"
+dependencies = [
+ "proc-macro2",
+]
+
+[[package]]
 name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -180,6 +220,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "stowaway"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32b13d61e782863c0eaeeaf7e8e580dc956a625851fd2fb73e5e92db9601c891"
+
+[[package]]
+name = "syn"
+version = "1.0.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0df0eb663f387145cab623dea85b09c2c5b4b0aef44e945d928e682fce71bb03"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-xid",
+]
+
+[[package]]
 name = "uart_16550"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -188,6 +245,12 @@ dependencies = [
  "bitflags",
  "x86_64",
 ]
+
+[[package]]
+name = "unicode-xid"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"
 
 [[package]]
 name = "volatile"
