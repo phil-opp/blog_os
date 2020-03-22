@@ -1366,9 +1366,75 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-When we execute `cargo xrun` now, we see that keyboard input works again:
+When we execute `cargo xrun` now, we see that keyboard input works again, but only for a short time:
 
-TODO image
+![QEMU printing output for keypresses "H", "e", and "l", then it hangs](keyboard-deadlock.gif)
+
+After pressing a few keys, the complete execution hangs. Not even the dots by the timer interrupt are printed anymore. Such bugs are typically caused by a [_deadlock_], which is a state where we endlessly wait on some lock. To find out where the program hangs, the best approach is to connect a debugger and print the backtrace. Expand the section below for the exact debugging steps:
+
+[_deadlock_]: https://en.wikipedia.org/wiki/Deadlock
+
+<details style="margin-bottom: 1rem;">
+<summary><strong>Debugging Steps</strong></summary>
+
+- Make sure `gdb` or `gdb-multiarch` is installed on your system.
+- Pass the `-s` flag to QEMU when running your kernel. You can do this through the command `cargo xrun -- -s`.
+- Run `gdb` with the file name of your kernel as argument:
+  ```
+  gdb target/x86_64-blog_os/debug/blog_os
+  ```
+- From the `gdb` console, connect to the QEMU instance by executing `target ext :1234`.
+- Print the backtrace by executing `backtrace` or `bt`.
+
+
+The backtrace in this case looks like this:
+
+```
+#0  AtomicBool::load (self=0x22d250 <blog_os::allocator::ALLOCATOR>, …)
+    at libcore/sync/atomic.rs:404
+#1  spin::Mutex<T>::obtain_lock (self=0x22d250 <blog_os::allocator::ALLOCATOR>)
+    at spin-0.5.2/src/mutex.rs:134
+#2  spin::Mutex<T>::lock (self=0x22d250 <blog_os::allocator::ALLOCATOR>)
+    at spin-0.5.2/src/mutex.rs:158
+#3  blog_os::allocator::Locked<A>::lock (…)
+    at src/allocator.rs:73
+#4  Locked::dealloc (…) at src/allocator/fixed_size_block.rs:83
+#5  __rg_dealloc (…) at src/allocator.rs:19
+#6  alloc::alloc::dealloc (…) at liballoc/alloc.rs:103
+#7  alloc::alloc::Global::dealloc (…) at liballoc/alloc.rs:174
+#8  alloc::sync::Arc<T>::drop_slow (…) at liballoc/sync.rs:743
+#9  alloc::sync::Arc<T>::drop (…) at liballoc/sync.rs:1249
+#10 core::ptr::drop_in_place () at libcore/ptr/mod.rs:174
+#11 blog_os::task::simple_executor::DummyWaker::wake (…)
+    at src/task/simple_executor.rs:37
+#12 alloc::task::raw_waker::wake (waker=0x4444444400d0)
+    at liballoc/task.rs:69
+#13 core::task::wake::Waker::wake (self=...) at libcore/task/wake.rs:241
+#14 AtomicWaker::wake (self=0x22d210 <blog_os::task::keyboard::WAKER>)
+    at futures-core-0.3.4/src/task/__internal/atomic_waker.rs:355
+#15 blog_os::task::keyboard::add_scancode (scancode=31) at src/task/keyboard.rs:24
+#16 blog_os::interrupts::keyboard_interrupt_handler (…) at src/interrupts.rs:87
+```
+
+Note that I shortened the output a bit to make it more readable.
+
+</details>
+
+From the backtrace, we can deduce that the deadlock was caused by the following order of operations:
+
+```
+keyboard_interrupt_handler -> add_scancode -> AtomicWaker::wake
+-> GlobalAlloc::dealloc -> allocator::Locked::lock
+```
+
+TODO
+
+
+
+#### Fixing the Deadlock
+
+
+
 
 If you keep an eye on the CPU utilization of your computer, you will see that the `QEMU` process now keeps one CPU completely busy. This happens because our `SimpleExecutor` polls tasks over and over again in a loop. So even if we don't press any keys on the keyboard, the executor repeatedly calls `poll` on our `print_keypresses` task, even though the task cannot make any progress and will return `Poll::Pending` each time.
 
