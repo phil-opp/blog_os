@@ -7,27 +7,16 @@ use crate::print;
 
 static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 
-pub struct ScancodeStream;
+pub struct ScancodeStream {
+    _private: (),
+}
 
 impl ScancodeStream {
     pub fn new() -> Self {
         SCANCODE_QUEUE.try_init_once(|| ArrayQueue::new(100))
             .expect("ScancodeStream::new should only be called once");
-        ScancodeStream
-    }
-
-    pub async fn print_keypresses(mut self) {
-        let mut keyboard = Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore);
-
-        while let Some(scancode) = self.next().await {
-            if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
-                if let Some(key) = keyboard.process_keyevent(key_event) {
-                    match key {
-                        DecodedKey::Unicode(character) => print!("{}", character),
-                        DecodedKey::RawKey(key) => print!("{:?}", key),
-                    }
-                }
-            }
+        ScancodeStream {
+            _private: (),
         }
     }
 }
@@ -42,6 +31,22 @@ impl Stream for ScancodeStream {
         match queue.pop() {
             Ok(scancode) => Poll::Ready(Some(scancode)),
             Err(crossbeam_queue::PopError) => Poll::Pending,
+        }
+    }
+}
+
+pub async fn print_keypresses() {
+    let mut scancodes = ScancodeStream::new();
+    let mut keyboard = Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore);
+
+    while let Some(scancode) = scancodes.next().await {
+        if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+            if let Some(key) = keyboard.process_keyevent(key_event) {
+                match key {
+                    DecodedKey::Unicode(character) => print!("{}", character),
+                    DecodedKey::RawKey(key) => print!("{:?}", key),
+                }
+            }
         }
     }
 }
