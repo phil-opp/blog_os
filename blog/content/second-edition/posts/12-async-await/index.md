@@ -890,53 +890,68 @@ The struct contains a single `task_queue` field of type [`VecDeque`], which is b
 
 #### Dummy Waker
 
-In order to call the `poll` method, we need to create a [`Context`] type, which wraps a [`Waker`] type. To start simple, we will first create a dummy waker that does nothing. The simplest way to do this is by implementing the unstable [`Wake`] trait for an empty `DummyWaker` struct:
+In order to call the `poll` method, we need to create a [`Context`] type, which wraps a [`Waker`] type. To start simple, we will first create a dummy waker that does nothing. For this, we create a [`RawWaker`] instance, which defines the implementation of the different `Waker` methods, and then use the [`Waker::from_raw`] function to turn it into a `Waker`:
 
-[`Wake`]: https://doc.rust-lang.org/nightly/alloc/task/trait.Wake.html
+[`RawWaker`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html
+[`Waker::from_raw`]: https://doc.rust-lang.org/stable/core/task/struct.Waker.html#method.from_raw
 
 ```rust
 // in src/task/simple_executor.rs
 
-use alloc::{sync::Arc, task::Wake};
+use core::task::{Waker, RawWaker};
 
-struct DummyWaker;
+fn dummy_raw_waker() -> RawWaker {
+    todo!();
+}
 
-impl Wake for DummyWaker {
-    fn wake(self: Arc<Self>) {
-        // do nothing
-    }
+fn dummy_waker() -> Waker {
+    unsafe { Waker::from_raw(dummy_raw_waker()) }
 }
 ```
 
-The trait is still unstable, so we have to add **`#![feature(wake_trait)]`** to the top of our `lib.rs` to use it. The `wake` method of the trait is normally responsible for waking the corresponding task in the executor. However, our `SimpleExecutor` will not differentiate between ready and waiting tasks, so we don't need to do anything on `wake` calls.
+The `from_raw` function is unsafe because undefined behavior can occur if the programmer does not uphelp the documented requirements of `RawWaker`. Before we look at the implementation of the `dummy_raw_waker` function, we first try to understand how the `RawWaker` type works.
 
-Since wakers are normally shared between the executor and the asynchronous tasks, the `wake` method requires that the `Self` instance is wrapped in the [`Arc`] type, which implements reference-counted ownership. The basic idea is that the value is heap-allocated and the number of active references to it are counted. If the number of active references reaches zero, the value is no longer needed and can be deallocated.
+##### `RawWaker`
 
+The [`RawWaker`] type requires the programmer to explicitly define a [_virtual method table_] (_vtable_) that specifies the functions that should be called when the `RawWaker` is cloned, woken, or dropped. The layout of this vtable is defined by the [`RawWakerVTable`] type. Each function receives a `*const ()` argument that is basically a _type-erased_ `&self` pointer to some struct, e.g. allocated on the heap. The reason for using a `*const ()` pointer instead of a proper reference is that the `RawWaker` type should be non-generic. The pointer value that is passed to the functions is the `data` pointer given to [`RawWaker::new`].
+
+[_virtual method table_]: https://en.wikipedia.org/wiki/Virtual_method_table
+[`RawWakerVTable`]: https://doc.rust-lang.org/stable/core/task/struct.RawWakerVTable.html
+[`RawWaker::new`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html#method.new
+
+Typically, the `RawWaker` is created for some heap allocated struct that is wrapped into the [`Box`] or [`Arc`] type. For such types, methods like [`Box::into_raw`] can be used to convert the `Box<T>` to a `*const T` pointer. This pointer can then be casted to an anonymous `*const ()` pointer and passed to `RawWaker::new`. Since each vtable function receives the same `*const ()` as argument, the functions can sately cast the pointer back to a `Box<T>` or a `&T` to operate on it. As you can imagine, this process is highly dangerous and can easily lead to undefined behavior on mistakes. For this reason, manually creating a `RawWaker` is not recommended unless necessary.
+
+[`Box`]: https://doc.rust-lang.org/stable/alloc/boxed/struct.Box.html
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
+[`Box::into_raw`]: https://doc.rust-lang.org/stable/alloc/boxed/struct.Box.html#method.into_raw
 
-To make our `DummyWaker` usable with the [`Context`] type, we need a method to convert it to the [`Waker`] defined in the core library:
+##### A Dummy `RawWaker`
+
+While manually creating a `RawWaker` is not recommended, there is currently no other way to create a dummy `Waker` that does nothing. Fortunately, the fact that we want to do nothing makes it relatively safe to implement the `dummy_raw_waker` function:
 
 ```rust
 // in src/task/simple_executor.rs
 
-use core::task::Waker;
+use core::task::RawWakerVTable;
 
-impl DummyWaker {
-    fn to_waker(self) -> Waker {
-        Waker::from(Arc::new(self))
+fn dummy_raw_waker() -> RawWaker {
+    fn no_op(_: *const ()) {}
+    fn clone(_: *const ()) -> RawWaker {
+        dummy_raw_waker()
     }
+
+    let vtable = &RawWakerVTable::new(clone, no_op, no_op, no_op);
+    RawWaker::new(0 as *const (), vtable)
 }
 ```
 
-The method first makes the `self` instance reference-counted by wrapping it in an [`Arc`]. Then it uses the [`Waker::from`] method to create the `Waker`. This method is available for all reference counted types that implement the [`Wake`] trait.
+First, we define two inner functions named `no_op` and `clone`. The `no_op` function takes a `*const ()` pointer and does nothing. The `clone` function also takes a `*const ()` pointer and returns a new `RawWaker` by calling `dummy_raw_waker` again. We use these two functions to create a minimal `RawWakerVTable`: The `clone` function is used for the cloning operations and the `no_op` function is used for all other operations. Since the `RawWaker` does nothing, it does not matter that we return a new `RawWaker` from `clone` instead of cloning it.
 
-[`Waker::from`]: TODO
-
-Now we have a way to create a `Waker` instance, we can use it to implement a `run` method on our executor.
+After creating the `vtable`, we use the [`RawWaker::new`] function to create the `RawWaker`. The passed `*const ()` does not matter since none of the vtable function uses it. For this reason, we simply pass a null pointer.
 
 #### A `run` Method
 
-The most simple `run` method is to repeatedly poll all queued tasks in a loop until all are done. This is not very efficient since it does not utilize the notifications of the `Waker` type, but it is an easy way to get things running:
+Now we have a way to create a `Waker` instance, we can use it to implement a `run` method on our executor. The most simple `run` method is to repeatedly poll all queued tasks in a loop until all are done. This is not very efficient since it does not utilize the notifications of the `Waker` type, but it is an easy way to get things running:
 
 ```rust
 // in src/task/simple_executor.rs
@@ -1366,78 +1381,57 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-When we execute `cargo xrun` now, we see that keyboard input works again, but only for a short time:
+When we execute `cargo xrun` now, we see that keyboard input works again:
 
-![QEMU printing output for keypresses "H", "e", and "l", then it hangs](keyboard-deadlock.gif)
-
-After pressing a few keys, the complete execution hangs. Not even the dots by the timer interrupt are printed anymore. Such bugs are typically caused by a [_deadlock_], which is a state where we endlessly wait on some lock. To find out where the program hangs, the best approach is to connect a debugger and print the backtrace. Expand the section below for the exact debugging steps:
-
-[_deadlock_]: https://en.wikipedia.org/wiki/Deadlock
-
-<details style="margin-bottom: 1rem;">
-<summary><strong>Debugging Steps</strong></summary>
-
-- Make sure `gdb` or `gdb-multiarch` is installed on your system.
-- Pass the `-s` flag to QEMU when running your kernel. You can do this through the command `cargo xrun -- -s`.
-- Run `gdb` with the file name of your kernel as argument:
-  ```
-  gdb target/x86_64-blog_os/debug/blog_os
-  ```
-- From the `gdb` console, connect to the QEMU instance by executing `target ext :1234`.
-- Print the backtrace by executing `backtrace` or `bt`.
-
-
-The backtrace in this case looks like this:
-
-```
-#0  AtomicBool::load (self=0x22d250 <blog_os::allocator::ALLOCATOR>, …)
-    at libcore/sync/atomic.rs:404
-#1  spin::Mutex<T>::obtain_lock (self=0x22d250 <blog_os::allocator::ALLOCATOR>)
-    at spin-0.5.2/src/mutex.rs:134
-#2  spin::Mutex<T>::lock (self=0x22d250 <blog_os::allocator::ALLOCATOR>)
-    at spin-0.5.2/src/mutex.rs:158
-#3  blog_os::allocator::Locked<A>::lock (…)
-    at src/allocator.rs:73
-#4  Locked::dealloc (…) at src/allocator/fixed_size_block.rs:83
-#5  __rg_dealloc (…) at src/allocator.rs:19
-#6  alloc::alloc::dealloc (…) at liballoc/alloc.rs:103
-#7  alloc::alloc::Global::dealloc (…) at liballoc/alloc.rs:174
-#8  alloc::sync::Arc<T>::drop_slow (…) at liballoc/sync.rs:743
-#9  alloc::sync::Arc<T>::drop (…) at liballoc/sync.rs:1249
-#10 core::ptr::drop_in_place () at libcore/ptr/mod.rs:174
-#11 blog_os::task::simple_executor::DummyWaker::wake (…)
-    at src/task/simple_executor.rs:37
-#12 alloc::task::raw_waker::wake (waker=0x4444444400d0)
-    at liballoc/task.rs:69
-#13 core::task::wake::Waker::wake (self=...) at libcore/task/wake.rs:241
-#14 AtomicWaker::wake (self=0x22d210 <blog_os::task::keyboard::WAKER>)
-    at futures-core-0.3.4/src/task/__internal/atomic_waker.rs:355
-#15 blog_os::task::keyboard::add_scancode (scancode=31) at src/task/keyboard.rs:24
-#16 blog_os::interrupts::keyboard_interrupt_handler (…) at src/interrupts.rs:87
-```
-
-Note that I shortened the output a bit to make it more readable.
-
-</details>
-
-From the backtrace, we can deduce that the deadlock was caused by the following order of operations:
-
-```
-keyboard_interrupt_handler -> add_scancode -> AtomicWaker::wake
--> GlobalAlloc::dealloc -> allocator::Locked::lock
-```
-
-TODO
-
-
-
-#### Fixing the Deadlock
-
-
-
+TODO image
 
 If you keep an eye on the CPU utilization of your computer, you will see that the `QEMU` process now keeps one CPU completely busy. This happens because our `SimpleExecutor` polls tasks over and over again in a loop. So even if we don't press any keys on the keyboard, the executor repeatedly calls `poll` on our `print_keypresses` task, even though the task cannot make any progress and will return `Poll::Pending` each time.
 
 To fix this, we need to create an executor that properly utilizes the `Waker` notifications. This way, the executor is notified when the next keyboard interrupt occurs, so it does not need to keep polling the `print_keypresses` task over and over again.
 
 ### Executor with Waker Support
+
+
+#### The `Wake` Trait
+
+The simplest way to do this is by implementing the unstable [`Wake`] trait for an empty `DummyWaker` struct:
+
+[`Wake`]: https://doc.rust-lang.org/nightly/alloc/task/trait.Wake.html
+
+```rust
+// in src/task/simple_executor.rs
+
+use alloc::{sync::Arc, task::Wake};
+
+struct DummyWaker;
+
+impl Wake for DummyWaker {
+    fn wake(self: Arc<Self>) {
+        // do nothing
+    }
+}
+```
+
+The trait is still unstable, so we have to add **`#![feature(wake_trait)]`** to the top of our `lib.rs` to use it. The `wake` method of the trait is normally responsible for waking the corresponding task in the executor. However, our `SimpleExecutor` will not differentiate between ready and waiting tasks, so we don't need to do anything on `wake` calls.
+
+Since wakers are normally shared between the executor and the asynchronous tasks, the `wake` method requires that the `Self` instance is wrapped in the [`Arc`] type, which implements reference-counted ownership. The basic idea is that the value is heap-allocated and the number of active references to it are counted. If the number of active references reaches zero, the value is no longer needed and can be deallocated.
+
+[`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
+
+To make our `DummyWaker` usable with the [`Context`] type, we need a method to convert it to the [`Waker`] defined in the core library:
+
+```rust
+// in src/task/simple_executor.rs
+
+use core::task::Waker;
+
+impl DummyWaker {
+    fn to_waker(self) -> Waker {
+        Waker::from(Arc::new(self))
+    }
+}
+```
+
+The method first makes the `self` instance reference-counted by wrapping it in an [`Arc`]. Then it uses the [`Waker::from`] method to create the `Waker`. This method is available for all reference counted types that implement the [`Wake`] trait.
+
+[`Waker::from`]: TODO
