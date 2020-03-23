@@ -1002,7 +1002,7 @@ Let's summarize the various steps that happen for this example:
 
 - First, a new instance of our `SimpleExecutor` type is created with an empty `task_queue`.
 - Next, we call the asynchronous `example_task` function, which returns a future. We wrap this future in the `Task` type, which moves it to the heap and pins it, and then add the task to the `task_queue` of the executor through the `spawn` method.
-- We then wall the `run` method to start the execution of the single task in the queue. This involves:
+- We then call the `run` method to start the execution of the single task in the queue. This involves:
     - Popping the task from the front of the `task_queue`.
     - Creating a `RawWaker` for the task, converting it to a [`Waker`] instance, and then creating a [`Context`] instance from it.
     - Calling the [`poll`] method on the future of the task, using the `Context` we just created.
