@@ -913,7 +913,7 @@ The `from_raw` function is unsafe because undefined behavior can occur if the pr
 
 ##### `RawWaker`
 
-The [`RawWaker`] type requires the programmer to explicitly define a [_virtual method table_] (_vtable_) that specifies the functions that should be called when the `RawWaker` is cloned, woken, or dropped. The layout of this vtable is defined by the [`RawWakerVTable`] type. Each function receives a `*const ()` argument that is basically a _type-erased_ `&self` pointer to some struct, e.g. allocated on the heap. The reason for using a `*const ()` pointer instead of a proper reference is that the `RawWaker` type should be non-generic. The pointer value that is passed to the functions is the `data` pointer given to [`RawWaker::new`].
+The [`RawWaker`] type requires the programmer to explicitly define a [_virtual method table_] (_vtable_) that specifies the functions that should be called when the `RawWaker` is cloned, woken, or dropped. The layout of this vtable is defined by the [`RawWakerVTable`] type. Each function receives a `*const ()` argument that is basically a _type-erased_ `&self` pointer to some struct, e.g. allocated on the heap. The reason for using a `*const ()` pointer instead of a proper reference is that the `RawWaker` type should be non-generic but still support arbitrary types. The pointer value that is passed to the functions is the `data` pointer given to [`RawWaker::new`].
 
 [_virtual method table_]: https://en.wikipedia.org/wiki/Virtual_method_table
 [`RawWakerVTable`]: https://doc.rust-lang.org/stable/core/task/struct.RawWakerVTable.html
@@ -961,7 +961,7 @@ use core::task::{Context, Poll};
 impl SimpleExecutor {
     pub fn run(&mut self) {
         while let Some(mut task) = self.task_queue.pop_front() {
-            let waker = DummyWaker.to_waker();
+            let waker = dummy_waker();
             let mut context = Context::from_waker(&waker);
             match task.poll(&mut context) {
                 Poll::Ready(()) => {} // task done
@@ -972,7 +972,7 @@ impl SimpleExecutor {
 }
 ```
 
-The function uses a `while let` loop to handle all tasks in the `task_queue`. For each task, it first creates a `Context` type by wrapping a `Waker` instance created from our `DummyWaker` type. Then it invokes the `Task::poll` method with this `Context`. If the `poll` method returns `Poll::Ready`, the task is finished and we can continue with the next task. If the task is still `Poll::Pending`, we add it to the back of the queue again so that it will be polled again in a subsequent loop iteration.
+The function uses a `while let` loop to handle all tasks in the `task_queue`. For each task, it first creates a `Context` type by wrapping a `Waker` instance returned by our `dummy_waker` function. Then it invokes the `Task::poll` method with this `Context`. If the `poll` method returns `Poll::Ready`, the task is finished and we can continue with the next task. If the task is still `Poll::Pending`, we add it to the back of the queue again so that it will be polled again in a subsequent loop iteration.
 
 #### Trying It
 
@@ -1004,7 +1004,7 @@ Let's summarize the various steps that happen for this example:
 - Next, we call the asynchronous `example_task` function, which returns a future. We wrap this future in the `Task` type, which moves it to the heap and pins it, and then add the task to the `task_queue` of the executor through the `spawn` method.
 - We then wall the `run` method to start the execution of the single task in the queue. This involves:
     - Popping the task from the front of the `task_queue`.
-    - Creating a `DummyWaker` for the task, converting it to a [`Waker`] instance, and then creating a [`Context`] instance from it.
+    - Creating a `RawWaker` for the task, converting it to a [`Waker`] instance, and then creating a [`Context`] instance from it.
     - Calling the [`poll`] method on the future of the task, using the `Context` we just created.
     - Since the `example_task` does not wait for anything, it can directly run til its end on the first `poll` call. This is where the _"async number: 42"_ line is printed.
     - Since the `example_task` directly returns `Poll::Ready`, it is not added back to the task queue.
@@ -1391,6 +1391,11 @@ To fix this, we need to create an executor that properly utilizes the `Waker` no
 
 ### Executor with Waker Support
 
+
+
+
+
+### Old
 
 #### The `Wake` Trait
 
