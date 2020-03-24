@@ -1391,11 +1391,165 @@ When we execute `cargo xrun` now, we see that keyboard input works again:
 
 If you keep an eye on the CPU utilization of your computer, you will see that the `QEMU` process now continuously keeps the CPU busy. This happens because our `SimpleExecutor` polls tasks over and over again in a loop. So even if we don't press any keys on the keyboard, the executor repeatedly calls `poll` on our `print_keypresses` task, even though the task cannot make any progress and will return `Poll::Pending` each time.
 
-To fix this, we need to create an executor that properly utilizes the `Waker` notifications. This way, the executor is notified when the next keyboard interrupt occurs, so it does not need to keep polling the `print_keypresses` task over and over again.
-
 ### Executor with Waker Support
 
+To fix the performance problem, we need to create an executor that properly utilizes the `Waker` notifications. This way, the executor is notified when the next keyboard interrupt occurs, so it does not need to keep polling the `print_keypresses` task over and over again.
 
+#### Task Id
+
+The first step in creating an executor with proper support for waker notifications is to give each task an unique ID. This is required because we need a way to specify which task should be woken. We start by creating a new `TaskId` wrapper type:
+
+```rust
+// in src/task/mod.rs
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct TaskId(usize);
+```
+
+The `TaskId` struct is a simple wrapper type around `usize`. We derive a number of traits for it to make it printable, copyable, comparable, and sortable. The latter is important because we want to use `TaskId` as the key type of a [`BTreeMap`] in a moment.
+
+[`BTreeMap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
+
+To assign each task an unique ID, we utilize the fact that each task stores a pinned, heap-allocated future:
+
+```rust
+pub struct Task {
+    future: Pin<Box<dyn Future<Output = ()>>>,
+}
+```
+
+The idea is to use the memory address of this future as an ID. This address is unique because because no two futures are stored at the same address. The `Pin` type ensures that they can't move in memory, so we also know that the address stays the same as long as the task exists. These properties make the address a good candidate for an ID.
+
+The implementation looks like this:
+
+```rust
+// in src/task/mod.rs
+
+impl Task {
+    fn id(&self) -> TaskId {
+        use core::ops::Deref;
+
+        let addr = Pin::deref(&self.future) as *const _ as *const () as usize;
+        TaskId(addr)
+    }
+}
+```
+
+We use the `deref` method of the [`Deref`] trait to get a reference to the heap allocated future. To get the corresponding memory address, we convert this reference to a raw pointer and then to an `usize`. Finally, we return the address wrapped in the `TaskId` struct.
+
+[`Deref`]: https://doc.rust-lang.org/core/ops/trait.Deref.html
+
+#### The `Executor` Type
+
+We create our new `Executor` type in a `task::executor` module:
+
+```rust
+// in src/task/mod.rs
+
+pub mod executor;
+```
+
+```rust
+// in src/task/executor.rs
+
+use super::{Task, TaskId};
+use alloc::collections::{BTreeMap, VecDeque};
+use core::task::Waker;
+use crossbeam_queue::ArrayQueue;
+
+pub struct Executor {
+    task_queue: VecDeque<Task>,
+    waiting_tasks: BTreeMap<TaskId, Task>,
+    wake_queue: Arc<ArrayQueue<TaskId>>,
+    waker_cache: BTreeMap<TaskId, Waker>,
+}
+
+impl Executor {
+    pub fn new() -> Self {
+        Executor {
+            task_queue: VecDeque::new(),
+            waiting_tasks: BTreeMap::new(),
+            wake_queue: Arc::new(ArrayQueue::new(100)),
+            waker_cache: BTreeMap::new(),
+        }
+    }
+}
+```
+
+In addition to a `task_queue`, that stores the tasks that are ready to execute, the type has a `waiting_tasks` map, a `wake_queue` and a `waker_cache`. These fields have the following purpose:
+
+- The `waiting_tasks` map stores tasks that returned `Poll::Pending`. The map is indexed by the `TaskId` to allow efficient continuation a specific task.
+- The `wake_queue` is an reference-counted [`ArrayQueue`] of task IDs. It will be shared between the executor and wakers. The idea is that the wakers push the ID of the woken task to the queue. The executor sits on the receiving end of the queue and moves all woken tasks from the `waiting_tasks` map back to the `task_queue`. The reason for using a fixed-size queue instead of an unbounded queue such as [`SegQueue`] is that interrupt handlers that should not allocate will push to this queue.
+- The `waker_cache` map caches the [`Waker`] of a task after its creation. This has two reasons: First, it improves performance by reusing the same waker for multiple wake-ups of the same task instead of creating a new waker each time. Second, it ensures that reference-counted wakers are not deallocated inside interrupt handlers because it could lead to deadlocks (there are more details on this below).
+
+[`SegQueue`]: https://docs.rs/crossbeam-queue/0.2.1/crossbeam_queue/struct.SegQueue.html
+
+To create an `Executor`, we provide a simple `new` function. We choose a capacity of 100 for the `wake_queue`, which should be more than enough for the foreseeable future. In case our system will have more than 100 concurrent tasks at some point, we can easily increase this size.
+
+#### Spawning Tasks
+
+As for the `SimpleExecutor`, we provide a `spawn` method on our `Executor` type that adds a given task to the `task_queue`:
+
+```rust
+// in src/task/executor.rs
+
+impl Executor {
+    pub fn spawn(&mut self, task: Task) {
+        self.task_queue.push_back(task)
+    }
+}
+```
+
+While this method requires a `&mut` reference to the executor it is not callable after the executor has been started. If it should be possible to let tasks themselves spawn additional tasks at some point, we could change the type of the task queue to a concurrent queue such as [`SegQueue`] and share a reference to this queue with tasks.
+
+#### Running Tasks
+
+To execute all tasks in the `task_queue`, we create a private `run_ready_tasks` method:
+
+```rust
+// in src/task/executor.rs
+
+impl Executor {
+    fn run_ready_tasks(&mut self) {
+        while let Some(mut task) = self.task_queue.pop_front() {
+            let waker = self.waker_cache.entry(&task.id()).or_insert_with(|| {
+                self.create_waker(task.id())
+            });
+            let mut context = Context::from_waker(waker);
+            match task.poll(&mut context) {
+                Poll::Ready(()) => {
+                    // task done -> remove cached waker
+                    self.waker_cache.remove(task.id());
+                }
+                Poll::Pending => {
+                    if self.waiting_tasks.insert(task.id(), task).is_some() {
+                        panic!("task with same ID already in waiting_tasks");
+                    }
+                },
+            }
+        }
+    }
+}
+```
+
+The basic idea of this function is similar to our `SimpleExecutor`: Loop over all tasks in the `task_queue`, create a waker for each task, and then poll it. However, instead of adding pending tasks back to the end of the `task_queue`, we store them in the `waiting_tasks` map until they are woken again. The waker creation is done by a method named `create_waker`, whose implemenation will be shown in a moment.
+
+To avoid the performance overhead of creating a waker on each poll, we use the `waker_cache` map to store the waker for each task after it has been created. For this, we first use the [`BTreeMap::entry`] method to find the [`Entry`] corresponding to the task ID. We then use the [`Entry::or_insert_with`] method to optionally create a new `Waker` if not present and then get a reference to the `Waker`. Note reusing wakers like this is not possible for all waker implementations, but our implemenation will allow it. To clean up the `waker_cache` when a task is finished, we use use the [`BTreeMap::remove`] method to remove any cached waker for that task from the map.
+
+[`BTreeMap::entry`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.entry
+[`Entry`]: https://doc.rust-lang.org/alloc/collections/btree_map/enum.Entry.html
+[`Entry::or_insert_with`]: https://doc.rust-lang.org/alloc/collections/btree_map/enum.Entry.html#method.or_insert_with
+[`BTreeMap::remove`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.remove
+
+#### Waker Design
+
+- Waker
+- Executor::create_waker
+- Executor::wake_tasks
+
+#### A `run` Method
+
+#### Sleep If Idle
 
 
 
