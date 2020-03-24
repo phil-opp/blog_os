@@ -1284,7 +1284,10 @@ impl Stream for ScancodeStream {
 
         WAKER.register(&cx.waker());
         match queue.pop() {
-            Ok(scancode) => Poll::Ready(Some(scancode)),
+            Ok(scancode) => {
+                WAKER.take();
+                Poll::Ready(Some(scancode))
+            },
             Err(crossbeam_queue::PopError) => Poll::Pending,
         }
     }
@@ -1295,9 +1298,10 @@ Like before, we first use the [`OnceCell::try_get`] function to get a reference 
 
 If the first call to `queue.pop()` does not succeed, the queue is potentially empty. Only potentially because the interrupt handler might have filled the queue asynchronously immediately after the check. Since this race condition can occur again on the next check, we need to register the `Waker` in the `WAKER` static before the second check. This way, a wakeup might happen before we return `Poll::Pending`, but it is guaranteed that we get a wakeup for any scancodes pushed after the check.
 
-After registering the `Waker` contained in the passed [`Context`] through the [`AtomicWaker::register`] function, we try popping from the queue a second time. If it now succeeds, we return `Poll::Ready`. Otherwise, we return `Poll::Pending` like before, but this time with a registered wakeup.
+After registering the `Waker` contained in the passed [`Context`] through the [`AtomicWaker::register`] function, we try popping from the queue a second time. If it now succeeds, we return `Poll::Ready`. We also remove the registered waker again using [`Waker::take`] because a waker notification is no longer needed. In case `queue.pop()` fails for a second time, we return `Poll::Pending` like before, but this time with a registered wakeup.
 
 [`AtomicWaker::register`]: https://docs.rs/futures-util/0.3.4/futures_util/task/struct.AtomicWaker.html#method.register
+[`AtomicWaker::take`]: https://docs.rs/futures/0.3.4/futures/task/struct.AtomicWaker.html#method.take
 
 Note that there are two ways that a wakeup can happen for a task that did not return `Poll::Pending` (yet). One way is the mentioned race condition when the wakeup happens immediately before returning `Poll::Pending`. The other way is when the queue is no longer empty after registering the waker so that `Poll::Ready` is returned. Since these spurious wakeups are not preventable, the executor needs to be able to handle them correctly.
 
