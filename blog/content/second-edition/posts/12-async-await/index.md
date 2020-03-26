@@ -8,7 +8,7 @@ date = 0000-01-01
 chapter = "Interrupts"
 +++
 
-In this post we explore _cooperative multitasking_ and the _async/await_ feature of Rust. This will make it possible to run multiple concurrent tasks in our kernel. TODO
+In this post we explore _cooperative multitasking_ and the _async/await_ feature of Rust. We take a detailed look how async/await works in Rust, including the design of the `Future` trait, the state machine transformation, and _pinning_. We then add basic support for async/await to our kernel by creating an asynchronous keyboard task and a basic executor.
 
 <!-- more -->
 
