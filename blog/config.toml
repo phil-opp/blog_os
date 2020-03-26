@@ -19,6 +19,7 @@ skip_prefixes = [
     "https://www.amd.com/system/files/TechDocs/", # seems to have problems with PDFs
     "https://developer.apple.com/library/archive/qa/qa1118/_index.html", # results in a 401 (I don't know why)
     "https://github.com", # rate limiting often leads to "Error 429 Too Many Requests"
+    "https://www.linkedin.com/", # seems to send invalid HTTP status codes
 ]
 skip_anchor_prefixes = [
      "https://github.com/", # see https://github.com/getzola/zola/issues/805
