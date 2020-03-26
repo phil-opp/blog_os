@@ -1368,9 +1368,9 @@ pub async fn print_keypresses() {
 
 The code is very similar to the code we had in our [keyboard interrupt handler] before we modified it in this post. The only difference is that, instead of reading the scancode from an I/O port, we take it from the `ScancodeStream`. For this, we first create a new `Scancode` stream and then repeatedly use the [`next`] method provided by the [`StreamExt`] trait to get a `Future` that resolves to the next element in the stream. By using the `await` operator on it, we asynchronously wait for the result of the future.
 
-[keyboard interrupt handler]: TODO
-[`next`]: TODO
-[`StreamExt`]: TODO
+[keyboard interrupt handler]: @/second-edition/posts/07-hardware-interrupts/index.md#interpreting-the-scancodes
+[`next`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html#method.next
+[`StreamExt`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html
 
 We use `while let` to loop until the stream returns `None` to signal its end. Since our `poll_next` method never returns `None`, this is effectively and endless loop, so the `print_keypresses` task never finishes.
 
