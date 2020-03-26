@@ -95,7 +95,7 @@ Language-supported implementations of cooperative tasks are often even able to b
 
 The drawback of cooperative multitasking is that an uncooperative task can potentially run for an unlimited amount of time. Thus, a malicious or buggy task can prevent other tasks from running and slow down or even block the whole system. For this reason, cooperative multitasking should only be used when all tasks are known to cooperate. As a counterexample, it's not a good idea to make the operating system rely on the cooperation of arbitrary userlevel programs.
 
-However, the strong performance and memory benefits of cooperative multitasking make it a good approach for usage _within_ a program, especially in combination with asynchronous operations. Since an operating system kernel is a performance-critical program that interacts with asynchronous hardware, cooperative multitasking seems like a good approach for concurrency in our kernel.
+However, the strong performance and memory benefits of cooperative multitasking make it a good approach for usage _within_ a program, especially in combination with asynchronous operations. Since an operating system kernel is a performance-critical program that interacts with asynchronous hardware, cooperative multitasking seems like a good approach for implementing concurrency.
 
 ## Async/Await in Rust
 
@@ -180,11 +180,11 @@ A more efficient approach could be to _block_ the current thread until the futur
 
 #### Future Combinators
 
-An alternative to waiting is to use future combinators. Future combinators are functions like `map` that allow chaining and combining futures together, similar to the functions on [`Iterator`]. Instead of waiting on the future, these combinators return a future themselves, which applies the mapping operation on `poll`.
+An alternative to waiting is to use future combinators. Future combinators are methods like `map` that allow chaining and combining futures together, similar to the methods on [`Iterator`]. Instead of waiting on the future, these combinators return a future themselves, which applies the mapping operation on `poll`.
 
 [`Iterator`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html
 
-As an example, a simple `string_len` combinator for converting `Future<Output = String>` to a `Future<Output = usize>` could look like this:
+As an example, a simple `string_len` combinator for converting a `Future<Output = String>` to a `Future<Output = usize>` could look like this:
 
 ```rust
 struct StringLen<F> {
@@ -316,7 +316,7 @@ We see that the first `poll` call starts the function and lets it run until it r
 
 #### Saving State
 
-In order to be able to continue from the last waiting state, the state machine must save it internally. In addition, it must save all the variables that it needs to continue execution on the next `poll` call. This is where the compiler can really shine: Since it knows which variables are used when, it can automatically generate structs with exactly the variables that are needed.
+In order to be able to continue from the last waiting state, the state machine must keep track of the current state internally. In addition, it must save all the variables that it needs to continue execution on the next `poll` call. This is where the compiler can really shine: Since it knows which variables are used when, it can automatically generate structs with exactly the variables that are needed.
 
 As an example, the compiler generates structs like the following for the above `example` function:
 
@@ -521,7 +521,7 @@ struct WaitingOnWriteState {
 }
 ```
 
-We need to store both the `array` and `element` variables because `element` is required for the return type and `array` is referenced by `element`. Since `element` is a reference, it stores a _pointer_ (i.e. a memory address) to the referenced element. We used `0x1001a` as an example memory address here. In reality it needs to be the address of the last element of the `array` field, so it depends on where the struct lives in memory. Structs with such internal pointers are called _self-referential_ structs because they reference themselves from one of their fields.
+We need to store both the `array` and `element` variables because `element` is required for the return value and `array` is referenced by `element`. Since `element` is a reference, it stores a _pointer_ (i.e. a memory address) to the referenced element. We used `0x1001a` as an example memory address here. In reality it needs to be the address of the last element of the `array` field, so it depends on where the struct lives in memory. Structs with such internal pointers are called _self-referential_ structs because they reference themselves from one of their fields.
 
 #### The Problem with Self-Referential Structs
 
@@ -588,7 +588,7 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 
 ([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
 
-Here we use the [`mem::replace`] function to replace the heap allocated value with a new struct instance. This allows us to move the original `heap_value` to the stack, while the `self_ptr` field of the struct is now a dangling pointer that still points to the old heap address. When you try to run the example on the playground, you see that the printed _"value at:"_ and _"internal reference:"_ lines show indeed different pointers. So heap allpcating a value is not enough to make self-references safe.
+Here we use the [`mem::replace`] function to replace the heap allocated value with a new struct instance. This allows us to move the original `heap_value` to the stack, while the `self_ptr` field of the struct is now a dangling pointer that still points to the old heap address. When you try to run the example on the playground, you see that the printed _"value at:"_ and _"internal reference:"_ lines show indeed different pointers. So heap allocating a value is not enough to make self-references safe.
 
 [`mem::replace`]: https://doc.rust-lang.org/nightly/core/mem/fn.replace.html
 
@@ -675,7 +675,7 @@ The [`get_unchecked_mut`] function works on a `Pin<&mut T>` instead of a `Pin<Bo
 
 [`Pin::as_mut`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.as_mut
 
-Now the only error left is the desired error on `mem::replace`. Remember, this operation tries to move the heap allocated value to stack, which would break the self-reference stored in the `self_ptr` field. By opting out of `Unpin` and using `Pin<Box<T>>`, we can prevent this error and safely work with self-referential structs. Note that the compiler is not able to prove that the creation of the self-reference is safe (yet), so we need to use an unsafe block and verify the correctness ourselves.
+Now the only error left is the desired error on `mem::replace`. Remember, this operation tries to move the heap allocated value to stack, which would break the self-reference stored in the `self_ptr` field. By opting out of `Unpin` and using `Pin<Box<T>>`, we can prevent this operation at compile time and thus safely work with self-referential structs. As we saw, the compiler is not able to prove that the creation of the self-reference is safe (yet), so we need to use an unsafe block and verify the correctness ourselves.
 
 #### Stack Pinning and `Pin<&mut T>`
 
@@ -717,15 +717,7 @@ In case you're interested in understanding how to safely implement a future comb
 
 Using async/await, it is possible to ergonomically work with futures in a completely asynchronous way. However, as we learned above, futures do nothing until they are polled. This means we have to have to call `poll` on them at some point, otherwise the asynchronous code is never executed.
 
-With a single future, we can always wait for the future using a loop [as described above](#waiting-on-futures). However, this approach is very inefficient, especially for programs that create a large number of futures. An example for such a program could be a web server that handles each request using an asynchronous function:
-
-```rust
-async fn handle_request(request: Request) {…}
-```
-
-The function is invoked for each request the webserver receives. It has no return type, so it results in a future with the empty type `()` as output. When the web server receives many concurrent requests, this can easily result in hundreds or thousands of futures in the system. While these futures have no return value that we need for future computations, we still want them to be polled to completion because otherwise the requests would not be handled.
-
-The most common approach for this is to define a global _executor_ that is responsible for polling all futures in the system until they are finished.
+With a single future, we can always wait for each future manually using a loop [as described above](#waiting-on-futures). However, this approach is very inefficient and not practical for programs that create a large number of futures. The most common solution for this problem is to define a global _executor_ that is responsible for polling all futures in the system until they are finished.
 
 #### Executors
 
@@ -740,7 +732,7 @@ To avoid the overhead of polling futures over and over again, executors typicall
 
 #### Wakers
 
-The idea behind the waker API is that a special [`Waker`] type is passed to each invocation of `poll`, wrapped in a [`Context`] type for future extensibility. This `Waker` type is created by the executor and can be used by the asynchronous task to signal its (partial) completion. As a result, the executor does not need to call `poll` on a future that previously returned `Poll::Pending` again until it is notified by the corresponding waker.
+The idea behind the waker API is that a special [`Waker`] type is passed to each invocation of `poll`, wrapped in the [`Context`] type. This `Waker` type is created by the executor and can be used by the asynchronous task to signal its (partial) completion. As a result, the executor does not need to call `poll` on a future that previously returned `Poll::Pending` until it is notified by the corresponding waker.
 
 [`Context`]: https://doc.rust-lang.org/nightly/core/task/struct.Context.html
 
@@ -752,7 +744,7 @@ async fn write_file() {
 }
 ```
 
-This function asynchronously writes the string "Hello" to a `foo.txt` file. Since hard disk writes take some time, the first `poll` call on this future will likely return `Poll::Pending`. However, the hard disk driver will internally store the `Waker` passed in the `poll` call and signal it as soon as the file was written to disk. This way, the executor does not need to waste any time trying to `poll` the future again before it receives the waker notification.
+This function asynchronously writes the string "Hello" to a `foo.txt` file. Since hard disk writes take some time, the first `poll` call on this future will likely return `Poll::Pending`. However, the hard disk driver will internally store the `Waker` passed to the `poll` call and use it to notify the executor when the file was written to disk. This way, the executor does not need to waste any time trying to `poll` the future again before it receives the waker notification.
 
 We will see how the `Waker` type works in detail when we create our own executor with waker support in the implementation section of this post.
 
@@ -765,7 +757,7 @@ It might not be immediately apparent, but futures and async/await are an impleme
 - Each future that is added to the executor is basically an cooperative task.
 - Instead of using an explicit yield operation, futures give up control of the CPU core by returning `Poll::Pending` (or `Poll::Ready` at the end).
     - There is nothing that forces futures to give up the CPU. If they want, they can never return from `poll`, e.g. by spinning endlessly in a loop.
-    - Since each future can block the execution of the other futures in the executor, we need to trust they are not malicious.
+    - Since each future can block the execution of the other futures in the executor, we need to trust them to be not malicious.
 - Futures internally store all the state they need to continue execution on the next `poll` call. With async/await, the compiler automatically detects all variables that are needed and stores them inside the generated state machine.
     - Only the minimum state required for continuation is saved.
     - Since the `poll` method gives up the call stack when it returns, the same stack can be used for polling other futures.
