@@ -766,7 +766,7 @@ We see that futures and async/await fit the cooperative multitasking pattern per
 
 ## Implementation
 
-Now that we understand how cooperative multitasking based on futures and async/await works in Rust, it's time to add support for it to our kernel. Since the [`Future`] trait is part of the `core` library and async/await is a feature of the language itself, there is nothing special we need to do to use it in our `#![no_std]` kernel. The only requirement is that we use at least nightly-TODO of Rust because async/await was not `no_std` compatible before.
+Now that we understand how cooperative multitasking based on futures and async/await works in Rust, it's time to add support for it to our kernel. Since the [`Future`] trait is part of the `core` library and async/await is a feature of the language itself, there is nothing special we need to do to use it in our `#![no_std]` kernel. The only requirement is that we use at least nightly `2020-03-25` of Rust because async/await was not `no_std` compatible before. <span class="gray">(There is no nightly with the rustfmt and clippy components since then, so you might have to pass the `--force` flag to `rustup update`, which performs the update even if it removes some installed components.)</span>
 
 With a recent-enough nightly, we can start using async/await in our `main.rs`:
 
