@@ -32,7 +32,10 @@
             </div>
         </header>
 
-        <main>{% block main %}{% endblock main %}</main>
+        <div>
+            {% block toc_aside %}{% endblock toc_aside %}
+            <main>{% block main %}{% endblock main %}</main>
+        </div>
 
         <div>{% block after_main %}{% endblock after_main %}</div>
 
