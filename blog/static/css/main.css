@@ -315,9 +315,13 @@ a.zola-anchor:hover {
 div.note {
   padding: .7rem 1rem;
   margin: 1rem .2rem;
-  border: 2px solid #99ff99;
+  border: 2px solid #6ad46a;
   border-radius: 5px;
-  background-color: #99ff0022;
+  background-color: #99ff991f;
+}
+
+div.note p:last-child {
+  margin-bottom: 0;
 }
 
 div.warning {
@@ -430,6 +434,10 @@ details summary h3, details summary h4, details summary h5, details summary h6 {
   margin-top: .5rem;
 }
 
+h5 {
+  font-style: italic;
+  font-size: 0.9rem;
+}
 .gray {
   color: gray;
 }

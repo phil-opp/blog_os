@@ -10,7 +10,7 @@ The code for each post lives in a separate git branch. This makes it possible to
 
 **The code for the latest post is available [here][latest-post].**
 
-[latest-post]: https://github.com/phil-opp/blog_os/tree/post-11
+[latest-post]: https://github.com/phil-opp/blog_os/tree/post-12
 
 You can find the branch for each post by following the `(source code)` link in the [post list](#posts) below. The branches are named `post-XX` where `XX` is the post number, for example `post-03` for the _VGA Text Mode_ post or `post-07` for the _Hardware Interrupts_ post. For build instructions, see the Readme of the respective branch.
 
@@ -58,6 +58,11 @@ The goal of this project is to provide step-by-step tutorials in individual blog
     ([source code](https://github.com/phil-opp/blog_os/tree/post-10))
 - [Allocator Designs](https://os.phil-opp.com/allocator-designs/)
     ([source code](https://github.com/phil-opp/blog_os/tree/post-11))
+
+**Multitasking**:
+
+- [Async/Await](https://os.phil-opp.com/async-await/)
+    ([source code](https://github.com/phil-opp/blog_os/tree/post-12))
 
 ## First Edition Posts
 
