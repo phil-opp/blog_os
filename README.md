@@ -1,10 +1,10 @@
-# Blog OS (Allocator Designs)
+# Blog OS (Async/Await)
 
-[![Build Status](https://github.com/phil-opp/blog_os/workflows/Build%20Code/badge.svg?branch=post-11)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Build+Code%22+branch%3Apost-11)
+[![Build Status](https://github.com/phil-opp/blog_os/workflows/Build%20Code/badge.svg?branch=post-12)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Build+Code%22+branch%3Apost-12)
 
-This repository contains the source code for the [Allocator Designs][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
+This repository contains the source code for the [Async/Await][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
-[post]: https://os.phil-opp.com/allocator-designs/
+[post]: https://os.phil-opp.com/async-await/
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
