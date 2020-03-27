@@ -32,6 +32,7 @@ impl Executor {
         loop {
             self.wake_tasks();
             self.run_ready_tasks();
+            self.sleep_if_idle();
         }
     }
 
@@ -62,6 +63,22 @@ impl Executor {
             if let Some(task) = self.waiting_tasks.remove(&task_id) {
                 self.task_queue.push_back(task);
             }
+        }
+    }
+
+    fn sleep_if_idle(&self) {
+        use x86_64::instructions::interrupts::{self, enable_interrupts_and_hlt};
+
+        // fast path
+        if !self.wake_queue.is_empty() {
+            return;
+        }
+
+        interrupts::disable();
+        if self.wake_queue.is_empty() {
+            enable_interrupts_and_hlt();
+        } else {
+            interrupts::enable();
         }
     }
 
