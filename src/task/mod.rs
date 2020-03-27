@@ -5,6 +5,7 @@ use core::{
     task::{Context, Poll},
 };
 
+pub mod executor;
 pub mod keyboard;
 pub mod simple_executor;
 
@@ -22,4 +23,14 @@ impl Task {
     fn poll(&mut self, context: &mut Context) -> Poll<()> {
         self.future.as_mut().poll(context)
     }
+
+    fn id(&self) -> TaskId {
+        use core::ops::Deref;
+
+        let addr = Pin::deref(&self.future) as *const _ as *const () as usize;
+        TaskId(addr)
+    }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct TaskId(usize);
