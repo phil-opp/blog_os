@@ -2,7 +2,7 @@
 title = "Async/Await"
 weight = 12
 path = "async-await"
-date = 0000-01-01
+date = 2020-03-27
 
 [extra]
 chapter = "Interrupts"
@@ -1820,6 +1820,3 @@ To utilize the waker notifications of the keyboard task, we created a new `Execu
 Using async/wait, we now have basic support for cooperative multitasking in our kernel. While cooperative multitasking is very efficient, it leads to latency problems when individual tasks keep running for too long and thus prevent other tasks to run. For this reason, it makes sense to also add support for preemptive multitasking to our kernel.
 
 In the next post, we will introduce _threads_ as the most common form of preemptive multitasking. In addition to resolving the problem of long running tasks, threads will also prepare us for utilizing multiple CPU cores and running untrusted user programs in the future.
-
-
-TODO: update date
