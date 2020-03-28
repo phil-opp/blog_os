@@ -537,12 +537,15 @@ We moved the struct a bit so that it starts at address `0x10024` now. This could
 
 #### Possible Solutions
 
-There are two fundamental approaches to solve the dangling pointer problem:
+There are three fundamental approaches to solve the dangling pointer problem:
 
 - **Update the pointer on move:** The idea is to update the internal pointer whenever the struct is moved in memory so that it is still valid after the move. Unfortunately, this approach would require extensive changes to Rust that would result in potentially huge performance losses. The reason is that some kind of runtime would need to keep track of the type of all struct fields and check on every move operation whether a pointer update is required.
+- **Store an offset instead of self-references:**: To avoid the requirement for updating pointers, the compiler could try to store self-references as offsets from the struct's beginning instead. For example, the `element` field of the above `WaitingOnWriteState` struct could be stored in form of an `element_offset` field with value 8 because the array element that the reference points to starts 8 bytes after the struct's beginning. Since the offset stays the same when the struct is moved, no field updates are required.
+
+  The problem of this approach is that it requires the compiler to detect all self-references. This is not possible at compile-time because the value of a reference might depend on user input, so we would need a runtime system again to analyze references and correctly create the state structs. This would not only result in runtime costs, but also prevent certain compiler optimizations, so that it would cause large performance losses again.
 - **Forbid moving the struct:** As we saw above, the dangling pointer only occurs when we move the struct in memory. By completely forbidding move operations on self-referential structs, the problem can be also avoided. The big advantage of this approach is that it can be implemented at the type system level without additional runtime costs. The drawback is that it puts the burden of dealing with move operations on possibly self-referential structs on the programmer.
 
-Rust understandably decided for the second solution. For this, the [_pinning_] API was proposed in [RFC 2349](https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md). In the following, we will give a short overview of this API and explain how it works with async/await and futures.
+Because its principle to provide _zero cost abstractions_, which means that abstractions should not impose additional runtime costs, Rust decided for the third solution. For this, the [_pinning_] API was proposed in [RFC 2349](https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md). In the following, we will give a short overview of this API and explain how it works with async/await and futures.
 
 #### Heap Values
 
