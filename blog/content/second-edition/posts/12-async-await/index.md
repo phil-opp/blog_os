@@ -909,7 +909,7 @@ fn dummy_waker() -> Waker {
 }
 ```
 
-The `from_raw` function is unsafe because undefined behavior can occur if the programmer does not uphelp the documented requirements of `RawWaker`. Before we look at the implementation of the `dummy_raw_waker` function, we first try to understand how the `RawWaker` type works.
+The `from_raw` function is unsafe because undefined behavior can occur if the programmer does not uphold the documented requirements of `RawWaker`. Before we look at the implementation of the `dummy_raw_waker` function, we first try to understand how the `RawWaker` type works.
 
 ##### `RawWaker`
 
@@ -1376,7 +1376,7 @@ The code is very similar to the code we had in our [keyboard interrupt handler] 
 [`next`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html#method.next
 [`StreamExt`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html
 
-We use `while let` to loop until the stream returns `None` to signal its end. Since our `poll_next` method never returns `None`, this is effectively and endless loop, so the `print_keypresses` task never finishes.
+We use `while let` to loop until the stream returns `None` to signal its end. Since our `poll_next` method never returns `None`, this is effectively an endless loop, so the `print_keypresses` task never finishes.
 
 Let's add the `print_keypresses` task to our executor in our `main.rs` to get working keyboard input again:
 
