@@ -191,7 +191,7 @@ struct StringLen<F> {
     inner_future: F,
 }
 
-impl<F> Future for StringLen<F> where Fut: Future<Output = String> {
+impl<F> Future for StringLen<F> where F: Future<Output = String> {
     type Output = usize;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<T> {
