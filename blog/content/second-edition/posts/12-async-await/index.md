@@ -152,7 +152,7 @@ The `poll` method takes two arguments: `self: Pin<&mut Self>` and `cx: &mut Cont
 
 [_pinned_]: https://doc.rust-lang.org/nightly/core/pin/index.html
 
-The purpose of the `cx: &mut Context` parameter is to pass a [`Waker`] instance to the asynchronous task, e.g. the file system load. This `Waker` allows the asynchronous task to signal that it (or a part of it) is finished, e.g. that the file was loaded from disk. Since the main task knows that it will be notified when the `Future` is ready, it does not need to call `poll` over and over again. We will explain this process in more detail later in this post when we implement an own waker type.
+The purpose of the `cx: &mut Context` parameter is to pass a [`Waker`] instance to the asynchronous task, e.g. the file system load. This `Waker` allows the asynchronous task to signal that it (or a part of it) is finished, e.g. that the file was loaded from disk. Since the main task knows that it will be notified when the `Future` is ready, it does not need to call `poll` over and over again. We will explain this process in more detail later in this post when we implement our own waker type.
 
 [`Waker`]: https://doc.rust-lang.org/nightly/core/task/struct.Waker.html
 
