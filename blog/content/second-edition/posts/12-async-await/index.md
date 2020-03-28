@@ -382,7 +382,7 @@ impl Future for ExampleStateMachine {
             match self { // TODO: handle pinning
                 ExampleStateMachine::Start(state) => {…}
                 ExampleStateMachine::WaitingOnFooTxt(state) => {…}
-                ExampleStateMachine::WaitingOnFooTxt(state) => {…}
+                ExampleStateMachine::WaitingOnBarTxt(state) => {…}
                 ExampleStateMachine::End(state) => {…}
             }
         }
