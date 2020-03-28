@@ -1598,11 +1598,11 @@ We push the `task_id` to the referenced `wake_queue`. Since modifications of the
 
 ##### The `Wake` Trait
 
-In order to use our `TaskWaker` type for polling futures, we need to convert it to a [`Waker`] instance first. This is required because the [`Future::poll`] method takes a [`Context`] instance as argument, which can only be constructed from the `Waker` type. While we could do this by providing an implementation of the [`RawWaker`] type, it's both simpler and safer to instead implement the `Arc`-based [`Wake`] trait and then using the [`From`] implementations provided by the standard library to construct the `Waker`.
+In order to use our `TaskWaker` type for polling futures, we need to convert it to a [`Waker`] instance first. This is required because the [`Future::poll`] method takes a [`Context`] instance as argument, which can only be constructed from the `Waker` type. While we could do this by providing an implementation of the [`RawWaker`] type, it's both simpler and safer to instead implement the `Arc`-based [`Wake`][wake-trait] trait and then using the [`From`] implementations provided by the standard library to construct the `Waker`.
 
 The trait implementation looks like this:
 
-[`Wake`]: https://doc.rust-lang.org/nightly/alloc/task/trait.Wake.html
+[wake-trait]: https://doc.rust-lang.org/nightly/alloc/task/trait.Wake.html
 
 ```rust
 // in src/task/simple_executor.rs
