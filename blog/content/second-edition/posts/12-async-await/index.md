@@ -714,7 +714,7 @@ It is worth noting that moving futures before the first `poll` call is fine. Thi
 In case you're interested in understanding how to safely implement a future combinator function using stack pinning yourself, take a look at the relatively short [source of the `map` combinator method][map-src] of the `futures` crate and the section about [projections and structural pinning] of the pin documentation.
 
 [map-src]: https://docs.rs/futures-util/0.3.4/src/futures_util/future/future/map.rs.html
-[projections and structural pinning]: file:///home/philipp/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/share/doc/rust/html/std/pin/index.html#projections-and-structural-pinning
+[projections and structural pinning]: https://doc.rust-lang.org/stable/std/pin/index.html#projections-and-structural-pinning
 
 ### Executors and Wakers
 
