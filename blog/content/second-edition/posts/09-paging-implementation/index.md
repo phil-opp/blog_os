@@ -699,7 +699,7 @@ As expected, the translations of `0xb8000` and the code and stack addresses stay
 
 By using the translation function of the `MappedPageTable` type we can spare ourselves the work of implementing huge page support. We also have access to other page functions such as `map_to`, which we will use in the next section.
 
-At this point we no longer need our `memory::translate_addr` function, so we can delete it.
+At this point we no longer need our `memory::translate_addr` and `memory::translate_addr_inner` functions, so we can delete it.
 
 ### Creating a new Mapping
 
