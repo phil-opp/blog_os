@@ -922,7 +922,7 @@ The [`RawWaker`] type requires the programmer to explicitly define a [_virtual m
 [`RawWakerVTable`]: https://doc.rust-lang.org/stable/core/task/struct.RawWakerVTable.html
 [`RawWaker::new`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html#method.new
 
-Typically, the `RawWaker` is created for some heap allocated struct that is wrapped into the [`Box`] or [`Arc`] type. For such types, methods like [`Box::into_raw`] can be used to convert the `Box<T>` to a `*const T` pointer. This pointer can then be casted to an anonymous `*const ()` pointer and passed to `RawWaker::new`. Since each vtable function receives the same `*const ()` as argument, the functions can sately cast the pointer back to a `Box<T>` or a `&T` to operate on it. As you can imagine, this process is highly dangerous and can easily lead to undefined behavior on mistakes. For this reason, manually creating a `RawWaker` is not recommended unless necessary.
+Typically, the `RawWaker` is created for some heap allocated struct that is wrapped into the [`Box`] or [`Arc`] type. For such types, methods like [`Box::into_raw`] can be used to convert the `Box<T>` to a `*const T` pointer. This pointer can then be casted to an anonymous `*const ()` pointer and passed to `RawWaker::new`. Since each vtable function receives the same `*const ()` as argument, the functions can safely cast the pointer back to a `Box<T>` or a `&T` to operate on it. As you can imagine, this process is highly dangerous and can easily lead to undefined behavior on mistakes. For this reason, manually creating a `RawWaker` is not recommended unless necessary.
 
 [`Box`]: https://doc.rust-lang.org/stable/alloc/boxed/struct.Box.html
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
