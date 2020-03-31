@@ -1327,7 +1327,7 @@ To wake the stored `Waker`, we add a call to `WAKER.wake()` in the `add_scancode
 
 pub(crate) add_scancode(scancode: u8) {
     if let Ok(queue) = SCANCODE_QUEUE.try_get() {
-        if let Err(_) = scancode_queue.push(scancode) {
+        if let Err(_) = queue.push(scancode) {
             println!("WARNING: scancode queue full; dropping keyboard input");
         } else {
             WAKER.wake(); // new
