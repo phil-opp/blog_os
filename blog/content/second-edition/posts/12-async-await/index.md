@@ -718,7 +718,7 @@ In case you're interested in understanding how to safely implement a future comb
 
 ### Executors and Wakers
 
-Using async/await, it is possible to ergonomically work with futures in a completely asynchronous way. However, as we learned above, futures do nothing until they are polled. This means we have to have to call `poll` on them at some point, otherwise the asynchronous code is never executed.
+Using async/await, it is possible to ergonomically work with futures in a completely asynchronous way. However, as we learned above, futures do nothing until they are polled. This means we have to call `poll` on them at some point, otherwise the asynchronous code is never executed.
 
 With a single future, we can always wait for each future manually using a loop [as described above](#waiting-on-futures). However, this approach is very inefficient and not practical for programs that create a large number of futures. The most common solution for this problem is to define a global _executor_ that is responsible for polling all futures in the system until they are finished.
 
