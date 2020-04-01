@@ -38,7 +38,7 @@ impl Executor {
 
     fn run_ready_tasks(&mut self) {
         while let Some(mut task) = self.task_queue.pop_front() {
-            let task_id = task.id();
+            let task_id = task.id;
             if !self.waker_cache.contains_key(&task_id) {
                 self.waker_cache.insert(task_id, self.create_waker(task_id));
             }
