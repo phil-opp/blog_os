@@ -1419,41 +1419,53 @@ The first step in creating an executor with proper support for waker notificatio
 // in src/task/mod.rs
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-struct TaskId(usize);
+struct TaskId(u64);
 ```
 
-The `TaskId` struct is a simple wrapper type around `usize`. We derive a number of traits for it to make it printable, copyable, comparable, and sortable. The latter is important because we want to use `TaskId` as the key type of a [`BTreeMap`] in a moment.
+The `TaskId` struct is a simple wrapper type around `u64`. We derive a number of traits for it to make it printable, copyable, comparable, and sortable. The latter is important because we want to use `TaskId` as the key type of a [`BTreeMap`] in a moment.
 
 [`BTreeMap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
 
-To assign each task an unique ID, we utilize the fact that each task stores a pinned, heap-allocated future:
+To create a new unique ID, we create a `TaskID::new` function:
 
 ```rust
-pub struct Task {
-    future: Pin<Box<dyn Future<Output = ()>>>,
-}
-```
+use core::sync::atomic::{AtomicU64, Ordering};
 
-The idea is to use the memory address of this future as an ID. This address is unique because no two futures are stored at the same address. The `Pin` type ensures that they can't move in memory, so we also know that the address stays the same as long as the task exists. These properties make the address a good candidate for an ID.
-
-The implementation looks like this:
-
-```rust
-// in src/task/mod.rs
-
-impl Task {
-    fn id(&self) -> TaskId {
-        use core::ops::Deref;
-
-        let addr = Pin::deref(&self.future) as *const _ as *const () as usize;
-        TaskId(addr)
+impl TaskId {
+    fn new() -> Self {
+        static NEXT_ID: AtomicU64 = AtomicU64::new(0);
+        TaskId(NEXT_ID.fetch_add(1, Ordering::Relaxed))
     }
 }
 ```
 
-We use the `deref` method of the [`Deref`] trait to get a reference to the heap allocated future. To get the corresponding memory address, we convert this reference to a raw pointer and then to an `usize`. Finally, we return the address wrapped in the `TaskId` struct.
+The function uses an static `NEXT_ID` variable of type [`AtomicU64`] to ensure that each ID is assigned only once. The [`fetch_add`] method atomically increases the value and returns the previous value in one atomic operation. This means that even when the `TaskId::new` method is called in parallel, every ID is returned exactly once. The [`Ordering`] parameter defines whether the compiler is allowed to reorder the `fetch_add` operation in the instructions stream. Since we only require that the ID is unique, the `Relaxed` ordering with the weakest requirements is enough in this case.
 
-[`Deref`]: https://doc.rust-lang.org/core/ops/trait.Deref.html
+[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
+[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
+[`Ordering`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
+
+We can now extend our `Task` type with an additional `id` field:
+
+```rust
+// in src/task/mod.rs
+
+pub struct Task {
+    id: TaskId, // new
+    future: Pin<Box<dyn Future<Output = ()>>>,
+}
+
+impl Task {
+    pub fn new(future: impl Future<Output = ()> + 'static) -> Task {
+        Task {
+            id: TaskId::new(), // new
+            future: Box::pin(future),
+        }
+    }
+}
+```
+
+The new `id` field makes it possible to uniquely name a task, which required for waking a specific task.
 
 #### The `Executor` Type
 
@@ -1533,7 +1545,7 @@ use core::task::{Context, Poll};
 impl Executor {
     fn run_ready_tasks(&mut self) {
         while let Some(mut task) = self.task_queue.pop_front() {
-            let task_id = task.id();
+            let task_id = task.id;
             if !self.waker_cache.contains_key(&task_id) {
                 self.waker_cache.insert(task_id, self.create_waker(task_id));
             }
