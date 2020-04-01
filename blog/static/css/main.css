@@ -441,3 +441,7 @@ h5 {
 .gray {
   color: gray;
 }
+
+a strong {
+  color: #268bd2;
+}
