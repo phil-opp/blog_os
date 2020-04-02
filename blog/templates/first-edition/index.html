@@ -51,7 +51,7 @@
 
 <hr>
 {% set extra = get_section(path = "first-edition/extra/_index.md") %}
-<h1>{{ extra.title }}</h1>
+<h2>{{ extra.title }}</h2>
 <ul>
     {% for subsection_path in extra.subsections %}
         {% set subsection = get_section(path=subsection_path) %}
