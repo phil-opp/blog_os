@@ -950,7 +950,7 @@ fn dummy_raw_waker() -> RawWaker {
 
 First, we define two inner functions named `no_op` and `clone`. The `no_op` function takes a `*const ()` pointer and does nothing. The `clone` function also takes a `*const ()` pointer and returns a new `RawWaker` by calling `dummy_raw_waker` again. We use these two functions to create a minimal `RawWakerVTable`: The `clone` function is used for the cloning operations and the `no_op` function is used for all other operations. Since the `RawWaker` does nothing, it does not matter that we return a new `RawWaker` from `clone` instead of cloning it.
 
-After creating the `vtable`, we use the [`RawWaker::new`] function to create the `RawWaker`. The passed `*const ()` does not matter since none of the vtable function uses it. For this reason, we simply pass a null pointer.
+After creating the `vtable`, we use the [`RawWaker::new`] function to create the `RawWaker`. The passed `*const ()` does not matter since none of the vtable functions uses it. For this reason, we simply pass a null pointer.
 
 #### A `run` Method
 
@@ -1021,7 +1021,7 @@ Let's summarize the various steps that happen for this example:
     - Popping the task from the front of the `task_queue`.
     - Creating a `RawWaker` for the task, converting it to a [`Waker`] instance, and then creating a [`Context`] instance from it.
     - Calling the [`poll`] method on the future of the task, using the `Context` we just created.
-    - Since the `example_task` does not wait for anything, it can directly run til its end on the first `poll` call. This is where the _"async number: 42"_ line is printed.
+    - Since the `example_task` does not wait for anything, it can directly run till its end on the first `poll` call. This is where the _"async number: 42"_ line is printed.
     - Since the `example_task` directly returns `Poll::Ready`, it is not added back to the task queue.
 - The `run` method returns after the `task_queue` becomes empty. The execution of our `kernel_main` function continues and the _"It did not crash!"_ message is printed.
 
@@ -1039,7 +1039,7 @@ In the following, we will create an asynchronous task based on the keyboard inte
 
 Currently, we handle the keyboard input directly in the interrupt handler. This is not a good idea for the long term because interrupt handlers should stay as short as possible as they might interrupt important work. Instead, interrupt handlers should only perform the minimal amount of work necessary (e.g. reading the keyboard scancode) and leave the rest of the work (e.g. interpreting the scancode) to a background task.
 
-A common pattern for delegating work to a background task is to create some sort of queue. The interrupt handler pushes work units of work to the queue and the background task handles the work in the queue. Applied to our keyboard interrupt, this means that the interrupt handler only reads the scancode from the keyboard, pushes it to the queue, and then returns. The keyboard task sits on the other end of the queue and interprets and handles each scancode that is pushed to it:
+A common pattern for delegating work to a background task is to create some sort of queue. The interrupt handler pushes units of work to the queue and the background task handles the work in the queue. Applied to our keyboard interrupt, this means that the interrupt handler only reads the scancode from the keyboard, pushes it to the queue, and then returns. The keyboard task sits on the other end of the queue and interprets and handles each scancode that is pushed to it:
 
 ![Scancode queue with 8 slots on the top. Keyboard interrupt handler on the bottom left with a "push scancode" arrow to the left of the queue. Keyboard task on the bottom right with a "pop scancode" queue coming from the right side of the queue.](scancode-queue.svg)
 
@@ -1088,7 +1088,7 @@ use crossbeam_queue::ArrayQueue;
 static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 ```
 
-Since the [`ArrayQueue::new`] performs a heap allocation, which are not possible at compile time ([yet][const-heap-alloc]), we can't initialize the static variable directly. Instead, we use the [`OnceCell`] type of the [`conquer_once`] crate, which makes it possible to perform safe one-time initialization of static values. To include the crate, we need to add it as a dependency in our `Cargo.toml`:
+Since the [`ArrayQueue::new`] performs a heap allocation, which is not possible at compile time ([yet][const-heap-alloc]), we can't initialize the static variable directly. Instead, we use the [`OnceCell`] type of the [`conquer_once`] crate, which makes it possible to perform safe one-time initialization of static values. To include the crate, we need to add it as a dependency in our `Cargo.toml`:
 
 [`ArrayQueue::new`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html#method.new
 [const-heap-alloc]: https://github.com/rust-lang/const-eval/issues/20
@@ -1185,7 +1185,7 @@ impl ScancodeStream {
 
 The purpose of the `_private` field is to prevent construction of the struct from outside of the module. This makes the `new` function the only way to construct the type. In the function, we first try to initialize the `SCANCODE_QUEUE` static. We panic if it is already initialized to ensure that only a single `ScancodeStream` instance can be created.
 
-To make the scancodes available to asynchronous tasks, the next step is to implement `poll`-like method that tries to pop the next scancode off the queue. While this sounds like we should implement [`Future`] trait for our type, this does not quite fit here. The problem is that the `Future` trait only abstracts over a single asynchronous value and expects that the `poll` method is not called again after it returns `Poll::Ready`. Our scancode queue, however, contains multiple asynchronous values so that it is ok to keep polling it.
+To make the scancodes available to asynchronous tasks, the next step is to implement `poll`-like method that tries to pop the next scancode off the queue. While this sounds like we should implement the [`Future`] trait for our type, this does not quite fit here. The problem is that the `Future` trait only abstracts over a single asynchronous value and expects that the `poll` method is not called again after it returns `Poll::Ready`. Our scancode queue, however, contains multiple asynchronous values so that it is ok to keep polling it.
 
 ##### The `Stream` Trait
 
@@ -1277,7 +1277,7 @@ The idea is that the `poll_next` implementation stores the current waker in this
 
 ##### Storing a Waker
 
-The contract defined by `poll`/`poll_next` requires that the task registers a wakeup for the passed `Waker` when it returns `Poll::Pending`. Let's modify our `poll_next` implementation to satisfy these requirement:
+The contract defined by `poll`/`poll_next` requires that the task registers a wakeup for the passed `Waker` when it returns `Poll::Pending`. Let's modify our `poll_next` implementation to satisfy this requirement:
 
 ```rust
 // in src/task/keyboard.rs
@@ -1439,7 +1439,7 @@ impl TaskId {
 }
 ```
 
-The function uses an static `NEXT_ID` variable of type [`AtomicU64`] to ensure that each ID is assigned only once. The [`fetch_add`] method atomically increases the value and returns the previous value in one atomic operation. This means that even when the `TaskId::new` method is called in parallel, every ID is returned exactly once. The [`Ordering`] parameter defines whether the compiler is allowed to reorder the `fetch_add` operation in the instructions stream. Since we only require that the ID is unique, the `Relaxed` ordering with the weakest requirements is enough in this case.
+The function uses a static `NEXT_ID` variable of type [`AtomicU64`] to ensure that each ID is assigned only once. The [`fetch_add`] method atomically increases the value and returns the previous value in one atomic operation. This means that even when the `TaskId::new` method is called in parallel, every ID is returned exactly once. The [`Ordering`] parameter defines whether the compiler is allowed to reorder the `fetch_add` operation in the instructions stream. Since we only require that the ID is unique, the `Relaxed` ordering with the weakest requirements is enough in this case.
 
 [`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
 [`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
@@ -1465,7 +1465,7 @@ impl Task {
 }
 ```
 
-The new `id` field makes it possible to uniquely name a task, which required for waking a specific task.
+The new `id` field makes it possible to uniquely name a task, which is required for waking a specific task.
 
 #### The `Executor` Type
 
@@ -1576,7 +1576,7 @@ To avoid the performance overhead of creating a waker on each poll, we use the `
 [`BTreeMap::get`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.get
 [`expect`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.expect
 
-Note that reusing wakers like this is not possible for all waker implementations, but our implemenation will allow it. To clean up the `waker_cache` when a task is finished, we use use the [`BTreeMap::remove`] method to remove any cached waker for that task from the map.
+Note that reusing wakers like this is not possible for all waker implementations, but our implemenation will allow it. To clean up the `waker_cache` when a task is finished, we use the [`BTreeMap::remove`] method to remove any cached waker for that task from the map.
 
 [`BTreeMap::remove`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.remove
 
@@ -1613,7 +1613,7 @@ We push the `task_id` to the referenced `wake_queue`. Since modifications of the
 
 ##### The `Wake` Trait
 
-In order to use our `TaskWaker` type for polling futures, we need to convert it to a [`Waker`] instance first. This is required because the [`Future::poll`] method takes a [`Context`] instance as argument, which can only be constructed from the `Waker` type. While we could do this by providing an implementation of the [`RawWaker`] type, it's both simpler and safer to instead implement the `Arc`-based [`Wake`][wake-trait] trait and then using the [`From`] implementations provided by the standard library to construct the `Waker`.
+In order to use our `TaskWaker` type for polling futures, we need to convert it to a [`Waker`] instance first. This is required because the [`Future::poll`] method takes a [`Context`] instance as argument, which can only be constructed from the `Waker` type. While we could do this by providing an implementation of the [`RawWaker`] type, it's both simpler and safer to instead implement the `Arc`-based [`Wake`][wake-trait] trait and then use the [`From`] implementations provided by the standard library to construct the `Waker`.
 
 The trait implementation looks like this:
 
@@ -1635,9 +1635,9 @@ impl Wake for TaskWaker {
 }
 ```
 
-The trait is still unstable, so we have to add **`#![feature(wake_trait)]`** to the top of our `lib.rs` to use it. Since wakers are commonly shared between the executor and the asynchronous tasks, the trait methods require that the `Self` instance is wrapped in the [`Arc`] type, which implements reference-counted ownership. This means that we have to move our `TaskWaker` to an `Arc` to in order to call them.
+The trait is still unstable, so we have to add **`#![feature(wake_trait)]`** to the top of our `lib.rs` to use it. Since wakers are commonly shared between the executor and the asynchronous tasks, the trait methods require that the `Self` instance is wrapped in the [`Arc`] type, which implements reference-counted ownership. This means that we have to move our `TaskWaker` to an `Arc` in order to call them.
 
-The difference between the `wake` and `wake_by_ref` methods is that the latter only requires a reference the `Arc`, while the former takes ownership of the `Arc` and thus often requires an increase of the reference count. Not all types support waking by reference, so implementing the `wake_by_ref` method is optional, however it can lead to better performance because it avoids unnecessary reference count modifications. In our case, we can simply forward both trait methods to our `wake_task` function, which requires only a shared `&self` reference.
+The difference between the `wake` and `wake_by_ref` methods is that the latter only requires a reference to the `Arc`, while the former takes ownership of the `Arc` and thus often requires an increase of the reference count. Not all types support waking by reference, so implementing the `wake_by_ref` method is optional, however it can lead to better performance because it avoids unnecessary reference count modifications. In our case, we can simply forward both trait methods to our `wake_task` function, which requires only a shared `&self` reference.
 
 ##### Creating Wakers
 
@@ -1699,7 +1699,7 @@ impl Executor {
 }
 ```
 
-This method just calls the `wake_tasks` and `run_ready_tasks` functions in a loop. While we could theoretically return from the function when both the `task_queue` and the `waiting_tasks` map become empty, this would never happen since our `keyboard_task` never finishes, so a simply `loop` should suffice. Since the function never returns, we use the `!` return type to mark the function as [diverging] to the compiler.
+This method just calls the `wake_tasks` and `run_ready_tasks` functions in a loop. While we could theoretically return from the function when both the `task_queue` and the `waiting_tasks` map become empty, this would never happen since our `keyboard_task` never finishes, so a simple `loop` should suffice. Since the function never returns, we use the `!` return type to mark the function as [diverging] to the compiler.
 
 [diverging]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
@@ -1734,7 +1734,7 @@ The basic idea is to execute the [`hlt` instruction] when both the `task_queue` 
 
 [`hlt` instruction]: https://en.wikipedia.org/wiki/HLT_(x86_instruction)
 
-To implement this, we create a new `sleep_if_idle` method to our executor and call it from our `run` method:
+To implement this, we create a new `sleep_if_idle` method in our executor and call it from our `run` method:
 
 ```rust
 // in src/task/executor.rs
@@ -1772,7 +1772,7 @@ if self.wake_queue.is_empty() {
 
 In case this interrupt pushes to the `wake_queue`, we put the CPU to sleep even though there is now a ready task. In the worst case, this could delay the handling of a keyboard interrupt until the next keypress or the next timer interrupt. So how do we prevent it?
 
-The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen between in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`enable_interrupts_and_hlt`] function provided by the [`x86_64`] crate. This function is only available since version 0.9.6, so you might need to update your `x86_64` dependency to use it.
+The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`enable_interrupts_and_hlt`] function provided by the [`x86_64`] crate. This function is only available since version 0.9.6, so you might need to update your `x86_64` dependency to use it.
 
 [`enable_interrupts_and_hlt`]: https://docs.rs/x86_64/0.9.6/x86_64/instructions/interrupts/fn.enable_interrupts_and_hlt.html
 
@@ -1802,13 +1802,13 @@ impl Executor {
 
 To avoid unnecessarily disabling interrupts, we early return if the `wake_queue` is not empty. Otherwise, we disable interrupts and check the `wake_queue` again. If it is still empty, we use the [`enable_interrupts_and_hlt`] function to enable interrupts and put the CPU to sleep as a single atomic operation. In case the queue is no longer empty, it means that an interrupt woke a task between the first and the second check. In that case, we enable interrupts again and directly continue execution without executing `hlt`.
 
-Now our executor properly puts the CPU to sleep when there is nothing to do. We can see that the QEMU process as a much lower CPU utilization when we run our kernel using `cargo xrun` again.
+Now our executor properly puts the CPU to sleep when there is nothing to do. We can see that the QEMU process has a much lower CPU utilization when we run our kernel using `cargo xrun` again.
 
 #### Possible Extensions
 
 Our executor is now able to run tasks in an efficient way. It utilizes waker notifications to avoid polling waiting tasks and puts the CPU to sleep when there is currently no work to do. However, our executor is still quite basic and there are many possible ways to extend its functionality:
 
-- **Scheduling:** We currently use the [`VecDeque`] type to implement a _first in first out_ (FIFO) strategy for our `task_queue`, which is often also called _round robin_ scheduling. This strategy might not be the most efficient for all workloads. For example, it might make sense to prioritize latency-critical tasks or task that do a lot of I/O. See the [scheduling chapter] of the [_Operating Systems: Three Easy Pieces_] book or the [Wikipedia article on scheduling][scheduling-wiki] for more information.
+- **Scheduling:** We currently use the [`VecDeque`] type to implement a _first in first out_ (FIFO) strategy for our `task_queue`, which is often also called _round robin_ scheduling. This strategy might not be the most efficient for all workloads. For example, it might make sense to prioritize latency-critical tasks or tasks that do a lot of I/O. See the [scheduling chapter] of the [_Operating Systems: Three Easy Pieces_] book or the [Wikipedia article on scheduling][scheduling-wiki] for more information.
 - **Task Spawning**: Our `Executor::spawn` method currently requires a `&mut self` reference and is thus no longer available after starting the `run` method. To fix this, we could create an additional `Spawner` type that shares some kind of queue with the executor and allows task creation from within tasks themselves. The queue could be for example the `task_queue` directly or a separate queue that the executor checks in its run loop.
 - **Utilizing Threads**: We don't have support for threads yet, but we will add it in the next post. This will make it possible to launch multiple instances of the executor in different threads. The advantage of this approach is that the delay imposed by long running tasks can be reduced because other tasks can run concurrently. This approach also allows it to utilize multiple CPU cores.
 - **Load Balancing**: When adding threading support, it becomes important how to distribute the tasks between the executors to ensure that all CPU cores are utilized. A common technique for this is [_work stealing_].
