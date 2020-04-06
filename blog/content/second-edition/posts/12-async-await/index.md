@@ -469,7 +469,7 @@ ExampleStateMachine::End(_) => {
 
 Futures should not be polled again after they returned `Poll::Ready`, therefore we panic if `poll` is called when we are already in the `End` state.
 
-We now know how the compiler-generated state machine and its implementation of the `Future` trait _could_ look like. In practice, the compiler generates code in different way. (In case you're interested, the implementation is currently based on [_generators_], but this is only an implementation detail.)
+We now know how the compiler-generated state machine and its implementation of the `Future` trait _could_ look like. In practice, the compiler generates code in a different way. (In case you're interested, the implementation is currently based on [_generators_], but this is only an implementation detail.)
 
 [_generators_]: https://doc.rust-lang.org/nightly/unstable-book/language-features/generators.html
 
@@ -545,7 +545,7 @@ There are three fundamental approaches to solve the dangling pointer problem:
   The problem of this approach is that it requires the compiler to detect all self-references. This is not possible at compile-time because the value of a reference might depend on user input, so we would need a runtime system again to analyze references and correctly create the state structs. This would not only result in runtime costs, but also prevent certain compiler optimizations, so that it would cause large performance losses again.
 - **Forbid moving the struct:** As we saw above, the dangling pointer only occurs when we move the struct in memory. By completely forbidding move operations on self-referential structs, the problem can be also avoided. The big advantage of this approach is that it can be implemented at the type system level without additional runtime costs. The drawback is that it puts the burden of dealing with move operations on possibly self-referential structs on the programmer.
 
-Because its principle to provide _zero cost abstractions_, which means that abstractions should not impose additional runtime costs, Rust decided for the third solution. For this, the [_pinning_] API was proposed in [RFC 2349](https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md). In the following, we will give a short overview of this API and explain how it works with async/await and futures.
+Because of its principle to provide _zero cost abstractions_, which means that abstractions should not impose additional runtime costs, Rust decided for the third solution. For this, the [_pinning_] API was proposed in [RFC 2349](https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md). In the following, we will give a short overview of this API and explain how it works with async/await and futures.
 
 #### Heap Values
 
@@ -658,7 +658,7 @@ error[E0596]: cannot borrow data in a dereference of `std::pin::Pin<std::boxed::
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
 ```
 
-Both errors occur because the `Pin<Box<SelfReferential>>` type no longer implements the `DerefMut` trait. This exactly what we wanted because the `DerefMut` trait would return a `&mut` reference, which we want to prevent. This only happens because we both opted-out of `Unpin` and changed `Box::new` to `Box::pin`.
+Both errors occur because the `Pin<Box<SelfReferential>>` type no longer implements the `DerefMut` trait. This is exactly what we wanted because the `DerefMut` trait would return a `&mut` reference, which we want to prevent. This only happens because we both opted-out of `Unpin` and changed `Box::new` to `Box::pin`.
 
 The problem now is that the compiler does not only prevent moving the type in line 16, but also forbids to initialize the `self_ptr` field in line 10. This happens because the compiler can't differentiate between valid and invalid uses of `&mut` references. To get the initialization working again, we have to use the unsafe [`get_unchecked_mut`] method:
 
