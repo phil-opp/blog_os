@@ -18,14 +18,6 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 [at the bottom]: #comments
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-12
 
-<div class="note">
-
-As a personal side note, I'm currently looking for a job in Karlsruhe (Germany) or remote. I would love to do systems programming using Rust, but I'm also open to other opportuni&shy;ties. For more information, see my [_LinkedIn_ profile] or contact me at <job@phil-opp.com>.
-
-[_LinkedIn_ profile]: https://www.linkedin.com/in/phil-opp/
-
-</div>
-
 <!-- toc -->
 
 ## Multitasking
