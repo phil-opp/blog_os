@@ -245,7 +245,7 @@ test-args = […]
 test-success-exit-code = 33         # (0x10 << 1) | 1
 ```
 
-With this configuration, `bootimage` maps our success exit code to exit code 0, so that `cargo xtest` correctly recognizes the success case and does no count the test as failed.
+With this configuration, `bootimage` maps our success exit code to exit code 0, so that `cargo xtest` correctly recognizes the success case and does not count the test as failed.
 
 Our test runner now automatically closes QEMU and correctly reports the test results out. We still see the QEMU window open for a very short time, but it does not suffice to read the results. It would be nice if we could print the test results to the console instead, so that we can still see them after QEMU exited.
 
