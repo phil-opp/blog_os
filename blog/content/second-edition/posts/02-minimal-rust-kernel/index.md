@@ -235,7 +235,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-Note that the entry point needs to be called `_start` regardless of your host OS. The Windows and macOS entry points from the previous post should be deleted.
+Note that the entry point needs to be called `_start` regardless of your host OS.
 
 We can now build the kernel for our new target by passing the name of the JSON file as `--target`:
 
