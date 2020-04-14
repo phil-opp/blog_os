@@ -253,7 +253,7 @@ target = "x86_64-blog_os.json"
 这里的配置告诉 `cargo` 在没有显式声明目标的情况下，使用我们提供的 `x86_64-blog_os.json` 作为目标配置。这意味着保存后，我们可以直接使用：
 
 ```
-cargo build
+cargo xbuild
 ```
 
 来编译我们的内核。[官方提供的一份文档](https://doc.rust-lang.org/cargo/reference/config.html)中有对 cargo 配置文件更详细的说明。
