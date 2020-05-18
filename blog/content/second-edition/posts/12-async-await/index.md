@@ -1612,7 +1612,7 @@ The trait implementation looks like this:
 [wake-trait]: https://doc.rust-lang.org/nightly/alloc/task/trait.Wake.html
 
 ```rust
-// in src/task/simple_executor.rs
+// in src/task/executor.rs
 
 use alloc::task::Wake;
 
