@@ -1473,57 +1473,59 @@ pub mod executor;
 // in src/task/executor.rs
 
 use super::{Task, TaskId};
-use alloc::{collections::{BTreeMap, VecDeque}, sync::Arc};
+use alloc::{collections::BTreeMap, sync::Arc};
 use core::task::Waker;
 use crossbeam_queue::ArrayQueue;
 
 pub struct Executor {
-    task_queue: VecDeque<Task>,
-    waiting_tasks: BTreeMap<TaskId, Task>,
-    wake_queue: Arc<ArrayQueue<TaskId>>,
+    tasks: BTreeMap<TaskId, Task>,
+    task_queue: Arc<ArrayQueue<TaskId>>,
     waker_cache: BTreeMap<TaskId, Waker>,
 }
 
 impl Executor {
     pub fn new() -> Self {
         Executor {
-            task_queue: VecDeque::new(),
-            waiting_tasks: BTreeMap::new(),
-            wake_queue: Arc::new(ArrayQueue::new(100)),
+            tasks: BTreeMap::new(),
+            task_queue: Arc::new(ArrayQueue::new(100)),
             waker_cache: BTreeMap::new(),
         }
     }
 }
 ```
 
-In addition to a `task_queue`, which stores the tasks that are ready to execute, the type has a `waiting_tasks` map, a `wake_queue` and a `waker_cache`. These fields have the following purpose:
+Instead of storing tasks in a [`VecDeque`] like we did for our `SimpleExecutor`, we use a `task_queue` of task IDs and a [`BTreeMap`] named `tasks` that contains the actual `Task` instances. The map is indexed by the `TaskId` to allow efficient continuation of a specific task.
 
-- The `waiting_tasks` map stores tasks that returned `Poll::Pending`. The map is indexed by the `TaskId` to allow efficient continuation of a specific task.
-- The `wake_queue` is [`ArrayQueue`] of task IDs, wrapped into the [`Arc`] type that implements _reference counting_. Reference counting makes it possible to share ownership of the value between multiple owners. It works by allocating the value on the heap and counting the number of active references to it. When the number of active references reaches zero, the value is no longer needed and can be deallocated.
+The `task_queue` field is an [`ArrayQueue`] of task IDs, wrapped into the [`Arc`] type that implements _reference counting_. Reference counting makes it possible to share ownership of the value between multiple owners. It works by allocating the value on the heap and counting the number of active references to it. When the number of active references reaches zero, the value is no longer needed and can be deallocated.
 
-  We use the `Arc` wrapper for the `wake_queue` because it will be shared between the executor and wakers. The idea is that the wakers push the ID of the woken task to the queue. The executor sits on the receiving end of the queue and moves all woken tasks from the `waiting_tasks` map back to the `task_queue`. The reason for using a fixed-size queue instead of an unbounded queue such as [`SegQueue`] is that interrupt handlers that should not allocate will push to this queue.
-- The `waker_cache` map caches the [`Waker`] of a task after its creation. This has two reasons: First, it improves performance by reusing the same waker for multiple wake-ups of the same task instead of creating a new waker each time. Second, it ensures that reference-counted wakers are not deallocated inside interrupt handlers because it could lead to deadlocks (there are more details on this below).
+We use this `Arc<ArrayQueue>` type for the `task_queue` because it will be shared between the executor and wakers. The idea is that the wakers push the ID of the woken task to the queue. The executor sits on the receiving end of the queue, retrieves the woken tasks by their ID from the `tasks` map, and then runs them. The reason for using a fixed-size queue instead of an unbounded queue such as [`SegQueue`] is that interrupt handlers that should not allocate will push to this queue.
+
+In addition to the `task_queue` and the `tasks` map, the `Executor` type has a `waker_cache` field that is also a map. This map caches the [`Waker`] of a task after its creation. This has two reasons: First, it improves performance by reusing the same waker for multiple wake-ups of the same task instead of creating a new waker each time. Second, it ensures that reference-counted wakers are not deallocated inside interrupt handlers because it could lead to deadlocks (there are more details on this below).
 
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
 [`SegQueue`]: https://docs.rs/crossbeam-queue/0.2.1/crossbeam_queue/struct.SegQueue.html
 
-To create an `Executor`, we provide a simple `new` function. We choose a capacity of 100 for the `wake_queue`, which should be more than enough for the foreseeable future. In case our system will have more than 100 concurrent tasks at some point, we can easily increase this size.
+To create an `Executor`, we provide a simple `new` function. We choose a capacity of 100 for the `task_queue`, which should be more than enough for the foreseeable future. In case our system will have more than 100 concurrent tasks at some point, we can easily increase this size.
 
 #### Spawning Tasks
 
-As for the `SimpleExecutor`, we provide a `spawn` method on our `Executor` type that adds a given task to the `task_queue`:
+As for the `SimpleExecutor`, we provide a `spawn` method on our `Executor` type that adds a given task to the `tasks` map and immediately wakes it by pushing its ID to the `task_queue`:
 
 ```rust
 // in src/task/executor.rs
 
 impl Executor {
     pub fn spawn(&mut self, task: Task) {
-        self.task_queue.push_back(task)
+        let task_id = task.id;
+        if self.tasks.insert(task.id, task).is_some() {
+            panic!("task with same ID already in tasks");
+        }
+        self.task_queue.push(task_id).expect("queue full");
     }
 }
 ```
 
-While this method requires a `&mut` reference to the executor it is not callable after the executor has been started. If it should be possible to let tasks themselves spawn additional tasks at some point, we could change the type of the task queue to a concurrent queue such as [`SegQueue`] and share a reference to this queue with tasks.
+If there is already a task with the same idea in the map, the [`BTreeMap::insert`] method returns it. This should never happen since each task has an unique ID, so we panic in this case since it indicates a bug in our code. Similarly, we panic when the `task_queue` is full since this should never happen if we choose a large-enough queue size.
 
 #### Running Tasks
 
@@ -1536,56 +1538,70 @@ use core::task::{Context, Poll};
 
 impl Executor {
     fn run_ready_tasks(&mut self) {
-        while let Some(mut task) = self.task_queue.pop_front() {
-            let task_id = task.id;
-            if !self.waker_cache.contains_key(&task_id) {
-                self.waker_cache.insert(task_id, self.create_waker(task_id));
-            }
-            let waker = self.waker_cache.get(&task_id).expect("should exist");
+        // destructure `self` to avoid borrow checker errors
+        let Self {
+            tasks,
+            task_queue,
+            waker_cache,
+        } = self;
+
+        while let Ok(task_id) = task_queue.pop() {
+            let task = match tasks.get_mut(&task_id) {
+                Some(task) => task,
+                None => continue, // task no longer exists
+            };
+            let waker = waker_cache
+                .entry(task_id)
+                .or_insert_with(|| TaskWaker::new(task_id, task_queue.clone()));
             let mut context = Context::from_waker(waker);
             match task.poll(&mut context) {
                 Poll::Ready(()) => {
-                    // task done -> remove cached waker
-                    self.waker_cache.remove(&task_id);
+                    // task done -> remove it and its cached waker
+                    tasks.remove(&task_id);
+                    waker_cache.remove(&task_id);
                 }
-                Poll::Pending => {
-                    if self.waiting_tasks.insert(task_id, task).is_some() {
-                        panic!("task with same ID already in waiting_tasks");
-                    }
-                },
+                Poll::Pending => {}
             }
         }
     }
 }
 ```
 
-The basic idea of this function is similar to our `SimpleExecutor`: Loop over all tasks in the `task_queue`, create a waker for each task, and then poll it. However, instead of adding pending tasks back to the end of the `task_queue`, we store them in the `waiting_tasks` map until they are woken again. The waker creation is done by a method named `create_waker`, whose implemenation will be shown in a moment.
+The basic idea of this function is similar to our `SimpleExecutor`: Loop over all tasks in the `task_queue`, create a waker for each task, and then poll it. However, instead of adding pending tasks back to the end of the `task_queue`, we let our `TaskWaker` implementation take care of of adding woken tasks back to the queue. The implementation of this waker type will be shown in a moment.
 
-To avoid the performance overhead of creating a waker on each poll, we use the `waker_cache` map to store the waker for each task after it has been created. For this, we first use the [`BTreeMap::contains_key`] method to check whether a cached waker exists for the task. If not, we use the [`BTreeMap::insert`] method to create it. Afterwards, we can be sure that the waker exists, so we use the [`BTreeMap::get`] method in combination with an [`expect`] call to get a reference to it.
+Let's look into some of the implementation details of this `run_ready_tasks` method:
 
-[`BTreeMap::contains_key`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.contains_key
-[`BTreeMap::insert`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.insert
-[`BTreeMap::get`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.get
-[`expect`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.expect
+- We use [_destructuring_] to split `self` into its three fields to avoid some borrow checker errors. Namely, our implementation needs to access the `self.task_queue` from within a closure, which currently tries to borrow `self` completely. This is a fundamental borrow checker issue that will be resolved when [RFC 2229] is [implemented][RFC 2229 impl].
 
-Note that reusing wakers like this is not possible for all waker implementations, but our implemenation will allow it. To clean up the `waker_cache` when a task is finished, we use the [`BTreeMap::remove`] method to remove any cached waker for that task from the map.
+- For each popped task ID, we retrieve a mutable reference to the corresponding task from the `tasks` map. Since our `ScancodeStream` implementation registers wakers before checking whether a task needs to be put to sleep, it might happen that a wake-up occurs for a task that no longer exists. In this case, we simply ignore the wake-up and continue with the next ID from the queue.
+
+- To avoid the performance overhead of creating a waker on each poll, we use the `waker_cache` map to store the waker for each task after it has been created. For this, we use the [`BTreeMap::entry`] method in combination with [`Entry::or_insert_with`] to create a new waker if it doesn't exist yet and then get a mutable reference to it. For creating a new waker, we clone the `task_queue` and pass it together with the task ID to the `TaskWaker::new` function (implementation shown below). Since the `task_queue` is wrapped into `Arc`, the `clone` only increases the reference count of the value, but still points to the same heap allocated queue. Note that reusing wakers like this is not possible for all waker implementations, but our `TaskWaker` type will allow it.
+
+[_destructuring_]: https://doc.rust-lang.org/book/ch18-03-pattern-syntax.html#destructuring-to-break-apart-values
+[RFC 2229]: https://github.com/rust-lang/rfcs/pull/2229
+[RFC 2229 impl]: https://github.com/rust-lang/rust/issues/53488
+
+[`BTreeMap::entry`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.entry
+[`Entry::or_insert_with`]: https://doc.rust-lang.org/alloc/collections/btree_map/enum.Entry.html#method.or_insert_with
+
+A task is finished when it returns `Poll::Ready`. In that case, we remove it from the `tasks` map using the [`BTreeMap::remove`] method. We also remove its cached waker, if it exists.
 
 [`BTreeMap::remove`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.remove
 
 #### Waker Design
 
-The job of the waker is to push the ID of the woken task to the `wake_queue` of the executor. We implement this by creating a new `TaskWaker` struct that stores the task ID and a reference to the `wake_queue`:
+The job of the waker is to push the ID of the woken task to the `task_queue` of the executor. We implement this by creating a new `TaskWaker` struct that stores the task ID and a reference to the `task_queue`:
 
 ```rust
 // in src/task/executor.rs
 
 struct TaskWaker {
     task_id: TaskId,
-    wake_queue: Arc<ArrayQueue<TaskId>>,
+    task_queue: Arc<ArrayQueue<TaskId>>,
 }
 ```
 
-Since the ownership of the `wake_queue` is shared between the executor and wakers, we use the [`Arc`] wrapper type to implement shared reference-counted ownership.
+Since the ownership of the `task_queue` is shared between the executor and wakers, we use the [`Arc`] wrapper type to implement shared reference-counted ownership.
 
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
 
@@ -1596,12 +1612,12 @@ The implementation of the wake operation is quite simple:
 
 impl TaskWaker {
     fn wake_task(&self) {
-        self.wake_queue.push(self.task_id).expect("wake_queue full");
+        self.task_queue.push(self.task_id).expect("task_queue full");
     }
 }
 ```
 
-We push the `task_id` to the referenced `wake_queue`. Since modifications of the [`ArrayQueue`] type only require a shared reference, we can implement this method on `&self` instead of `&mut self`.
+We push the `task_id` to the referenced `task_queue`. Since modifications of the [`ArrayQueue`] type only require a shared reference, we can implement this method on `&self` instead of `&mut self`.
 
 ##### The `Wake` Trait
 
@@ -1633,46 +1649,26 @@ The difference between the `wake` and `wake_by_ref` methods is that the latter o
 
 ##### Creating Wakers
 
-Since the `Waker` type supports [`From`] conversions for all `Arc`-wrapped values that implement the `Wake` trait, we can now implement the `Executor::create_waker` method using our `TaskWaker`:
+Since the `Waker` type supports [`From`] conversions for all `Arc`-wrapped values that implement the `Wake` trait, we can now implement the `TaskWaker::new` function that is required by our `Executor::run_ready_tasks` method:
 
 [`From`]: https://doc.rust-lang.org/nightly/core/convert/trait.From.html
 
 ```rust
 // in src/task/executor.rs
 
-impl Executor {
-    fn create_waker(&self, task_id: TaskId) -> Waker {
+impl TaskWaker {
+    fn new(task_id: TaskId, task_queue: Arc<ArrayQueue<TaskId>>) -> Waker {
         Waker::from(Arc::new(TaskWaker {
             task_id,
-            wake_queue: self.wake_queue.clone(),
+            task_queue,
         }))
     }
 }
 ```
 
-We create the `TaskWaker` using the passed `task_id` and a clone of the `wake_queue`. Since the `wake_queue` is wrapped into `Arc`, the `clone` only increases the reference count of the value, but still points to the same heap allocated queue. We store the `TaskWaker` in an `Arc` too because the `Waker::from` implementation requires it. This function then takes care of constructing a [`RawWakerVTable`] and a [`RawWaker`] instance for our `TaskWaker` type. In case you're interested in how it works in detail, check out the [implementation in the `alloc` crate][waker-from-impl].
+We create the `TaskWaker` using the passed `task_id` and `task_queue`. We then wrap the `TaskWaker` in an `Arc` and use the `Waker::from` implementation to convert it to a [`Waker`]. This `from` method takes care of constructing a [`RawWakerVTable`] and a [`RawWaker`] instance for our `TaskWaker` type. In case you're interested in how it works in detail, check out the [implementation in the `alloc` crate][waker-from-impl].
 
 [waker-from-impl]: https://github.com/rust-lang/rust/blob/cdb50c6f2507319f29104a25765bfb79ad53395c/src/liballoc/task.rs#L58-L87
-
-##### Handling Wake-Ups
-
-To handle wake-ups in our executor, we add a `wake_tasks` method:
-
-```rust
-// in src/task/executor.rs
-
-impl Executor {
-    fn wake_tasks(&mut self) {
-        while let Ok(task_id) = self.wake_queue.pop() {
-            if let Some(task) = self.waiting_tasks.remove(&task_id) {
-                self.task_queue.push_back(task);
-            }
-        }
-    }
-}
-```
-
-We use a `while let` loop to pop all items from the `wake_queue`. For each popped task ID, we remove the corresponding task from the `waiting_tasks` map and add it to the back of the `task_queue`. Since we register wakers before checking whether a task needs to be put to sleep, it might happen that a wake-up occurs for tasks even though they are not in the `waiting_tasks` map. In this case, we simply ignore the wake-up.
 
 #### A `run` Method
 
@@ -1684,14 +1680,13 @@ With our waker implementation in place, we can finally construct a `run` method 
 impl Executor {
     pub fn run(&mut self) -> ! {
         loop {
-            self.wake_tasks();
             self.run_ready_tasks();
         }
     }
 }
 ```
 
-This method just calls the `wake_tasks` and `run_ready_tasks` functions in a loop. While we could theoretically return from the function when both the `task_queue` and the `waiting_tasks` map become empty, this would never happen since our `keyboard_task` never finishes, so a simple `loop` should suffice. Since the function never returns, we use the `!` return type to mark the function as [diverging] to the compiler.
+This method just calls the `run_ready_tasks` function in a loop. While we could theoretically return from the function when the `tasks` map becomes empty, this would never happen since our `keyboard_task` never finishes, so a simple `loop` should suffice. Since the function never returns, we use the `!` return type to mark the function as [diverging] to the compiler.
 
 [diverging]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
@@ -1718,11 +1713,11 @@ When we run our kernel using `cargo xrun` now, we see that keyboard input still 
 
 ![QEMU printing ".....H...e...l...l..o..... ...a..g..a....i...n...!"](qemu-keyboard-output-again.gif)
 
-However, the CPU utilization of QEMU did not get any better. The reason for this is that we still keep the CPU busy for the whole time. We no longer poll tasks until they are woken again, but we still check the `wake_queue` and the `task_queue` in a busy loop. To fix this, we need to put the CPU to sleep if there is no more work to do.
+However, the CPU utilization of QEMU did not get any better. The reason for this is that we still keep the CPU busy for the whole time. We no longer poll tasks until they are woken again, but we still check the `task_queue` in a busy loop. To fix this, we need to put the CPU to sleep if there is no more work to do.
 
 #### Sleep If Idle
 
-The basic idea is to execute the [`hlt` instruction] when both the `task_queue` and the `wake_queue` are empty. This instruction puts the CPU to sleep until the next interrupt arrives. The fact that the CPU immediately becomes active again on interrupts ensures that we can still directly react when an interrupt handler pushes to the `wake_queue`.
+The basic idea is to execute the [`hlt` instruction] when the `task_queue` is empty. This instruction puts the CPU to sleep until the next interrupt arrives. The fact that the CPU immediately becomes active again on interrupts ensures that we can still directly react when an interrupt handler pushes to the `task_queue`.
 
 [`hlt` instruction]: https://en.wikipedia.org/wiki/HLT_(x86_instruction)
 
@@ -1734,35 +1729,34 @@ To implement this, we create a new `sleep_if_idle` method in our executor and ca
 impl Executor {
     pub fn run(&mut self) -> ! {
         loop {
-            self.wake_tasks();
             self.run_ready_tasks();
             self.sleep_if_idle();   // new
         }
     }
 
     fn sleep_if_idle(&self) {
-        if self.wake_queue.is_empty() {
+        if self.task_queue.is_empty() {
             x86_64::instructions::hlt();
         }
     }
 }
 ```
 
-Since we call `sleep_if_idle` directly after `run_ready_tasks`, which loops until the `task_queue` becomes empty, we only need to check the `wake_queue`. If it is empty too, there is no task that is ready to run, so we execute the `hlt` instruction through the [`instructions::hlt`] wrapper function provided by the [`x86_64`] crate.
+Since we call `sleep_if_idle` directly after `run_ready_tasks`, which loops until the `task_queue` becomes empty, checking the queue again might seem unnecessary. However, a hardware interrupt might occur directly after `run_ready_tasks` returns, so there might be a new task in the queue at the time the `sleep_if_idle` function is called. Only if the queue is still empty, we put the CPU to sleep by executing the `hlt` instruction through the [`instructions::hlt`] wrapper function provided by the [`x86_64`] crate.
 
 [`instructions::hlt`]: https://docs.rs/x86_64/0.9.6/x86_64/instructions/fn.hlt.html
 [`x86_64`]: https://docs.rs/x86_64/0.9.6/x86_64/index.html
 
-Unfortunately, there is a subtle race condition in this implementation. Since interrupts are asynchronous and can happen at any time, it is possible that an interrupt happens between the `is_empty` check and the call to `hlt`:
+Unfortunately, there is still a subtle race condition in this implementation. Since interrupts are asynchronous and can happen at any time, it is possible that an interrupt happens right between the `is_empty` check and the call to `hlt`:
 
 ```rust
-if self.wake_queue.is_empty() {
+if self.task_queue.is_empty() {
     /// <--- interrupt can happen here
     x86_64::instructions::hlt();
 }
 ```
 
-In case this interrupt pushes to the `wake_queue`, we put the CPU to sleep even though there is now a ready task. In the worst case, this could delay the handling of a keyboard interrupt until the next keypress or the next timer interrupt. So how do we prevent it?
+In case this interrupt pushes to the `task_queue`, we put the CPU to sleep even though there is now a ready task. In the worst case, this could delay the handling of a keyboard interrupt until the next keypress or the next timer interrupt. So how do we prevent it?
 
 The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`enable_interrupts_and_hlt`] function provided by the [`x86_64`] crate. This function is only available since version 0.9.6, so you might need to update your `x86_64` dependency to use it.
 
@@ -1777,13 +1771,8 @@ impl Executor {
     fn sleep_if_idle(&self) {
         use x86_64::instructions::interrupts::{self, enable_interrupts_and_hlt};
 
-        // fast path
-        if !self.wake_queue.is_empty() {
-            return;
-        }
-
         interrupts::disable();
-        if self.wake_queue.is_empty() {
+        if self.task_queue.is_empty() {
             enable_interrupts_and_hlt();
         } else {
             interrupts::enable();
@@ -1792,7 +1781,7 @@ impl Executor {
 }
 ```
 
-To avoid unnecessarily disabling interrupts, we early return if the `wake_queue` is not empty. Otherwise, we disable interrupts and check the `wake_queue` again. If it is still empty, we use the [`enable_interrupts_and_hlt`] function to enable interrupts and put the CPU to sleep as a single atomic operation. In case the queue is no longer empty, it means that an interrupt woke a task between the first and the second check. In that case, we enable interrupts again and directly continue execution without executing `hlt`.
+To avoid race conditions, we disable interrupts before checking whether the `task_queue` is empty. If it is, we use the [`enable_interrupts_and_hlt`] function to enable interrupts and put the CPU to sleep as a single atomic operation. In case the queue is no longer empty, it means that an interrupt woke a task after `run_ready_tasks` returned. In that case, we enable interrupts again and directly continue execution without executing `hlt`.
 
 Now our executor properly puts the CPU to sleep when there is nothing to do. We can see that the QEMU process has a much lower CPU utilization when we run our kernel using `cargo xrun` again.
 
@@ -1820,7 +1809,7 @@ Behind the scenes, the compiler transforms async/await code to _state machines_,
 
 For our **implementation**, we first created a very basic executor that polls all spawned tasks in a busy loop without using the `Waker` type at all. We then showed the advantage of waker notifications by implementing an asynchronous keyboard task. The task defines a static `SCANCODE_QUEUE` using the mutex-free `ArrayQueue` type provided by the `crossbeam` crate. Instead of handling keypresses directly, the keyboard interrupt handler now puts all received scancodes in the queue and then wakes the registered `Waker` to signal that new input is available. On the receiving end, we created a `ScancodeStream` type to provide a `Future` resolving to the next scancode in the queue. This made it possible to create an asynchronous `print_keypresses` task that uses async/await to interpret and print the scancodes in the queue.
 
-To utilize the waker notifications of the keyboard task, we created a new `Executor` type that differentiates between ready and waiting tasks. Using an `Arc`-shared `wake_queue`, we implemented a `TaskWaker` type that sends wake-up notifications directly to the executor, which can then mark the corresponding task as ready again. To save power when no tasks are runnable, we added support for putting the CPU to sleep using the `hlt` instruction. Finally, we discussed some potential extensions of our executor, for example for providing multi-core support.
+To utilize the waker notifications of the keyboard task, we created a new `Executor` type that uses an `Arc`-shared `task_queue` for ready tasks. We implemented a `TaskWaker` type that pushes the ID of woken tasks directly to this `task_queue`, which are then polled again by the executor. To save power when no tasks are runnable, we added support for putting the CPU to sleep using the `hlt` instruction. Finally, we discussed some potential extensions of our executor, for example for providing multi-core support.
 
 ## What's Next?
 
