@@ -4,24 +4,26 @@ use core::task::{Context, Poll, Waker};
 use crossbeam_queue::ArrayQueue;
 
 pub struct Executor {
+    tasks: BTreeMap<TaskId, Task>,
     task_queue: Arc<ArrayQueue<TaskId>>,
-    waiting_tasks: BTreeMap<TaskId, Task>,
     waker_cache: BTreeMap<TaskId, Waker>,
 }
 
 impl Executor {
     pub fn new() -> Self {
         Executor {
+            tasks: BTreeMap::new(),
             task_queue: Arc::new(ArrayQueue::new(100)),
-            waiting_tasks: BTreeMap::new(),
             waker_cache: BTreeMap::new(),
         }
     }
 
     pub fn spawn(&mut self, task: Task) {
         let task_id = task.id;
-        self.add_waiting(task);
-        self.task_queue.push(task_id).expect("task_queue full");
+        if self.tasks.insert(task.id, task).is_some() {
+            panic!("task with same ID already in tasks");
+        }
+        self.task_queue.push(task_id).expect("queue full");
     }
 
     pub fn run(&mut self) -> ! {
@@ -31,29 +33,30 @@ impl Executor {
         }
     }
 
-    fn add_waiting(&mut self, task: Task) {
-        if self.waiting_tasks.insert(task.id, task).is_some() {
-            panic!("task with same ID already in waiting_tasks");
-        }
-    }
-
     fn run_ready_tasks(&mut self) {
-        while let Ok(task_id) = self.task_queue.pop() {
-            let mut task = match self.waiting_tasks.remove(&task_id) {
+        // destructure `self` to avoid borrow checker errors
+        let Self {
+            tasks,
+            task_queue,
+            waker_cache,
+        } = self;
+
+        while let Ok(task_id) = task_queue.pop() {
+            let task = match tasks.get_mut(&task_id) {
                 Some(task) => task,
-                None => continue,
+                None => continue, // task no longer exists
             };
-            if !self.waker_cache.contains_key(&task_id) {
-                self.waker_cache.insert(task_id, self.create_waker(task_id));
-            }
-            let waker = self.waker_cache.get(&task_id).expect("should exist");
+            let waker = waker_cache
+                .entry(task_id)
+                .or_insert_with(|| TaskWaker::new(task_id, task_queue.clone()));
             let mut context = Context::from_waker(waker);
             match task.poll(&mut context) {
                 Poll::Ready(()) => {
-                    // task done -> remove cached waker
-                    self.waker_cache.remove(&task_id);
+                    // task done -> remove it and its cached waker
+                    tasks.remove(&task_id);
+                    waker_cache.remove(&task_id);
                 }
-                Poll::Pending => self.add_waiting(task),
+                Poll::Pending => {}
             }
         }
     }
@@ -68,13 +71,6 @@ impl Executor {
             interrupts::enable();
         }
     }
-
-    fn create_waker(&self, task_id: TaskId) -> Waker {
-        Waker::from(Arc::new(TaskWaker {
-            task_id,
-            task_queue: self.task_queue.clone(),
-        }))
-    }
 }
 
 struct TaskWaker {
@@ -83,6 +79,13 @@ struct TaskWaker {
 }
 
 impl TaskWaker {
+    fn new(task_id: TaskId, task_queue: Arc<ArrayQueue<TaskId>>) -> Waker {
+        Waker::from(Arc::new(TaskWaker {
+            task_id,
+            task_queue,
+        }))
+    }
+
     fn wake_task(&self) {
         self.task_queue.push(self.task_id).expect("task_queue full");
     }
