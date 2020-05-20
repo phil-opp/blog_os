@@ -708,7 +708,7 @@ The `create_example_mapping` function looks like this:
 
 use x86_64::{
     PhysAddr,
-    structures::paging::{Page, PhysFrame, Mapper, Size4KiB, FrameAllocator, UnusedPhysFrame}
+    structures::paging::{Page, PhysFrame, Mapper, Size4KiB, FrameAllocator}
 };
 
 /// Creates an example mapping for the given page to frame `0xb8000`.
@@ -720,11 +720,12 @@ pub fn create_example_mapping(
     use x86_64::structures::paging::PageTableFlags as Flags;
 
     let frame = PhysFrame::containing_address(PhysAddr::new(0xb8000));
-    // FIXME: ONLY FOR TEMPORARY TESTING
-    let unused_frame = unsafe { UnusedPhysFrame::new(frame) };
     let flags = Flags::PRESENT | Flags::WRITABLE;
 
-    let map_to_result = mapper.map_to(page, unused_frame, flags, frame_allocator);
+    let map_to_result = unsafe {
+        // FIXME: this is not safe, we do it only for testing
+        mapper.map_to(page, frame, flags, frame_allocator)
+    };
     map_to_result.expect("map_to failed").flush();
 }
 ```
@@ -736,10 +737,7 @@ In addition to the `page` that should be mapped, the function expects a mutable 
 [`FrameAllocator`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/trait.FrameAllocator.html
 [`PageSize`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/page/trait.PageSize.html
 
-Instead of a normal `PhysFrame`, the [`map_to`] method requires an [`UnusedPhysFrame`] wrapper type to ensure that the frame is not already in use. The reason for this is that mapping the same frame twice could result in undefined behavior, for example when two different `&mut` references point to the same physical memory location. In our case, we reuse the VGA text buffer frame, which is already mapped, so we break the required condition when calling the unsafe [`UnusedPhysFrame::new`] function. However, the `create_example_mapping` function is only a temporary testing function and will be removed after this post, so it is ok. To remind us of the unsafety, we put a `FIXME` comment on the line. 
-
-[`UnusedPhysFrame`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/struct.UnusedPhysFrame.html
-[`UnusedPhysFrame::new`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/struct.UnusedPhysFrame.html#method.new
+The [`map_to`] method is unsafe because the caller must ensure that the frame is not already in use. The reason for this is that mapping the same frame twice could result in undefined behavior, for example when two different `&mut` references point to the same physical memory location. In our case, we reuse the VGA text buffer frame, which is already mapped, so we break the required condition. However, the `create_example_mapping` function is only a temporary testing function and will be removed after this post, so it is ok. To remind us of the unsafety, we put a `FIXME` comment on the line.
 
 In addition to the `page` and the `unused_frame`, the `map_to` method takes a set of flags for the mapping and a reference to the `frame_allocator`, which will be explained in a moment. For the flags, we set the `PRESENT` flag because it is required for all valid entries and the `WRITABLE` flag to make the mapped page writable. For a list of all possible flags, see the [_Page Table Format_] section of the previous post.
 
@@ -766,7 +764,7 @@ Let's start with the simple case and assume that we don't need to create new pag
 pub struct EmptyFrameAllocator;
 
 unsafe impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
-    fn allocate_frame(&mut self) -> Option<UnusedPhysFrame> {
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
         None
     }
 }
@@ -901,7 +899,7 @@ use bootloader::bootinfo::MemoryRegionType;
 
 impl BootInfoFrameAllocator {
     /// Returns an iterator over the usable frames specified in the memory map.
-    fn usable_frames(&self) -> impl Iterator<Item = UnusedPhysFrame> {
+    fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
         // get usable regions from memory map
         let regions = self.memory_map.iter();
         let usable_regions = regions
@@ -912,9 +910,7 @@ impl BootInfoFrameAllocator {
         // transform to an iterator of frame start addresses
         let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
         // create `PhysFrame` types from the start addresses
-        let frames = frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)));
-        // we know that the frames are really unused
-        frames.map(|f| unsafe { UnusedPhysFrame::new(f) })
+        frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
     }
 }
 ```
@@ -925,8 +921,7 @@ This function uses iterator combinator methods to transform the initial `MemoryM
 - Then we use the [`filter`] method to skip any reserved or otherwise unavailable regions. The bootloader updates the memory map for all the mappings it creates, so frames that are used by our kernel (code, data or stack) or to store the boot information are already marked as `InUse` or similar. Thus we can be sure that `Usable` frames are not used somewhere else.
 - Afterwards, we use the [`map`] combinator and Rust's [range syntax] to transform our iterator of memory regions to an iterator of address ranges.
 - The next step is the most complicated: We convert each range to an iterator through the `into_iter` method and then choose every 4096th address using [`step_by`]. Since 4096 bytes (= 4 KiB) is the page size, we get the start address of each frame. The bootloader page aligns all usable memory areas so that we don't need any alignment or rounding code here. By using [`flat_map`] instead of `map`, we get an `Iterator<Item = u64>` instead of an `Iterator<Item = Iterator<Item = u64>>`.
-- Then we convert the start addresses to `PhysFrame` types to construct the an `Iterator<Item = PhysFrame>`.
-- In the last step, we use the [`map`] combinator again to wrap each frame into the [`UnusedPhysFrame`] wrapper type. This is safe because we trust the boot information.
+- Finally, we convert the start addresses to `PhysFrame` types to construct the an `Iterator<Item = PhysFrame>`.
 
 [`MemoryRegion`]: https://docs.rs/bootloader/0.6.4/bootloader/bootinfo/struct.MemoryRegion.html
 [`filter`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.filter
@@ -935,7 +930,7 @@ This function uses iterator combinator methods to transform the initial `MemoryM
 [`step_by`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.step_by
 [`flat_map`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.flat_map
 
-The return type of the function uses the [`impl Trait`] feature. This way, we can specify that we return some type that implements the [`Iterator`] trait with item type `UnusedPhysFrame`, but don't need to name the concrete return type. This is important here because we _can't_ name the concrete type since it depends on unnamable closure types.
+The return type of the function uses the [`impl Trait`] feature. This way, we can specify that we return some type that implements the [`Iterator`] trait with item type `PhysFrame`, but don't need to name the concrete return type. This is important here because we _can't_ name the concrete type since it depends on unnamable closure types.
 
 [`impl Trait`]: https://doc.rust-lang.org/book/ch10-02-traits.html#returning-types-that-implement-traits
 [`Iterator`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html
@@ -948,7 +943,7 @@ Now we can implement the `FrameAllocator` trait:
 // in src/memory.rs
 
 unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
-    fn allocate_frame(&mut self) -> Option<UnusedPhysFrame> {
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
         let frame = self.usable_frames().nth(self.next);
         self.next += 1;
         frame
