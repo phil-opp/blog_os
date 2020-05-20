@@ -5,4 +5,4 @@ authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 edition = "2018"
 
 [dependencies]
-bootloader = "0.8.0"
+bootloader = "0.9.3"
