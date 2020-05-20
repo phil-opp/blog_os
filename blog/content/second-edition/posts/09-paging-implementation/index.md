@@ -608,7 +608,7 @@ The base of the abstraction are two traits that define various page table mappin
 
 [`Mapper`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/mapper/trait.Mapper.html
 [`translate_page`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
-[`map_to`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
+[`map_to`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
 [`MapperAllSizes`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
 [`translate_addr`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
 [`translate`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate

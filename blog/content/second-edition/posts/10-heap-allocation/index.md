@@ -439,7 +439,7 @@ The function takes mutable references to a [`Mapper`] and a [`FrameAllocator`] i
 [`Size4KiB`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/page/enum.Size4KiB.html
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`MapToError`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/mapper/enum.MapToError.html
-[`Mapper::map_to`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.map_to
+[`Mapper::map_to`]: https://docs.rs/x86_64/0.11.0/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
 
 The implementation can be broken down into two parts:
 
