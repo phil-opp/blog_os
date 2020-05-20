@@ -48,7 +48,7 @@ In the following we present three possible kernel allocator designs and explain 
 
 ## Bump Allocator
 
-The most simple allocator design is a _bump allocator_. It allocates memory linearly and only keeps track of the number of allocated bytes and the number of allocations. It is only useful in very specific use cases because it has a severe limitation: it can only free all memory at once.
+The most simple allocator design is a _bump allocator_ (also known as _stack allocator_). It allocates memory linearly and only keeps track of the number of allocated bytes and the number of allocations. It is only useful in very specific use cases because it has a severe limitation: it can only free all memory at once.
 
 ### Idea
 
@@ -465,7 +465,7 @@ Each list node contains two fields: The size of the memory region and a pointer 
 
 [_free list_]: https://en.wikipedia.org/wiki/Free_list
 
-As you might guess from the name, this is the technique that the `linked_list_allocator` crate uses.
+As you might guess from the name, this is the technique that the `linked_list_allocator` crate uses. Allocators that use this technique are also often called _pool allocators_.
 
 ### Implementation
 
