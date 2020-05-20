@@ -774,8 +774,6 @@ In the second step it uses the [`max`] method to enforce a minimum allocation si
 [`pad_to_align`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.pad_to_align
 [`max`]: https://doc.rust-lang.org/std/cmp/trait.Ord.html#method.max
 
-Both the `align_to` and the `pad_to_align` methods are still unstable. To enable then, we need to add **`#![feature(alloc_layout_extra)]`** to the beginning of our `lib.rs`.
-
 ### Using it
 
 We can now update the `ALLOCATOR` static in the `allocator` module to use our new `LinkedListAllocator`:
