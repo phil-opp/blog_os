@@ -1525,7 +1525,7 @@ impl Executor {
 }
 ```
 
-If there is already a task with the same idea in the map, the [`BTreeMap::insert`] method returns it. This should never happen since each task has an unique ID, so we panic in this case since it indicates a bug in our code. Similarly, we panic when the `task_queue` is full since this should never happen if we choose a large-enough queue size.
+If there is already a task with the same ID in the map, the [`BTreeMap::insert`] method returns it. This should never happen since each task has an unique ID, so we panic in this case since it indicates a bug in our code. Similarly, we panic when the `task_queue` is full since this should never happen if we choose a large-enough queue size.
 
 #### Running Tasks
 
