@@ -77,22 +77,22 @@ The default configuration of the PICs is not usable, because it sends interrupt 
 
 The configuration happens by writing special values to the command and data ports of the PICs. Fortunately there is already a crate called [`pic8259_simple`], so we don't need to write the initialization sequence ourselves. In case you are interested how it works, check out [its source code][pic crate source], it's fairly small and well documented.
 
-[pic crate source]: https://docs.rs/crate/pic8259_simple/0.1.1/source/src/lib.rs
+[pic crate source]: https://docs.rs/crate/pic8259_simple/0.2.0/source/src/lib.rs
 
 To add the crate as dependency, we add the following to our project:
 
-[`pic8259_simple`]: https://docs.rs/pic8259_simple/0.1.1/pic8259_simple/
+[`pic8259_simple`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pic8259_simple = "0.1.1"
+pic8259_simple = "0.2.0"
 ```
 
 The main abstraction provided by the crate is the [`ChainedPics`] struct that represents the primary/secondary PIC layout we saw above. It is designed to be used in the following way:
 
-[`ChainedPics`]: https://docs.rs/pic8259_simple/0.1.1/pic8259_simple/struct.ChainedPics.html
+[`ChainedPics`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/struct.ChainedPics.html
 
 ```rust
 // in src/interrupts.rs
@@ -125,7 +125,7 @@ pub fn init() {
 
 We use the [`initialize`] function to perform the PIC initialization. Like the `ChainedPics::new` function, this function is also unsafe because it can cause undefined behavior if the PIC is misconfigured.
 
-[`initialize`]: https://docs.rs/pic8259_simple/0.1.1/pic8259_simple/struct.ChainedPics.html#method.initialize
+[`initialize`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/struct.ChainedPics.html#method.initialize
 
 If all goes well we should continue to see the "It did not crash" message when executing `cargo xrun`.
 
