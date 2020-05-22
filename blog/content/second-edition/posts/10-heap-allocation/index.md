@@ -700,7 +700,7 @@ fn main(boot_info: &'static BootInfo) -> ! {
 
 It is very similar to the `kernel_main` function in our `main.rs`, with the differences that we don't invoke `println`, don't include any example allocations, and call `test_main` unconditionally.
 
-Now we're ready to add a few test cases. First, we add a test that performs a simple allocation using [`Box`] and checks the allocated value, to ensure that basic allocations work:
+Now we're ready to add a few test cases. First, we add a test that performs some simple allocations using [`Box`] and checks the allocated values, to ensure that basic allocations work:
 
 ```rust
 // in tests/heap_allocation.rs
@@ -711,8 +711,10 @@ use alloc::boxed::Box;
 #[test_case]
 fn simple_allocation() {
     serial_print!("simple_allocation... ");
-    let heap_value = Box::new(41);
-    assert_eq!(*heap_value, 41);
+    let heap_value_1 = Box::new(41);
+    let heap_value_2 = Box::new(13);
+    assert_eq!(*heap_value_1, 41);
+    assert_eq!(*heap_value_2, 13);
     serial_println!("[ok]");
 }
 ```
