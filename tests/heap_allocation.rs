@@ -31,8 +31,10 @@ fn main(boot_info: &'static BootInfo) -> ! {
 #[test_case]
 fn simple_allocation() {
     serial_print!("simple_allocation... ");
-    let heap_value = Box::new(41);
-    assert_eq!(*heap_value, 41);
+    let heap_value_1 = Box::new(41);
+    let heap_value_2 = Box::new(13);
+    assert_eq!(*heap_value_1, 41);
+    assert_eq!(*heap_value_2, 13);
     serial_println!("[ok]");
 }
 
