@@ -578,7 +578,7 @@ impl LinkedListAllocator {
     /// Adds the given memory region to the front of the list.
     unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
         // ensure that the freed region is capable of holding ListNode
-        assert!(align_up(addr, mem::align_of::<ListNode>()) == addr);
+        assert_eq!(align_up(addr, mem::align_of::<ListNode>()), addr);
         assert!(size >= mem::size_of::<ListNode>());
 
         // create a new list node and append it at the start of the list
@@ -870,7 +870,7 @@ Most notably, no traversal of the list is required for deallocation either. This
 
 #### Fallback Allocator
 
-Given that large allocations (>2KB) are often rare, especially in operating system kernels, it might make sense to fall back to a different allocator for these allocations. For example, we could fall back to a linked list allocator for allocations greater than 2048 bytes in order to reduce memory waste. Since only very few allocations of that size are expected, the the linked list would stay small so that (de)allocations would be still reasonably fast.
+Given that large allocations (>2KB) are often rare, especially in operating system kernels, it might make sense to fall back to a different allocator for these allocations. For example, we could fall back to a linked list allocator for allocations greater than 2048 bytes in order to reduce memory waste. Since only very few allocations of that size are expected, the linked list would stay small so that (de)allocations would be still reasonably fast.
 
 #### Creating new Blocks
 
