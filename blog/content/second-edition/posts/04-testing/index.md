@@ -484,7 +484,91 @@ test-timeout = 300          # (in seconds)
 
 If you don't want to wait 5 minutes for the `trivial_assertion` test to time out, you can temporarily decrease the above value.
 
-After this, we no longer need the `trivial_assertion` test, so we can delete it.
+### Insert Printing Automatically
+
+Our `trivial_assertion` test currently needs to print its own status information using `serial_print!`/`serial_println!`:
+
+```rust
+#[test_case]
+fn trivial_assertion() {
+    serial_print!("trivial assertion... ");
+    assert_eq!(1, 1);
+    serial_println!("[ok]");
+}
+```
+
+Manually adding these print statements for every test we write is cumbersome, so let's update our `test_runner` to print these messages automatically. To do that, we need to create a new `Testable` trait:
+
+```rust
+// in src/main.rs
+
+pub trait Testable {
+    fn run(&self) -> ();
+}
+```
+
+The trick now is to implement this trait for all types `T` that implement the [`Fn()` trait]:
+
+[`Fn()` trait]: https://doc.rust-lang.org/stable/core/ops/trait.Fn.html
+
+```rust
+// in src/main.rs
+
+impl<T> Testable for T
+where
+    T: Fn(),
+{
+    fn run(&self) {
+        serial_print!("{}...\t", core::any::type_name::<T>());
+        self();
+        serial_println!("[ok]");
+    }
+}
+```
+
+We implement the `run` function by first printing the function name using the [`any::type_name`] function. This function is implemented directly in the compiler and returns a string description of every type. For functions, the type is their name, so this is exactly what we want in this case. The `\t` character is the [tab character], which adds some alignment to the `[ok]` messages.
+
+[`any::type_name`]: https://doc.rust-lang.org/stable/core/any/fn.type_name.html
+[tab character]: https://en.wikipedia.org/wiki/Tab_key#Tab_characters
+
+After printing the function name, we invoke the test function through `self()`. This only works because we require that `self` implements the `Fn()` trait. After the test function returned, we print `[ok]` to indicate that the function did not panic.
+
+The last step is to update our `test_runner` to use the new `Testable` trait:
+
+```rust
+// in src/main.rs
+
+#[cfg(test)]
+pub fn test_runner(tests: &[&dyn Testable]) {
+    serial_println!("Running {} tests", tests.len());
+    for test in tests {
+        test.run(); // new
+    }
+    exit_qemu(QemuExitCode::Success);
+}
+```
+
+The only two changes are the type of the `tests` argument from `&[&dyn Fn()]` to `&[&dyn Testable]` and that we now call `test.run()` instead of `test()`.
+
+We can now remove the print statements from our `trivial_assertion` test since they're now printed automatically:
+
+```rust
+// in src/main.rs
+
+#[test_case]
+fn trivial_assertion() {
+    assert_eq!(1, 1);
+}
+```
+
+The `cargo xtest` output now looks like this:
+
+```
+Running 1 tests
+blog_os::trivial_assertion...	[ok]
+```
+
+The function name now includes the full path to the function, which is useful when test functions in different modules have the same name. Otherwise the output looks the same as before, but we no longer need to manually add print statements to our tests.
 
 ## Testing the VGA Buffer
 
@@ -493,18 +577,13 @@ Now that we have a working test framework, we can create a few tests for our VGA
 ```rust
 // in src/vga_buffer.rs
 
-#[cfg(test)]
-use crate::{serial_print, serial_println};
-
 #[test_case]
 fn test_println_simple() {
-    serial_print!("test_println... ");
     println!("test_println_simple output");
-    serial_println!("[ok]");
 }
 ```
 
-The test just prints something to the VGA buffer. If it finishes without panicking, it means that the `println` invocation did not panic either. Since we only need the `serial_println` import in test mode, we add the `cfg(test)` attribute to avoid the unused import warning for a normal `cargo xbuild`.
+The test just prints something to the VGA buffer. If it finishes without panicking, it means that the `println` invocation did not panic either.
 
 To ensure that no panic occurs even if many lines are printed and lines are shifted off the screen, we can create another test:
 
@@ -513,11 +592,9 @@ To ensure that no panic occurs even if many lines are printed and lines are shif
 
 #[test_case]
 fn test_println_many() {
-    serial_print!("test_println_many... ");
     for _ in 0..200 {
         println!("test_println_many output");
     }
-    serial_println!("[ok]");
 }
 ```
 
@@ -528,16 +605,12 @@ We can also create a test function to verify that the printed lines really appea
 
 #[test_case]
 fn test_println_output() {
-    serial_print!("test_println_output... ");
-
     let s = "Some test string that fits on a single line";
     println!("{}", s);
     for (i, c) in s.chars().enumerate() {
         let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
         assert_eq!(char::from(screen_char.ascii_character), c);
     }
-
-    serial_println!("[ok]");
 }
 ```
 
@@ -619,10 +692,25 @@ To make our library work with `cargo xtest`, we need to also add the test functi
 
 use core::panic::PanicInfo;
 
-pub fn test_runner(tests: &[&dyn Fn()]) {
+pub trait Testable {
+    fn run(&self) -> ();
+}
+
+impl<T> Testable for T
+where
+    T: Fn(),
+{
+    fn run(&self) {
+        serial_print!("{}...\t", core::any::type_name::<T>());
+        self();
+        serial_println!("[ok]");
+    }
+}
+
+pub fn test_runner(tests: &[&dyn Testable]) {
     serial_println!("Running {} tests", tests.len());
     for test in tests {
-        test();
+        test.run();
     }
     exit_qemu(QemuExitCode::Success);
 }
@@ -755,13 +843,11 @@ We can now add tests to our `basic_boot.rs`. For example, we can test that `prin
 ```rust
 // in tests/basic_boot.rs
 
-use blog_os::{println, serial_print, serial_println};
+use blog_os::println;
 
 #[test_case]
 fn test_println() {
-    serial_print!("test_println... ");
     println!("test_println output");
-    serial_println!("[ok]");
 }
 ```
 
@@ -846,12 +932,12 @@ use blog_os::serial_print;
 
 #[test_case]
 fn should_fail() {
-    serial_print!("should_fail... ");
+    serial_print!("should_panic::should_fail...\t");
     assert_eq!(0, 1);
 }
 ```
 
-The test uses the `assert_eq` to assert that `0` and `1` are equal. This of course fails, so that our test panics as desired.
+The test uses the `assert_eq` to assert that `0` and `1` are equal. This of course fails, so that our test panics as desired. Note that we need to manually print the function name using `serial_print!` here because we don't use the `Testable` trait.
 
 When we run the test through `cargo xtest --test should_panic` we see that it is successful because the test panicked as expected. When we comment out the assertion and run the test again, we see that it indeed fails with the _"test did not panic"_ message.
 
@@ -893,7 +979,7 @@ pub extern "C" fn _start() -> ! {
 }
 
 fn should_fail() {
-    serial_print!("should_fail... ");
+    serial_print!("should_panic::should_fail...\t");
     assert_eq!(0, 1);
 }
 
