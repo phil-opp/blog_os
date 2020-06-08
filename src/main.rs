@@ -30,3 +30,8 @@ fn panic(info: &PanicInfo) -> ! {
 fn panic(info: &PanicInfo) -> ! {
     blog_os::test_panic_handler(info)
 }
+
+#[test_case]
+fn trivial_assertion() {
+    assert_eq!(1, 1);
+}
