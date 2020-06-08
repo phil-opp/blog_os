@@ -14,11 +14,25 @@ pub mod vga_buffer;
 pub fn init() {
     interrupts::init_idt();
 }
+pub trait Testable {
+    fn run(&self) -> ();
+}
 
-pub fn test_runner(tests: &[&dyn Fn()]) {
+impl<T> Testable for T
+where
+    T: Fn(),
+{
+    fn run(&self) {
+        serial_print!("{}...\t", core::any::type_name::<T>());
+        self();
+        serial_println!("[ok]");
+    }
+}
+
+pub fn test_runner(tests: &[&dyn Testable]) {
     serial_println!("Running {} tests", tests.len());
     for test in tests {
-        test();
+        test.run();
     }
     exit_qemu(QemuExitCode::Success);
 }
