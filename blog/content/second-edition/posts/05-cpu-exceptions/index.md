@@ -438,23 +438,20 @@ Now we can create a `test_breakpoint_exception` test:
 ```rust
 // in src/interrupts.rs
 
-#[cfg(test)]
-use crate::{serial_print, serial_println};
-
 #[test_case]
 fn test_breakpoint_exception() {
-    serial_print!("test_breakpoint_exception...");
     // invoke a breakpoint exception
     x86_64::instructions::interrupts::int3();
-    serial_println!("[ok]");
 }
 ```
 
-Apart from printing status messages through the [serial port], the test invokes the `int3` function to trigger a breakpoint exception. By checking that the execution continues afterwards, we verify that our breakpoint handler is working correctly.
+The test invokes the `int3` function to trigger a breakpoint exception. By checking that the execution continues afterwards, we verify that our breakpoint handler is working correctly.
 
-[serial port]: @/second-edition/posts/04-testing/index.md#serial-port
+You can try this new test by running `cargo xtest` (all tests) or `cargo xtest --lib` (only tests of `lib.rs` and its modules). You should see the following in the output:
 
-You can try this new test by running `cargo xtest` (all tests) or `cargo xtest --lib` (only tests of `lib.rs` and its modules). You should see `test_breakpoint_exception...[ok]` in the output.
+```
+blog_os::interrupts::test_breakpoint_exception...	[ok]
+```
 
 ## Too much Magic?
 The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own IDT type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed. Note that these posts are based on the [first edition] of this blog and might be out of date.
