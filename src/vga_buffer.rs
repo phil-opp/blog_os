@@ -3,9 +3,6 @@ use lazy_static::lazy_static;
 use spin::Mutex;
 use volatile::Volatile;
 
-#[cfg(test)]
-use crate::{serial_print, serial_println};
-
 lazy_static! {
     /// A global `Writer` instance that can be used for printing to the VGA text buffer.
     ///
@@ -180,26 +177,20 @@ pub fn _print(args: fmt::Arguments) {
 
 #[test_case]
 fn test_println_simple() {
-    serial_print!("test_println... ");
     println!("test_println_simple output");
-    serial_println!("[ok]");
 }
 
 #[test_case]
 fn test_println_many() {
-    serial_print!("test_println_many... ");
     for _ in 0..200 {
         println!("test_println_many output");
     }
-    serial_println!("[ok]");
 }
 
 #[test_case]
 fn test_println_output() {
     use core::fmt::Write;
     use x86_64::instructions::interrupts;
-
-    serial_print!("test_println_output... ");
 
     let s = "Some test string that fits on a single line";
     interrupts::without_interrupts(|| {
@@ -210,6 +201,4 @@ fn test_println_output() {
             assert_eq!(char::from(screen_char.ascii_character), c);
         }
     });
-
-    serial_println!("[ok]");
 }

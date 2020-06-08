@@ -58,3 +58,8 @@ async fn example_task() {
     let number = async_number().await;
     println!("async number: {}", number);
 }
+
+#[test_case]
+fn trivial_assertion() {
+    assert_eq!(1, 1);
+}
