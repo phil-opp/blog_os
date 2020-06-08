@@ -457,7 +457,7 @@ use blog_os::serial_print;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    serial_print!("stack_overflow... ");
+    serial_print!("stack_overflow::stack_overflow...\t");
 
     blog_os::gdt::init();
     init_test_idt();
@@ -471,12 +471,19 @@ pub extern "C" fn _start() -> ! {
 #[allow(unconditional_recursion)]
 fn stack_overflow() {
     stack_overflow(); // for each recursion, the return address is pushed
+    volatile::Volatile::new(0).read(); // prevent tail recursion optimizations
 }
 ```
 
 We call our `gdt::init` function to initialize a new GDT. Instead of calling our `interrupts::init_idt` function, we call a `init_test_idt` function that will be explained in a moment. The reason is that we want to register a custom double fault handler that does a `exit_qemu(QemuExitCode::Success)` instead of panicking.
 
-The `stack_overflow` function is identical to the function in our `main.rs`. We additionally added the `allow(unconditional_recursion)` attribute to silence the warning that the function recurses endlessly.
+The `stack_overflow` function is almost identical to the function in our `main.rs`. The only difference is that we do an additional [volatile] read at the end of the function using the [`Volatile`] type to prevent a compiler optimization called [_tail call elimination_]. Among other things, this optimization allows the compiler to transform a function whose last statement is a recursive function call into a normal loop. Thus, no additional stack frame is created for the function call, so that the stack usage does remain constant.
+
+[volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
+[`Volatile`]: https://docs.rs/volatile/0.2.6/volatile/struct.Volatile.html
+[_tail call elimination_]: https://en.wikipedia.org/wiki/Tail_call
+
+In our case, however, we want that the stack overflow happens, so we add a dummy volatile read statement at the end of the function, which the compiler is not allowed to remove. Thus, the function is no longer _tail recursive_ and the transformation into a loop is prevented. We also add the `allow(unconditional_recursion)` attribute to silence the compiler warning that the function recurses endlessly.
 
 ### The Test IDT
 
