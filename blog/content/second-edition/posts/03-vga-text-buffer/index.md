@@ -478,7 +478,7 @@ error[E0017]: references in statics may only refer to immutable values
 
 To understand what's happening here, we need to know that statics are initialized at compile time, in contrast to normal variables that are initialized at run time. The component of the Rust compiler that evaluates such initialization expressions is called the “[const evaluator]”. Its functionality is still limited, but there is ongoing work to expand it, for example in the “[Allow panicking in constants]” RFC.
 
-[const evaluator]: https://rust-lang.github.io/rustc-guide/const-eval.html
+[const evaluator]: https://rustc-dev-guide.rust-lang.org/const-eval.html
 [Allow panicking in constants]: https://github.com/rust-lang/rfcs/pull/2345
 
 The issue about `ColorCode::new` would be solvable by using [`const` functions], but the fundamental problem here is that Rust's const evaluator is not able to convert raw pointers to references at compile time. Maybe it will work someday, but until then, we have to find another solution.
