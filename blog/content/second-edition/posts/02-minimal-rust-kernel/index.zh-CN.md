@@ -312,7 +312,7 @@ pub extern "C" fn _start() -> ! {
 # in Cargo.toml
 
 [dependencies]
-bootloader = "0.6.0"
+bootloader = "0.9.3"
 ```
 
 只添加引导程序为依赖项，并不足以创建一个可引导的磁盘映像；我们还需要内核编译完成之后，将内核和引导程序组合在一起。然而，截至目前，原生的 cargo 并不支持在编译完成后添加其它步骤（详见[这个 issue](https://github.com/rust-lang/cargo/issues/545)）。
@@ -320,10 +320,8 @@ bootloader = "0.6.0"
 为了解决这个问题，我们建议使用 `bootimage` 工具——它将会在内核编译完毕后，将它和引导程序组合在一起，最终创建一个能够引导的磁盘映像。我们可以使用下面的命令来安装这款工具：
 
 ```bash
-cargo install bootimage --version "^0.7.3"
+cargo install bootimage
 ```
-
-参数 `^0.7.3` 是一个**脱字号条件**（[caret requirement](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#caret-requirements)），它的意义是“ 0.7.3 版本或一个兼容 0.7.3 的新版本”。这意味着，如果这款工具发布了修复 bug 的版本 `0.7.4` 或 `0.7.5`，cargo 将会自动选择最新的版本，因为它依然兼容 `0.7.x`；但 cargo 不会选择 `0.8.0`，因为这个版本被认为并不和 `0.7.x` 系列版本兼容。需要注意的是，`Cargo.toml` 中定义的依赖包版本都默认是脱字号条件：刚才我们指定 `bootloader` 包的版本时，遵循的就是这个原则。
 
 为了运行 `bootimage` 以及编译引导程序，我们需要安装 rustup 模块 `llvm-tools-preview`——我们可以使用 `rustup component add llvm-tools-preview` 来安装这个工具。
 
