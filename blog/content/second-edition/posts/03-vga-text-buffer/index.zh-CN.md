@@ -275,10 +275,10 @@ pub extern "C" fn _start() -> ! {
 # in Cargo.toml
 
 [dependencies]
-volatile = "0.2.3"
+volatile = "0.2.6"
 ```
 
-`0.2.3` 表示一个**语义版本号**（[semantic version number](https://semver.org/)），在 cargo 文档的[《指定依赖项》章节](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html)可以找到与它相关的使用指南。
+`0.2.6` 表示一个**语义版本号**（[semantic version number](https://semver.org/)），在 cargo 文档的[《指定依赖项》章节](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html)可以找到与它相关的使用指南。
 
 现在，我们使用它来完成 VGA 缓冲区的 volatile 写入操作。我们将 `Buffer` 类型的定义修改为下列代码：
 
