@@ -453,7 +453,7 @@ The implementation can be broken down into two parts:
 
     - We use the [`Mapper::map_to`] method for creating the mapping in the active page table. The method can fail, therefore we use the [question mark operator] again to forward the error to the caller. On success, the method returns a [`MapperFlush`] instance that we can use to update the [_translation lookaside buffer_] using the [`flush`] method.
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.11.1/x86_64/struct.VirtAddr.html
+[`VirtAddr`]: https://docs.rs/x86_64/0.11.1/x86_64/addr/struct.VirtAddr.html
 [`Page`]: https://docs.rs/x86_64/0.11.1/x86_64/structures/paging/page/struct.Page.html
 [`containing_address`]: https://docs.rs/x86_64/0.11.1/x86_64/structures/paging/page/struct.Page.html#method.containing_address
 [`Page::range_inclusive`]: https://docs.rs/x86_64/0.11.1/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive

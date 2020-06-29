@@ -397,7 +397,7 @@ Level 4 page table at: PhysAddr(0x1000)
 
 So the currently active level 4 page table is stored at address `0x1000` in _physical_ memory, as indicated by the [`PhysAddr`] wrapper type. The question now is: how can we access this table from our kernel?
 
-[`PhysAddr`]: https://docs.rs/x86_64/0.11.1/x86_64/struct.PhysAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.11.1/x86_64/addr/struct.PhysAddr.html
 
 Accessing physical memory directly is not possible when paging is active, since programs could easily circumvent memory protection and access memory of other programs otherwise. So the only way to access the table is through some virtual page that is mapped to the physical frame at address `0x1000`. This problem of creating mappings for page table frames is a general problem, since the kernel needs to access the page tables regularly, for example when allocating a stack for a new thread.
 

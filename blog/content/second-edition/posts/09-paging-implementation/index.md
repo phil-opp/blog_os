@@ -437,7 +437,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 First, we convert the `physical_memory_offset` of the `BootInfo` struct to a [`VirtAddr`] and pass it to the `active_level_4_table` function. We then use the `iter` function to iterate over the page table entries and the [`enumerate`] combinator to additionally add an index `i` to each element. We only print non-empty entries because all 512 entries wouldn't fit on the screen.
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.11.1/x86_64/struct.VirtAddr.html
+[`VirtAddr`]: https://docs.rs/x86_64/0.11.1/x86_64/addr/struct.VirtAddr.html
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
 When we run it, we see the following output:
