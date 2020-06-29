@@ -179,7 +179,7 @@ test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.7.5"
+x86_64 = "0.11.0"
 ```
 
 现在我们可以使用crate中提供的[`Port`] 类型来创建一个`exit_qemu` 函数了:
