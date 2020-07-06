@@ -33,7 +33,7 @@ dependencies = [
  "spin",
  "uart_16550",
  "volatile",
- "x86_64",
+ "x86_64 0.11.1",
 ]
 
 [[package]]
@@ -161,6 +161,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5894c618ce612a3fa23881b152b608bafb8c56cfc22f434a3ba3120b40f7b587"
 
 [[package]]
+name = "proc-macro2"
+version = "1.0.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "beae6331a816b1f65d04c45b078fd8e6c93e8071771f41b8163255bbd8d7c8fa"
+dependencies = [
+ "unicode-xid",
+]
+
+[[package]]
+name = "quote"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa563d17ecb180e500da1cfd2b028310ac758de548efdd203e18f283af693f37"
+dependencies = [
+ "proc-macro2",
+]
+
+[[package]]
 name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -182,14 +200,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "syn"
+version = "1.0.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8d5d96e8cbb005d6959f119f773bfaebb5684296108fb32600c00cde305b2cd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-xid",
+]
+
+[[package]]
 name = "uart_16550"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e58fc40dc1712664fc9b0a7bd8ca2f21ab49960924fb245a80a05e1e92f3dfe9"
 dependencies = [
  "bitflags",
- "x86_64",
+ "x86_64 0.11.0",
 ]
+
+[[package]]
+name = "unicode-xid"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7fe0bb3479651439c9112f72b6c505038574c9fbb575ed1bf3b797fa39dd564"
 
 [[package]]
 name = "volatile"
@@ -205,4 +240,21 @@ checksum = "365de37eb7c6da582cbb510dd0f3f1235d24ff6309a8a96e8a9909cc9bfd608f"
 dependencies = [
  "bit_field",
  "bitflags",
+]
+
+[[package]]
+name = "x86_64"
+version = "0.11.1"
+dependencies = [
+ "bit_field",
+ "bitflags",
+ "x86_64-idt-default-handler",
+]
+
+[[package]]
+name = "x86_64-idt-default-handler"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]

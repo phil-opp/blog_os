@@ -2,7 +2,9 @@ use crate::{gdt, hlt_loop, print, println};
 use lazy_static::lazy_static;
 use pic8259_simple::ChainedPics;
 use spin;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
+use x86_64::structures::idt::{
+    self, InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode,
+};
 
 pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
@@ -30,6 +32,7 @@ pub static PICS: spin::Mutex<ChainedPics> =
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
+
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         idt.page_fault.set_handler_fn(page_fault_handler);
         unsafe {
@@ -37,14 +40,25 @@ lazy_static! {
                 .set_handler_fn(double_fault_handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
         }
-        idt[InterruptIndex::Timer.as_usize()].set_handler_fn(timer_interrupt_handler);
-        idt[InterruptIndex::Keyboard.as_usize()].set_handler_fn(keyboard_interrupt_handler);
+        idt::set_default_handler!(&mut idt, default_handler, 32..);
         idt
     };
 }
 
 pub fn init_idt() {
     IDT.load();
+}
+
+fn default_handler(stack_frame: &mut InterruptStackFrame, index: u8) {
+    if index == 32 {
+        print!("{} ", index);
+    } else {
+        println!("INTERRUPT {}: \n{:#?}", index, stack_frame);
+    }
+
+    unsafe {
+        PICS.lock().notify_end_of_interrupt(index);
+    }
 }
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut InterruptStackFrame) {
