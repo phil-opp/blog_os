@@ -33,6 +33,7 @@ lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
 
+        idt::set_general_handler!(&mut idt, default_handler);
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         idt.page_fault.set_handler_fn(page_fault_handler);
         unsafe {
@@ -40,7 +41,6 @@ lazy_static! {
                 .set_handler_fn(double_fault_handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
         }
-        idt::set_default_handler!(&mut idt, default_handler, 32..);
         idt
     };
 }
@@ -49,7 +49,7 @@ pub fn init_idt() {
     IDT.load();
 }
 
-fn default_handler(stack_frame: &mut InterruptStackFrame, index: u8) {
+fn default_handler(stack_frame: &mut InterruptStackFrame, index: u8, error_code: Option<u64>) {
     if index == 32 {
         print!("{} ", index);
     } else {

@@ -248,13 +248,14 @@ version = "0.11.1"
 dependencies = [
  "bit_field",
  "bitflags",
- "x86_64-idt-default-handler",
+ "x86_64-idt-general-handler",
 ]
 
 [[package]]
-name = "x86_64-idt-default-handler"
+name = "x86_64-idt-general-handler"
 version = "0.1.0"
 dependencies = [
+ "proc-macro2",
  "quote",
  "syn",
 ]
