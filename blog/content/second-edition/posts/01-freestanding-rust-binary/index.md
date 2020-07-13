@@ -403,7 +403,7 @@ macOS [does not officially support statically linked binaries] and requires prog
 cargo rustc -- -C link-args="-e __start -static"
 ```
 
-This still not suffices, as a third linker error occurs:
+This still does not suffice, as a third linker error occurs:
 
 ```
 error: linking with `cc` failed: exit code: 1
