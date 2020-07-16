@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 bootloader = { git = "https://github.com/rust-osdev/bootloader.git", branch = "Zbuild-std" }
+rlibc = "1.0.0"
