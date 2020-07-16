@@ -32,7 +32,7 @@ The _heap_ is the memory area for long-lived allocations. The programmer can acc
 
 A good allocator is fast and reliable. It also effectively utilizes the available memory and keeps [fragmentation] low. Furthermore, it works well for concurrent applications and scales to any number of processors. It even optimizes the memory layout with respect to the CPU caches to improve [cache locality] and avoid [false sharing].
 
-[cache locality]: http://docs.cray.com/books/S-2315-50/html-S-2315-50/qmeblljm.html
+[cache locality]: https://www.geeksforgeeks.org/locality-of-reference-and-cache-operation-in-cache-memory/
 [fragmentation]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
 [false sharing]: https://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 

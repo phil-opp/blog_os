@@ -154,7 +154,7 @@ Language item 是一些編譯器需求的特殊函式或類型。舉例來說，
 
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
 [libunwind]: https://www.nongnu.org/libunwind/
-[structured exception handling]: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx
+[structured exception handling]: https://docs.microsoft.com/de-de/windows/win32/debug/structured-exception-handling
 
 ### 停用回溯
 

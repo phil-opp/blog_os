@@ -179,7 +179,7 @@ bootimage run -- -serial mon:stdio
 
 Instead of standard output, QEMU supports [many more target devices][QEMU -serial]. For redirecting the output to a file, the argument is:
 
-[QEMU -serial]: https://qemu.weilnetz.de/doc/qemu-doc.html#Debug_002fExpert-options
+[QEMU -serial]: https://qemu.weilnetz.de/doc/latest/system/invocation.html#hxtool-9
 
 ```
 -serial file:output-file.txt

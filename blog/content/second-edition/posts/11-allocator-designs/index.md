@@ -36,7 +36,7 @@ The responsibility of an allocator is to manage the available heap memory. It ne
 
 Apart from correctness, there are many secondary design goals. For example, the allocator should effectively utilize the available memory and keep [_fragmentation_] low. Furthermore, it should work well for concurrent applications and scale to any number of processors. For maximal performance, it could even optimize the memory layout with respect to the CPU caches to improve [cache locality] and avoid [false sharing].
 
-[cache locality]: http://docs.cray.com/books/S-2315-50/html-S-2315-50/qmeblljm.html
+[cache locality]: https://www.geeksforgeeks.org/locality-of-reference-and-cache-operation-in-cache-memory/
 [_fragmentation_]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
 [false sharing]: https://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 
