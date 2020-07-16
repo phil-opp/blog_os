@@ -67,7 +67,8 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly
-      - run: rustup component add rustfmt
+          components: rustfmt
+          override: true
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -82,7 +83,8 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly
-      - run: rustup component add clippy
+          components: clippy, rust-src
+          override: true
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
