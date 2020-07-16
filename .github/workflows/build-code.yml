@@ -23,14 +23,17 @@ jobs:
         ]
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
-      - name: "Install `rust-src` Rustup Component"
+      - name: Install `rust-src` Rustup Component
         run: rustup component add rust-src
-      - uses: actions-rs/cargo@v1
+      - name: Run `cargo check`
+        uses: actions-rs/cargo@v1
         with:
           command: check
 
@@ -45,16 +48,19 @@ jobs:
         ]
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions-rs/toolchain@v1
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
-      - name: "Install bootimage"
+      - name: Install bootimage
         run: cargo install bootimage --debug --git https://github.com/rust-osdev/bootimage.git --branch Zbuild-std
-      - uses: actions/checkout@v2
-      - name: "Install Rustup Components"
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Install Rustup Components
         run: rustup component add rust-src llvm-tools-preview
-      - uses: actions-rs/cargo@v1
+      - name: Run `cargo bootimage`
+        uses: actions-rs/cargo@v1
         with:
           command: bootimage
 
@@ -62,14 +68,17 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
           components: rustfmt
           override: true
-      - uses: actions-rs/cargo@v1
+      - name: Run `cargo fmt`
+        uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
@@ -78,14 +87,17 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
           components: clippy, rust-src
           override: true
-      - uses: actions-rs/cargo@v1
+      - name: Run `cargo clippy`
+        uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: -- -D warnings
