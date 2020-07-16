@@ -28,6 +28,8 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly
+      - name: "Install `rust-src` Rustup Component"
+        run: rustup component add rust-src
       - uses: actions-rs/cargo@v1
         with:
           command: check
