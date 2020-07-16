@@ -12,9 +12,8 @@ on:
   pull_request:
 
 jobs:
-  test:
-    name: "Test"
-
+  check:
+    name: Check
     strategy:
       matrix:
         platform: [
@@ -22,49 +21,67 @@ jobs:
           macos-latest,
           windows-latest
         ]
-
     runs-on: ${{ matrix.platform }}
-    timeout-minutes: 15
-
     steps:
-    - name: "Checkout Repository"
-      uses: actions/checkout@v1
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
 
-    - name: Install Rustup
-      run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
-        echo ::add-path::$HOME/.cargo/bin
-      if: runner.os == 'macOS'
-
-    - name: "Print Rust Version"
-      run: |
-        rustc -Vv
-        cargo -Vv
-
-    - name: "Install Rustup Components"
-      run: rustup component add rust-src llvm-tools-preview
-    - name: "Install cargo-xbuild"
-      run: cargo install cargo-xbuild --debug
-    - name: "Install bootimage"
-      run: cargo install bootimage --debug
-
-    - name: "Run cargo xbuild"
-      run: cargo xbuild
-    - name: "Create Bootimage"
-      run: cargo bootimage
-
+  test:
+    name: Test Suite
+    strategy:
+      matrix:
+        platform: [
+          ubuntu-latest,
+          macos-latest,
+          windows-latest
+        ]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+      - name: "Install Rustup Components"
+        run: rustup component add rust-src llvm-tools-preview
+      - name: "Install bootimage"
+        run: cargo install bootimage --debug
+      - uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: bootimage
 
   check_formatting:
-    name: "Check Formatting"
+    name: Rustfmt
     runs-on: ubuntu-latest
-    timeout-minutes: 2
     steps:
-    - uses: actions/checkout@v1
-    - name: "Use the latest Rust nightly with rustfmt"
-      uses: actions-rs/toolchain@v1
-      with:
-          toolchain: nightly
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
           profile: minimal
-          components: rustfmt
-          override: true
-    - run: cargo fmt -- --check
+          toolchain: nightly
+      - run: rustup component add rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+      - run: rustup component add clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
