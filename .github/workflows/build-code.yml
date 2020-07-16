@@ -52,7 +52,7 @@ jobs:
       - name: "Install Rustup Components"
         run: rustup component add rust-src llvm-tools-preview
       - name: "Install bootimage"
-        run: cargo install bootimage --debug
+        run: cargo install bootimage --debug --git https://github.com/rust-osdev/bootimage.git --branch Zbuild-std
       - uses: actions/checkout@v2
       - uses: actions-rs/cargo@v1
         with:
