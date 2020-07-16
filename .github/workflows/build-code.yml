@@ -49,11 +49,11 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly
-      - name: "Install Rustup Components"
-        run: rustup component add rust-src llvm-tools-preview
       - name: "Install bootimage"
         run: cargo install bootimage --debug --git https://github.com/rust-osdev/bootimage.git --branch Zbuild-std
       - uses: actions/checkout@v2
+      - name: "Install Rustup Components"
+        run: rustup component add rust-src llvm-tools-preview
       - uses: actions-rs/cargo@v1
         with:
           command: bootimage
