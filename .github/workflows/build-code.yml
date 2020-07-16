@@ -38,7 +38,7 @@ jobs:
           command: check
 
   test:
-    name: Test Suite
+    name: Test
     strategy:
       matrix:
         platform: [
@@ -65,7 +65,7 @@ jobs:
           command: bootimage
 
   check_formatting:
-    name: Rustfmt
+    name: Check Formatting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
