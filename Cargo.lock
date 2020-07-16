@@ -9,6 +9,14 @@ dependencies = [
 
 [[package]]
 name = "bootloader"
-version = "0.9.3"
+version = "0.9.5"
+source = "git+https://github.com/rust-osdev/bootloader.git?branch=Zbuild-std#874fe6ec5a0043b515ef74591b925bb527fb3c9a"
+dependencies = [
+ "rlibc",
+]
+
+[[package]]
+name = "rlibc"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44ac0bdf4930c3c4d7f0d04eb6f15d7dcb9d5972b1ff9cd2bee0128112260fc7"
+checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
