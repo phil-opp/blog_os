@@ -204,7 +204,18 @@ The first step in implementing a heap allocator is to add a dependency on the bu
 extern crate alloc;
 ```
 
-Contrary to normal dependencies, we don't need to modify the `Cargo.toml`. The reason is that the `alloc` crate ships with the Rust compiler as part of the standard library, so we just need to enable it. This is what this `extern crate` statement does. (Historically, all dependencies needed an `extern crate` statement, which is now optional).
+Contrary to normal dependencies, we don't need to modify the `Cargo.toml`. The reason is that the `alloc` crate ships with the Rust compiler as part of the standard library, so the compiler already knows about the crate. By adding this `extern crate` statement, we specify that the compiler should try to include it. (Historically, all dependencies needed an `extern crate` statement, which is now optional).
+
+Since we are compiling for a custom target, we can't use the precompiled version of `alloc` that is shipped with the Rust installation. Instead, we have to tell cargo to recompile the crate from source. We can do that, by adding it to the `unstable.build-std` array in our `.cargo/config.toml` file:
+
+```toml
+# in .cargo/config.toml
+
+[unstable]
+build-std = ["core", "compiler_builtins", "alloc"]
+````
+
+Now the compiler will recompile and include the `alloc` crate in our kernel.
 
 The reason that the `alloc` crate is disabled by default in `#[no_std]` crates is that it has additional requirements. We can see these requirements as errors when we try to compile our project now:
 
