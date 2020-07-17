@@ -283,12 +283,12 @@ Now we are able to build our kernel for a bare metal target. However, our `_star
 
 ### Set a Default Target
 
-To avoid passing the `--target` parameter on every invocation of `cargo xbuild`, we can override the default target. To do this, we create a [cargo configuration] file at `.cargo/config` with the following content:
+To avoid passing the `--target` parameter on every invocation of `cargo xbuild`, we can override the default target. To do this, we create a [cargo configuration] file at `.cargo/config.toml` with the following content:
 
 [cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
 
 ```toml
-# in .cargo/config
+# in .cargo/config.toml
 
 [build]
 target = "x86_64-blog_os.json"
@@ -434,7 +434,7 @@ After writing the image to the USB stick, you can run it on real hardware by boo
 To make it easier to run our kernel in QEMU, we can set the `runner` configuration key for cargo:
 
 ```toml
-# in .cargo/config
+# in .cargo/config.toml
 
 [target.'cfg(target_os = "none")']
 runner = "bootimage runner"

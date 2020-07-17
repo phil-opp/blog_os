@@ -423,10 +423,10 @@ Now our program should build successfully on macOS.
 
 #### Unifying the Build Commands
 
-Right now we have different build commands depending on the host platform, which is not ideal. To avoid this, we can create a file named `.cargo/config` that contains the platform specific arguments:
+Right now we have different build commands depending on the host platform, which is not ideal. To avoid this, we can create a file named `.cargo/config.toml` that contains the platform specific arguments:
 
 ```toml
-# in .cargo/config
+# in .cargo/config.toml
 
 [target.'cfg(target_os = "linux")']
 rustflags = ["-C", "link-arg=-nostartfiles"]
@@ -438,7 +438,7 @@ rustflags = ["-C", "link-args=/ENTRY:_start /SUBSYSTEM:console"]
 rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 ```
 
-The `rustflags` key contains arguments that are automatically added to every invocation of `rustc`. For more information on the `.cargo/config` file check out the [official documentation](https://doc.rust-lang.org/cargo/reference/config.html).
+The `rustflags` key contains arguments that are automatically added to every invocation of `rustc`. For more information on the `.cargo/config.toml` file check out the [official documentation](https://doc.rust-lang.org/cargo/reference/config.html).
 
 Now our program should be buildable on all three platforms with a simple `cargo build`.
 
