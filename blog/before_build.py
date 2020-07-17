@@ -86,4 +86,4 @@ with io.open("templates/auto/status-updates-truncated.html", 'w', encoding='utf8
     for index, line in enumerate(lines):
         if index == 5:
             break
-        status_updates.write(line)
+        status_updates.write("<b>" + line + "</b>")
