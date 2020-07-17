@@ -286,7 +286,7 @@ After setting the `unstable.build-std` configuration key and installing the `rus
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-We see that `cargo build` now recompiles the `core`, `rustc-std-workspace-core` (another dependency of `core`), and `compiler_builtin` libraries for our custom target.
+We see that `cargo build` now recompiles the `core`, `rustc-std-workspace-core` (a dependency of `compiler_builtins`), and `compiler_builtins` libraries for our custom target.
 
 #### The `rlibc` Crate
 
