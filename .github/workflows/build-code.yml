@@ -63,6 +63,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: bootimage
+
       # install QEMU
       - name: Install QEMU (Linux)
         run: sudo apt update && sudo apt install qemu-system-x86
@@ -87,8 +88,10 @@ jobs:
       - name: "Print QEMU Version"
         run: qemu-system-x86_64 --version
 
-      - name: "Run cargo xtest"
-        run: cargo xtest
+      - name: Run `cargo test`
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
 
   check_formatting:
     name: Check Formatting
