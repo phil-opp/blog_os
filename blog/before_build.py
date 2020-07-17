@@ -47,3 +47,12 @@ with io.open("templates/auto/stars.html", 'w', encoding='utf8') as stars:
 with io.open("templates/auto/forks.html", 'w', encoding='utf8') as forks:
     forks.truncate()
     forks.write(format_number(repo.forks_count))
+
+with io.open("templates/auto/status-updates.html", 'w', encoding='utf8') as status_updates:
+    status_updates.truncate()
+
+    pulls = g.search_issues("is:merged", repo="rust-osdev/homepage", type="pr", label="next-post")[:5]
+
+    for pr in sorted(pulls, key=lambda issue: issue.closed_at, reverse=True):
+        link = '<a href="' + pr.html_url + '">' + pr.title + "</a> "
+        status_updates.write(u"  <li>" + link + "</li>\n")
