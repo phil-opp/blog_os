@@ -444,7 +444,7 @@ harness = false
 
 [without a test harness]: @/second-edition/posts/04-testing/index.md#no-harness-tests
 
-Now `cargo xtest --test stack_overflow` should compile successfully. The test fails of course, since the `unimplemented` macro panics.
+Now `cargo test --test stack_overflow` should compile successfully. The test fails of course, since the `unimplemented` macro panics.
 
 ### Implementing `_start`
 
@@ -537,7 +537,7 @@ extern "x86-interrupt" fn test_double_fault_handler(
 
 When the double fault handler is called, we exit QEMU with a success exit code, which marks the test as passed. Since integration tests are completely separate executables, we need to set `#![feature(abi_x86_interrupt)]` attribute again at the top of our test file.
 
-Now we can run our test through `cargo xtest --test stack_overflow` (or `cargo xtest` to run all tests). As expected, we see the `stack_overflow... [ok]` output in the console. Try to comment out the `set_stack_index` line: it should cause the test to fail.
+Now we can run our test through `cargo test --test stack_overflow` (or `cargo test` to run all tests). As expected, we see the `stack_overflow... [ok]` output in the console. Try to comment out the `set_stack_index` line: it should cause the test to fail.
 
 ## Summary
 In this post we learned what a double fault is and under which conditions it occurs. We added a basic double fault handler that prints an error message and added an integration test for it.

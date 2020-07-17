@@ -762,7 +762,7 @@ This test ensures that the allocator reuses freed memory for subsequent allocati
 Let's run our new integration test:
 
 ```
-> cargo xtest --test heap_allocation
+> cargo test --test heap_allocation
 […]
 Running 3 tests
 simple_allocation... [ok]
@@ -770,7 +770,7 @@ large_vec... [ok]
 many_boxes... [ok]
 ```
 
-All three tests succeeded! You can also invoke `cargo xtest` (without `--test` argument) to run all unit and integration tests.
+All three tests succeeded! You can also invoke `cargo test` (without `--test` argument) to run all unit and integration tests.
 
 ## Summary
 
