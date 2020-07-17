@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+extern crate rlibc;
+
 use core::panic::PanicInfo;
 
 static HELLO: &[u8] = b"Hello World!";
