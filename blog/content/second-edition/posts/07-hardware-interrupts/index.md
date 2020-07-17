@@ -127,7 +127,7 @@ We use the [`initialize`] function to perform the PIC initialization. Like the `
 
 [`initialize`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/struct.ChainedPics.html#method.initialize
 
-If all goes well we should continue to see the "It did not crash" message when executing `cargo xrun`.
+If all goes well we should continue to see the "It did not crash" message when executing `cargo run`.
 
 ## Enabling Interrupts
 
@@ -144,7 +144,7 @@ pub fn init() {
 }
 ```
 
-The `interrupts::enable` function of the `x86_64` crate executes the special `sti` instruction (“set interrupts”) to enable external interrupts. When we try `cargo xrun` now, we see that a double fault occurs:
+The `interrupts::enable` function of the `x86_64` crate executes the special `sti` instruction (“set interrupts”) to enable external interrupts. When we try `cargo run` now, we see that a double fault occurs:
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` because of hardware timer](qemu-hardware-timer-double-fault.png)
 
@@ -240,7 +240,7 @@ The `notify_end_of_interrupt` figures out whether the primary or secondary PIC s
 
 We need to be careful to use the correct interrupt vector number, otherwise we could accidentally delete an important unsent interrupt or cause our system to hang. This is the reason that the function is unsafe.
 
-When we now execute `cargo xrun` we see dots periodically appearing on the screen:
+When we now execute `cargo run` we see dots periodically appearing on the screen:
 
 ![QEMU printing consecutive dots showing the hardware timer](qemu-hardware-timer-dots.gif)
 
@@ -359,10 +359,10 @@ Note that disabling interrupts shouldn't be a general solution. The problem is t
 
 ## Fixing a Race Condition
 
-If you run `cargo xtest` you might see the `test_println_output` test failing:
+If you run `cargo test` you might see the `test_println_output` test failing:
 
 ```
-> cargo xtest --lib
+> cargo test --lib
 […]
 Running 4 tests
 test_breakpoint_exception...[ok]
@@ -425,7 +425,7 @@ We performed the following changes:
 
 [`writeln`]: https://doc.rust-lang.org/core/macro.writeln.html
 
-With the above changes, `cargo xtest` now deterministically succeeds again.
+With the above changes, `cargo test` now deterministically succeeds again.
 
 This was a very harmless race condition that only caused a test failure. As you can imagine, other race conditions can be much more difficult to debug due to their non-deterministic nature. Luckily, Rust prevents us from data races, which are the most serious class of race conditions since they can cause all kinds of undefined behavior, including system crashes and silent memory corruptions.
 
@@ -479,7 +479,7 @@ Let's update our `lib.rs` as well:
 ```rust
 // in src/lib.rs
 
-/// Entry point for `cargo xtest`
+/// Entry point for `cargo test`
 #[cfg(test)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {

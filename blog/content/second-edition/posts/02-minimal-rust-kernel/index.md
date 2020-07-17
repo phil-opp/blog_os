@@ -251,50 +251,86 @@ It fails! The error tells us that the Rust compiler no longer finds the [`core` 
 
 The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for supported host triples (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for other targets, we need to recompile `core` for these targets first.
 
-#### Cargo xbuild
-That's where [`cargo xbuild`] comes in. It is a wrapper for `cargo build` that automatically cross-compiles `core` and other built-in libraries. We can install it by executing:
+#### The `build-std` Option
 
-[`cargo xbuild`]: https://github.com/rust-osdev/cargo-xbuild
+That's where the [`build-std` feature] of cargo comes in. It allows to recompile `core` and other standard library crates on demand, instead of using the precompiled versions shipped with the Rust installation. This feature is very new and still not finished, so it is marked as "unstable" and only available on [nightly Rust compilers].
+
+[`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
+[nightly Rust compilers]: #installing-rust-nightly
+
+To use the feature, we need to create a [cargo configuration] file at `.cargo/config.toml` with the following content:
+
+```toml
+# in .cargo/config.toml
+
+[unstable]
+build-std = ["core", "compiler_builtins"]
+```
+
+This tells cargo that it should recompile the `core` and `compiler_builtins` libraries. The latter is required because it is a dependency of `core`. In order to recompile these libraries, cargo needs access to the rust source code, which we can install with `rustup component add rust-src`.
+
+<div class="note">
+
+**Note:** The `unstable.build-std` configuration key requires at least the Rust nightly from 2020-07-15. Right now, the `rustfmt` component is [not available](https://rust-lang.github.io/rustup-components-history/) on these recent nightlies, so you might need to use `rustup update nightly --force` to update your nightly, which skips the `rustfmt` component if it's not available.
+
+</div>
+
+After setting the `unstable.build-std` configuration key and installing the `rust-src` component, we can rerun the our build command:
 
 ```
-cargo install cargo-xbuild
-```
-
-The command depends on the rust source code, which we can install with `rustup component add rust-src`.
-
-Now we can rerun the above command with `xbuild` instead of `build`:
-
-```
-> cargo xbuild --target x86_64-blog_os.json
+> cargo build --target x86_64-blog_os.json
    Compiling core v0.0.0 (/…/rust/src/libcore)
-   Compiling compiler_builtins v0.1.5
-   Compiling rustc-std-workspace-core v1.0.0 (/…/rust/src/tools/rustc-std-workspace-core)
-   Compiling alloc v0.0.0 (/tmp/xargo.PB7fj9KZJhAI)
-    Finished release [optimized + debuginfo] target(s) in 45.18s
-   Compiling blog_os v0.1.0 (file:///…/blog_os)
+   Compiling rustc-std-workspace-core v1.99.0 (/…/rust/src/tools/rustc-std-workspace-core)
+   Compiling compiler_builtins v0.1.32
+   Compiling blog_os v0.1.0 (/…/blog_os)
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-We see that `cargo xbuild` cross-compiles the `core`, `compiler_builtin`, and `alloc` libraries for our new custom target. Since these libraries use a lot of unstable features internally, this only works with a [nightly Rust compiler]. Afterwards, `cargo xbuild` successfully compiles our `blog_os` crate.
+We see that `cargo build` now recompiles the `core`, `rustc-std-workspace-core` (another dependency of `core`), and `compiler_builtin` libraries for our new custom target. Since these libraries use a lot of unstable features internally, this only works with a [nightly Rust compiler].
 
-[nightly Rust compiler]: #installing-rust-nightly
+#### The `rlibc` Crate
 
-Now we are able to build our kernel for a bare metal target. However, our `_start` entry point, which will be called by the boot loader, is still empty. So let's output something to screen from it.
+The Rust compiler assumes that a certain set of built-in functions is available for all systems. Most of these functions are provided by the `compiler_builtins` crate that we just recompiled. However, there are some functions in that crate that are not enabled by default because they are normally provided by the C library on the system. These functions include `memset`, which sets all bytes in a memory block to a given value, `memcpy`, which copies one memory block to another, and `memcmp`, which compares two memory blocks.
 
-### Set a Default Target
+While we didn't need any of these functions to compile our kernel right now, they will be required as soon as we add some more code to it. So it's a good idea to provide implementations for these functions now to avoid linker errors later. While there is no way to enable the implementations of the `compiler_builtins` crate yet (see the [tracking issue](https://github.com/rust-lang/wg-cargo-std-aware/issues/15)), there is a good alternative: the [`rlibc`] crate.
 
-To avoid passing the `--target` parameter on every invocation of `cargo xbuild`, we can override the default target. To do this, we create a [cargo configuration] file at `.cargo/config` with the following content:
+[`rlibc`]: https://docs.rs/rlibc/1.0.0/rlibc/
+
+To include the crate, we need to add it as a dependency in our `Cargo.toml` file:
+
+```toml
+# in Cargo.toml
+
+[dependencies]
+rlibc = "1.0.0"
+```
+
+For normal crates, this would be enough. However, since we never use any functions of `rlibc` directly, we need to explicitly instruct the Rust compiler to link the crate. We can do so by adding the following to our `main.rs`:
+
+```rust
+// in main.rs
+
+extern crate rlibc;
+```
+
+With this change, our kernel has valid implementations for all required functions, so it will continue to compile even if our code gets more complex.
+
+#### Set a Default Target
+
+To avoid passing the `--target` parameter on every invocation of `cargo build`, we can override the default target. To do this, we add the following to our [cargo configuration] file at `.cargo/config.toml`:
 
 [cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
 
 ```toml
-# in .cargo/config
+# in .cargo/config.toml
 
 [build]
 target = "x86_64-blog_os.json"
 ```
 
-This tells `cargo` to use our `x86_64-blog_os.json` target when no explicit `--target` argument is passed. This means that we can now build our kernel with a simple `cargo xbuild`. For more information on cargo configuration options, check out the [official documentation][cargo configuration].
+This tells `cargo` to use our `x86_64-blog_os.json` target when no explicit `--target` argument is passed. This means that we can now build our kernel with a simple `cargo build`. For more information on cargo configuration options, check out the [official documentation][cargo configuration].
+
+We are now able to build our kernel for a bare metal target with a simple `cargo build`. However, our `_start` entry point, which will be called by the boot loader, is still empty. It's time that we output something to screen from it.
 
 ### Printing to Screen
 The easiest way to print text to the screen at this stage is the [VGA text buffer]. It is a special memory area mapped to the VGA hardware that contains the contents displayed on screen. It normally consists of 25 lines that each contain 80 character cells. Each character cell displays an ASCII character with some foreground and background colors. The screen output looks like this:
@@ -363,7 +399,7 @@ Instead of writing our own bootloader, which is a project on its own, we use the
 # in Cargo.toml
 
 [dependencies]
-bootloader = "0.9.3"
+bootloader = "0.9.8"
 ```
 
 Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to link our kernel with the bootloader after compilation, but cargo has no support for [post-build scripts].
@@ -384,7 +420,7 @@ After installing `bootimage` and adding the `llvm-tools-preview` component, we c
 > cargo bootimage
 ```
 
-We see that the tool recompiles our kernel using `cargo xbuild`, so it will automatically pick up any changes you make. Afterwards it compiles the bootloader, which might take a while. Like all crate dependencies it is only built once and then cached, so subsequent builds will be much faster. Finally, `bootimage` combines the bootloader and your kernel to a bootable disk image.
+We see that the tool recompiles our kernel using `cargo build`, so it will automatically pick up any changes you make. Afterwards it compiles the bootloader, which might take a while. Like all crate dependencies it is only built once and then cached, so subsequent builds will be much faster. Finally, `bootimage` combines the bootloader and your kernel to a bootable disk image.
 
 After executing the command, you should see a bootable disk image named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
@@ -434,7 +470,7 @@ After writing the image to the USB stick, you can run it on real hardware by boo
 To make it easier to run our kernel in QEMU, we can set the `runner` configuration key for cargo:
 
 ```toml
-# in .cargo/config
+# in .cargo/config.toml
 
 [target.'cfg(target_os = "none")']
 runner = "bootimage runner"
@@ -446,7 +482,7 @@ The `bootimage runner` command is specifically designed to be usable as a `runne
 
 [Readme of `bootimage`]: https://github.com/rust-osdev/bootimage
 
-Now we can use `cargo xrun` to compile our kernel and boot it in QEMU. Like `xbuild`, the `xrun` subcommand builds the sysroot crates before invoking the actual cargo command. The subcommand is also provided by `cargo-xbuild`, so you don't need to install an additional tool.
+Now we can use `cargo run` to compile our kernel and boot it in QEMU.
 
 ## What's next?
 

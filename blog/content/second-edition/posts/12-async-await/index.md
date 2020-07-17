@@ -1153,7 +1153,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 We removed all the keyboard handling code from this function and instead added a call to the `add_scancode` function. The rest of the function stays the same as before.
 
-As expected, keypresses are no longer printed to the screen when we run our project using `cargo xrun` now. Instead, we see the warning that the scancode queue is uninitialized for every keystroke.
+As expected, keypresses are no longer printed to the screen when we run our project using `cargo run` now. Instead, we see the warning that the scancode queue is uninitialized for every keystroke.
 
 #### Scancode Stream
 
@@ -1393,7 +1393,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-When we execute `cargo xrun` now, we see that keyboard input works again:
+When we execute `cargo run` now, we see that keyboard input works again:
 
 ![QEMU printing ".....H...e...l...l..o..... ...W..o..r....l...d...!"](qemu-keyboard-output.gif)
 
@@ -1709,7 +1709,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 We only need to change the import and the type name. Since our `run` function is marked as diverging, the compiler knows that it never returns so that we no longer need a call to `hlt_loop` at the end of our `kernel_main` function.
 
-When we run our kernel using `cargo xrun` now, we see that keyboard input still works:
+When we run our kernel using `cargo run` now, we see that keyboard input still works:
 
 ![QEMU printing ".....H...e...l...l..o..... ...a..g..a....i...n...!"](qemu-keyboard-output-again.gif)
 
@@ -1783,7 +1783,7 @@ impl Executor {
 
 To avoid race conditions, we disable interrupts before checking whether the `task_queue` is empty. If it is, we use the [`enable_interrupts_and_hlt`] function to enable interrupts and put the CPU to sleep as a single atomic operation. In case the queue is no longer empty, it means that an interrupt woke a task after `run_ready_tasks` returned. In that case, we enable interrupts again and directly continue execution without executing `hlt`.
 
-Now our executor properly puts the CPU to sleep when there is nothing to do. We can see that the QEMU process has a much lower CPU utilization when we run our kernel using `cargo xrun` again.
+Now our executor properly puts the CPU to sleep when there is nothing to do. We can see that the QEMU process has a much lower CPU utilization when we run our kernel using `cargo run` again.
 
 #### Possible Extensions
 

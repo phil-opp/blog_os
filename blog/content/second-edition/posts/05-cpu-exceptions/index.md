@@ -406,7 +406,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-When we run it in QEMU now (using `cargo xrun`), we see the following:
+When we run it in QEMU now (using `cargo run`), we see the following:
 
 ![QEMU printing `EXCEPTION: BREAKPOINT` and the interrupt stack frame](qemu-breakpoint-exception.png)
 
@@ -421,7 +421,7 @@ Let's create a test that ensures that the above continues to work. First, we upd
 ```rust
 // in src/lib.rs
 
-/// Entry point for `cargo xtest`
+/// Entry point for `cargo test`
 #[cfg(test)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
@@ -431,7 +431,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-Remember, this `_start` function is used when running `cargo xtest --lib`, since Rust's tests the `lib.rs` completely independent of the `main.rs`. We need to call `init` here to set up an IDT before running the tests.
+Remember, this `_start` function is used when running `cargo test --lib`, since Rust's tests the `lib.rs` completely independent of the `main.rs`. We need to call `init` here to set up an IDT before running the tests.
 
 Now we can create a `test_breakpoint_exception` test:
 
@@ -447,7 +447,7 @@ fn test_breakpoint_exception() {
 
 The test invokes the `int3` function to trigger a breakpoint exception. By checking that the execution continues afterwards, we verify that our breakpoint handler is working correctly.
 
-You can try this new test by running `cargo xtest` (all tests) or `cargo xtest --lib` (only tests of `lib.rs` and its modules). You should see the following in the output:
+You can try this new test by running `cargo test` (all tests) or `cargo test --lib` (only tests of `lib.rs` and its modules). You should see the following in the output:
 
 ```
 blog_os::interrupts::test_breakpoint_exception...	[ok]

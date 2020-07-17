@@ -373,7 +373,7 @@ Now our kernel uses our bump allocator! Everything should still work, including 
 [`heap_allocation` tests]: @/second-edition/posts/10-heap-allocation/index.md#adding-a-test
 
 ```
-> cargo xtest --test heap_allocation
+> cargo test --test heap_allocation
 […]
 Running 3 tests
 simple_allocation... [ok]
@@ -416,7 +416,7 @@ Like the `many_boxes` test, this test creates a large number of allocations to p
 When we try run our new test, we see that it indeed fails:
 
 ```
-> cargo xtest --test heap_allocation
+> cargo test --test heap_allocation
 Running 4 tests
 simple_allocation... [ok]
 large_vec... [ok]
@@ -791,7 +791,7 @@ Since the `init` function behaves the same for the bump and linked list allocato
 When we now run our `heap_allocation` tests again, we see that all tests pass now, including the `many_boxes_long_lived` test that failed with the bump allocator:
 
 ```
-> cargo xtest --test heap_allocation
+> cargo test --test heap_allocation
 simple_allocation... [ok]
 large_vec... [ok]
 many_boxes... [ok]
@@ -1158,7 +1158,7 @@ Since the `init` function behaves the same for all allocators we implemented, we
 When we now run our `heap_allocation` tests again, all tests should still pass:
 
 ```
-> cargo xtest --test heap_allocation
+> cargo test --test heap_allocation
 simple_allocation... [ok]
 large_vec... [ok]
 many_boxes... [ok]
