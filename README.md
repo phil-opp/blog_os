@@ -10,19 +10,21 @@ This repository contains the source code for the [Async/Await][post] post of the
 
 ## Building
 
-You need a nightly Rust compiler. First you need to install the `cargo-xbuild` and `bootimage` tools:
+This project required a nightly version of Rust. You can build the project by running:
 
 ```
-cargo install cargo-xbuild bootimage
+cargo build
 ```
 
-Then you can build the project by running:
+To create a bootable disk image from the compiled kernel, you need to install the [`bootimage`] tool:
+
+[`bootimage`]: https://github.com/rust-osdev/bootimage
 
 ```
-cargo xbuild
+cargo install bootimage
 ```
 
-To create a bootable disk image, run:
+After installing, you can create the bootable disk image by running:
 
 ```
 cargo bootimage
@@ -39,10 +41,10 @@ You can run the disk image in [QEMU] through:
 [QEMU]: https://www.qemu.org/
 
 ```
-cargo xrun
+cargo run
 ```
 
-Of course [QEMU] needs to be installed for this.
+[QEMU] and the [`bootimage`] tool need to be installed for this.
 
 You can also write the image to an USB stick for booting it on a real machine. On Linux, the command for this is:
 
