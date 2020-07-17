@@ -5,7 +5,8 @@ authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 edition = "2018"
 
 [dependencies]
-bootloader = "0.9.3"
+bootloader = "0.9.8"
+rlibc = "1.0.0"
 volatile = "0.2.6"
 spin = "0.5.2"
 
