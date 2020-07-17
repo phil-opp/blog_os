@@ -40,10 +40,10 @@ Unfortunately it's a bit more complicated for `no_std` applications such as our 
 
 [`test`]: https://doc.rust-lang.org/test/index.html
 
-We can see this when we try to run `cargo xtest` in our project:
+We can see this when we try to run `cargo test` in our project:
 
 ```
-> cargo xtest
+> cargo test
    Compiling blog_os v0.1.0 (/…/blog_os)
 error[E0463]: can't find crate for `test`
 ```
@@ -85,7 +85,7 @@ Our runner just prints a short debug message and then calls each test function i
 [_trait object_]: https://doc.rust-lang.org/1.30.0/book/first-edition/trait-objects.html
 [_Fn()_]: https://doc.rust-lang.org/std/ops/trait.Fn.html
 
-When we run `cargo xtest` now, we see that it now succeeds. However, we still see our "Hello World" instead of the message from our `test_runner`. The reason is that our `_start` function is still used as entry point. The custom test frameworks feature generates a `main` function that calls `test_runner`, but this function is ignored because we use the `#[no_main]` attribute and provide our own entry point.
+When we run `cargo test` now, we see that it now succeeds. However, we still see our "Hello World" instead of the message from our `test_runner`. The reason is that our `_start` function is still used as entry point. The custom test frameworks feature generates a `main` function that calls `test_runner`, but this function is ignored because we use the `#[no_main]` attribute and provide our own entry point.
 
 To fix this, we first need to change the name of the generated function to something different than `main` through the `reexport_test_harness_main` attribute. Then we can call the renamed function from our `_start` function:
 
@@ -107,7 +107,7 @@ pub extern "C" fn _start() -> ! {
 
 We set the name of the test framework entry function to `test_main` and call it from our `_start` entry point. We use [conditional compilation] to add the call to `test_main` only in test contexts because the function is not generated on a normal run.
 
-When we now execute `cargo xtest`, we see the "Running 0 tests" message from our `test_runner` on the screen. We are now ready to create our first test function:
+When we now execute `cargo test`, we see the "Running 0 tests" message from our `test_runner` on the screen. We are now ready to create our first test function:
 
 ```rust
 // in src/main.rs
@@ -120,17 +120,17 @@ fn trivial_assertion() {
 }
 ```
 
-When we run `cargo xtest` now, we see the following output:
+When we run `cargo test` now, we see the following output:
 
 ![QEMU printing "Hello World!", "Running 1 tests", and "trivial assertion... [ok]"](qemu-test-runner-output.png)
 
 The `tests` slice passed to our `test_runner` function now contains a reference to the `trivial_assertion` function. From the `trivial assertion... [ok]` output on the screen we see that the test was called and that it succeeded.
 
-After executing the tests, our `test_runner` returns to the `test_main` function, which in turn returns to our `_start` entry point function. At the end of `_start`, we enter an endless loop because the entry point function is not allowed to return. This is a problem, because we want `cargo xtest` to exit after running all tests.
+After executing the tests, our `test_runner` returns to the `test_main` function, which in turn returns to our `_start` entry point function. At the end of `_start`, we enter an endless loop because the entry point function is not allowed to return. This is a problem, because we want `cargo test` to exit after running all tests.
 
 ## Exiting QEMU
 
-Right now we have an endless loop at the end of our `_start` function and need to close QEMU manually on each execution of `cargo xtest`. This is unfortunate because we also want to run `cargo xtest` in scripts without user interaction. The clean solution to this would be to implement a proper way to shutdown our OS. Unfortunately this is relatively complex, because it requires implementing support for either the [APM] or [ACPI] power management standard.
+Right now we have an endless loop at the end of our `_start` function and need to close QEMU manually on each execution of `cargo test`. This is unfortunate because we also want to run `cargo test` in scripts without user interaction. The clean solution to this would be to implement a proper way to shutdown our OS. Unfortunately this is relatively complex, because it requires implementing support for either the [APM] or [ACPI] power management standard.
 
 [APM]: https://wiki.osdev.org/APM
 [ACPI]: https://wiki.osdev.org/ACPI
@@ -144,7 +144,7 @@ Luckily, there is an escape hatch: QEMU supports a special `isa-debug-exit` devi
 test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 ```
 
-The `bootimage runner` appends the `test-args` to the default QEMU command for all test executables. For a normal `cargo xrun`, the arguments are ignored.
+The `bootimage runner` appends the `test-args` to the default QEMU command for all test executables. For a normal `cargo run`, the arguments are ignored.
 
 Together with the device name (`isa-debug-exit`), we pass the two parameters `iobase` and `iosize` that specify the _I/O port_ through which the device can be reached from our kernel.
 
@@ -218,10 +218,10 @@ fn test_runner(tests: &[&dyn Fn()]) {
 }
 ```
 
-When we run `cargo xtest` now, we see that QEMU immediately closes after executing the tests. The problem is that `cargo test` interprets the test as failed even though we passed our `Success` exit code:
+When we run `cargo test` now, we see that QEMU immediately closes after executing the tests. The problem is that `cargo test` interprets the test as failed even though we passed our `Success` exit code:
 
 ```
-> cargo xtest
+> cargo test
     Finished dev [unoptimized + debuginfo] target(s) in 0.03s
      Running target/x86_64-blog_os/debug/deps/blog_os-5804fc7d2dd4c9be
 Building bootloader
@@ -245,7 +245,7 @@ test-args = […]
 test-success-exit-code = 33         # (0x10 << 1) | 1
 ```
 
-With this configuration, `bootimage` maps our success exit code to exit code 0, so that `cargo xtest` correctly recognizes the success case and does not count the test as failed.
+With this configuration, `bootimage` maps our success exit code to exit code 0, so that `cargo test` correctly recognizes the success case and does not count the test as failed.
 
 Our test runner now automatically closes QEMU and correctly reports the test results out. We still see the QEMU window open for a very short time, but it does not suffice to read the results. It would be nice if we could print the test results to the console instead, so that we can still see them after QEMU exited.
 
@@ -371,10 +371,10 @@ test-args = [
 ]
 ```
 
-When we run `cargo xtest` now, we see the test output directly in the console:
+When we run `cargo test` now, we see the test output directly in the console:
 
 ```
-> cargo xtest
+> cargo test
     Finished dev [unoptimized + debuginfo] target(s) in 0.02s
      Running target/x86_64-blog_os/debug/deps/blog_os-7b7c37b4ad62551a
 Building bootloader
@@ -424,7 +424,7 @@ For our test panic handler, we use `serial_println` instead of `println` and the
 Now QEMU also exits for failed tests and prints a useful error message on the console:
 
 ```
-> cargo xtest
+> cargo test
     Finished dev [unoptimized + debuginfo] target(s) in 0.02s
      Running target/x86_64-blog_os/debug/deps/blog_os-7b7c37b4ad62551a
 Building bootloader
@@ -462,16 +462,16 @@ Now QEMU runs completely in the background and no window is opened anymore. This
 
 ### Timeouts
 
-Since `cargo xtest` waits until the test runner exits, a test that never returns can block the test runner forever. That's unfortunate, but not a big problem in practice since it's normally easy to avoid endless loops. In our case, however, endless loops can occur in various situations:
+Since `cargo test` waits until the test runner exits, a test that never returns can block the test runner forever. That's unfortunate, but not a big problem in practice since it's normally easy to avoid endless loops. In our case, however, endless loops can occur in various situations:
 
 - The bootloader fails to load our kernel, which causes the system to reboot endlessly.
 - The BIOS/UEFI firmware fails to load the bootloader, which causes the same endless rebooting.
 - The CPU enters a `loop {}` statement at the end of some of our functions, for example because the QEMU exit device doesn't work properly.
 - The hardware causes a system reset, for example when a CPU exception is not caught (explained in a future post).
 
-Since endless loops can occur in so many situations, the `bootimage` tool sets a timeout of 5 minutes for each test executable by default. If the test does not finish in this time, it is marked as failed and a "Timed Out" error is printed to the console. This feature ensures that tests that are stuck in an endless loop don't block `cargo xtest` forever.
+Since endless loops can occur in so many situations, the `bootimage` tool sets a timeout of 5 minutes for each test executable by default. If the test does not finish in this time, it is marked as failed and a "Timed Out" error is printed to the console. This feature ensures that tests that are stuck in an endless loop don't block `cargo test` forever.
 
-You can try it yourself by adding a `loop {}` statement in the `trivial_assertion` test. When you run `cargo xtest`, you see that the test is marked as timed out after 5 minutes. The timeout duration is [configurable][bootimage config] through a `test-timeout` key in the Cargo.toml:
+You can try it yourself by adding a `loop {}` statement in the `trivial_assertion` test. When you run `cargo test`, you see that the test is marked as timed out after 5 minutes. The timeout duration is [configurable][bootimage config] through a `test-timeout` key in the Cargo.toml:
 
 [bootimage config]: https://github.com/rust-osdev/bootimage#configuration
 
@@ -561,7 +561,7 @@ fn trivial_assertion() {
 }
 ```
 
-The `cargo xtest` output now looks like this:
+The `cargo test` output now looks like this:
 
 ```
 Running 1 tests
@@ -666,7 +666,7 @@ We use the [`unimplemented`] macro that always panics as a placeholder for the `
 
 [`unimplemented`]: https://doc.rust-lang.org/core/macro.unimplemented.html
 
-If you run `cargo xtest` at this stage, you will get an endless loop because the panic handler loops endlessly. You need to use the `Ctrl+c` keyboard shortcut for exiting QEMU.
+If you run `cargo test` at this stage, you will get an endless loop because the panic handler loops endlessly. You need to use the `Ctrl+c` keyboard shortcut for exiting QEMU.
 
 ### Create a Library
 
@@ -676,11 +676,13 @@ To make the required functions available to our integration test, we need to spl
 // src/lib.rs
 
 #![no_std]
+
+extern crate rlibc;
 ```
 
-Like the `main.rs`, the `lib.rs` is a special file that is automatically recognized by cargo. The library is a separate compilation unit, so we need to specify the `#![no_std]` attribute again.
+Like the `main.rs`, the `lib.rs` is a special file that is automatically recognized by cargo. The library is a separate compilation unit, so we need to specify the `#![no_std]` attribute and the `extern crate rlibc` statement again.
 
-To make our library work with `cargo xtest`, we need to also add the test functions and attributes:
+To make our library work with `cargo test`, we need to also add the test functions and attributes:
 
 ```rust
 // in src/lib.rs
@@ -722,7 +724,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     loop {}
 }
 
-/// Entry point for `cargo xtest`
+/// Entry point for `cargo test`
 #[cfg(test)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
@@ -817,7 +819,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 The library is usable like a normal external crate. It is called like our crate, which is `blog_os` in our case. The above code uses the `blog_os::test_runner` function in the `test_runner` attribute and the `blog_os::test_panic_handler` function in our `cfg(test)` panic handler. It also imports the `println` macro to make it available to our `_start` and `panic` functions.
 
-At this point, `cargo xrun` and `cargo xtest` should work again. Of course, `cargo xtest` still loops endlessly (you can exit with `ctrl+c`). Let's fix this by using the required library functions in our integration test.
+At this point, `cargo run` and `cargo test` should work again. Of course, `cargo test` still loops endlessly (you can exit with `ctrl+c`). Let's fix this by using the required library functions in our integration test.
 
 ### Completing the Integration Test
 
@@ -836,7 +838,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 Instead of reimplementing the test runner, we use the `test_runner` function from our library. For our `panic` handler, we call the `blog_os::test_panic_handler` function like we did in our `main.rs`.
 
-Now `cargo xtest` exits normally again. When you run it, you see that it builds and runs the tests for our `lib.rs`, `main.rs`, and `basic_boot.rs` separately after each other. For the `main.rs` and the `basic_boot` integration test, it reports "Running 0 tests" since these files don't have any functions annotated with `#[test_case]`.
+Now `cargo test` exits normally again. When you run it, you see that it builds and runs the tests for our `lib.rs`, `main.rs`, and `basic_boot.rs` separately after each other. For the `main.rs` and the `basic_boot` integration test, it reports "Running 0 tests" since these files don't have any functions annotated with `#[test_case]`.
 
 We can now add tests to our `basic_boot.rs`. For example, we can test that `println` works without panicking, like we did in the vga buffer tests:
 
@@ -851,7 +853,7 @@ fn test_println() {
 }
 ```
 
-When we run `cargo xtest` now, we see that it finds and executes the test function.
+When we run `cargo test` now, we see that it finds and executes the test function.
 
 The test might seem a bit useless right now since it's almost identical to one of the VGA buffer tests. However, in the future the `_start` functions of our `main.rs` and `lib.rs` might grow and call various initialization routines before running the `test_main` function, so that the two tests are executed in very different environments.
 
@@ -939,7 +941,7 @@ fn should_fail() {
 
 The test uses the `assert_eq` to assert that `0` and `1` are equal. This of course fails, so that our test panics as desired. Note that we need to manually print the function name using `serial_print!` here because we don't use the `Testable` trait.
 
-When we run the test through `cargo xtest --test should_panic` we see that it is successful because the test panicked as expected. When we comment out the assertion and run the test again, we see that it indeed fails with the _"test did not panic"_ message.
+When we run the test through `cargo test --test should_panic` we see that it is successful because the test panicked as expected. When we comment out the assertion and run the test again, we see that it indeed fails with the _"test did not panic"_ message.
 
 A significant drawback of this approach is that it only works for a single test function. With multiple `#[test_case]` functions, only the first function is executed because the execution cannot continue after the panic handler has been called. I currently don't know of a good way to solve this problem, so let me know if you have an idea!
 
@@ -991,7 +993,7 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 ```
 
-We now call the `should_fail` function directly from our `_start` function and exit with a failure exit code if it returns. When we run `cargo xtest --test should_panic` now, we see that the test behaves exactly as before.
+We now call the `should_fail` function directly from our `_start` function and exit with a failure exit code if it returns. When we run `cargo test --test should_panic` now, we see that the test behaves exactly as before.
 
 Apart from creating `should_panic` tests, disabling the `harness` attribute can also be useful for complex integration tests, for example when the individual test functions have side effects and need to be run in a specified order.
 
