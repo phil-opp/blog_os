@@ -10,7 +10,9 @@ This repository contains the source code for the [Double Faults][post] post of t
 
 ## Building
 
-This project required a nightly version of Rust. You can build the project by running:
+This project requires a nightly version of Rust because it uses some unstable features. At least nightly _2020-07-15_ is required for building. You might need to run `rustup update nightly --force` to update to the latest nightly even if some components such as `rustfmt` are missing it.
+
+You can build the project by running:
 
 ```
 cargo build
