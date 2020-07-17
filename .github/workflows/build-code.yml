@@ -53,8 +53,6 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly
-      - name: Install bootimage
-        run: cargo install bootimage --debug
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: Add thumbv7em-none-eabihf Target
