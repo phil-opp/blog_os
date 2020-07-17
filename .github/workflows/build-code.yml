@@ -54,7 +54,7 @@ jobs:
           profile: minimal
           toolchain: nightly
       - name: Install bootimage
-        run: cargo install bootimage --debug --git https://github.com/rust-osdev/bootimage.git --branch Zbuild-std
+        run: cargo install bootimage --debug
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: Install Rustup Components
