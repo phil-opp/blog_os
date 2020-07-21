@@ -85,7 +85,13 @@ Our runner just prints a short debug message and then calls each test function i
 [_trait object_]: https://doc.rust-lang.org/1.30.0/book/first-edition/trait-objects.html
 [_Fn()_]: https://doc.rust-lang.org/std/ops/trait.Fn.html
 
-When we run `cargo test` now, we see that it now succeeds. However, we still see our "Hello World" instead of the message from our `test_runner`. The reason is that our `_start` function is still used as entry point. The custom test frameworks feature generates a `main` function that calls `test_runner`, but this function is ignored because we use the `#[no_main]` attribute and provide our own entry point.
+When we run `cargo test` now, we see that it now succeeds (if it doesn't, see the note below). However, we still see our "Hello World" instead of the message from our `test_runner`. The reason is that our `_start` function is still used as entry point. The custom test frameworks feature generates a `main` function that calls `test_runner`, but this function is ignored because we use the `#[no_main]` attribute and provide our own entry point.
+
+<div class = "warning">
+
+**Note:** There is currently a bug in cargo that leads to "duplicate lang item" errors on `cargo test` in some cases. It occurs when you have set `panic = "abort"` for a profile in your `Cargo.toml`. Try removing it, then `cargo test` should work. See the [cargo issue](https://github.com/rust-lang/cargo/issues/7359) for more information on this.
+
+</div>
 
 To fix this, we first need to change the name of the generated function to something different than `main` through the `reexport_test_harness_main` attribute. Then we can call the renamed function from our `_start` function:
 
