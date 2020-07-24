@@ -1317,7 +1317,7 @@ To wake the stored `Waker`, we add a call to `WAKER.wake()` in the `add_scancode
 ```rust
 // in src/task/keyboard.rs
 
-pub(crate) add_scancode(scancode: u8) {
+pub(crate) fn add_scancode(scancode: u8) {
     if let Ok(queue) = SCANCODE_QUEUE.try_get() {
         if let Err(_) = queue.push(scancode) {
             println!("WARNING: scancode queue full; dropping keyboard input");
