@@ -29,7 +29,7 @@ First, install [termux](https://termux.com/) from the [Google Play Store](https:
     pkg install wget tar
     ```
 
-- Add the [community repository by its-pointless](https://wiki.termux.com/wiki/Package_Management#By_its-pointless_.28live_the_dream.29:):
+- Add the [community repository by its-pointless](https://wiki.termux.com/wiki/Package_Management#By_its-pointless):
     ```
     wget https://its-pointless.github.io/setup-pointless-repo.sh
     bash setup-pointless-repo.sh
