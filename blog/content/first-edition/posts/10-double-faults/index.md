@@ -495,7 +495,7 @@ We define that the 0th IST entry is the double fault stack (any other IST index 
 #### Loading the TSS
 Now that we created a new TSS, we need a way to tell the CPU that it should use it. Unfortunately, this is a bit cumbersome, since the TSS is a Task State _Segment_ (for historical reasons). So instead of loading the table directly, we need to add a new segment descriptor to the [Global Descriptor Table] \(GDT). Then we can load our TSS invoking the [`ltr` instruction] with the respective GDT index.
 
-[Global Descriptor Table]: http://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
+[Global Descriptor Table]: https://web.archive.org/web/20190217233448/https://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
 [`ltr` instruction]: https://www.felixcloutier.com/x86/ltr
 
 ### The Global Descriptor Table (again)
