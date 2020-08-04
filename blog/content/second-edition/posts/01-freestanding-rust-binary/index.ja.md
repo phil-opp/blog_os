@@ -5,8 +5,9 @@ path = "ja/freestanding-rust-binary"
 date = 2018-02-10
 
 [extra]
+chapter = "Bare Bones"
 # Please update this when updating the translation
-translation_based_on_commit = "24d04e0e39a3395ecdce795bab0963cb6afe1bfd"
+translation_based_on_commit = "6f1f87215892c2be12c6973a6f753c9a25c34b7e"
 # GitHub usernames of the people that translated this post
 translators = ["JohnTitor"]
 +++
@@ -17,7 +18,7 @@ translators = ["JohnTitor"]
 
 <!-- more -->
 
-このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください (訳注: リンクは原文(英語)のものになります)。また[こちら][comments]にコメントを遺すこともできます。この記事の完全なソースコードは[`post-01` ブランチ][post branch]にあります。
+このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください (訳注: リンクは原文(英語)のものになります)。また[こちら][comments]にコメントを残すこともできます。この記事の完全なソースコードは[`post-01` ブランチ][post branch]にあります。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [comments]: #comments
@@ -61,7 +62,7 @@ cargo new blog_os --bin --edition 2018
 
 プロジェクト名を `blog_os` としましたが、もちろんお好きな名前をつけていただいても大丈夫です。`--bin`フラグは実行可能バイナリを作成することを、 `--edition 2018` は[2018エディション][2018 edition]を使用することを明示的に指定します。コマンドを実行すると、 Cargoは以下のようなディレクトリ構造を作成します:
 
-[2018 edition]: https://rust-lang-nursery.github.io/edition-guide/rust-2018/index.html
+[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
 
 ```bash
 blog_os
@@ -72,7 +73,7 @@ blog_os
 
 `Cargo.toml` にはクレートの名前や作者名、[セマンティックバージョニング][semantic version]に基づくバージョンナンバーや依存関係などが書かれています。`src/main.rs` には私達のクレートのルートモジュールと `main` 関数が含まれています。`cargo build` コマンドでこのクレートをコンパイルして、 `target/debug` ディレクトリの中にあるコンパイルされた `blog_os` バイナリを実行することができます。
 
-[semantic version]: http://semver.org/
+[semantic version]: https://semver.org/
 
 ### `no_std` Attribute
 
@@ -154,11 +155,12 @@ language item はコンパイラによって内部的に必要とされる特別
 
 独自に language item を実装することもできますが、これは最終手段として行われるべきでしょう。というのも、language item は非常に不安定な実装であり型検査も行われないからです(なので、コンパイラは関数が正しい引数の型を取っているかさえ検査しません)。幸い、上記の language item のエラーを修正するためのより安定した方法があります。
 
-`eh_personality` language item は[スタックアンワインド][stack unwinding] を実装するための関数を定義します。デフォルトでは、パニックが起きた場合には Rust はアンワインドを使用してすべてのスタックにある変数のデストラクタを実行します。これにより、使用されている全てのメモリが確実に解放され、親スレッドはパニックを検知して実行を継続できます。しかしアンワインドは複雑であり、いくつかの OS 特有のライブラリ(例えば、Linux では [libunwind] 、Windows では[構造化例外][structured exception handling])を必要とするので、私達の OS には使いたくありません。
+[`eh_personality` language item] は[スタックアンワインド][stack unwinding] を実装するための関数を定義します。デフォルトでは、パニックが起きた場合には Rust はアンワインドを使用してすべてのスタックにある変数のデストラクタを実行します。これにより、使用されている全てのメモリが確実に解放され、親スレッドはパニックを検知して実行を継続できます。しかしアンワインドは複雑であり、いくつかの OS 特有のライブラリ(例えば、Linux では [libunwind] 、Windows では[構造化例外][structured exception handling])を必要とするので、私達の OS には使いたくありません。
 
-[stack unwinding]: http://www.bogotobogo.com/cplusplus/stackunwinding.php
-[libunwind]: http://www.nongnu.org/libunwind/
-[structured exception handling]: https://msdn.microsoft.com/en-us/library/windows/desktop/ms680657(v=vs.85).aspx
+[`eh_personality` language item]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
+[stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
+[libunwind]: https://www.nongnu.org/libunwind/
+[structured exception handling]:  https://docs.microsoft.com/de-de/windows/win32/debug/structured-exception-handling
 
 ### アンワインドの無効化
 
@@ -403,7 +405,7 @@ error: linking with `cc` failed: exit code: 1
 
 macOS は[正式には静的にリンクされたバイナリをサポートしておらず][does not officially support statically linked binaries]、プログラムはデフォルトで `libSystem` ライブラリにリンクされる必要があります。これを無効にして静的バイナリをリンクするには、`-static` フラグをリンカに渡します:
 
-[does not officially support statically linked binaries]: https://developer.apple.com/library/content/qa/qa1118/_index.html
+[does not officially support statically linked binaries]: https://developer.apple.com/library/archive/qa/qa1118/_index.html
 
 ```bash
 cargo rustc -- -C link-args="-e __start -static"
@@ -429,10 +431,10 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 
 #### ビルドコマンドの統一
 
-現時点では、ホストプラットフォームによって異なるビルドコマンドを使っていますが、これは理想的ではありません。これを回避するために、プラットフォーム固有の引数を含む `.cargo/config` というファイルを作成します:
+現時点では、ホストプラットフォームによって異なるビルドコマンドを使っていますが、これは理想的ではありません。これを回避するために、プラットフォーム固有の引数を含む `.cargo/config.toml` というファイルを作成します:
 
 ```toml
-# in .cargo/config
+# in .cargo/config.toml
 
 [target.'cfg(target_os = "linux")']
 rustflags = ["-C", "link-arg=-nostartfiles"]
@@ -444,9 +446,9 @@ rustflags = ["-C", "link-args=/ENTRY:_start /SUBSYSTEM:console"]
 rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 ```
 
-`rustflags` には `rustc` を呼び出すたびに自動的に追加される引数が含まれています。`.cargo/config` についての詳細は[公式のドキュメント][official documentation]を確認してください。
+`rustflags` には `rustc` を呼び出すたびに自動的に追加される引数が含まれています。`.cargo/config.toml` についての詳細は[公式のドキュメント][official documentation]を確認してください。
 
-[official documentation]: (https://doc.rust-lang.org/cargo/reference/config.html)
+[official documentation]: https://doc.rust-lang.org/cargo/reference/config.html
 
 これで私達のプログラムは3つすべてのプラットフォーム上で、シンプルに `cargo build` のみでビルドすることができるようになります。
 
@@ -456,7 +458,7 @@ rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 
 もし既存の OS 上で動作する最小限のバイナリを作成したいなら、`libc` を使って `#[start]` attribute を[ここ][no-stdlib]で説明するとおりに設定するのが良いでしょう。
 
-[no-stdlib]: (https://doc.rust-lang.org/1.16.0/book/no-stdlib.html)
+[no-stdlib]: https://doc.rust-lang.org/1.16.0/book/no-stdlib.html
 
 </details>
 
