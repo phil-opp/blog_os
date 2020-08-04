@@ -9,6 +9,7 @@ generate_rss = true
 languages = [
     { code = "zh-CN" }, # Chinese (simplified)
     { code = "zh-TW" }, # Chinese (tradictional)
+    { code = "ja" }, # Japanese
 ]
 
 ignored_content = ["*/README.md"]
