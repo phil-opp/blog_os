@@ -4,8 +4,9 @@ weight = 8
 path = "kernel-heap"
 aliases = ["kernel-heap.html"]
 date  = 2016-04-11
-updated = "2017-11-19"
 template = "first-edition/page.html"
+[extra]
+updated = "2017-11-19"
 +++
 
 In the previous posts we created a [frame allocator] and a [page table module]. Now we are ready to create a kernel heap and a memory allocator. Thus, we will unlock `Box`, `Vec`, `BTreeMap`, and the rest of the [alloc] crate.
