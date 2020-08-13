@@ -327,7 +327,7 @@ impl Writer {
 ```rust
 // in src/vga_buffer.rs
 
-use core::fmt::Write;
+use core::fmt;
 
 impl fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
