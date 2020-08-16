@@ -1,0 +1,33 @@
+name: Build code on schedule
+
+on:
+  schedule:
+    - cron: '40 1 * * *'   # every day at 1:40
+
+jobs:
+  trigger-build:
+    name: Trigger Build
+    strategy:
+      matrix:
+        branch: [
+          post-01,
+          post-02,
+          post-03,
+          post-04,
+          post-05,
+          post-06,
+          post-07,
+          post-08,
+          post-09,
+          post-10,
+          post-11,
+          post-12,
+        ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invoke workflow
+        uses: benc-uk/workflow-dispatch@v1.1
+        with:
+          workflow: Build Code
+          token: ${{ secrets.SCHEDULED_BUILDS_TOKEN }}
+          ref: ${{ matrix.branch }}
