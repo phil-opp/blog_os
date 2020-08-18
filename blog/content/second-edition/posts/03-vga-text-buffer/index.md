@@ -374,6 +374,7 @@ Now we can use Rust's built-in `write!`/`writeln!` formatting macros:
 
 ```rust
 // in src/vga_buffer.rs
+use core::fmt::Write;
 
 pub fn print_something() {
     use core::fmt::Write;
