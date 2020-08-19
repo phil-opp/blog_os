@@ -969,6 +969,8 @@ The `new` function just initializes the `list_heads` array with empty nodes and 
 
 [`empty`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html#method.empty
 
+If you haven't done so already for the `LinkedListAllocator` implementation, you also need to add **`#![feature(const_fn)]`** to the beginning of your `lib.rs`. The reason is that any use of mutable reference types in const functions is still unstable, including the `Option<&'static mut ListNode>` array element type of the `list_heads` field (even if we set it to `None`).
+
 The unsafe `init` function only calls the [`init`] function of the `fallback_allocator` without doing any additional initialization of the `list_heads` array. Instead, we will initialize the lists lazily on `alloc` and `dealloc` calls.
 
 [`init`]: https://docs.rs/linked_list_allocator/0.6.4/linked_list_allocator/struct.Heap.html#method.init
