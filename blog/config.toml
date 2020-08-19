@@ -4,7 +4,8 @@ description = "This blog series creates a small operating system in the Rust pro
 
 highlight_code = true
 highlight_theme = "visual-studio-dark"
-generate_rss = true
+generate_feed = true
+feed_filename = "rss.xml"
 
 languages = [
     { code = "zh-CN" }, # Chinese (simplified)
