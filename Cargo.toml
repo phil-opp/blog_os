@@ -4,14 +4,19 @@ version = "0.1.0"
 authors = ["Philipp Oppermann <dev@phil-opp.com>"]
 edition = "2018"
 
+[workspace]
+members = [
+    "disk_image",
+]
+
 [[test]]
 name = "should_panic"
 harness = false
 
 [dependencies]
-bootloader = "0.9.8"
+bootloader = { path = "../../uefi-test"}
 rlibc = "1.0.0"
-volatile = "0.2.6"
+volatile = "0.4.0-alpha"
 spin = "0.5.2"
 x86_64 = "0.11.0"
 uart_16550 = "0.2.0"

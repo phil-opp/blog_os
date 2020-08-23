@@ -4,7 +4,6 @@
 #![test_runner(blog_os::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-use blog_os::println;
 use core::panic::PanicInfo;
 
 #[no_mangle] // don't mangle the name of this function
@@ -21,5 +20,5 @@ fn panic(info: &PanicInfo) -> ! {
 
 #[test_case]
 fn test_println() {
-    println!("test_println output");
+    //println!("test_println output");
 }

@@ -5,4 +5,7 @@
 # target = "x86_64-blog_os.json"
 
 [target.'cfg(target_os = "none")']
-runner = "bootimage runner"
+runner = "cargo run --manifest-path disk_image/Cargo.toml --bin runner --quiet"
+
+[alias]
+bootimage = "run --manifest-path disk_image/Cargo.toml --bin disk_image --quiet"
