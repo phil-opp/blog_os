@@ -1,5 +1,5 @@
-use std::process::Command;
 use anyhow::anyhow;
+use std::process::Command;
 
 const TARGET_NAME: &str = "x86_64-blog_os";
 const KERNEL_BINARIES: &[&str] = &["blog_os"];
@@ -10,7 +10,9 @@ fn main() -> anyhow::Result<()> {
     build_cmd.arg("build");
     build_cmd.arg("--release");
     build_cmd.arg("-Zbuild-std=core");
-    build_cmd.arg("--target").arg(format!("{}.json", TARGET_NAME));
+    build_cmd
+        .arg("--target")
+        .arg(format!("{}.json", TARGET_NAME));
     if !build_cmd.status()?.success() {
         return Err(anyhow!("build failed"));
     };
@@ -24,10 +26,14 @@ fn main() -> anyhow::Result<()> {
             let path = target_dir.join(binary_name);
             path.canonicalize()?
         };
-        
+
         let disk_image = disk_image::create_disk_image(&binary_path, false)?;
 
-        println!("Created disk image for binary {} at {}", binary_name, disk_image.display());
+        println!(
+            "Created disk image for binary {} at {}",
+            binary_name,
+            disk_image.display()
+        );
     }
 
     Ok(())

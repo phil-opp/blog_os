@@ -5,16 +5,13 @@
 #![reexport_test_harness_main = "test_main"]
 
 use blog_os::serial_println;
-use core::{ptr, panic::PanicInfo, slice};
+use core::{panic::PanicInfo, ptr, slice};
 
 #[no_mangle]
-pub extern "C" fn _start(boot_info: &'static mut bootloader::boot_info_uefi::BootInfo) -> ! {
+pub extern "C" fn _start(boot_info: &'static mut bootloader::boot_info::BootInfo) -> ! {
     #[cfg(test)]
     test_main();
-    
-    loop {
-        x86_64::instructions::hlt();
-    }
+
     let mut framebuffer = {
         let ptr = boot_info.framebuffer.start_addr as *mut u8;
         let slice = unsafe { slice::from_raw_parts_mut(ptr, boot_info.framebuffer.len) };
@@ -22,7 +19,6 @@ pub extern "C" fn _start(boot_info: &'static mut bootloader::boot_info_uefi::Boo
     };
 
     //serial_println!("Hello World{}", "!");
-
 
     for i in 0..boot_info.framebuffer.len {
         framebuffer.index_mut(i).write(0x99);

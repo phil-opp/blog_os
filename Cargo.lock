@@ -37,14 +37,11 @@ version = "0.9.8"
 
 [[package]]
 name = "bootloader-locator"
-version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28ad4c6eeee6c832cb7b2d11fab963674418878c8edaedbef67fcae403dae645"
+version = "0.0.3"
 dependencies = [
  "cargo_metadata",
  "locate-cargo-manifest",
  "thiserror",
- "toml",
 ]
 
 [[package]]
@@ -132,8 +129,6 @@ checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
 [[package]]
 name = "runner-utils"
 version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9dc6848b056990cd51e72aa5556bdbea4a96013e8b18635d183c84159c2988f"
 dependencies = [
  "thiserror",
  "wait-timeout",
@@ -227,15 +222,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "toml"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
-dependencies = [
- "serde",
 ]
 
 [[package]]
