@@ -15,12 +15,12 @@ extern crate rlibc;
 use core::panic::PanicInfo;
 
 pub mod allocator;
+pub mod framebuffer;
 pub mod gdt;
 pub mod interrupts;
 pub mod memory;
 pub mod serial;
 pub mod task;
-pub mod vga_buffer;
 
 pub fn init() {
     gdt::init();

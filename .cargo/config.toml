@@ -1,8 +1,14 @@
 [unstable]
-build-std = ["core", "compiler_builtins", "alloc"]
+# TODO: uncomment once https://github.com/rust-lang/cargo/issues/8687 is resolved
+# build-std = ["core", "alloc"]
 
 [build]
-target = "x86_64-blog_os.json"
+# TODO: uncomment once https://github.com/rust-lang/cargo/issues/8687 is resolved
+# target = "x86_64-blog_os.json"
 
 [target.'cfg(target_os = "none")']
-runner = "bootimage runner"
+runner = "cargo run --package disk_image --bin runner --quiet"
+
+[alias]
+xrun = "run --target x86_64-blog_os.json -Zbuild-std=core,alloc"
+bootimage = "run --package disk_image --bin disk_image --quiet"
