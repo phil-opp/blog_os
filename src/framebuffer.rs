@@ -87,7 +87,8 @@ impl Writer {
         let color = if on {
             match self.info.pixel_format {
                 PixelFormat::RGB => [0x33, 0xff, 0x66, 0],
-                other => panic!("unknown pixel format {:?}", other),
+                PixelFormat::BGR => [0x66, 0xff, 0x33, 0],
+                _other => [0xff, 0xff, 0xff, 0],
             }
         } else {
             [0, 0, 0, 0]
