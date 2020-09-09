@@ -42,6 +42,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    unsafe {
+        blog_os::framebuffer::WRITER.force_unlock();
+    };
     println!("{}", info);
     blog_os::hlt_loop();
 }
