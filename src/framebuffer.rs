@@ -45,6 +45,12 @@ impl Writer {
         self.buffer.fill(0);
     }
 
+    fn shift_lines_up(&mut self) {
+        let offset = self.info.stride * self.info.bytes_per_pixel * 8;
+        self.buffer.copy_within(offset.., 0);
+        self.y_pos -= 8;
+    }
+
     fn width(&self) -> usize {
         self.info.horizontal_resolution
     }
@@ -61,8 +67,8 @@ impl Writer {
                 if self.x_pos >= self.width() {
                     self.newline();
                 }
-                if self.y_pos >= (self.height() - 8) {
-                    self.clear();
+                while self.y_pos >= (self.height() - 8) {
+                    self.shift_lines_up();
                 }
                 let rendered = font8x8::BASIC_FONTS
                     .get(c)
