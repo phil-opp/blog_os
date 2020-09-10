@@ -625,7 +625,7 @@ current reference count is 2
 reference count is 1 now
 ](qemu-alloc-showcase.png)
 
-As expected, we see that the `Box` and `Vec` values live on the heap, as indicated by the pointer starting with `0x_4444_4444_0000`. The reference counted value also behaves as expected, with the reference count being 2 after the `clone` call, and 1 again after one of the instances was dropped.
+As expected, we see that the `Box` and `Vec` values live on the heap, as indicated by the pointer starting with the `0x_4444_4444_*` prefix. The reference counted value also behaves as expected, with the reference count being 2 after the `clone` call, and 1 again after one of the instances was dropped.
 
 The reason that the vector starts at offset `0x800` is not that the boxed value is `0x800` bytes large, but the [reallocations] that occur when the vector needs to increase its capacity. For example, when the vector's capacity is 32 and we try to add the next element, the vector allocates a new backing array with capacity 64 behind the scenes and copies all elements over. Then it frees the old allocation.
 
