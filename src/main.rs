@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+#![feature(llvm_asm)] //new
 
 extern crate rlibc;
 
