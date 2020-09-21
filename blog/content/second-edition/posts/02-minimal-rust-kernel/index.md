@@ -104,8 +104,9 @@ Cargo supports different target systems through the `--target` parameter. The ta
 [target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [ABI]: https://stackoverflow.com/a/2456882
 [platform-support]: https://forge.rust-lang.org/release/platform-support.html
+[custom-targets]: https://doc.rust-lang.org/nightly/rustc/targets/custom.html
 
-For our target system, however, we require some special configuration parameters (e.g. no underlying OS), so none of the [existing target triples][platform-support] fits. Fortunately, Rust allows us to define our own target through a JSON file. For example, a JSON file that describes the `x86_64-unknown-linux-gnu` target looks like this:
+For our target system, however, we require some special configuration parameters (e.g. no underlying OS), so none of the [existing target triples][platform-support] fits. Fortunately, Rust allows us to define [our own target][custom-targets] through a JSON file. For example, a JSON file that describes the `x86_64-unknown-linux-gnu` target looks like this:
 
 ```json
 {
