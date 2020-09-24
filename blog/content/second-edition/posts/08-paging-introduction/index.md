@@ -235,8 +235,8 @@ Let's take a closer look at the available flags:
 
 The `x86_64` crate provides types for [page tables] and their [entries], so we don't need to create these structures ourselves.
 
-[page tables]: https://docs.rs/x86_64/0.11.1/x86_64/structures/paging/page_table/struct.PageTable.html
-[entries]: https://docs.rs/x86_64/0.11.1/x86_64/structures/paging/page_table/struct.PageTableEntry.html
+[page tables]: https://docs.rs/x86_64/0.12.1/x86_64/structures/paging/page_table/struct.PageTable.html
+[entries]: https://docs.rs/x86_64/0.12.1/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
 ### The Translation Lookaside Buffer
 
@@ -245,7 +245,7 @@ A 4-level page table makes the translation of virtual addresses expensive, becau
 Unlike the other CPU caches, the TLB is not fully transparent and does not update or remove translations when the contents of page tables change. This means that the kernel must manually update the TLB whenever it modifies a page table. To do this, there is a special CPU instruction called [`invlpg`] (“invalidate page”) that removes the translation for the specified page from the TLB, so that it is loaded again from the page table on the next access. The TLB can also be flushed completely by reloading the `CR3` register, which simulates an address space switch. The `x86_64` crate provides Rust functions for both variants in the [`tlb` module].
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
-[`tlb` module]: https://docs.rs/x86_64/0.11.1/x86_64/instructions/tlb/index.html
+[`tlb` module]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/tlb/index.html
 
 It is important to remember flushing the TLB on each page table modification because otherwise the CPU might keep using the old translation, which can lead to non-deterministic bugs that are very hard to debug.
 
@@ -300,8 +300,8 @@ extern "x86-interrupt" fn page_fault_handler(
 The [`CR2`] register is automatically set by the CPU on a page fault and contains the accessed virtual address that caused the page fault. We use the [`Cr2::read`] function of the `x86_64` crate to read and print it. The [`PageFaultErrorCode`] type provides more information about the type of memory access that caused the page fault, for example whether it was caused by a read or write operation. For this reason we print it too. We can't continue execution without resolving the page fault, so we enter a [`hlt_loop`] at the end.
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
-[`Cr2::read`]: https://docs.rs/x86_64/0.11.1/x86_64/registers/control/struct.Cr2.html#method.read
-[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.11.1/x86_64/structures/idt/struct.PageFaultErrorCode.html
+[`Cr2::read`]: https://docs.rs/x86_64/0.12.1/x86_64/registers/control/struct.Cr2.html#method.read
+[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
 [`hlt_loop`]: @/second-edition/posts/07-hardware-interrupts/index.md#the-hlt-instruction
 
@@ -335,7 +335,7 @@ When we run it, we see that our page fault handler is called:
 
 The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access. The error code tells us through the [`CAUSED_BY_WRITE`] that the fault occurred while trying to perform a write operation. It tells us even more through the [bits that are _not_ set][`PageFaultErrorCode`]. For example, the fact that the `PROTECTION_VIOLATION` flag is not set means that the page fault occurred because the target page wasn't present.
 
-[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.11.1/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
+[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
 
 We see that the current instruction pointer is `0x2031b2`, so we know that this address points to a code page. Code pages are mapped read-only by the bootloader, so reading from this address works but writing causes a page fault. You can try this by changing the `0xdeadbeaf` pointer to `0x2031b2`:
 
@@ -359,7 +359,7 @@ By commenting out the last line, we see that the read access works, but the writ
 
 We see that the _"read worked"_ message is printed, which indicates that the read operation did not cause any errors. However, instead of the _"write worked"_ message a page fault occurs. This time the [`PROTECTION_VIOLATION`] flag is set in addition to the [`CAUSED_BY_WRITE`] flag, which indicates that the page was present, but the operation was not allowed on it. In this case, writes to the page are not allowed since code pages are mapped as read-only.
 
-[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.11.1/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
+[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
 ### Accessing the Page Tables
 
@@ -385,9 +385,9 @@ pub extern "C" fn _start() -> ! {
 
 The [`Cr3::read`] function of the `x86_64` returns the currently active level 4 page table from the `CR3` register. It returns a tuple of a [`PhysFrame`] and a [`Cr3Flags`] type. We are only interested in the frame, so we ignore the second element of the tuple.
 
-[`Cr3::read`]: https://docs.rs/x86_64/0.11.1/x86_64/registers/control/struct.Cr3.html#method.read
-[`PhysFrame`]: https://docs.rs/x86_64/0.11.1/x86_64/structures/paging/frame/struct.PhysFrame.html
-[`Cr3Flags`]: https://docs.rs/x86_64/0.11.1/x86_64/registers/control/struct.Cr3Flags.html
+[`Cr3::read`]: https://docs.rs/x86_64/0.12.1/x86_64/registers/control/struct.Cr3.html#method.read
+[`PhysFrame`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/paging/frame/struct.PhysFrame.html
+[`Cr3Flags`]: https://docs.rs/x86_64/0.12.1/x86_64/registers/control/struct.Cr3Flags.html
 
 When we run it, we see the following output:
 
@@ -397,7 +397,7 @@ Level 4 page table at: PhysAddr(0x1000)
 
 So the currently active level 4 page table is stored at address `0x1000` in _physical_ memory, as indicated by the [`PhysAddr`] wrapper type. The question now is: how can we access this table from our kernel?
 
-[`PhysAddr`]: https://docs.rs/x86_64/0.11.1/x86_64/addr/struct.PhysAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.12.1/x86_64/addr/struct.PhysAddr.html
 
 Accessing physical memory directly is not possible when paging is active, since programs could easily circumvent memory protection and access memory of other programs otherwise. So the only way to access the table is through some virtual page that is mapped to the physical frame at address `0x1000`. This problem of creating mappings for page table frames is a general problem, since the kernel needs to access the page tables regularly, for example when allocating a stack for a new thread.
 
