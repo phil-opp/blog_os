@@ -29,9 +29,9 @@ dependencies = [
 
 [[package]]
 name = "bootloader"
-version = "0.9.8"
+version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ad686b9b47363de7d36c05fb6885f17d08d0f2d15b1bc782a101fe3c94a2c7c"
+checksum = "dd6d8b0a125f7c1be168f6fd21d12c84148a807ef4896df8215a5607f9b2a9b4"
 
 [[package]]
 name = "cpuio"
@@ -50,9 +50,9 @@ dependencies = [
 
 [[package]]
 name = "pc-keyboard"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c48392db76c4e9a69e0b3be356c5f97ebb7b14413c5e4fd0af4755dbf86e2fce"
+checksum = "5c6f2d937e3b8d63449b01401e2bae4041bc9dd1129c2e3e0d239407cf6635ac"
 
 [[package]]
 name = "pic8259_simple"
@@ -87,15 +87,15 @@ dependencies = [
 
 [[package]]
 name = "volatile"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6af0edf5b4faacc31fc51159244d78d65ec580f021afcef7bd53c04aeabc7f29"
+checksum = "f6b06ad3ed06fef1713569d547cdbdb439eafed76341820fb0e0344f29a41945"
 
 [[package]]
 name = "x86_64"
-version = "0.11.0"
+version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "365de37eb7c6da582cbb510dd0f3f1235d24ff6309a8a96e8a9909cc9bfd608f"
+checksum = "5fa1f02f6b33489502afe477f7d428cfa1eee22d4a10966e95dfeed96c523d46"
 dependencies = [
  "bit_field",
  "bitflags",
