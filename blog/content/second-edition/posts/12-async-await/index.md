@@ -1744,8 +1744,8 @@ impl Executor {
 
 Since we call `sleep_if_idle` directly after `run_ready_tasks`, which loops until the `task_queue` becomes empty, checking the queue again might seem unnecessary. However, a hardware interrupt might occur directly after `run_ready_tasks` returns, so there might be a new task in the queue at the time the `sleep_if_idle` function is called. Only if the queue is still empty, we put the CPU to sleep by executing the `hlt` instruction through the [`instructions::hlt`] wrapper function provided by the [`x86_64`] crate.
 
-[`instructions::hlt`]: https://docs.rs/x86_64/0.11.1/x86_64/instructions/fn.hlt.html
-[`x86_64`]: https://docs.rs/x86_64/0.11.1/x86_64/index.html
+[`instructions::hlt`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/fn.hlt.html
+[`x86_64`]: https://docs.rs/x86_64/0.12.1/x86_64/index.html
 
 Unfortunately, there is still a subtle race condition in this implementation. Since interrupts are asynchronous and can happen at any time, it is possible that an interrupt happens right between the `is_empty` check and the call to `hlt`:
 
@@ -1760,7 +1760,7 @@ In case this interrupt pushes to the `task_queue`, we put the CPU to sleep even 
 
 The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`enable_interrupts_and_hlt`] function provided by the [`x86_64`] crate. This function is only available since version 0.9.6, so you might need to update your `x86_64` dependency to use it.
 
-[`enable_interrupts_and_hlt`]: https://docs.rs/x86_64/0.11.1/x86_64/instructions/interrupts/fn.enable_interrupts_and_hlt.html
+[`enable_interrupts_and_hlt`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/interrupts/fn.enable_interrupts_and_hlt.html
 
 The updated implementation of our `sleep_if_idle` function looks like this:
 
