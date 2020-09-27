@@ -19,7 +19,7 @@
     </p>
     <p>Latest post:
         {% set latest_post = posts|last %}
-        <strong><a href="/{{ latest_post.path | safe }}">{{ latest_post.title }}</a></strong>
+        <strong><a href="{{ latest_post.path | safe }}">{{ latest_post.title }}</a></strong>
     </p>
 </div>
 
@@ -55,10 +55,10 @@
 <ul>
     {% for subsection_path in extra.subsections %}
         {% set subsection = get_section(path=subsection_path) %}
-        <li><a href="/{{ subsection.path | safe }}">{{ subsection.title }}</a></li>
+        <li><a href="{{ subsection.path | safe }}">{{ subsection.title }}</a></li>
     {% endfor %}
     {% for page in extra.pages %}
-        <li><a href="/{{ page.path | safe }}">{{ page.title }}</a></li>
+        <li><a href="{{ page.path | safe }}">{{ page.title }}</a></li>
     {% endfor %}
 </ul>
 

@@ -36,10 +36,10 @@
     <hr>
     <div class="PageNavigation">
         {% if page.lighter %}
-            <a class="prev" href="/{{ page.lighter.path | safe }}">&laquo; {{ page.lighter.title }}</a>
+            <a class="prev" href="{{ page.lighter.path | safe }}">&laquo; {{ page.lighter.title }}</a>
         {% endif %}
         {% if page.heavier %}
-            <a class="next" href="/{{ page.heavier.path | safe }}">{{ page.heavier.title }} &raquo;</a>
+            <a class="next" href="{{ page.heavier.path | safe }}">{{ page.heavier.title }} &raquo;</a>
         {% endif %}
     </div>
 

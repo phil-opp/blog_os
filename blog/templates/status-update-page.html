@@ -23,10 +23,10 @@
     <hr>
     <div class="PageNavigation">
         {% if page.earlier %}
-            <a class="prev" href="/{{ page.earlier.path | safe }}">&laquo; {{ page.earlier.title }}</a>
+            <a class="prev" href="{{ page.earlier.path | safe }}">&laquo; {{ page.earlier.title }}</a>
         {% endif %}
         {% if page.later %}
-            <a class="next" href="/{{ page.later.path | safe }}">{{ page.later.title }} &raquo;</a>
+            <a class="next" href="{{ page.later.path | safe }}">{{ page.later.title }} &raquo;</a>
         {% endif %}
     </div>
     <hr>

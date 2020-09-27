@@ -15,7 +15,7 @@
 <div><ul>
     {% include "auto/status-updates.html" %}
     {% for page in section.pages %}
-        <li><b><a href="/{{ page.path | safe }}">{{ page.title }}</a></b></li>
+        <li><b><a href="{{ page.path | safe }}">{{ page.title }}</a></b></li>
     {% endfor %}
 </ul></div>
 
