@@ -111,9 +111,9 @@ dependencies = [
 
 [[package]]
 name = "uart_16550"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74cba8625e8a1ec064fc6440aef7921ff21b06f1ed60dd603cb1b1d5e0dfcd46"
+checksum = "c07777999215cbf8772f7974116039b439b1bddb90302d293c5a578d1d3a763d"
 dependencies = [
  "bitflags",
  "x86_64",
@@ -127,9 +127,9 @@ checksum = "f6b06ad3ed06fef1713569d547cdbdb439eafed76341820fb0e0344f29a41945"
 
 [[package]]
 name = "x86_64"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "238a5798f77641af3c4f242bf985807f312a480cd4e35ed7255fad4b2ccb9d4f"
+checksum = "d5b4b42dbabe13b69023e1a1407d395f1a1a33df76e9a9efdbe303acc907e292"
 dependencies = [
  "bit_field",
  "bitflags",
