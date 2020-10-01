@@ -339,7 +339,7 @@ impl Writer {
 
                 self.buffer.chars[row][col].write(ScreenChar {
                     ascii_character: byte,
-                    color_code: color_code,
+                    color_code,
                 });
                 ...
             }
