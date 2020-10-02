@@ -6,7 +6,6 @@ version = "0.1.0"
 dependencies = [
  "bootloader",
  "lazy_static",
- "rlibc",
  "spin",
  "volatile",
 ]
@@ -25,12 +24,6 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 dependencies = [
  "spin",
 ]
-
-[[package]]
-name = "rlibc"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
 
 [[package]]
 name = "spin"
