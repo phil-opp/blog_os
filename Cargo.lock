@@ -5,7 +5,6 @@ name = "blog_os"
 version = "0.1.0"
 dependencies = [
  "bootloader",
- "rlibc",
 ]
 
 [[package]]
@@ -13,9 +12,3 @@ name = "bootloader"
 version = "0.9.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83732ad599045a978528e4311539fdcb20c30e406b66d1d08cd4089d4fc8d90f"
-
-[[package]]
-name = "rlibc"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"

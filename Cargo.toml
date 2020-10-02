@@ -6,4 +6,3 @@ edition = "2018"
 
 [dependencies]
 bootloader = "0.9.8"
-rlibc = "1.0.0"
