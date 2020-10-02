@@ -14,7 +14,6 @@ harness = false
 
 [dependencies]
 bootloader = { version = "0.9.8", features = ["map_physical_memory"]}
-rlibc = "1.0.0"
 volatile = "0.2.6"
 spin = "0.5.2"
 x86_64 = "0.12.1"

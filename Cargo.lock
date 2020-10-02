@@ -30,7 +30,6 @@ dependencies = [
  "linked_list_allocator",
  "pc-keyboard",
  "pic8259_simple",
- "rlibc",
  "spin",
  "uart_16550",
  "volatile",
@@ -206,12 +205,6 @@ checksum = "aa563d17ecb180e500da1cfd2b028310ac758de548efdd203e18f283af693f37"
 dependencies = [
  "proc-macro2",
 ]
-
-[[package]]
-name = "rlibc"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
 
 [[package]]
 name = "scopeguard"
