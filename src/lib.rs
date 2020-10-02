@@ -7,8 +7,6 @@
 #![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
-extern crate rlibc;
-
 use core::panic::PanicInfo;
 
 pub mod allocator;
