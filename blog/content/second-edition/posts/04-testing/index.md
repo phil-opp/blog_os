@@ -683,10 +683,9 @@ To make the required functions available to our integration test, we need to spl
 
 #![no_std]
 
-extern crate rlibc;
 ```
 
-Like the `main.rs`, the `lib.rs` is a special file that is automatically recognized by cargo. The library is a separate compilation unit, so we need to specify the `#![no_std]` attribute and the `extern crate rlibc` statement again.
+Like the `main.rs`, the `lib.rs` is a special file that is automatically recognized by cargo. The library is a separate compilation unit, so we need to specify the `#![no_std]` attribute again.
 
 To make our library work with `cargo test`, we need to also add the test functions and attributes:
 

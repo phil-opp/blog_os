@@ -289,32 +289,31 @@ After setting the `unstable.build-std` configuration key and installing the `rus
 
 We see that `cargo build` now recompiles the `core`, `rustc-std-workspace-core` (a dependency of `compiler_builtins`), and `compiler_builtins` libraries for our custom target.
 
-#### The `rlibc` Crate
+#### Memory-Related Intrinsics
 
-The Rust compiler assumes that a certain set of built-in functions is available for all systems. Most of these functions are provided by the `compiler_builtins` crate that we just recompiled. However, there are some functions in that crate that are not enabled by default because they are normally provided by the C library on the system. These functions include `memset`, which sets all bytes in a memory block to a given value, `memcpy`, which copies one memory block to another, and `memcmp`, which compares two memory blocks.
+The Rust compiler assumes that a certain set of built-in functions is available for all systems. Most of these functions are provided by the `compiler_builtins` crate that we just recompiled. However, there are some memory-related functions in that crate that are not enabled by default because they are normally provided by the C library on the system. These functions include `memset`, which sets all bytes in a memory block to a given value, `memcpy`, which copies one memory block to another, and `memcmp`, which compares two memory blocks. While we didn't need any of these functions to compile our kernel right now, they will be required as soon as we add some more code to it (e.g. when copying structs around).
 
-While we didn't need any of these functions to compile our kernel right now, they will be required as soon as we add some more code to it. So it's a good idea to provide implementations for these functions now to avoid linker errors later. While there is no way to enable the implementations of the `compiler_builtins` crate yet (see the [tracking issue](https://github.com/rust-lang/wg-cargo-std-aware/issues/15)), there is a good alternative: the [`rlibc`] crate.
+Since we can't link to the C library of the operating system, we need an alternative way to provide these functions to the compiler. One possible approach for this could be to implement our own `memset` etc. functions and apply the `#[no_mangle]` attribute to them (to avoid the automatic renaming during compilation). However, this is dangerous since the slightest mistake in the implementation of these functions could lead to undefined behavior. So it's a good idea to reuse existing well-tested implementations instead.
 
-[`rlibc`]: https://docs.rs/rlibc/1.0.0/rlibc/
+Fortunately, the `compiler_builtins` crate already contains implementations for all the needed functions, they are just disabled by default to not collide with the implementations from the C library. We can enable them by setting cargo's [`build-std-features`] flag to `["compiler-builtins-mem"]`. Like the `build-std` flag, this flag can be either passed on the command line as `-Z` flag or configured in the `unstable` table in the `.cargo/config.toml` file. Since we always want to build with this flag, the config file option makes more sense for us:
 
-To include the crate, we need to add it as a dependency in our `Cargo.toml` file:
+[`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
 
 ```toml
-# in Cargo.toml
-
-[dependencies]
-rlibc = "1.0.0"
+[unstable]
+build-std-features = ["compiler-builtins-mem"]
 ```
 
-For normal crates, this would be enough. However, since we never use any functions of `rlibc` directly, we need to explicitly instruct the Rust compiler to link the crate. We can do so by adding the following to our `main.rs`:
+(Support for the `compiler-builtins-mem` feature was only [added very recently](https://github.com/rust-lang/rust/pull/77284), so you need at least Rust nightly `2020-09-30` for it.)
 
-```rust
-// in main.rs
+Behind the scenes, this flag enables the [`mem` feature] of the `compiler_builtins` crate. The effect of this is that the `#[no_mangle]` attribute is applied to the [`memcpy` etc. implementations] of the crate, which makes them available to the linker. It's worth noting that these functions are [not optimized] right now, so their performance might not be the best, but at least they are correct. For `x86_64`, there is an open pull request to [optimize these functions using special assembly instructions][memcpy rep movsb].
 
-extern crate rlibc;
-```
+[`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L51-L52
+[`memcpy` etc. implementations]: (https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69)
+[not optimized]: https://github.com/rust-lang/compiler-builtins/issues/339
+[memcpy rep movsb]: https://github.com/rust-lang/compiler-builtins/pull/365
 
-With this change, our kernel has valid implementations for all required functions, so it will continue to compile even if our code gets more complex.
+With this change, our kernel has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
 
 #### Set a Default Target
 
