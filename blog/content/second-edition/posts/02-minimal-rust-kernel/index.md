@@ -28,15 +28,16 @@ When you turn on a computer, it begins executing firmware code that is stored in
 [ROM]: https://en.wikipedia.org/wiki/Read-only_memory
 [power-on self-test]: https://en.wikipedia.org/wiki/Power-on_self-test
 
-On x86, there are two firmware standards: the “Basic Input/Output System“ (**[BIOS]**) and the newer “Unified Extensible Firmware Interface” (**[UEFI]**). The BIOS standard is old and outdated, but simple and well-supported on any x86 machine since the 1980s. UEFI, in contrast, is more modern and has much more features, but is more complex to set up (at least in my opinion).
+On x86, there are two firmware standards: the “Basic Input/Output System“ (**[BIOS]**) that was first introduced in the 1980s and the newer “Unified Extensible Firmware Interface” (**[UEFI]**), which most modern systems use.
 
 [BIOS]: https://en.wikipedia.org/wiki/BIOS
 [UEFI]: https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
-
-Currently, we only provide BIOS support, but support for UEFI is planned, too. If you'd like to help us with this, check out the [Github issue](https://github.com/phil-opp/blog_os/issues/349).
+[end-bios-support]: https://arstechnica.com/gadgets/2017/11/intel-to-kill-off-the-last-vestiges-of-the-ancient-pc-bios-by-2020/
 
 ### BIOS Boot
 Almost all x86 systems have support for BIOS booting, including newer UEFI-based machines that use an emulated BIOS. This is great, because you can use the same boot logic across all machines from the last centuries. But this wide compatibility is at the same time the biggest disadvantage of BIOS booting, because it means that the CPU is put into a 16-bit compatibility mode called [real mode] before booting so that archaic bootloaders from the 1980s would still work.
+
+[real mode]: https://en.wikipedia.org/wiki/Real_mode
 
 But let's start from the beginning:
 
@@ -44,14 +45,13 @@ When you turn on a computer, it loads the BIOS from some special flash memory lo
 
 The bootloader has to determine the location of the kernel image on the disk and load it into memory. It also needs to switch the CPU from the 16-bit [real mode] first to the 32-bit [protected mode], and then to the 64-bit [long mode], where 64-bit registers and the complete main memory are available. Its third job is to query certain information (such as a memory map) from the BIOS and pass it to the OS kernel.
 
-[real mode]: https://en.wikipedia.org/wiki/Real_mode
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
 [memory segmentation]: https://en.wikipedia.org/wiki/X86_memory_segmentation
 
-Writing a bootloader is a bit cumbersome as it requires assembly language and a lot of non insightful steps like “write this magic value to this processor register”. Therefore we don't cover bootloader creation in this post and instead provide a tool named [bootimage] that automatically prepends a bootloader to your kernel.
+Writing a bootloader is a bit cumbersome as it requires assembly language and a lot of non insightful steps like “write this magic value to this processor register”. Therefore we don't cover bootloader creation in this post and instead use the existing [`bootloader`] crate to make our kernel bootable.
 
-[bootimage]: https://github.com/rust-osdev/bootimage
+[bootimage]: https://github.com/rust-osdev/bootloader
 
 If you are interested in building your own bootloader: Stay tuned, a set of posts on this topic is already planned! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
 
@@ -77,6 +77,10 @@ To make a kernel Multiboot compliant, one just needs to insert a so-called [Mult
 Because of these drawbacks we decided to not use GRUB or the Multiboot standard. However, we plan to add Multiboot support to our [bootimage] tool, so that it's possible to load your kernel on a GRUB system too. If you're interested in writing a Multiboot compliant kernel, check out the [first edition] of this blog series.
 
 [first edition]: @/first-edition/_index.md
+
+#### The Future of BIOS
+
+As noted above, most modern systems still support booting operating systems written for the legacy BIOS firmware for backwards-compatibility. However, there are [plans to remove this support soon][end-bios-support]. Thus, it is strongly recommended to make operating system kernels compatible with the newer UEFI standard too. Fortunately, it is possible to create a kernel that supports booting on both BIOS (for older systems) and UEFI (for modern systems).
 
 ### UEFI
 
