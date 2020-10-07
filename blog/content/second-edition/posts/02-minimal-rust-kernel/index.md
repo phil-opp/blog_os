@@ -300,6 +300,8 @@ Fortunately, the `compiler_builtins` crate already contains implementations for 
 [`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
 
 ```toml
+# in .cargo/config.toml
+
 [unstable]
 build-std-features = ["compiler-builtins-mem"]
 ```
