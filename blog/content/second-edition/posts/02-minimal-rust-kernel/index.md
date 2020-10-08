@@ -272,7 +272,7 @@ This tells cargo that it should recompile the `core` and `compiler_builtins` lib
 
 <div class="note">
 
-**Note:** The `unstable.build-std` configuration key requires at least the Rust nightly from 2020-07-15. Right now, the `rustfmt` component is [not available](https://rust-lang.github.io/rustup-components-history/) on these recent nightlies, so you might need to use `rustup update nightly --force` to update your nightly, which skips the `rustfmt` component if it's not available.
+**Note:** The `unstable.build-std` configuration key requires at least the Rust nightly from 2020-07-15.
 
 </div>
 
