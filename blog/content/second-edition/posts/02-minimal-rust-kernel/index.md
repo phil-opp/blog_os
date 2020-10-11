@@ -62,14 +62,47 @@ As noted above, most modern systems still support booting operating systems writ
 The Unified Extensible Firmware Interface (UEFI) replaces the classical BIOS firmware on most modern computers. The specification provides provides lots of useful features that make bootloader implementations much simpler:
 
 - It supports initializing the CPU directly into 64-bit mode, instead of starting in a DOS-compatible 16-bit mode like the BIOS firmware.
-- A standardized specification minimizes the differences between systems. This isn't the case for the legacy BIOS firmware, so that bootloaders often have to try different methods because of hardware differences.
+- A standardized [specification][uefi-specification] minimizes the differences between systems. This isn't the case for the legacy BIOS firmware, so that bootloaders often have to try different methods because of hardware differences.
 - The specification is independent of the CPU architecture, so that the same interface can be used to boot on `x86_64` and `ARM` CPUs.
 - It understands disk partition tables and supports large partitions (>2TB).
 - It natively supports network booting without requiring additional drivers.
 
-However, the large number of features make the UEFI firmware very complex, which increases the chance that there are some bugs in the UEFI implementation itself. This can lead to security problems because the firmware has complete control over the hardware. For example, a vulnerability in the built-in network stack of an UEFI implementation can allow attackers to compromise the system and e.g. silently observe all I/O data. The fact that most UEFI implementations are not open-source makes this issue even more problematic, since there is no way to audit the firmware code.
+[uefi-specification]: https://uefi.org/specifications
 
-TODO: implementation overview, `bootloader` support
+The UEFI standard also tries to make the boot process safer through a so-called _"secure boot"_ mechanism. The idea is that the firmware only allows loading bootloaders that are signed by a trusted [digital signature]. Thus, malware should be prevented from compromising the early boot process.
+
+[digital signature]: https://en.wikipedia.org/wiki/Digital_signature
+
+#### Issues & Criticism
+
+While most of the UEFI specification sounds like a good idea, there are also many issues with the standard. The main issue for most people is the fear that the _secure boot_ mechanism can be used to [lock users into the Windows operating system][uefi-secure-boot-lock-in] and thus prevent the installation of alternative operating systems such as Linux.
+
+[uefi-secure-boot-lock-in]: https://arstechnica.com/information-technology/2015/03/windows-10-to-make-the-secure-boot-alt-os-lock-out-a-reality/
+
+Another point of criticism is that the large number of features make the UEFI firmware very complex, which increases the chance that there are some bugs in the firmware implementation. This can lead to security problems because the firmware has complete control over the hardware. For example, a vulnerability in the built-in network stack of an UEFI implementation can allow attackers to compromise the system and e.g. silently observe all I/O data. The fact that most UEFI implementations are not open-source makes this issue even more problematic, since there is no way to audit the firmware code for potential bugs.
+
+While there are open firmware projects such as [coreboot] that try to solve these problems, there is no way around the UEFI standard on most modern consumer computers. So we have to live with these drawbacks for now if we want to build a widely compatible bootloader and operating system kernel.
+
+[coreboot]: https://www.coreboot.org/
+
+#### Boot Process
+
+TODO:
+
+- FAT partition
+- config file specfies boot file
+- Boot file with `.efi` ending and microsoft calling convention
+- UEFI loads boot file and calls its entry point
+- Passes system table as argument -> lots of functionality
+- Exit boot services -> functions no longer usable
+
+#### Implementation
+
+TODO:
+
+- uefi crate
+- bootloader support
+- upcoming post series
 
 ### The Multiboot Standard
 To avoid that every operating system implements its own bootloader, which is only compatible with a single OS, the [Free Software Foundation] created an open bootloader standard called [Multiboot] in 1995. The standard defines an interface between the bootloader and operating system, so that any Multiboot compliant bootloader can load any Multiboot compliant operating system on both BIOS and UEFI systems. The reference implementation is [GNU GRUB], which is the most popular bootloader for Linux systems.
