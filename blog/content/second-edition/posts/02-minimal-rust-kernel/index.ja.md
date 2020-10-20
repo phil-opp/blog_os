@@ -34,8 +34,8 @@ translators = ["woodyZootopia"]
 
 x86には2つのファームウェアの標準規格があります："Basic Input/Output System" (**[BIOS]**) と、より新しい "Unified Extensible Firmware Interface" (**[UEFI]**) です。BIOS規格は古く時代遅れですが、シンプルでありすべてのx86のマシンで1980年代からよくサポートされています。対して、UEFIはより現代的でずっと多くの機能を持っていますが、セットアップが複雑です（少なくとも私はそう思います）。
 
-[BIOS]: https://en.wikipedia.org/wiki/BIOS
-[UEFI]: https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
+[BIOS]: https://ja.wikipedia.org/wiki/Basic_Input/Output_System
+[UEFI]: https://ja.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
 
 今の所、このブログではBIOSしかサポートしていませんが、UEFIのサポートも計画中です。お手伝いいただける場合は、[GitHubのissue](https://github.com/phil-opp/blog_os/issues/349)をご覧ください。
 
@@ -62,9 +62,9 @@ x86には2つのファームウェアの標準規格があります："Basic Inp
 #### マルチブートの標準規格
 すべてのオペレーティングシステムが、自前で一つのOSにしか対応していないブートローダーを実装するということを避けるために、[フリーソフトウェア財団][Free Software Foundation]が[Multiboot]というブートローダーの公開標準規格を策定しています。この標準規格では、ブートローダーとオペレーティングシステムのインターフェースが定義されており、どのMultibootに準拠したブートローダーでもすべてのMultibootに準拠したオペレーティングシステムが読み込めるようになっています。そのリファレンス実装として、Linuxシステムで一番人気のブートローダーである[GNU GRUB]があります。
 
-[Free Software Foundation]: https://en.wikipedia.org/wiki/Free_Software_Foundation
+[Free Software Foundation]: https://ja.wikipedia.org/wiki/フリーソフトウェア財団
 [Multiboot]: https://wiki.osdev.org/Multiboot
-[GNU GRUB]: https://en.wikipedia.org/wiki/GNU_GRUB
+[GNU GRUB]: https://ja.wikipedia.org/wiki/GNU_GRUB
 
 カーネルをMultibootに準拠させるには、カーネルファイルの先頭にいわゆる[Multiboot header]を挿入するだけでいいです。このおかげで、OSをGRUBで起動するのはとても簡単です。しかし、GRUBとMultiboot標準規格にはいくつか問題もあります：
 
@@ -131,7 +131,7 @@ Cargoは`--target`パラメータを使ってさまざまなターゲットを�
 ほとんどのフィールドはLLVMがそのプラットフォーム向けのコードを生成するために必要なものです。例えば、[`data-layout`]フィールドは種々の整数、浮動小数点数、ポインタ型の大きさを定義しています。次に、`target-pointer-width`のような、条件付きコンパイルに用いられるフィールドがあります。第3の種類のフィールドはクレートがどのようにビルドされるべきかを定義します。例えば、`pre-link-args`フィールドは[<ruby>リンカ<rp> (</rp><rt>linker</rt><rp>) </rp></ruby>][linker]に渡される引数を指定しています。
 
 [`data-layout`]: https://llvm.org/docs/LangRef.html#data-layout
-[linker]: https://en.wikipedia.org/wiki/Linker_(computing)
+[linker]: https://ja.wikipedia.org/wiki/リンケージエディタ
 
 私達のカーネルも`x86_64`のシステムをターゲットとするので、私達のターゲット仕様も上のものと非常によく似たものになるでしょう。`x86_64-blog_os.json`というファイル（お好きな名前を選んでください）を作り、共通する要素を埋めるところから始めましょう。
 
@@ -148,7 +148,7 @@ Cargoは`--target`パラメータを使ってさまざまなターゲットを�
 }
 ```
 
-ベアメタル環境で実行するので、`llvm-target`のOSを変え、`os`フィールドを`none`にしたことに注目してください。
+<ruby>ベアメタル<rp> (</rp><rt>bare metal</rt><rp>) </rp></ruby>環境で実行するので、`llvm-target`のOSを変え、`os`フィールドを`none`にしたことに注目してください。
 
 以下の、ビルドに関係する項目を追加します。
 
@@ -186,7 +186,7 @@ Cargoは`--target`パラメータを使ってさまざまなターゲットを�
 
 `mmx`と`sse`という機能は、[Single Instruction Multiple Data (SIMD)]命令をサポートするかを決定します。この命令は、しばしばプログラムを著しく速くしてくれます。しかし、大きなSIMDレジスタをOSカーネルで使うことは性能上の問題に繋がります。 その理由は、カーネルは、割り込まれたプログラムを再開する前に、すべてのレジスタを元に戻さないといけないからです。これは、カーネルがSIMDの状態のすべてを、システムコールやハードウェア割り込みがあるたびにメインメモリに保存しないといけないということを意味します。SIMDの状態情報はとても巨大（512〜1600 bytes）で、割り込みは非常に頻繁に起こるかもしれないので、保存・復元の操作がこのように追加されるのは性能にかなりの悪影響を及ぼします。これを避けるために、（カーネルの上で走っているアプリケーションではなく！）カーネルではSIMDを無効化するのです。
 
-[Single Instruction Multiple Data (SIMD)]: https://en.wikipedia.org/wiki/SIMD
+[Single Instruction Multiple Data (SIMD)]: https://ja.wikipedia.org/wiki/SIMD
 
 SIMDを無効化することによる問題に、`x86_64`における浮動小数点演算は標準ではSIMDレジスタを必要とするということがあります。この問題を解決するため、`soft-float`機能を追加します。これは、すべての浮動小数点演算を通常の整数に基づいたソフトウェア上の関数を使ってエミュレートするというものです。
 
@@ -254,7 +254,7 @@ error[E0463]: can't find crate for `core`
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
-問題は、coreライブラリはRustコンパイラと一緒に<ruby>コンパイル済み<rp> (</rp><rt>precompiled</rt><rp>) </rp></ruby>ライブラリとして配布されているということです。そのため、これは、私達独自のターゲットではなく、サポートされたhost triple（例えば `x86_64-unknown-linux-gnu`）にのみ使えるのです。他のターゲットのためにコードをコンパイルしようと思ったら、`core`をそれらのターゲットに向けて再コンパイルする必要があります。
+問題は、coreライブラリはRustコンパイラと一緒に<ruby>コンパイル済み<rp> (</rp><rt>precompiled</rt><rp>) </rp></ruby>ライブラリとして配布されているということです。そのため、これは、私達独自のターゲットではなく、サポートされているhost triple（例えば `x86_64-unknown-linux-gnu`）にのみ使えるのです。他のターゲットのためにコードをコンパイルしようと思ったら、`core`をそれらのターゲットに向けて再コンパイルする必要があります。
 
 #### `build-std`オプション
 
@@ -293,15 +293,15 @@ build-std = ["core", "compiler_builtins"]
 
 今回は、`cargo build`が`core`、`rustc-std-workspace-core` (`compiler_builtins`の依存です)、そして `compiler_builtins`を私達のカスタムターゲット向けに再コンパイルしているということがわかります。
 
-#### Memory-Related Intrinsics
+#### メモリ関係の<ruby>組み込み<rp> (</rp><rt>intrinsic</rt><rp>) </rp></ruby>関数
 
-The Rust compiler assumes that a certain set of built-in functions is available for all systems. Most of these functions are provided by the `compiler_builtins` crate that we just recompiled. However, there are some memory-related functions in that crate that are not enabled by default because they are normally provided by the C library on the system. These functions include `memset`, which sets all bytes in a memory block to a given value, `memcpy`, which copies one memory block to another, and `memcmp`, which compares two memory blocks. While we didn't need any of these functions to compile our kernel right now, they will be required as soon as we add some more code to it (e.g. when copying structs around).
+Rustコンパイラは、すべてのシステムにおいて、特定の組み込み関数が利用可能であるということを前提にしています。それらの関数の多くは、私達がちょうど再コンパイルした`compiler_builtins`クレートによって提供されています。しかしながら、通常システムのCライブラリに提供されているので標準では有効化されていない、メモリ関係の関数がいくつかあります。それらの関数には、メモリブロック内のすべてのバイトを与えられた値にセットする`memset`、メモリーブロックを他のブロックへとコピーする`memcpy`、2つのメモリーブロックを比較する`memcmp`などがあります。これらの関数はどれも、現在の段階で我々のカーネルをコンパイルするのに必要というわけではありませんが、コードを追加していくとすぐに必要になるでしょう（たとえば、構造体をコピーしたりとか）。
 
-Since we can't link to the C library of the operating system, we need an alternative way to provide these functions to the compiler. One possible approach for this could be to implement our own `memset` etc. functions and apply the `#[no_mangle]` attribute to them (to avoid the automatic renaming during compilation). However, this is dangerous since the slightest mistake in the implementation of these functions could lead to undefined behavior. For example, you might get an endless recursion when implementing `memcpy` using a `for` loop because `for` loops implicitly call the [`IntoIterator::into_iter`] trait method, which might call `memcpy` again. So it's a good idea to reuse existing well-tested implementations instead.
+オペレーティングシステムのCライブラリにリンクすることはできませんので、これらの関数をコンパイラに与えてやる別の方法が必要になります。このための方法として考えられるものの一つが、自前で`memset`を実装し、（コンパイル中の自動リネームを防ぐため）`#[no_mangle]`アトリビュートをこれらに適用することでしょう。しかし、こうすると、これらの関数の実装のちょっとしたミスが未定義動作に繋がりうるため危険です。たとえば、`for`ループを使って`memcpy`を実装すると無限再帰を起こしてしまうかもしれません。なぜなら、`for`ループは暗黙のうちに[`IntoIterator::into_iter`]トレイトメソッドを呼び出しており、これは`memcpy`を再び呼び出しているかもしれないからです。なので、代わりに、既存のよくテストされた実装を再利用するのが良いでしょう。
 
 [`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
 
-Fortunately, the `compiler_builtins` crate already contains implementations for all the needed functions, they are just disabled by default to not collide with the implementations from the C library. We can enable them by setting cargo's [`build-std-features`] flag to `["compiler-builtins-mem"]`. Like the `build-std` flag, this flag can be either passed on the command line as `-Z` flag or configured in the `unstable` table in the `.cargo/config.toml` file. Since we always want to build with this flag, the config file option makes more sense for us:
+ありがたいことに、`compiler_builtins`クレートにはこれらの必要な関数すべての実装が含まれており、標準ではCライブラリの実装と競合しないように無効化されているだけなのです。有効化するにはcargoの[`build-std-features`]フラグを`["computer-builtins-mem"]`にセットすればいいです。`build-std`フラグと同じように、このフラグはコマンドラインで`-Z`フラグとして渡すこともできれば、`.cargo/config.toml`ファイルの`unstable`テーブルで設定することもできます。ビルド時は常にこのフラグをセットしたいので、設定ファイルを使うほうが良いでしょう：
 
 [`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
 
@@ -312,20 +312,20 @@ Fortunately, the `compiler_builtins` crate already contains implementations for 
 build-std-features = ["compiler-builtins-mem"]
 ```
 
-(Support for the `compiler-builtins-mem` feature was only [added very recently](https://github.com/rust-lang/rust/pull/77284), so you need at least Rust nightly `2020-09-30` for it.)
+（`compiler-builtins-mem`機能のサポートが追加されたのは[すごく最近](https://github.com/rust-lang/rust/pull/77284)なので、`2019-09-30`以降のRust nightlyが必要です）
 
-Behind the scenes, this flag enables the [`mem` feature] of the `compiler_builtins` crate. The effect of this is that the `#[no_mangle]` attribute is applied to the [`memcpy` etc. implementations] of the crate, which makes them available to the linker. It's worth noting that these functions are [not optimized] right now, so their performance might not be the best, but at least they are correct. For `x86_64`, there is an open pull request to [optimize these functions using special assembly instructions][memcpy rep movsb].
+このとき、裏で`compiler_builtins`クレートの[`mem`機能][`mem` feature]が有効化されています。これにより、このクレートの[`memcpy`などの実装][`memcpy` etc. implementations]に`#[no_mangle]`アトリビュートが適用され、リンカがこれらを利用できるようになっています。これらの関数は今のところ[最適化されておらず][not optimized]、性能は最高ではないかもしれないということは知っておく価値があるでしょう。ですが、少なくともこれらは正しいです。`x86_64`については、[これらの関数を特殊なアセンブリ命令を使って最適化する][memcpy rep movsb]プルリクエストがopenされています。
 
 [`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L51-L52
 [`memcpy` etc. implementations]: (https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69)
 [not optimized]: https://github.com/rust-lang/compiler-builtins/issues/339
 [memcpy rep movsb]: https://github.com/rust-lang/compiler-builtins/pull/365
 
-With this change, our kernel has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
+この変更をもって、私達のカーネルの実装はすべてのコンパイラに必要とされている関数の有効な実装を手に入れたので、私達のコードがもっと複雑になっても変わらずコンパイルできるでしょう。
 
-#### Set a Default Target
+#### 標準のターゲットをセットする
 
-To avoid passing the `--target` parameter on every invocation of `cargo build`, we can override the default target. To do this, we add the following to our [cargo configuration] file at `.cargo/config.toml`:
+`cargo build`を呼び出すたびに`--target`パラメータを渡すのを避けるために、標準のターゲットを書き換えることができます。これをするには、以下を`.cargo/config.toml`の[cargo設定][cargo configuration]ファイルに付け加えます:
 
 [cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
 
@@ -336,12 +336,12 @@ To avoid passing the `--target` parameter on every invocation of `cargo build`, 
 target = "x86_64-blog_os.json"
 ```
 
-This tells `cargo` to use our `x86_64-blog_os.json` target when no explicit `--target` argument is passed. This means that we can now build our kernel with a simple `cargo build`. For more information on cargo configuration options, check out the [official documentation][cargo configuration].
+これは、明示的に`--target`引数が渡されていないときは、`x86_64-blog_os.json`ターゲットを使うように`cargo`に命令します。つまり、私達はカーネルをシンプルな`cargo build`コマンドでビルドできるということです。cargoの設定のオプションについてより詳しく知るには、[公式のドキュメント][cargo configuration]を読んでください。
 
-We are now able to build our kernel for a bare metal target with a simple `cargo build`. However, our `_start` entry point, which will be called by the boot loader, is still empty. It's time that we output something to screen from it.
+今や、シンプルな`cargo build`コマンドで、ベアメタルのターゲットに私達のカーネルをビルドできるようになりました。しかし、ブートローダーによって呼び出される私達の`_start`エントリポイントはまだ空っぽです。こいつから何かを画面に出力してみましょう。
 
 ### 画面に出力する
-現在の段階で画面に文字を出力する最も簡単な方法は[VGAテキストバッファ][VGA text buffer]です。これは画面に出力されている内容を持っているVGAハードウェアにマップされた特殊なメモリです。通常、これは25行からなり、それぞれの行は80文字セルからなります。それぞれの文字セルは、背景色と前景色付きのASCII文字を表示します。画面出力はこんなふうに見えます：
+現在の段階で画面に文字を出力する最も簡単な方法は[VGAテキストバッファ][VGA text buffer]です。これは画面に出力されている内容を保持しているVGAハードウェアにマップされた特殊なメモリです。通常、これは25行からなり、それぞれの行は80文字セルからなります。それぞれの文字セルは、背景色と前景色付きのASCII文字を表示します。画面出力はこんなふうに見えます：
 
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
 
@@ -378,28 +378,34 @@ pub extern "C" fn _start() -> ! {
 [raw pointer]: https://doc.rust-jp.rs/book-ja/ch19-01-unsafe-rust.html#生ポインタを参照外しする
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
-すべてのメモリへの書き込みの周りを、[<ruby>`unsafe`<rp> (</rp><rt>非安全</rt><rp>) </rp></ruby>][`unsafe`]ブロックが囲んでいることに注意してください。この理由は、私達の作った生ポインタが合法であることをRustコンパイラが証明できないからです。生ポインタはどんな場所でも指しうるので、データの破損につながるかもしれません。これらの操作を`unsafe`ブロックに入れることで、私達はこれが合法だと確信しているとコンパイラに伝えているのです。ただし、`unsafe`ブロックはRustの安全性チェックを消すわけではなく、[5つのことが追加でできるようになる][five additional things]だけということに注意してください。（訳注：翻訳時点では、リンク先のThe Rust book日本語版には「追加でできるようになること」は4つしか書かれていません）
+すべてのメモリへの書き込みの周りを、[<ruby>`unsafe`<rp> (</rp><rt>安全でない</rt><rp>) </rp></ruby>][`unsafe`]ブロックが囲んでいることに注意してください。この理由は、私達の作った生ポインタが合法であることをRustコンパイラが証明できないからです。生ポインタはどんな場所でも指しうるので、データの破損につながるかもしれません。これらの操作を`unsafe`ブロックに入れることで、私達はこれが合法だと確信しているとコンパイラに伝えているのです。ただし、`unsafe`ブロックはRustの安全性チェックを消すわけではなく、[5つのことが追加でできるようになる][five additional things]だけということに注意してください。
 
-[`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
+<div class="note">
+
+**訳注:**  翻訳時点(2020-10-20)では、リンク先のThe Rust book日本語版には「追加でできるようになること」は4つしか書かれていません。
+
+</div>
+
+[`unsafe`]: https://doc.rust-jp.rs/book-ja/ch19-01-unsafe-rust.html
 [five additional things]: https://doc.rust-jp.rs/book-ja/ch19-01-unsafe-rust.html#unsafeの強大な力superpower
 
-強調しておきたいのですが、 **このような機能はRustでプログラミングするときには使いたくありません！** unsafeブロック内で生ポインタを扱うと非常にしくじりやすいです。たとえば、注意不足でバッファの終端のさらに奥に書き込みを行ってしまったりするかもしれません。
+強調しておきたいのですが、 **このような機能はRustでプログラミングするときに使いたいものではありません！** unsafeブロック内で生ポインタを扱うと非常にしくじりやすいです。たとえば、注意不足でバッファの終端のさらに奥に書き込みを行ってしまったりするかもしれません。
 
-ですので、`unsafe`の使用はできるかぎり最小限にしたいです。これをするために、Rustでは安全な<ruby>abstraction<rp> (</rp><rt>抽象化されたもの</rt><rp>) </rp></ruby>を作ることができます。たとえば、VGAバッファ型を作り、この中にすべてのunsafeな操作を<ruby>包み<rp> (</rp><rt>encapsulate</rt><rp>) </rp></ruby>、外側から誤ったことをするのを**不可能**にすることができるでしょう。こうすれば、`unsafe`の量を最小限にすることができ、[メモリ安全性][memory safety]を侵していないことを確信することができます。そのような安全なVGAバッファの抽象化を次の記事で作ります。
+ですので、`unsafe`の使用はできるかぎり最小限にしたいです。これをするために、Rustでは安全な<ruby>abstraction<rp> (</rp><rt>抽象化されたもの</rt><rp>) </rp></ruby>を作ることができます。たとえば、VGAバッファ型を作り、この中にすべてのunsafeな操作を包みこみ（<ruby>カプセル化し<rp> (</rp><rt>encapsulate</rt><rp>) </rp></ruby>）、外側から誤ったことをするのを**不可能**にすることができるでしょう。こうすれば、`unsafe`の量を最小限にすることができ、[メモリ安全性][memory safety]を侵していないことを確信することができます。そのような安全なVGAバッファの抽象化を次の記事で作ります。
 
 [memory safety]: https://ja.wikipedia.org/wiki/メモリ安全性
 
-## Running our Kernel
+## カーネルを実行する
 
-Now that we have an executable that does something perceptible, it is time to run it. First, we need to turn our compiled kernel into a bootable disk image by linking it with a bootloader. Then we can run the disk image in the [QEMU] virtual machine or boot it on real hardware using a USB stick.
+目に見えることを行ってくれる実行可能ファイルを手に入れたので、実行してみましょう。まず、コンパイルした私達のカーネルを、ブートローダーとリンクすることによってブータブルディスクイメージにする必要があります。すると、そのディスクイメージを、[QEMU]バーチャルマシン内や、USBメモリを使って実際のハードウェア上で実行できます。
 
-### Creating a Bootimage
+### ブートイメージを作る
 
-To turn our compiled kernel into a bootable disk image, we need to link it with a bootloader. As we learned in the [section about booting], the bootloader is responsible for initializing the CPU and loading our kernel.
+コンパイルされた私達のカーネルをブータブルディスクイメージに変えるには、ブートローダーとリンクする必要があります。[起動のプロセスの節][section about booting]で学んだように、ブートローダーはCPUを初期化しカーネルをロードする役割があります。
 
 [section about booting]: #the-boot-process
 
-Instead of writing our own bootloader, which is a project on its own, we use the [`bootloader`] crate. This crate implements a basic BIOS bootloader without any C dependencies, just Rust and inline assembly. To use it for booting our kernel, we need to add a dependency on it:
+自前のブートローダーを書くと、それだけで1つのプロジェクトになってしまうので、代わりに[`bootloader`]クレートを使いましょう。このクレートは、Cに依存せず、Rustとインラインアセンブリだけで基本的なBIOSブートローダーを実装しています。私達のカーネルを起動するためにこれを使うには、それへの依存関係を追記する必要があります：
 
 [`bootloader`]: https://crates.io/crates/bootloader
 
@@ -410,43 +416,43 @@ Instead of writing our own bootloader, which is a project on its own, we use the
 bootloader = "0.9.8"
 ```
 
-Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to link our kernel with the bootloader after compilation, but cargo has no support for [post-build scripts].
+bootloaderを依存として加えることだけでブータブルディスクイメージが実際に作れるわけではありません。問題は、私達のカーネルをコンパイル後にブートローダーにリンクしなければならないのに、cargoは[<ruby>ビルド後<rp> (</rp><rt>post-build</rt><rp>) </rp></ruby>にスクリプトを走らせること][post-build scripts]に対応していないのです。
 
 [post-build scripts]: https://github.com/rust-lang/cargo/issues/545
 
-To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then links them together to create a bootable disk image. To install the tool, execute the following command in your terminal:
+この問題を解決するため、私達は`bootimage`というツールを作りました。これは、まずカーネルとブートローダーをコンパイルし、そしてこれらをリンクしてブータブルディスクイメージを作ります。このツールをインストールするには、以下のコマンドをターミナルで実行してください：
 
 ```
 cargo install bootimage
 ```
 
-For running `bootimage` and building the bootloader, you need to have the `llvm-tools-preview` rustup component installed. You can do so by executing `rustup component add llvm-tools-preview`.
+`bootimage`を実行しブートローダをビルドするには、`llvm-tools-preview`というrustupコンポーネントをインストールする必要があります。これは`rustup component add llvm-tools-preview`と実行することでできます。
 
-After installing `bootimage` and adding the `llvm-tools-preview` component, we can create a bootable disk image by executing:
+`bootimage`をインストールし、`llvm-tools-preview`を追加したら、以下のように実行することでブータブルディスクイメージを作れます：
 
 ```
 > cargo bootimage
 ```
 
-We see that the tool recompiles our kernel using `cargo build`, so it will automatically pick up any changes you make. Afterwards it compiles the bootloader, which might take a while. Like all crate dependencies it is only built once and then cached, so subsequent builds will be much faster. Finally, `bootimage` combines the bootloader and your kernel to a bootable disk image.
+このツールが私達のカーネルを`cargo build`を使って再コンパイルしていることがわかります。そのため、あなたの行った変更を自動で検知してくれます。その後、bootloaderをビルドします。これには少し時間がかかるかもしれません。他の依存クレートと同じように、ビルドは一度しか行われず、その時キャッシュされるので、以降のビルドはもっと早くなります。最終的に、`bootimage`はbootloaderとあなたのカーネルを合体させ、ブータブルディスクイメージにします。
 
-After executing the command, you should see a bootable disk image named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
+このコマンドを実行したら、`target/x86_64-blog_os/debug`ディレクトリ内に`bootimage-blog_os.bin`という名前のブータブルディスクイメージがあるはずです。これをバーチャルマシン内で起動してもいいですし、実際のハードウェア上で起動するためにUSBメモリにコピーしてもいいでしょう（ただし、これはCDイメージではありません。CDイメージは異なるフォーマットを持つので、これをCDに焼いてもうまくいきません）。
 
-#### How does it work?
-The `bootimage` tool performs the following steps behind the scenes:
+#### どういう仕組みなの？
+`bootimage`ツールは、裏で以下のステップを行っています：
 
-- It compiles our kernel to an [ELF] file.
-- It compiles the bootloader dependency as a standalone executable.
-- It links the bytes of the kernel ELF file to the bootloader.
+- 私達のカーネルを[ELF]ファイルにコンパイルする。
+- 依存であるbootloaderをスタンドアロンの実行ファイルとしてコンパイルする。
+- カーネルのELFファイルのバイト列をブートローダーにリンクする。
 
-[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+[ELF]: https://ja.wikipedia.org/wiki/Executable_and_Linkable_Format
 [rust-osdev/bootloader]: https://github.com/rust-osdev/bootloader
 
-When booted, the bootloader reads and parses the appended ELF file. It then maps the program segments to virtual addresses in the page tables, zeroes the `.bss` section, and sets up a stack. Finally, it reads the entry point address (our `_start` function) and jumps to it.
+起動時、ブートローダーは付け足されたELFファイルを読み、解釈します。次にプログラム部を<ruby>ページテーブル<rp> (</rp><rt>page table</rt><rp>) </rp></ruby>の<ruby>仮想アドレス<rp> (</rp><rt>virtual address</rt><rp>) </rp></ruby>にマップし、`.bss`部をゼロにし、スタックをセットアップします。最後に、エントリポイントの番地（私達の`_start`関数）を読み、そこに<ruby>飛び<rp> (</rp><rt>jump</rt><rp>) </rp></ruby>ます。
 
-### Booting it in QEMU
+### QEMUで起動する
 
-We can now boot the disk image in a virtual machine. To boot it in [QEMU], execute the following command:
+今や、ディスクイメージを仮想マシンで起動できます。[QEMU]でこれを起動するには、以下のコマンドを実行してください：
 
 [QEMU]: https://www.qemu.org/
 
@@ -455,27 +461,27 @@ We can now boot the disk image in a virtual machine. To boot it in [QEMU], execu
 warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 ```
 
-This opens a separate window with that looks like this:
+これにより、以下のような見た目の別のウィンドウが開きます：
 
 ![QEMU showing "Hello World!"](qemu.png)
 
-We see that our "Hello World!" is visible on the screen.
+私達の書いた"Hello World!"が画面に見えますね。
 
-### Real Machine
+### 実際のマシン
 
-It is also possible to write it to an USB stick and boot it on a real machine:
+USBメモリにこれを書き込んで実際のマシン上で起動することも可能です：
 
 ```
 > dd if=target/x86_64-blog_os/debug/bootimage-blog_os.bin of=/dev/sdX && sync
 ```
 
-Where `sdX` is the device name of your USB stick. **Be careful** to choose the correct device name, because everything on that device is overwritten.
+ただし、`sdX`はあなたのUSBメモリのデバイス名です。 **正しいデバイス名を選んでいるのかよく確認してください** 、そのデバイス上のすべてのデータが上書きされてしまいますので。
 
-After writing the image to the USB stick, you can run it on real hardware by booting from it. You probably need to use a special boot menu or change the boot order in your BIOS configuration to boot from the USB stick. Note that it currently doesn't work for UEFI machines, since the `bootloader` crate has no UEFI support yet.
+イメージをUSBメモリに書き込んだあとは、それから起動することによって実際のハードウェア上で走らせることができます。特殊なブートメニューを使ったり、BIOS設定で起動時の優先順位を変え、USBメモリから起動することを選択する必要があるでしょう。ただし、`bootloader`クレートはUEFIをサポートしていないので、UEFI機に対してはうまく行かないということに注意してください。
 
-### Using `cargo run`
+### `cargo run`を使う
 
-To make it easier to run our kernel in QEMU, we can set the `runner` configuration key for cargo:
+QEMU内で私達のカーネルを走らせるのを簡単にするために、cargoの`runner`設定が使えます。
 
 ```toml
 # in .cargo/config.toml
@@ -483,15 +489,14 @@ To make it easier to run our kernel in QEMU, we can set the `runner` configurati
 [target.'cfg(target_os = "none")']
 runner = "bootimage runner"
 ```
+`target.'cfg(target_os = "none")'`テーブルは、`"os"`フィールドが`"none"`であるようなすべてのターゲットに適用されます。私達の`x86_64-blog_os.json`ターゲットもその1つです。`runner`キーは`caargo run`のときに発動されるべきコマンドを指定しています。このコマンドは、ビルドが成功した後に、実行可能ファイルのパスを第一引数として実行されます。詳しくは、[cargoのドキュメント][cargo configuration]を読んでください。
 
-The `target.'cfg(target_os = "none")'` table applies to all targets that have set the `"os"` field of their target configuration file to `"none"`. This includes our `x86_64-blog_os.json` target. The `runner` key specifies the command that should be invoked for `cargo run`. The command is run after a successful build with the executable path passed as first argument. See the [cargo documentation][cargo configuration] for more details.
-
-The `bootimage runner` command is specifically designed to be usable as a `runner` executable. It links the given executable with the project's bootloader dependency and then launches QEMU. See the [Readme of `bootimage`] for more details and possible configuration options.
+`bootimage runner`コマンドは、`runner`で実行するために設計されています。このコマンドは、与えられた実行ファイルをプロジェクトの依存するbootloaderとリンクして、QEMUを立ち上げます。より詳しく知りたいときや、設定オプションについては[`bootimage`のReadme][Readme of `bootimage`]を読んでください。
 
 [Readme of `bootimage`]: https://github.com/rust-osdev/bootimage
 
-Now we can use `cargo run` to compile our kernel and boot it in QEMU.
+これで、`cargo run`を使ってカーネルをコンパイルしQEMU内で起動することができます。
 
-## What's next?
+## 次は？
 
-In the next post, we will explore the VGA text buffer in more detail and write a safe interface for it. We will also add support for the `println` macro.
+次の記事では、VGAテキストバッファをより詳しく学び、その安全なインターフェースを書きます。`println`マクロが使えるようにもします。
