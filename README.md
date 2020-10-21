@@ -112,7 +112,10 @@ The current version of the blog is already the second edition. The first edition
 
 ## License
 
-This project, with exception of the `blog/content` folder, is licensed under
+This project, with exception of the `blog/content` folder, is licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
+  https://www.apache.org/licenses/LICENSE-2.0)
 - MIT license ([LICENSE-MIT](LICENSE-MIT) or https://opensource.org/licenses/MIT)
 
 at your option.
