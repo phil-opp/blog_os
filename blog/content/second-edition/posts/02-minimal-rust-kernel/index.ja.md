@@ -12,7 +12,7 @@ translation_based_on_commit = "7212ffaa8383122b1eb07fe1854814f99d2e1af4"
 translators = ["woodyZootopia"]
 +++
 
-この記事では、Rustで最小限の64bitカーネルを作ります。前の記事で作った[<ruby>独立した<rp> (</rp><rt>freestanding</rt><rp>) </rp></ruby>Rustバイナリ][freestanding Rust binary]を下敷きにして、何かを画面に出力する、ブータブルディスクイメージを作ります。
+この記事では、Rustで最小限の64bitカーネルを作ります。前の記事で作った[フリースタンディングなRustバイナリ][freestanding Rust binary]を下敷きにして、何かを画面に出力する、ブータブルディスクイメージを作ります。
 
 [freestanding Rust binary]: @/second-edition/posts/01-freestanding-rust-binary/index.ja.md
 
