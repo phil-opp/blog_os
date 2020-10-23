@@ -84,7 +84,7 @@ x86には2つのファームウェアの標準規格があります："Basic Inp
 
 ### UEFI
 
-（今の所UEFIのサポートは提供していませんが、ぜひともしたいと思っています！お手伝いいただける場合は、 [Github issue](https://github.com/phil-opp/blog_os/issues/349)で教えてください）
+（今の所UEFIのサポートは提供していませんが、ぜひともしたいと思っています！お手伝いいただける場合は、 [GitHub issue](https://github.com/phil-opp/blog_os/issues/349)で教えてください。）
 
 ## 最小のカーネル
 どのようにコンピュータが起動するのかについてざっくりと理解できたので、自前で最小のカーネルを書いてみましょう。目標は、起動したら画面に"Hello, World!"と出力するようなディスクイメージを作ることです。そのためには、前の記事の[<ruby>独立した<rp> (</rp><rt>freestanding</rt><rp>) </rp></ruby>Rustバイナリ][freestanding Rust binary]を基礎として作ります。
