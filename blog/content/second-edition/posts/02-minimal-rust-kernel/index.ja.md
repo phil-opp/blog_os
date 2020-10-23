@@ -491,7 +491,7 @@ runner = "bootimage runner"
 ```
 `target.'cfg(target_os = "none")'`テーブルは、`"os"`フィールドが`"none"`であるようなすべてのターゲットに適用されます。私達の`x86_64-blog_os.json`ターゲットもその1つです。`runner`キーは`cargo run`のときに呼ばれるコマンドを指定しています。このコマンドは、ビルドが成功した後に、実行可能ファイルのパスを第一引数として実行されます。詳しくは、[cargoのドキュメント][cargo configuration]を読んでください。
 
-`bootimage runner`コマンドは、`runner`で実行するために設計されています。このコマンドは、与えられた実行ファイルをプロジェクトの依存するbootloaderとリンクして、QEMUを立ち上げます。より詳しく知りたいときや、設定オプションについては[`bootimage`のReadme][Readme of `bootimage`]を読んでください。
+`bootimage runner`コマンドは、`runner`キーとして実行するために設計されています。このコマンドは、与えられた実行ファイルをプロジェクトの依存するbootloaderとリンクして、QEMUを立ち上げます。より詳しく知りたいときや、設定オプションについては[`bootimage`のReadme][Readme of `bootimage`]を読んでください。
 
 [Readme of `bootimage`]: https://github.com/rust-osdev/bootimage
 
