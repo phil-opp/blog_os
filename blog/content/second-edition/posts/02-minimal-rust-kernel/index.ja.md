@@ -71,7 +71,7 @@ x86には2つのファームウェアの標準規格があります："Basic Inp
 [Multiboot header]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
 
 - これらは32bitプロテクトモードしかサポートしていません。そのため、64bitロングモードに変更するためのCPUの設定は依然行う必要があります。
-- これらは、カーネルではなくブートローダーがシンプルになるように設計されています。例えば、カーネルは[通常とは異なるデフォルトページサイズ][adjusted default page size]でリンクされる必要があり、そうしないとGRUBはMultiboot headerを見つけることができません。他にも、カーネルに渡される[<ruby>ブート情報<rp> (</rp><rt>boot information</rt><rp>) </rp></ruby>][boot information]は、クリーンな抽象化を与えてくれず、たくさんのアーキテクチャ依存の構造を含んでいます。
+- これらは、カーネルではなくブートローダーがシンプルになるように設計されています。例えば、カーネルは[通常とは異なるデフォルトページサイズ][adjusted default page size]でリンクされる必要があり、そうしないとGRUBはMultiboot headerを見つけることができません。他にも、カーネルに渡される[<ruby>ブート情報<rp> (</rp><rt>boot information</rt><rp>) </rp></ruby>][boot information]は、クリーンな抽象化を与えてくれず、アーキテクチャ依存の構造を多く含んでいます。
 - GRUBもMultiboot標準規格もドキュメントが充実していません。
 - カーネルファイルからブータブルディスクイメージを作るには、ホストシステムにGRUBがインストールされている必要があります。これにより、MacとWindows上での開発は比較的難しくなっています。
 
