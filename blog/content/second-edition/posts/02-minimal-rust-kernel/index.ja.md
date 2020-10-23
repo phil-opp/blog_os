@@ -66,7 +66,7 @@ x86には2つのファームウェアの標準規格があります："Basic Inp
 [Multiboot]: https://wiki.osdev.org/Multiboot
 [GNU GRUB]: https://ja.wikipedia.org/wiki/GNU_GRUB
 
-カーネルをMultibootに準拠させるには、カーネルファイルの先頭にいわゆる[Multiboot header]を挿入するだけでいいです。このおかげで、OSをGRUBで起動するのはとても簡単です。しかし、GRUBとMultiboot標準規格にはいくつか問題もあります：
+カーネルをMultibootに準拠させるには、カーネルファイルの先頭にいわゆる[Multiboot header]を挿入するだけで済みます。このおかげで、OSをGRUBで起動するのはとても簡単です。しかし、GRUBとMultiboot標準規格にはいくつか問題もあります：
 
 [Multiboot header]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
 
