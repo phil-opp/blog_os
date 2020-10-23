@@ -103,7 +103,7 @@ nightlyコンパイラでは、いわゆる**feature flag**をファイルの先
 [`asm!` macro]: https://doc.rust-lang.org/unstable-book/library-features/asm.html
 
 ### ターゲットの仕様
-Cargoは`--target`パラメータを使ってさまざまなターゲットをサポートします。ターゲットはいわゆる[target <ruby>triple<rp> (</rp><rt>3つ組</rt><rp>) </rp></ruby>][target triple]によって表されます。これはCPUアーキテクチャ、製造元、オペレーティングシステム、そして[ABI]を表します。例えば、`x86_64-unknown-linux-gnu`というtarget tripleは、`x86_64`のCPU、製造元不明、GNU ABIのLinuxオペレーティングシステム向けのシステムを表します。Rustは[多くの種類のtarget triple][platform-support]をサポートしており、その中にはAndroidのための`arm-linux-androideabi`や[WebAssemblyのための`wasm32-unknown-unknown`](https://www.hellorust.com/setup/wasm-target/)があります。
+Cargoは`--target`パラメータを使ってさまざまなターゲットをサポートします。ターゲットはいわゆる[target <ruby>triple<rp> (</rp><rt>3つ組</rt><rp>) </rp></ruby>][target triple]によって表されます。これはCPUアーキテクチャ、製造元、オペレーティングシステム、そして[ABI]を表します。例えば、`x86_64-unknown-linux-gnu`というtarget tripleは、`x86_64`のCPU、製造元不明、GNU ABIのLinuxオペレーティングシステム向けのシステムを表します。Rustは[多くのtarget triple][platform-support]をサポートしており、その中にはAndroidのための`arm-linux-androideabi`や[WebAssemblyのための`wasm32-unknown-unknown`](https://www.hellorust.com/setup/wasm-target/)などがあります。
 
 [target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [ABI]: https://stackoverflow.com/a/2456882
@@ -152,7 +152,6 @@ Cargoは`--target`パラメータを使ってさまざまなターゲットを�
 
 以下の、ビルドに関係する項目を追加します。
 
-
 ```json
 "linker-flavor": "ld.lld",
 "linker": "rust-lld",
@@ -166,7 +165,7 @@ Cargoは`--target`パラメータを使ってさまざまなターゲットを�
 "panic-strategy": "abort",
 ```
 
-この設定は、ターゲットが<ruby>パニック<rp> (</rp><rt>panic</rt><rp>) </rp></ruby>時の[stack unwinding]をサポートしていないので、プログラムは代わりに直接<ruby>中断<rp> (</rp><rt>abort</rt><rp>) </rp></ruby>しなければならないということを指定しています。これは、Cargo.tomlに`panic = "abort"`という設定を書くのに等しいですから、そこからそれを取り除いて良いです（このターゲット設定は、Cargo.tomlの設定と異なり、このあとやる`core`ライブラリの再コンパイルにも適用されます。ですので、Cargo.tomlに設定するほうが好みだったとしても、この設定を追加するようにしてください）。
+この設定は、ターゲットがパニック時の[stack unwinding]をサポートしていないので、プログラムは代わりに直接<ruby>中断<rp> (</rp><rt>abort</rt><rp>) </rp></ruby>しなければならないということを指定しています。これは、Cargo.tomlに`panic = "abort"`という設定を書くのに等しいですから、後者の設定を消しても構いません（このターゲット設定は、Cargo.tomlの設定と異なり、このあと行う`core`ライブラリの再コンパイルにも適用されます。ですので、Cargo.tomlに設定する方が好みだったとしても、この設定を追加するようにしてください）。
 
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
 
@@ -174,7 +173,7 @@ Cargoは`--target`パラメータを使ってさまざまなターゲットを�
 "disable-redzone": true,
 ```
 
-カーネルを書いているので、いつかの時点で<ruby>割り込み<rp> (</rp><rt>interrupt</rt><rp>) </rp></ruby>を処理しなければならなくなるでしょう。これを安全に行うために、 **"red zone"** と呼ばれる、ある種のスタックポインタ最適化を無効化する必要があります。こうしないと、スタックの<ruby>破損<rp> (</rp><rt>corruption</rt><rp>) </rp></ruby>を引き起こしてしまうだろうからです。より詳しくは、[red zoneの無効化][disabling the red zone]という別記事をご覧ください。
+カーネルを書いている以上、ある時点で<ruby>割り込み<rp> (</rp><rt>interrupt</rt><rp>) </rp></ruby>を処理しなければならなくなるでしょう。これを安全に行うために、 **"red zone"** と呼ばれる、ある種のスタックポインタ最適化を無効化する必要があります。こうしないと、スタックの<ruby>破損<rp> (</rp><rt>corruption</rt><rp>) </rp></ruby>を引き起こしてしまう恐れがあるためです。より詳しくは、[red zoneの無効化][disabling the red zone]という別記事をご覧ください。
 
 [disabling the red zone]: @/second-edition/posts/02-minimal-rust-kernel/disable-red-zone/index.md
 
@@ -182,9 +181,9 @@ Cargoは`--target`パラメータを使ってさまざまなターゲットを�
 "features": "-mmx,-sse,+soft-float",
 ```
 
-`features`フィールドは、ターゲットの<ruby>機能<rp> (</rp><rt>features</rt><rp>) </rp></ruby>を有効化/無効化します。マイナスを前につけることで`mmx`と`sse`という機能を無効化し、プラスを前につけることで`soft-float`という機能を有効化しています。それぞれのフラグの間にスペースは入れてはならず、もしそうするとLLVMが機能文字列の解釈に失敗していまうということに注意してください。
+`features`フィールドは、ターゲットの<ruby>機能<rp> (</rp><rt>features</rt><rp>) </rp></ruby>を有効化/無効化します。マイナスを前につけることで`mmx`と`sse`という機能を無効化し、プラスを前につけることで`soft-float`という機能を有効化しています。それぞれのフラグの間にスペースは入れてはならず、もしそうするとLLVMが機能文字列の解釈に失敗してしまうことに注意してください。
 
-`mmx`と`sse`という機能は、[Single Instruction Multiple Data (SIMD)]命令をサポートするかを決定します。この命令は、しばしばプログラムを著しく速くしてくれます。しかし、大きなSIMDレジスタをOSカーネルで使うことは性能上の問題に繋がります。 その理由は、カーネルは、割り込まれたプログラムを再開する前に、すべてのレジスタを元に戻さないといけないからです。これは、カーネルがSIMDの状態のすべてを、システムコールやハードウェア割り込みがあるたびにメインメモリに保存しないといけないということを意味します。SIMDの状態情報はとても巨大（512〜1600 bytes）で、割り込みは非常に頻繁に起こるかもしれないので、保存・復元の操作がこのように追加されるのは性能にかなりの悪影響を及ぼします。これを避けるために、（カーネルの上で走っているアプリケーションではなく！）カーネルではSIMDを無効化するのです。
+`mmx`と`sse`という機能は、[Single Instruction Multiple Data (SIMD)]命令をサポートするかを決定します。この命令は、しばしばプログラムを著しく速くしてくれます。しかし、大きなSIMDレジスタをOSカーネルで使うことは性能上の問題に繋がります。 その理由は、カーネルは、割り込まれたプログラムを再開する前に、すべてのレジスタを元に戻さないといけないためです。これは、カーネルがSIMDの状態のすべてを、システムコールやハードウェア割り込みがあるたびにメインメモリに保存しないといけないということを意味します。SIMDの状態情報はとても巨大（512〜1600 bytes）で、割り込みは非常に頻繁に起こるかもしれないので、保存・復元の操作がこのように追加されるのは性能にかなりの悪影響を及ぼします。これを避けるために、（カーネルの上で走っているアプリケーションではなく！）カーネル上でSIMDを無効化するのです。
 
 [Single Instruction Multiple Data (SIMD)]: https://ja.wikipedia.org/wiki/SIMD
 
@@ -193,7 +192,7 @@ SIMDを無効化することによる問題に、`x86_64`における浮動小�
 より詳しくは、[SIMDを無効化する](@/second-edition/posts/02-minimal-rust-kernel/disable-simd/index.md)ことに関する私達の記事を読んでください。
 
 #### まとめると
-私達のターゲット仕様ファイルはこんなふうになっているはずです。
+私達のターゲット仕様ファイルは今このようになっているはずです。
 
 ```json
 {
@@ -214,7 +213,7 @@ SIMDを無効化することによる問題に、`x86_64`における浮動小�
 ```
 
 ### カーネルをビルドする
-私達の新しいターゲットのコンパイルにはLinuxの慣習を使います（理由は知りません、LLVMの既定ってだけじゃないでしょうか）。つまり、[前の記事][previous post]で説明したように`_start`という名前のエントリポイントが要るということです。
+私達の新しいターゲットのコンパイルにはLinuxの慣習に倣います（理由は知りません、LLVMのデフォルトであるというだけではないでしょうか）。つまり、[前の記事][previous post]で説明したように`_start`という名前のエントリポイントが要るということです。
 
 [previous post]: @/second-edition/posts/01-freestanding-rust-binary/index.ja.md
 
@@ -240,7 +239,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-あなたのホストOSがなんであるかにかかわらず、エントリポイントは`_start`という名前である必要があることに注意してください。
+ホストOSが何であるかにかかわらず、エントリポイントは`_start`という名前でなければならないことに注意してください。
 
 これで、私達の新しいターゲットのためのカーネルを、JSONファイル名を`--target`として渡すことでビルドできるようになりました。
 
@@ -250,15 +249,15 @@ pub extern "C" fn _start() -> ! {
 error[E0463]: can't find crate for `core`
 ```
 
-失敗しましたね！エラーはRustコンパイラが[`core`ライブラリ][`core` library]を見つけられなくなったと言っています。このライブラリは、`Result`、`Option`、イテレータのような基本的なRustの型を持っており、暗黙のうちにすべての`no_std`なクレートにリンクされています。
+失敗しましたね！エラーはRustコンパイラが[`core`ライブラリ][`core` library]を見つけられなくなったと言っています。このライブラリは、`Result` や `Option`、イテレータのような基本的なRustの型を持っており、暗黙のうちにすべての`no_std`なクレートにリンクされています。
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
-問題は、coreライブラリはRustコンパイラと一緒に<ruby>コンパイル済み<rp> (</rp><rt>precompiled</rt><rp>) </rp></ruby>ライブラリとして配布されているということです。そのため、これは、私達独自のターゲットではなく、サポートされているhost triple（例えば `x86_64-unknown-linux-gnu`）にのみ使えるのです。他のターゲットのためにコードをコンパイルしようと思ったら、`core`をそれらのターゲットに向けて再コンパイルする必要があります。
+問題は、coreライブラリはRustコンパイラと一緒に<ruby>コンパイル済み<rp> (</rp><rt>precompiled</rt><rp>) </rp></ruby>ライブラリとして配布されているということです。そのため、これは、私達独自のターゲットではなく、サポートされているhost triple（例えば `x86_64-unknown-linux-gnu`）でのみ使えるのです。他のターゲットのためにコードをコンパイルしたいときには、`core`をそれらのターゲットに向けて再コンパイルする必要があります。
 
 #### `build-std`オプション
 
-ここでcargoの[`build-std`機能][`build-std` feature]の出番です。これを使うと`core`やその他の標準ライブラリクレートについて、Rustインストール時に一緒についてくるコンパイル済みバージョンを使う代わりに、必要に応じて再コンパイルすることができます。この機能はとても新しく、まだ完成していないので、「<ruby>不安定<rp> (</rp><rt>unstable</rt><rp>) </rp></ruby>」マークが付いており、[nightly Rustコンパイラ][nightly Rust compilers]でのみ利用可能です。
+ここでcargoの[`build-std`機能][`build-std` feature]の出番です。これを使うと`core`やその他の標準ライブラリクレートについて、Rustインストール時に一緒についてくるコンパイル済みバージョンを使う代わりに、必要に応じて再コンパイルすることができます。これはとても新しくまだ完成していないので、<ruby>不安定<rp> (</rp><rt>unstable</rt><rp>) </rp></ruby>機能とされており、[nightly Rustコンパイラ][nightly Rust compilers]でのみ利用可能です。
 
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust compilers]: #installing-rust-nightly
@@ -272,7 +271,7 @@ error[E0463]: can't find crate for `core`
 build-std = ["core", "compiler_builtins"]
 ```
 
-これはcargoに`core`と`compiler_builtins`ライブラリを再コンパイルするよう命令します。後者は必要なのは`core`がこれに依存しているためです。 これらのライブラリを再コンパイルするためには、cargoはRustのソースコードにアクセスできる必要があります。これは`rustup component add rust-src`でインストールできます。
+これはcargoに`core`と`compiler_builtins`ライブラリを再コンパイルするよう命令します。後者が必要なのは`core`がこれに依存しているためです。 これらのライブラリを再コンパイルするためには、cargoがRustのソースコードにアクセスできる必要があります。これは`rustup component add rust-src`でインストールできます。
 
 <div class="note">
 
@@ -280,7 +279,7 @@ build-std = ["core", "compiler_builtins"]
 
 </div>
 
-`unstable.build-std`設定キーをセットし、`rust-src`コンポーネントをインストールしたなら、ビルドコマンドをもう一度実行しましょう。
+`unstable.build-std`設定キーをセットし、`rust-src`コンポーネントをインストールしたら、ビルドコマンドをもう一度実行しましょう。
 
 ```
 > cargo build --target x86_64-blog_os.json
@@ -293,15 +292,15 @@ build-std = ["core", "compiler_builtins"]
 
 今回は、`cargo build`が`core`、`rustc-std-workspace-core` (`compiler_builtins`の依存です)、そして `compiler_builtins`を私達のカスタムターゲット向けに再コンパイルしているということがわかります。
 
-#### メモリ関係の<ruby>組み込み<rp> (</rp><rt>intrinsic</rt><rp>) </rp></ruby>関数
+#### メモリ関係の<ruby>組み込み関数<rp> (</rp><rt>intrinsics</rt><rp>) </rp></ruby>
 
-Rustコンパイラは、すべてのシステムにおいて、特定の組み込み関数が利用可能であるということを前提にしています。それらの関数の多くは、私達がちょうど再コンパイルした`compiler_builtins`クレートによって提供されています。しかしながら、通常システムのCライブラリに提供されているので標準では有効化されていない、メモリ関係の関数がいくつかあります。それらの関数には、メモリブロック内のすべてのバイトを与えられた値にセットする`memset`、メモリーブロックを他のブロックへとコピーする`memcpy`、2つのメモリーブロックを比較する`memcmp`などがあります。これらの関数はどれも、現在の段階で我々のカーネルをコンパイルするのに必要というわけではありませんが、コードを追加していくとすぐに必要になるでしょう（たとえば、構造体をコピーしたりとか）。
+Rustコンパイラは、すべてのシステムにおいて、特定の組み込み関数が利用可能であるということを前提にしています。それらの関数の多くは、私達がちょうど再コンパイルした`compiler_builtins`クレートによって提供されています。しかしながら、通常システムのCライブラリによって提供されているので標準では有効化されていない、メモリ関係の関数がいくつかあります。それらの関数には、メモリブロック内のすべてのバイトを与えられた値にセットする`memset`、メモリーブロックを他のブロックへとコピーする`memcpy`、2つのメモリーブロックを比較する`memcmp`などがあります。これらの関数はどれも、現在の段階で我々のカーネルをコンパイルするのに必要というわけではありませんが、コードを追加していくとすぐに必要になるでしょう（たとえば、構造体をコピーする、など）。
 
-オペレーティングシステムのCライブラリにリンクすることはできませんので、これらの関数をコンパイラに与えてやる別の方法が必要になります。このための方法として考えられるものの一つが、自前で`memset`を実装し、（コンパイル中の自動リネームを防ぐため）`#[no_mangle]`アトリビュートをこれらに適用することでしょう。しかし、こうすると、これらの関数の実装のちょっとしたミスが未定義動作に繋がりうるため危険です。たとえば、`for`ループを使って`memcpy`を実装すると無限再帰を起こしてしまうかもしれません。なぜなら、`for`ループは暗黙のうちに[`IntoIterator::into_iter`]トレイトメソッドを呼び出しており、これは`memcpy`を再び呼び出しているかもしれないからです。なので、代わりに、既存のよくテストされた実装を再利用するのが良いでしょう。
+オペレーティングシステムのCライブラリにリンクすることはできませんので、これらの関数をコンパイラに与えてやる別の方法が必要になります。このための方法として考えられるものの一つが、自前で`memset`を実装し、（コンパイル中の自動リネームを防ぐため）`#[no_mangle]`アトリビュートをこれらに適用することでしょう。しかし、こうすると、これらの関数の実装のちょっとしたミスが未定義動作に繋がりうるため危険です。たとえば、`for`ループを使って`memcpy`を実装すると無限再帰を起こしてしまうかもしれません。なぜなら、`for`ループは暗黙のうちに[`IntoIterator::into_iter`]トレイトメソッドを呼び出しており、これが`memcpy`を再び呼び出しているかもしれないためです。なので、代わりに既存のよくテストされた実装を再利用するのが良いでしょう。
 
 [`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
 
-ありがたいことに、`compiler_builtins`クレートにはこれらの必要な関数すべての実装が含まれており、標準ではCライブラリの実装と競合しないように無効化されているだけなのです。有効化するにはcargoの[`build-std-features`]フラグを`["computer-builtins-mem"]`にセットすればいいです。`build-std`フラグと同じように、このフラグはコマンドラインで`-Z`フラグとして渡すこともできれば、`.cargo/config.toml`ファイルの`unstable`テーブルで設定することもできます。ビルド時は常にこのフラグをセットしたいので、設定ファイルを使うほうが良いでしょう：
+ありがたいことに、`compiler_builtins`クレートにはこれらの必要な関数すべての実装が含まれており、標準ではCライブラリの実装と競合しないように無効化されているだけなのです。これはcargoの[`build-std-features`]フラグを`["computer-builtins-mem"]`に設定することで有効化できます。`build-std`フラグと同じように、このフラグはコマンドラインで`-Z`フラグとして渡すこともできれば、`.cargo/config.toml`ファイルの`unstable`テーブルで設定することもできます。ビルド時は常にこのフラグをセットしたいので、設定ファイルを使う方が良いでしょう：
 
 [`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
 
@@ -312,9 +311,9 @@ Rustコンパイラは、すべてのシステムにおいて、特定の組み�
 build-std-features = ["compiler-builtins-mem"]
 ```
 
-（`compiler-builtins-mem`機能のサポートが追加されたのは[すごく最近](https://github.com/rust-lang/rust/pull/77284)なので、`2019-09-30`以降のRust nightlyが必要です）
+（`compiler-builtins-mem`機能のサポートが追加されたのは[つい最近](https://github.com/rust-lang/rust/pull/77284)なので、`2019-09-30`以降のRust nightlyが必要です。）
 
-このとき、裏で`compiler_builtins`クレートの[`mem`機能][`mem` feature]が有効化されています。これにより、このクレートの[`memcpy`などの実装][`memcpy` etc. implementations]に`#[no_mangle]`アトリビュートが適用され、リンカがこれらを利用できるようになっています。これらの関数は今のところ[最適化されておらず][not optimized]、性能は最高ではないかもしれないということは知っておく価値があるでしょう。ですが、少なくともこれらは正しいです。`x86_64`については、[これらの関数を特殊なアセンブリ命令を使って最適化する][memcpy rep movsb]プルリクエストがopenされています。
+このとき、裏で`compiler_builtins`クレートの[`mem`機能][`mem` feature]が有効化されています。これにより、このクレートの[`memcpy`などの実装][`memcpy` etc. implementations]に`#[no_mangle]`アトリビュートが適用され、リンカがこれらを利用できるようになっています。これらの関数は今のところ[最適化されておらず][not optimized]、性能は最高ではないかもしれないものの、少なくとも正しい実装ではあるということは知っておく価値があるでしょう。`x86_64`については、[これらの関数を特殊なアセンブリ命令を使って最適化する][memcpy rep movsb]プルリクエストが提出されています。
 
 [`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L51-L52
 [`memcpy` etc. implementations]: (https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69)
@@ -325,7 +324,7 @@ build-std-features = ["compiler-builtins-mem"]
 
 #### 標準のターゲットをセットする
 
-`cargo build`を呼び出すたびに`--target`パラメータを渡すのを避けるために、標準のターゲットを書き換えることができます。これをするには、以下を`.cargo/config.toml`の[cargo設定][cargo configuration]ファイルに付け加えます:
+`cargo build`を呼び出すたびに`--target`パラメータを渡すのを避けるために、デフォルトのターゲットを書き換えることができます。これをするには、以下を`.cargo/config.toml`の[cargo設定][cargo configuration]ファイルに付け加えます:
 
 [cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
 
@@ -338,10 +337,10 @@ target = "x86_64-blog_os.json"
 
 これは、明示的に`--target`引数が渡されていないときは、`x86_64-blog_os.json`ターゲットを使うように`cargo`に命令します。つまり、私達はカーネルをシンプルな`cargo build`コマンドでビルドできるということです。cargoの設定のオプションについてより詳しく知るには、[公式のドキュメント][cargo configuration]を読んでください。
 
-今や、シンプルな`cargo build`コマンドで、ベアメタルのターゲットに私達のカーネルをビルドできるようになりました。しかし、ブートローダーによって呼び出される私達の`_start`エントリポイントはまだ空っぽです。こいつから何かを画面に出力してみましょう。
+これにより、シンプルな`cargo build`コマンドで、ベアメタルのターゲットに私達のカーネルをビルドできるようになりました。しかし、ブートローダーによって呼び出される私達の`_start`エントリポイントはまだ空っぽです。そろそろここから何かを画面に出力してみましょう。
 
 ### 画面に出力する
-現在の段階で画面に文字を出力する最も簡単な方法は[VGAテキストバッファ][VGA text buffer]です。これは画面に出力されている内容を保持しているVGAハードウェアにマップされた特殊なメモリです。通常、これは25行からなり、それぞれの行は80文字セルからなります。それぞれの文字セルは、背景色と前景色付きのASCII文字を表示します。画面出力はこんなふうに見えます：
+現在の段階で画面に文字を出力する最も簡単な方法は[VGAテキストバッファ][VGA text buffer]です。これは画面に出力されている内容を保持しているVGAハードウェアにマップされた特殊なメモリです。通常、これは25行からなり、それぞれの行は80文字セルからなります。それぞれの文字セルは、背景色と前景色付きのASCII文字を表示します。画面出力はこのように見えるでしょう：
 
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
 
@@ -369,7 +368,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-まず、`0xb8000`という整数を[生ポインタ][raw pointer]にキャストします。次に[<ruby>静的<rp> (</rp><rt>static</rt><rp>) </rp></ruby>][static]な`HELLO`という[バイト列][byte string]変数の要素に対し[イテレート][iterate]します。[`enumerate`]メソッドを使って、ループと一緒に「走る」変数`i`を追加しています。ループの内部では、[`offset`]メソッドを使って文字列のバイトと対応する色のバイト（`0xb`は明るいシアン色）を書き込んでいます。
+まず、`0xb8000`という整数を[生ポインタ][raw pointer]にキャストします。次に[<ruby>静的<rp> (</rp><rt>static</rt><rp>) </rp></ruby>][static]な`HELLO`という[バイト列][byte string]変数の要素に対し[イテレート][iterate]します。[`enumerate`]メソッドを使うことで、`for` ループの実行回数を表す変数 `i` も取得します。ループの内部では、[`offset`]メソッドを使って文字列のバイトと対応する色のバイト（`0xb`は明るいシアン色）を書き込んでいます。
 
 [iterate]: https://doc.rust-jp.rs/book-ja/ch13-02-iterators.html
 [static]: https://doc.rust-jp.rs/book-ja/ch10-03-lifetime-syntax.html#静的ライフタイム
@@ -378,7 +377,7 @@ pub extern "C" fn _start() -> ! {
 [raw pointer]: https://doc.rust-jp.rs/book-ja/ch19-01-unsafe-rust.html#生ポインタを参照外しする
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
-すべてのメモリへの書き込みの周りを、[<ruby>`unsafe`<rp> (</rp><rt>安全でない</rt><rp>) </rp></ruby>][`unsafe`]ブロックが囲んでいることに注意してください。この理由は、私達の作った生ポインタが合法であることをRustコンパイラが証明できないからです。生ポインタはどんな場所でも指しうるので、データの破損につながるかもしれません。これらの操作を`unsafe`ブロックに入れることで、私達はこれが合法だと確信しているとコンパイラに伝えているのです。ただし、`unsafe`ブロックはRustの安全性チェックを消すわけではなく、[5つのことが追加でできるようになる][five additional things]だけということに注意してください。
+すべてのメモリへの書き込み処理のコードを、[<ruby>`unsafe`<rp> (</rp><rt>安全でない</rt><rp>) </rp></ruby>][`unsafe`]ブロックが囲んでいることに注意してください。この理由は、私達の作った生ポインタが正しいものであることをRustコンパイラが証明できないためです。生ポインタはどんな場所でも指しうるので、データの破損につながるかもしれません。これらの操作を`unsafe`ブロックに入れることで、私達はこれが正しいことを確信しているとコンパイラに伝えているのです。ただし、`unsafe`ブロックはRustの安全性チェックを消すわけではなく、[追加で5つのことができるようになる][five additional things]だけということに注意してください。
 
 <div class="note">
 
@@ -391,21 +390,21 @@ pub extern "C" fn _start() -> ! {
 
 強調しておきたいのですが、 **このような機能はRustでプログラミングするときに使いたいものではありません！** unsafeブロック内で生ポインタを扱うと非常にしくじりやすいです。たとえば、注意不足でバッファの終端のさらに奥に書き込みを行ってしまったりするかもしれません。
 
-ですので、`unsafe`の使用はできるかぎり最小限にしたいです。これをするために、Rustでは安全な<ruby>abstraction<rp> (</rp><rt>抽象化されたもの</rt><rp>) </rp></ruby>を作ることができます。たとえば、VGAバッファ型を作り、この中にすべてのunsafeな操作を包みこみ（<ruby>カプセル化し<rp> (</rp><rt>encapsulate</rt><rp>) </rp></ruby>）、外側から誤ったことをするのを**不可能**にすることができるでしょう。こうすれば、`unsafe`の量を最小限にすることができ、[メモリ安全性][memory safety]を侵していないことを確信することができます。そのような安全なVGAバッファの抽象化を次の記事で作ります。
+ですので、`unsafe`の使用は最小限にしたいです。これをするために、Rustでは安全な<ruby>abstraction<rp> (</rp><rt>抽象化されたもの</rt><rp>) </rp></ruby>を作ることができます。たとえば、VGAバッファ型を作り、この中にすべてのunsafeな操作をカプセル化し、外側からの誤った操作が**不可能**であることを保証できるでしょう。こうすれば、`unsafe`の量を最小限にでき、[メモリ安全性][memory safety]を侵していないことを確かにできます。そのような安全なVGAバッファの abstraction を次の記事で作ります。
 
 [memory safety]: https://ja.wikipedia.org/wiki/メモリ安全性
 
 ## カーネルを実行する
 
-目に見えることを行ってくれる実行可能ファイルを手に入れたので、実行してみましょう。まず、コンパイルした私達のカーネルを、ブートローダーとリンクすることによってブータブルディスクイメージにする必要があります。すると、そのディスクイメージを、[QEMU]バーチャルマシン内や、USBメモリを使って実際のハードウェア上で実行できます。
+では、目で見て分かる処理を行う実行可能ファイルを手に入れたので、実行してみましょう。まず、コンパイルした私達のカーネルを、ブートローダーとリンクすることによってブータブルディスクイメージにする必要があります。そして、そのディスクイメージを、[QEMU]バーチャルマシン内や、USBメモリを使って実際のハードウェア上で実行できます。
 
 ### ブートイメージを作る
 
-コンパイルされた私達のカーネルをブータブルディスクイメージに変えるには、ブートローダーとリンクする必要があります。[起動のプロセスの節][section about booting]で学んだように、ブートローダーはCPUを初期化しカーネルをロードする役割があります。
+コンパイルされた私達のカーネルをブータブルディスクイメージに変えるには、ブートローダーとリンクする必要があります。[起動のプロセスのセクション][section about booting]で学んだように、ブートローダーはCPUを初期化しカーネルをロードする役割があります。
 
 [section about booting]: #the-boot-process
 
-自前のブートローダーを書くと、それだけで1つのプロジェクトになってしまうので、代わりに[`bootloader`]クレートを使いましょう。このクレートは、Cに依存せず、Rustとインラインアセンブリだけで基本的なBIOSブートローダーを実装しています。私達のカーネルを起動するためにこれを使うには、それへの依存関係を追記する必要があります：
+自前のブートローダーを書くと、それだけで1つのプロジェクトになってしまうので、代わりに[`bootloader`]クレートを使いましょう。このクレートは、Cに依存せず、Rustとインラインアセンブリだけで基本的なBIOSブートローダーを実装しています。私達のカーネルを起動するためにこれを依存関係に追加する必要があります：
 
 [`bootloader`]: https://crates.io/crates/bootloader
 
@@ -416,7 +415,7 @@ pub extern "C" fn _start() -> ! {
 bootloader = "0.9.8"
 ```
 
-bootloaderを依存として加えることだけでブータブルディスクイメージが実際に作れるわけではありません。問題は、私達のカーネルをコンパイル後にブートローダーにリンクしなければならないのに、cargoは[<ruby>ビルド後<rp> (</rp><rt>post-build</rt><rp>) </rp></ruby>にスクリプトを走らせること][post-build scripts]に対応していないのです。
+bootloaderを依存として加えることだけでブータブルディスクイメージが実際に作れるわけではなく、私達のカーネルをコンパイル後にブートローダーにリンクする必要があります。問題は、cargoが[<ruby>ビルド後<rp> (</rp><rt>post-build</rt><rp>) </rp></ruby>にスクリプトを走らせる機能][post-build scripts]を持っていないことです。
 
 [post-build scripts]: https://github.com/rust-lang/cargo/issues/545
 
@@ -434,7 +433,7 @@ cargo install bootimage
 > cargo bootimage
 ```
 
-このツールが私達のカーネルを`cargo build`を使って再コンパイルしていることがわかります。そのため、あなたの行った変更を自動で検知してくれます。その後、bootloaderをビルドします。これには少し時間がかかるかもしれません。他の依存クレートと同じように、ビルドは一度しか行われず、その時キャッシュされるので、以降のビルドはもっと早くなります。最終的に、`bootimage`はbootloaderとあなたのカーネルを合体させ、ブータブルディスクイメージにします。
+このツールが私達のカーネルを`cargo build`を使って再コンパイルしていることがわかります。そのため、あなたの行った変更を自動で検知してくれます。その後、bootloaderをビルドします。これには少し時間がかかるかもしれません。他の依存クレートと同じように、ビルドは一度しか行われず、その都度キャッシュされるので、以降のビルドはもっと早くなります。最終的に、`bootimage`はbootloaderとあなたのカーネルを合体させ、ブータブルディスクイメージにします。
 
 このコマンドを実行したら、`target/x86_64-blog_os/debug`ディレクトリ内に`bootimage-blog_os.bin`という名前のブータブルディスクイメージがあるはずです。これをバーチャルマシン内で起動してもいいですし、実際のハードウェア上で起動するためにUSBメモリにコピーしてもいいでしょう（ただし、これはCDイメージではありません。CDイメージは異なるフォーマットを持つので、これをCDに焼いてもうまくいきません）。
 
@@ -448,11 +447,11 @@ cargo install bootimage
 [ELF]: https://ja.wikipedia.org/wiki/Executable_and_Linkable_Format
 [rust-osdev/bootloader]: https://github.com/rust-osdev/bootloader
 
-起動時、ブートローダーは付け足されたELFファイルを読み、解釈します。次にプログラム部を<ruby>ページテーブル<rp> (</rp><rt>page table</rt><rp>) </rp></ruby>の<ruby>仮想アドレス<rp> (</rp><rt>virtual address</rt><rp>) </rp></ruby>にマップし、`.bss`部をゼロにし、スタックをセットアップします。最後に、エントリポイントの番地（私達の`_start`関数）を読み、そこに<ruby>飛び<rp> (</rp><rt>jump</rt><rp>) </rp></ruby>ます。
+起動時、ブートローダーは追加されたELFファイルを読み、解釈します。次にプログラム部を<ruby>ページテーブル<rp> (</rp><rt>page table</rt><rp>) </rp></ruby>の<ruby>仮想アドレス<rp> (</rp><rt>virtual address</rt><rp>) </rp></ruby>にマップし、`.bss`部をゼロにし、スタックをセットアップします。最後に、エントリポイントのアドレス（私達の`_start`関数）を読み、そこにジャンプします。
 
 ### QEMUで起動する
 
-今や、ディスクイメージを仮想マシンで起動できます。[QEMU]でこれを起動するには、以下のコマンドを実行してください：
+これで、ディスクイメージを仮想マシンで起動できます。[QEMU]を使ってこれを起動するには、以下のコマンドを実行してください：
 
 [QEMU]: https://www.qemu.org/
 
@@ -475,7 +474,7 @@ USBメモリにこれを書き込んで実際のマシン上で起動するこ�
 > dd if=target/x86_64-blog_os/debug/bootimage-blog_os.bin of=/dev/sdX && sync
 ```
 
-ただし、`sdX`はあなたのUSBメモリのデバイス名です。 **正しいデバイス名を選んでいるのかよく確認してください** 、そのデバイス上のすべてのデータが上書きされてしまいますので。
+`sdX`はあなたのUSBメモリのデバイス名です。そのデバイス上のすべてのデータが上書きされてしまうので、 **正しいデバイス名を選んでいるのかよく確認してください** 。
 
 イメージをUSBメモリに書き込んだあとは、そこから起動することによって実際のハードウェア上で走らせることができます。特殊なブートメニューを使ったり、BIOS設定で起動時の優先順位を変え、USBメモリから起動することを選択する必要があるでしょう。ただし、`bootloader`クレートはUEFIをサポートしていないので、UEFIマシン上ではうまく動作しないということに注意してください。
 
