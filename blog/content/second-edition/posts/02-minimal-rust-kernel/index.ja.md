@@ -481,7 +481,7 @@ USBメモリにこれを書き込んで実際のマシン上で起動するこ�
 
 ### `cargo run`を使う
 
-QEMU内で私達のカーネルを走らせるのを簡単にするために、cargoの`runner`設定が使えます。
+QEMU上でより簡単に私達のカーネルを走らせるために、cargoの`runner`設定が使えます。
 
 ```toml
 # in .cargo/config.toml
