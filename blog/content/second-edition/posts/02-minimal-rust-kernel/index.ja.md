@@ -9,7 +9,7 @@ chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "7212ffaa8383122b1eb07fe1854814f99d2e1af4"
 # GitHub usernames of the people that translated this post
-translators = ["woodyZootopia"]
+translators = ["woodyZootopia", "JohnTitor"]
 +++
 
 この記事では、Rustで最小限の64bitカーネルを作ります。前の記事で作った[フリースタンディングなRustバイナリ][freestanding Rust binary]を下敷きにして、何かを画面に出力する、ブータブルディスクイメージを作ります。
