@@ -18,7 +18,7 @@ translators = ["woodyZootopia"]
 
 <!-- more -->
 
-このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください。また[記事下部][at the bottom]にコメントを残すこともできます。この記事の完全なソースコードは[`post-02` ブランチ][post branch]にあります。
+このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください (訳注: リンクは原文(英語)のものになります)。また[こちら][at the bottom]にコメントを残すこともできます。この記事の完全なソースコードは[`post-02` ブランチ][post branch]にあります。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -94,7 +94,7 @@ x86には2つのファームウェアの標準規格があります："Basic Inp
 ### RustのNightly版をインストールする
 Rustには**stable**、**beta**、**nightly**の3つのリリースチャンネルがあります。Rust Bookはこれらの3つのチャンネルの違いをとても良く説明しているので、一度[確認してみてください](https://doc.rust-jp.rs/book-ja/appendix-07-nightly-rust.html)。オペレーティングシステムをビルドするには、nightlyチャンネルでしか利用できないいくつかの実験的機能を使う必要があるので、Rustのnightly版をインストールすることになります。
 
-Rustの実行環境を管理するのには、[rustup]を強くおすすめします。Nightly、beta、stable版のコンパイラをそれぞれインストールすることができますし、アップデートするのも簡単です。現在のディレクトリにnightlyコンパイラを使うようにするには、`rustup override set nightly`と実行してください。もしくは、`rust-toolchain`というファイルに`nightly`と記入してプロジェクトのルートディレクトリに置くのでも良いです。Nightly版を使っていることは、`rustc --version`と実行することで確かめられます。表示されるバージョン名の末尾に`-nightly`とあるはずです。
+Rustの実行環境を管理するのには、[rustup]を強くおすすめします。nightly、beta、stable版のコンパイラをそれぞれインストールすることができますし、アップデートするのも簡単です。現在のディレクトリにnightlyコンパイラを使うようにするには、`rustup override set nightly`と実行してください。もしくは、`rust-toolchain`というファイルに`nightly`と記入してプロジェクトのルートディレクトリに置くことでも指定できます。Nightly版を使っていることは、`rustc --version`と実行することで確かめられます。表示されるバージョン名の末尾に`-nightly`とあるはずです。
 
 [rustup]: https://www.rustup.rs/
 
@@ -320,7 +320,7 @@ build-std-features = ["compiler-builtins-mem"]
 [not optimized]: https://github.com/rust-lang/compiler-builtins/issues/339
 [memcpy rep movsb]: https://github.com/rust-lang/compiler-builtins/pull/365
 
-この変更をもって、私達のカーネルの実装はすべてのコンパイラに必要とされている関数の有効な実装を手に入れたので、私達のコードがもっと複雑になっても変わらずコンパイルできるでしょう。
+この変更をもって、私達のカーネルはコンパイラに必要とされているすべての関数の有効な実装を手に入れたので、コードがもっと複雑になっても変わらずコンパイルできるでしょう。
 
 #### 標準のターゲットをセットする
 
@@ -346,7 +346,7 @@ target = "x86_64-blog_os.json"
 
 ![screen output for common ASCII characters](https://upload.wikimedia.org/wikipedia/commons/f/f8/Codepage-437.png)
 
-次の記事では、VGAバッファの正確なレイアウトについて議論し、このためのちょっとしたドライバも書きます。"Hello World!"を出力するためには、バッファが<ruby>番地<rp> (</rp><rt>address</rt><rp>) </rp></ruby>`0xb8000`にあり、それぞれの文字セルはASCIIのバイトと色のバイトからなることだけ知っていればよいです。
+次の記事では、VGAバッファの正確なレイアウトについて議論し、このためのちょっとしたドライバも書きます。"Hello World!"を出力するためには、バッファがアドレス`0xb8000`にあり、それぞれの文字セルはASCIIのバイトと色のバイトからなることを知っている必要があります。
 
 実装はこんな感じになります：
 
