@@ -27,7 +27,7 @@ translators = ["woodyZootopia"]
 <!-- toc -->
 
 ## <ruby>起動<rp> (</rp><rt>Boot</rt><rp>) </rp></ruby>のプロセス
-コンピュータを起動すると、マザーボードの[ROM]に保存されたファームウェアのコードを実行し始めます。このコードは、[<ruby>起動時の自己テスト<rp> (</rp><rt>power-on self test</rt><rp>) </rp></ruby>][power-on self-test]を実行し、使用可能なRAMを検出し、CPUとハードウェアを<ruby>事前初期化<rp> (</rp><rt>pre-initialize</rt><rp>) </rp></ruby>します。その後、<ruby>ブータブル<rp> (</rp><rt>bootable</rt><rp>) </rp></ruby>ディスクを探し、オペレーティングシステムのカーネルを<ruby>起動<rp> (</rp><rt>boot</rt><rp>) </rp></ruby>します。
+コンピュータを起動すると、マザーボードの [ROM] に保存されたファームウェアのコードを実行し始めます。このコードは、[<ruby>起動時の自己テスト<rp> (</rp><rt>power-on self test</rt><rp>) </rp></ruby>][power-on self-test]を実行し、使用可能なRAMを検出し、CPUとハードウェアを<ruby>事前初期化<rp> (</rp><rt>pre-initialize</rt><rp>) </rp></ruby>します。その後、<ruby>ブータブル<rp> (</rp><rt>bootable</rt><rp>) </rp></ruby>ディスクを探し、オペレーティングシステムのカーネルを<ruby>起動<rp> (</rp><rt>boot</rt><rp>) </rp></ruby>します。
 
 [ROM]: https://ja.wikipedia.org/wiki/Read_only_memory
 [power-on self-test]: https://ja.wikipedia.org/wiki/Power_On_Self_Test
