@@ -401,9 +401,9 @@ For normal Rust crates, this step would be all that need for adding them as a de
 
 ### Creating a Disk Image
 
-The [Readme of the `bootloader` crate] describes how to create a bootable disk image for a kernel. The first step is to find the directory where cargo placed the source code of the `bootloader` dependency. Then, a special build command needs to be executed in that directory, passing the paths to the kernel binary and its `Cargo.toml` as arguments. This will result in multiple disk image files as output, which can be used to boot the kernel on BIOS and UEFI systems.
+The [Readme of the `bootloader` crate][`bootloader` Readme] describes how to create a bootable disk image for a kernel. The first step is to find the directory where cargo placed the source code of the `bootloader` dependency. Then, a special build command needs to be executed in that directory, passing the paths to the kernel binary and its `Cargo.toml` as arguments. This will result in multiple disk image files as output, which can be used to boot the kernel on BIOS and UEFI systems.
 
-[Readme of the `bootloader` crate]: TODO
+[`bootloader` Readme]: TODO
 
 #### A `disk_image` crate
 
@@ -413,7 +413,7 @@ Since following these steps manually is cumbersome, we create a script to automa
 cargo new --lib disk_image
 ```
 
-This command creates a new `disk_image` subfolder with a `/Cargo.toml` and a `src/lib.rs` in it. Since this new cargo project will be tightly coupled with our main project, it makes sense to combine the two crates as a [cargo workspace]. This way, they will share the same `Cargo.lock` for their dependencies and place their compilation artifacts in a common `target` folder. To create such a workpace, we add the following to the `Cargo.toml` of our main project:
+This command creates a new `disk_image` subfolder with a `Cargo.toml` and a `src/lib.rs` in it. Since this new cargo project will be tightly coupled with our main project, it makes sense to combine the two crates as a [cargo workspace]. This way, they will share the same `Cargo.lock` for their dependencies and place their compilation artifacts in a common `target` folder. To create such a workspace, we add the following to the `Cargo.toml` of our main project:
 
 [cargo workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 
@@ -424,11 +424,119 @@ This command creates a new `disk_image` subfolder with a `/Cargo.toml` and a `sr
 members = ["disk_image"]
 ```
 
-Now the two crates form a workspace. In addition to sharing the `Cargo.lock` file and `target` folder, this also means that we can now build the `disk_image` crate from our root folder by executing `cargo build --package disk_image` or `cargo build -p disk_image` for short.
+After creating the workspace, we begin the implementation of the `disk_image` crate, starting with a skeleton of a `create_disk_image` function:
+
+```rust
+// in disk_image/src/lib.rs
+
+use std::path::{Path, PathBuf};
+
+pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
+    todo!()
+}
+```
+
+The function takes the path to the kernel binary and returns the path to the created bootable disk image. As you might notice, we're using the [`Path`] and [`PathBuf`] types of the standard library here. This is possible because the `disk_image` crate runs our host system, which is indicated by the absense of a `#![no_std]` attribute. For our kernel, we used that attribute to opt-out of the standard library because our kernel should run on bare metal.
+
+[`Path`]: https://doc.rust-lang.org/std/path/struct.Path.html
+[`PathBuf`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html
+
+To allow the function to return arbitrary errors, we use the [`anyhow`] crate. This requires adding the crate as a dependency, so we modify our `disk_image/Cargo.toml` in the following way:
+
+[`anyhow`]: https://docs.rs/anyhow/1.0.33/anyhow/
+
+```toml
+# in disk_image/Cargo.toml
+
+[dependencies]
+anyhow = "1.0"
+```
+
+Now we're ready to implement the build steps outlined in the [`bootloader` Readme].
 
 #### Locating the `bootloader` Source
 
+The first step in creating the bootable disk image is to to locate where cargo put the source code of the `bootloader` dependency. For that we can use the `cargo metadata` command, which outputs all kinds of information about a cargo project as a JSON object. Among other things, it contains the manifest path (i.e. the path to the `Cargo.toml`) of all dependencies, including the `bootloader` crate.
+
+To keep this post short, we won't include the code to parse the JSON output and to locate the right entry here. Instead, we created a small crate named [`bootloader-locator`] that wraps the needed functionality in a simple [`locate_bootloader`] function. Let's add that crate as a dependency and use it:
+
+[`bootloader-locator`]: https://docs.rs/bootloader-locator/0.0.4/bootloader_locator/index.html
+[`locate_bootloader`]: https://docs.rs/bootloader-locator/0.0.4/bootloader_locator/fn.locate_bootloader.html
+
+```toml
+# in disk_image/Cargo.toml
+
+[dependencies]
+bootloader-locator = "0.0.4"
+```
+
+```rust
+// in disk_image/src/lib.rs
+
+use bootloader_locator::locate_bootloader; // new
+
+pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
+    let bootloader_manifest = locate_bootloader("bootloader")?; // new
+    todo!()
+}
+```
+
+The `locate_bootloader` function takes the name of the bootloader dependency as argument to allow alternative bootloader crates that are named differently. Since the function might fail, we use the [`?` operator] to propagate the error.
+
+[`?` operator]: https://doc.rust-lang.org/edition-guide/rust-2018/error-handling-and-panics/the-question-mark-operator-for-easier-error-handling.html
+
+If you're interested in how the `locate_bootloader` function works, [check out its source code][locate_bootloader source]. It first executes the `cargo metadata` command and parses it's result as JSON using the [`json` crate]. Then it traverses the parsed metadata to find the `bootloader` dependency and return its manifest path.
+
+[locate_bootloader source]: https://docs.rs/crate/bootloader-locator/0.0.4/source/src/lib.rs
+[`json` crate]: https://docs.rs/json/0.12.4/json/
+
 #### Running the Build Command
+
+The next step is to run the build command of the bootloader. For that we use the [`process::Command`] type of the standard library, which allows us to spawn new processes and wait for their results:
+
+[`process::Command`]: https://doc.rust-lang.org/std/process/struct.Command.html
+
+```rust
+// in disk_image/src/lib.rs
+
+use std::process::Command; // new
+
+pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
+    let bootloader_manifest = locate_bootloader("bootloader")?;
+
+    // new code below
+
+    // the path to the disk image crate, set by cargo
+    let disk_image_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+    // create a new build command; use the `CARGO` environment variable to
+    // also support cargo versions not named "cargo"
+    let mut build_cmd = Command::new(env!("CARGO"));
+    build_cmd.arg("builder");
+    // we know that the kernel's manifest is at `../Cargo.toml`
+    let kernel_manifest = disk_image_dir.parent().unwrap().join("Cargo.toml");
+    build_cmd.arg("--kernel-manifest").arg(&kernel_manifest);
+    build_cmd.arg("--kernel-binary").arg(kernel_binary);
+    // use the same target folder for building the bootloader
+    let target_dir = disk_image_dir.parent().join("target");
+    build_cmd.arg("--target-dir").arg(target_dir);
+    // place the resulting disk image next to our kernel binary
+    let out_dir = kernel_binary.parent().unwrap();
+    build_cmd.arg("--out-dir").arg(target_dir);
+    // execute the build command in the `bootloader` folder
+    build_cmd.current_dir(bootloader_manifest.parent().unwrap());
+    // run the command
+    let exit_status = build_cmd.status()?;
+
+    if !exit_status.success() {
+        return Err(anyhow::Error::msg("bootloader build failed"))
+    }
+
+    todo!()
+}
+```
+
+
 
 #### Adding an Alias
 
