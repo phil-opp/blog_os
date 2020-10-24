@@ -39,7 +39,7 @@ Almost all x86 systems have support for BIOS booting, including newer UEFI-based
 
 [real mode]: https://en.wikipedia.org/wiki/Real_mode
 
-#### BIOS Boot Process
+#### Boot Process
 
 When you turn on a computer, it loads the BIOS from some special flash memory located on the motherboard. The BIOS runs self test and initialization routines of the hardware, then it looks for bootable disks. If it finds one, the control is transferred to its _bootloader_, which is a 512-byte portion of executable code stored at the disk's beginning. Most bootloaders are larger than 512 bytes, so bootloaders are commonly split into a small first stage, which fits into 512 bytes, and a second stage, which is subsequently loaded by the first stage.
 
@@ -59,12 +59,12 @@ As noted above, most modern systems still support booting operating systems writ
 
 ### UEFI
 
-The Unified Extensible Firmware Interface (UEFI) replaces the classical BIOS firmware on most modern computers. The specification provides provides lots of useful features that make bootloader implementations much simpler:
+The Unified Extensible Firmware Interface (UEFI) replaces the classical BIOS firmware on most modern computers. The specification provides lots of useful features that make bootloader implementations much simpler:
 
 - It supports initializing the CPU directly into 64-bit mode, instead of starting in a DOS-compatible 16-bit mode like the BIOS firmware.
+- It understands disk partitions and executable files. Thus it is able to fully load the bootloader from disk into memory (no 512-byte large "first stage" is required anymore).
 - A standardized [specification][uefi-specification] minimizes the differences between systems. This isn't the case for the legacy BIOS firmware, so that bootloaders often have to try different methods because of hardware differences.
 - The specification is independent of the CPU architecture, so that the same interface can be used to boot on `x86_64` and `ARM` CPUs.
-- It understands disk partition tables and supports large partitions (>2TB).
 - It natively supports network booting without requiring additional drivers.
 
 [uefi-specification]: https://uefi.org/specifications
@@ -87,22 +87,28 @@ While there are open firmware projects such as [coreboot] that try to solve thes
 
 #### Boot Process
 
-TODO:
+The UEFI boot process works in the following way:
 
-- FAT partition
-- config file specfies boot file
-- Boot file with `.efi` ending and microsoft calling convention
-- UEFI loads boot file and calls its entry point
-- Passes system table as argument -> lots of functionality
-- Exit boot services -> functions no longer usable
+- After powering on and self-testing all components, the UEFI firmware starts looking for special bootable disk partitions called [EFI system partitions]. These partitions must be formatted with the [FAT file system] and assigned a special ID that indicates them as EFI system partition.
+- If it finds such a partition, the firmware looks for an executable file named `efi\boot\bootx64.efi` (on x86_64 systems). This executable must use the [Portable Executable (PE)] format, which is common in the Windows world.
+- It then loads the executable from disk to memory, sets up the execution environment (CPU state, page tables, etc.) in a defined way, and finally jumps to the entry point of the loaded executable.
 
-#### Implementation
+[EFI system partitions]: https://en.wikipedia.org/wiki/EFI_system_partition
+[FAT file system]: https://en.wikipedia.org/wiki/File_Allocation_Table
+[Portable Executable (PE)]: https://en.wikipedia.org/wiki/Portable_Executable
 
-TODO:
+From this point on, the bootloader executable has control and can proceed to load the operating system kernel. However, it probably needs additional information about the system to do so, for example the amount of available memory in the system. For this reason, the UEFI firmware passes a pointer to a special _system table_ as an argument when invoking the bootloader entry point function. Using this table, the bootloader can query various system information and even invoke special functions provided by the UEFI firmware, for example for accessing the hard disk.
 
-- uefi crate
-- bootloader support
-- upcoming post series
+#### How we will use UEFI
+
+As it is probably clear at this point, the UEFI interface is very powerful and complex. The wide range of functionality makes it even possible to write an operating system directly as an UEFI application, using the UEFI services instead of creating own drivers. In practice, however, most operating systems use UEFI only for the bootloader since own drivers give you more control over the system. We will also follow this path for our OS implementation.
+
+To keep this post focused, we won't cover the creation of an UEFI bootloader in this post. Instead, we will use the already mentioned [`bootloader`] crate, which allows loading our kernel on both UEFI and BIOS systems.
+
+If you're interested in how to create an UEFI bootloader: We are planning to cover this in detail in a separate series of posts. If you can't wait, check out our [`uefi` crate] and the [_An EFI App a bit rusty_] post by Gil Mendes.
+
+[_An EFI App a bit rusty_]: https://gil0mendes.io/blog/an-efi-app-a-bit-rusty/
+[`uefi` crate]: https://github.com/rust-osdev/uefi-rs/
 
 ### The Multiboot Standard
 To avoid that every operating system implements its own bootloader, which is only compatible with a single OS, the [Free Software Foundation] created an open bootloader standard called [Multiboot] in 1995. The standard defines an interface between the bootloader and operating system, so that any Multiboot compliant bootloader can load any Multiboot compliant operating system on both BIOS and UEFI systems. The reference implementation is [GNU GRUB], which is the most popular bootloader for Linux systems.
