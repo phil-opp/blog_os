@@ -253,7 +253,7 @@ It is important to remember flushing the TLB on each page table modification bec
 
 One thing that we did not mention yet: **Our kernel already runs on paging**. The bootloader that we added in the ["A minimal Rust Kernel"] post already set up a 4-level paging hierarchy that maps every page of our kernel to a physical frame. The bootloader does this because paging is mandatory in 64-bit mode on x86_64.
 
-["A minimal Rust kernel"]: @/second-edition/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
+["A minimal Rust kernel"]: @/second-edition/posts/02-minimal-rust-kernel/index.md#booting-our-kernel
 
 This means that every memory address that we used in our kernel was a virtual address. Accessing the VGA buffer at address `0xb8000` only worked because the bootloader _identity mapped_ that memory page, which means that it mapped the virtual page `0xb8000` to the physical frame `0xb8000`.
 

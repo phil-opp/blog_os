@@ -372,7 +372,142 @@ Behind the scenes, the new flag enables the [`mem` feature] of the `compiler_bui
 [not optimized]: https://github.com/rust-lang/compiler-builtins/issues/339
 [memcpy rep movsb]: https://github.com/rust-lang/compiler-builtins/pull/365
 
-With this change, our kernel has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
+With this additional flag, our kernel has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
+
+## Booting our Kernel
+
+As we learned in the [section about booting], operating systems are loaded by bootloaders, which are small programs that initialize the hardware to reasonable defaults, load the kernel from disk, and provide it with some fundamental information about the underlying system.
+
+[section about booting]: #the-boot-process
+
+### The `bootloader` Crate
+
+Since bootloaders quite complex on their own, we won't create our own bootloader here (but we are planning a separate series of posts on this). Instead, we will boot our kernel using the [`bootloader`] crate. This crate supports both BIOS and UEFI booting, provides all the necessary system information we need, and creates a reasonable default execution environment for our kernel. This way, we can focus on the actual kernel design in the following posts instead of spending a lot of time on system initialization.
+
+[`bootloader`]: https://crates.io/crates/bootloader
+
+To use the `bootloader` crate, we first need to add a dependency on it:
+
+```toml
+# in Cargo.toml
+
+[dependencies]
+bootloader = "TODO"
+```
+
+For normal Rust crates, this step would be all that need for adding them as a dependency. However, the `bootloader` crate is a bit special. The problem is that it needs access to our kernel _after compilation_ in order to create a bootable disk image. However, cargo has no support for automatically running code after a successful build, so we need some tricks for this. (There is a proposal for [post-build scripts] that would solve this issue, but it is not clear yet whether the cargo developers want to add such a feature.)
+
+[post-build scripts]: https://github.com/rust-lang/cargo/issues/545
+
+### Creating a Disk Image
+
+The [Readme of the `bootloader` crate] describes how to create a bootable disk image for a kernel. The first step is to find the directory where cargo placed the source code of the `bootloader` dependency. Then, a special build command needs to be executed in that directory, passing the paths to the kernel binary and its `Cargo.toml` as arguments. This will result in multiple disk image files as output, which can be used to boot the kernel on BIOS and UEFI systems.
+
+[Readme of the `bootloader` crate]: TODO
+
+#### A `disk_image` crate
+
+Since following these steps manually is cumbersome, we create a script to automate it. For that we create a new `disk_image` crate in a subdirectory:
+
+```
+cargo new --lib disk_image
+```
+
+This command creates a new `disk_image` subfolder with a `/Cargo.toml` and a `src/lib.rs` in it. Since this new cargo project will be tightly coupled with our main project, it makes sense to combine the two crates as a [cargo workspace]. This way, they will share the same `Cargo.lock` for their dependencies and place their compilation artifacts in a common `target` folder. To create such a workpace, we add the following to the `Cargo.toml` of our main project:
+
+[cargo workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
+
+```toml
+# in Cargo.toml
+
+[workspace]
+members = ["disk_image"]
+```
+
+Now the two crates form a workspace. In addition to sharing the `Cargo.lock` file and `target` folder, this also means that we can now build the `disk_image` crate from our root folder by executing `cargo build --package disk_image` or `cargo build -p disk_image` for short.
+
+#### Locating the `bootloader` Source
+
+#### Running the Build Command
+
+#### Adding an Alias
+
+### Running it in QEMU
+
+### Screen Output
+
+### Using `cargo run`
+
+TODO:
+- real machine
+
+### Simplify Build Commands
+
+TODO:
+- xbuild/xrun aliases
+- .cargo/config.toml files -> using not possible because of cargo limitations
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# OLD
+
+
+
+
+
+
+
+
+
+
+
+
+For running `bootimage` and building the bootloader, you need to have the `llvm-tools-preview` rustup component installed. You can do so by executing `rustup component add llvm-tools-preview`.
+
+
+
+After executing the command, you should see a bootable disk image named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
+
+#### How does it work?
+The `bootimage` tool performs the following steps behind the scenes:
+
+- It compiles our kernel to an [ELF] file.
+- It compiles the bootloader dependency as a standalone executable.
+- It links the bytes of the kernel ELF file to the bootloader.
+
+[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+[rust-osdev/bootloader]: https://github.com/rust-osdev/bootloader
+
+When booted, the bootloader reads and parses the appended ELF file. It then maps the program segments to virtual addresses in the page tables, zeroes the `.bss` section, and sets up a stack. Finally, it reads the entry point address (our `_start` function) and jumps to it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #### Set a Default Target
 
@@ -444,56 +579,6 @@ So we want to minimize the use of `unsafe` as much as possible. Rust gives us th
 
 Now that we have an executable that does something perceptible, it is time to run it. First, we need to turn our compiled kernel into a bootable disk image by linking it with a bootloader. Then we can run the disk image in the [QEMU] virtual machine or boot it on real hardware using a USB stick.
 
-### Creating a Bootimage
-
-To turn our compiled kernel into a bootable disk image, we need to link it with a bootloader. As we learned in the [section about booting], the bootloader is responsible for initializing the CPU and loading our kernel.
-
-[section about booting]: #the-boot-process
-
-Instead of writing our own bootloader, which is a project on its own, we use the [`bootloader`] crate. This crate implements a basic BIOS bootloader without any C dependencies, just Rust and inline assembly. To use it for booting our kernel, we need to add a dependency on it:
-
-[`bootloader`]: https://crates.io/crates/bootloader
-
-```toml
-# in Cargo.toml
-
-[dependencies]
-bootloader = "0.9.8"
-```
-
-Adding the bootloader as dependency is not enough to actually create a bootable disk image. The problem is that we need to link our kernel with the bootloader after compilation, but cargo has no support for [post-build scripts].
-
-[post-build scripts]: https://github.com/rust-lang/cargo/issues/545
-
-To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then links them together to create a bootable disk image. To install the tool, execute the following command in your terminal:
-
-```
-cargo install bootimage
-```
-
-For running `bootimage` and building the bootloader, you need to have the `llvm-tools-preview` rustup component installed. You can do so by executing `rustup component add llvm-tools-preview`.
-
-After installing `bootimage` and adding the `llvm-tools-preview` component, we can create a bootable disk image by executing:
-
-```
-> cargo bootimage
-```
-
-We see that the tool recompiles our kernel using `cargo build`, so it will automatically pick up any changes you make. Afterwards it compiles the bootloader, which might take a while. Like all crate dependencies it is only built once and then cached, so subsequent builds will be much faster. Finally, `bootimage` combines the bootloader and your kernel to a bootable disk image.
-
-After executing the command, you should see a bootable disk image named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
-
-#### How does it work?
-The `bootimage` tool performs the following steps behind the scenes:
-
-- It compiles our kernel to an [ELF] file.
-- It compiles the bootloader dependency as a standalone executable.
-- It links the bytes of the kernel ELF file to the bootloader.
-
-[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
-[rust-osdev/bootloader]: https://github.com/rust-osdev/bootloader
-
-When booted, the bootloader reads and parses the appended ELF file. It then maps the program segments to virtual addresses in the page tables, zeroes the `.bss` section, and sets up a stack. Finally, it reads the entry point address (our `_start` function) and jumps to it.
 
 ### Booting it in QEMU
 
