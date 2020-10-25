@@ -134,7 +134,7 @@ Because of these drawbacks we decided to not use GRUB or the Multiboot standard 
 
 [first edition]: @/edition-1/_index.md
 
-## A Minimal Kernel
+## Minimal Kernel
 Now that we roughly know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a disk image that prints something to the screen when booted. For that we build upon the [freestanding Rust binary] from the previous post.
 
 As you may remember, we built the freestanding binary through `cargo`, but depending on the operating system we needed different entry point names and compile flags. That's because `cargo` builds for the _host system_ by default, i.e. the system you're running on. This isn't something we want for our kernel, because a kernel that runs on top of e.g. Windows does not make much sense. Instead, we want to compile for a clearly defined _target system_.
@@ -374,7 +374,7 @@ Behind the scenes, the new flag enables the [`mem` feature] of the `compiler_bui
 
 With this additional flag, our kernel has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
 
-## Booting our Kernel
+## Bootable Disk Image
 
 As we learned in the [section about booting], operating systems are loaded by bootloaders, which are small programs that initialize the hardware to reasonable defaults, load the kernel from disk, and provide it with some fundamental information about the underlying system.
 
@@ -395,9 +395,65 @@ To use the `bootloader` crate, we first need to add a dependency on it:
 bootloader = "TODO"
 ```
 
-For normal Rust crates, this step would be all that need for adding them as a dependency. However, the `bootloader` crate is a bit special. The problem is that it needs access to our kernel _after compilation_ in order to create a bootable disk image. However, cargo has no support for automatically running code after a successful build, so we need some tricks for this. (There is a proposal for [post-build scripts] that would solve this issue, but it is not clear yet whether the cargo developers want to add such a feature.)
+For normal Rust crates, this step would be all that need for adding them as a dependency. However, the `bootloader` crate is a bit special. The problem is that it needs access to our kernel _after compilation_ in order to create a bootable disk image. However, cargo has no support for automatically running code after a successful build, so we need some manual build code for this. (There is a proposal for [post-build scripts] that would solve this issue, but it is not clear yet whether the cargo developers want to add such a feature.)
 
 [post-build scripts]: https://github.com/rust-lang/cargo/issues/545
+
+#### Receiving the Boot Information
+
+Before we look into the bootable disk image creation, we update need to update our `_start` entry point to be compatible with the `bootloader` crate. As we already mentioned above, bootloaders commonly pass additional system information when invoking the kernel, such as the amount of available memory. The `bootloader` crate also follows this convention, so we need to update our `_start` entry point to expect an additional argument.
+
+The [`bootloader` documentation] specifies that a kernel entry point should have the following signature:
+
+[`bootloader` documentation]: TODO
+
+```rust
+extern "C" fn(boot_info: &'static mut bootloader::BootInfo) -> !;
+```
+
+The only difference to our `_start` entry point is the additional `boot_info` argument, which is passed by the `bootloader` crate. This argument is a mutable reference to a [`bootloader::BootInfo`] type, which provides various information about the system.
+
+[`bootloader::BootInfo`]: TODO
+
+<div class="note"><details>
+<summary><h5>About <code>extern "C"</code> and <code>!</code></h5></summary>
+
+The [`extern "C"`] qualifier specifies that the function should use the same [ABI] and [calling convention] as C code. It is common to use this qualifier when communicating across different executables because C has a stable ABI that is guaranteed to never change. Normal Rust functions, on the other hand, don't have a stable ABI, so they might change it the future (e.g. to optimize performance) and thus shouldn't be used across different executables.
+
+[`extern "C"`]: https://doc.rust-lang.org/reference/items/functions.html#extern-function-qualifier
+[ABI]: https://en.wikipedia.org/wiki/Application_binary_interface
+[calling convention]: https://en.wikipedia.org/wiki/Calling_convention
+
+The `!` return type indicates that the function is [diverging], which means that it must never return. The `bootloader` requires this because its code might no longer be valid after the kernel modified the system state such as the [page tables].
+
+[diverging]: https://doc.rust-lang.org/rust-by-example/fn/diverging.html
+[page tables]: @/second-edition/posts/08-paging-introduction/index.md
+
+</details></div>
+
+While we could simply add the additional argument to our `_start` function, it would result in very fragile code. The problem is that because the `_start` function is called externally from the bootloader, no checking of the function signature occurs. So no compilation error occurs, even if the function signature completely changed after updating to a newer `bootloader` version. At runtime, however, the code would fail or introduce undefined behavior.
+
+To avoid these issues and make sure that the entry point function has always the correct signature, the `bootloader` crate provides an [`entry_point`] macro that provides a type-checked way to define a Rust function as the entry point. This way, the function signature is checked at compile time so that no runtime error can occur.
+
+[`entry_point`]: https://docs.rs/bootloader/0.6.4/bootloader/macro.entry_point.html
+
+To use the `entry_point` macro, we need to rewrite our entry point function in the following way:
+
+```rust
+// in src/main.rs
+
+use bootloader::{BootInfo, entry_point};
+
+entry_point!(kernel_main);
+
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    […]
+}
+```
+
+We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the real lower-level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. Since the signature of the function is enforced by the macro, a compilation error occurs on a wrong function signature.
+
+After adjusting our entry point for the `bootloader` crate, we can now look into how to create a bootable disk image from our kernel.
 
 ### Creating a Disk Image
 
@@ -452,7 +508,9 @@ To allow the function to return arbitrary errors, we use the [`anyhow`] crate. T
 anyhow = "1.0"
 ```
 
-Now we're ready to implement the build steps outlined in the [`bootloader` Readme].
+Instead of doing anything, the function currently only invokes the [`todo!`] macro to mark this part of the code as unfinished. Let's start resolving this by implementing the build steps outlined in the [`bootloader` Readme].
+
+[`todo!`]: https://doc.rust-lang.org/std/macro.todo.html
 
 #### Locating the `bootloader` Source
 
@@ -492,7 +550,16 @@ If you're interested in how the `locate_bootloader` function works, [check out i
 
 #### Running the Build Command
 
-The next step is to run the build command of the bootloader. For that we use the [`process::Command`] type of the standard library, which allows us to spawn new processes and wait for their results:
+The next step is to run the build command of the bootloader. From the [`bootloader` Readme] we learn that the crate requires the following build command:
+
+```
+cargo builder --kernel-manifest path/to/kernel/Cargo.toml \
+    --kernel-binary path/to/kernel_bin
+```
+
+In addition, the Readme recommends to use the `--target-dir` and `--out-dir` arguments when building the bootloader as a dependency to override where cargo places the compilation artifacts.
+
+Let's try to invoke that command from our `create_disk_image` function. For that we use the [`process::Command`] type of the standard library, which allows us to spawn new processes and wait for their results:
 
 [`process::Command`]: https://doc.rust-lang.org/std/process/struct.Command.html
 
@@ -506,25 +573,21 @@ pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
 
     // new code below
 
-    // the path to the disk image crate, set by cargo
-    let disk_image_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let bootloader_dir = bootloader_manifest.parent().unwrap();
+    let kernel_manifest = todo!();
+    let target_dir = todo!();
+    let out_dir = todo!();
 
     // create a new build command; use the `CARGO` environment variable to
-    // also support cargo versions not named "cargo"
+    // also support non-standard cargo versions
     let mut build_cmd = Command::new(env!("CARGO"));
     build_cmd.arg("builder");
-    // we know that the kernel's manifest is at `../Cargo.toml`
-    let kernel_manifest = disk_image_dir.parent().unwrap().join("Cargo.toml");
     build_cmd.arg("--kernel-manifest").arg(&kernel_manifest);
     build_cmd.arg("--kernel-binary").arg(kernel_binary);
-    // use the same target folder for building the bootloader
-    let target_dir = disk_image_dir.parent().join("target");
-    build_cmd.arg("--target-dir").arg(target_dir);
-    // place the resulting disk image next to our kernel binary
-    let out_dir = kernel_binary.parent().unwrap();
-    build_cmd.arg("--out-dir").arg(target_dir);
+    build_cmd.arg("--target-dir").arg(&target_dir);
+    build_cmd.arg("--out-dir").arg(&out_dir);
     // execute the build command in the `bootloader` folder
-    build_cmd.current_dir(bootloader_manifest.parent().unwrap());
+    build_cmd.current_dir(&bootloader_dir);
     // run the command
     let exit_status = build_cmd.status()?;
 
@@ -536,13 +599,258 @@ pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
 }
 ```
 
+We use the [`Command::new`] function to create a new [`process::Command`]. Instead of hardcoding the command name "cargo", we use the [`CARGO` environment variable] that cargo sets when compiling the `disk_image` crate. This way, we ensure that we use the exact same cargo version for compiling the `bootloader` crate, which is useful when using non-standard cargo versions, e.g. through rustup's [toolchain override shorthands]. Since the environment variable is set at compile time, we retrieve its value using the compiler-builtin [`env!`] macro.
 
+[`Command::new`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.new
+[`CARGO` environment variable]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
+[toolchain override shorthands]: https://rust-lang.github.io/rustup/overrides.html#toolchain-override-shorthand
+[`env!`]: https://doc.rust-lang.org/std/macro.env.html
+
+After creating the command, we pass all the required arguments through the [`Command::arg`] method. Most of the paths are still marked as `todo!()` and will be filled out in a moment. The two exceptions are the `kernel_binary` path that is passed in as argument and the `bootloader_dir` path, which we can create from the `bootloader_manifest` path using the [`Path::parent`] method. Since not all paths have a parent directory (e.g. the path `/` has not), the `parent()` call can fail. However, this should never happen for the `bootloader_manifest` path, so we use the [`Option::unwrap`] method that panics on `None`.
+
+[`Command::arg`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.arg
+[`Path::parent`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.parent
+[`Option::unwrap`]: https://doc.rust-lang.org/std/option/enum.Option.html#method.unwrap
+
+To execute the build command inside of the bootloader folder (instead of the current working directory), we use the [`Command::current_dir`] method. Then we use the [`Command::status`] method to execute the command and wait for its exit status. Through the [`ExitStatus::success`] method we verify that the command was successful. If not we return an error message constructed through the [`anyhow::Error::msg`] function.
+
+[`Command::current_dir`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.current_dir
+[`Command::status`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.status
+[`ExitStatus::success`]: https://doc.rust-lang.org/std/process/struct.ExitStatus.html#method.success
+[`anyhow::Error::msg`]: https://docs.rs/anyhow/1.0.33/anyhow/struct.Error.html#method.msg
+
+We still need to fill in the paths we marked as `todo!` above. For that we utilize another environment variable that cargo passes on build:
+
+```rust
+// in `create_disk_image` in disk_image/src/lib.rs
+
+// the path to the disk image crate, set by cargo
+let disk_image_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+// we know that the kernel lives in the parent directory
+let kernel_dir = disk_image_dir.parent().unwrap();
+let kernel_manifest = kernel_dir.join("Cargo.toml");
+// use the same target folder for building the bootloader
+let target_dir = kernel_dir.join("target");
+// place the resulting disk image next to our kernel binary
+let out_dir = kernel_binary.parent().unwrap();
+```
+
+The [`CARGO_MANIFEST_DIR`] environment variable always points to the `disk_image` directory, even if the crate is built from a different directory (e.g. via cargo's `--manifest-path` argument). This gives use a good starting point for creating the paths we care about since we know that the kernel lives in the parent directory. Using the [`Path::join`] method, we can construct the `kernel_manifest` and `target_dir` paths this way. To place the disk image files created by the bootloader build next to our kernel executable, we set the `out_dir` path to the the same directory.
+
+[`CARGO_MANIFEST_DIR`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
+[`Path::join`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.join
+
+#### Returning the Disk Image
+
+The final step to finish our `create_disk_image` function by returning the path to the disk image after building the bootloader. From the [`bootloader` Readme], we learn that the bootloader in fact creates multiple disk images:
+
+- A BIOS boot image named `bootimage-bios-<bin_name>.bin`.
+- An EFI executable suitable for UEFI booting named `bootimage-uefi-<bin_name>.efi`.
+
+The `<bin_name>` placeholder is the binary name of the kernel. While this is always `blog_os` for now (or the name you chose), it might be different when we create unit and integration tests for our kernel in the next posts. For this reason we use the [`Path::file_name`] method to determine it instead of hardcoding it:
+
+[`Path::file_name`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.file_name
+
+```rust
+// in disk_image/src/lib.rs
+
+pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
+    [...] // as before
+
+    // new below
+
+    let kernel_binary_name = kernel_binary
+        .file_name().expect("kernel_binary has no file name")
+        .to_str().expect("kernel file name is not valid unicode");
+    Ok(out_dir.join(format!("bootimage-bios-{}.bin", kernel_binary_name)))
+}
+```
+
+We return the path to the BIOS image here for now because it is easier to boot in the [QEMU] emulator, but you could also return a different disk image here. Alternatively, you could also return a struct containing the paths to all the disk images.
+
+[QEMU]: https://www.qemu.org/
+
+### Builder Binary
+
+We now have a `create_disk_image` function, but no way to invoke it. Let's fix this by creating a `builder` executable in the `disk_image` crate. For this, we create a new `bin` folder in `disk_image/src` and add a `builder.rs` file with the following content:
+
+```rust
+// in disk_image/src/bin/builder.rs
+
+use std::path::PathBuf;
+use anyhow::Context;
+
+fn main() -> anyhow::Result<()> {
+    let kernel_binary = build_kernel().context("failed to build kernel")?;
+    let disk_image = disk_image::create_disk_image(kernel_binary)
+        .context("failed to create disk image")?;
+    println!("Created disk image at `{}`", disk_image.display());
+}
+
+fn build_kernel() -> anyhow::Result<PathBuf> {
+    todo!()
+}
+```
+
+The entry point of all binaries in Rust is the `main` function. While this function doesn't need a return type, we use the [`anyhow::Result`] type again as a simple way of dealing with errors. The implementation of the `main` method consists of two steps: building our kernel and creating the disk image. For the first step we define a new `build_kernel` function whose implementation we will create in the following. For the disk image creation we use the `create_disk_image` function we created in our `lib.rs`. Since cargo treats the `main.rs` and `lib.rs` as separate crates, we need to prefix the crate name `disk_image` in order to access it.
+
+[`anyhow::Result`]: https://docs.rs/anyhow/1.0.33/anyhow/type.Result.html
+
+One new operation that we didn't see before are the `context` calls. This method is defined in the [`anyhow::Context`] trait and provides a way to add additional messages to errors, which are also printed out in case of an error. This way we can easily see whether an error occured in `build_kernel` or `create_disk_image`.
+
+[`anyhow::Context`]: https://docs.rs/anyhow/1.0.33/anyhow/trait.Context.html
+
+#### The `build_kernel` Implementation
+
+The purpose of the `build_kernel` method is to build our kernel and return the path to the resulting kernel binary. As we learned in the first part of this post, the build command for our kernel is:
+
+```
+cargo build --target x86_64-blog_os.json -Z build-std=core \
+    -Z build-std-features=compiler-builtins-mem
+```
+
+Let's invoke that command using the [`process::Command`] type again:
+
+```rust
+// in disk_image/src/bin/builder.rs
+
+fn build_kernel() -> anyhow::Result<PathBuf> {
+    // we know that the kernel lives in the parent directory
+    let kernel_dir = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let command_line_args: Vec<String> = std::env::args().skip(1).collect();
+
+    let mut cmd = Command::new(env!("CARGO"));
+    cmd.args(&[
+        "--target", "x86_64-blog_os.json",
+        "-Z", "build-std=core",
+        "-Z", "build-std-features=compiler-builtins-mem",
+    ]);
+    cmd.args(&command_line_args);
+    cmd.current_dir(kernel_dir);
+    let exit_status = cmd.status()?;
+
+    if exit_status.success() {
+        let profile = if command_line_args.contains("--release") {
+            "release"
+        } else {
+            "debug"
+        };
+        Ok(
+            kernel_dir.join("target").join("x86_64-blog_os").join(profile)
+            .join("blog_os")
+        )
+    } else {
+        Err(anyhow::Error::msg("kernel build failed"))
+    }
+}
+```
+
+Before constructing the command, we use the [`CARGO_MANIFEST_DIR`] environment variable again to determine the path to the kernel directory. We also retrieve the command line arguments passed to the `builder` executable by using the [`std::env::args`] function. Since the first command line argument is always the executable name, which we don't need, we use the [`Iterator::skip`] method to skip it. Then we use the [`Iterator::collect`] method to transform the iterator into a [`Vec`] of strings.
+
+[`std::env::args`]: https://doc.rust-lang.org/std/env/fn.args.html
+[`Iterator::skip`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
+[`Iterator::collect`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.collect
+[`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+
+Instead of [`Command::arg`], we use the [`Command::args`] method as a less verbose way to pass multiple string arguments at once. In addition to the build arguments, we also pass all the command line argument passed to the `builder` executable. This way, it is possible to pass additional command line arguments, for example `--release` to compile the kernel with optimizations. Similar to the bootloader build, we also use the [`Command::current_dir`] method to run the command in the root directory, which is required for finding the `x86_64-blog_os.json` file.
+
+[`Command::args`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.args
+
+After running the command and checking its exit status, we construct the path to the kernel binary. When compiling for a custom target, cargo places the executable inside a `target/<target-name>/<profile>/<name>` folder where `<target-name>` is the name of the custom target file, `<profile>` is either [`debug`] or [`release`], and `<name>` is the executable name. In our case, the target name is `x86_64-blog_os` and the executable name is `blog_os`. To determine whether it is a debug or release build, we looks through the `command_line_args` vector for a `--release` argument.
+
+[`debug`]: https://doc.rust-lang.org/cargo/reference/profiles.html#dev
+[`release`]: https://doc.rust-lang.org/cargo/reference/profiles.html#release
+
+#### Running it
+
+We can now run our `builder` binary using the following command:
+
+```
+cargo run --package disk_image --bin builder
+```
+
+The `--package disk_image` argument is optional when you run the command from within the `disk_image` directory. After running the command, you should see the `bootimage-*` files in your `target/x86_64-blog_os/debug` folder.
+
+To pass additional arguments to the `builder` executable, you have to pass them after a special separator argument `--`, otherwise they are interpreted by the `cargo run` command. As an example, you have to run the following command to build the kernel in release mode:
+
+```
+cargo run --package disk_image --bin builder -- --release
+```
+
+Without the additional `--` argument, only the `builder` executable is built in release mode, not the kernel. To verify that the `--release` argument worked, you can verify that the kernel executable and the disk image files are available in the `target/x86_64-blog_os/release` folder.
 
 #### Adding an Alias
 
-### Running it in QEMU
+Since we will need to run this `builder` executable quite often, it makes sense to add a shorter alias for the above command. To do that, we create a [cargo configuration file] at the root directory of our project. Cargo configuration files are named `.cargo/config.toml` and allow configuring the behavior of cargo itself. Among other things, they allow to define subcommand aliases to avoid typing out long commands. Let's use this feature to define a `cargo disk-image` alias for the above command:
+
+[cargo configuration file]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# in .cargo/config.toml
+
+[alias]
+disk-image = ["run", "--package", "disk_image", "--bin builder", "--"]
+```
+
+Now we can run `cargo disk-image` instead of using the long build command. Since we already included the separator argument `--` in the argument list, we can pass additional arguments directly. For example, a release build is now a simple `cargo disk-image --release`.
+
+You can of course choose a different alias name if you like. You can also add a one character alias (e.g. `cargo i`) if you want to minimize typing.
+
+## Running our Kernel
+
+After creating a bootable disk image for our kernel, we are finally able to run it. Before we learn how to run it on real hardware, we start by running it inside the [QEMU] system emulator. This has multiple advantages:
+
+- We can't break anything: Our kernel has full hardware access, so that a bug might have serious consequences on read hardware.
+- We don't need a separate computer: QEMU runs as a normal program on our development computer.
+- The edit-test cycle is much faster: We don't need to copy the disk image to bootable usb stick on every kernel change.
+- It's possible to debug our kernel via QEMU's debug tools and GDB.
+
+We will still learn how to boot our kernel on real hardware later in this post, but for now we focus on QEMU. For that you need to install QEMU on your machine as described on the [QEMU download page].
+
+[QEMU download page]: https://www.qemu.org/download/
+
+### Running in QEMU
+
+After installing QEMU, you can run `qemu-system-x86_64 --version` in a terminal to verify that it is installed. Then you can run the BIOS disk image of our kernel through the following command:
+
+```
+qemu-system-x86_64 -drive \
+    format=raw,file=target/x86_64-blog_os/debug/bootimage-bios-blog_os.bin
+```
+
+As a result, you should see a window open that looks like this:
+
+TODO: QEMU screenshot
+
+This output comes from the bootloader. As we see, the last line is "Jumping to kernel entry point at […]". This is the point where the `_start` function of our kernel is called. Since we currently only `loop {}` in that function nothing else happens, so it is expected that we don't see any additional output.
+
+Running the UEFI disk image works in a similar way, but we need to pass some additional files to QEMU to emulate an UEFI firmware. This is necessary because QEMU does not support emulating an UEFI firmware natively. The files that we need are provided by the [Open Virtual Machine Firmware (OVMF)][OVMF] project, which implements UEFI support for virtual machines. Unfortunately, the project is only very sparsely documented and not even has a clear homepage.
+
+[OVMF]: http://www.linux-kvm.org/downloads/lersek/ovmf-whitepaper-c770f8c.txt
+
+The easiest way to work with OVMF is to download pre-built images of the code. We provide such images at TODO. Both the `OVMF_CODE.fd` and `OVMF_VARS.fd` files are needed, so download them to a directory of your choice. Using these files, we can then run our UEFI disk image using the following command:
+
+```
+qemu-system-x86_64 -drive \
+    format=raw,file=target/x86_64-blog_os/debug/bootimage-uefi-blog_os.bin \
+    -drive if=pflash,format=raw,file=/path/to/OVMF_CODE.fd,
+    -drive if=pflash,format=raw,file=/path/to/OVMF_VARS.fd,
+```
+
+If everything works, this command opens a window with the following content:
+
+TODO: QEMU UEFI screenshot
+
+The output is a bit different than with the BIOS disk image. Among other things, it explicitly mentions that this is an UEFI boot right on top.
 
 ### Screen Output
+
+While we see some screen output from the bootloader, our kernel still does nothing. Let's try to output something to the screen from it too.
+
+Screen output works through a so-called [_framebuffer_]. A framebuffer is a memory region that contains the pixels that should be shown on the screen. The graphics card automatically reads the contents of this region on every screen refresh and updates the shown pixels accordingly. The size, pixel format, and memory location of the framebuffer might be different on different systems, 
+
+[_framebuffer_]: https://en.wikipedia.org/wiki/Framebuffer
+
 
 ### Using `cargo run`
 
