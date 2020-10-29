@@ -446,8 +446,8 @@ use bootloader::{BootInfo, entry_point};
 
 entry_point!(kernel_main);
 
-fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    […]
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    loop {}
 }
 ```
 
@@ -845,11 +845,78 @@ The output is a bit different than with the BIOS disk image. Among other things,
 
 ### Screen Output
 
-While we see some screen output from the bootloader, our kernel still does nothing. Let's try to output something to the screen from it too.
+While we see some screen output from the bootloader, our kernel still does nothing. Let's fix this by tring to output something to the screen from our kernel too.
 
-Screen output works through a so-called [_framebuffer_]. A framebuffer is a memory region that contains the pixels that should be shown on the screen. The graphics card automatically reads the contents of this region on every screen refresh and updates the shown pixels accordingly. The size, pixel format, and memory location of the framebuffer might be different on different systems, 
+Screen output works through a so-called [_framebuffer_]. A framebuffer is a memory region that contains the pixels that should be shown on the screen. The graphics card automatically reads the contents of this region on every screen refresh and updates the shown pixels accordingly.
 
 [_framebuffer_]: https://en.wikipedia.org/wiki/Framebuffer
+
+Since the size, pixel format, and memory location of the framebuffer can vary between different systems, we need to find out these parameters first. The easiest way to do this is to read it from the [boot information structure][`BootInfo`] that the bootloader passes as argument to our kernel entry point:
+
+```rust
+// in src/lib.rs
+
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    if let Some(framebuffer) = boot_info.framebuffer {
+        let info = framebuffer.info();
+        let buffer = framebuffer.buffer();
+    }
+    loop {}
+}
+```
+
+Even though most systems support a framebuffer, some might not. The [`BootInfo`] type reflects this by specifying its `framebuffer` field as an [`Option`]. Since screen output won't be essential for our kernel (there are other possible communication channels such as serial ports), we use an [`if let`] statement to run the framebuffer code only if a framebuffer is available.
+
+[`if let`]: TODO
+
+The [`FrameBuffer`] type provides two methods: The [`info`] method returns a [`FrameBufferInfo`] instance with all kinds of information about the framebuffer format, including the pixel type and the screen resolution. The [`buffer`] method returns the actual framebuffer content in form of a mutable byte [slice].
+
+[`FrameBuffer`]: TODO
+
+We will look into programming the framebuffer in detail in the next post. For now, let's just try setting the whole screen to some color. For this, we just set every pixel in the byte slice to some fixed value:
+
+
+```rust
+// in src/lib.rs
+
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    if let Some(framebuffer) = boot_info.framebuffer {
+        for byte in framebuffer.buffer() {
+            *byte = 0x90;
+        }
+    }
+    loop {}
+}
+```
+
+While it depends on the pixel color format how these values are interpreted, the result will likely be some shade of gray since we set the same value for every color channel (e.g. in the RGB color format).
+
+After running `cargo builder` and launching the result in QEMU, we see that our guess was right:
+
+TODO: QEMU screenshot
+
+We finally see some output from our own little kernel!
+
+You can try experimenting with the pixel bytes if you like, for example by increasing the pixel value on each loop iteration:
+
+```rust
+// in src/lib.rs
+
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    if let Some(framebuffer) = boot_info.framebuffer {
+        let mut value = 0x90;
+        for byte in framebuffer.buffer() {
+            *byte = value;
+            value.wrapping_add(71);
+        }
+    }
+    loop {}
+}
+```
+
+We use the [`wrapping_add`] method here because Rust panics on implicit integer overflow (at least in debug mode). By adding a prime number, we try to add some variety. The result looks as follows:
+
+TODO
 
 
 ### Using `cargo run`
@@ -864,6 +931,36 @@ TODO:
 - .cargo/config.toml files -> using not possible because of cargo limitations
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+There multiple ways to work with an `Option` types:
+
+- Use the [`unwrap`] or [`expect`] methods to extract the inner value if present and [`panic`] otherwise.
+- Use a use a [`match`] statement and [pattern matching] to deal with the `Some` and `None` cases individually.
+- Use an [`if let`] statement to conditionally run some code if the `Option` is `Some`. This is equivalent to a `match` statement with an empty arm on `None`.
+- Use the [`ok_or`]/[`ok_or_else`] methods to convert the `Option` to a `Result`.
 
 
 
