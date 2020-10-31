@@ -142,7 +142,7 @@ As you may remember, we built the freestanding binary through `cargo`, but depen
 ### Installing Rust Nightly
 Rust has three release channels: _stable_, _beta_, and _nightly_. The Rust Book explains the difference between these channels really well, so take a minute and [check it out](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). For building an operating system we will need some experimental features that are only available on the nightly channel, so we need to install a nightly version of Rust.
 
-The recommened tool to manage Rust installations is [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. With rustup you can use a nightly compiler for the current directory by running `rustup override set nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory. After doing that, you can verify that you have a nightly version installed and active by running `rustc --version`: The version number should contain `-nightly` at the end.
+The recommend tool to manage Rust installations is [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. With rustup you can use a nightly compiler for the current directory by running `rustup override set nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory. After doing that, you can verify that you have a nightly version installed and active by running `rustc --version`: The version number should contain `-nightly` at the end.
 
 [rustup]: https://www.rustup.rs/
 
@@ -491,7 +491,7 @@ pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
 }
 ```
 
-The function takes the path to the kernel binary and returns the path to the created bootable disk image. As you might notice, we're using the [`Path`] and [`PathBuf`] types of the standard library here. This is possible because the `disk_image` crate runs our host system, which is indicated by the absense of a `#![no_std]` attribute. For our kernel, we used that attribute to opt-out of the standard library because our kernel should run on bare metal.
+The function takes the path to the kernel binary and returns the path to the created bootable disk image. As you might notice, we're using the [`Path`] and [`PathBuf`] types of the standard library here. This is possible because the `disk_image` crate runs our host system, which is indicated by the absence of a `#![no_std]` attribute. For our kernel, we used that attribute to opt-out of the standard library because our kernel should run on bare metal.
 
 [`Path`]: https://doc.rust-lang.org/std/path/struct.Path.html
 [`PathBuf`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html
@@ -695,7 +695,7 @@ The entry point of all binaries in Rust is the `main` function. While this funct
 
 [`anyhow::Result`]: https://docs.rs/anyhow/1.0.33/anyhow/type.Result.html
 
-One new operation that we didn't see before are the `context` calls. This method is defined in the [`anyhow::Context`] trait and provides a way to add additional messages to errors, which are also printed out in case of an error. This way we can easily see whether an error occured in `build_kernel` or `create_disk_image`.
+One new operation that we didn't see before are the `context` calls. This method is defined in the [`anyhow::Context`] trait and provides a way to add additional messages to errors, which are also printed out in case of an error. This way we can easily see whether an error occurred in `build_kernel` or `create_disk_image`.
 
 [`anyhow::Context`]: https://docs.rs/anyhow/1.0.33/anyhow/trait.Context.html
 
