@@ -30,6 +30,14 @@
  * Themes
  */
 
+@font-face {
+    font-family: "Iosevka";
+    src: url("/fonts/iosevka-regular.woff2") format("woff2"), url("/fonts/iosevka-regular.woff") format("woff");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 /*
  * Body resets
  *
@@ -229,7 +237,7 @@ hr {
 }
 
 abbr {
-    font-size: 85%;
+    font-size: 90%;
     font-weight: bold;
     color: #555;
     text-transform: uppercase;
@@ -243,7 +251,7 @@ abbr[title] {
 /* Code */
 
 code, pre {
-    font-family: Menlo, Monaco, Consolas, monospace;
+    font-family: "Iosevka", monospace;
 }
 
 code {
@@ -259,7 +267,7 @@ pre {
     margin-top: 0;
     margin-bottom: 1rem;
     padding: .5rem;
-    font-size: .85rem;
+    font-size: .9rem;
     line-height: 1.4;
     white-space: pre;
     overflow: auto;
