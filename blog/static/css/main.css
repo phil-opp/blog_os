@@ -446,16 +446,10 @@ a strong {
   color: #268bd2;
 }
 
-.right-to-left p, .right-to-left a, .right-to-left h1, .right-to-left h2, .right-to-left h3,
-.right-to-left h4, .right-to-left h5, .right-to-left details, .right-to-left time{
+.right-to-left {
 	direction: rtl;
 }
 
-.right-to-left pre {
-	direction: ltr;
-}
- 
-.left-to-right p, .left-to-right a, .left-to-right h1, .left-to-right h2, .left-to-right h3,
-.left-to-right h4, .left-to-right h5, .left-to-right details, .left-to-right time{
+.left-to-right, .right-to-left pre {
 	direction: ltr;
 }
