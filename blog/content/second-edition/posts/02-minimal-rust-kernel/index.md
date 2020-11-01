@@ -312,8 +312,8 @@ build-std-features = ["compiler-builtins-mem"]
 
 Behind the scenes, this flag enables the [`mem` feature] of the `compiler_builtins` crate. The effect of this is that the `#[no_mangle]` attribute is applied to the [`memcpy` etc. implementations] of the crate, which makes them available to the linker. It's worth noting that these functions are [not optimized] right now, so their performance might not be the best, but at least they are correct. For `x86_64`, there is an open pull request to [optimize these functions using special assembly instructions][memcpy rep movsb].
 
-[`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L51-L52
-[`memcpy` etc. implementations]: (https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69)
+[`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L54-L55
+[`memcpy` etc. implementations]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
 [not optimized]: https://github.com/rust-lang/compiler-builtins/issues/339
 [memcpy rep movsb]: https://github.com/rust-lang/compiler-builtins/pull/365
 
