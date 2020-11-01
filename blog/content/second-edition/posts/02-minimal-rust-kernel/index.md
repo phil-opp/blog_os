@@ -460,15 +460,15 @@ The [Readme of the `bootloader` crate][`bootloader` Readme] describes how to cre
 
 [`bootloader` Readme]: TODO
 
-#### A `disk_image` crate
+#### A `bootimage` crate
 
-Since following these steps manually is cumbersome, we create a script to automate it. For that we create a new `disk_image` crate in a subdirectory:
+Since following these steps manually is cumbersome, we create a script to automate it. For that we create a new `bootimage` crate in a subdirectory:
 
 ```
-cargo new --lib disk_image
+cargo new --lib bootimage
 ```
 
-This command creates a new `disk_image` subfolder with a `Cargo.toml` and a `src/lib.rs` in it. Since this new cargo project will be tightly coupled with our main project, it makes sense to combine the two crates as a [cargo workspace]. This way, they will share the same `Cargo.lock` for their dependencies and place their compilation artifacts in a common `target` folder. To create such a workspace, we add the following to the `Cargo.toml` of our main project:
+This command creates a new `bootimage` subfolder with a `Cargo.toml` and a `src/lib.rs` in it. Since this new cargo project will be tightly coupled with our main project, it makes sense to combine the two crates as a [cargo workspace]. This way, they will share the same `Cargo.lock` for their dependencies and place their compilation artifacts in a common `target` folder. To create such a workspace, we add the following to the `Cargo.toml` of our main project:
 
 [cargo workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 
@@ -476,32 +476,32 @@ This command creates a new `disk_image` subfolder with a `Cargo.toml` and a `src
 # in Cargo.toml
 
 [workspace]
-members = ["disk_image"]
+members = ["bootimage"]
 ```
 
-After creating the workspace, we begin the implementation of the `disk_image` crate, starting with a skeleton of a `create_disk_image` function:
+After creating the workspace, we begin the implementation of the `bootimage` crate, starting with a skeleton of a `create_bootimage` function:
 
 ```rust
-// in disk_image/src/lib.rs
+// in bootimage/src/lib.rs
 
 use std::path::{Path, PathBuf};
 
-pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
+pub fn create_bootimage(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
     todo!()
 }
 ```
 
-The function takes the path to the kernel binary and returns the path to the created bootable disk image. As you might notice, we're using the [`Path`] and [`PathBuf`] types of the standard library here. This is possible because the `disk_image` crate runs our host system, which is indicated by the absence of a `#![no_std]` attribute. For our kernel, we used that attribute to opt-out of the standard library because our kernel should run on bare metal.
+The function takes the path to the kernel binary and returns the path to the created bootable disk image. As you might notice, we're using the [`Path`] and [`PathBuf`] types of the standard library here. This is possible because the `bootimage` crate runs our host system, which is indicated by the absence of a `#![no_std]` attribute. For our kernel, we used that attribute to opt-out of the standard library because our kernel should run on bare metal.
 
 [`Path`]: https://doc.rust-lang.org/std/path/struct.Path.html
 [`PathBuf`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html
 
-To allow the function to return arbitrary errors, we use the [`anyhow`] crate. This requires adding the crate as a dependency, so we modify our `disk_image/Cargo.toml` in the following way:
+To allow the function to return arbitrary errors, we use the [`anyhow`] crate. This requires adding the crate as a dependency, so we modify our `bootimage/Cargo.toml` in the following way:
 
 [`anyhow`]: https://docs.rs/anyhow/1.0.33/anyhow/
 
 ```toml
-# in disk_image/Cargo.toml
+# in bootimage/Cargo.toml
 
 [dependencies]
 anyhow = "1.0"
@@ -521,18 +521,18 @@ To keep this post short, we won't include the code to parse the JSON output and 
 [`locate_bootloader`]: https://docs.rs/bootloader-locator/0.0.4/bootloader_locator/fn.locate_bootloader.html
 
 ```toml
-# in disk_image/Cargo.toml
+# in bootimage/Cargo.toml
 
 [dependencies]
 bootloader-locator = "0.0.4"
 ```
 
 ```rust
-// in disk_image/src/lib.rs
+// in bootimage/src/lib.rs
 
 use bootloader_locator::locate_bootloader; // new
 
-pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
+pub fn create_bootimage(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
     let bootloader_manifest = locate_bootloader("bootloader")?; // new
     todo!()
 }
@@ -558,16 +558,16 @@ cargo builder --kernel-manifest path/to/kernel/Cargo.toml \
 
 In addition, the Readme recommends to use the `--target-dir` and `--out-dir` arguments when building the bootloader as a dependency to override where cargo places the compilation artifacts.
 
-Let's try to invoke that command from our `create_disk_image` function. For that we use the [`process::Command`] type of the standard library, which allows us to spawn new processes and wait for their results:
+Let's try to invoke that command from our `create_bootimage` function. For that we use the [`process::Command`] type of the standard library, which allows us to spawn new processes and wait for their results:
 
 [`process::Command`]: https://doc.rust-lang.org/std/process/struct.Command.html
 
 ```rust
-// in disk_image/src/lib.rs
+// in bootimage/src/lib.rs
 
 use std::process::Command; // new
 
-pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
+pub fn create_bootimage(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
     let bootloader_manifest = locate_bootloader("bootloader")?;
 
     // new code below
@@ -598,7 +598,7 @@ pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
 }
 ```
 
-We use the [`Command::new`] function to create a new [`process::Command`]. Instead of hardcoding the command name "cargo", we use the [`CARGO` environment variable] that cargo sets when compiling the `disk_image` crate. This way, we ensure that we use the exact same cargo version for compiling the `bootloader` crate, which is useful when using non-standard cargo versions, e.g. through rustup's [toolchain override shorthands]. Since the environment variable is set at compile time, we retrieve its value using the compiler-builtin [`env!`] macro.
+We use the [`Command::new`] function to create a new [`process::Command`]. Instead of hardcoding the command name "cargo", we use the [`CARGO` environment variable] that cargo sets when compiling the `bootimage` crate. This way, we ensure that we use the exact same cargo version for compiling the `bootloader` crate, which is useful when using non-standard cargo versions, e.g. through rustup's [toolchain override shorthands]. Since the environment variable is set at compile time, we retrieve its value using the compiler-builtin [`env!`] macro.
 
 [`Command::new`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.new
 [`CARGO` environment variable]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
@@ -621,12 +621,12 @@ To execute the build command inside of the bootloader folder (instead of the cur
 We still need to fill in the paths we marked as `todo!` above. For that we utilize another environment variable that cargo passes on build:
 
 ```rust
-// in `create_disk_image` in disk_image/src/lib.rs
+// in `create_bootimage` in bootimage/src/lib.rs
 
 // the path to the disk image crate, set by cargo
-let disk_image_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+let bootimage_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
 // we know that the kernel lives in the parent directory
-let kernel_dir = disk_image_dir.parent().unwrap();
+let kernel_dir = bootimage_dir.parent().unwrap();
 let kernel_manifest = kernel_dir.join("Cargo.toml");
 // use the same target folder for building the bootloader
 let target_dir = kernel_dir.join("target");
@@ -634,14 +634,14 @@ let target_dir = kernel_dir.join("target");
 let out_dir = kernel_binary.parent().unwrap();
 ```
 
-The [`CARGO_MANIFEST_DIR`] environment variable always points to the `disk_image` directory, even if the crate is built from a different directory (e.g. via cargo's `--manifest-path` argument). This gives use a good starting point for creating the paths we care about since we know that the kernel lives in the parent directory. Using the [`Path::join`] method, we can construct the `kernel_manifest` and `target_dir` paths this way. To place the disk image files created by the bootloader build next to our kernel executable, we set the `out_dir` path to the the same directory.
+The [`CARGO_MANIFEST_DIR`] environment variable always points to the `bootimage` directory, even if the crate is built from a different directory (e.g. via cargo's `--manifest-path` argument). This gives use a good starting point for creating the paths we care about since we know that the kernel lives in the parent directory. Using the [`Path::join`] method, we can construct the `kernel_manifest` and `target_dir` paths this way. To place the disk image files created by the bootloader build next to our kernel executable, we set the `out_dir` path to the the same directory.
 
 [`CARGO_MANIFEST_DIR`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
 [`Path::join`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.join
 
 #### Returning the Disk Image
 
-The final step to finish our `create_disk_image` function by returning the path to the disk image after building the bootloader. From the [`bootloader` Readme], we learn that the bootloader in fact creates multiple disk images:
+The final step to finish our `create_bootimage` function by returning the path to the disk image after building the bootloader. From the [`bootloader` Readme], we learn that the bootloader in fact creates multiple disk images:
 
 - A BIOS boot image named `bootimage-bios-<bin_name>.bin`.
 - An EFI executable suitable for UEFI booting named `bootimage-uefi-<bin_name>.efi`.
@@ -651,9 +651,9 @@ The `<bin_name>` placeholder is the binary name of the kernel. While this is alw
 [`Path::file_name`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.file_name
 
 ```rust
-// in disk_image/src/lib.rs
+// in bootimage/src/lib.rs
 
-pub fn create_disk_image(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
+pub fn create_bootimage(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
     [...] // as before
 
     // new below
@@ -671,19 +671,19 @@ We return the path to the BIOS image here for now because it is easier to boot i
 
 ### Builder Binary
 
-We now have a `create_disk_image` function, but no way to invoke it. Let's fix this by creating a `builder` executable in the `disk_image` crate. For this, we create a new `bin` folder in `disk_image/src` and add a `builder.rs` file with the following content:
+We now have a `create_bootimage` function, but no way to invoke it. Let's fix this by creating a `builder` executable in the `bootimage` crate. For this, we create a new `bin` folder in `bootimage/src` and add a `builder.rs` file with the following content:
 
 ```rust
-// in disk_image/src/bin/builder.rs
+// in bootimage/src/bin/builder.rs
 
 use std::path::PathBuf;
 use anyhow::Context;
 
 fn main() -> anyhow::Result<()> {
     let kernel_binary = build_kernel().context("failed to build kernel")?;
-    let disk_image = disk_image::create_disk_image(kernel_binary)
+    let bootimage = bootimage::create_bootimage(kernel_binary)
         .context("failed to create disk image")?;
-    println!("Created disk image at `{}`", disk_image.display());
+    println!("Created disk image at `{}`", bootimage.display());
 }
 
 fn build_kernel() -> anyhow::Result<PathBuf> {
@@ -691,11 +691,11 @@ fn build_kernel() -> anyhow::Result<PathBuf> {
 }
 ```
 
-The entry point of all binaries in Rust is the `main` function. While this function doesn't need a return type, we use the [`anyhow::Result`] type again as a simple way of dealing with errors. The implementation of the `main` method consists of two steps: building our kernel and creating the disk image. For the first step we define a new `build_kernel` function whose implementation we will create in the following. For the disk image creation we use the `create_disk_image` function we created in our `lib.rs`. Since cargo treats the `main.rs` and `lib.rs` as separate crates, we need to prefix the crate name `disk_image` in order to access it.
+The entry point of all binaries in Rust is the `main` function. While this function doesn't need a return type, we use the [`anyhow::Result`] type again as a simple way of dealing with errors. The implementation of the `main` method consists of two steps: building our kernel and creating the disk image. For the first step we define a new `build_kernel` function whose implementation we will create in the following. For the disk image creation we use the `create_bootimage` function we created in our `lib.rs`. Since cargo treats the `main.rs` and `lib.rs` as separate crates, we need to prefix the crate name `bootimage` in order to access it.
 
 [`anyhow::Result`]: https://docs.rs/anyhow/1.0.33/anyhow/type.Result.html
 
-One new operation that we didn't see before are the `context` calls. This method is defined in the [`anyhow::Context`] trait and provides a way to add additional messages to errors, which are also printed out in case of an error. This way we can easily see whether an error occurred in `build_kernel` or `create_disk_image`.
+One new operation that we didn't see before are the `context` calls. This method is defined in the [`anyhow::Context`] trait and provides a way to add additional messages to errors, which are also printed out in case of an error. This way we can easily see whether an error occurred in `build_kernel` or `create_bootimage`.
 
 [`anyhow::Context`]: https://docs.rs/anyhow/1.0.33/anyhow/trait.Context.html
 
@@ -711,7 +711,7 @@ cargo build --target x86_64-blog_os.json -Z build-std=core \
 Let's invoke that command using the [`process::Command`] type again:
 
 ```rust
-// in disk_image/src/bin/builder.rs
+// in bootimage/src/bin/builder.rs
 
 fn build_kernel() -> anyhow::Result<PathBuf> {
     // we know that the kernel lives in the parent directory
@@ -765,15 +765,15 @@ After running the command and checking its exit status, we construct the path to
 We can now run our `builder` binary using the following command:
 
 ```
-cargo run --package disk_image --bin builder
+cargo run --package bootimage --bin builder
 ```
 
-The `--package disk_image` argument is optional when you run the command from within the `disk_image` directory. After running the command, you should see the `bootimage-*` files in your `target/x86_64-blog_os/debug` folder.
+The `--package bootimage` argument is optional when you run the command from within the `bootimage` directory. After running the command, you should see the `bootimage-*` files in your `target/x86_64-blog_os/debug` folder.
 
 To pass additional arguments to the `builder` executable, you have to pass them after a special separator argument `--`, otherwise they are interpreted by the `cargo run` command. As an example, you have to run the following command to build the kernel in release mode:
 
 ```
-cargo run --package disk_image --bin builder -- --release
+cargo run --package bootimage --bin builder -- --release
 ```
 
 Without the additional `--` argument, only the `builder` executable is built in release mode, not the kernel. To verify that the `--release` argument worked, you can verify that the kernel executable and the disk image files are available in the `target/x86_64-blog_os/release` folder.
@@ -788,7 +788,7 @@ Since we will need to run this `builder` executable quite often, it makes sense 
 # in .cargo/config.toml
 
 [alias]
-disk-image = ["run", "--package", "disk_image", "--bin builder", "--"]
+disk-image = ["run", "--package", "bootimage", "--bin builder", "--"]
 ```
 
 Now we can run `cargo disk-image` instead of using the long build command. Since we already included the separator argument `--` in the argument list, we can pass additional arguments directly. For example, a release build is now a simple `cargo disk-image --release`.
