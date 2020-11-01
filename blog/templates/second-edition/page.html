@@ -33,11 +33,13 @@
 {% endblock toc_aside %}
 
 {% block main %}
+    <div class="{% if page.extra.rtl %}right-to-left{% endif %}">
     <h1>{{ page.title }}</h1>
     <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
         {{ page.date | date(format="%b %d, %Y") }}
         {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
     </time>
+    </div>
 
     {% if page.extra.warning %}
         <div class="warning">
@@ -67,7 +69,9 @@
         </div>
     {% endif %}
 
+    <div class="{% if page.extra.rtl %}right-to-left{% endif %}">	
     {{ page.content | replace(from="<!-- toc -->", to=macros::toc(toc=page.toc))  | safe }}
+    </div>
 
     <div class="post-footer-support">
         <h2>Support Me</h2>

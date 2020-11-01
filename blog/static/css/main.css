@@ -445,3 +445,11 @@ h5 {
 a strong {
   color: #268bd2;
 }
+
+.right-to-left {
+	direction: rtl;
+}
+
+.left-to-right, .right-to-left pre {
+	direction: ltr;
+}
