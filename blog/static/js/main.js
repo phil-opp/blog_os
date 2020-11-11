@@ -1,6 +1,4 @@
 window.onload = function() {
-  show_lang_selector();
-
   var container = document.querySelector('#toc-aside');
 
   if (container != null) {
@@ -61,19 +59,5 @@ function toc_scroll_position(container) {
   // set active class for current ToC item
   if (current_toc_item != null) {
     current_toc_item.classList.add("active");
-  }
-}
-
-function show_lang_selector() {
-  var show_lang_selector = false;
-  for (language_selector of document.querySelectorAll('#language-selector li')) {
-    var lang = language_selector.getAttribute("data-lang-switch-to");
-    if (this.navigator.languages.includes(lang)) {
-      language_selector.classList.remove("hidden");
-      show_lang_selector = true
-    }
-  }
-  if (show_lang_selector) {
-    document.querySelector("#language-selector").classList.remove("hidden")
   }
 }

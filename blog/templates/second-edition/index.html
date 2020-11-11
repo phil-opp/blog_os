@@ -77,12 +77,12 @@
 
 {% block after_main %}
 <aside class="page-aside-right">
-    <div class="block hidden" id="language-selector">
+    <div class="block" id="language-selector">
         <h2>Languages</h2>
         <ul>
             <li><a href="/">English (Original)</a></li>
             {% for lang in config.languages %}
-                <li data-lang-switch-to="{{ lang.code }}" class="hidden"><a href="/{{ lang.code }}">{{ lang.code }}</a></li>
+                <li data-lang-switch-to="{{ lang.code }}" class=""><a href="/{{ lang.code }}">{{ lang.code }}</a></li>
             {% endfor %}
         </ul>
     </div>
