@@ -103,11 +103,11 @@
 
     <aside class="page-aside-right">
         {% if page.translations -%}
-        <div class="block hidden" id="language-selector">
+        <div class="block" id="language-selector">
             <h2>Other Languages</h2>
             <ul>
                 {%- for translation in page.translations %}
-                <li data-lang-switch-to="{{ translation.lang }}" class="hidden"><a href="{{ translation.permalink | safe }}">{{ translation.lang }} {% if translation.lang == "en" %}(original){% endif %}</a></li>
+                <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">{{ translation.lang }} {% if translation.lang == "en" %}(original){% endif %}</a></li>
                 {%- endfor %}
             </ul>
         </div>
