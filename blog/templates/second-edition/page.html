@@ -105,11 +105,15 @@
         {% if page.translations -%}
         <div class="block" id="language-selector">
             <h2>Other Languages</h2>
-            <ul>
-                {%- for translation in page.translations %}
-                <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">{{ translation.lang }} {% if translation.lang == "en" %}(original){% endif %}</a></li>
-                {%- endfor %}
-            </ul>
+            <ul>{%- for translation in page.translations | sort(attribute="lang") %}
+                <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">
+                    {%- if translation.lang == "en" -%}
+                        English (original)
+                    {%- else -%}
+                        {{ trans(key="lang_name", lang = translation.lang) }}
+                    {%- endif -%}
+                </a></li>
+            {% endfor %}</ul>
         </div>
         {%- endif %}
 

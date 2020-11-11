@@ -78,13 +78,18 @@
 {% block after_main %}
 <aside class="page-aside-right">
     <div class="block" id="language-selector">
-        <h2>Languages</h2>
-        <ul>
-            <li><a href="/">English (Original)</a></li>
-            {% for lang in config.languages %}
-                <li data-lang-switch-to="{{ lang.code }}" class=""><a href="/{{ lang.code }}">{{ lang.code }}</a></li>
-            {% endfor %}
-        </ul>
+        <h2>Other Languages</h2>
+        <ul>{%- for lang_code in config.languages | map(attribute="code") | concat(with="en") | sort -%}
+            {%- if lang_code != lang -%}
+                <li data-lang-switch-to="{{ lang_code }}" class="">
+                    {%- if lang_code == "en" -%}
+                        <a href="/">English (original)</a>
+                    {%- else -%}
+                        <a href="/{{ lang_code }}">{{ trans(key="lang_name", lang = lang_code) }}</a>
+                    {%- endif -%}
+                </li>
+            {%- endif %}
+        {% endfor %}</ul>
     </div>
     <div class="block">
         <h2>Recent Updates</h2>
