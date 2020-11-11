@@ -9,7 +9,7 @@ feed_filename = "rss.xml"
 
 languages = [
     { code = "zh-CN" }, # Chinese (simplified)
-    { code = "zh-TW" }, # Chinese (tradictional)
+    { code = "zh-TW" }, # Chinese (traditional)
     { code = "ja" }, # Japanese
 ]
 
@@ -31,3 +31,15 @@ skip_anchor_prefixes = [
 [extra]
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }
+
+[translations.en]
+lang_name = "English"
+
+[translations.zh-CN]
+lang_name = "Chinese (simplified)"
+
+[translations.zh-TW]
+lang_name = "Chinese (traditional)"
+
+[translations.ja]
+lang_name = "Japanese"
