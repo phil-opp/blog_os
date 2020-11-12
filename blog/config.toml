@@ -44,3 +44,6 @@ lang_name = "Chinese (traditional)"
 
 [translations.ja]
 lang_name = "Japanese"
+
+[translations.fa]
+lang_name = "Persian"
