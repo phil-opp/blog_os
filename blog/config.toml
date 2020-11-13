@@ -11,6 +11,7 @@ languages = [
     { code = "zh-CN" }, # Chinese (simplified)
     { code = "zh-TW" }, # Chinese (traditional)
     { code = "ja" }, # Japanese
+    { code = "fa" }, # Persian
 ]
 
 ignored_content = ["*/README.md"]
@@ -43,3 +44,6 @@ lang_name = "Chinese (traditional)"
 
 [translations.ja]
 lang_name = "Japanese"
+
+[translations.fa]
+lang_name = "Persian"
