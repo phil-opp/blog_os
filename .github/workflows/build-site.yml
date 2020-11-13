@@ -84,7 +84,7 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
           ssh-add - <<< "$deploy_key"
-          echo ::set-env name=SSH_AUTH_SOCK::$SSH_AUTH_SOCK
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
       env:
         SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         deploy_key: ${{ secrets.DEPLOY_SSH_KEY }}
