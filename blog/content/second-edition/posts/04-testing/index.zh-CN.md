@@ -613,7 +613,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 和`main.rs`一样，`lib.rs`也是一个可以被cargo自动识别的特殊文件。该库是一个独立的编译单元，所以我们需要再次指定`#![no_std]` 属性。
 
-为了让我们的库可以和`cargo xtest`一起协同工作，我们还需要添加以下测试函数和属性:
+为了让我们的库可以和`cargo xtest`一起协同工作，我们还需要移动以下测试函数和属性:
 
 ```rust
 // in src/lib.rs
