@@ -687,7 +687,7 @@ To make the required functions available to our integration test, we need to spl
 
 Like the `main.rs`, the `lib.rs` is a special file that is automatically recognized by cargo. The library is a separate compilation unit, so we need to specify the `#![no_std]` attribute again.
 
-To make our library work with `cargo test`, we need to also add the test functions and attributes:
+To make our library work with `cargo test`, we need to also move the test functions and attributes from `main.rs`  to `lib.rs`:
 
 ```rust
 // in src/lib.rs
