@@ -79,7 +79,7 @@ jobs:
       - name: Install Scoop (Windows)
         run: |
           Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
-          echo ::add-path::$HOME\scoop\shims
+          echo "$HOME\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         if: runner.os == 'Windows'
         shell: pwsh
       - name: Install QEMU (Windows)
