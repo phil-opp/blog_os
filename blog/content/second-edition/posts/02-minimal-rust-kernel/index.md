@@ -462,13 +462,13 @@ The [Readme of the `bootloader` crate][`bootloader` Readme] describes how to cre
 
 #### A `bootimage` crate
 
-Since following these steps manually is cumbersome, we create a script to automate it. For that we create a new `bootimage` crate in a subdirectory:
+Since following these steps manually is cumbersome, we create a script to automate it. For that we create a new `bootimage` crate in a subdirectory, in which we will implement the build steps:
 
 ```
-cargo new --lib bootimage
+cargo new --bin bootimage
 ```
 
-This command creates a new `bootimage` subfolder with a `Cargo.toml` and a `src/lib.rs` in it. Since this new cargo project will be tightly coupled with our main project, it makes sense to combine the two crates as a [cargo workspace]. This way, they will share the same `Cargo.lock` for their dependencies and place their compilation artifacts in a common `target` folder. To create such a workspace, we add the following to the `Cargo.toml` of our main project:
+This command creates a new `bootimage` subfolder with a `Cargo.toml` and a `src/main.rs` in it. Since this new cargo project will be tightly coupled with our main project, it makes sense to combine the two crates as a [cargo workspace]. This way, they will share the same `Cargo.lock` for their dependencies and place their compilation artifacts in a common `target` folder. To create such a workspace, we add the following to the `Cargo.toml` of our main project:
 
 [cargo workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 
@@ -479,24 +479,43 @@ This command creates a new `bootimage` subfolder with a `Cargo.toml` and a `src/
 members = ["bootimage"]
 ```
 
-After creating the workspace, we begin the implementation of the `bootimage` crate, starting with a skeleton of a `create_bootimage` function:
+After creating the workspace, we begin the implementation of the `bootimage` crate:
 
 ```rust
-// in bootimage/src/lib.rs
+// in bootimage/src/main.rs
 
 use std::path::{Path, PathBuf};
+
+fn main() -> anyhow::Result<PathBuf> {
+    // this is where cargo places our kernel executable 
+    // (we hardcode this path for now, but will improve this later)
+    let kernel_binary = Path::new("target/x86_64_blog_os/debug/blog_os");
+
+    // create a bootable disk image for the compiled kernel executable
+    let bootimage = create_bootimage(kernel_binary)?;
+
+    println!("Created bootable disk image at {}", bootimage.display());
+
+    Ok(())
+}
 
 pub fn create_bootimage(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
     todo!()
 }
 ```
 
-The function takes the path to the kernel binary and returns the path to the created bootable disk image. As you might notice, we're using the [`Path`] and [`PathBuf`] types of the standard library here. This is possible because the `bootimage` crate runs our host system, which is indicated by the absence of a `#![no_std]` attribute. For our kernel, we used that attribute to opt-out of the standard library because our kernel should run on bare metal.
+By default, cargo places our compiled kernel executable in a `target/x86_64_blog_os/debug` folder. The `x86_64_blog_os` is the name of our target JSON file and the `debug` indicates that this was a build with debug information and without optimizations. For now we simply hardcode this path here to keep things simple, but we will make it more flexible later in this post.
+
+To transform our kernel executable into a bootable disk image, we pass the `kernel_binary` path to a `create_bootimage` function. This function takes the path to the kernel binary and returns the path to the created bootable disk image. Instead of an implementation, we use the [`todo!`] macro to mark this part of the code as unfinished. We then print out the returned path to the bootable disk image.
+
+[`todo!`]: https://doc.rust-lang.org/std/macro.todo.html
+
+As you might notice, we're using the [`Path`] and [`PathBuf`] types and the [`println` macro of the standard library here. This is possible because the `bootimage` crate runs our host system, which is indicated by the absence of a `#![no_std]` attribute. (For our kernel, we used the `#![no_std]` attribute to opt-out of the standard library because our kernel should run on bare metal.)
 
 [`Path`]: https://doc.rust-lang.org/std/path/struct.Path.html
 [`PathBuf`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html
 
-To allow the function to return arbitrary errors, we use the [`anyhow`] crate. This requires adding the crate as a dependency, so we modify our `bootimage/Cargo.toml` in the following way:
+For error handling, we use the [`anyhow`] crate. This crate provides a general error type that can be used to create arbitrary errors, which can be easily handled with Rust's [question mark operator]. To use the `anyhow` crate, we need to add it as a dependency, which can do by modifying our `bootimage/Cargo.toml` in the following way:
 
 [`anyhow`]: https://docs.rs/anyhow/1.0.33/anyhow/
 
@@ -507,13 +526,19 @@ To allow the function to return arbitrary errors, we use the [`anyhow`] crate. T
 anyhow = "1.0"
 ```
 
-Instead of doing anything, the function currently only invokes the [`todo!`] macro to mark this part of the code as unfinished. Let's start resolving this by implementing the build steps outlined in the [`bootloader` Readme].
+We can already run our `bootimage` binary now by executing `cargo run --package bootimage`. However, the binary immediately panics when it reaches the `todo!` macro call:
 
-[`todo!`]: https://doc.rust-lang.org/std/macro.todo.html
+```
+> cargo run --package bootimage
+
+TODO
+```
+
+Let's start resolving this by filling in the actual implementation. For that we implement the build steps outlined in the [`bootloader` Readme].
 
 #### Locating the `bootloader` Source
 
-The first step in creating the bootable disk image is to to locate where cargo put the source code of the `bootloader` dependency. For that we can use the `cargo metadata` command, which outputs all kinds of information about a cargo project as a JSON object. Among other things, it contains the manifest path (i.e. the path to the `Cargo.toml`) of all dependencies, including the `bootloader` crate.
+The first step in creating the bootable disk image is to to locate where cargo put the source code of the `bootloader` dependency. For that we can use cargo's `cargo metadata` subcommand, which outputs all kinds of information about a cargo project as a JSON object. Among other things, it contains the manifest path (i.e. the path to the `Cargo.toml`) of all dependencies, including the `bootloader` crate.
 
 To keep this post short, we won't include the code to parse the JSON output and to locate the right entry here. Instead, we created a small crate named [`bootloader-locator`] that wraps the needed functionality in a simple [`locate_bootloader`] function. Let's add that crate as a dependency and use it:
 
@@ -555,6 +580,8 @@ The next step is to run the build command of the bootloader. From the [`bootload
 cargo builder --kernel-manifest path/to/kernel/Cargo.toml \
     --kernel-binary path/to/kernel_bin
 ```
+
+(TODO: `cargo run --package builder` instead?)
 
 In addition, the Readme recommends to use the `--target-dir` and `--out-dir` arguments when building the bootloader as a dependency to override where cargo places the compilation artifacts.
 
@@ -598,14 +625,14 @@ pub fn create_bootimage(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
 }
 ```
 
-We use the [`Command::new`] function to create a new [`process::Command`]. Instead of hardcoding the command name "cargo", we use the [`CARGO` environment variable] that cargo sets when compiling the `bootimage` crate. This way, we ensure that we use the exact same cargo version for compiling the `bootloader` crate, which is useful when using non-standard cargo versions, e.g. through rustup's [toolchain override shorthands]. Since the environment variable is set at compile time, we retrieve its value using the compiler-builtin [`env!`] macro.
+We use the [`Command::new`] function to create a new [`process::Command`]. Instead of hardcoding the command name "cargo", we use the [`CARGO` environment variable] that cargo sets when compiling the `bootimage` crate. This way, we ensure that we use the exact same cargo version for compiling the `bootloader` crate, which is important when using non-standard cargo versions, e.g. through rustup's [toolchain override shorthands]. Since the environment variable is set at compile time, we use the compiler-builtin [`env!`] macro to retrieve its value.
 
 [`Command::new`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.new
 [`CARGO` environment variable]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
 [toolchain override shorthands]: https://rust-lang.github.io/rustup/overrides.html#toolchain-override-shorthand
 [`env!`]: https://doc.rust-lang.org/std/macro.env.html
 
-After creating the command, we pass all the required arguments through the [`Command::arg`] method. Most of the paths are still marked as `todo!()` and will be filled out in a moment. The two exceptions are the `kernel_binary` path that is passed in as argument and the `bootloader_dir` path, which we can create from the `bootloader_manifest` path using the [`Path::parent`] method. Since not all paths have a parent directory (e.g. the path `/` has not), the `parent()` call can fail. However, this should never happen for the `bootloader_manifest` path, so we use the [`Option::unwrap`] method that panics on `None`.
+After creating the command, we pass all the required arguments by calling the [`Command::arg`] method. Most of the paths are still set to `todo!()` and will be filled out in a moment. The two exceptions are the `kernel_binary` path that is passed in as argument and the `bootloader_dir` path, which we can create from the `bootloader_manifest` path using the [`Path::parent`] method. Since not all paths have a parent directory (e.g. the path `/` has not), the `parent()` call can fail. However, this should never happen for the `bootloader_manifest` path, so we use the [`Option::unwrap`] method that panics on `None`.
 
 [`Command::arg`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.arg
 [`Path::parent`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.parent
@@ -669,131 +696,16 @@ We return the path to the BIOS image here for now because it is easier to boot i
 
 [QEMU]: https://www.qemu.org/
 
-### Builder Binary
-
-We now have a `create_bootimage` function, but no way to invoke it. Let's fix this by creating a `builder` executable in the `bootimage` crate. For this, we create a new `bin` folder in `bootimage/src` and add a `builder.rs` file with the following content:
-
-```rust
-// in bootimage/src/bin/builder.rs
-
-use std::path::PathBuf;
-use anyhow::Context;
-
-fn main() -> anyhow::Result<()> {
-    let kernel_binary = build_kernel().context("failed to build kernel")?;
-    let bootimage = bootimage::create_bootimage(kernel_binary)
-        .context("failed to create disk image")?;
-    println!("Created disk image at `{}`", bootimage.display());
-}
-
-fn build_kernel() -> anyhow::Result<PathBuf> {
-    todo!()
-}
-```
-
-The entry point of all binaries in Rust is the `main` function. While this function doesn't need a return type, we use the [`anyhow::Result`] type again as a simple way of dealing with errors. The implementation of the `main` method consists of two steps: building our kernel and creating the disk image. For the first step we define a new `build_kernel` function whose implementation we will create in the following. For the disk image creation we use the `create_bootimage` function we created in our `lib.rs`. Since cargo treats the `main.rs` and `lib.rs` as separate crates, we need to prefix the crate name `bootimage` in order to access it.
-
-[`anyhow::Result`]: https://docs.rs/anyhow/1.0.33/anyhow/type.Result.html
-
-One new operation that we didn't see before are the `context` calls. This method is defined in the [`anyhow::Context`] trait and provides a way to add additional messages to errors, which are also printed out in case of an error. This way we can easily see whether an error occurred in `build_kernel` or `create_bootimage`.
-
-[`anyhow::Context`]: https://docs.rs/anyhow/1.0.33/anyhow/trait.Context.html
-
-#### The `build_kernel` Implementation
-
-The purpose of the `build_kernel` method is to build our kernel and return the path to the resulting kernel binary. As we learned in the first part of this post, the build command for our kernel is:
+Our `create_bootimage` function is now fully implemented, which means that running the `bootimage` binary should work now:
 
 ```
-cargo build --target x86_64-blog_os.json -Z build-std=core \
-    -Z build-std-features=compiler-builtins-mem
+> cargo run --package bootimage
+TODO
 ```
 
-Let's invoke that command using the [`process::Command`] type again:
+It worked! We see that it successfully created a bootable disk image at TODO.
 
-```rust
-// in bootimage/src/bin/builder.rs
-
-fn build_kernel() -> anyhow::Result<PathBuf> {
-    // we know that the kernel lives in the parent directory
-    let kernel_dir = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    let command_line_args: Vec<String> = std::env::args().skip(1).collect();
-
-    let mut cmd = Command::new(env!("CARGO"));
-    cmd.args(&[
-        "--target", "x86_64-blog_os.json",
-        "-Z", "build-std=core",
-        "-Z", "build-std-features=compiler-builtins-mem",
-    ]);
-    cmd.args(&command_line_args);
-    cmd.current_dir(kernel_dir);
-    let exit_status = cmd.status()?;
-
-    if exit_status.success() {
-        let profile = if command_line_args.contains("--release") {
-            "release"
-        } else {
-            "debug"
-        };
-        Ok(
-            kernel_dir.join("target").join("x86_64-blog_os").join(profile)
-            .join("blog_os")
-        )
-    } else {
-        Err(anyhow::Error::msg("kernel build failed"))
-    }
-}
-```
-
-Before constructing the command, we use the [`CARGO_MANIFEST_DIR`] environment variable again to determine the path to the kernel directory. We also retrieve the command line arguments passed to the `builder` executable by using the [`std::env::args`] function. Since the first command line argument is always the executable name, which we don't need, we use the [`Iterator::skip`] method to skip it. Then we use the [`Iterator::collect`] method to transform the iterator into a [`Vec`] of strings.
-
-[`std::env::args`]: https://doc.rust-lang.org/std/env/fn.args.html
-[`Iterator::skip`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
-[`Iterator::collect`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.collect
-[`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
-
-Instead of [`Command::arg`], we use the [`Command::args`] method as a less verbose way to pass multiple string arguments at once. In addition to the build arguments, we also pass all the command line argument passed to the `builder` executable. This way, it is possible to pass additional command line arguments, for example `--release` to compile the kernel with optimizations. Similar to the bootloader build, we also use the [`Command::current_dir`] method to run the command in the root directory, which is required for finding the `x86_64-blog_os.json` file.
-
-[`Command::args`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.args
-
-After running the command and checking its exit status, we construct the path to the kernel binary. When compiling for a custom target, cargo places the executable inside a `target/<target-name>/<profile>/<name>` folder where `<target-name>` is the name of the custom target file, `<profile>` is either [`debug`] or [`release`], and `<name>` is the executable name. In our case, the target name is `x86_64-blog_os` and the executable name is `blog_os`. To determine whether it is a debug or release build, we looks through the `command_line_args` vector for a `--release` argument.
-
-[`debug`]: https://doc.rust-lang.org/cargo/reference/profiles.html#dev
-[`release`]: https://doc.rust-lang.org/cargo/reference/profiles.html#release
-
-#### Running it
-
-We can now run our `builder` binary using the following command:
-
-```
-cargo run --package bootimage --bin builder
-```
-
-The `--package bootimage` argument is optional when you run the command from within the `bootimage` directory. After running the command, you should see the `bootimage-*` files in your `target/x86_64-blog_os/debug` folder.
-
-To pass additional arguments to the `builder` executable, you have to pass them after a special separator argument `--`, otherwise they are interpreted by the `cargo run` command. As an example, you have to run the following command to build the kernel in release mode:
-
-```
-cargo run --package bootimage --bin builder -- --release
-```
-
-Without the additional `--` argument, only the `builder` executable is built in release mode, not the kernel. To verify that the `--release` argument worked, you can verify that the kernel executable and the disk image files are available in the `target/x86_64-blog_os/release` folder.
-
-#### Adding an Alias
-
-Since we will need to run this `builder` executable quite often, it makes sense to add a shorter alias for the above command. To do that, we create a [cargo configuration file] at the root directory of our project. Cargo configuration files are named `.cargo/config.toml` and allow configuring the behavior of cargo itself. Among other things, they allow to define subcommand aliases to avoid typing out long commands. Let's use this feature to define a `cargo disk-image` alias for the above command:
-
-[cargo configuration file]: https://doc.rust-lang.org/cargo/reference/config.html
-
-```toml
-# in .cargo/config.toml
-
-[alias]
-disk-image = ["run", "--package", "bootimage", "--bin builder", "--"]
-```
-
-Now we can run `cargo disk-image` instead of using the long build command. Since we already included the separator argument `--` in the argument list, we can pass additional arguments directly. For example, a release build is now a simple `cargo disk-image --release`.
-
-You can of course choose a different alias name if you like. You can also add a one character alias (e.g. `cargo i`) if you want to minimize typing.
+Note that the command will only work from the root directory of our project. This is because we hardcoded the `kernel_binary` path in our `main` function. We will fix this later in the post, but now it is time to actually run our kernel!
 
 ## Running our Kernel
 
@@ -916,6 +828,149 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 We use the [`wrapping_add`] method here because Rust panics on implicit integer overflow (at least in debug mode). By adding a prime number, we try to add some variety. The result looks as follows:
 
 TODO
+
+
+### Booting on Real Hardware
+
+TODO
+
+## Improving `bootimage`
+
+### Rebuild the Kernel
+
+- build kernel before creating disk image
+
+### 
+
+
+
+### Builder Binary
+
+We now have a `create_bootimage` function, but no way to invoke it. Let's fix this by creating a `builder` executable in the `bootimage` crate. For this, we create a new `bin` folder in `bootimage/src` and add a `builder.rs` file with the following content:
+
+```rust
+// in bootimage/src/bin/builder.rs
+
+use std::path::PathBuf;
+use anyhow::Context;
+
+fn main() -> anyhow::Result<()> {
+    let kernel_binary = build_kernel().context("failed to build kernel")?;
+    let bootimage = bootimage::create_bootimage(kernel_binary)
+        .context("failed to create disk image")?;
+    println!("Created disk image at `{}`", bootimage.display());
+}
+
+fn build_kernel() -> anyhow::Result<PathBuf> {
+    todo!()
+}
+```
+
+The entry point of all binaries in Rust is the `main` function. While this function doesn't need a return type, we use the [`anyhow::Result`] type again as a simple way of dealing with errors. The implementation of the `main` method consists of two steps: building our kernel and creating the disk image. For the first step we define a new `build_kernel` function whose implementation we will create in the following. For the disk image creation we use the `create_bootimage` function we created in our `lib.rs`. Since cargo treats the `main.rs` and `lib.rs` as separate crates, we need to prefix the crate name `bootimage` in order to access it.
+
+[`anyhow::Result`]: https://docs.rs/anyhow/1.0.33/anyhow/type.Result.html
+
+One new operation that we didn't see before are the `context` calls. This method is defined in the [`anyhow::Context`] trait and provides a way to add additional messages to errors, which are also printed out in case of an error. This way we can easily see whether an error occurred in `build_kernel` or `create_bootimage`.
+
+[`anyhow::Context`]: https://docs.rs/anyhow/1.0.33/anyhow/trait.Context.html
+
+#### The `build_kernel` Implementation
+
+The purpose of the `build_kernel` method is to build our kernel and return the path to the resulting kernel binary. As we learned in the first part of this post, the build command for our kernel is:
+
+```
+cargo build --target x86_64-blog_os.json -Z build-std=core \
+    -Z build-std-features=compiler-builtins-mem
+```
+
+Let's invoke that command using the [`process::Command`] type again:
+
+```rust
+// in bootimage/src/bin/builder.rs
+
+fn build_kernel() -> anyhow::Result<PathBuf> {
+    // we know that the kernel lives in the parent directory
+    let kernel_dir = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let command_line_args: Vec<String> = std::env::args().skip(1).collect();
+
+    let mut cmd = Command::new(env!("CARGO"));
+    cmd.args(&[
+        "--target", "x86_64-blog_os.json",
+        "-Z", "build-std=core",
+        "-Z", "build-std-features=compiler-builtins-mem",
+    ]);
+    cmd.args(&command_line_args);
+    cmd.current_dir(kernel_dir);
+    let exit_status = cmd.status()?;
+
+    if exit_status.success() {
+        let profile = if command_line_args.contains("--release") {
+            "release"
+        } else {
+            "debug"
+        };
+        Ok(
+            kernel_dir.join("target").join("x86_64-blog_os").join(profile)
+            .join("blog_os")
+        )
+    } else {
+        Err(anyhow::Error::msg("kernel build failed"))
+    }
+}
+```
+
+Before constructing the command, we use the [`CARGO_MANIFEST_DIR`] environment variable again to determine the path to the kernel directory. We also retrieve the command line arguments passed to the `builder` executable by using the [`std::env::args`] function. Since the first command line argument is always the executable name, which we don't need, we use the [`Iterator::skip`] method to skip it. Then we use the [`Iterator::collect`] method to transform the iterator into a [`Vec`] of strings.
+
+[`std::env::args`]: https://doc.rust-lang.org/std/env/fn.args.html
+[`Iterator::skip`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.skip
+[`Iterator::collect`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.collect
+[`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+
+Instead of [`Command::arg`], we use the [`Command::args`] method as a less verbose way to pass multiple string arguments at once. In addition to the build arguments, we also pass all the command line argument passed to the `builder` executable. This way, it is possible to pass additional command line arguments, for example `--release` to compile the kernel with optimizations. Similar to the bootloader build, we also use the [`Command::current_dir`] method to run the command in the root directory, which is required for finding the `x86_64-blog_os.json` file.
+
+[`Command::args`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.args
+
+After running the command and checking its exit status, we construct the path to the kernel binary. When compiling for a custom target, cargo places the executable inside a `target/<target-name>/<profile>/<name>` folder where `<target-name>` is the name of the custom target file, `<profile>` is either [`debug`] or [`release`], and `<name>` is the executable name. In our case, the target name is `x86_64-blog_os` and the executable name is `blog_os`. To determine whether it is a debug or release build, we looks through the `command_line_args` vector for a `--release` argument.
+
+[`debug`]: https://doc.rust-lang.org/cargo/reference/profiles.html#dev
+[`release`]: https://doc.rust-lang.org/cargo/reference/profiles.html#release
+
+#### Running it
+
+We can now run our `builder` binary using the following command:
+
+```
+cargo run --package bootimage --bin builder
+```
+
+The `--package bootimage` argument is optional when you run the command from within the `bootimage` directory. After running the command, you should see the `bootimage-*` files in your `target/x86_64-blog_os/debug` folder.
+
+To pass additional arguments to the `builder` executable, you have to pass them after a special separator argument `--`, otherwise they are interpreted by the `cargo run` command. As an example, you have to run the following command to build the kernel in release mode:
+
+```
+cargo run --package bootimage --bin builder -- --release
+```
+
+Without the additional `--` argument, only the `builder` executable is built in release mode, not the kernel. To verify that the `--release` argument worked, you can verify that the kernel executable and the disk image files are available in the `target/x86_64-blog_os/release` folder.
+
+
+#### Adding an Alias
+
+Since we will need to run this `builder` executable quite often, it makes sense to add a shorter alias for the above command. To do that, we create a [cargo configuration file] at the root directory of our project. Cargo configuration files are named `.cargo/config.toml` and allow configuring the behavior of cargo itself. Among other things, they allow to define subcommand aliases to avoid typing out long commands. Let's use this feature to define a `cargo disk-image` alias for the above command:
+
+[cargo configuration file]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# in .cargo/config.toml
+
+[alias]
+disk-image = ["run", "--package", "bootimage", "--bin builder", "--"]
+```
+
+Now we can run `cargo disk-image` instead of using the long build command. Since we already included the separator argument `--` in the argument list, we can pass additional arguments directly. For example, a release build is now a simple `cargo disk-image --release`.
+
+You can of course choose a different alias name if you like. You can also add a one character alias (e.g. `cargo i`) if you want to minimize typing.
+
 
 
 ### Using `cargo run`
