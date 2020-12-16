@@ -1,0 +1,13 @@
+{% extends "edition-3/foundation.html" %}
+
+{% block masthead %}
+<header class="masthead">
+    <div style="position:relative">
+        <h2 class="masthead-title">
+            <a href="{{ config.base_url | safe }}/edition-3" title="Home">{{ config.title | safe }} (Third Edition - Alpha)</a>
+        </h2>
+        <p><small>{{ config.extra.subtitle | replace(from=" ", to="&nbsp;") | safe }}</small></p>
+        {% block header %}{% endblock header %}
+    </div>
+</header>
+{% endblock masthead %}

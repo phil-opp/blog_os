@@ -1,0 +1,130 @@
+{% extends "edition-3/base.html" %}
+
+{% import "macros.html" as macros %}
+
+{% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+{% block header %}
+    {% if lang != "en" -%}
+    <aside id="all-posts-link"><a href="{{ get_url(path="@/edition-3/_index.md") }}/{{ lang }}" title="All Posts">« All Posts</a></aside>
+    {%- else -%}
+    <aside id="all-posts-link"><a href="{{ get_url(path="@/edition-3/_index.md") }}" title="All Posts">« All Posts</a></aside>
+    {%- endif %}
+{% endblock header %}
+
+{% block description -%}
+{{ page.summary | safe | striptags | truncate(length=150) }}
+{%- endblock description %}
+
+{% block toc_aside %}
+<aside id="toc-aside">
+    <h2>Table of Contents</h2>
+    <ol>
+        {% for h2 in page.toc %}<li>
+            <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
+            {% if h2.children %}<ol>
+                {% for h3 in h2.children %}<li>
+                    <a href="#{{h3.id | safe}}">{{ h3.title | safe }}</a>
+                </li>{% endfor %}
+            </ol>{% endif %}
+        </li>{% endfor %}
+        <li class="toc-comments-link"><a href="#comments">Comments</a></li>
+    </ol>
+</aside>
+{% endblock toc_aside %}
+
+{% block main %}
+    <div class="{% if page.extra.rtl %}right-to-left{% endif %}">
+    <h1>{{ page.title }}</h1>
+    <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
+        {{ page.date | date(format="%b %d, %Y") }}
+        {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
+    </time>
+    </div>
+
+    {% if page.extra.warning %}
+        <div class="warning">
+            {% if page.extra.warning_short %} <b>{{ page.extra.warning_short }}</b> {% endif %}
+            {{ page.extra.warning | markdown(inline=true) | safe }}
+        </div>
+    {% endif %}
+
+    {%- if page.lang != "en" %}
+        <div class="warning">
+            {% set translations = page.translations | filter(attribute="lang", value="en") %}
+            {% set original = translations.0 %}
+            <p>
+            <b>Translated Content:</b>
+                This is a community translation of the <strong><a href="{{ original.permalink }}">{{ original.title }}</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!
+            </p>
+            {%- if page.extra.translators %}
+            <p>
+                Translation by {% for user in page.extra.translators -%}
+                    {%- if not loop.first -%}
+                        {%- if loop.last %}, and {% else %}, {% endif -%}
+                    {%- endif -%}
+                    <a href="https://github.com/{{user}}">@{{user}}</a>
+                {%- endfor %}.
+            </p>
+            {% endif -%}
+        </div>
+    {% endif %}
+
+    <div class="{% if page.extra.rtl %}right-to-left{% endif %}">	
+    {{ page.content | replace(from="<!-- toc -->", to=macros::toc(toc=page.toc))  | safe }}
+    </div>
+
+    <div class="post-footer-support">
+        <h2>Support Me</h2>
+        {% include "support.html" %}
+    </div>
+
+    <hr>
+    <div class="PageNavigation">
+        {% if page.lighter %}
+            <a class="prev" href="{{ page.lighter.path | safe }}">&laquo; {{ page.lighter.title }}</a>
+        {% endif %}
+        {% if page.heavier %}
+            <a class="next" href="{{ page.heavier.path | safe }}">{{ page.heavier.title }} &raquo;</a>
+        {% endif %}
+    </div>
+
+    <hr>
+    <section>
+        <h2 id="comments">Comments</h2>
+
+        {%- if page.lang != "en" %}
+        <p>
+            Please leave your comments in English if possible.
+        </p>
+        {% endif %}
+
+        {{ macros::utterances() }}
+    </section>
+
+    <aside class="page-aside-right">
+        {% if page.translations -%}
+        <div class="block" id="language-selector">
+            <h2>Other Languages</h2>
+            <ul>{%- for translation in page.translations | sort(attribute="lang") %}
+                <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">
+                    {%- if translation.lang == "en" -%}
+                        English (original)
+                    {%- else -%}
+                        {{ trans(key="lang_name", lang = translation.lang) }}
+                    {%- endif -%}
+                </a></li>
+            {% endfor %}</ul>
+        </div>
+        {%- endif %}
+
+        <div class="block">
+            <h2>About Me</h2>
+            <p>
+                I'm a Rust freelancer with a master's degree in computer science. I love systems programming, open source software, and new challenges.
+            </p><p>
+                If you want to work with me, reach out on <a href = "https://www.linkedin.com/in/phil-opp/">LinkedIn</a> or write me at <a href="mailto:job@phil-opp.com">job@phil-opp.com</a>.
+            </p>
+        </div>
+    </aside>
+
+{% endblock main %}

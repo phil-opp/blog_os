@@ -1,0 +1,61 @@
+<!doctype html>
+
+<html lang="{% if lang %}{{ lang }}{% else %}{{ config.default_language }}{% endif %}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
+    <meta name="author" content="{{ config.extra.author.name }}">
+
+    {% if current_url %}
+        <link rel="canonical" href="{{ current_url | safe }}" />
+    {% endif %}
+    <link href="/css/edition-3/main.css" rel="stylesheet">
+
+    <link rel="alternate" type="application/rss+xml" title="RSS feed for os.phil-opp.com" href="{{ config.base_url | safe }}/rss.xml" />
+
+    <script async src="/js/edition-3/main.js"></script>
+
+    <title>{% block title %}{% endblock title %} (Third Edition - Alpha)</title>
+</head>
+
+<body>
+    <div class="container content">
+        {% block masthead %}{% endblock masthead %}
+
+        <div>
+            {% block toc_aside %}{% endblock toc_aside %}
+            <main>{% block main %}{% endblock main %}</main>
+        </div>
+
+        <div>{% block after_main %}{% endblock after_main %}</div>
+
+        <footer class="footer">
+            <hr>
+            <small>
+                &copy; <time datetime="2020">2020</time>. All rights reserved.
+                <a href="{{ get_url(path="@/pages/contact.md") | safe }}">Contact</a>
+            </small>
+        </footer>
+    </div>
+
+    <!-- Fathom - simple website analytics - https://github.com/usefathom/fathom -->
+    <script>
+        (function(f, a, t, h, o, m){
+            a[h]=a[h]||function(){
+                (a[h].q=a[h].q||[]).push(arguments)
+            };
+            o=f.createElement('script'),
+            m=f.getElementsByTagName('script')[0];
+            o.async=1; o.src=t; o.id='fathom-script';
+            m.parentNode.insertBefore(o,m)
+        })(document, window, '//fathom.phil-opp.com/tracker.js', 'fathom');
+        fathom('set', 'siteId', 'MUXWM');
+        fathom('trackPageview');
+    </script>
+    <!-- / Fathom -->
+</body>
+
+</html>
