@@ -80,7 +80,7 @@ x86には2つのファームウェアの標準規格があります："Basic Inp
 
 これらの欠点を考慮し、私達はGRUBとMultiboot標準規格を使わないことに決めました。しかし、あなたのカーネルをGRUBシステム上で読み込めるように、私達の[bootimage]ツールにMultibootのサポートを追加することも計画しています。Multiboot準拠なカーネルを書きたい場合は、このブログシリーズの[第1版][first edition]をご覧ください。
 
-[first edition]: @/first-edition/_index.md
+[first edition]: @/edition-1/_index.md
 
 ### UEFI
 

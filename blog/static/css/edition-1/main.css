@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Iosevka";
+  src: url("/fonts/iosevka-regular.woff2") format("woff2"), url("/fonts/iosevka-regular.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 h1 code, h2 code, h3 code, h4 code, h5 code, h6 code {
   padding: 0;
   color: #a0565c;
@@ -82,7 +90,7 @@ main img {
   border: 2px solid #fc0
 }
 
-.posts.interrupts {
+.posts.exceptions {
   border: 2px solid #f66;
 }
 
@@ -126,7 +134,7 @@ main img {
   color: #990;
 }
 
-.post-category.interrupts {
+.post-category.exceptions {
   color: #f33;
 }
 
@@ -275,10 +283,6 @@ aside#all-posts-link {
 
   aside.page-aside-right ul li {
     margin-top: .5rem;
-  }
-
-  #language-selector li {
-    margin-top: 0;
   }
 
   aside#all-posts-link {
@@ -448,12 +452,4 @@ h5 {
 
 a strong {
   color: #268bd2;
-}
-
-.right-to-left {
-	direction: rtl;
-}
-
-.left-to-right, .right-to-left pre {
-	direction: ltr;
 }

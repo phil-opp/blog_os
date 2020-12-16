@@ -456,9 +456,9 @@ blog_os::interrupts::test_breakpoint_exception...	[ok]
 ## Too much Magic?
 The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own IDT type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed. Note that these posts are based on the [first edition] of this blog and might be out of date.
 
-[“Handling Exceptions with Naked Functions”]: @/first-edition/extra/naked-exceptions/_index.md
+[“Handling Exceptions with Naked Functions”]: @/edition-1/extra/naked-exceptions/_index.md
 [`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/struct.InterruptDescriptorTable.html
-[first edition]: @/first-edition/_index.md
+[first edition]: @/edition-1/_index.md
 
 ## What's next?
 We've successfully caught our first exception and returned from it! The next step is to ensure that we catch all exceptions, because an uncaught exception causes a fatal [triple fault], which leads to a system reset. The next post explains how we can avoid this by correctly catching [double faults].

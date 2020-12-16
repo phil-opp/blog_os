@@ -76,7 +76,7 @@ To make a kernel Multiboot compliant, one just needs to insert a so-called [Mult
 
 Because of these drawbacks we decided to not use GRUB or the Multiboot standard. However, we plan to add Multiboot support to our [bootimage] tool, so that it's possible to load your kernel on a GRUB system too. If you're interested in writing a Multiboot compliant kernel, check out the [first edition] of this blog series.
 
-[first edition]: @/first-edition/_index.md
+[first edition]: @/edition-1/_index.md
 
 ### UEFI
 
