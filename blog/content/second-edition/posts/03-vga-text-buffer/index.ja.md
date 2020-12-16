@@ -66,7 +66,7 @@ VGAテキストバッファはアドレス`0xb8000`に[<ruby>memory-mapped<rp> (
 [supports normal reads and writes]: https://web.stanford.edu/class/cs140/projects/pintos/specs/freevga/vga/vgamem.htm#manip
 
 ## Rustのモジュール
-VGAバッファが動く仕組みを学んだので、画面出力を扱うRustのモジュールを作れます。
+VGAバッファが動く仕組みを学んだので、さっそく画面出力を扱うRustのモジュールを作っていきます。
 
 ```rust
 // in src/main.rs
@@ -107,9 +107,9 @@ pub enum Color {
 
 [C-like enum]: https://doc.rust-jp.rs/rust-by-example-ja/custom_types/enum/c_like.html
 
-通常、コンパイラは使われていないヴァリアントそれぞれに対して警告を発します。`#[allow(dead_code)]`属性を使うことで`Color`enumに対するそれらの警告を消すことができます。
+通常、コンパイラは使われていないヴァリアントそれぞれに対して警告を発します。`#[allow(dead_code)]`属性を使うことで`Color` enumに対するそれらの警告を消すことができます。
 
-[`Copy`], [`Clone`], [`Debug`], [`PartialEq`], および [`Eq`]を[derive][deriving]することによって、この型の[コピーセマンティクス][copy semantics]を有効化し、この型を出力することと比較することを可能にします。
+[`Copy`]、[`Clone`]、[`Debug`]、[`PartialEq`]、および [`Eq`]を[derive][deriving]することによって、この型の[コピーセマンティクス][copy semantics]を有効化し、この型を出力することと比較することを可能にします。
 
 [deriving]: https://doc.rust-jp.rs/rust-by-example-ja/trait/derive.html
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
@@ -142,7 +142,7 @@ impl ColorCode {
 [`repr(transparent)`]: https://doc.rust-lang.org/nomicon/other-reprs.html#reprtransparent
 
 ### テキストバッファ
-次に、画面上の文字を表す構造体とテキストバッファを表す構造体を追加できます。
+次に、画面上の文字とテキストバッファをそれぞれ表す構造体を追加していきます。
 
 ```rust
 // in src/vga_buffer.rs
@@ -183,7 +183,7 @@ writerは常に最後の行に書き、行が一杯になったとき（もし�
 [`'static`]: https://doc.rust-jp.rs/book-ja/ch10-03-lifetime-syntax.html#静的ライフタイム
 
 ### 出力する
-では`Writer`を使ってバッファの文字を変更しましょう。ます一つのASCII文字を書くメソッドを作ります：
+では`Writer`を使ってバッファの文字を変更しましょう。まず一つのASCII文字を書くメソッドを作ります：
 
 ```rust
 // in src/vga_buffer.rs
@@ -217,7 +217,7 @@ impl Writer {
 
 [newline]: https://ja.wikipedia.org/wiki/%E6%94%B9%E8%A1%8C%E3%82%B3%E3%83%BC%E3%83%89
 
-バイトを出力する時、writerは現在の行がいっぱいかをチェックします。その場合、行を折り返すために先に`new_line`の呼び出しが必要です。その後で現在の場所に`ScreenChar`を書きます。最後に、現在の<ruby>列の位置<rp> (</rp><rt>column position</rt><rp>) </rp></ruby>を進めます。
+バイトを出力する時、writerは現在の行がいっぱいかをチェックします。その場合、行を折り返すために先に`new_line`の呼び出しが必要です。その後で現在の場所のバッファに新しい`ScreenChar`を書き込みます。最後に、現在の<ruby>列の位置<rp> (</rp><rt>column position</rt><rp>) </rp></ruby>を進めます。
 
 文字列全体を出力するには、バイト列に変換しひとつひとつ出力すればよいです：
 
@@ -245,7 +245,7 @@ VGAテキストバッファはASCIIおよび[コードページ437][code page 43
 [UTF-8]: https://www.fileformat.info/info/unicode/utf8.htm
 
 #### やってみよう！
-何かの文字を画面に書き出すために、一時的に使う関数を作ってみましょう。
+適当な文字を画面に書き出すために、一時的に使う関数を作ってみましょう。
 
 ```rust
 // in src/vga_buffer.rs
@@ -315,7 +315,7 @@ volatile = "0.2.6"
 [semantic]: https://semver.org/lang/ja/
 [Specifying Dependencies]: https://doc.crates.io/specifying-dependencies.html
 
-これを使って、VGAバッファのvolatileへと書き込みを行ってみましょう。`Buffer`型を以下のように変更します：
+これを使って、VGAバッファへの書き込みをvolatileにしてみましょう。`Buffer`型を以下のように変更します：
 
 ```rust
 // in src/vga_buffer.rs
@@ -354,7 +354,7 @@ impl Writer {
 }
 ```
 
-`=`を使った通常の代入の代わりに`write`メソッドを使っています。これにより、コンパイラがこの書き込みを最適化して取り除いてしまうことがないことが保証されます。
+`=`を使った通常の代入の代わりに`write`メソッドを使っています。これにより、コンパイラがこの書き込みを最適化して取り除いてしまわないことが保証されます。
 
 ### フォーマットマクロ
 Rustの<ruby>フォーマットマクロ<rp> (</rp><rt>formatting macro</rt><rp>) </rp></ruby>もサポートすると良さそうです。そうすると、整数や浮動小数点数といった様々な型を簡単に出力できます。それらをサポートするためには、[`core::fmt::Write`]トレイトを実装する必要があります。このトレイトに必要なメソッドは`write_str`だけです。これは私達の`write_string`によく似ており、戻り値の型が`fmt::Result`であるだけです：
@@ -536,7 +536,7 @@ lazy_static! {
 }
 ```
 
-しかし、この`WRITER`は<ruby>不変<rp> (</rp><rt>immutable</rt><rp>) </rp></ruby>なので、全く使い物になりません。なぜならこれは、この`WRITER`に何も書き込めないということを意味するからです（私達のすべての書き込みメソッドは`&mut self`を取るからです）。ひとつの解決策には、[<ruby>可変<rp> (</rp><rt>mutable</rt><rp>) </rp></ruby>で静的な変数][mutable static]を使うということがあります。しかし、そうすると、あらゆる読み書きが容易にデータ競合やその他の良くないことを引き起こしてしまうので、それらがすべてunsafeになってしまいます。しかし他に方法はあるのでしょうか？不変静的変数を[RefCell]や、果ては[UnsafeCell]のような、[<ruby>内部可変性<rp> (</rp><rt>interior mutability</rt><rp>) </rp></ruby>][interior mutability]を提供するcell型と一緒に使うという事も考えられます。しかし、それらの型は（ちゃんとした理由があって）[Sync]ではないので、静的変数で使うことはできません。
+しかし、この`WRITER`は<ruby>不変<rp> (</rp><rt>immutable</rt><rp>) </rp></ruby>なので、全く使い物になりません。なぜならこれは、この`WRITER`に何も書き込めないということを意味するからです（私達のすべての書き込みメソッドは`&mut self`を取るからです）。ひとつの解決策には、[<ruby>可変<rp> (</rp><rt>mutable</rt><rp>) </rp></ruby>で静的な変数][mutable static]を使うということがあります。しかし、そうすると、あらゆる読み書きが容易にデータ競合やその他の良くないことを引き起こしてしまうので、それらがすべてunsafeになってしまいます。`static mut`を使うことも、[それを削除しようという提案][remove static mut]すらあることを考えると、できる限り避けたいです。しかし他に方法はあるのでしょうか？不変静的変数を[RefCell]や、果ては[UnsafeCell]のような、[<ruby>内部可変性<rp> (</rp><rt>interior mutability</rt><rp>) </rp></ruby>][interior mutability]を提供するcell型と一緒に使うという事も考えられます。しかし、それらの型は（ちゃんとした理由があって）[Sync]ではないので、静的変数で使うことはできません。
 
 [mutable static]: https://doc.rust-jp.rs/book-ja/ch19-01-unsafe-rust.html#可変で静的な変数にアクセスしたり変更する
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
@@ -546,7 +546,7 @@ lazy_static! {
 [Sync]: https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html
 
 ### スピンロック
-同期された内部可変性を得るためには、標準ライブラリを使えるなら[Mutex]を使うことができます。これは、リソースがすでにロックされていた場合、スレッドをブロックすることにより相互排他性を提供します。しかし、私達の初歩的なカーネルにはブロックの機能はもちろんのこと、スレッドの概念すらないので、これも使うことはできません。しかし、コンピュータサイエンスの世界には、OSを必要としない非常に単純なmutexが存在するのです：[<ruby>スピンロック<rp> (</rp><rt>spinlock</rt><rp>) </rp></ruby>][spinlock]です。スピンロックを使うと、ブロックする代わりに、スレッドは単純にリソースを何度も何度もロックしようとしまくり、mutexが開放されるまでのあいだCPU時間を使い尽くします。
+同期された内部可変性を得るためには、標準ライブラリを使えるなら[Mutex]を使うことができます。これは、リソースがすでにロックされていた場合、スレッドをブロックすることにより相互排他性を提供します。しかし、私達の初歩的なカーネルにはブロックの機能はもちろんのこと、スレッドの概念すらないので、これも使うことはできません。しかし、コンピュータサイエンスの世界には、OSを必要としない非常に単純なmutexが存在するのです：それが[<ruby>スピンロック<rp> (</rp><rt>spinlock</rt><rp>) </rp></ruby>][spinlock]です。スピンロックを使うと、ブロックする代わりに、スレッドは単純にリソースを何度も何度もロックしようとすることで、mutexが開放されるまでの間CPU時間を使い尽くします。
 
 [Mutex]: https://doc.rust-lang.org/nightly/std/sync/struct.Mutex.html
 [spinlock]: https://ja.wikipedia.org/wiki/スピンロック
@@ -661,7 +661,7 @@ pub fn _print(args: fmt::Arguments) {
 
 `_print`関数は静的な`WRITER`をロックし、その`write_fmt`メソッドを呼び出します。このメソッドは`Write`トレイトのものなので、このトレイトもインポートしないといけません。最後に追加した`unwrap()`は、画面出力がうまく行かなかったときパニックします。しかし、`write_str`は常に`Ok`を返すようにしているので、これは起きないはずです。
 
-マクロは`_print`をモジュールの外側から呼び出せる必要があるので、この関数は<ruby>公開<rp> (</rp><rt>public</rt><rp>) </rp></ruby>されていなければなりません。しかし、これは<ruby>非公開<rp> (</rp><rt>private</rt><rp>) </rp></ruby>の実装の詳細ではないかと思ったので、[`doc(hidden)`属性][`doc(hidden)` attribute]をつけることで、生成されたドキュメントから隠すようにします。
+マクロは`_print`をモジュールの外側から呼び出せる必要があるので、この関数は<ruby>公開<rp> (</rp><rt>public</rt><rp>) </rp></ruby>されていなければなりません。しかし、これは<ruby>非公開<rp> (</rp><rt>private</rt><rp>) </rp></ruby>の実装の詳細であると考え、[`doc(hidden)`属性][`doc(hidden)` attribute]をつけることで、生成されたドキュメントから隠すようにします。
 
 [`doc(hidden)` attribute]: https://doc.rust-lang.org/nightly/rustdoc/the-doc-attribute.html#dochidden
 
@@ -708,7 +708,7 @@ fn panic(info: &PanicInfo) -> ! {
 ## まとめ
 この記事では、VGAテキストバッファの構造と、どのようにすれば`0xb8000`番地におけるメモリマッピングを通じてそれに書き込みを行えるかを学びました。このメモリマップされたバッファへの書き込みというunsafeな操作をカプセル化し、安全で便利なインターフェースを外部に提供するRustモジュールを作りました。
 
-また、cargoのおかげでサードパーティのライブラリへの依存関係を追加することが簡単になっていることもわかりました。`lazy_static`と`spin`という2つの依存先は、OS開発においてとても便利であり、今後の記事においても使っていきます。
+また、cargoのおかげでサードパーティのライブラリへの依存関係を簡単に追加できることも分かりました。`lazy_static`と`spin`という2つの依存先は、OS開発においてとても便利であり、今後の記事においても使っていきます。
 
 ## 次は？
 次の記事ではRustに組み込まれている単体テストフレームワークをセットアップする方法を説明します。その後、この記事のVGAバッファモジュールに対する基本的な単体テストを作ります。
