@@ -1,0 +1,52 @@
+{% extends "edition-1/base.html" %}
+
+{% import "edition-1/comments.html" as comments %}
+
+{% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+
+{% block main %}
+    <h1>{{ page.title }}</h1>
+    <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
+        {{ page.date | date(format="%b %d, %Y") }}
+        {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
+    </time>
+
+    <aside id="toc-aside">
+        <h2>Table of Contents</h2>
+        <ol>
+            {% for h2 in page.toc %}<li>
+                <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
+                {% if h2.children %}<ol>
+                    {% for h3 in h2.children %}<li>
+                        <a href="#{{h3.id | safe}}">{{ h3.title | safe }}</a>
+                    </li>{% endfor %}
+                </ol>{% endif %}
+            </li>{% endfor %}
+        </ol>
+    </aside>
+
+    <div class="warning">
+        <b>No longer updated!</b> You are viewing the a post of the first edition of “Writing an OS in Rust”, which is no longer updated. You can find the second edition <a href="{{ get_url(path = "@/edition-2/_index.md") | safe }}">here</a>.
+    </div>
+
+    {{ page.content | safe }}
+{% endblock main %}
+
+{% block after_main %}
+    <hr>
+    <div class="PageNavigation">
+        {% if page.lighter %}
+            <a class="prev" href="{{ page.lighter.path | safe }}">&laquo; {{ page.lighter.title }}</a>
+        {% endif %}
+        {% if page.heavier %}
+            <a class="next" href="{{ page.heavier.path | safe }}">{{ page.heavier.title }} &raquo;</a>
+        {% endif %}
+    </div>
+
+    <hr>
+    <section>
+        <h2>Comments (Archived)</h2>
+        <section id="isso-thread">{{ comments::comment(page=page) }}</section>
+    </section>
+
+{% endblock after_main %}

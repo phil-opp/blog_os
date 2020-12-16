@@ -7,7 +7,7 @@ This post gives an overview of the recent updates to the _Writing an OS in Rust_
 
 I focused my time this month on finishing the long-planned post about [**Async/Await**]. In addition to that, there were a few updates to the crates behind the scenes, including some great contributions and a new `vga` crate.
 
-[**Async/Await**]: @/second-edition/posts/12-async-await/index.md
+[**Async/Await**]: @/edition-2/posts/12-async-await/index.md
 
 As mentioned in the _Async/Await_ post, I'm currently looking for job in Karlsruhe (Germany) or remote, so please let me know if you're interested.
 
