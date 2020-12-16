@@ -1,8 +1,7 @@
 +++
 title = "A Minimal Rust Kernel"
 weight = 2
-path = "minimal-rust-kernel"
-date = 2018-02-10
+date = 0000-01-01
 
 [extra]
 chapter = "Bare Bones"
@@ -426,7 +425,7 @@ The [`extern "C"`] qualifier specifies that the function should use the same [AB
 The `!` return type indicates that the function is [diverging], which means that it must never return. The `bootloader` requires this because its code might no longer be valid after the kernel modified the system state such as the [page tables].
 
 [diverging]: https://doc.rust-lang.org/rust-by-example/fn/diverging.html
-[page tables]: @/second-edition/posts/08-paging-introduction/index.md
+[page tables]: @/edition-2/posts/08-paging-introduction/index.md
 
 </details></div>
 
