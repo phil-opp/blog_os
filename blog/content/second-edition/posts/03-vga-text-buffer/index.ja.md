@@ -9,7 +9,7 @@ chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "bd6fbcb1c36705b2c474d7fcee387bfea1210851"
 # GitHub usernames of the people that translated this post
-translators = ["woodyZootopia"]
+translators = ["woodyZootopia", "JohnTitor"]
 +++
 
 [VGAテキストモード][VGA text mode]は画面にテキストを出力するシンプルな方法です。この記事では、すべてのunsafeな要素を別のモジュールにカプセル化することで、それを安全かつシンプルに扱えるようにするインターフェースを作ります。また、Rustの[フォーマッティングマクロ][formatting macros]のサポートも実装します。
