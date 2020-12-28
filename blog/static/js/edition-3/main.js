@@ -61,3 +61,29 @@ function toc_scroll_position(container) {
     current_toc_item.classList.add("active");
   }
 }
+
+function toggle_lights() {
+  var body = document.querySelector("body");
+  var comment_form = document.querySelector("iframe.utterances-frame");
+  if (body != null) {
+    if (body.classList.contains("dark")) {
+      body.classList.replace("dark", "light");
+      if (comment_form != null) {
+        comment_form.contentWindow.postMessage(
+          { type: "set-theme", theme: "github-light" },
+          "https://utteranc.es/"
+        )
+      }
+    } else {
+      body.classList.remove("light");
+      body.classList.add("dark");
+      if (comment_form != null) {
+        comment_form.contentWindow.postMessage(
+          { type: "set-theme", theme: "github-dark" },
+          "https://utteranc.es/"
+        )
+      }
+    }
+    console.log(body)
+  }
+}
