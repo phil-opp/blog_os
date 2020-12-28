@@ -1,17 +1,17 @@
-window.onload = function() {
+window.onload = function () {
   var container = document.querySelector('#toc-aside');
 
   if (container != null) {
     resize_toc(container);
     toc_scroll_position(container);
-    window.onscroll = function() { toc_scroll_position(container) };
+    window.onscroll = function () { toc_scroll_position(container) };
   }
 }
 
 function resize_toc(container) {
   var containerHeight = container.clientHeight;
 
-  var resize = function() {
+  var resize = function () {
     if (containerHeight > document.documentElement.clientHeight - 100) {
       container.classList.add('coarse');
     } else {
@@ -21,7 +21,7 @@ function resize_toc(container) {
   resize();
 
   var resizeId;
-  window.onresize = function() {
+  window.onresize = function () {
     clearTimeout(resizeId);
     resizeId = setTimeout(resize, 300);
   };
