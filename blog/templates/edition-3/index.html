@@ -18,7 +18,7 @@
         needed code, so you can follow along if you like. The source code is also available in the corresponding
         <a href="https://github.com/phil-opp/blog_os">Github repository</a>.
     </p>
-    
+
     <p>Latest post:
         {% set latest_post = posts|last %}
         <strong><a href="{{ latest_post.path | safe }}">{{ latest_post.title }}</a></strong>
@@ -29,27 +29,28 @@
 <p>In the following posts, we explain how to create an operating system for the <code>x86_64</code> architecture step for step. Starting from scratch, we create a bootable OS kernel, implement basic input/output support, show how to test and debug our kernel, explain virtual memory management, and add support for multitasking and userspace programs.</p>
 -->
 
-<div>
 {%- set chapter = "none" -%}
 {%- for post in posts -%}
-    {%- if post.extra["chapter"] -%}
-        {%- if post.extra["chapter"] != chapter -%}
-            {# Begin new chapter #}
-            {%- set_global chapter = post.extra["chapter"] -%}
-</div>
-
-{% set chapter_slug = chapter | slugify %}
-<div class="posts {{chapter_slug}}">
-{% set chapter_page = get_page(path = "edition-3/chapters/" ~ chapter_slug ~ ".md" ) %}
-<h2>{{ chapter_page.title }}</h2>
-{{ chapter_page.content | safe }}
-
+    {%- if post.extra["chapter"] != chapter -%}
+        {%- if chapter != "none" -%}
+            </ul></div>
         {%- endif -%}
+
+        {# Begin new chapter #}
+        {%- set_global chapter = post.extra["chapter"] -%}
+
+        {% set chapter_slug = chapter | slugify %}
+        <div class="posts {{chapter_slug}}">
+        {% set chapter_page = get_page(path = "edition-3/chapters/" ~ chapter_slug ~ ".md" ) %}
+        <h2>{{ chapter_page.title }}</h2>
+        {{ chapter_page.content | safe }}
+
+        <ul>
     {%- endif -%}
 
-    {{ macros::post_link_edition_3(page=post) }}
+    <li>{{ macros::post_link_edition_3(page=post) }}</li>
 {%- endfor -%}
-</div>
+</ul></div>
 
 <hr>
 
