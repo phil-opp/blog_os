@@ -34,7 +34,12 @@
 
 {% block main %}
     <div class="{% if page.extra.rtl %}right-to-left{% endif %}">
-    <h1>{{ page.title }}</h1>
+    <div class="post-title">
+        <h1>{{ page.title }}</h1>
+        <span class="post-icon">
+            {%- if page.extra.icon -%}{{page.extra.icon | safe}}{%- endif -%}
+        </span>
+    </div>
     <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
         {{ page.date | date(format="%b %d, %Y") }}
         {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}

@@ -419,12 +419,37 @@ tbody tr:nth-child(odd) td, tbody tr:nth-child(odd) th {
 
 /* Blog post or page title */
 
-.page-title, .post-title, .post-title a {
+.page-title, .post-list-title, .post-list-title a {
     color: var(--post-title-color);
 }
 
-.page-title, .post-title {
+.page-title, .post-list-title {
     margin-top: 0;
+}
+
+.post-list-icon {
+    float: left;
+    margin-top: -2.1rem;
+    margin-left: -3rem;
+    width: 2rem;
+}
+
+.post-title {
+    margin-bottom: 0.5rem;
+}
+
+.post-title h1 {
+    display: inline;
+}
+
+.post-icon {
+    display: inline-block;
+    padding-top: 0rem;
+    margin-left: 1rem;
+    margin-top: -2rem;
+    margin-bottom: -2rem;
+    width: 3rem;
+    vertical-align: -1rem;
 }
 
 /* Meta data line below post title */
@@ -586,7 +611,11 @@ main img {
 }
 
 .posts ul {
-    padding-left: 2em;
+    padding-left: 3rem;
+}
+
+.posts li {
+    list-style-type: none;
 }
 
 .posts.neutral {

@@ -30,7 +30,10 @@
             {%- set post = page -%}
             {%- set not_translated = true -%}
         {%- endif -%}
-        <h3 class="post-title"><a href="{{ post.path | safe }}">{{ post.title }}</a></h3>
+        <h3 class="post-list-title"><a href="{{ post.path | safe }}">{{ post.title }}</a></h3>
+        <span class="post-list-icon">
+            {%- if post.extra.icon -%}{{post.extra.icon | safe}}{%- endif -%}
+        </span>
         <div class="post-summary">
             {{ post.summary | safe }}
             <a class="read-more" href="{{ post.path | safe }}"><em>read&nbsp;more&nbsp;»</em></a>
