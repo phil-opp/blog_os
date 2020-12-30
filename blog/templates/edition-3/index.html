@@ -76,8 +76,17 @@
 </div>
 
 <div class="frontpage-section">
-    <h2>First Edition</h2>
-    <p>You are currently viewing the second edition of “Writing an OS in Rust”. The first edition is very different in many aspects, for example it builds upon the GRUB bootloader instead of using the `bootloader` crate. In case you're interested in it, it is still available. Note that the first edition is no longer updated and might contain outdated information. <a class="read-more" href="{{ get_url(path = "edition-1") | safe }}"><em>read&nbsp;the&nbsp;first edition&nbsp;»</em></a></p>
+    <h2>Previous Editions</h2>
+    <p>You are currently viewing the third edition of “Writing an OS in Rust”. In case you are interested in the older editions, you can still find them here:</p>
+        <ul>
+            <li>
+                <strong><a href="{{ get_url(path="@/edition-2/_index.md")}}">Second Edition:</a></strong> The second edition is based on older version of the <code>bootloader</code> crate, which uses the hardware-provided VGA text buffer instead of a pixel-based framebuffer for screen output. Instead of the APIC, the legacy PIC is used for implementing hardware interrupts. The second edition only works on BIOS-based systems, not on the newer UEFI standard. <a class="read-more" href="{{ get_url(path = "edition-2") | safe }}"><em>read&nbsp;the&nbsp;second edition&nbsp;»</em></a></p>
+            </li>
+            <li>
+                <strong><a href="{{ get_url(path="@/edition-1/_index.md")}}">First Edition:</a></strong> The first edition was already started in 2015. It is very different in many aspects, for example it builds upon the GRUB bootloader instead of using the `bootloader` crate. This means that it requires you to manually write some assembly code and do an elaborate remap of the kernel's virtual pages in order to improve safety.<a class="read-more" href="{{ get_url(path = "edition-1") | safe }}"><em>read&nbsp;the&nbsp;first edition&nbsp;»</em></a></p>
+            </li>
+        </ul>
+    <p><em>Note that the older editions are no longer updated and might no longer work or contain outdated information.</em></p>
 </div>
 
 <div class="">
