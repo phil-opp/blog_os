@@ -1,6 +1,7 @@
 +++
-title = "A Minimal Rust Kernel"
+title = "Minimal Kernel"
 weight = 2
+path = "minimal-kernel"
 date = 0000-01-01
 
 [extra]
