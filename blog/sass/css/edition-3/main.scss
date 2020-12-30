@@ -73,9 +73,11 @@ html {
     --masthead-title-color: #505050;
     --strong-color: #303030;
     --masthead-subtitle: #c0c0c0;
-    --background-color-section-bare-bones: #f4f4ff;
-    --border-color-section-bare-bones: #ccccff;
     --post-title-color: #228;
+    --background-color-section-bare-bones: #f6f6ff;
+    --border-color-section-bare-bones: #ccccff;
+    --background-color-section-basic-io: #f6fff6;
+    --border-color-section-basic-io: #99ff99;
 }
 
 @mixin set-colors-dark {
@@ -91,9 +93,11 @@ html {
     --masthead-title-color: #a0a0a0;
     --strong-color: #c0c0c0;
     --masthead-subtitle: #6f6f6f;
+    --post-title-color: #c8c8ff;
     --background-color-section-bare-bones: #114;
     --border-color-section-bare-bones: #66a;
-    --post-title-color: #c8c8ff;
+    --background-color-section-basic-io: #131;
+    --border-color-section-basic-io: #6a6;
 }
 
 @mixin light-switch-light {
@@ -626,14 +630,14 @@ main img {
     border: 2px solid #aaa;
 }
 
-.posts.edition-1 {
-    border: 2px solid #aaa;
-    background-color: #99ff0022;
-}
-
 .posts.bare-bones {
     background-color: var(--background-color-section-bare-bones);
     border: 2px solid var(--border-color-section-bare-bones);
+}
+
+.posts.basic-i-o {
+    background-color: var(--background-color-section-basic-io);
+    border: 2px solid var(--border-color-section-basic-io);
 }
 
 .posts.memory-management {
