@@ -19,7 +19,7 @@
 
     <script async src="/js/edition-2/main.js"></script>
 
-    <title>{% block title %}{% endblock title %}</title>
+    <title>{% block title %}{% endblock title %} (Second Edition)</title>
 </head>
 
 <body>
@@ -27,7 +27,7 @@
         <header class="masthead">
             <div style="position:relative">
                 <h2 class="masthead-title">
-                    <a href="{{ config.base_url | safe }}" title="Home">{{ config.title | safe }}</a>
+                    <a href="{{ config.base_url | safe }}" title="Home">{{ config.title | safe }} (Second Edition)</a>
                 </h2>
                 <p><small>{{ config.extra.subtitle | replace(from=" ", to="&nbsp;") | safe }}</small></p>
                 {% block header %}{% endblock header %}
