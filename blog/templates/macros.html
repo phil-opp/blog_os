@@ -1,12 +1,12 @@
 {% macro post_link(page) %}
-    <div>
-        {% set translations = page.translations | filter(attribute="lang", value=lang) -%}
-        {%- if translations -%}
-            {%- set post = get_page(path = translations.0.path) -%}
-        {%- else -%}
-            {%- set post = page -%}
-            {%- set not_translated = true -%}
-        {%- endif -%}
+    {% set translations = page.translations | filter(attribute="lang", value=lang) -%}
+    {%- if translations -%}
+        {%- set post = get_page(path = translations.0.path) -%}
+    {%- else -%}
+        {%- set post = page -%}
+        {%- set not_translated = true -%}
+    {%- endif -%}
+    <div{% if post.extra.rtl %} class="right-to-left"{% endif %}>
         <h2 class="post-title"><a href="{{ post.path | safe }}">{{ post.title }}</a></h2>
         <div class="post-summary">
             {{ post.summary | safe }}
