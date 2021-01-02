@@ -1,3 +1,3 @@
 +++
-template = "index.html"
+template = "edition-2/index.html"
 +++
