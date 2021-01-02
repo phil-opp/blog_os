@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% import "edition-2/macros.html" as macros %}
+
+{% block title %}{{ section.title }} | {{ config.title }}{% endblock title %}
+
+{% block main %}
+
+<h1>{{ section.title }}</h1>
+
+{% block introduction %}{% endblock introduction %}
+
+<div class="posts neutral">
+    {% for page in section.pages %}
+        {{ macros::post_link(page=page) }}
+    {% endfor %}
+</div>
+
+{% endblock main %}
