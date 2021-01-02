@@ -1,6 +1,7 @@
 {% extends "edition-2/base.html" %}
 
-{% import "macros.html" as macros %}
+{% import "edition-2/macros.html" as macros %}
+{% import "snippets.html" as snippets %}
 
 {% block title %}{{ config.title }}{% endblock title %}
 
@@ -71,7 +72,7 @@
 
 <div class="">
     <h2>Support Me</h2>
-    {% include "support.html" %}
+    {{ snippets::support() }}
 </div>
 {% endblock main %}
 

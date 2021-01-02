@@ -1,3 +1,4 @@
+{% macro support() %}
 <p>
     Creating and <a href="{{ get_url(path="@/status-update/_index.md") }}">maintaining</a> this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance.
 </p>
@@ -7,3 +8,14 @@
 <p>
     Thank you!
 </p>
+{% endmacro support %}
+
+{% macro utterances() %}
+    <script src="https://utteranc.es/client.js"
+        data-repo="phil-opp/blog_os"
+        data-issue-term="url"
+        data-label="comments"
+        crossorigin="anonymous"
+        async>
+    </script>
+{% endmacro utterances %}

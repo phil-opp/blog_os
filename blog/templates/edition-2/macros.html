@@ -1,3 +1,8 @@
+{% macro latest_post(posts) %}
+    {% set post = posts|last %}
+    <strong><a href="{{ post.path | safe }}">{{ post.title }}</a></strong>
+{% endmacro latest_post %}
+
 {% macro post_link(page) %}
     {% set translations = page.translations | filter(attribute="lang", value=lang) -%}
     {%- if translations -%}
@@ -20,16 +25,6 @@
         </div>
     </div>
 {% endmacro post_link %}
-
-{% macro utterances() %}
-    <script src="https://utteranc.es/client.js"
-        data-repo="phil-opp/blog_os"
-        data-issue-term="url"
-        data-label="comments"
-        crossorigin="anonymous"
-        async>
-    </script>
-{% endmacro utterances %}
 
 {% macro toc(toc) %}
     <details id = "toc-inline">
