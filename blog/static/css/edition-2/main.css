@@ -454,6 +454,6 @@ a strong {
 	direction: rtl;
 }
 
-.left-to-right, .right-to-left pre {
+.left-to-right, .right-to-left pre, .right-to-left table {
 	direction: ltr;
 }
