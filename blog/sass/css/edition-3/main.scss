@@ -74,6 +74,7 @@ html {
     --strong-color: #303030;
     --masthead-subtitle: #c0c0c0;
     --post-title-color: #228;
+    --gh-repo-box-border-color: #ddd;
     --background-color-section-bare-bones: #f6f6ff;
     --border-color-section-bare-bones: #ccccff;
     --background-color-section-basic-io: #f6fff6;
@@ -94,6 +95,7 @@ html {
     --strong-color: #c0c0c0;
     --masthead-subtitle: #6f6f6f;
     --post-title-color: #c8c8ff;
+    --gh-repo-box-border-color: #555;
     --background-color-section-bare-bones: #114;
     --border-color-section-bare-bones: #66a;
     --background-color-section-basic-io: #131;
@@ -928,18 +930,18 @@ details summary h3, details summary h4, details summary h5, details summary h6 {
 }
 
 .gh-repo-box {
-    border: 1px solid #d1d5da;
+    border: 1px solid var(--gh-repo-box-border-color);
     border-radius: 3px;
     padding: 16px;
     margin-top: 0.5rem;
-    color: #586069;
     font-size: 80%;
 }
 
 .gh-repo-box .repo-link {
-    color: #0366d6;
+    color: var(--link-color);
     font-weight: 600;
     font-size: 120%;
+    margin-left: 0.2rem;
 }
 
 .gh-repo-box .subtitle {
@@ -951,15 +953,17 @@ details summary h3, details summary h4, details summary h5, details summary h6 {
 }
 
 .gh-repo-box .stars-forks a {
-    color: #586069;
+    color: var(--text-color);
+    opacity: 0.7;
 }
 
 .gh-repo-box .stars-forks a:hover {
-    color: #0366d6;
+    color: var(--link-color);
     text-decoration: none;
+    opacity: 1.0;
 }
 
-.gh-repo-box .stars-forks svg {
+.gh-repo-box svg {
     vertical-align: text-bottom;
     fill: currentColor;
 }
