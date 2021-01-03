@@ -4,9 +4,9 @@
 <header class="masthead">
     <div style="position:relative">
         <h2 class="masthead-title">
-            <a href="{{ config.base_url | safe }}/edition-3" title="Home">{{ config.title | safe }} (Third Edition - Alpha)</a>
+            <a href="{{ config.base_url | safe }}/edition-3" title="Home">{{ config.title | safe }}</a>
         </h2>
-        <p><small>{{ config.extra.subtitle | replace(from=" ", to="&nbsp;") | safe }}</small></p>
+        <p><small>{{ config.extra.subtitle | replace(from=" ", to="&nbsp;") | safe }} —&nbsp;Third&nbsp;Edition&nbsp;(Alpha&nbsp;Release)</small></p>
         {% block header %}{% endblock header %}
     </div>
 </header>
