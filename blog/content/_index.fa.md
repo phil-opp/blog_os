@@ -2,12 +2,12 @@
 template = "edition-2/index.html"
 +++
 
-<h1 style="visibility: hidden; height: 0px; margin: 0px; padding: 0px;">Writing an OS in Rust</h1>
+<h1 style="visibility: hidden; height: 0px; margin: 0px; padding: 0px;">نوشتن یک سیستم عامل با راست</h1>
 
-<div class="front-page-introduction">
+<div class="front-page-introduction right-to-left">
 
-This blog series creates a small operating system in the [Rust programming language](https://www.rust-lang.org/). Each post is a small tutorial and includes all needed code, so you can follow along if you like. The source code is also available in the corresponding [Github repository](https://github.com/phil-opp/blog_os).
+این مجموعه بلاگ یک سیستم عامل کوچک در [زبان برنامه نویسی Rust](https://www.rust-lang.org/) ایجاد می کند. هر پست یک آموزش کوچک است و شامل تمام کدهای مورد نیاز است ، بنابراین اگر دوست دارید می توانید آن را دنبال کنید. کد منبع نیز در [مخزن گیت‌هاب](https://github.com/phil-opp/blog_os) مربوطه موجود است.
 
-Latest post: <!-- latest-post -->
+اخرین پست: <!-- latest-post -->
 
 </div>
