@@ -14,7 +14,7 @@ icon = '''
 '''
 +++
 
-After exploring the boot process on both BIOS and UEFI-based systems, we create a minimal operating system kernel based on the [freestanding Rust binary] from the previous post. We then combine it with a bootloader to create a bootable disk image, which can be started in the [QEMU] emulator and on real hardware.
+In this post, we explore the boot process on both BIOS and UEFI-based systems. We then turn the [freestanding Rust binary] from the previous post into a minimal operating system kernel and combine it with a bootloader. The result is a bootable disk image, which can be started in the [QEMU] emulator and run on real hardware.
 
 [freestanding Rust binary]: @/edition-3/posts/01-freestanding-binary/index.md
 
