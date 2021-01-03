@@ -15,11 +15,11 @@
         <h2 class="post-title"><a href="{{ post.path | safe }}">{{ post.title }}</a></h2>
         <div class="post-summary">
             {{ post.summary | safe }}
-            <a class="read-more" href="{{ post.path | safe }}"><em>read&nbsp;more&nbsp;»</em></a>
+	    <a class="read-more" href="{{ post.path | safe }}"><em>{{ trans(key="readmore", lang=lang) }}</em></a>
 
             {%- if lang and not_translated and lang != config.default_language -%}
             <aside class="no-translation">
-                (This post is not translated yet.)
+                {{ trans(key="not_translated", lang=lang) }}
             </aside>
             {%- endif -%}
         </div>
@@ -28,7 +28,7 @@
 
 {% macro toc(toc) %}
     <details id = "toc-inline">
-        <summary><b>Table of Contents</b></summary>
+        <summary><b>{{ trans(key="toc", lang=lang) }}</b></summary>
         <ul>
             {% for h2 in toc %}<li>
                 <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
@@ -38,7 +38,7 @@
                     </li>{% endfor %}
                 </ul>{% endif %}
             </li>{% endfor %}
-            <li class="toc-comments-link"><a href="#comments">Comments</a></li>
+	    <li class="toc-comments-link"><a href="#comments">{{ trans(key="comments", lang=lang) }}</a></li>
         </ul>
     </details>
 {% endmacro toc %}
