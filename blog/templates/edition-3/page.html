@@ -1,6 +1,7 @@
 {% extends "edition-3/base.html" %}
 
-{% import "macros.html" as macros %}
+{% import "edition-3/macros.html" as macros %}
+{% import "snippets.html" as snippets %}
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block header %}
@@ -80,7 +81,7 @@
 
     <div class="post-footer-support">
         <h2>Support Me</h2>
-        {% include "support.html" %}
+        {{ snippets::support() }}
     </div>
 
     <hr>
@@ -103,7 +104,7 @@
         </p>
         {% endif %}
 
-        {{ macros::utterances_edition_3() }}
+        {{ macros::utterances() }}
     </section>
 
     <aside class="page-aside-right">

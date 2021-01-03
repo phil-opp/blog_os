@@ -1,6 +1,7 @@
 {% extends "edition-3/foundation.html" %}
 
-{% import "macros.html" as macros %}
+{% import "edition-3/macros.html" as macros %}
+{% import "snippets.html" as snippets %}
 
 {% block title %}{{ config.title }}{% endblock title %}
 
@@ -48,7 +49,7 @@
         <ul>
     {%- endif -%}
 
-    <li>{{ macros::post_link_edition_3(page=post) }}</li>
+    <li>{{ macros::post_link(page=post) }}</li>
 {%- endfor -%}
 </ul></div>
 
@@ -91,7 +92,7 @@
 
 <div class="">
     <h2>Support Me</h2>
-    {% include "support.html" %}
+    {{ snippets::support() }}
 </div>
 {% endblock main %}
 
