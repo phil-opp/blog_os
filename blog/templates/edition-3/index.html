@@ -44,7 +44,9 @@
         <div class="posts {{chapter_slug}}">
         {% set chapter_page = get_page(path = "edition-3/chapters/" ~ chapter_slug ~ ".md" ) %}
         <h2>{{ chapter_page.title }}</h2>
-        {{ chapter_page.content | safe }}
+        <div class="chapter-introduction">
+            {{ chapter_page.content | safe }}
+        </div>
 
         <ul>
     {%- endif -%}
