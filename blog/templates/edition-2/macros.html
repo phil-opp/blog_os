@@ -1,12 +1,17 @@
+{% macro latest_post(posts) %}
+    {% set post = posts|last %}
+    <strong><a href="{{ post.path | safe }}">{{ post.title }}</a></strong>
+{% endmacro latest_post %}
+
 {% macro post_link(page) %}
-    <div>
-        {% set translations = page.translations | filter(attribute="lang", value=lang) -%}
-        {%- if translations -%}
-            {%- set post = get_page(path = translations.0.path) -%}
-        {%- else -%}
-            {%- set post = page -%}
-            {%- set not_translated = true -%}
-        {%- endif -%}
+    {% set translations = page.translations | filter(attribute="lang", value=lang) -%}
+    {%- if translations -%}
+        {%- set post = get_page(path = translations.0.path) -%}
+    {%- else -%}
+        {%- set post = page -%}
+        {%- set not_translated = true -%}
+    {%- endif -%}
+    <div{% if post.extra.rtl %} class="right-to-left"{% endif %}>
         <h2 class="post-title"><a href="{{ post.path | safe }}">{{ post.title }}</a></h2>
         <div class="post-summary">
             {{ post.summary | safe }}
@@ -47,15 +52,6 @@
     </div>
 {% endmacro post_link %}
 
-{% macro utterances() %}
-    <script src="https://utteranc.es/client.js"
-        data-repo="phil-opp/blog_os"
-        data-issue-term="url"
-        data-label="comments"
-        crossorigin="anonymous"
-        async>
-    </script>
-{% endmacro utterances %}
 
 {% macro utterances_edition_3() %}
     <script src="https://utteranc.es/client.js"
@@ -67,7 +63,6 @@
         async>
     </script>
 {% endmacro utterances_edition_3 %}
-
 {% macro toc(toc) %}
     <details id = "toc-inline">
         <summary><b>Table of Contents</b></summary>

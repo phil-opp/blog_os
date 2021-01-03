@@ -1,11 +1,3 @@
-@font-face {
-  font-family: "Iosevka";
-  src: url("/fonts/iosevka-regular.woff2") format("woff2"), url("/fonts/iosevka-regular.woff") format("woff");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
 h1 code, h2 code, h3 code, h4 code, h5 code, h6 code {
   padding: 0;
   color: #a0565c;

@@ -715,8 +715,6 @@ Now we're ready to add a few test cases. First, we add a test that performs some
 
 ```rust
 // in tests/heap_allocation.rs
-
-use blog_os::{serial_print, serial_println};
 use alloc::boxed::Box;
 
 #[test_case]

@@ -214,6 +214,8 @@ For specifying the exit status, we create a `QemuExitCode` enum. The idea is to 
 We can now update our `test_runner` to exit QEMU after all tests ran:
 
 ```rust
+// in src/main.rs
+
 fn test_runner(tests: &[&dyn Fn()]) {
     println!("Running {} tests", tests.len());
     for test in tests {
@@ -246,6 +248,8 @@ The problem is that `cargo test` considers all error codes other than `0` as fai
 To work around this, `bootimage` provides a `test-success-exit-code` configuration key that maps a specified exit code to the exit code `0`:
 
 ```toml
+# in Cargo.toml
+
 [package.metadata.bootimage]
 test-args = […]
 test-success-exit-code = 33         # (0x10 << 1) | 1
@@ -315,6 +319,8 @@ Like the `isa-debug-exit` device, the UART is programmed using port I/O. Since t
 To make the serial port easily usable, we add `serial_print!` and `serial_println!` macros:
 
 ```rust
+// in src/serial.rs
+
 #[doc(hidden)]
 pub fn _print(args: ::core::fmt::Arguments) {
     use core::fmt::Write;
@@ -406,6 +412,8 @@ To exit QEMU with an error message on a panic, we can use [conditional compilati
 [conditional compilation]: https://doc.rust-lang.org/1.30.0/book/first-edition/conditional-compilation.html
 
 ```rust
+// in src/main.rs
+
 // our existing panic handler
 #[cfg(not(test))] // new attribute
 #[panic_handler]
@@ -786,7 +794,7 @@ We make the modules public to make them usable from outside of our library. This
 Now we can update our `main.rs` to use the library:
 
 ```rust
-// src/main.rs
+// in src/main.rs
 
 #![no_std]
 #![no_main]

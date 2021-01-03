@@ -68,6 +68,8 @@ The goal of this project is to provide step-by-step tutorials in individual blog
 
 The current version of the blog is already the second edition. The first edition is outdated and no longer maintained, but might still be useful. The posts of the first edition are:
 
+<details><summary><i>Click to expand</i></summary>
+
 **Bare Bones:**
 
 - [A Minimal x86 Kernel](https://os.phil-opp.com/multiboot-kernel.html)
@@ -109,6 +111,8 @@ The current version of the blog is already the second edition. The first edition
           ([source code](https://github.com/phil-opp/blog_os/tree/better_exception_messages))
     - [Returning from Exceptions](https://os.phil-opp.com/returning-from-exceptions.html)
           ([source code](https://github.com/phil-opp/blog_os/tree/returning_from_exceptions))
+
+</details>
 
 ## License
 
