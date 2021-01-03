@@ -17,7 +17,7 @@
 {%- endblock description %}
 
 {% block toc_aside %}
-<aside id="toc-aside">
+<aside id="toc-aside" class="{% if page.extra.rtl %}right-to-left{% endif %}">
 	<h2>{{ trans(key="toc", lang=lang) }}</h2>
     <ol>
         {% for h2 in page.toc %}<li>
@@ -49,6 +49,7 @@
         </div>
     {% endif %}
 
+
     {%- if page.lang != "en" %}
         <div class="warning">
             {% set translations = page.translations | filter(attribute="lang", value="en") %}
@@ -75,7 +76,7 @@
     </div>
 
     <div class="post-footer-support{% if page.extra.rtl %} right-to-left{% endif %}">
-        <h2>{{ trans(key="support_me", lang=lang) }}</h2>
+        <h2>Support Me</h2>
         {{ snippets::support() }}
     </div>
 
@@ -102,10 +103,10 @@
         {{ snippets::utterances() }}
     </section>
 
-    <aside class="page-aside-right{% if page.extra.rtl %} right-to-left{% endif %}">
+    <aside class="page-aside-right">
         {% if page.translations -%}
         <div class="block" id="language-selector">
-            <h2>{{ trans(key="other_languages", lang=lang) }}</h2>
+            <h2>Other Languages</h2>
             <ul>{%- for translation in page.translations | sort(attribute="lang") %}
                 <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">
                     {%- if translation.lang == "en" -%}
@@ -118,10 +119,10 @@
         </div>
         {%- endif %}
 
-        <div class="block">
-            <h2>{{ trans(key="about_me", lang=lang) }}</h2>
+        <div class="block{% if page.extra.rtl %} left-to-right{% endif %}">
+            <h2>About Me</h2>
             <p>
-	        {{ trans(key="about_me_text_1", lang=lang) }}
+	        I'm a Rust freelancer with a master's degree in computer science. I love systems programming, open source software, and new challenges.
             </p><p>
                 If you want to work with me, reach out on <a href = \"https://www.linkedin.com/in/phil-opp/\">LinkedIn</a> or write me at <a href=\"mailto:job@phil-opp.com\">job@phil-opp.com</a>.
             </p>
