@@ -18,7 +18,7 @@
 
 {% block toc_aside %}
 <aside id="toc-aside" class="{% if page.extra.rtl %}right-to-left{% endif %}">
-	<h2>{{ trans(key="toc", lang=lang) }}</h2>
+        <h2>{{ trans(key="toc", lang=lang) }}</h2>
     <ol>
         {% for h2 in page.toc %}<li>
             <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
@@ -28,7 +28,7 @@
                 </li>{% endfor %}
             </ol>{% endif %}
         </li>{% endfor %}
-	<li class="toc-comments-link"><a href="#comments">{{ trans(key="comments", lang=lang) }}</a></li>
+        <li class="toc-comments-link"><a href="#comments">{{ trans(key="comments", lang=lang) }}</a></li>
     </ol>
 </aside>
 {% endblock toc_aside %}
@@ -55,16 +55,16 @@
             {% set translations = page.translations | filter(attribute="lang", value="en") %}
             {% set original = translations.0 %}
             <p>
-	    <b>{{ trans(key="translated_content", lang=lang) }}</b>
-	    {{ trans(key="translated_content_notice", lang=lang) | 
-	        replace(from="_original.permalink_", to=original.permalink) | 
-	        replace(from="_original.title_", to=original.title) | safe }}
+            <b>{{ trans(key="translated_content", lang=lang) }}</b>
+            {{ trans(key="translated_content_notice", lang=lang) |
+                replace(from="_original.permalink_", to=original.permalink) |
+                replace(from="_original.title_", to=original.title) | safe }}
             </p>
             {%- if page.extra.translators %}
             <p>
                 {{ trans(key="translated_by", lang=lang) }} {% for user in page.extra.translators -%}
                     {%- if not loop.first -%}
-		        {%- if loop.last %} {{ trans(key="word_seprator", lang=lang) }} {% else %}, {% endif -%}
+                        {%- if loop.last %} {{ trans(key="word_separator", lang=lang) }} {% else %}, {% endif -%}
                     {%- endif -%}
                     <a href="https://github.com/{{user}}">@{{user}}</a>
                 {%- endfor %}.
@@ -73,7 +73,7 @@
         </div>
     {% endif %}
 
-    <div class="{% if page.extra.rtl %}right-to-left{% endif %}">	
+    <div class="{% if page.extra.rtl %}right-to-left{% endif %}">
     {{ page.content | replace(from="<!-- toc -->", to=macros::toc(toc=page.toc))  | safe }}
     </div>
 
@@ -98,7 +98,7 @@
 
         {%- if page.lang != "en" %}
         <p class="{% if page.extra.rtl %}right-to-left{% endif %}">
-	    {{ trans(key="comments_notice", lang=lang) }}
+            {{ trans(key="comments_notice", lang=lang) }}
         </p>
         {% endif %}
 
@@ -124,9 +124,9 @@
         <div class="block{% if page.extra.rtl %} left-to-right{% endif %}">
             <h2>About Me</h2>
             <p>
-	        I'm a Rust freelancer with a master's degree in computer science. I love systems programming, open source software, and new challenges.
+                I'm a Rust freelancer with a master's degree in computer science. I love systems programming, open source software, and new challenges.
             </p><p>
-                If you want to work with me, reach out on <a href = \"https://www.linkedin.com/in/phil-opp/\">LinkedIn</a> or write me at <a href=\"mailto:job@phil-opp.com\">job@phil-opp.com</a>.
+                If you want to work with me, reach out on <a href="https://www.linkedin.com/in/phil-opp/">LinkedIn</a> or write me at <a href="mailto:job@phil-opp.com">job@phil-opp.com</a>.
             </p>
         </div>
     </aside>

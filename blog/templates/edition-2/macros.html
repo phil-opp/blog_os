@@ -15,7 +15,7 @@
         <h2 class="post-title"><a href="{{ post.path | safe }}">{{ post.title }}</a></h2>
         <div class="post-summary">
             {{ post.summary | safe }}
-	    <a class="read-more" href="{{ post.path | safe }}"><em>{{ trans(key="readmore", lang=lang) | safe }}</em></a>
+            <a class="read-more" href="{{ post.path | safe }}"><em>{{ trans(key="readmore", lang=lang) | safe }}</em></a>
 
             {%- if lang and not_translated and lang != config.default_language -%}
             <aside class="no-translation">
@@ -38,7 +38,7 @@
                     </li>{% endfor %}
                 </ul>{% endif %}
             </li>{% endfor %}
-	    <li class="toc-comments-link"><a href="#comments">{{ trans(key="comments", lang=lang) }}</a></li>
+            <li class="toc-comments-link"><a href="#comments">{{ trans(key="comments", lang=lang) }}</a></li>
         </ul>
     </details>
 {% endmacro toc %}
