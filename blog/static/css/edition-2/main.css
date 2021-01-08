@@ -452,8 +452,9 @@ a strong {
 
 .right-to-left {
 	direction: rtl;
+	font-family: Vazir;
 }
 
-.left-to-right, .right-to-left pre, .right-to-left table {
+.left-to-right, .right-to-left pre, .right-to-left table, .right-to-left[id="toc-aside"] {
 	direction: ltr;
 }

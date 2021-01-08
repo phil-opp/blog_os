@@ -6,9 +6,9 @@
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block header %}
     {% if lang != "en" -%}
-    <aside id="all-posts-link"><a href="{{ config.base_url | safe }}/{{ lang }}" title="All Posts">« All Posts</a></aside>
+    <aside id="all-posts-link"><a href="{{ config.base_url | safe }}/{{ lang }}" title="All Posts">{{ trans(key="all_posts", lang=lang) }}</a></aside>
     {%- else -%}
-    <aside id="all-posts-link"><a href="{{ config.base_url | safe }}" title="All Posts">« All Posts</a></aside>
+    <aside id="all-posts-link"><a href="{{ config.base_url | safe }}" title="All Posts">{{ trans(key="all_posts", lang=lang) }}</a></aside>
     {%- endif %}
 {% endblock header %}
 
@@ -17,8 +17,8 @@
 {%- endblock description %}
 
 {% block toc_aside %}
-<aside id="toc-aside">
-    <h2>Table of Contents</h2>
+<aside id="toc-aside" class="{% if page.extra.rtl %}right-to-left{% endif %}">
+        <h2>{{ trans(key="toc", lang=lang) }}</h2>
     <ol>
         {% for h2 in page.toc %}<li>
             <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
@@ -28,7 +28,7 @@
                 </li>{% endfor %}
             </ol>{% endif %}
         </li>{% endfor %}
-        <li class="toc-comments-link"><a href="#comments">Comments</a></li>
+        <li class="toc-comments-link"><a href="#comments">{{ trans(key="comments", lang=lang) }}</a></li>
     </ol>
 </aside>
 {% endblock toc_aside %}
@@ -49,19 +49,22 @@
         </div>
     {% endif %}
 
+
     {%- if page.lang != "en" %}
-        <div class="warning">
+        <div class="warning{% if page.extra.rtl %} right-to-left{% endif %}">
             {% set translations = page.translations | filter(attribute="lang", value="en") %}
             {% set original = translations.0 %}
             <p>
-            <b>Translated Content:</b>
-                This is a community translation of the <strong><a href="{{ original.permalink }}">{{ original.title }}</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!
+            <b>{{ trans(key="translated_content", lang=lang) }}</b>
+            {{ trans(key="translated_content_notice", lang=lang) |
+                replace(from="_original.permalink_", to=original.permalink) |
+                replace(from="_original.title_", to=original.title) | safe }}
             </p>
             {%- if page.extra.translators %}
             <p>
-                Translation by {% for user in page.extra.translators -%}
+                {{ trans(key="translated_by", lang=lang) }} {% for user in page.extra.translators -%}
                     {%- if not loop.first -%}
-                        {%- if loop.last %}, and {% else %}, {% endif -%}
+                        {%- if loop.last %} {{ trans(key="word_separator", lang=lang) }} {% else %}, {% endif -%}
                     {%- endif -%}
                     <a href="https://github.com/{{user}}">@{{user}}</a>
                 {%- endfor %}.
@@ -70,11 +73,11 @@
         </div>
     {% endif %}
 
-    <div class="{% if page.extra.rtl %}right-to-left{% endif %}">	
+    <div class="{% if page.extra.rtl %}right-to-left{% endif %}">
     {{ page.content | replace(from="<!-- toc -->", to=macros::toc(toc=page.toc))  | safe }}
     </div>
 
-    <div class="post-footer-support">
+    <div class="post-footer-support{% if page.extra.rtl %} right-to-left{% endif %}">
         <h2>Support Me</h2>
         {{ snippets::support() }}
     </div>
@@ -91,11 +94,11 @@
 
     <hr>
     <section>
-        <h2 id="comments">Comments</h2>
+        <h2 id="comments" class="{% if page.extra.rtl %}right-to-left{% endif %}">{{ trans(key="comments", lang=lang) }}</h2>
 
         {%- if page.lang != "en" %}
-        <p>
-            Please leave your comments in English if possible.
+        <p class="{% if page.extra.rtl %}right-to-left{% endif %}">
+            {{ trans(key="comments_notice", lang=lang) }}
         </p>
         {% endif %}
 
@@ -118,12 +121,12 @@
         </div>
         {%- endif %}
 
-        <div class="block">
+        <div class="block{% if page.extra.rtl %} left-to-right{% endif %}">
             <h2>About Me</h2>
             <p>
                 I'm a Rust freelancer with a master's degree in computer science. I love systems programming, open source software, and new challenges.
             </p><p>
-                If you want to work with me, reach out on <a href = "https://www.linkedin.com/in/phil-opp/">LinkedIn</a> or write me at <a href="mailto:job@phil-opp.com">job@phil-opp.com</a>.
+                If you want to work with me, reach out on <a href="https://www.linkedin.com/in/phil-opp/">LinkedIn</a> or write me at <a href="mailto:job@phil-opp.com">job@phil-opp.com</a>.
             </p>
         </div>
     </aside>
