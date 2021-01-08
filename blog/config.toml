@@ -43,7 +43,7 @@ readmore = "read&nbsp;more&nbsp;»"
 not_translated = "(This post is not translated yet.)"
 translated_content = "Translated Content:"
 translated_content_notice = "This is a community translation of the <strong><a href=\"_original.permalink_\">_original.title_</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!"
-translated_by = "Translation By"
+translated_by = "Translation by"
 word_separator = "and"
 
 [translations.zh-CN]
@@ -56,7 +56,7 @@ readmore = "read&nbsp;more&nbsp;»"
 not_translated = "(This post is not translated yet.)"
 translated_content = "Translated Content:"
 translated_content_notice = "This is a community translation of the <strong><a href=\"_original.permalink_\">_original.title_</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!"
-translated_by = "Translation By"
+translated_by = "Translation by"
 word_separator = "and"
 
 [translations.zh-TW]
@@ -69,7 +69,7 @@ readmore = "read&nbsp;more&nbsp;»"
 not_translated = "(This post is not translated yet.)"
 translated_content = "Translated Content:"
 translated_content_notice = "This is a community translation of the <strong><a href=\"_original.permalink_\">_original.title_</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!"
-translated_by = "Translation By"
+translated_by = "Translation by"
 word_separator = "and"
 
 [translations.ja]
@@ -82,7 +82,7 @@ readmore = "read&nbsp;more&nbsp;»"
 not_translated = "(This post is not translated yet.)"
 translated_content = "Translated Content:"
 translated_content_notice = "This is a community translation of the <strong><a href=\"_original.permalink_\">_original.title_</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!"
-translated_by = "Translation By"
+translated_by = "Translation by"
 word_separator = "and"
 
 [translations.fa]
