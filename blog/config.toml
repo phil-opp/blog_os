@@ -35,7 +35,7 @@ author = { name = "Philipp Oppermann" }
 
 [translations.en]
 lang_name = "English"
-toc = "Table Of Contents"
+toc = "Table of Contents"
 all_posts = "« All Posts"
 comments = "Comments"
 comments_notice = "Please leave your comments in English if possible."
@@ -48,7 +48,7 @@ word_separator = "and"
 
 [translations.zh-CN]
 lang_name = "Chinese (simplified)"
-toc = "Table Of Contents"
+toc = "Table of Contents"
 all_posts = "« All Posts"
 comments = "Comments"
 comments_notice = "Please leave your comments in English if possible."
@@ -61,7 +61,7 @@ word_separator = "and"
 
 [translations.zh-TW]
 lang_name = "Chinese (traditional)"
-toc = "Table Of Contents"
+toc = "Table of Contents"
 all_posts = "« All Posts"
 comments = "Comments"
 comments_notice = "Please leave your comments in English if possible."
@@ -74,7 +74,7 @@ word_separator = "and"
 
 [translations.ja]
 lang_name = "Japanese"
-toc = "Table Of Contents"
+toc = "Table of Contents"
 all_posts = "« All Posts"
 comments = "Comments"
 comments_notice = "Please leave your comments in English if possible."
