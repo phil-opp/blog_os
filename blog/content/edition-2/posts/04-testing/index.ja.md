@@ -1,5 +1,5 @@
 +++
-title = "Testing"
+title = "テスト"
 weight = 4
 path = "ja/testing"
 date = 2019-04-27
@@ -12,11 +12,11 @@ translation_based_on_commit = "dce5c9825bd4e7ea6c9530e999c9d58f80c585cc"
 translators = ["woodyZootopia"]
 +++
 
-This post explores unit and integration testing in `no_std` executables. We will use Rust's support for custom test frameworks to execute test functions inside our kernel. To report the results out of QEMU, we will use different features of QEMU and the `bootimage` tool.
+この記事では、`no_std`な実行環境における<ruby>単体テスト<rp> (</rp><rt>unit test</rt><rp>) </rp></ruby>と<ruby>結合テスト<rp> (</rp><rt>integration test</rt><rp>) </rp></ruby>について学びます。Rustではカスタムテストフレームワークがサポートされているので、これを使ってカーネルの中でテスト関数を実行します。QEMUの外へとテストの結果を通知するため、QEMUと`bootimage`の様々な機能を使います。
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-04`][post branch] branch.
+このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください (訳注: リンクは原文(英語)のものになります)。また[こちら][at the bottom]にコメントを残すこともできます。この記事の完全なソースコードは[`post-04` ブランチ][post branch]にあります。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -24,49 +24,54 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 <!-- toc -->
 
-## Requirements
+## この記事を読む前に
 
-This post replaces the (now deprecated) [_Unit Testing_] and [_Integration Tests_] posts. It assumes that you have followed the [_A Minimal Rust Kernel_] post after 2019-04-27. Mainly, it requires that you have a `.cargo/config.toml` file that [sets a default target] and [defines a runner executable].
+この記事は、（古い版の）[単体テスト][_Unit Testing_]と[結合テスト][_Integration Tests_]の記事を置き換えるものです。この記事は、あなたが[最小のカーネル][_A Minimal Rust Kernel_]の記事を2019-04-27以降に読まれたことを前提にしています。おおよそ、あなたの`.cargo/config.toml`ファイルが[標準のターゲットを設定して][sets a default target]おり、[ランナー実行ファイルを定義している][defines a runner executable]ことが条件となります。
+
+<div class="note">
+
+**訳注:**  [最小のカーネル][_A Minimal Rust Kernel_]の記事が日本語に翻訳されたのはこの日より後なので、あなたがこのサイトを日本語で閲覧している場合は特に問題はありません。
+
+</div>
 
 [_Unit Testing_]: @/edition-2/posts/deprecated/04-unit-testing/index.md
 [_Integration Tests_]: @/edition-2/posts/deprecated/05-integration-tests/index.md
-[_A Minimal Rust Kernel_]: @/edition-2/posts/02-minimal-rust-kernel/index.md
-[sets a default target]: @/edition-2/posts/02-minimal-rust-kernel/index.md#set-a-default-target
-[defines a runner executable]: @/edition-2/posts/02-minimal-rust-kernel/index.md#using-cargo-run
+[_A Minimal Rust Kernel_]: @/edition-2/posts/02-minimal-rust-kernel/index.ja.md
+[sets a default target]: @/edition-2/posts/02-minimal-rust-kernel/index.ja.md#biao-zhun-notagetutowosetutosuru
+[defines a runner executable]: @/edition-2/posts/02-minimal-rust-kernel/index.ja.md#cargo-runwoshi-u
 
-## Testing in Rust
+## Rustにおけるテスト
 
-Rust has a [built-in test framework] that is capable of running unit tests without the need to set anything up. Just create a function that checks some results through assertions and add the `#[test]` attribute to the function header. Then `cargo test` will automatically find and execute all test functions of your crate.
+Rustは[テストフレームワークが組み込まれて][built-in test framework]おり、なにも設定することなく単体テストを走らせることができます。何らかの結果をアサーションを使って確認する関数を作り、その関数のヘッダに`#[test]`属性をつけるだけです。その上で`cargo test`を実行すると、あなたのクレートのすべてのテスト関数を自動で見つけて実行してくれます。
 
-[built-in test framework]: https://doc.rust-lang.org/book/second-edition/ch11-00-testing.html
+[built-in test framework]: https://doc.rust-jp.rs/book-ja/ch11-00-testing.html
 
-Unfortunately it's a bit more complicated for `no_std` applications such as our kernel. The problem is that Rust's test framework implicitly uses the built-in [`test`] library, which depends on the standard library. This means that we can't use the default test framework for our `#[no_std]` kernel.
+残念なことに、私達のカーネルのような`no_std`のアプリケーションにとっては、テストは少しややこしくなります。問題なのは、Rustのテストフレームワークは組み込みの[`test`]ライブラリを内部で使っており、これは標準ライブラリに依存しているということです。つまり、私達の`#[no_std]`のカーネルには標準のテストフレームワークは使えないのです。
 
 [`test`]: https://doc.rust-lang.org/test/index.html
 
-We can see this when we try to run `cargo test` in our project:
+私達のプロジェクト内で`cargo test`を実行しようとすればそれがわかります：
 
 ```
 > cargo test
    Compiling blog_os v0.1.0 (/…/blog_os)
 error[E0463]: can't find crate for `test`
 ```
-
-Since the `test` crate depends on the standard library, it is not available for our bare metal target. While porting the `test` crate to a `#[no_std]` context [is possible][utest], it is highly unstable and requires some hacks such as redefining the `panic` macro.
+`test`クレートは標準ライブラリに依存しているので、私達のベアメタルのターゲットでは使えません。`test`クレートを`#[no_std]`環境に持ってくるということは[不可能ではない][utest]のですが、非常に不安定であり、また`panic`マクロの再定義といった<ruby>技巧<rp> (</rp><rt>ハック</rt><rp>) </rp></ruby>が必要になってしまいます。
 
 [utest]: https://github.com/japaric/utest
 
-### Custom Test Frameworks
+### 独自のテストフレームワーク
 
-Fortunately, Rust supports replacing the default test framework through the unstable [`custom_test_frameworks`] feature. This feature requires no external libraries and thus also works in `#[no_std]` environments. It works by collecting all functions annotated with a `#[test_case]` attribute and then invoking a user-specified runner function with the list of tests as argument. Thus it gives the implementation maximal control over the test process.
+ありがたいことに、Rustでは、不安定な[<ruby>`custom_test_frameworks`<rp> (</rp><rt>独自のテストフレームワーク</rt><rp>) </rp></ruby>][`custom_test_frameworks`]機能を使えば標準のテストフレームワークを置き換えることができます。この機能には外部ライブラリは必要なく、したがって`#[no_std]`環境でも動きます。これは、`#[test_case]`属性をつけられたすべての関数を集めたものをリストにして、それを引数としてユーザの指定した実行関数を呼び出すことで働きます。こうすることで、（実行関数の）実装内容によってテストプロセスを最大限コントロールできるようにしているのです。
 
 [`custom_test_frameworks`]: https://doc.rust-lang.org/unstable-book/language-features/custom-test-frameworks.html
 
-The disadvantage compared to the default test framework is that many advanced features such as [`should_panic` tests] are not available. Instead, it is up to the implementation to provide such features itself if needed. This is ideal for us since we have a very special execution environment where the default implementations of such advanced features probably wouldn't work anyway. For example, the `#[should_panic]` attribute relies on stack unwinding to catch the panics, which we disabled for our kernel.
+標準のテストフレームワークと比べた欠点は、[`should_panic`テスト][`should_panic` tests]のような多くの高度な機能が利用できないということです。それらの機能が必要なら、自分で実装して提供してください、というわけです。これは私達にとって全く申し分のないことで、というのも、私達の非常に特殊な実行環境では、それらの高度な機能の標準の実装はいずれにせようまく働かないだろうからです。例えば、`#[should_panic]`属性はパニックを検知するためにスタックアンワインドを使いますが、これは私達のカーネルでは無効化しています。
 
-[`should_panic` tests]: https://doc.rust-lang.org/book/ch11-01-writing-tests.html#checking-for-panics-with-should_panic
+[`should_panic` tests]: https://doc.rust-jp.rs/book-ja/ch11-01-writing-tests.html#should_panicでパニックを確認する
 
-To implement a custom test framework for our kernel, we add the following to our `main.rs`:
+私達のカーネルのための独自テストフレームワークを実装するため、以下を`main.rs`に追記します：
 
 ```rust
 // in src/main.rs
@@ -83,21 +88,21 @@ fn test_runner(tests: &[&dyn Fn()]) {
 }
 ```
 
-Our runner just prints a short debug message and then calls each test function in the list. The argument type `&[&dyn Fn()]` is a [_slice_] of [_trait object_] references of the [_Fn()_] trait. It is basically a list of references to types that can be called like a function. Since the function is useless for non-test runs, we use the `#[cfg(test)]` attribute to include it only for tests.
+このランナーは短いデバッグメッセージを表示し、リスト内のそれぞれの関数を呼び出すだけです。引数の型である`&[&dyn Fn()]`は、[Fn()][_Fn()_]トレイトの[トレイトオブジェクト][_trait object_]参照の[スライス][_slice_]です。これは要するに、関数のように呼び出せる型への参照のリストです。この (test_runner) 関数はテストでない実行のときには意味がないので、`#[cfg(test)]`属性を使って、テスト時にのみこれがインクルードされるようにします。
 
 [_slice_]: https://doc.rust-lang.org/std/primitive.slice.html
-[_trait object_]: https://doc.rust-lang.org/1.30.0/book/first-edition/trait-objects.html
+[_trait object_]: https://doc.rust-jp.rs/book-ja/ch17-02-trait-objects.html
 [_Fn()_]: https://doc.rust-lang.org/std/ops/trait.Fn.html
 
-When we run `cargo test` now, we see that it now succeeds (if it doesn't, see the note below). However, we still see our "Hello World" instead of the message from our `test_runner`. The reason is that our `_start` function is still used as entry point. The custom test frameworks feature generates a `main` function that calls `test_runner`, but this function is ignored because we use the `#[no_main]` attribute and provide our own entry point.
+`cargo test`を実行すると、今度は成功しているはずです（もし失敗したなら、下の補足を読んでください）。しかし、依然として、`test_runner`からのメッセージではなく "Hello World" が表示されてしまっています。この理由は、`_start`関数がまだエントリポイントとして使われているからです。「独自のテストフレームワーク」機能は`test_runner`を呼び出す`main`関数を生成するのですが、私達は`#[no_main]`属性を使っており、独自のエントリポイントを与えてしまっているため、このmain関数は無視されてしまうのです。
 
 <div class = "warning">
 
-**Note:** There is currently a bug in cargo that leads to "duplicate lang item" errors on `cargo test` in some cases. It occurs when you have set `panic = "abort"` for a profile in your `Cargo.toml`. Try removing it, then `cargo test` should work. See the [cargo issue](https://github.com/rust-lang/cargo/issues/7359) for more information on this.
+**補足:** 現在、cargoには`cargo test`を実行すると、いくらかのケースにおいて "duplicate lang item" エラーになってしまうバグが存在します。これは、`Cargo.toml`内のプロファイルにおいて`panic = "abort"`を設定していたときに起こります。これを取り除けば`cargo test`はうまく行くはずです。これについて、より詳しく知りたい場合は[cargoのissue](https://github.com/rust-lang/cargo/issues/7359)を読んでください。
 
 </div>
 
-To fix this, we first need to change the name of the generated function to something different than `main` through the `reexport_test_harness_main` attribute. Then we can call the renamed function from our `_start` function:
+これを修正するために、まず生成される関数の名前を`reexport_test_harness_main`属性を使って`main`とは違うものに変える必要があります。そして、その<ruby>改名<rp> (</rp><rt>リネーム</rt><rp>) </rp></ruby>された関数を`_start`関数から呼び出せばよいです。
 
 ```rust
 // in src/main.rs
@@ -115,37 +120,37 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-We set the name of the test framework entry function to `test_main` and call it from our `_start` entry point. We use [conditional compilation] to add the call to `test_main` only in test contexts because the function is not generated on a normal run.
+テストフレームワークのエントリ関数の名前を`test_main`に設定し、私達の`_start`エントリポイントから呼び出しています。`test_main`関数は通常の実行時には生成されていないので、[条件付きコンパイル][conditional compilation]を用いて、テスト時にのみこの関数への呼び出しが追記されるようにしています。
 
-When we now execute `cargo test`, we see the "Running 0 tests" message from our `test_runner` on the screen. We are now ready to create our first test function:
+`cargo test`を実行すると、 `test_runner`からの "Running 0 tests" というメッセージが画面に見えます。これで、テスト関数を作り始める準備ができました：
 
 ```rust
 // in src/main.rs
 
 #[test_case]
 fn trivial_assertion() {
-    print!("trivial assertion... ");
+    print!("trivial assertion... "); // "些末なアサーション……"
     assert_eq!(1, 1);
     println!("[ok]");
 }
 ```
 
-When we run `cargo test` now, we see the following output:
+`cargo test`を実行すると、以下の出力を得ます：
 
 ![QEMU printing "Hello World!", "Running 1 tests", and "trivial assertion... [ok]"](qemu-test-runner-output.png)
 
-The `tests` slice passed to our `test_runner` function now contains a reference to the `trivial_assertion` function. From the `trivial assertion... [ok]` output on the screen we see that the test was called and that it succeeded.
+今、`test_runner`関数に渡される`test`のスライスは、`trivial_assertion`関数への参照を保持しています。`trivial assertion... [ok]`という画面の出力から、テストが呼び出され成功したことがわかります。
 
-After executing the tests, our `test_runner` returns to the `test_main` function, which in turn returns to our `_start` entry point function. At the end of `_start`, we enter an endless loop because the entry point function is not allowed to return. This is a problem, because we want `cargo test` to exit after running all tests.
+テストを実行したあとは、`test_runner`から`test_main`関数へとリターンし、さらに`_start`エントリポイント関数へとリターンします。エントリポイント関数がリターンすることは認められていないので、`_start`の最後では無限ループに入ります。しかし、`cargo test`にはすべてのテストを実行し終わったあとには終了してほしいので、これは問題です。
 
-## Exiting QEMU
+## QEMUを終了する
 
-Right now we have an endless loop at the end of our `_start` function and need to close QEMU manually on each execution of `cargo test`. This is unfortunate because we also want to run `cargo test` in scripts without user interaction. The clean solution to this would be to implement a proper way to shutdown our OS. Unfortunately this is relatively complex, because it requires implementing support for either the [APM] or [ACPI] power management standard.
+今の所、`_start`関数の最後で無限ループがあるので、`cargo test`を実行するたびにQEMUを手動で終了しないといけません。ユーザによる入力などのないスクリプトでも`cargo test`を実行したいので、これは不都合です。これに対する綺麗な解決法はOSをシャットダウンする適切な方法を実装することでしょう。しかし、これは[APM]か[ACPI]というパワーマネジメント標準規格へのサポートを実装する必要があるので、残念なことに比較的複雑です。
 
 [APM]: https://wiki.osdev.org/APM
 [ACPI]: https://wiki.osdev.org/ACPI
 
-Luckily, there is an escape hatch: QEMU supports a special `isa-debug-exit` device, which provides an easy way to exit QEMU from the guest system. To enable it, we need to pass a `-device` argument to QEMU. We can do so by adding a `package.metadata.bootimage.test-args` configuration key in our `Cargo.toml`:
+嬉しいことに、ある「脱出口」があるのです。QEMUは特殊な`isa-debug-exit`デバイスをサポートしており、これを使うとゲストシステムから簡単にQEMUを終了できます。これを有効化するためには、QEMUに`-device`引数を渡す必要があります。これは`Cargo.toml`に`package.metadata.bootimage.test-args`設定キーを追加することで行えます。
 
 ```toml
 # in Cargo.toml
@@ -154,29 +159,29 @@ Luckily, there is an escape hatch: QEMU supports a special `isa-debug-exit` devi
 test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 ```
 
-The `bootimage runner` appends the `test-args` to the default QEMU command for all test executables. For a normal `cargo run`, the arguments are ignored.
+`bootimage runner`は、`test-args`をすべてのテスト実行可能ファイルの標準QEMUコマンドに追加します。通常の`cargo run`のとき、これらの引数は無視されます。
 
-Together with the device name (`isa-debug-exit`), we pass the two parameters `iobase` and `iosize` that specify the _I/O port_ through which the device can be reached from our kernel.
+デバイス名 (`isa-debug-exit`) に加え、カーネルからそのデバイスにたどり着くための **I/Oポート** を指定する`iobase`と`iosize`という2つのパラメータを渡しています。
 
-### I/O Ports
+### I/Oポート
 
-There are two different approaches for communicating between the CPU and peripheral hardware on x86, **memory-mapped I/O** and **port-mapped I/O**. We already used memory-mapped I/O for accessing the [VGA text buffer] through the memory address `0xb8000`. This address is not mapped to RAM, but to some memory on the VGA device.
+CPUと<ruby>周辺機器<rp> (</rp><rt>ペリフェラル</rt><rp>) </rp></ruby>が通信するやり方には、 **<ruby>memory-mapped<rp> (</rp><rt>メモリマップされた</rt><rp>) </rp></ruby> I/O** と **<ruby>port-mapped<rp> (</rp><rt>ポートマップされた</rt><rp>) </rp></ruby> I/O** の2つがあります。memory-mapped I/Oについては、すでに[VGAテキストバッファ][VGA text buffer]にメモリアドレス`0xb8000`を使ってアクセスしたときに使っています。このアドレスはRAMではなく、VGAデバイス上にあるメモリにマップされているのです。
 
-[VGA text buffer]: @/edition-2/posts/03-vga-text-buffer/index.md
+[VGA text buffer]: @/edition-2/posts/03-vga-text-buffer/index.ja.md
 
-In contrast, port-mapped I/O uses a separate I/O bus for communication. Each connected peripheral has one or more port numbers. To communicate with such an I/O port there are special CPU instructions called `in` and `out`, which take a port number and a data byte (there are also variations of these commands that allow sending an `u16` or `u32`).
+一方、port-mapped I/Oは通信に別個のI/Oバスを使います。接続されたそれぞれの周辺機器は1つ以上のポート番号を持っています。それらのI/Oポートと通信するために、`in`と`out`という特別なCPU命令があり、これらはポート番号と1バイトのデータを受け取ります（`u16`や`u32`を送信できる、これらの亜種も存在します）。
 
-The `isa-debug-exit` devices uses port-mapped I/O. The `iobase` parameter specifies on which port address the device should live (`0xf4` is a [generally unused][list of x86 I/O ports] port on the x86's IO bus) and the `iosize` specifies the port size (`0x04` means four bytes).
+`isa-debug-exit`はこのport-mapped I/Oを使います。`iobase`パラメータはどのポートにこのデバイスが繋がれているのか（`0xf4`はx86のI/Oバスにおいて[普通使われない][list of x86 I/O ports]ポートです）を、`iosize`はポートの大きさ（`0x04`は4バイトを意味します）を指定します。
 
 [list of x86 I/O ports]: https://wiki.osdev.org/I/O_Ports#The_list
 
-### Using the Exit Device
+### 「終了デバイス」を使う
 
-The functionality of the `isa-debug-exit` device is very simple. When a `value` is written to the I/O port specified by `iobase`, it causes QEMU to exit with [exit status] `(value << 1) | 1`. So when we write `0` to the port QEMU will exit with exit status `(0 << 1) | 1 = 1` and when we write `1` to the port it will exit with exit status `(1 << 1) | 1 = 3`.
+`isa-debug-exit`の機能は非常に単純です。値`value`が`iobase`により指定されたI/Oポートに書き込まれたら、QEMUは[終了ステータス][exit status]を`(value << 1) | 1`にして終了します。なので、このポートに`0`を書き込むと、QEMUは終了ステータス`(0 << 1) | 1 = 1`で、`1`を書き込むと終了ステータス`(1 << 1) | 1 = 3`で終了します。
 
-[exit status]: https://en.wikipedia.org/wiki/Exit_status
+[exit status]: https://ja.wikipedia.org/wiki/終了ステータス
 
-Instead of manually invoking the `in` and `out` assembly instructions, we use the abstractions provided by the [`x86_64`] crate. To add a dependency on that crate, we add it to the `dependencies` section in our `Cargo.toml`:
+`in`と`out`のアセンブリ命令を手動で呼び出す代わりに、[`x86_64`]クレートによって提供される<ruby>abstraction<rp> (</rp><rt>抽象化されたもの</rt><rp>) </rp></ruby>を使います。このクレートへの依存を追加するため、`Cargo.toml`の`dependencies`セクションにこれを追加しましょう：
 
 [`x86_64`]: https://docs.rs/x86_64/0.12.1/x86_64/
 
@@ -187,7 +192,7 @@ Instead of manually invoking the `in` and `out` assembly instructions, we use th
 x86_64 = "0.12.1"
 ```
 
-Now we can use the [`Port`] type provided by the crate to create an `exit_qemu` function:
+これで、このクレートによって提供される[`Port`]型を使って`exit_qemu`関数を作ることができます。
 
 [`Port`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/port/struct.Port.html
 
@@ -211,11 +216,11 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 }
 ```
 
-The function creates a new [`Port`] at `0xf4`, which is the `iobase` of the `isa-debug-exit` device. Then it writes the passed exit code to the port. We use `u32` because we specified the `iosize` of the `isa-debug-exit` device as 4 bytes. Both operations are unsafe, because writing to an I/O port can generally result in arbitrary behavior.
+この関数は新しい[`Port`]を`0xf4`（`isa-debug-exit`デバイスの`iobase`です）に作ります。そして、渡された終了コードをポートに書き込みます。`isa-device-exit`デバイスの`iosize`に4バイトを指定していたので、`u32`を使うことにします。I/Oポートへの書き込みは一般にあらゆる振る舞いを引き起こしうるので、これらの命令は両方unsafeです。
 
-For specifying the exit status, we create a `QemuExitCode` enum. The idea is to exit with the success exit code if all tests succeeded and with the failure exit code otherwise. The enum is marked as `#[repr(u32)]` to represent each variant by an `u32` integer. We use exit code `0x10` for success and `0x11` for failure. The actual exit codes do not matter much, as long as they don't clash with the default exit codes of QEMU. For example, using exit code `0` for success is not a good idea because it becomes `(0 << 1) | 1 = 1` after the transformation, which is the default exit code when QEMU failed to run. So we could not differentiate a QEMU error from a successful test run.
+終了ステータスを指定するために、`QemuExitCode`enumを作ります。成功したら成功（`Success`）の終了コードで、そうでなければ失敗（`Failed`）の終了コードで終了しようというわけです。enumは`#[repr(u32)]`をつけることで、それぞれのヴァリアントが`u32`の整数として表されるようにしています。終了コード`0x10`を成功に、`0x11`を失敗に使います。終了コードの実際の値は、QEMUの標準の終了コードと被ってしまわない限りはなんでも構いません。例えば、成功の終了コードに`0`を使うと、変換後`(0 << 1) | 1 = 1`になってしまい、これはQEMUが実行に失敗したときの標準終了コードなのでよくありません。QEMUのエラーとテスト実行の成功が区別できなくなります。
 
-We can now update our `test_runner` to exit QEMU after all tests ran:
+というわけで、`test_runner`を更新して、すべてのテストが実行されたあとでQEMUを終了するようにすることができますね：
 
 ```rust
 fn test_runner(tests: &[&dyn Fn()]) {
@@ -228,7 +233,7 @@ fn test_runner(tests: &[&dyn Fn()]) {
 }
 ```
 
-When we run `cargo test` now, we see that QEMU immediately closes after executing the tests. The problem is that `cargo test` interprets the test as failed even though we passed our `Success` exit code:
+`cargo test`を実行すると、QEMUはテスト実行後即座に閉じるのがわかります。しかし、問題は、`Success`の終了コードを渡したのに、`cargo test`はテストが失敗したと解釈することです：
 
 ```
 > cargo test
@@ -243,11 +248,11 @@ Running: `qemu-system-x86_64 -drive format=raw,file=/…/target/x86_64-blog_os/d
 error: test failed, to rerun pass '--bin blog_os'
 ```
 
-The problem is that `cargo test` considers all error codes other than `0` as failure.
+問題は、`cargo test`が`0`でないすべてのエラーコードを失敗と解釈してしまうことです。
 
-### Success Exit Code
+### 成功の終了コード
 
-To work around this, `bootimage` provides a `test-success-exit-code` configuration key that maps a specified exit code to the exit code `0`:
+これを解決するために、`bootimage`は指定された終了コードを`0`へとマップする設定キー、`test-success-exit-code`を提供しています：
 
 ```toml
 [package.metadata.bootimage]
@@ -255,27 +260,28 @@ test-args = […]
 test-success-exit-code = 33         # (0x10 << 1) | 1
 ```
 
-With this configuration, `bootimage` maps our success exit code to exit code 0, so that `cargo test` correctly recognizes the success case and does not count the test as failed.
+この設定を使うと、`bootimage`は私達の出した成功の終了コードを、終了コード0へとマップするので、`cargo test`は正しく成功を認識し、テストを失敗したと見做さなくなります。
 
-Our test runner now automatically closes QEMU and correctly reports the test results out. We still see the QEMU window open for a very short time, but it does not suffice to read the results. It would be nice if we could print the test results to the console instead, so that we can still see them after QEMU exited.
 
-## Printing to the Console
+私達のテストランナーは、自動でQEMUを閉じ、結果を報告するようになりました。QEMUの画面が非常に短い時間開くのはまだ見えますが、短すぎて結果が読めません。QEMUが終了したあともテストの結果が見られるように、コンソールに出力できたら良さそうです。
 
-To see the test output on the console, we need to send the data from our kernel to the host system somehow. There are various ways to achieve this, for example by sending the data over a TCP network interface. However, setting up a networking stack is a quite complex task, so we will choose a simpler solution instead.
+## コンソールに出力する
 
-### Serial Port
+テストの結果をコンソールで見るためには、カーネルからホストシステムにどうにかしてデータを送る必要があります。これを達成する方法は色々あり、例えばTCPネットワークインターフェースを通じてデータを送るというのが考えられます。しかし、ネットワークスタックを設定するのは非常に複雑なタスクなので、より簡単な解決策を取ることにしましょう。
 
-A simple way to send the data is to use the [serial port], an old interface standard which is no longer found in modern computers. It is easy to program and QEMU can redirect the bytes sent over serial to the host's standard output or a file.
+### シリアルポート
 
-[serial port]: https://en.wikipedia.org/wiki/Serial_port
+データを送る簡単な方法とは、[シリアルポート][serial port]という、最近のコンピュータにはもはや見られない古いインターフェース標準を使うことです。これはプログラムするのが簡単で、QEMUはシリアルを通じて送られたデータをホストの標準出力やファイルにリダイレクトすることができます。
 
-The chips implementing a serial interface are called [UARTs]. There are [lots of UART models] on x86, but fortunately the only differences between them are some advanced features we don't need. The common UARTs today are all compatible to the [16550 UART], so we will use that model for our testing framework.
+[serial port]: https://ja.wikipedia.org/wiki/シリアルポート
 
-[UARTs]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
+シリアルインターフェースを実装しているチップは[UART][UARTs]と呼ばれています。x86には[多くのUARTのモデルがありますが][lots of UART models]、幸運なことに、それらの違いは私達の必要としないような高度な機能だけです。今日よく見られるUARTはすべて[16550 UART]に互換性があるので、このモデルを私達のテストフレームワークに使いましょう。
+
+[UARTs]: https://ja.wikipedia.org/wiki/UART
 [lots of UART models]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
-[16550 UART]: https://en.wikipedia.org/wiki/16550_UART
+[16550 UART]: https://ja.wikipedia.org/wiki/16550_UART
 
-We will use the [`uart_16550`] crate to initialize the UART and send data over the serial port. To add it as a dependency, we update our `Cargo.toml` and `main.rs`:
+[`uart_16550`]クレートを使ってUARTを初期化しデータをシリアルポートを使って送信しましょう。これを依存先として追加するため、`Cargo.toml`と`main.rs`を書き換えます：
 
 [`uart_16550`]: https://docs.rs/uart_16550
 
@@ -286,7 +292,7 @@ We will use the [`uart_16550`] crate to initialize the UART and send data over t
 uart_16550 = "0.2.0"
 ```
 
-The `uart_16550` crate contains a `SerialPort` struct that represents the UART registers, but we still need to construct an instance of it ourselves. For that we create a new `serial` module with the following content:
+`uart_16550`クレートにはUARTレジスタを表現する`SerialPort`構造体が含まれていますが、これのインスタンスは私達自身で作らなくてはいけません。そのため、以下の内容で新しい`serial`モジュールを作りましょう：
 
 ```rust
 // in src/main.rs
@@ -310,13 +316,13 @@ lazy_static! {
 }
 ```
 
-Like with the [VGA text buffer][vga lazy-static], we use `lazy_static` and a spinlock to create a `static` writer instance. By using `lazy_static` we can ensure that the `init` method is called exactly once on its first use.
+[VGAテキストバッファ][vga lazy-static]のときのように、`lazy_static`とスピンロックを使って`static`なwriterインスタンスを作ります。`lazy_static`を使うことで、`init`メソッドが初めて使われたとき1回だけ呼び出されることを保証できます。
 
-Like the `isa-debug-exit` device, the UART is programmed using port I/O. Since the UART is more complex, it uses multiple I/O ports for programming different device registers. The unsafe `SerialPort::new` function expects the address of the first I/O port of the UART as argument, from which it can calculate the addresses of all needed ports. We're passing the port address `0x3F8`, which is the standard port number for the first serial interface.
+`isa-debug-exit`デバイスのときと同じように、UARTはport I/Oを使ってプログラムされています。UARTはより複雑で、様々なデバイスレジスタ群をプログラムするために複数のI/Oポートを使います。unsafeな`SerialPort::new`関数はUARTの最初のI/Oポートを引数とします。この引数から、すべての必要なポートのアドレスを計算することができます。ポートアドレス`0x3F8`を渡していますが、これは最初のシリアルインターフェースの標準のポート番号です。
 
 [vga lazy-static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
-To make the serial port easily usable, we add `serial_print!` and `serial_println!` macros:
+シリアルポートを簡単に使えるようにするために、`serial_print!`と`serial_println!`マクロを追加します：
 
 ```rust
 #[doc(hidden)]
@@ -325,7 +331,7 @@ pub fn _print(args: ::core::fmt::Arguments) {
     SERIAL1.lock().write_fmt(args).expect("Printing to serial failed");
 }
 
-/// Prints to the host through the serial interface.
+/// シリアルインターフェースを通じてホストに出力する。
 #[macro_export]
 macro_rules! serial_print {
     ($($arg:tt)*) => {
@@ -333,7 +339,7 @@ macro_rules! serial_print {
     };
 }
 
-/// Prints to the host through the serial interface, appending a newline.
+/// シリアルインターフェースを通じてホストに出力し、改行を末尾に追加する。
 #[macro_export]
 macro_rules! serial_println {
     () => ($crate::serial_print!("\n"));
@@ -343,11 +349,11 @@ macro_rules! serial_println {
 }
 ```
 
-The implementation is very similar to the implementation of our `print` and `println` macros. Since the `SerialPort` type already implements the [`fmt::Write`] trait, we don't need to provide our own implementation.
+この実装は私達の`print`および`println`マクロとよく似ています。`SerialPort`型はすでに[`fmt::Write`]トレイトを実装しているので、自前の実装を提供する必要はありません。
 
 [`fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
-Now we can print to the serial interface instead of the VGA text buffer in our test code:
+これで、テストコードにおいてVGAテキストバッファの代わりにシリアルインターフェースに出力することができます：
 
 ```rust
 // in src/main.rs
@@ -366,11 +372,11 @@ fn trivial_assertion() {
 }
 ```
 
-Note that the `serial_println` macro lives directly under the root namespace because we used the `#[macro_export]` attribute, so importing it through `use crate::serial::serial_println` will not work.
+`#[macro_export]`属性を使っているため、`serial_println`マクロはルート<ruby>名前空間<rp> (</rp><rt>namespace</rt><rp>) </rp></ruby>の直下にいるので、`use crate::serial::serial_println`とインポートするとうまく行かないということに注意してください。
 
-### QEMU Arguments
+### QEMUの引数
 
-To see the serial output from QEMU, we need use the `-serial` argument to redirect the output to stdout:
+QEMUからのシリアル出力を見るために、出力を標準出力にリダイレクトしたいので、`-serial`引数を使う必要があります。
 
 ```toml
 # in Cargo.toml
@@ -381,7 +387,7 @@ test-args = [
 ]
 ```
 
-When we run `cargo test` now, we see the test output directly in the console:
+これで`cargo test`を実行すると、テスト出力がコンソールに直接出力されているのが見えるでしょう：
 
 ```
 > cargo test
@@ -396,29 +402,29 @@ Running 1 tests
 trivial assertion... [ok]
 ```
 
-However, when a test fails we still see the output inside QEMU because our panic handler still uses `println`. To simulate this, we can change the assertion in our `trivial_assertion` test to `assert_eq!(0, 1)`:
+しかし、テストが失敗したときは、私達のパニックハンドラはまだ`println`を使っているので、出力がQEMUの中に出てしまいます。これをシミュレートするには、`trivial_assertion`テストの中のアサーションを`assert_eq!(0, 1)`に変えればよいです：
 
 ![QEMU printing "Hello World!" and "panicked at 'assertion failed: `(left == right)`
     left: `0`, right: `1`', src/main.rs:55:5](qemu-failed-test.png)
 
-We see that the panic message is still printed to the VGA buffer, while the other test output is printed to the serial port. The panic message is quite useful, so it would be useful to see it in the console too.
+他のテスト出力がシリアルポートに出力されている一方、パニックメッセージはまだVGAバッファに出力されているのがわかります。このパニックメッセージは非常に役に立つので、コンソールでこのメッセージも見られたら非常に便利でしょう。
 
-### Print an Error Message on Panic
+### パニック時のエラーメッセージを出力する
 
-To exit QEMU with an error message on a panic, we can use [conditional compilation] to use a different panic handler in testing mode:
+パニック時にQEMUをエラーメッセージとともに終了するためには、[条件付きコンパイル][conditional compilation]を使うことで、テスト時に異なるパニックハンドラを使うことができます：
 
 [conditional compilation]: https://doc.rust-lang.org/1.30.0/book/first-edition/conditional-compilation.html
 
 ```rust
-// our existing panic handler
-#[cfg(not(test))] // new attribute
+// 前からあるパニックハンドラ
+#[cfg(not(test))] // 新しく追加した属性
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     loop {}
 }
 
-// our panic handler in test mode
+// テストモードで使うパニックハンドラ
 #[cfg(test)]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -429,9 +435,9 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-For our test panic handler, we use `serial_println` instead of `println` and then exit QEMU with a failure exit code. Note that we still need an endless `loop` after the `exit_qemu` call because the compiler does not know that the `isa-debug-exit` device causes a program exit.
+テストパニックハンドラには`println`の代わりに`serial_println`を使い、そのあと失敗の終了コードでQEMUを終了します。コンパイラには、`exit_qemu`の呼び出しのあと`isa-debug-exit`デバイスがプログラムを終了させているということはわからないので、やはり最後に終了しない`loop`を入れないといけないということに注意してください。
 
-Now QEMU also exits for failed tests and prints a useful error message on the console:
+これでQEMUはテストが失敗したときも終了し、コンソールに役に立つエラーメッセージを表示するようになります：
 
 ```
 > cargo test
@@ -450,11 +456,11 @@ Error: panicked at 'assertion failed: `(left == right)`
  right: `1`', src/main.rs:65:5
 ```
 
-Since we see all test output on the console now, we no longer need the QEMU window that pops up for a short time. So we can hide it completely.
+これですべてのテスト出力がコンソールで見られるようになったので、一瞬出てくるQEMUウィンドウはもはや必要ありません。ですので、これを完全に見えなくしてしまいましょう。
 
-### Hiding QEMU
+### QEMUを隠す
 
-Since we report out the complete test results using the `isa-debug-exit` device and the serial port, we don't need the QEMU window anymore. We can hide it by passing the `-display none` argument to QEMU:
+すべてのテスト結果を`isa-debug-exit`デバイスとシリアルポートを使って通知できるので、QEMUのウィンドウはもはや必要ありません。これは、QEMUに`-display none`引数を渡すことで隠すことができます：
 
 ```toml
 # in Cargo.toml
@@ -466,22 +472,22 @@ test-args = [
 ]
 ```
 
-Now QEMU runs completely in the background and no window is opened anymore. This is not only less annoying, but also allows our test framework to run in environments without a graphical user interface, such as CI services or [SSH] connections.
+これでQEMUは完全にバックグラウンドで実行するようになり、ウィンドウはもう開きません。これで、ジャマが減っただけでなく、私達のテストフレームワークがグラフィカルユーザーインターフェースのない環境――たとえばCIサービスや[SSH]接続――でも使えるようになりました。
 
-[SSH]: https://en.wikipedia.org/wiki/Secure_Shell
+[SSH]: https://ja.wikipedia.org/wiki/Secure_Shell
 
-### Timeouts
+### タイムアウト
 
-Since `cargo test` waits until the test runner exits, a test that never returns can block the test runner forever. That's unfortunate, but not a big problem in practice since it's normally easy to avoid endless loops. In our case, however, endless loops can occur in various situations:
+`cargo test`はテストランナーが終了するまで待つので、絶対に終了しないテストがあるとテストランナーを永遠にブロックしかねません。これは悲しいですが、普通<ruby>エンドレス<rp> (</rp><rt>終了しない</rt><rp>) </rp></ruby>ループを回避するのは簡単なので、実際は大きな問題ではありません。しかしながら、私達のケースでは、様々な状況でエンドレスループが発生しうるのです：
 
-- The bootloader fails to load our kernel, which causes the system to reboot endlessly.
-- The BIOS/UEFI firmware fails to load the bootloader, which causes the same endless rebooting.
-- The CPU enters a `loop {}` statement at the end of some of our functions, for example because the QEMU exit device doesn't work properly.
-- The hardware causes a system reset, for example when a CPU exception is not caught (explained in a future post).
+- ブートローダーが私達のカーネルを読み込むのに失敗し、これによりシステムが延々と再起動し続ける。
+- BIOS/UEFIファームウェアがブートローダーの読み込みに失敗し、同様に延々と再起動し続ける。
+- 私達の関数のどれかの最後で、CPUが`loop{}`文に入ってしまう（例えば、QEMU終了デバイスがうまく動かなかったなどの理由で）。
+- CPU例外（今後説明します）がうまく捕捉されなかったりして、ハードウェアがシステムリセットを行う。
 
-Since endless loops can occur in so many situations, the `bootimage` tool sets a timeout of 5 minutes for each test executable by default. If the test does not finish in this time, it is marked as failed and a "Timed Out" error is printed to the console. This feature ensures that tests that are stuck in an endless loop don't block `cargo test` forever.
+エンドレスループは非常に多くの状況で発生しうるので、`bootimage`はそれぞれのテスト実行ファイルに対し標準で5分のタイムアウトを設定しています。テストがこの時間内に終了しなかった場合は、失敗と印をつけて、"Timed Out" エラーがコンソールに出力されます。この機能により、エンドレスループで詰まったテストが`cargo test`を永遠にブロックしてしまうことがないことが保証されます。
 
-You can try it yourself by adding a `loop {}` statement in the `trivial_assertion` test. When you run `cargo test`, you see that the test is marked as timed out after 5 minutes. The timeout duration is [configurable][bootimage config] through a `test-timeout` key in the Cargo.toml:
+これを自分で試すこともできます。`trivial_assertion`テストに`loop {}`文を追加してください。`cargo test`を実行すると、5分後にテストがタイムアウトと印をつけられるのがわかるでしょう。タイムアウトまでの時間は`Cargo.toml`の`test-timeout`キーで[設定可能][bootimage config]です：
 
 [bootimage config]: https://github.com/rust-osdev/bootimage#configuration
 
@@ -489,14 +495,14 @@ You can try it yourself by adding a `loop {}` statement in the `trivial_assertio
 # in Cargo.toml
 
 [package.metadata.bootimage]
-test-timeout = 300          # (in seconds)
+test-timeout = 300          # (単位は秒)
 ```
 
-If you don't want to wait 5 minutes for the `trivial_assertion` test to time out, you can temporarily decrease the above value.
+`trivial_assertion`テストがタイムアウトするのを待ちたくない場合は、上の値を一時的に下げても良いでしょう。
 
-### Insert Printing Automatically
+### 出力機能を自動で挿入する
 
-Our `trivial_assertion` test currently needs to print its own status information using `serial_print!`/`serial_println!`:
+現在、私達の`trivial_assertion`テストは、自分のステータス情報を`serial_print!`/`serial_println!`を使って出力する必要があります：
 
 ```rust
 #[test_case]
@@ -507,7 +513,7 @@ fn trivial_assertion() {
 }
 ```
 
-Manually adding these print statements for every test we write is cumbersome, so let's update our `test_runner` to print these messages automatically. To do that, we need to create a new `Testable` trait:
+私達の書くすべてのテストにこれらのprint文を手動で追加するのは煩わしいので、私達の`test_runner`を変更して、これらのメッセージを自動で出力するようにしましょう。そうするためには、`Testable`トレイトを作る必要があります：
 
 ```rust
 // in src/main.rs
@@ -517,7 +523,7 @@ pub trait Testable {
 }
 ```
 
-The trick now is to implement this trait for all types `T` that implement the [`Fn()` trait]:
+ここで、[`Fn()`トレイト][`Fn()` trait]を持つ型`T`すべてにこのトレイトを実装してやるのがミソです：
 
 [`Fn()` trait]: https://doc.rust-lang.org/stable/core/ops/trait.Fn.html
 
@@ -536,14 +542,14 @@ where
 }
 ```
 
-We implement the `run` function by first printing the function name using the [`any::type_name`] function. This function is implemented directly in the compiler and returns a string description of every type. For functions, the type is their name, so this is exactly what we want in this case. The `\t` character is the [tab character], which adds some alignment to the `[ok]` messages.
+`run`関数を実装するに当たり、まず[`any::type_name`]を使って関数の名前を出力します。この関数はコンパイラの中に直接実装されており、すべての型の文字列による説明を返すことができます。関数の型はその名前なので、今回の場合まさに私達のやりたいことができています。文字`\t`は[タブ文字][tab character]であり、メッセージ`[ok]`の前にちょっとしたアラインメント（幅を整えるための空白）をつけます。
 
 [`any::type_name`]: https://doc.rust-lang.org/stable/core/any/fn.type_name.html
-[tab character]: https://en.wikipedia.org/wiki/Tab_key#Tab_characters
+[tab character]: https://ja.wikipedia.org/wiki/タブキー#タブ文字
 
-After printing the function name, we invoke the test function through `self()`. This only works because we require that `self` implements the `Fn()` trait. After the test function returned, we print `[ok]` to indicate that the function did not panic.
+関数名を出力したあとは、テスト関数を`self()`を使って呼び出します。これは、`self`が`Fn()`トレイトを実装していることが要求されているからこそ可能です。テスト関数がリターンしたら、`[ok]`を出力してこの関数がパニックしなかったことを示します。
 
-The last step is to update our `test_runner` to use the new `Testable` trait:
+最後に、`test_runner`をこの`Testable`トレイトを使うように更新します：
 
 ```rust
 // in src/main.rs
@@ -552,15 +558,15 @@ The last step is to update our `test_runner` to use the new `Testable` trait:
 pub fn test_runner(tests: &[&dyn Testable]) {
     serial_println!("Running {} tests", tests.len());
     for test in tests {
-        test.run(); // new
+        test.run(); // ここを変更
     }
     exit_qemu(QemuExitCode::Success);
 }
 ```
 
-The only two changes are the type of the `tests` argument from `&[&dyn Fn()]` to `&[&dyn Testable]` and that we now call `test.run()` instead of `test()`.
+変更点は2つだけで、`tests`引数の型を`&[&dyn Fn()]`から`&[&dyn Testable]`に変えたことと、`test()`の変わりに`test.run()`を呼ぶようにしたことです。
 
-We can now remove the print statements from our `trivial_assertion` test since they're now printed automatically:
+また、`trivial_assertion`のprint文は今や自動で出力されるようになったので、これを取り除きましょう：
 
 ```rust
 // in src/main.rs
@@ -571,18 +577,18 @@ fn trivial_assertion() {
 }
 ```
 
-The `cargo test` output now looks like this:
+これで`cargo test`の出力は以下のようになるはずです：
 
 ```
 Running 1 tests
 blog_os::trivial_assertion...	[ok]
 ```
 
-The function name now includes the full path to the function, which is useful when test functions in different modules have the same name. Otherwise the output looks the same as before, but we no longer need to manually add print statements to our tests.
+いま、関数名には関数までのフルパスが含まれていますが、これは異なるモジュールのテスト関数が同じ名前を持っているときに便利です。それ以外の点において出力は前と同じですが、もう手動でテストにprint文を付け加える必要はありません。
 
-## Testing the VGA Buffer
+## VGAバッファをテストする
 
-Now that we have a working test framework, we can create a few tests for our VGA buffer implementation. First, we create a very simple test to verify that `println` works without panicking:
+私達のテストフレームワークがうまく動くようになったので、私達のVGAバッファに関する実装のテストをいくつか作ってみましょう。まず、`println`がパニックすることなく成功することを確かめる非常に単純なテストを作ります：
 
 ```rust
 // in src/vga_buffer.rs
@@ -593,9 +599,9 @@ fn test_println_simple() {
 }
 ```
 
-The test just prints something to the VGA buffer. If it finishes without panicking, it means that the `println` invocation did not panic either.
+このテストは、適当な文字列をVGAバッファにただ出力するだけです。このテストがパニックすることなく終了したなら、`println`の呼び出しもまたパニックしなかったということです。
 
-To ensure that no panic occurs even if many lines are printed and lines are shifted off the screen, we can create another test:
+たくさんの行が出力され、行がスクリーンから押し出されたとしてもパニックが起きないことを確かめるために、もう一つテストを作ってみましょう：
 
 ```rust
 // in src/vga_buffer.rs
@@ -608,7 +614,7 @@ fn test_println_many() {
 }
 ```
 
-We can also create a test function to verify that the printed lines really appear on the screen:
+出力された行が本当に画面に映っているのかを確かめるテスト関数も作ることができます：
 
 ```rust
 // in src/vga_buffer.rs
@@ -624,23 +630,22 @@ fn test_println_output() {
 }
 ```
 
-The function defines a test string, prints it using `println`, and then iterates over the screen characters of the static `WRITER`, which represents the vga text buffer. Since `println` prints to the last screen line and then immediately appends a newline, the string should appear on line `BUFFER_HEIGHT - 2`.
+この関数はテスト用文字列を定義し、`println`を使って出力し、静的な`WRITER`――VGAテキストバッファを表現しています――上の表示文字を<ruby>走査<rp> (</rp><rt>イテレート</rt><rp>) </rp></ruby>しています。`println`は最後に出力された行につづけて出力し、即座に改行するので、`BUFFER_HEIGHT - 2`行目にこの文字列は現れるはずです。
 
-By using [`enumerate`], we count the number of iterations in the variable `i`, which we then use for loading the screen character corresponding to `c`. By comparing the `ascii_character` of the screen character with `c`, we ensure that each character of the string really appears in the vga text buffer.
+[`enumerate`]を使うことで、変数`i`によって反復の回数を数え、これを`c`に対応する画面上の文字を読み込むのに使っています。画面の文字の`ascii_character`を`c`と比較することで、文字列のそれぞれの文字がVGAテキストバッファに確実に現れていることを確かめることができます。
 
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
-As you can imagine, we could create many more test functions, for example a function that tests that no panic occurs when printing very long lines and that they're wrapped correctly. Or a function for testing that newlines, non-printable characters, and non-unicode characters are handled correctly.
+ご想像の通り、もっとたくさんテストを作っても良いです。例えば、非常に長い行を出力しても、うまく折り返され、パニックしないことをテストする関数や、改行・出力不可能な文字・非ユニコード文字などが適切に処理されることを確かめるような関数を作ることもできます。
 
-For the rest of this post, however, we will explain how to create _integration tests_ to test the interaction of different components together.
+ですが、この記事の残りでは、 **結合テスト** を作って、異なる<ruby>構成要素<rp> (</rp><rt>コンポーネント</rt><rp>) </rp></ruby>の相互作用をテストする方法を説明しましょう。
 
-## Integration Tests
+## 結合テスト
+Rustにおける[結合テスト][integration tests]は、慣習としてプロジェクトのルートにおいた`tests`ディレクトリ (つまり`src`ディレクトリと同じ階層ですね) にテストプログラムを入れます。標準のテストフレームワークも、独自のテストフレームワークも、自動的にこのディレクトリにあるすべてのテストを実行します。
 
-The convention for [integration tests] in Rust is to put them into a `tests` directory in the project root (i.e. next to the `src` directory). Both the default test framework and custom test frameworks will automatically pick up and execute all tests in that directory.
+[integration tests]: https://doc.rust-jp.rs/book-ja/ch11-03-test-organization.html#結合テスト
 
-[integration tests]: https://doc.rust-lang.org/book/ch11-03-test-organization.html#integration-tests
-
-All integration tests are their own executables and completely separate from our `main.rs`. This means that each test needs to define its own entry point function. Let's create an example integration test named `basic_boot` to see how it works in detail:
+すべての結合テストは、独自の実行可能ファイルを持っており、私達の`main.rs`とは完全に独立しています。つまり、それぞれのテストが独自のエントリポイント関数を定義しないといけないということです。どのような仕組みになっているのかを詳しく見るために、`basic_boot`という名前で試しに結合テストを作ってみましょう：
 
 ```rust
 // in tests/basic_boot.rs
@@ -653,7 +658,7 @@ All integration tests are their own executables and completely separate from our
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // don't mangle the name of this function
+#[no_mangle] // この関数の名前を変えない
 pub extern "C" fn _start() -> ! {
     test_main();
 
@@ -670,17 +675,17 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-Since integration tests are separate executables, we need to provide all the crate attributes (`no_std`, `no_main`, `test_runner`, etc.) again. We also need to create a new entry point function `_start`, which calls the test entry point function `test_main`. We don't need any `cfg(test)` attributes because integration test executables are never built in non-test mode.
+結合テストは独立した実行ファイルであるので、クレート属性（`no_std`、`no_main`、`test_runner`など）をすべてもう一度与えないといけません。また、新しいエントリポイント関数`_start`も作らないといけません。これはテストエントリポイント関数`test_main`を呼び出します。結合テストの実行可能ファイルは、テストモードでないときはビルドされないので、`cfg(test)`属性は必要ありません。
 
-We use the [`unimplemented`] macro that always panics as a placeholder for the `test_runner` function and just `loop` in the `panic` handler for now. Ideally, we want to implement these functions exactly as we did in our `main.rs` using the `serial_println` macro and the `exit_qemu` function. The problem is that we don't have access to these functions since tests are built completely separately of our `main.rs` executable.
+今のところ、`test_runner`関数の中身として、常にパニックする[`unimplemented`]マクロを代わりに入れており、そして`panic`ハンドラにはただの`loop`を入れています。本当は、`serial_println`マクロと`exit_qemu`関数を使って、これらの関数を`main.rs`と全く同じように実装したいです。しかし問題は、テストが私達の`main.rs`実行ファイルとは完全に別にビルドされているので、これらの関数にアクセスすることができないということです。
 
 [`unimplemented`]: https://doc.rust-lang.org/core/macro.unimplemented.html
 
-If you run `cargo test` at this stage, you will get an endless loop because the panic handler loops endlessly. You need to use the `Ctrl+c` keyboard shortcut for exiting QEMU.
+この段階で`cargo test`を実行したら、パニックハンドラによってエンドレスループに入ってしまうでしょう。QEMUを終了するキーボードショートカットである`Ctrl+c`を使わないといけません。
 
-### Create a Library
+### ライブラリを作る
 
-To make the required functions available to our integration test, we need to split off a library from our `main.rs`, which can be included by other crates and integration test executables. To do this, we create a new `src/lib.rs` file:
+結合テストに必要な関数を利用できるようにするために、`main.rs`からライブラリを分離してやる必要があります。こうすると、他のクレートや結合テスト実行ファイルがこれをインクルードできるようになります。これをするために、新しい`src/lib.rs`ファイルを作りましょう：
 
 ```rust
 // src/lib.rs
@@ -689,9 +694,9 @@ To make the required functions available to our integration test, we need to spl
 
 ```
 
-Like the `main.rs`, the `lib.rs` is a special file that is automatically recognized by cargo. The library is a separate compilation unit, so we need to specify the `#![no_std]` attribute again.
+`main.rs`と同じく、`lib.rs`は自動的にcargoに認識される特別なファイルです。ライブラリは別のコンパイル単位なので、`#![no_std]`属性を再び指定する必要があります。
 
-To make our library work with `cargo test`, we need to also move the test functions and attributes from `main.rs`  to `lib.rs`:
+`cargo test`がライブラリにも使えるようにするために、テストのための関数や属性を`main.rs`から`lib.rs`へと移す必要もあります。
 
 ```rust
 // in src/lib.rs
@@ -733,7 +738,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     loop {}
 }
 
-/// Entry point for `cargo test`
+/// `cargo test`のときのエントリポイント
 #[cfg(test)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
@@ -748,13 +753,13 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-To make our `test_runner` available to executables and integration tests, we don't apply the `cfg(test)` attribute to it and make it public. We also factor out the implementation of our panic handler into a public `test_panic_handler` function, so that it is available for executables too.
+`test_runner`を（`main.rs`の）実行可能ファイルと結合テストの両方から利用可能にするために、`cfg(test)`属性をこれに適用せず、また、publicにします。パニックハンドラの実装もpublicな`test_panic_handler`関数へと分離することで、実行可能ファイルからも使えるようにしています。
 
-Since our `lib.rs` is tested independently of our `main.rs`, we need to add a `_start` entry point and a panic handler when the library is compiled in test mode. By using the [`cfg_attr`] crate attribute, we conditionally enable the `no_main` attribute in this case.
+`lib.rs`は`main.rs`とは独立にコンパイルされるので、ライブラリがテストモードでコンパイルされるときは`_start`エントリポイントとパニックハンドラを追加する必要があります。このような場合、[`cfg_attr`]クレート属性を使うことで、`no_main`属性を条件付きで有効化することができます。
 
 [`cfg_attr`]: https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg_attr-attribute
 
-We also move over the `QemuExitCode` enum and the `exit_qemu` function and make them public:
+`QemuExitCode`enumと`exit_qemu`関数も移動し、publicにします：
 
 ```rust
 // in src/lib.rs
@@ -776,7 +781,7 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 }
 ```
 
-Now executables and integration tests can import these functions from the library and don't need to define their own implementations. To also make `println` and `serial_println` available, we move the module declarations too:
+これで、実行ファイルも結合テストもこれらの関数をライブラリからインポートでき、自前の実装を定義する必要はありません。`println`と`serial_println`も利用可能にするために、モジュールの宣言も移動させましょう：
 
 ```rust
 // in src/lib.rs
@@ -785,9 +790,9 @@ pub mod serial;
 pub mod vga_buffer;
 ```
 
-We make the modules public to make them usable from outside of our library. This is also required for making our `println` and `serial_println` macros usable, since they use the `_print` functions of the modules.
+モジュールをpublicにすることで、ライブラリの外からも使えるようにしています。`println`と`serial_println`マクロは、これらのモジュールの`_print`関数を使っているため、これらのマクロを使うためにも、この変更は必要です。
 
-Now we can update our `main.rs` to use the library:
+では、`main.rs`をこのライブラリを使うように更新しましょう：
 
 ```rust
 // src/main.rs
@@ -811,7 +816,7 @@ pub extern "C" fn _start() -> ! {
     loop {}
 }
 
-/// This function is called on panic.
+/// この関数はパニック時に呼ばれる。
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -826,13 +831,13 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-The library is usable like a normal external crate. It is called like our crate, which is `blog_os` in our case. The above code uses the `blog_os::test_runner` function in the `test_runner` attribute and the `blog_os::test_panic_handler` function in our `cfg(test)` panic handler. It also imports the `println` macro to make it available to our `_start` and `panic` functions.
+ライブラリは通常の外部クレートと同じように使うことができます。名前は、私達のクレート名――今回なら`blog_os`――になります。上のコードでは、`blog_os::test_runner`関数を`test_runner`属性で、`blog_os::test_panic_handler`関数を`cfg(test)`のパニックハンドラで使っています。また、`println`マクロをインポートすることで、`_start`と`panic`関数で使えるようにもしています。
 
-At this point, `cargo run` and `cargo test` should work again. Of course, `cargo test` still loops endlessly (you can exit with `ctrl+c`). Let's fix this by using the required library functions in our integration test.
+この時点で、`cargo run`と`cargo test`は再びうまく実行できるようになっているはずです。もちろん、`cargo test`は依然エンドレスループするはずですが（`ctrl+c`で終了できます）。結合テストに必要な関数を使ってこれを修正しましょう。
 
-### Completing the Integration Test
+### 結合テストを完成させる
 
-Like our `src/main.rs`, our `tests/basic_boot.rs` executable can import types from our new library. This allows us to import the missing components to complete our test.
+`src/main.rs`と同じように、`tests/basic_boot.rs`実行ファイルは新しいライブラリから型をインポートできます。これで、テストを完成させるのに足りない要素をインポートすることができます。
 
 ```rust
 // in tests/basic_boot.rs
@@ -845,11 +850,11 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-Instead of reimplementing the test runner, we use the `test_runner` function from our library. For our `panic` handler, we call the `blog_os::test_panic_handler` function like we did in our `main.rs`.
+テストランナーを再実装することはせず、ライブラリの`test_runner`関数を使います。`panic`ハンドラとしては、`main.rs`でやったように`blog_os::test_panic_handler`関数を呼びます。
 
-Now `cargo test` exits normally again. When you run it, you see that it builds and runs the tests for our `lib.rs`, `main.rs`, and `basic_boot.rs` separately after each other. For the `main.rs` and the `basic_boot` integration test, it reports "Running 0 tests" since these files don't have any functions annotated with `#[test_case]`.
+これで、`cargo test`は再び通常通り終了するはずです。実行すると、`lib.rs`、`main.rs`、そして`basic_boot.rs`を順にそれぞれビルドし、テストを実行するのが見えるはずです。`main.rs`と`basic_boot`結合テストに関しては、これらには`#[test_case]`のつけられた関数はないため、"Running 0 tests"と報告されるはずです。
 
-We can now add tests to our `basic_boot.rs`. For example, we can test that `println` works without panicking, like we did in the vga buffer tests:
+これで、`basic_boot.rs`にテストを追加していくことができます。例えば、`println`がパニックすることなくうまく行くことを、VGAバッファのときのようにテストすることができます：
 
 ```rust
 // in tests/basic_boot.rs
@@ -862,31 +867,31 @@ fn test_println() {
 }
 ```
 
-When we run `cargo test` now, we see that it finds and executes the test function.
+`cargo test`を実行すると、テスト関数を見つけ出して実行しているのがわかるでしょう。
 
-The test might seem a bit useless right now since it's almost identical to one of the VGA buffer tests. However, in the future the `_start` functions of our `main.rs` and `lib.rs` might grow and call various initialization routines before running the `test_main` function, so that the two tests are executed in very different environments.
+このテストは、VGAバッファのテストとほとんど同じであるため、今のところあまり意味がないように思われるかもしれません。しかし、将来的に`main.rs`の`_start`関数と`lib.rs`はどんどん大きくなり、`test_main`関数を実行する前に様々な初期化ルーチンを呼ぶようになるかもしれないので、これらの2つのテストは全然違う環境で実行されるようになるかもしれないのです。
 
-By testing `println` in a `basic_boot` environment without calling any initialization routines in `_start`, we can ensure that `println` works right after booting. This is important because we rely on it e.g. for printing panic messages.
+`println`を`basic_boot`環境で（`_start`で初期化ルーチンを一切呼ぶことなく）テストすることにより、起動の直後に`println`が使えることが保証されます。私達は、例えばパニックメッセージの出力などを`println`に依存しているので、これは重要です。
 
-### Future Tests
+### 今後のテスト
 
-The power of integration tests is that they're treated as completely separate executables. This gives them complete control over the environment, which makes it possible to test that the code interacts correctly with the CPU or hardware devices.
+結合テストの魅力は、これらは完全に独立した実行ファイルとして扱われることです。これにより、実行環境を完全にコントロールすることができるので、コードがCPUやハードウェアデバイスと正しく相互作用していることをテストすることができるのです。
 
-Our `basic_boot` test is a very simple example for an integration test. In the future, our kernel will become much more featureful and interact with the hardware in various ways. By adding integration tests, we can ensure that these interactions work (and keep working) as expected. Some ideas for possible future tests are:
+`basic_boot`テストは結合テストの非常に簡単な例でした。今後は、私達のカーネルはもっと機能豊富になり、様々な方法でハードウェアと相互作用するようになります。結合テストを追加することにより、それらの相互作用が期待通り動く（また、期待通り動きつづけている）ことを確かめることができるのです。今後追加できるテストの例としては、以下があります：
 
-- **CPU Exceptions**: When the code performs invalid operations (e.g. divides by zero), the CPU throws an exception. The kernel can register handler functions for such exceptions. An integration test could verify that the correct exception handler is called when a CPU exception occurs or that the execution continues correctly after resolvable exceptions.
-- **Page Tables**: Page tables define which memory regions are valid and accessible. By modifying the page tables, it is possible to allocate new memory regions, for example when launching programs. An integration test could perform some modifications of the page tables in the `_start` function and then verify that the modifications have the desired effects in `#[test_case]` functions.
-- **Userspace Programs**: Userspace programs are programs with limited access to the system's resources. For example, they don't have access to kernel data structures or to the memory of other programs. An integration test could launch userspace programs that perform forbidden operations and verify that the kernel prevents them all.
+- **CPU<ruby>例外<rp> (</rp><rt>exception</rt><rp>) </rp></ruby>**: プログラムが不正な操作（例えばゼロで割るなど）を行った場合、CPUは例外を投げます（訳注：例外を発することを、英語でthrow an exceptionというのにちなんで、慣例的に「投げる」と表現します）。カーネルはそのような例外に対するハンドラ関数を登録しておくことができます。結合テストで、CPU例外が起こったときに、例外ハンドラが呼ばれていることや、例外が解決可能だった場合に実行が継続することを確かめることができるでしょう。
+- **ページテーブル**: ページテーブルは、どのメモリ領域が有効でアクセスできるかを定義しています。例えばプログラムを立ち上げるとき、このページテーブルを変更することで、新しいメモリ領域を割り当てることが可能です。結合テストで、ページテーブルに`_start`関数内で何らかの変更を施して、その変更が期待通りの効果を起こしているかを`#[test_case]`関数で確かめることができるでしょう。
+- **ユーザー<ruby>空間<rp> (</rp><rt>スペース</rt><rp>) </rp></ruby>プログラム**: ユーザー空間プログラムは、システムの<ruby>資源<rp> (</rp><rt>リソース</rt><rp>) </rp></ruby>に限られたアクセスしか持たないプログラムのことです。これらは例えば、カーネルのデータ構造や、他のプログラムのメモリにアクセスすることはできません。結合テストで、禁止された操作を実行するようなユーザー空間プログラムを起動し、カーネルがそれらをすべて防ぐことを確かめることができるでしょう。
 
-As you can imagine, many more tests are possible. By adding such tests, we can ensure that we don't break them accidentally when we add new features to our kernel or refactor our code. This is especially important when our kernel becomes larger and more complex.
+ご想像のとおり、もっと多くのテストが可能です。このようなテストを追加することで、カーネルに新しい機能を追加したときや、コードをリファクタリングしたときに、これらを壊してしまっていないことを保証することができます。これは、私達のカーネルがより大きく、より複雑になったときに特に重要になります。
 
-### Tests that Should Panic
+### パニックしなければならないテスト
 
-The test framework of the standard library supports a [`#[should_panic]` attribute][should_panic] that allows to construct tests that should fail. This is useful for example to verify that a function fails when an invalid argument is passed. Unfortunately this attribute isn't supported in `#[no_std]` crates since it requires support from the standard library.
+標準ライブラリのテストフレームワークは、[`#[should_panic]`属性][should_panic]をサポートしています。これを使うと、失敗しなければならないテストを作ることができます。これは、例えば、関数が無効な引数を渡されたときに失敗することを確かめたりするのに便利です。残念なことに、この機能は標準ライブラリのサポートを必要とするため、`#[no_std]`クレートではこの属性はサポートされていません。
 
-[should_panic]: https://doc.rust-lang.org/rust-by-example/testing/unit_testing.html#testing-panics
+[should_panic]: https://doc.rust-jp.rs/rust-by-example-ja/testing/unit_testing.html#testing-panics
 
-While we can't use the `#[should_panic]` attribute in our kernel, we can get similar behavior by creating an integration test that exits with a success error code from the panic handler. Let's start creating such a test with the name `should_panic`:
+`#[should_panic]`属性は使えませんが、パニックハンドラから成功のエラーコードで終了するような結合テストを作れば、似たような動きをさせることはできます。そのようなテストを`should_panic`という名前で作ってみましょう：
 
 ```rust
 // in tests/should_panic.rs
@@ -905,7 +910,7 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 ```
 
-This test is still incomplete as it doesn't define a `_start` function or any of the custom test runner attributes yet. Let's add the missing parts:
+これは`_start`関数や、独自テストランナー属性などをまだ定義していないので未完成です。足りない部分を追加しましょう：
 
 ```rust
 // in tests/should_panic.rs
@@ -932,9 +937,9 @@ pub fn test_runner(tests: &[&dyn Fn()]) {
 }
 ```
 
-Instead of reusing the `test_runner` from our `lib.rs`, the test defines its own `test_runner` function that exits with a failure exit code when a test returns without panicking (we want our tests to panic). If no test function is defined, the runner exits with a success error code. Since the runner always exits after running a single test, it does not make sense to define more than one `#[test_case]` function.
+このテストは、`lib.rs`の`test_runner`を使い回さず、自前の、テストがパニックせずリターンしたときに失敗の終了コードを出すような`test_runner`関数を定義しています（私達はテストにパニックしてほしいわけですから）。もしテスト関数が一つも定義されていなければ、このランナーは成功のエラーコードで終了します。ランナーは一つテストを実行したら必ず終了するので、1つ以上の`#[test_case]`関数を定義しても意味はありません。
 
-Now we can create a test that should fail:
+では、失敗するはずのテストを追加してみましょう：
 
 ```rust
 // in tests/should_panic.rs
@@ -948,19 +953,25 @@ fn should_fail() {
 }
 ```
 
-The test uses the `assert_eq` to assert that `0` and `1` are equal. This of course fails, so that our test panics as desired. Note that we need to manually print the function name using `serial_print!` here because we don't use the `Testable` trait.
+このテストは`assert_eq`を使って`0`と`1`が等しいことをアサートしています。これはもちろん失敗するので、私達のテストは望み通りパニックします。ここで、`Testable`トレイトは使っていないので、関数名は`serial_print!`を使って自分で出力しないといけないことに注意してください。
 
-When we run the test through `cargo test --test should_panic` we see that it is successful because the test panicked as expected. When we comment out the assertion and run the test again, we see that it indeed fails with the _"test did not panic"_ message.
+`cargo test --test should_panic`を使ってテストすると、テストが期待通りパニックし、成功したことがわかるでしょう。アサーションをコメントアウトしテストをもう一度実行すると、"test did not panic"というメッセージとともに、テストが確かに失敗することがわかります。
 
-A significant drawback of this approach is that it only works for a single test function. With multiple `#[test_case]` functions, only the first function is executed because the execution cannot continue after the panic handler has been called. I currently don't know of a good way to solve this problem, so let me know if you have an idea!
+この方法の無視できない欠点は、テスト関数を一つしか使えないことです。`#[test_case]`関数が複数ある場合、パニックハンドラが呼び出された後で（プログラムの）実行を続けることはできないので、最初の関数のみが実行されます。この問題を解決するいい方法を私は知らないので、もしなにかアイデアがあったら教えてください！
 
-### No Harness Tests
+### <ruby>ハーネス<rp> (</rp><rt>harness</rt><rp>) </rp></ruby>のないテスト
 
-For integration tests that only have a single test function (like our `should_panic` test), the test runner isn't really needed. For cases like this, we can disable the test runner completely and run our test directly in the `_start` function.
+<div class="note">
 
-The key to this is disable the `harness` flag for the test in the `Cargo.toml`, which defines whether a test runner is used for an integration test. When it's set to `false`, both the default test runner and the custom test runner feature are disabled, so that the test is treated like a normal executable.
+**訳注:** ハーネスとは、もともとは馬具の一種を意味する言葉です。転じて「制御する道具」一般を指し、また[テストハーネス](https://en.wikipedia.org/wiki/Test_harness)というと（`test_runner`のように）複数のテストケースを処理し、その振る舞い・出力などを適切に処理・整形してくれるプログラムのことを指します。
 
-Let's disable the `harness` flag for our `should_panic` test:
+</div>
+
+（私達の`should_panic`テストのように）一つしかテスト関数を持たない結合テストでは、テストランナーは必ずしも必要というわけではありません。このような場合、テストランナーは完全に無効化してしまって、`_start`関数からテストを直接実行することができます。
+
+このためには、`Cargo.toml`でこのテストの`harness`フラグを無効化することがカギとなります。これは、結合テストにテストランナーが使われるかを定義しています。これが`false`に設定されると、標準のテストランナーと独自のテストランナーの両方が無効化され、通常の実行ファイルのように扱われるようになります。
+
+`should_panic`テストの`harness`フラグを無効化してみましょう：
 
 ```toml
 # in Cargo.toml
@@ -970,7 +981,7 @@ name = "should_panic"
 harness = false
 ```
 
-Now we vastly simplify our `should_panic` test by removing the test runner related code. The result looks like this:
+これで、テストランナーに関係するコードを取り除いて、`should_panic`テストを大幅に簡略化することができます。結果として以下のようになります：
 
 ```rust
 // in tests/should_panic.rs
@@ -1002,20 +1013,20 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 ```
 
-We now call the `should_fail` function directly from our `_start` function and exit with a failure exit code if it returns. When we run `cargo test --test should_panic` now, we see that the test behaves exactly as before.
+`should_fail`関数を`_start`関数から直接呼び出して、もしリターンしたら失敗の終了コードで終了するようにしました。今`cargo test --test should_panic`を実行しても、以前と全く同じように振る舞います。
 
-Apart from creating `should_panic` tests, disabling the `harness` attribute can also be useful for complex integration tests, for example when the individual test functions have side effects and need to be run in a specified order.
+`should_panic`なテストを作るとき以外にも`harness`属性は有用なことがあります。例えば、それぞれのテスト関数が副作用を持っており、指定された順番で実行されないといけないときなどです。
 
-## Summary
+## まとめ
 
-Testing is a very useful technique to ensure that certain components have a desired behavior. Even if they cannot show the absence of bugs, they're still an useful tool for finding them and especially for avoiding regressions.
+テストは、ある要素が望み通りの振る舞いをしていることを保証するのにとても便利なテクニックです。バグが存在しないことを証明することはできないとはいえ、バグを発見したり、特に手戻りを防ぐのに便利なツールであることは間違いありません。
 
-This post explained how to set up a test framework for our Rust kernel. We used the custom test frameworks feature of Rust to implement support for a simple `#[test_case]` attribute in our bare-metal environment. By using the `isa-debug-exit` device of QEMU, our test runner can exit QEMU after running the tests and report the test status out. To print error messages to the console instead of the VGA buffer, we created a basic driver for the serial port.
+この記事では、私達のRust製カーネルでテストフレームワークを組み立てる方法を説明しました。Rustの<ruby>独自<rp> (</rp><rt>カスタム</rt><rp>) </rp></ruby>テストフレームワーク機能を使って、私達のベアメタル環境における、シンプルな`#[test_case]`属性のサポートを実装しました。私達のテストランナーは、QEMUの`isa-debug-exit`デバイスを使うことで、QEMUをテスト実行後に終了し、テストステータスを報告することができます。エラーメッセージを、VGAバッファの代わりにコンソールに出力するために、シリアルポートの単純なドライバを作りました。
 
-After creating some tests for our `println` macro, we explored integration tests in the second half of the post. We learned that they live in the `tests` directory and are treated as completely separate executables. To give them access to the `exit_qemu` function and the `serial_println` macro, we moved most of our code into a library that can be imported by all executables and integration tests. Since integration tests run in their own separate environment, they make it possible to test interactions with the hardware or to create tests that should panic.
+`println`マクロのテストをいくつか作った後、記事の後半では結合テストについて見ました。結合テストは`tests`ディレクトリに置かれ、完全に独立した実行ファイルとして扱われることを学びました。結合テストから`exit_qemu`関数と`serial_println`マクロにアクセスできるようにするために、コードのほとんどをライブラリに移し、すべての実行ファイルと結合テストがインポートできるようにしました。結合テストはそれぞれ独自の環境で実行されるため、ハードウェアとの相互作用や、パニックするべきテストを作るといったことが可能になります。
 
-We now have a test framework that runs in a realistic environment inside QEMU. By creating more tests in future posts, we can keep our kernel maintainable when it becomes more complex.
+QEMU内で現実に近い環境で実行できるテストフレームワークを手に入れました。今後の記事でより多くのテストを作っていくことで、カーネルがより複雑になってもメンテナンスし続けられるでしょう。
 
-## What's next?
+## 次は？
 
-In the next post, we will explore _CPU exceptions_. These exceptions are thrown by the CPU when something illegal happens, such as a division by zero or an access to an unmapped memory page (a so-called “page fault”). Being able to catch and examine these exceptions is very important for debugging future errors. Exception handling is also very similar to the handling of hardware interrupts, which is required for keyboard support.
+次の記事では、**CPU例外**を見ていきます。この例外というのは、CPUによってなにか「不法行為」――例えば、ゼロ割りやマップされていないメモリページへのアクセス（いわゆる「ページフォルト」）――が行われたときに投げられます。これらの例外を捕捉して検分できるようにしておくことは、将来エラーをデバッグするときに非常に重要です。例外の処理はまた、キーボードをサポートするのに必要になる、ハードウェア割り込みの処理に非常に似てもいます。
