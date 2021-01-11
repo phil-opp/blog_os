@@ -9,7 +9,7 @@ chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "dce5c9825bd4e7ea6c9530e999c9d58f80c585cc"
 # GitHub usernames of the people that translated this post
-translators = ["woodyZootopia"]
+translators = ["woodyZootopia", "JohnTitor"]
 +++
 
 この記事では、`no_std`な実行環境における<ruby>単体テスト<rp> (</rp><rt>unit test</rt><rp>) </rp></ruby>と<ruby>結合テスト<rp> (</rp><rt>integration test</rt><rp>) </rp></ruby>について学びます。Rustではカスタムテストフレームワークがサポートされているので、これを使ってカーネルの中でテスト関数を実行します。QEMUの外へとテストの結果を通知するため、QEMUと`bootimage`の様々な機能を使います。
