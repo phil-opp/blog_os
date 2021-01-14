@@ -81,7 +81,7 @@ html {
     --border-color-section-basic-io: #99ff99;
 
     // colors with transparency that work for both light and dark mode
-    --background-color-note: #00ff0010;
+    --background-color-note: #00ff001a;
     --border-color-note: #00ff0050;
 }
 
@@ -873,8 +873,12 @@ a.zola-anchor:hover {
     padding: .7rem 1rem;
     margin: 1rem .2rem;
     border: 2px solid var(--border-color-note);
-    border-radius: 5px;
+    border-radius: 3px;
     background-color: var(--background-color-note);
+}
+
+.note p:first-of-type {
+    margin-top: 1rem;
 }
 
 .note p:last-child {
