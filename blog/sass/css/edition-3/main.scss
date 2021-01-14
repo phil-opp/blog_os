@@ -13,7 +13,7 @@
  * https://github.com/poole/poole.
  *
  *
- * Adjusted by @phil-opp. 
+ * Adjusted by @phil-opp.
  */
 
 /*
@@ -79,6 +79,10 @@ html {
     --border-color-section-bare-bones: #ccccff;
     --background-color-section-basic-io: #f6fff6;
     --border-color-section-basic-io: #99ff99;
+
+    // colors with transparency that work for both light and dark mode
+    --background-color-note: #00ff0010;
+    --border-color-note: #00ff0050;
 }
 
 @mixin set-colors-dark {
@@ -865,15 +869,15 @@ a.zola-anchor:hover {
     text-decoration: none;
 }
 
-div.note {
+.note {
     padding: .7rem 1rem;
     margin: 1rem .2rem;
-    border: 2px solid #6ad46a;
+    border: 2px solid var(--border-color-note);
     border-radius: 5px;
-    background-color: #99ff991f;
+    background-color: var(--background-color-note);
 }
 
-div.note p:last-child {
+.note p:last-child {
     margin-bottom: 0;
 }
 
