@@ -305,6 +305,8 @@ We can add a dependency on the `volatile` crate by adding it to the `dependencie
 volatile = "0.2.6"
 ```
 
+Make sure to specifiy `volatile` version `0.2.6`. We will run into errors using later versions of the crate.
+
 The `0.2.6` is the [semantic] version number. For more information, see the [Specifying Dependencies] guide of the cargo documentation.
 
 [semantic]: https://semver.org/
