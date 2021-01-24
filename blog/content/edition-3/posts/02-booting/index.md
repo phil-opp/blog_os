@@ -92,6 +92,8 @@ Writing a BIOS bootloader is cumbersome as it requires assembly language and a l
 
 As noted above, most modern systems still support booting operating systems written for the legacy BIOS firmware for backwards-compatibility. However, there are [plans to remove this support soon][end-bios-support]. Thus, it is strongly recommended to make operating system kernels compatible with the newer UEFI standard too. Fortunately, it is possible to create a kernel that supports booting on both BIOS (for older systems) and UEFI (for modern systems).
 
+[end-bios-support]: https://arstechnica.com/gadgets/2017/11/intel-to-kill-off-the-last-vestiges-of-the-ancient-pc-bios-by-2020/
+
 ### UEFI
 
 The Unified Extensible Firmware Interface (UEFI) replaces the classical BIOS firmware on most modern computers. The specification provides lots of useful features that make bootloader implementations much simpler:
@@ -99,7 +101,7 @@ The Unified Extensible Firmware Interface (UEFI) replaces the classical BIOS fir
 - It supports initializing the CPU directly into 64-bit mode, instead of starting in a DOS-compatible 16-bit mode like the BIOS firmware.
 - It understands disk partitions and executable files. Thus it is able to fully load the bootloader from disk into memory (no 512-byte large "first stage" is required anymore).
 - A standardized [specification][uefi-specification] minimizes the differences between systems. This isn't the case for the legacy BIOS firmware, so that bootloaders often have to try different methods because of hardware differences.
-- The specification is independent of the CPU architecture, so that the same interface can be used to boot on `x86_64` and `ARM` CPUs.
+- The specification is independent of the CPU architecture, so that the same interface can be used to boot on `x86_64` and e.g. `ARM` CPUs.
 - It natively supports network booting without requiring additional drivers.
 
 [uefi-specification]: https://uefi.org/specifications
@@ -114,7 +116,7 @@ While most of the UEFI specification sounds like a good idea, there are also man
 
 [uefi-secure-boot-lock-in]: https://arstechnica.com/information-technology/2015/03/windows-10-to-make-the-secure-boot-alt-os-lock-out-a-reality/
 
-Another point of criticism is that the large number of features make the UEFI firmware very complex, which increases the chance that there are some bugs in the firmware implementation. This can lead to security problems because the firmware has complete control over the hardware. For example, a vulnerability in the built-in network stack of an UEFI implementation can allow attackers to compromise the system and e.g. silently observe all I/O data. The fact that most UEFI implementations are not open-source makes this issue even more problematic, since there is no way to audit the firmware code for potential bugs.
+Another point of criticism is that the large number of features make the UEFI firmware very complex, which increases the chance that there are some bugs in the firmware implementation itself. This can lead to security problems because the firmware has complete control over the hardware. For example, a vulnerability in the built-in network stack of an UEFI implementation can allow attackers to compromise the system and e.g. silently observe all I/O data. The fact that most UEFI implementations are not open-source makes this issue even more problematic, since there is no way to audit the firmware code for potential bugs.
 
 While there are open firmware projects such as [coreboot] that try to solve these problems, there is no way around the UEFI standard on most modern consumer computers. So we have to live with these drawbacks for now if we want to build a widely compatible bootloader and operating system kernel.
 
@@ -124,10 +126,13 @@ While there are open firmware projects such as [coreboot] that try to solve thes
 
 The UEFI boot process works in the following way:
 
-- After powering on and self-testing all components, the UEFI firmware starts looking for special bootable disk partitions called [EFI system partitions]. These partitions must be formatted with the [FAT file system] and assigned a special ID that indicates them as EFI system partition.
-- If it finds such a partition, the firmware looks for an executable file named `efi\boot\bootx64.efi` (on x86_64 systems). This executable must use the [Portable Executable (PE)] format, which is common in the Windows world.
+- After powering on and self-testing all components, the UEFI firmware starts looking for special bootable disk partitions called [EFI system partitions]. These partitions must be formatted with the [FAT file system] and assigned a special ID that indicates them as EFI system partition. The UEFI standard understands both the [MBR] and [GPT] partition table formats for this, at least theoretically. In practice, some UEFI implementations seem to [directly switch to BIOS-style booting when an MBR partition table is used][mbr-csm], so it is recommended to only use the GPT format with UEFI.
+- If the firmware finds a EFI system partition, it looks for an executable file named `efi\boot\bootx64.efi` (on x86_64 systems) in it. This executable must use the [Portable Executable (PE)] format, which is common in the Windows world.
 - It then loads the executable from disk to memory, sets up the execution environment (CPU state, page tables, etc.) in a defined way, and finally jumps to the entry point of the loaded executable.
 
+[MBR]: https://en.wikipedia.org/wiki/Master_boot_record
+[GPT]: https://en.wikipedia.org/wiki/GUID_Partition_Table
+[mbr-csm]: https://bbs.archlinux.org/viewtopic.php?id=142637
 [EFI system partitions]: https://en.wikipedia.org/wiki/EFI_system_partition
 [FAT file system]: https://en.wikipedia.org/wiki/File_Allocation_Table
 [Portable Executable (PE)]: https://en.wikipedia.org/wiki/Portable_Executable
@@ -136,9 +141,9 @@ From this point on, the bootloader executable has control and can proceed to loa
 
 #### How we will use UEFI
 
-As it is probably clear at this point, the UEFI interface is very powerful and complex. The wide range of functionality makes it even possible to write an operating system directly as an UEFI application, using the UEFI services instead of creating own drivers. In practice, however, most operating systems use UEFI only for the bootloader since own drivers give you more control over the system. We will also follow this path for our OS implementation.
+As it is probably clear at this point, the UEFI interface is very powerful and complex. The wide range of functionality makes it even possible to write an operating system directly as an UEFI application, using the UEFI services instead of creating own drivers. In practice, however, most operating systems use UEFI only for the bootloader since own drivers give you better performance and more control over the system. We will also follow this path for our OS implementation.
 
-To keep this post focused, we won't cover the creation of an UEFI bootloader in this post. Instead, we will use the already mentioned [`bootloader`] crate, which allows loading our kernel on both UEFI and BIOS systems.
+To keep this post focused, we won't cover the creation of an UEFI bootloader here. Instead, we will use the already mentioned [`bootloader`] crate, which allows loading our kernel on both UEFI and BIOS systems.
 
 If you're interested in how to create an UEFI bootloader: We are planning to cover this in detail in a separate series of posts. If you can't wait, check out our [`uefi` crate] and the [_An EFI App a bit rusty_] post by Gil Mendes.
 
@@ -146,7 +151,8 @@ If you're interested in how to create an UEFI bootloader: We are planning to cov
 [`uefi` crate]: https://github.com/rust-osdev/uefi-rs/
 
 ### The Multiboot Standard
-To avoid that every operating system implements its own bootloader, which is only compatible with a single OS, the [Free Software Foundation] created an open bootloader standard called [Multiboot] in 1995. The standard defines an interface between the bootloader and operating system, so that any Multiboot compliant bootloader can load any Multiboot compliant operating system on both BIOS and UEFI systems. The reference implementation is [GNU GRUB], which is the most popular bootloader for Linux systems.
+
+To avoid that every operating system implements its own bootloader that is only compatible with a single OS, the [Free Software Foundation] created an open bootloader standard called [Multiboot] in 1995. The standard defines an interface between the bootloader and operating system, so that any Multiboot compliant bootloader can load any Multiboot compliant operating system on both BIOS and UEFI systems. The reference implementation is [GNU GRUB], which is the most popular bootloader for Linux systems.
 
 [Free Software Foundation]: https://en.wikipedia.org/wiki/Free_Software_Foundation
 [Multiboot]: https://www.gnu.org/software/grub/manual/multiboot2/multiboot.html
@@ -165,7 +171,7 @@ To make a kernel Multiboot compliant, one just needs to insert a so-called [Mult
 [adjusted default page size]: https://wiki.osdev.org/Multiboot#Multiboot_2
 [boot information]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 
-Because of these drawbacks we decided to not use GRUB or the Multiboot standard for this series. However, we plan to add Multiboot support to our [`bootloader`] crate, so that it's possible to load your kernel on a GRUB system too. If you're interested in writing a Multiboot compliant kernel, check out the [first edition] of this blog series.
+Because of these drawbacks we decided to not use GRUB or the Multiboot standard for this series. However, we plan to add Multiboot support to our [`bootloader`] crate, so that it becomes possible to load your kernel on a GRUB system too. If you're interested in writing a Multiboot compliant kernel, check out the [first edition] of this blog series.
 
 [first edition]: @/edition-1/_index.md
 
