@@ -34,28 +34,57 @@ When you turn on a computer, it begins executing firmware code that is stored in
 [ROM]: https://en.wikipedia.org/wiki/Read-only_memory
 [power-on self-test]: https://en.wikipedia.org/wiki/Power-on_self-test
 
-On x86, there are two firmware standards: the “Basic Input/Output System“ (**[BIOS]**) and the newer “Unified Extensible Firmware Interface” (**[UEFI]**). The BIOS standard is old and outdated, but simple and well-supported on any x86 machine since the 1980s. UEFI, in contrast, is more modern and has much more features, but is more complex to set up (at least in my opinion).
+On x86, there are two firmware standards: the “Basic Input/Output System“ (**[BIOS]**) and the newer “Unified Extensible Firmware Interface” (**[UEFI]**). The BIOS standard is old and outdated, but simple and well-supported on any x86 machine since the 1980s. UEFI, in contrast, is more modern and has much more features, but also more complex.
 
 [BIOS]: https://en.wikipedia.org/wiki/BIOS
 [UEFI]: https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
 
-Currently, we only provide BIOS support, but support for UEFI is planned, too. If you'd like to help us with this, check out the [Github issue](https://github.com/phil-opp/blog_os/issues/349).
-
 ### BIOS
+
 Almost all x86 systems have support for BIOS booting, including newer UEFI-based machines that use an emulated BIOS. This is great, because you can use the same boot logic across all machines from the last centuries. But this wide compatibility is at the same time the biggest disadvantage of BIOS booting, because it means that the CPU is put into a 16-bit compatibility mode called [real mode] before booting so that archaic bootloaders from the 1980s would still work.
 
 #### Boot Process
 
-When you turn on a computer, it loads the BIOS from some special flash memory located on the motherboard. The BIOS runs self test and initialization routines of the hardware, then it looks for bootable disks. If it finds one, the control is transferred to its _bootloader_, which is a 512-byte portion of executable code stored at the disk's beginning. Most bootloaders are larger than 512 bytes, so bootloaders are commonly split into a small first stage, which fits into 512 bytes, and a second stage, which is subsequently loaded by the first stage.
+When you turn on a computer, it loads the BIOS from some special flash memory located on the motherboard. The BIOS runs self test and initialization routines of the hardware, then it looks for bootable disks. For that it loads the first disk sector (512 bytes) of each disk into memory, which contains the [_master boot record_] (MBR) structure. This structure has the following general format:
 
-The bootloader has to determine the location of the kernel image on the disk and load it into memory. It also needs to switch the CPU from the 16-bit [real mode] first to the 32-bit [protected mode], and then to the 64-bit [long mode], where 64-bit registers and the complete main memory are available. Its third job is to query certain information (such as a memory map) from the BIOS and pass it to the OS kernel.
+[_master boot record_]: https://en.wikipedia.org/wiki/Master_boot_record
 
+Offset | Field | Size
+-------|-------|-----
+0 | bootstrap code | 446
+446 | partition entry 1 | 16
+462 | partition entry 2 | 16
+478 | partition entry 3 | 16
+444 | partition entry 4 | 16
+510 | boot signature | 2
+
+The bootstrap code is commonly called the _bootloader_ and responsible for loading and starting the operating system kernel. The four partition entries describe the [disk partitions] such as the `C:` partition on Windows. The boot signature field at the end of the structure specifies whether this disk is bootable or not. If it is bootable, the signature field must be set to the [magic bytes] `0xaa55`. It's worth noting that there are [many extensions][mbr-extensions] of the MBR format, which for example include a 5th partition entry or a disk signature.
+
+[disk partitions]: https://en.wikipedia.org/wiki/Disk_partitioning
+[magic bytes]: https://en.wikipedia.org/wiki/Magic_number_(programming)
+[mbr-extensions]: https://en.wikipedia.org/wiki/Master_boot_record#Sector_layout
+
+The BIOS itself only cares for the boot signature field. If it finds a disk with a boot signature equal to `0xaa55`, it directly passes control to the bootloader code stored at the beginning of the disk. This bootloader is then responsible for multiple things:
+
+- **Loading the kernel from disk:** The bootloader has to determine the location of the kernel image on the disk and load it into memory.
+- **Initializing the CPU:** As noted above, all `x86_64` CPUs start up in a 16-bit [real mode] to be compatible with older operating systems. So in order to run current 64-bit operating systems, the bootloader needsn to switch the CPU from the 16-bit [real mode] first to the 32-bit [protected mode], and then to the 64-bit [long mode], where 64-bit registers and the complete main memory are available.
+- **Querying system information:** The third job of the bootloader is to query certain information (such as a memory map) from the BIOS and pass it to the OS kernel. This for example includes information about the available main memory and graphical output devices.
+- **Setting up an execution environment:** Kernels are typically stored as normal executable files (e.g. in the [ELF] or [PE] format), which require some loading procedure. This includes setting up a [call stack] and a [page table].
+
+[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+[PE]: https://en.wikipedia.org/wiki/Portable_Executable
+[call stack]: https://en.wikipedia.org/wiki/Call_stack
 [real mode]: https://en.wikipedia.org/wiki/Real_mode
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
 [memory segmentation]: https://en.wikipedia.org/wiki/X86_memory_segmentation
+[page table]: https://en.wikipedia.org/wiki/Page_table
 
-Writing a BIOS bootloader is a bit cumbersome as it requires assembly language and a lot of non insightful steps like “write this magic value to this processor register”. Therefore we don't cover bootloader creation in this post and instead use the existing [`bootloader`] crate to make our kernel bootable. If you are interested in building your own BIOS bootloader: Stay tuned, a set of posts on this topic is already planned! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
+Some bootloaders also include a basic user interface for [choosing between multiple installed OSs][multi-booting] or entering a recovery mode. Since it is not possible to do all that within the available 446 bytes, most bootloaders are split into a small first stage, which is as small as possible, and a second stage, which is subsequently loaded by the first stage.
+
+[multi-booting]: https://en.wikipedia.org/wiki/Multi-booting
+
+Writing a BIOS bootloader is cumbersome as it requires assembly language and a lot of non insightful steps like _“write this magic value to this processor register”_. Therefore we don't cover bootloader creation in this post and instead use the existing [`bootloader`] crate to make our kernel bootable. If you are interested in building your own BIOS bootloader: Stay tuned, a set of posts on this topic is already planned! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
 
 [bootimage]: https://github.com/rust-osdev/bootimage
 
