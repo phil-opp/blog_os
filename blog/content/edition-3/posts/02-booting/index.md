@@ -14,9 +14,9 @@ icon = '''
 '''
 +++
 
-In this post, we explore the boot process on both BIOS and UEFI-based systems. We then turn the [freestanding Rust binary] from the previous post into a minimal operating system kernel and combine it with a bootloader. The result is a bootable disk image, which can be started in the [QEMU] emulator and run on real hardware.
+In this post, we explore the boot process on both BIOS and UEFI-based systems. We then turn the [freestanding Rust binary] from the previous post into a minimal operating system kernel and combine it with a bootloader. The result is a bootable disk image, which can be started in the [QEMU] emulator and run on real hardware. TODO
 
-[freestanding Rust binary]: @/edition-3/posts/01-freestanding-binary/index.md
+[freestanding Rust binary]: @/edition-3/posts/01-minimal-kernel/index.md
 
 <!-- more -->
 
@@ -175,244 +175,9 @@ Because of these drawbacks we decided to not use GRUB or the Multiboot standard 
 
 [first edition]: @/edition-1/_index.md
 
-## Minimal Kernel
-Now that we roughly know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a disk image that prints something to the screen when booted. For that we build upon the [freestanding Rust binary] from the previous post.
 
-As you may remember, we built the freestanding binary through `cargo`, but depending on the operating system we needed different entry point names and compile flags. That's because `cargo` builds for the _host system_ by default, i.e. the system you're running on. This isn't something we want for our kernel, because a kernel that runs on top of e.g. Windows does not make much sense. Instead, we want to compile for a clearly defined _target system_.
 
-### Installing Rust Nightly
-Rust has three release channels: _stable_, _beta_, and _nightly_. The Rust Book explains the difference between these channels really well, so take a minute and [check it out](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). For building an operating system we will need some experimental features that are only available on the nightly channel, so we need to install a nightly version of Rust.
 
-The recommend tool to manage Rust installations is [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. With rustup you can use a nightly compiler for the current directory by running `rustup override set nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory. After doing that, you can verify that you have a nightly version installed and active by running `rustc --version`: The version number should contain `-nightly` at the end.
-
-[rustup]: https://www.rustup.rs/
-
-The nightly compiler allows us to opt-in to various experimental features by using so-called _feature flags_ at the top of our file. For example, we could enable the experimental [`asm!` macro] for inline assembly by adding `#![feature(asm)]` to the top of our `main.rs`. Note that such experimental features are completely unstable, which means that future Rust versions might change or remove them without prior warning. For this reason we will only use them if absolutely necessary.
-
-[`asm!` macro]: https://doc.rust-lang.org/unstable-book/library-features/asm.html
-
-### Target Specification
-
-Cargo supports different target systems through the `--target` parameter. The target is specified as a so-called _[target triple]_, which describes the CPU architecture, the vendor, the operating system, and the [ABI]. For example, the `x86_64-unknown-linux-gnu` target triple describes a system with a `x86_64` CPU, no clear vendor and a Linux operating system with the GNU ABI. Rust supports [many different target triples][platform-support], including `arm-linux-androideabi` for Android or [`wasm32-unknown-unknown` for WebAssembly](https://www.hellorust.com/setup/wasm-target/).
-
-[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
-[ABI]: https://stackoverflow.com/a/2456882
-[platform-support]: https://doc.rust-lang.org/nightly/rustc/platform-support.html
-[custom-targets]: https://doc.rust-lang.org/nightly/rustc/targets/custom.html
-
-For our target system, however, we require some special configuration parameters (e.g. no underlying OS), so none of the [existing target triples][platform-support] fits. Fortunately, Rust allows us to define [our own target][custom-targets] through a JSON file. For example, a JSON file that describes the `x86_64-unknown-linux-gnu` target looks like this:
-
-```json
-{
-    "llvm-target": "x86_64-unknown-linux-gnu",
-    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
-    "arch": "x86_64",
-    "target-endian": "little",
-    "target-pointer-width": "64",
-    "target-c-int-width": "32",
-    "os": "linux",
-    "executables": true,
-    "linker-flavor": "gcc",
-    "pre-link-args": ["-m64"],
-    "morestack": false
-}
-```
-
-Most fields are required by LLVM to generate code for that platform. For example, the [`data-layout`] field defines the size of various integer, floating point, and pointer types. Then there are fields that Rust uses for conditional compilation, such as `target-pointer-width`. The third kind of fields define how the crate should be built. For example, the `pre-link-args` field specifies arguments passed to the [linker].
-
-[`data-layout`]: https://llvm.org/docs/LangRef.html#data-layout
-[linker]: https://en.wikipedia.org/wiki/Linker_(computing)
-
-We also target `x86_64` systems with our kernel, so our target specification will look very similar to the one above. Let's start by creating a `x86_64-blog_os.json` file (choose any name you like) with the common content:
-
-```json
-{
-    "llvm-target": "x86_64-unknown-none",
-    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
-    "arch": "x86_64",
-    "target-endian": "little",
-    "target-pointer-width": "64",
-    "target-c-int-width": "32",
-    "os": "none",
-    "executables": true
-}
-```
-
-Note that we changed the OS in the `llvm-target` and the `os` field to `none`, because our kernel will run on bare metal.
-
-We add the following build-related entries:
-
-- Override the default linker:
-
-  ```json
-  "linker-flavor": "ld.lld",
-  "linker": "rust-lld",
-  ```
-
-  Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker that is shipped with Rust for linking our kernel.
-
-  [LLD]: https://lld.llvm.org/
-
-- Abort on panic:
-
-  ```json
-  "panic-strategy": "abort",
-  ```
-
-  This setting specifies that the target doesn't support [stack unwinding] on panic, so instead the program should abort directly. This has the same effect as the `panic = "abort"` option in our Cargo.toml, so we can remove it from there. (Note that in contrast to the Cargo.toml option, this target option also applies when we recompile the `core` library later in this post. So be sure to add this option, even if you prefer to keep the Cargo.toml option.)
-
-  [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
-
-- Disable the red zone:
-
-  ```json
-  "disable-redzone": true,
-  ```
-
-  We're writing a kernel, so we'll need to handle interrupts at some point. To do that safely, we have to disable a certain stack pointer optimization called the _“red zone”_, because it would cause stack corruptions otherwise. For more information, see our separate post about [disabling the red zone].
-
-[disabling the red zone]: @/edition-2/posts/02-minimal-rust-kernel/disable-red-zone/index.md
-
-- Disable SIMD:
-
-  ```json
-  "features": "-mmx,-sse,+soft-float",
-  ```
-
-  The `features` field enables/disables target features. We disable the `mmx` and `sse` features by prefixing them with a minus and enable the `soft-float` feature by prefixing it with a plus. Note that there must be no spaces between different flags, otherwise LLVM fails to interpret the features string.
-
-  The `mmx` and `sse` features determine support for [Single Instruction Multiple Data (SIMD)] instructions, which can often speed up programs significantly. However, using the large SIMD registers in OS kernels leads to performance problems. The reason is that the kernel needs to restore all registers to their original state before continuing an interrupted program. This means that the kernel has to save the complete SIMD state to main memory on each system call or hardware interrupt. Since the SIMD state is very large (512–1600 bytes) and interrupts can occur very often, these additional save/restore operations considerably harm performance. To avoid this, we disable SIMD for our kernel (not for applications running on top!).
-
-  [Single Instruction Multiple Data (SIMD)]: https://en.wikipedia.org/wiki/SIMD
-
-  A problem with disabling SIMD is that floating point operations on `x86_64` require SIMD registers by default. To solve this problem, we add the `soft-float` feature, which emulates all floating point operations through software functions based on normal integers.
-
-For more information, see our post on [disabling SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
-
-After adding all the above entries, our full target specification file looks like this:
-
-```json
-{
-  "llvm-target": "x86_64-unknown-none",
-  "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
-  "arch": "x86_64",
-  "target-endian": "little",
-  "target-pointer-width": "64",
-  "target-c-int-width": "32",
-  "os": "none",
-  "executables": true,
-  "linker-flavor": "ld.lld",
-  "linker": "rust-lld",
-  "panic-strategy": "abort",
-  "disable-redzone": true,
-  "features": "-mmx,-sse,+soft-float"
-}
-```
-
-### Building our Kernel
-
-Compiling for our new target will use Linux conventions (I'm not quite sure why, I assume that it's just LLVM's default). This means that we need an entry point named `_start` as described in the [previous post]:
-
-[previous post]: @/edition-2/posts/01-freestanding-rust-binary/index.md
-
-```rust
-// src/main.rs
-
-#![no_std] // don't link the Rust standard library
-#![no_main] // disable all Rust-level entry points
-
-use core::panic::PanicInfo;
-
-/// This function is called on panic.
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-
-#[no_mangle] // don't mangle the name of this function
-pub extern "C" fn _start() -> ! {
-    // this function is the entry point, since the linker looks for a function
-    // named `_start` by default
-    loop {}
-}
-```
-
-Note that the entry point needs to be called `_start` regardless of your host OS.
-
-We can now build the kernel for our new target by passing the name of the JSON file as `--target`:
-
-```
-> cargo build --target x86_64-blog_os.json
-
-error[E0463]: can't find crate for `core`
-```
-
-It fails! The error tells us that the Rust compiler no longer finds the [`core` library]. This library contains basic Rust types such as `Result`, `Option`, and iterators, and is implicitly linked to all `no_std` crates.
-
-[`core` library]: https://doc.rust-lang.org/nightly/core/index.html
-
-The problem is that the core library is distributed together with the Rust compiler as a precompiled library. So it is only valid for supported host triples (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for a different target, we need to recompile `core` for this target.
-
-#### The `build-std` Option
-
-That's where the [`build-std` feature] of cargo comes in. It allows to recompile `core` and other standard library crates on demand, instead of using the precompiled versions shipped with the Rust installation. This feature is very new and still not finished, so it is marked as "unstable" and only available on [nightly Rust compilers].
-
-[`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
-[nightly Rust compilers]: #installing-rust-nightly
-
-We can use this feature to recompile the `core` library by passing `-Z build-std=core` to the `cargo build` command:
-
-```
-> cargo build --target x86_64-blog_os.json -Z build-std=core
-
-error: "/…/rustlib/src/rust/Cargo.lock" does not exist,
-unable to build with the standard library, try:
-    rustup component add rust-src
-```
-
-It still fails. The problem is that cargo needs a copy of the rust source code in order to recompile the `core` crate. The error message helpfully suggest to provide such a copy by installing the `rust-src` component.
-
-After running the suggested `rustup component add rust-src` command, the build should now finally succeed:
-
-```
-> cargo build --target x86_64-blog_os.json -Z build-std=core
-   Compiling core v0.0.0 (/…/rust/src/libcore)
-   Compiling rustc-std-workspace-core v1.99.0 (/…/rustc-std-workspace-core)
-   Compiling compiler_builtins v0.1.32
-   Compiling blog_os v0.1.0 (/…/blog_os)
-    Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
-```
-
-We see that `cargo build` now recompiles the `core`, `compiler_builtins` (a dependency of `core`), and `rustc-std-workspace-core` (a dependency of `compiler_builtins`) libraries for our custom target.
-
-#### Memory-Related Intrinsics
-
-The Rust compiler assumes that a certain set of built-in functions is available for all systems. Most of these functions are provided by the `compiler_builtins` crate that we just recompiled. However, there are some memory-related functions in that crate that are not enabled by default because they are normally provided by the C library on the system. These functions include `memset`, which sets all bytes in a memory block to a given value, `memcpy`, which copies one memory block to another, and `memcmp`, which compares two memory blocks. While we didn't need any of these functions to compile our kernel right now, they will be required as soon as we add some more code to it (e.g. when copying structs around).
-
-Since we can't link to the C library of the operating system, we need an alternative way to provide these functions to the compiler. One possible approach for this could be to implement our own `memset` etc. functions and apply the `#[no_mangle]` attribute to them (to avoid the automatic renaming during compilation). However, this is dangerous since the slightest mistake in the implementation of these functions could lead to bugs and undefined behavior. For example, you might get an endless recursion when implementing `memcpy` using a `for` loop because `for` loops implicitly call the [`IntoIterator::into_iter`] trait method, which might call `memcpy` again. So it's a good idea to reuse existing well-tested implementations instead of creating your own.
-
-[`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
-
-Fortunately, the `compiler_builtins` crate already contains implementations for all the needed functions, they are just disabled by default to not collide with the implementations from the C library. We can enable them by passing an additional `-Z build-std-features=compiler-builtins-mem` flag to `cargo`. Like the `build-std` flag, the [`build-std-features`] flag is still unstable, so it might change in the future.
-
-[`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
-
-The full build command now looks like this:
-
-```
-cargo build --target x86_64-blog_os.json -Z build-std=core \
-    -Z build-std-features=compiler-builtins-mem
-```
-
-(Support for the `compiler-builtins-mem` feature was only [added very recently](https://github.com/rust-lang/rust/pull/77284), so you need at least Rust nightly `2020-09-30` for it.)
-
-Behind the scenes, the new flag enables the [`mem` feature] of the `compiler_builtins` crate. The effect of this is that the `#[no_mangle]` attribute is applied to the [`memcpy` etc. implementations] of the crate, which makes them available to the linker. It's worth noting that these functions are already optimized using [inline assembly] on `x86_64`, so their performance should be much better than a custom loop-based implementation.
-
-[`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L54-L55
-[`memcpy` etc. implementations]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
-[inline assembly]: https://doc.rust-lang.org/unstable-book/library-features/asm.html
-
-With the additional `compiler-builtins-mem` flag, our kernel has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
 
 ## Bootable Disk Image
 
@@ -528,7 +293,7 @@ After creating the workspace, we begin the implementation of the `bootimage` cra
 use std::path::{Path, PathBuf};
 
 fn main() -> anyhow::Result<PathBuf> {
-    // this is where cargo places our kernel executable 
+    // this is where cargo places our kernel executable
     // (we hardcode this path for now, but will improve this later)
     let kernel_binary = Path::new("target/x86_64_blog_os/debug/blog_os");
 
@@ -881,7 +646,7 @@ TODO
 
 - build kernel before creating disk image
 
-### 
+###
 
 
 

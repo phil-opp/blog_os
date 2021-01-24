@@ -877,7 +877,7 @@ a.zola-anchor:hover {
     background-color: var(--background-color-note);
 }
 
-.note p:first-of-type {
+.note details p:first-of-type {
     margin-top: 1rem;
 }
 
@@ -935,6 +935,10 @@ details summary {
 
 details summary h3, details summary h4, details summary h5, details summary h6 {
     display: inline;
+}
+
+details :hover>a.zola-anchor {
+    opacity: 0;
 }
 
 .gh-repo-box {
