@@ -109,7 +109,7 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
     "target-pointer-width": "64",
     "target-c-int-width": "32",
     "os": "none",
-    "executables": true,
+    "executables": true
 }
 ```
 
