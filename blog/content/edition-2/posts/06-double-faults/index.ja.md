@@ -25,7 +25,7 @@ translators = ["garasubo", "JohnTitor"]
 <!-- toc -->
 
 ## ダブルフォルトとは
-ダブルフォルトとは簡単に言うとCPUが例外ハンドラを呼び出すことに失敗したときに起きる特別な例外です。例えば、ページフォルトが起きたが、ページフォルトハンドラが[Interrupt Descriptor Table][IDT] (IDT)に登録されていないときに発生します。つまり、C++での`catch(...)`やJavaやC#の`catch(Exception e)`ような、例外のあるプログラミング言語のcatch-allブロックのようなものです。
+簡単に言うとダブルフォルトとはCPUが例外ハンドラを呼び出すことに失敗したときに起きる特別な例外です。例えば、ページフォルトが起きたが、ページフォルトハンドラが[Interrupt Descriptor Table][IDT] (IDT)に登録されていないときに発生します。つまり、C++での`catch(...)`やJavaやC#の`catch(Exception e)`ような、例外のあるプログラミング言語のcatch-allブロックのようなものです。
 
 [IDT]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
@@ -68,8 +68,8 @@ pub extern "C" fn _start() -> ! {
 
 このトリプルフォルトを防ぐためには、ページフォルトかダブルフォルトのハンドラ関数を定義しないといけません。私達はすべての場合におけるトリプルフォルトを防ぎたいので、すべてのハンドルされていない例外のタイプで呼び出されるダブルフォルトハンドラを定義するところからはじめましょう。
 
-## A Double Fault Handler
-A double fault is a normal exception with an error code, so we can specify a handler function similar to our breakpoint handler:
+## ダブルフォルトハンドラ
+ダブルフォルトは通常のエラーコードのある例外なので、ブレークポイントハンドラと同じようにハンドラ関数を指定することができます。
 
 ```rust
 // in src/interrupts.rs
@@ -91,66 +91,68 @@ extern "x86-interrupt" fn double_fault_handler(
 }
 ```
 
-Our handler prints a short error message and dumps the exception stack frame. The error code of the double fault handler is always zero, so there's no reason to print it. One difference to the breakpoint handler is that the double fault handler is [_diverging_]. The reason is that the `x86_64` architecture does not permit returning from a double fault exception.
+私達のハンドラは短いエラーメッセージを出力して、例外スタックフレームをダンプします。ダブルフォルトハンドラのエラーコードは常に0なので、プリントすることはないでしょう。ブレークポイントハンドラとの一つの違いは、ダブルフォルトハンドラは[_発散する_]ことです。なぜかというと、`x86_64`アーキテクチャではダブルフォルト例外から復帰するすることは許されていないからです。
 
-[_diverging_]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
+[_発散する_]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
-When we start our kernel now, we should see that the double fault handler is invoked:
+ここで私達のカーネルをスタートさせると、ダブルフォルトハンドラが呼び出されていることがわかることでしょう。
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` and the exception stack frame](qemu-catch-double-fault.png)
 
-It worked! Here is what happens this time:
+動きました！ここで何が起きているかというと、
 
-1. The CPU tries to write to `0xdeadbeef`, which causes a page fault.
-2. Like before, the CPU looks at the corresponding entry in the IDT and sees that no handler function is defined. Thus, a double fault occurs.
-3. The CPU jumps to the – now present – double fault handler.
+1. CPUが`0xdeadbeef`に書き込もうとして、ページフォルトが起きる
+2. 以前と同様に、CPUはIDT中の対応するエントリを見にいくが、ハンドラ関数が定義されていないことがわかり、結果、ダブルフォルトが起きる
+3. CPUは、今は存在ている、ダブルフォルトハンドラにジャンプする
 
-The triple fault (and the boot-loop) no longer occurs, since the CPU can now call the double fault handler.
+CPUはダブルフォルトハンドラを呼べるようになったので、トリプルフォルト（と起動ループ）はもう起こりません。
 
-That was quite straightforward! So why do we need a whole post for this topic? Well, we're now able to catch _most_ double faults, but there are some cases where our current approach doesn't suffice.
+ここまでは簡単です。なんでこの話題のためにポストが必要だったのでしょうか？実は、私達は_ほとんどの_ダブルフォルトをキャッチすることはできますが、このアプローチでは十分でないケースが存在するのです。
 
-## Causes of Double Faults
-Before we look at the special cases, we need to know the exact causes of double faults. Above, we used a pretty vague definition:
+## ダブルフォルトの原因
+特別な場合を見にいく前に、ダブルフォルトの正確な原因を知る必要があります。ここまで、私達はとてもあいまいな定義を使ってきました。
 
-> A double fault is a special exception that occurs when the CPU fails to invoke an exception handler.
+> ダブルフォルトとはCPUが例外ハンドラを呼び出すことに失敗したときに起きる特別な例外です。
 
-What does _“fails to invoke”_ mean exactly? The handler is not present? The handler is [swapped out]? And what happens if a handler causes exceptions itself?
+_「呼び出すことに失敗する」_とは正確には何をいみするのでしょうか？ハンドラが存在しない？ハンドラが[スワップアウト]された？また、ハンドラそのものが例外を発生させたらどうなるのでしょうか？
 
-[swapped out]: http://pages.cs.wisc.edu/~remzi/OSTEP/vm-beyondphys.pdf
+[スワップアウト]: http://pages.cs.wisc.edu/~remzi/OSTEP/vm-beyondphys.pdf
 
-For example, what happens if:
+例えば以下のようなことがおこったらどうでしょう？
 
-1. a breakpoint exception occurs, but the corresponding handler function is swapped out?
-2. a page fault occurs, but the page fault handler is swapped out?
-3. a divide-by-zero handler causes a breakpoint exception, but the breakpoint handler is swapped out?
-4. our kernel overflows its stack and the _guard page_ is hit?
+1. ブレークポイント例外が発生したが、対応するハンドラがスワップアウトされていたら？
+2. ページフォルトが発生がしたが、ページフォルトハンドラがスワップアウトされていたら？
+3. ゼロ除算ハンドラがブレークポイント例外を発生したが、ブレークポイントハンドラがスワップアウトされていたら？
+4. カーネルがスタックをオーバーフローさせて_ガードページ_にヒットしたら？
 
 Fortunately, the AMD64 manual ([PDF][AMD64 manual]) has an exact definition (in Section 8.2.9). According to it, a “double fault exception _can_ occur when a second exception occurs during the handling of a prior (first) exception handler”. The _“can”_ is important: Only very specific combinations of exceptions lead to a double fault. These combinations are:
+幸いにもAMD64のマニュアル（[PDF][AMD64 manual]）には正確な定義が書かれています（8.2.9章）。それによると「ダブルフォルト例外は直前の（一度目の）例外ハンドラの処理中に二度目の例外が発生したとき_起きうる_」と書かれています。_起きうる_というのが重要で、とても特別な例外の組み合わせでのみダブルフォルトとなります。この組み合わせは以下のようになっています
 
-First Exception | Second Exception
+最初の例外 | 二度目の例外
 ----------------|-----------------
-[Divide-by-zero],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault] | [Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
-[Page Fault] | [Page Fault],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
+[ゼロ除算],<br>[無効TSS],<br>[セグメント不在],<br>[スタックセグメントフォルト],<br>[一般保護例外] | [無効TSS],<br>[セグメント不在],<br>[スタックセグメントフォルト],<br>[一般保護例外]
+[ページフォルト] | [ページフォルト],<br>[無効TSS],<br>[セグメント不在],<br>[スタックセグメントフォルト],<br>[一般保護例外]
 
-[Divide-by-zero]: https://wiki.osdev.org/Exceptions#Divide-by-zero_Error
-[Invalid TSS]: https://wiki.osdev.org/Exceptions#Invalid_TSS
-[Segment Not Present]: https://wiki.osdev.org/Exceptions#Segment_Not_Present
-[Stack-Segment Fault]: https://wiki.osdev.org/Exceptions#Stack-Segment_Fault
-[General Protection Fault]: https://wiki.osdev.org/Exceptions#General_Protection_Fault
-[Page Fault]: https://wiki.osdev.org/Exceptions#Page_Fault
+[ゼロ除算]: https://wiki.osdev.org/Exceptions#Divide-by-zero_Error
+[無効TSS]: https://wiki.osdev.org/Exceptions#Invalid_TSS
+[セグメント不在]: https://wiki.osdev.org/Exceptions#Segment_Not_Present
+[スタックセグメントフォルト]: https://wiki.osdev.org/Exceptions#Stack-Segment_Fault
+[一般保護例外]: https://wiki.osdev.org/Exceptions#General_Protection_Fault
+[ページフォルト]: https://wiki.osdev.org/Exceptions#Page_Fault
 
 
 [AMD64 manual]: https://www.amd.com/system/files/TechDocs/24593.pdf
 
-So for example a divide-by-zero fault followed by a page fault is fine (the page fault handler is invoked), but a divide-by-zero fault followed by a general-protection fault leads to a double fault.
+例えばページフォルトに続いてゼロ除算例外が起きた場合は問題ない（ページフォルトハンドラが呼び出される）が、一般保護例外に続いてゼロ除算例外が起きた場合はダブルフォルトが起きます。
 
-With the help of this table, we can answer the first three of the above questions:
+この表を見れば、先程の質問のうち最初の３つに答えることができます。
 
-1. If a breakpoint exception occurs and the corresponding handler function is swapped out, a _page fault_ occurs and the _page fault handler_ is invoked.
-2. If a page fault occurs and the page fault handler is swapped out, a _double fault_ occurs and the _double fault handler_ is invoked.
-3. If a divide-by-zero handler causes a breakpoint exception, the CPU tries to invoke the breakpoint handler. If the breakpoint handler is swapped out, a _page fault_ occurs and the _page fault handler_ is invoked.
+1. ブレークポイント例外が発生して、対応するハンドラ関数がスワップアウトされている場合、_ページフォルト_が発生して_ページフォルトハンドラ_が呼び出される
+2. ページフォルトが発生してページフォルトハンドラがスワップアウトされている場合、_ダブルフォルト_が発生してダブルフォルトハンドラが呼び出される
+3. ゼロ除算ハンドラがブレークポイント例外を発生させた場合、CPUはブレークポイントハンドラを呼び出そうとする。もしブレークポイントハンドラがスワップアウトされている場合、_ページフォルト_が発生して_ページフォルトハンドラ_が呼び出される
 
 In fact, even the case of an exception without a handler function in the IDT follows this scheme: When the exception occurs, the CPU tries to read the corresponding IDT entry. Since the entry is 0, which is not a valid IDT entry, a _general protection fault_ occurs. We did not define a handler function for the general protection fault either, so another general protection fault occurs. According to the table, this leads to a double fault.
+実際、IDTにハンドラ関数ないときの例外の場合はこの体系に従っています。つまり、例外が発生したとき、CPUは対応するIDTエントリを読み込みにいきます。このエントリは0のため正しいIDTエントリではないので、_一般保護例外_が発生します。私達は一般保護例外のハンドラも定義していないので、新たな一般保護例外が発生します。表によるとこれはダブルフォルトを起こします。
 
 ### Kernel Stack Overflow
 Let's look at the fourth question:
