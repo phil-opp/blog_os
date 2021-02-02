@@ -334,7 +334,7 @@ pub fn _print(args: fmt::Arguments) {
 The [`without_interrupts`] function takes a [closure] and executes it in an interrupt-free environment. We use it to ensure that no interrupt can occur as long as the `Mutex` is locked. When we run our kernel now we see that it keeps running without hanging. (We still don't notice any dots, but this is because they're scrolling by too fast. Try to slow down the printing, e.g. by putting a `for _ in 0..10000 {}` inside the loop.)
 
 [`without_interrupts`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.without_interrupts.html
-[closure]: https://doc.rust-lang.org/book/second-edition/ch13-01-closures.html
+[closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
 
 We can apply the same change to our serial printing function to ensure that no deadlocks occur with it either:
 

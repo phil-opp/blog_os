@@ -34,7 +34,7 @@ This post replaces the (now deprecated) [_Unit Testing_] and [_Integration Tests
 
 Rust has a [built-in test framework] that is capable of running unit tests without the need to set anything up. Just create a function that checks some results through assertions and add the `#[test]` attribute to the function header. Then `cargo test` will automatically find and execute all test functions of your crate.
 
-[built-in test framework]: https://doc.rust-lang.org/book/second-edition/ch11-00-testing.html
+[built-in test framework]: https://doc.rust-lang.org/book/ch11-00-testing.html
 
 Unfortunately it's a bit more complicated for `no_std` applications such as our kernel. The problem is that Rust's test framework implicitly uses the built-in [`test`] library, which depends on the standard library. This means that we can't use the default test framework for our `#[no_std]` kernel.
 

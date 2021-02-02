@@ -34,7 +34,7 @@ Alternatively, consider reading the new [_Testing_] post instead. It sets up a s
 ## Unit Tests for `no_std` Binaries
 Rust has a [built-in test framework] that is capable of running unit tests without the need to set anything up. Just create a function that checks some results through assertions and add the `#[test]` attribute to the function header. Then `cargo test` will automatically find and execute all test functions of your crate.
 
-[built-in test framework]: https://doc.rust-lang.org/book/second-edition/ch11-00-testing.html
+[built-in test framework]: https://doc.rust-lang.org/book/ch11-00-testing.html
 
 Unfortunately it's a bit more complicated for `no_std` applications such as our kernel. If we run `cargo test` (without adding any test yet), we get the following error:
 
@@ -250,7 +250,7 @@ error[E0277]: the trait bound `volatile::Volatile<vga_buffer::ScreenChar>: core:
 The problem is that array construction in Rust requires that the contained type is [`Copy`]. The `ScreenChar` is `Copy`, but the `Volatile` wrapper is not. There is currently no easy way to circumvent this without using [`unsafe`], but fortunately there is the [`array_init`] crate that provides a safe interface for such operations.
 
 [`Copy`]: https://doc.rust-lang.org/core/marker/trait.Copy.html
-[`unsafe`]: https://doc.rust-lang.org/book/second-edition/ch19-01-unsafe-rust.html
+[`unsafe`]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
 [`array_init`]: https://docs.rs/array-init
 
 To use that crate, we add the following to our `Cargo.toml`:
