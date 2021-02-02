@@ -29,9 +29,9 @@ dependencies = [
 
 [[package]]
 name = "bootloader"
-version = "0.9.11"
+version = "0.9.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83732ad599045a978528e4311539fdcb20c30e406b66d1d08cd4089d4fc8d90f"
+checksum = "452bbab4eae8767805ff09386c9e26d42ceb6964916ab3c64425469342473f91"
 
 [[package]]
 name = "cpuio"
