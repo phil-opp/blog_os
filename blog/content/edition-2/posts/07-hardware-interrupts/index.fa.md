@@ -213,7 +213,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 `timer_interrupt_handler` ما دارای امضای مشابه کنترل کننده های استثنای ما است ، زیرا پردازنده به طور یکسان به استثناها و وقفه های خارجی واکنش نشان می دهد (تنها تفاوت این است که برخی از استثناها کد خطا را در پشته ذخیره می‌کنند). ساختمان [`InterruptDescriptorTable`] تریت [`IndexMut`] را پیاده سازی می کند، بنابراین می توانیم از طریق سینتکس ایندکس‌دهی آرایه، به ایتم های جداگانه دسترسی پیدا کنیم.
 
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
 در کنترل کننده وقفه تایمر، یک نقطه را روی صفحه چاپ می کنیم. همانطور که وقفه تایمر به صورت دوره ای اتفاق می افتد ، انتظار داریم که در هر تیک تایمر یک نقطه ظاهر شود. با این حال، هنگامی که آن را اجرا می کنیم می بینیم که فقط یک نقطه چاپ می شود:
@@ -338,7 +338,7 @@ pub fn _print(args: fmt::Arguments) {
 
 تابع [`without_interrupts`] یک [کلوژر] را گرفته و آن را در یک محیط بدون وقفه اجرا می کند. ما از آن استفاده می کنیم تا اطمینان حاصل کنیم که تا زمانی که `Mutex` قفل شده است ، هیچ وقفه ای رخ نمی دهد. اکنون هنگامی که هسته را اجرا می کنیم ، می بینیم که آن بدون هنگ کردن به کار خود ادامه می دهد. (ما هنوز هیچ نقطه ای را مشاهده نمی کنیم ، اما این به این دلیل است که سرعت حرکت آنها بسیار سریع است. سعی کنید سرعت چاپ را کم کنید، مثلاً با قرار دادن `for _ in 0..10000 {}` در داخل حلقه.)
 
-[`without_interrupts`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/interrupts/fn.without_interrupts.html
+[`without_interrupts`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.without_interrupts.html
 [کلوژر]: https://doc.rust-lang.org/book/second-edition/ch13-01-closures.html
 
 ما می توانیم همین تغییر را در تابع چاپ سریال نیز اعمال کنیم تا اطمینان حاصل کنیم که هیچ بن‌بستی در آن رخ نمی دهد:
@@ -585,7 +585,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 ما برای خواندن یک بایت از پورت داده صفحه کلید از نوع [`Port`] کرت `x86_64` استفاده می‌کنیم. این بایت [_اسکن کد_] نامیده می شود و عددی است که کلید فشرده شده / رها شده را نشان می دهد. ما هنوز کاری با اسکن کد انجام نمی دهیم ، فقط آن را روی صفحه چاپ می کنیم:
 
-[`Port`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/port/struct.Port.html
 [_اسکن کد_]: https://en.wikipedia.org/wiki/Scancode
 
 ![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)

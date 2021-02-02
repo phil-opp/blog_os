@@ -183,18 +183,18 @@ CPUと<ruby>周辺機器<rp> (</rp><rt>ペリフェラル</rt><rp>) </rp></ruby>
 
 `in`と`out`のアセンブリ命令を手動で呼び出す代わりに、[`x86_64`]クレートによって提供される<ruby>abstraction<rp> (</rp><rt>抽象化されたもの</rt><rp>) </rp></ruby>を使います。このクレートへの依存を追加するため、`Cargo.toml`の`dependencies`セクションにこれを追加しましょう：
 
-[`x86_64`]: https://docs.rs/x86_64/0.12.1/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.13.2/x86_64/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.12.1"
+x86_64 = "0.13.2"
 ```
 
 これで、このクレートによって提供される[`Port`]型を使って`exit_qemu`関数を作ることができます。
 
-[`Port`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/port/struct.Port.html
 
 ```rust
 // in src/main.rs
