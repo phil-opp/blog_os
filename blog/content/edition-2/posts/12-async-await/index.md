@@ -1758,9 +1758,9 @@ if self.task_queue.is_empty() {
 
 In case this interrupt pushes to the `task_queue`, we put the CPU to sleep even though there is now a ready task. In the worst case, this could delay the handling of a keyboard interrupt until the next keypress or the next timer interrupt. So how do we prevent it?
 
-The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`enable_interrupts_and_hlt`] function provided by the [`x86_64`] crate. This function is only available since version 0.9.6, so you might need to update your `x86_64` dependency to use it.
+The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`interrupts::enable_and_hlt`][`enable_and_hlt`] function provided by the [`x86_64`] crate. This function is only available since version 0.9.6, so you might need to update your `x86_64` dependency to use it.
 
-[`enable_interrupts_and_hlt`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.enable_interrupts_and_hlt.html
+[`enable_and_hlt`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
 The updated implementation of our `sleep_if_idle` function looks like this:
 
@@ -1769,11 +1769,11 @@ The updated implementation of our `sleep_if_idle` function looks like this:
 
 impl Executor {
     fn sleep_if_idle(&self) {
-        use x86_64::instructions::interrupts::{self, enable_interrupts_and_hlt};
+        use x86_64::instructions::interrupts::{self, enable_and_hlt};
 
         interrupts::disable();
         if self.task_queue.is_empty() {
-            enable_interrupts_and_hlt();
+            enable_and_hlt();
         } else {
             interrupts::enable();
         }
@@ -1781,7 +1781,7 @@ impl Executor {
 }
 ```
 
-To avoid race conditions, we disable interrupts before checking whether the `task_queue` is empty. If it is, we use the [`enable_interrupts_and_hlt`] function to enable interrupts and put the CPU to sleep as a single atomic operation. In case the queue is no longer empty, it means that an interrupt woke a task after `run_ready_tasks` returned. In that case, we enable interrupts again and directly continue execution without executing `hlt`.
+To avoid race conditions, we disable interrupts before checking whether the `task_queue` is empty. If it is, we use the [`enable_and_hlt`] function to enable interrupts and put the CPU to sleep as a single atomic operation. In case the queue is no longer empty, it means that an interrupt woke a task after `run_ready_tasks` returned. In that case, we enable interrupts again and directly continue execution without executing `hlt`.
 
 Now our executor properly puts the CPU to sleep when there is nothing to do. We can see that the QEMU process has a much lower CPU utilization when we run our kernel using `cargo run` again.
 
