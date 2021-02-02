@@ -604,14 +604,14 @@ Translating virtual to physical addresses is a common task in an OS kernel, ther
 The base of the abstraction are two traits that define various page table mapping functions:
 
 - The [`Mapper`] trait is generic over the page size and provides functions that operate on pages. Examples are [`translate_page`], which translates a given page to a frame of the same size, and [`map_to`], which creates a new mapping in the page table.
-- The [`MapperAllSizes`] trait implies that the implementor implements `Mapper` for all pages sizes. In addition, it provides functions that work with multiple page sizes such as [`translate_addr`] or the general [`translate`].
+- The [`Translate`] trait provides functions that work with multiple page sizes such as [`translate_addr`] or the general [`translate`].
 
 [`Mapper`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/mapper/trait.Mapper.html
 [`translate_page`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
 [`map_to`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
-[`MapperAllSizes`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/mapper/trait.MapperAllSizes.html
-[`translate_addr`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#method.translate_addr
-[`translate`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/mapper/trait.MapperAllSizes.html#tymethod.translate
+[`Translate`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/mapper/trait.Translate.html
+[`translate_addr`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
+[`translate`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
 
 The traits only define the interface, they don't provide any implementation. The `x86_64` crate currently provides three types that implement the traits with different requirements. The [`OffsetPageTable`] type assumes that the complete physical memory is mapped to the virtual address space at some offset. The [`MappedPageTable`] is a bit more flexible: It only requires that each page table frame is mapped to the virtual address space at a calculable address. Finally, the [`RecursivePageTable`] type can be used to access page table frames through [recursive page tables](#recursive-page-tables).
 
@@ -647,7 +647,7 @@ The function takes the `physical_memory_offset` as an argument and returns a new
 
 The `active_level_4_table` function should be only called from the `init` function from now on because it can easily lead to aliased mutable references when called multiple times, which can cause undefined behavior. For this reason, we make the function private by removing the `pub` specifier.
 
-We now can use the `MapperAllSizes::translate_addr` method instead of our own `memory::translate_addr` function. We only need to change a few lines in our `kernel_main`:
+We now can use the `Translate::translate_addr` method instead of our own `memory::translate_addr` function. We only need to change a few lines in our `kernel_main`:
 
 ```rust
 // in src/main.rs
@@ -655,7 +655,7 @@ We now can use the `MapperAllSizes::translate_addr` method instead of our own `m
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     // new: different imports
     use blog_os::memory;
-    use x86_64::{structures::paging::MapperAllSizes, VirtAddr};
+    use x86_64::{structures::paging::Translate, VirtAddr};
 
     […] // hello world and blog_os::init
 
@@ -676,7 +676,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-We need to import the `MapperAllSizes` trait in order to use the [`translate_addr`] method it provides.
+We need to import the `Translate` trait in order to use the [`translate_addr`] method it provides.
 
 When we run it now, we see the same translation results as before, with the difference that the huge page translation now also works:
 
