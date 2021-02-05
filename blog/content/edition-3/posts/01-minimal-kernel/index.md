@@ -14,7 +14,7 @@ icon = '''
 '''
 +++
 
-The first step in creating our own operating system kernel is to create a Rust executable that does not link the standard library. This makes it possible to run Rust code on the [bare metal] without an underlying operating system. TODO
+The first step in creating our own operating system kernel is to create a [bare metal] Rust executable that does not depend on an underlying operating system. For that we need to disable most of Rust's standard library and adjust various compilation settings. The result is a minimal operating system kernel that forms the base for the following posts of this series.
 
 [bare metal]: https://en.wikipedia.org/wiki/Bare_machine
 
@@ -31,7 +31,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 ## Introduction
 To write an operating system kernel, we need code that does not depend on any operating system features. This means that we can't use threads, files, heap memory, the network, random numbers, standard output, or any other features requiring OS abstractions or specific hardware. Which makes sense, since we're trying to write our own OS and our own drivers.
 
-This means that we can't use most of the [Rust standard library], but there are a lot of Rust features that we _can_ use. For example, we can use [iterators], [closures], [pattern matching], [option] and [result], [string formatting], and of course the [ownership system]. These features make it possible to write a kernel in a very expressive, high level way without worrying about [undefined behavior] or [memory safety].
+While this means that we can't use most of the [Rust standard library], there are still a lot of Rust features that we _can_ use. For example, we can use [iterators], [closures], [pattern matching], [option] and [result], [string formatting], and of course the [ownership system]. These features make it possible to write a kernel in a very expressive, high level way without worrying about [undefined behavior] or [memory safety].
 
 [option]: https://doc.rust-lang.org/core/option/
 [result]:https://doc.rust-lang.org/core/result/
@@ -47,7 +47,7 @@ This means that we can't use most of the [Rust standard library], but there are 
 In order to create a minimal OS kernel in Rust, we start by creating an executable that can be run without an underlying operating system. Such an executable is often called a “freestanding” or “bare-metal” executable. We then make this executable compatible with the early-boot environment of the `x86_64` architecture so that we can boot it as an operating system kernel.
 
 ## Disabling the Standard Library
-By default, all Rust crates link the [standard library], which depends on the operating system for features such as threads, files, or networking. It also depends on the C standard library `libc`, which closely interacts with OS services. Since our plan is to write an operating system, we can not use any OS-dependent libraries. So we have to disable the automatic inclusion of the standard library through the [`no_std` attribute].
+By default, all Rust crates link the [standard library], which depends on the operating system for features such as threads, files, or networking. It also depends on the C standard library `libc`, which closely interacts with OS services. Since our plan is to write an operating system, we cannot use any OS-dependent libraries. So we have to disable the automatic inclusion of the standard library, which we can do through the [`no_std` attribute].
 
 [standard library]: https://doc.rust-lang.org/std/
 [`no_std` attribute]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
@@ -150,6 +150,13 @@ A side note about `loop {}`: There is currently a bug in LLVM (the code generato
 
 </div>
 
+After defining a panic handler, only the `eh_personality` language item error remains:
+
+```
+> cargo build
+error: language item required, but not found: `eh_personality`
+```
+
 ### The `eh_personality` Language Item
 
 Language items are special functions and types that are required internally by the compiler. For example, the [`Copy`] trait is a language item that tells the compiler which types have [_copy semantics_][`Copy`]. When we look at the [implementation][copy code], we see it has the special `#[lang = "copy"]` attribute that defines it as a language item.
@@ -191,7 +198,7 @@ error: requires `start` lang_item
 
 Our program is missing the `start` language item, which defines the entry point.
 
-### The `start` attribute
+### The `start` Language Item
 
 One might think that the `main` function is the first function called when a program is run. However, most languages have a [runtime system], which is responsible for things such as garbage collection (e.g. in Java) or software threads (e.g. goroutines in Go). This runtime needs to be called before `main`, since it needs to initialize itself.
 
@@ -242,7 +249,7 @@ When we run `cargo build` now, we get an ugly _linker_ error.
 
 ## Linker Errors
 
-The linker is a program that combines the generated code into an executable. Since the executable format differs between Linux, Windows, and macOS, each system has its own linker that throws a different error. The fundamental cause of the errors is the same: the default configuration of the linker assumes that our program depends on the C runtime, which it does not.
+The [linker] is a program that combines the generated code into an executable. Since the executable format differs between Linux, Windows, and macOS, each system has its own linker that throws a different error. The fundamental cause of the errors is the same: the default configuration of the linker assumes that our program depends on the C runtime, which it does not.
 
 To solve the errors, we need to tell the linker that we want to build for a bare-metal target, where no underlying operating system or C runtime exist. As an alternative, it is also possible to disable the linking of the C runtime by passing a certain set of arguments to the linker.
 
@@ -252,7 +259,7 @@ Linkers are very complex programs with a lot of configuration options. Each of t
 
 _This is not what we want for our kernel, so this section is only provided for completeness. Feel free to skip this section if you like._
 
-In the subsections below, we explain the required linker arguments for each operating system. It's worth noting that creating a freestanding executable this way is probably not a good idea. The reason is that our executable still expects various things, for example that a stack is initialized when the `_start` function is called. Without the C runtime, some of these requirements might not be fulfilled, which might cause our program to fail, e.g. through a segmentation fault.
+In the subsections below, we explain the required linker arguments for each operating system. It's worth noting that creating a freestanding executable this way is probably not a good idea. The reason is that our executable still expects various things, for example that a stack is initialized when the `_start` function is called. Without the C runtime, some of these requirements might not be fulfilled, which might cause our program to fail, e.g. by causing a segmentation fault.
 
 If you want to create a minimal binary that runs on top of an existing operating system, including `libc` and setting the `#[start]` attribute as described [here](https://doc.rust-lang.org/1.16.0/book/no-stdlib.html) is probably a better idea.
 
@@ -407,13 +414,12 @@ To describe different environments, Rust uses a string called [_target triple_].
 [_target triple_]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 
 ```
-rustc 1.35.0-nightly (474e7a648 2019-04-07)
+rustc 1.49.0 (e1884a8e3 2020-12-29)
 binary: rustc
-commit-hash: 474e7a6486758ea6fc761893b1a49cd9076fb0ab
-commit-date: 2019-04-07
+commit-hash: e1884a8e3c3e813aada8254edfa120e85bf5ffca
+commit-date: 2020-12-29
 host: x86_64-unknown-linux-gnu
-release: 1.35.0-nightly
-LLVM version: 8.0
+release: 1.49.0
 ```
 
 The above output is from a `x86_64` Linux system. We see that the `host` triple is `x86_64-unknown-linux-gnu`, which includes the CPU architecture (`x86_64`), the vendor (`unknown`), the operating system (`linux`), and the [ABI] (`gnu`).
@@ -431,7 +437,7 @@ An example for such a bare metal environment is the `thumbv7em-none-eabihf` targ
 rustup target add thumbv7em-none-eabihf
 ```
 
-This downloads a copy of the standard (and core) library for the system. Now we can build our freestanding executable for this target:
+This downloads a pre-compiled copy of the `core` library for the target. Afterwards we can build our freestanding executable for the target:
 
 ```
 cargo build --target thumbv7em-none-eabihf
@@ -443,16 +449,13 @@ By passing a `--target` argument we [cross compile] our executable for a bare me
 
 ## Kernel Target
 
-TODO
+We just saw that we can compile our executable for a embedded ARM system by passing a `--target` argument. Rust supports [many different target triples][platform-support], including `arm-linux-androideabi` for Android or [`wasm32-unknown-unknown` for WebAssembly](https://www.hellorust.com/setup/wasm-target/).
 
-Cargo supports different target systems through the `--target` parameter. The target is specified as a so-called _[target triple]_, which describes the CPU architecture, the vendor, the operating system, and the [ABI]. For example, the `x86_64-unknown-linux-gnu` target triple describes a system with a `x86_64` CPU, no clear vendor and a Linux operating system with the GNU ABI. Rust supports [many different target triples][platform-support], including `arm-linux-androideabi` for Android or [`wasm32-unknown-unknown` for WebAssembly](https://www.hellorust.com/setup/wasm-target/).
-
-[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
-[ABI]: https://stackoverflow.com/a/2456882
 [platform-support]: https://doc.rust-lang.org/nightly/rustc/platform-support.html
-[custom-targets]: https://doc.rust-lang.org/nightly/rustc/targets/custom.html
 
-For our target system, however, we require some special configuration parameters (e.g. no underlying OS), so none of the [existing target triples][platform-support] fits. Fortunately, Rust allows us to define [our own target][custom-targets] through a JSON file. For example, a JSON file that describes the `x86_64-unknown-linux-gnu` target looks like this:
+In order to create an operating system kernel, we need to choose a target that describes the environment on a bare-metal `x86_64` system. This requires some special configuration parameters (e.g. no underlying OS), so none of the officially supported target triples fit. Fortunately, Rust allows us to define [our own target][custom-targets] through a JSON file. For example, a JSON file that describes the `x86_64-unknown-linux-gnu` target looks like this:
+
+[custom-targets]: https://doc.rust-lang.org/nightly/rustc/targets/custom.html
 
 ```json
 {
@@ -501,7 +504,7 @@ We add the following build-related entries:
   "linker": "rust-lld",
   ```
 
-  Instead of using the platform's default linker (which might not support Linux targets), we use the cross platform [LLD] linker that is shipped with Rust for linking our kernel.
+  Instead of using the platform's default linker (which might not support our custom target), we use the cross platform [LLD] linker that is shipped with Rust for linking our kernel.
 
   [LLD]: https://lld.llvm.org/
 
@@ -511,7 +514,7 @@ We add the following build-related entries:
   "panic-strategy": "abort",
   ```
 
-  This setting specifies that the target doesn't support [stack unwinding] on panic, so instead the program should abort directly. This has the same effect as the `panic = "abort"` option in our Cargo.toml, so we can remove it from there. (Note that in contrast to the Cargo.toml option, this target option also applies when we recompile the `core` library later in this post. So be sure to add this option, even if you prefer to keep the Cargo.toml option.)
+  This setting specifies that the target doesn't support [stack unwinding] on panic, so instead the program should abort directly. This has the same effect as the `panic = "abort"` option in our Cargo.toml, so we can remove it from there.
 
   [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
 
@@ -539,7 +542,7 @@ We add the following build-related entries:
 
   A problem with disabling SIMD is that floating point operations on `x86_64` require SIMD registers by default. To solve this problem, we add the `soft-float` feature, which emulates all floating point operations through software functions based on normal integers.
 
-For more information, see our post on [disabling SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
+  For more information, see our post on [disabling SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
 
 After adding all the above entries, our full target specification file looks like this:
 
@@ -563,35 +566,7 @@ After adding all the above entries, our full target specification file looks lik
 
 ## Building our Kernel
 
-Compiling for our new target will use Linux conventions (I'm not quite sure why, I assume that it's just LLVM's default). This means that we need an entry point named `_start` as described in the [previous post]:
-
-[previous post]: @/edition-2/posts/01-freestanding-rust-binary/index.md
-
-```rust
-// src/main.rs
-
-#![no_std] // don't link the Rust standard library
-#![no_main] // disable all Rust-level entry points
-
-use core::panic::PanicInfo;
-
-/// This function is called on panic.
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-
-#[no_mangle] // don't mangle the name of this function
-pub extern "C" fn _start() -> ! {
-    // this function is the entry point, since the linker looks for a function
-    // named `_start` by default
-    loop {}
-}
-```
-
-Note that the entry point needs to be called `_start` regardless of your host OS.
-
-We can now build the kernel for our new target by passing the name of the JSON file as `--target`:
+To build our kernel for our new custom target we pass the path to the JSON file as `--target` argument:
 
 ```
 > cargo build --target x86_64-blog_os.json
@@ -603,30 +578,53 @@ It fails! The error tells us that the Rust compiler no longer finds the [`core` 
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
-The problem is that the core library is distributed together with the Rust compiler as a precompiled library. So it is only valid for supported host triples (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for a different target, we need to recompile `core` for this target.
+The problem is that the core library is distributed together with the Rust compiler as a precompiled library. These precompiled versions are available through `rustup` for all officially supported targets. We already saw this above, when we [built our kernel for the `thumbv7em-none-eabihf` target](#building-for-a-bare-metal-target). For our custom target, however, we need to build the `core` library ourselves.
+
+While `cargo` has built-in support for building the `core` library, this feature is still considered [_unstable_][cargo-unstable]. Unstable features are only available in the "nightly" release channel of Rust, not on normal stable releases. So in order to build the `core` library, we need to install a nightly version of Rust first.
+
+[cargo-unstable]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
 
 ### Installing Rust Nightly
-Rust has three release channels: _stable_, _beta_, and _nightly_. The Rust Book explains the difference between these channels really well, so take a minute and [check it out](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). For building an operating system we will need some experimental features that are only available on the nightly channel, so we need to install a nightly version of Rust.
+Rust has three release channels: _stable_, _beta_, and _nightly_. The Rust Book explains the difference between these channels really well, so take a minute and [check it out](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). Apart from the availability of unstable features, there is not really a difference between nightly and stable releases. Every 6 weeks, the current nightly is released on the beta channel and the current beta is released as stable. Since we will need some unstable features for our operating system (such as building `core`), we need to install a nightly version of Rust.
 
-The recommend tool to manage Rust installations is [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. With rustup you can use a nightly compiler for the current directory by running `rustup override set nightly`. Alternatively, you can add a file called `rust-toolchain` with the content `nightly` to the project's root directory. After doing that, you can verify that you have a nightly version installed and active by running `rustc --version`: The version number should contain `-nightly` at the end.
+The recommend tool to manage Rust installations is [rustup]. It allows you to install nightly, beta, and stable compilers side-by-side and makes it easy to update them. With rustup you can use a nightly compiler for the current directory by running:
+
+```
+rustup override set nightly
+```
+
+Alternatively, you can add a file called **`rust-toolchain`** to the project's root directory with the required Rust version:
+
+```
+nightly
+```
+
+After doing one of these things, both the `cargo` and `rustc` command should use a nightly version of Rust when invoked from within the current directory. You can verify that you have a nightly version installed and active by running `rustc --version`: The version number should contain `-nightly` at the end, for example:
 
 [rustup]: https://www.rustup.rs/
 
-The nightly compiler allows us to opt-in to various experimental features by using so-called _feature flags_ at the top of our file. For example, we could enable the experimental [`asm!` macro] for inline assembly by adding `#![feature(asm)]` to the top of our `main.rs`. Note that such experimental features are completely unstable, which means that future Rust versions might change or remove them without prior warning. For this reason we will only use them if absolutely necessary.
+```
+rustc 1.51.0-nightly (04caa632d 2021-01-30)
+```
 
+<div class="note">
+
+Note that this version number is just an example, your version should be newer. This post and the rest of the blog is regularly updated to always compile on the newest nightly version. So if something doesn't work try updating to the latest nightly by running `rustup update nightly`.
+
+</div>
+
+In addition to building `core`, using a nightly compiler allows us to opt-in to [various experimental features] by using so-called _feature flags_ at the top of our file. For example, we could enable the experimental [`asm!` macro] for inline assembly by adding `#![feature(asm)]` to the top of our `main.rs`. Note that such experimental features are completely unstable, which means that future Rust versions might change or remove them without prior warning. For this reason we will only use them if absolutely necessary.
+
+[various experimental features]: https://doc.rust-lang.org/unstable-book/the-unstable-book.html
 [`asm!` macro]: https://doc.rust-lang.org/unstable-book/library-features/asm.html
-
-
-
 
 ### The `build-std` Option
 
-That's where the [`build-std` feature] of cargo comes in. It allows to recompile `core` and other standard library crates on demand, instead of using the precompiled versions shipped with the Rust installation. This feature is very new and still not finished, so it is marked as "unstable" and only available on [nightly Rust compilers].
+Now that we switched to nightly Rust, we are able use the [`build-std` feature] of cargo. It allows to build `core` and other standard library crates on demand, instead of using the precompiled versions shipped with the Rust installation.
 
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
-[nightly Rust compilers]: #installing-rust-nightly
 
-We can use this feature to recompile the `core` library by passing `-Z build-std=core` to the `cargo build` command:
+To build the `core` library, we need to pass a `-Z build-std=core` argument to the `cargo build` command:
 
 ```
 > cargo build --target x86_64-blog_os.json -Z build-std=core
@@ -636,7 +634,7 @@ unable to build with the standard library, try:
     rustup component add rust-src
 ```
 
-It still fails. The problem is that cargo needs a copy of the rust source code in order to recompile the `core` crate. The error message helpfully suggest to provide such a copy by installing the `rust-src` component.
+It still fails. The problem is that cargo needs a copy of the Rust source code in order to recompile the `core` crate. The error message helpfully suggest to provide such a copy by installing the `rust-src` component.
 
 After running the suggested `rustup component add rust-src` command, the build should now finally succeed:
 
@@ -649,17 +647,17 @@ After running the suggested `rustup component add rust-src` command, the build s
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-We see that `cargo build` now recompiles the `core`, `compiler_builtins` (a dependency of `core`), and `rustc-std-workspace-core` (a dependency of `compiler_builtins`) libraries for our custom target.
+We see that `cargo build` now builds the `core`, `compiler_builtins` (a dependency of `core`), and `rustc-std-workspace-core` (a dependency of `compiler_builtins`) libraries for our custom target.
 
 ### Memory-Related Intrinsics
 
-The Rust compiler assumes that a certain set of built-in functions is available for all systems. Most of these functions are provided by the `compiler_builtins` crate that we just recompiled. However, there are some memory-related functions in that crate that are not enabled by default because they are normally provided by the C library on the system. These functions include `memset`, which sets all bytes in a memory block to a given value, `memcpy`, which copies one memory block to another, and `memcmp`, which compares two memory blocks. While we didn't need any of these functions to compile our kernel right now, they will be required as soon as we add some more code to it (e.g. when copying structs around).
+The Rust compiler assumes that a certain set of built-in functions is available for all systems. Most of these functions are provided by the `compiler_builtins` crate that we just built. However, there are some memory-related functions in that crate that are not enabled by default because they are normally provided by the C library on the system. These functions include `memset`, which sets all bytes in a memory block to a given value, `memcpy`, which copies one memory block to another, and `memcmp`, which compares two memory blocks. While we didn't need any of these functions to compile our kernel right now, they will be required as soon as we add some more code to it (e.g. when copying structs around).
 
 Since we can't link to the C library of the operating system, we need an alternative way to provide these functions to the compiler. One possible approach for this could be to implement our own `memset` etc. functions and apply the `#[no_mangle]` attribute to them (to avoid the automatic renaming during compilation). However, this is dangerous since the slightest mistake in the implementation of these functions could lead to bugs and undefined behavior. For example, you might get an endless recursion when implementing `memcpy` using a `for` loop because `for` loops implicitly call the [`IntoIterator::into_iter`] trait method, which might call `memcpy` again. So it's a good idea to reuse existing well-tested implementations instead of creating your own.
 
 [`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
 
-Fortunately, the `compiler_builtins` crate already contains implementations for all the needed functions, they are just disabled by default to not collide with the implementations from the C library. We can enable them by passing an additional `-Z build-std-features=compiler-builtins-mem` flag to `cargo`. Like the `build-std` flag, the [`build-std-features`] flag is still unstable, so it might change in the future.
+Fortunately, the `compiler_builtins` crate already contains implementations for all the needed functions, they are just disabled by default to not collide with the implementations from the C library. We can enable them by passing an additional `-Z build-std-features=compiler-builtins-mem` flag to `cargo`. Like the `build-std` flag, this [`build-std-features`] flag is still unstable, so it might change in the future.
 
 [`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
 
@@ -670,80 +668,59 @@ cargo build --target x86_64-blog_os.json -Z build-std=core \
     -Z build-std-features=compiler-builtins-mem
 ```
 
-(Support for the `compiler-builtins-mem` feature was only [added very recently](https://github.com/rust-lang/rust/pull/77284), so you need at least Rust nightly `2020-09-30` for it.)
-
 Behind the scenes, the new flag enables the [`mem` feature] of the `compiler_builtins` crate. The effect of this is that the `#[no_mangle]` attribute is applied to the [`memcpy` etc. implementations] of the crate, which makes them available to the linker. It's worth noting that these functions are already optimized using [inline assembly] on `x86_64`, so their performance should be much better than a custom loop-based implementation.
 
 [`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L54-L55
 [`memcpy` etc. implementations]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
 [inline assembly]: https://doc.rust-lang.org/unstable-book/library-features/asm.html
 
-With the additional `compiler-builtins-mem` flag, our kernel has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
+With the additional `compiler-builtins-mem` flag, our kernel now has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
 
-## Summary
+## A Shorter Build Command
 
-A minimal freestanding Rust binary looks like this:
+Our build command is quite long now, so it's a bit cumbersome to type and difficult to remember. So let's try to shorten it!
 
-`src/main.rs`:
+### Setting Defaults
 
-```rust
-#![no_std] // don't link the Rust standard library
-#![no_main] // disable all Rust-level entry points
+Since we want to always pass these flags to our build command, it would make sense to set them as default. Unfortunately, Cargo currently only supports changing the default build command through [`.cargo/config.toml`] configuration files. The problem with these files is that they are applied based on the current working directory, not based on the compiled project. This leads to [various problems][cargo-config-problems], for example that the settings also apply to all crates in subdirectories. These problems make `.cargo/config.toml` files unsuitable for our use case, since the code in the next post would be broken this way.
 
-use core::panic::PanicInfo;
+[`.cargo/config.toml`]: https://doc.rust-lang.org/cargo/reference/config.html
+[cargo-config-problems]: https://internals.rust-lang.org/t/problems-of-cargo-config-files-and-possible-solutions/12987
 
-#[no_mangle] // don't mangle the name of this function
-pub extern "C" fn _start() -> ! {
-    // this function is the entry point, since the linker looks for a function
-    // named `_start` by default
-    loop {}
-}
+To fix these problems, I proposed to [move some `.cargo/config.toml` settings to `Cargo.toml`][internals-proposal] to make them crate-specific. This would allow us to set proper defaults for our kernel too. So let's hope that it is implemented soon :). Until then, we can use _aliases_ to shorten our build command.
 
-/// This function is called on panic.
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-```
+[internals-proposal]: https://internals.rust-lang.org/t/proposal-move-some-cargo-config-settings-to-cargo-toml/13336
 
-`Cargo.toml`:
+### Aliases
+
+Cargo allows to define custom [command aliases], for example `cargo br` for `cargo build --release`. While these aliases are defined in a `.cargo/config.toml` file too, they apply only to the command-line invocation and don't affect the normal build process of other crates. Thus, we can use them without problems.
+
+[command aliases]: https://doc.rust-lang.org/cargo/reference/config.html#alias
+
+To shorten our build command using an alias, we first need to create a directory named `.cargo` in the crate's root (i.e. next to the `Cargo.toml`). In that directory, we create a new file named `config.toml` with the following content:
 
 ```toml
-[package]
-name = "crate_name"
-version = "0.1.0"
-authors = ["Author Name <author@example.com>"]
-
-# the profile used for `cargo build`
-[profile.dev]
-panic = "abort" # disable stack unwinding on panic
-
-# the profile used for `cargo build --release`
-[profile.release]
-panic = "abort" # disable stack unwinding on panic
+[alias]
+kbuild = """build --target x86_64-blog_os.json -Z build-std=core \
+    -Z build-std-features=compiler-builtins-mem"""
 ```
 
-To build this binary, we need to compile for a bare metal target such as `thumbv7em-none-eabihf`:
+This defines a new `kbuild` command (for "kernel build") that expands to the long build command of our kernel. Now we can build our kernel by running just:
 
 ```
-cargo build --target thumbv7em-none-eabihf
+cargo kbuild
 ```
 
-Alternatively, we can compile it for the host system by passing additional linker arguments:
+The name of the alias doesn't matter, so you can also name the alias `kb` if you like it even shorter. Note that overriding the built-in `build` command is not possible.
 
-```bash
-# Linux
-cargo rustc -- -C link-arg=-nostartfiles
-# Windows
-cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
-# macOS
-cargo rustc -- -C link-args="-e __start -static -nostartfiles"
-```
+One drawback of the alias approach is that you need to define a separate alias for every cargo subcommand (e.g. [`cargo check`] or [`cargo doc`]), which you want to use. You also need to adjust your IDE (e.g. [rust-analyzer]) to use a non-standard build/check command. So this approach is clearly just a workaound until proper package-specific defaults are implemented in Cargo.
 
-Note that this is just a minimal example of a freestanding Rust binary. This binary expects various things, for example that a stack is initialized when the `_start` function is called. **So for any real use of such a binary, more steps are required**.
+[`cargo check`]: https://doc.rust-lang.org/cargo/commands/cargo-check.html
+[`cargo doc`]: https://doc.rust-lang.org/cargo/commands/cargo-doc.html
+[rust-analyzer]: https://rust-analyzer.github.io/
 
 ## What's next?
 
-The [next post] explains the steps needed for turning our freestanding binary into a minimal operating system kernel. This includes creating a custom target, combining our executable with a bootloader, and learning how to print something to the screen.
+In the [next post], we will learn how to turn our minimal kernel in a bootable disk image, which can then be started in the [QEMU] virtual machine and on real hardware. For this, we'll explore the boot process of `x86_64` systems and learn about the differences between UEFI and the legacy BIOS firmware.
 
-[next post]: @/edition-2/posts/02-minimal-rust-kernel/index.md
+[next post]: @/edition-3/posts/02-booting/index.md
