@@ -14,9 +14,9 @@ icon = '''
 '''
 +++
 
-In this post, we explore the boot process on both BIOS and UEFI-based systems. We then turn the [freestanding Rust binary] from the previous post into a minimal operating system kernel and combine it with a bootloader. The result is a bootable disk image, which can be started in the [QEMU] emulator and run on real hardware. TODO
+In this post, we explore the boot process on both BIOS and UEFI-based systems. We combine the [minimal kernel] created in the previous post with a bootloader. The result is a bootable disk image, which can be started in the [QEMU] emulator and run on real hardware.
 
-[freestanding Rust binary]: @/edition-3/posts/01-minimal-kernel/index.md
+[minimal kernel]: @/edition-3/posts/01-minimal-kernel/index.md
 
 <!-- more -->
 
@@ -29,7 +29,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 <!-- toc -->
 
 ## The Boot Process
-When you turn on a computer, it begins executing firmware code that is stored in motherboard [ROM]. This code performs a [power-on self-test], detects available RAM, and pre-initializes the CPU and hardware. Afterwards it looks for a bootable disk and starts booting the operating system kernel.
+When you turn on a computer, it begins executing firmware code that is stored in motherboard [ROM]. This code performs a [power-on self-test], detects available RAM, and pre-initializes the CPU and other hardware. Afterwards it looks for a bootable disk and starts booting the operating system kernel.
 
 [ROM]: https://en.wikipedia.org/wiki/Read-only_memory
 [power-on self-test]: https://en.wikipedia.org/wiki/Power-on_self-test
@@ -41,11 +41,11 @@ On x86, there are two firmware standards: the “Basic Input/Output System“ (*
 
 ### BIOS
 
-Almost all x86 systems have support for BIOS booting, including newer UEFI-based machines that use an emulated BIOS. This is great, because you can use the same boot logic across all machines from the last centuries. But this wide compatibility is at the same time the biggest disadvantage of BIOS booting, because it means that the CPU is put into a 16-bit compatibility mode called [real mode] before booting so that archaic bootloaders from the 1980s would still work.
+Almost all x86 systems have support for BIOS booting, including most UEFI-based machines that support an emulated BIOS. This is great, because you can use the same boot logic across all machines from the last centuries. The drawback is that the standard is very old, for example the CPU is put into a 16-bit compatibility mode called [real mode] before booting so that archaic bootloaders from the 1980s would still work. Also, BIOS-compatibility will be slowly removed on newer UEFI machines over the next years (see below).
 
 #### Boot Process
 
-When you turn on a computer, it loads the BIOS from some special flash memory located on the motherboard. The BIOS runs self test and initialization routines of the hardware, then it looks for bootable disks. For that it loads the first disk sector (512 bytes) of each disk into memory, which contains the [_master boot record_] (MBR) structure. This structure has the following general format:
+When you turn on a BIOS-based computer, it first loads the BIOS firmware from some special flash memory located on the motherboard. The BIOS runs self test and initialization routines of the hardware, then it looks for bootable disks. For that it loads the first disk sector (512 bytes) of each disk into memory, which contains the [_master boot record_] (MBR) structure. This structure has the following general format:
 
 [_master boot record_]: https://en.wikipedia.org/wiki/Master_boot_record
 
@@ -67,8 +67,8 @@ The bootstrap code is commonly called the _bootloader_ and responsible for loadi
 The BIOS itself only cares for the boot signature field. If it finds a disk with a boot signature equal to `0xaa55`, it directly passes control to the bootloader code stored at the beginning of the disk. This bootloader is then responsible for multiple things:
 
 - **Loading the kernel from disk:** The bootloader has to determine the location of the kernel image on the disk and load it into memory.
-- **Initializing the CPU:** As noted above, all `x86_64` CPUs start up in a 16-bit [real mode] to be compatible with older operating systems. So in order to run current 64-bit operating systems, the bootloader needsn to switch the CPU from the 16-bit [real mode] first to the 32-bit [protected mode], and then to the 64-bit [long mode], where 64-bit registers and the complete main memory are available.
-- **Querying system information:** The third job of the bootloader is to query certain information (such as a memory map) from the BIOS and pass it to the OS kernel. This for example includes information about the available main memory and graphical output devices.
+- **Initializing the CPU:** As noted above, all `x86_64` CPUs start up in a 16-bit [real mode] to be compatible with older operating systems. So in order to run current 64-bit operating systems, the bootloader needsn to switch the CPU from the 16-bit [real mode] first to the 32-bit [protected mode], and then to the 64-bit [long mode], where all CPU registers and the complete main memory are available.
+- **Querying system information:** The third job of the bootloader is to query certain information from the BIOS and pass it to the OS kernel. This, for example, includes information about the available main memory and graphical output devices.
 - **Setting up an execution environment:** Kernels are typically stored as normal executable files (e.g. in the [ELF] or [PE] format), which require some loading procedure. This includes setting up a [call stack] and a [page table].
 
 [ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
@@ -99,7 +99,7 @@ As noted above, most modern systems still support booting operating systems writ
 The Unified Extensible Firmware Interface (UEFI) replaces the classical BIOS firmware on most modern computers. The specification provides lots of useful features that make bootloader implementations much simpler:
 
 - It supports initializing the CPU directly into 64-bit mode, instead of starting in a DOS-compatible 16-bit mode like the BIOS firmware.
-- It understands disk partitions and executable files. Thus it is able to fully load the bootloader from disk into memory (no 512-byte large "first stage" is required anymore).
+- It understands disk partitions and executable files. Thus it is able to fully load the bootloader from disk into memory (no 512-byte "first stage" is required anymore).
 - A standardized [specification][uefi-specification] minimizes the differences between systems. This isn't the case for the legacy BIOS firmware, so that bootloaders often have to try different methods because of hardware differences.
 - The specification is independent of the CPU architecture, so that the same interface can be used to boot on `x86_64` and e.g. `ARM` CPUs.
 - It natively supports network booting without requiring additional drivers.
@@ -128,7 +128,7 @@ The UEFI boot process works in the following way:
 
 - After powering on and self-testing all components, the UEFI firmware starts looking for special bootable disk partitions called [EFI system partitions]. These partitions must be formatted with the [FAT file system] and assigned a special ID that indicates them as EFI system partition. The UEFI standard understands both the [MBR] and [GPT] partition table formats for this, at least theoretically. In practice, some UEFI implementations seem to [directly switch to BIOS-style booting when an MBR partition table is used][mbr-csm], so it is recommended to only use the GPT format with UEFI.
 - If the firmware finds a EFI system partition, it looks for an executable file named `efi\boot\bootx64.efi` (on x86_64 systems) in it. This executable must use the [Portable Executable (PE)] format, which is common in the Windows world.
-- It then loads the executable from disk to memory, sets up the execution environment (CPU state, page tables, etc.) in a defined way, and finally jumps to the entry point of the loaded executable.
+- It then loads the executable from disk to memory, sets up the execution environment (CPU state, page tables, etc.) in a standardized way, and finally jumps to the entry point of the loaded executable.
 
 [MBR]: https://en.wikipedia.org/wiki/Master_boot_record
 [GPT]: https://en.wikipedia.org/wiki/GUID_Partition_Table
@@ -137,11 +137,13 @@ The UEFI boot process works in the following way:
 [FAT file system]: https://en.wikipedia.org/wiki/File_Allocation_Table
 [Portable Executable (PE)]: https://en.wikipedia.org/wiki/Portable_Executable
 
-From this point on, the bootloader executable has control and can proceed to load the operating system kernel. However, it probably needs additional information about the system to do so, for example the amount of available memory in the system. For this reason, the UEFI firmware passes a pointer to a special _system table_ as an argument when invoking the bootloader entry point function. Using this table, the bootloader can query various system information and even invoke special functions provided by the UEFI firmware, for example for accessing the hard disk.
+From this point on, the loaded executable has control. Typically, this executable is a bootloader that then loads the actual operating system kernel. Theoretically, it would also be possible to let the UEFI firmware load the kernel directly without a bootloader in between, but this would make it more difficult to port the kernel to other architectures.
+
+Bootloaders and kernels typically need additional information about the system, for example the amount of available memory. For this reason, the UEFI firmware passes a pointer to a special _system table_ as an argument when invoking the bootloader entry point function. Using this table, the bootloader can query various system information and even invoke special functions provided by the UEFI firmware, for example for accessing the hard disk.
 
 #### How we will use UEFI
 
-As it is probably clear at this point, the UEFI interface is very powerful and complex. The wide range of functionality makes it even possible to write an operating system directly as an UEFI application, using the UEFI services instead of creating own drivers. In practice, however, most operating systems use UEFI only for the bootloader since own drivers give you better performance and more control over the system. We will also follow this path for our OS implementation.
+As it is probably clear at this point, the UEFI interface is very powerful and complex. The wide range of functionality makes it even possible to write an operating system directly as an UEFI application, using the UEFI services provided by the system table instead of creating own drivers. In practice, however, most operating systems use UEFI only for the bootloader since own drivers give you better performance and more control over the system. We will also follow this path for our OS implementation.
 
 To keep this post focused, we won't cover the creation of an UEFI bootloader here. Instead, we will use the already mentioned [`bootloader`] crate, which allows loading our kernel on both UEFI and BIOS systems.
 
@@ -175,15 +177,9 @@ Because of these drawbacks we decided to not use GRUB or the Multiboot standard 
 
 [first edition]: @/edition-1/_index.md
 
-
-
-
-
 ## Bootable Disk Image
 
-As we learned in the [section about booting], operating systems are loaded by bootloaders, which are small programs that initialize the hardware to reasonable defaults, load the kernel from disk, and provide it with some fundamental information about the underlying system.
-
-[section about booting]: #the-boot-process
+We now know that most operating system kernels are loaded by bootloaders, which are small programs that initialize the hardware to reasonable defaults, load the kernel from disk, and provide it with some fundamental information about the underlying system. In this section, we will learn how to combine the [minimal kernel] we created in the previous post with the `bootloader` crate in order to create a bootable disk image.
 
 ### The `bootloader` Crate
 
@@ -197,10 +193,10 @@ To use the `bootloader` crate, we first need to add a dependency on it:
 # in Cargo.toml
 
 [dependencies]
-bootloader = "TODO"
+bootloader = "0.10.0-alpha-01"          # TODO
 ```
 
-For normal Rust crates, this step would be all that need for adding them as a dependency. However, the `bootloader` crate is a bit special. The problem is that it needs access to our kernel _after compilation_ in order to create a bootable disk image. However, cargo has no support for automatically running code after a successful build, so we need some manual build code for this. (There is a proposal for [post-build scripts] that would solve this issue, but it is not clear yet whether the cargo developers want to add such a feature.)
+For normal Rust crates, this step would be all that's needed for adding them as a dependency. However, the `bootloader` crate is a bit special. The problem is that it needs access to our kernel _after compilation_ in order to create a bootable disk image. However, cargo has no support for automatically running code after a successful build, so we need some manual build code for this. (There is a proposal for [post-build scripts] that would solve this issue, but it is not clear yet whether the Cargo team wants to add such a feature.)
 
 [post-build scripts]: https://github.com/rust-lang/cargo/issues/545
 
@@ -213,7 +209,7 @@ The [`bootloader` documentation] specifies that a kernel entry point should have
 [`bootloader` documentation]: TODO
 
 ```rust
-extern "C" fn(boot_info: &'static mut bootloader::BootInfo) -> !;
+extern "C" fn(boot_info: &'static mut bootloader::BootInfo) -> ! { ... }
 ```
 
 The only difference to our `_start` entry point is the additional `boot_info` argument, which is passed by the `bootloader` crate. This argument is a mutable reference to a [`bootloader::BootInfo`] type, which provides various information about the system.
@@ -242,7 +238,7 @@ To avoid these issues and make sure that the entry point function has always the
 
 [`entry_point`]: https://docs.rs/bootloader/0.6.4/bootloader/macro.entry_point.html
 
-To use the `entry_point` macro, we need to rewrite our entry point function in the following way:
+To use the `entry_point` macro, we rewrite our entry point function in the following way:
 
 ```rust
 // in src/main.rs
@@ -256,7 +252,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 }
 ```
 
-We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the real lower-level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. Since the signature of the function is enforced by the macro, a compilation error occurs on a wrong function signature.
+We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the actual lower-level `_start` entry point for us. The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it. Since the signature of the function is enforced by the macro, a compilation error occurs when it e.g. has the wrong argument type.
 
 After adjusting our entry point for the `bootloader` crate, we can now look into how to create a bootable disk image from our kernel.
 
@@ -316,14 +312,16 @@ To transform our kernel executable into a bootable disk image, we pass the `kern
 
 [`todo!`]: https://doc.rust-lang.org/std/macro.todo.html
 
-As you might notice, we're using the [`Path`] and [`PathBuf`] types and the [`println` macro of the standard library here. This is possible because the `bootimage` crate runs our host system, which is indicated by the absence of a `#![no_std]` attribute. (For our kernel, we used the `#![no_std]` attribute to opt-out of the standard library because our kernel should run on bare metal.)
+As you might notice, we're using the [`Path`] and [`PathBuf`] types and the [`println`] macro of the standard library here. This is possible because the `bootimage` crate will be part of our build process and thus run our host system, which is indicated by the absence of a `#![no_std]` attribute. (For our kernel, we used the `#![no_std]` attribute to opt-out of the standard library because our kernel should run on bare metal.)
 
 [`Path`]: https://doc.rust-lang.org/std/path/struct.Path.html
 [`PathBuf`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html
+[`println`]: https://doc.rust-lang.org/std/macro.println.html
 
 For error handling, we use the [`anyhow`] crate. This crate provides a general error type that can be used to create arbitrary errors, which can be easily handled with Rust's [question mark operator]. To use the `anyhow` crate, we need to add it as a dependency, which can do by modifying our `bootimage/Cargo.toml` in the following way:
 
 [`anyhow`]: https://docs.rs/anyhow/1.0.33/anyhow/
+[question mark operator]: https://doc.rust-lang.org/edition-guide/rust-2018/error-handling-and-panics/the-question-mark-operator-for-easier-error-handling.html
 
 ```toml
 # in bootimage/Cargo.toml
@@ -359,7 +357,7 @@ bootloader-locator = "0.0.4"
 ```
 
 ```rust
-// in bootimage/src/lib.rs
+// in bootimage/src/main.rs
 
 use bootloader_locator::locate_bootloader; // new
 
@@ -396,7 +394,7 @@ Let's try to invoke that command from our `create_bootimage` function. For that 
 [`process::Command`]: https://doc.rust-lang.org/std/process/struct.Command.html
 
 ```rust
-// in bootimage/src/lib.rs
+// in bootimage/src/main.rs
 
 use std::process::Command; // new
 
@@ -454,7 +452,7 @@ To execute the build command inside of the bootloader folder (instead of the cur
 We still need to fill in the paths we marked as `todo!` above. For that we utilize another environment variable that cargo passes on build:
 
 ```rust
-// in `create_bootimage` in bootimage/src/lib.rs
+// in `create_bootimage` in bootimage/src/main.rs
 
 // the path to the disk image crate, set by cargo
 let bootimage_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -474,17 +472,22 @@ The [`CARGO_MANIFEST_DIR`] environment variable always points to the `bootimage`
 
 #### Returning the Disk Image
 
-The final step to finish our `create_bootimage` function by returning the path to the disk image after building the bootloader. From the [`bootloader` Readme], we learn that the bootloader in fact creates multiple disk images:
+The final step to finish our `create_bootimage` function is to return the path to the disk image after building the bootloader. From the [`bootloader` Readme], we learn that the bootloader in fact creates multiple disk images:
 
-- A BIOS boot image named `bootimage-bios-<bin_name>.bin`.
-- An EFI executable suitable for UEFI booting named `bootimage-uefi-<bin_name>.efi`.
+- A BIOS boot image named `bootimage-bios-<bin_name>.img`.
+- Multiple images suitable for UEFI booting
+  - An EFI executable named `bootimage-uefi-<bin_name>.efi`.
+  - A FAT partition image named `bootimage-uefi-<bin_name>.fat`, which contains the EFI executable under `efi\boot\bootx64.efi`.
+  - A GPT disk image named `bootimage-uefi-<bin_name>.img`, which contains the FAT image as EFI system partition.
+
+In general, the `.img` files are the ones that you want to copy to an USB stick in order to boot from it. The other files are useful for booting the kernel in virtual machines such as [QEMU].
 
 The `<bin_name>` placeholder is the binary name of the kernel. While this is always `blog_os` for now (or the name you chose), it might be different when we create unit and integration tests for our kernel in the next posts. For this reason we use the [`Path::file_name`] method to determine it instead of hardcoding it:
 
 [`Path::file_name`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.file_name
 
 ```rust
-// in bootimage/src/lib.rs
+// in bootimage/src/main.rs
 
 pub fn create_bootimage(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
     [...] // as before
@@ -494,11 +497,11 @@ pub fn create_bootimage(kernel_binary: &Path) -> anyhow::Result<PathBuf> {
     let kernel_binary_name = kernel_binary
         .file_name().expect("kernel_binary has no file name")
         .to_str().expect("kernel file name is not valid unicode");
-    Ok(out_dir.join(format!("bootimage-bios-{}.bin", kernel_binary_name)))
+    Ok(out_dir.join(format!("bootimage-bios-{}.img", kernel_binary_name)))
 }
 ```
 
-We return the path to the BIOS image here for now because it is easier to boot in the [QEMU] emulator, but you could also return a different disk image here. Alternatively, you could also return a struct containing the paths to all the disk images.
+We return the path to the BIOS image here for now because it is the easiest to boot in the [QEMU] emulator, but you could also return a different disk image here. Alternatively, you could also return a struct containing the paths to all the disk images.
 
 [QEMU]: https://www.qemu.org/
 
@@ -509,9 +512,9 @@ Our `create_bootimage` function is now fully implemented, which means that runni
 TODO
 ```
 
-It worked! We see that it successfully created a bootable disk image at TODO.
+It worked! We see that it successfully created a bootable disk image at TODO. If we open the containing folder, we see that the UEFI image files are there too.
 
-Note that the command will only work from the root directory of our project. This is because we hardcoded the `kernel_binary` path in our `main` function. We will fix this later in the post, but now it is time to actually run our kernel!
+Note that the command will only work from the root directory of our project. This is because we hardcoded the `kernel_binary` path in our `main` function. We will fix this later in the post, but first it is time to actually run our kernel!
 
 ## Running our Kernel
 
@@ -532,7 +535,7 @@ After installing QEMU, you can run `qemu-system-x86_64 --version` in a terminal 
 
 ```
 qemu-system-x86_64 -drive \
-    format=raw,file=target/x86_64-blog_os/debug/bootimage-bios-blog_os.bin
+    format=raw,file=target/x86_64-blog_os/debug/bootimage-bios-blog_os.img
 ```
 
 As a result, you should see a window open that looks like this:
@@ -549,7 +552,7 @@ The easiest way to work with OVMF is to download pre-built images of the code. W
 
 ```
 qemu-system-x86_64 -drive \
-    format=raw,file=target/x86_64-blog_os/debug/bootimage-uefi-blog_os.bin \
+    format=raw,file=target/x86_64-blog_os/debug/bootimage-uefi-blog_os.img \
     -drive if=pflash,format=raw,file=/path/to/OVMF_CODE.fd,
     -drive if=pflash,format=raw,file=/path/to/OVMF_VARS.fd,
 ```
@@ -570,8 +573,10 @@ Screen output works through a so-called [_framebuffer_]. A framebuffer is a memo
 
 Since the size, pixel format, and memory location of the framebuffer can vary between different systems, we need to find out these parameters first. The easiest way to do this is to read it from the [boot information structure][`BootInfo`] that the bootloader passes as argument to our kernel entry point:
 
+[`BootInfo`]: TODO
+
 ```rust
-// in src/lib.rs
+// in src/main.rs
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer {
@@ -584,6 +589,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
 Even though most systems support a framebuffer, some might not. The [`BootInfo`] type reflects this by specifying its `framebuffer` field as an [`Option`]. Since screen output won't be essential for our kernel (there are other possible communication channels such as serial ports), we use an [`if let`] statement to run the framebuffer code only if a framebuffer is available.
 
+[`Option`]: https://doc.rust-lang.org/std/option/enum.Option.html
 [`if let`]: TODO
 
 The [`FrameBuffer`] type provides two methods: The [`info`] method returns a [`FrameBufferInfo`] instance with all kinds of information about the framebuffer format, including the pixel type and the screen resolution. The [`buffer`] method returns the actual framebuffer content in form of a mutable byte [slice].
@@ -594,7 +600,7 @@ We will look into programming the framebuffer in detail in the next post. For no
 
 
 ```rust
-// in src/lib.rs
+// in src/main.rs
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer {
@@ -608,7 +614,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
 While it depends on the pixel color format how these values are interpreted, the result will likely be some shade of gray since we set the same value for every color channel (e.g. in the RGB color format).
 
-After running `cargo builder` and launching the result in QEMU, we see that our guess was right:
+After running `cargo kbuild` and then our `bootimage` script again, we can boot the new version in QEMU. We see that our guess that the whole screen would turn gray was right:
 
 TODO: QEMU screenshot
 
@@ -617,7 +623,7 @@ We finally see some output from our own little kernel!
 You can try experimenting with the pixel bytes if you like, for example by increasing the pixel value on each loop iteration:
 
 ```rust
-// in src/lib.rs
+// in src/main.rs
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer {
@@ -645,8 +651,19 @@ TODO
 ### Rebuild the Kernel
 
 - build kernel before creating disk image
+- use json output to get exe name
 
-###
+### Create an `cargo bootimage` alias
+
+TODO: precedence over installed `bootimage` crate?
+
+### Support for `cargo run`
+
+- create `runner` binary
+- set it as runner in `.cargo/config` (for no OS targets only)
+- add `krun` alias
+
+# PREVIOUS:
 
 
 
@@ -851,7 +868,7 @@ For running `bootimage` and building the bootloader, you need to have the `llvm-
 
 
 
-After executing the command, you should see a bootable disk image named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
+After executing the command, you should see a bootable disk image named `bootimage-blog_os.img` in your `target/x86_64-blog_os/debug` directory. You can boot it in a virtual machine or copy it to an USB drive to boot it on real hardware. (Note that this is not a CD image, which have a different format, so burning it to a CD doesn't work).
 
 #### How does it work?
 The `bootimage` tool performs the following steps behind the scenes:
@@ -960,7 +977,7 @@ We can now boot the disk image in a virtual machine. To boot it in [QEMU], execu
 [QEMU]: https://www.qemu.org/
 
 ```
-> qemu-system-x86_64 -drive format=raw,file=target/x86_64-blog_os/debug/bootimage-blog_os.bin
+> qemu-system-x86_64 -drive format=raw,file=target/x86_64-blog_os/debug/bootimage-blog_os.img
 warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 ```
 
@@ -975,7 +992,7 @@ We see that our "Hello World!" is visible on the screen.
 It is also possible to write it to an USB stick and boot it on a real machine:
 
 ```
-> dd if=target/x86_64-blog_os/debug/bootimage-blog_os.bin of=/dev/sdX && sync
+> dd if=target/x86_64-blog_os/debug/bootimage-blog_os.img of=/dev/sdX && sync
 ```
 
 Where `sdX` is the device name of your USB stick. **Be careful** to choose the correct device name, because everything on that device is overwritten.
