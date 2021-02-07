@@ -243,7 +243,7 @@ To use the `entry_point` macro, we rewrite our entry point function in the follo
 ```rust
 // in src/main.rs
 
-use bootloader::{BootInfo, entry_point};
+use bootloader::{entry_point, BootInfo};
 
 entry_point!(kernel_main);
 
@@ -264,7 +264,7 @@ The [Readme of the `bootloader` crate][`bootloader` Readme] describes how to cre
 
 #### A `bootimage` crate
 
-Since following these steps manually is cumbersome, we create a script to automate it. For that we create a new `bootimage` crate in a subdirectory, in which we will implement the build steps:
+Since following these steps manually is cumbersome, we create a script to automate it. For that we create a new `bootimage` (short for _"bootable disk image"_) crate in a subdirectory, in which we will implement the build steps:
 
 ```
 cargo new --bin bootimage
@@ -288,7 +288,7 @@ After creating the workspace, we begin the implementation of the `bootimage` cra
 
 use std::path::{Path, PathBuf};
 
-fn main() -> anyhow::Result<PathBuf> {
+fn main() -> anyhow::Result<()> {
     // this is where cargo places our kernel executable
     // (we hardcode this path for now, but will improve this later)
     let kernel_binary = Path::new("target/x86_64_blog_os/debug/blog_os");
@@ -334,8 +334,12 @@ We can already run our `bootimage` binary now by executing `cargo run --package 
 
 ```
 > cargo run --package bootimage
+[...]
+    Finished dev [unoptimized + debuginfo] target(s) in 0.00s
+     Running `target/debug/bootimage`
+thread 'main' panicked at 'not yet implemented', bootimage/src/main.rs:17:5
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
-TODO
 ```
 
 Let's start resolving this by filling in the actual implementation. For that we implement the build steps outlined in the [`bootloader` Readme].
