@@ -1,5 +1,5 @@
 +++
-title = "Hardware Interrupts"
+title = "ハードウェア割り込み"
 weight = 7
 path = "ja/hardware-interrupts"
 date = 2018-10-22
