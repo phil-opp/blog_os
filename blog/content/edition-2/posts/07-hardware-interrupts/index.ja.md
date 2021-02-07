@@ -76,17 +76,16 @@ Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
 [I/O ports]: @/edition-2/posts/04-testing/index.md#i-o-ports
 [article on osdev.org]: https://wiki.osdev.org/8259_PIC
 
-### Implementation
+### 実装
 
-The default configuration of the PICs is not usable, because it sends interrupt vector numbers in the range 0–15 to the CPU. These numbers are already occupied by CPU exceptions, for example number 8 corresponds to a double fault. To fix this overlapping issue, we need to remap the PIC interrupts to different numbers. The actual range doesn't matter as long as it does not overlap with the exceptions, but typically the range 32–47 is chosen, because these are the first free numbers after the 32 exception slots.
+PICのデフォルト構成では、0〜15の範囲の割り込みベクタ番号をCPUに送信するため、使用できません。これらの番号は既にCPUの例外によって占有されており、例えば番号8はダブルフォルトに対応しています。この重複問題を解決するには、PICの割り込みを別の番号にリマップする必要があります。実際の範囲は例外と重ならない限り問題ではありませんが、一般的には32～47の範囲が選択されます。
 
-The configuration happens by writing special values to the command and data ports of the PICs. Fortunately there is already a crate called [`pic8259_simple`], so we don't need to write the initialization sequence ourselves. In case you are interested how it works, check out [its source code][pic crate source], it's fairly small and well documented.
-
-[pic crate source]: https://docs.rs/crate/pic8259_simple/0.2.0/source/src/lib.rs
-
-To add the crate as dependency, we add the following to our project:
+設定は、PICのコマンドポートとデータポートに特別な値を書き込むことによって行われます。幸いなことに、[`pic8259_simple`]というクレートがすでにあるので、自分で初期化シーケンスを書く必要はありません。どのように動作するのか興味がある場合は、[そのソースコード][pic crate source]をチェックしてください。
 
 [`pic8259_simple`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/
+[pic crate source]: https://docs.rs/crate/pic8259_simple/0.2.0/source/src/lib.rs
+
+依存関係としてクレートを追加するには、以下のようにプロジェクトに追加します。
 
 ```toml
 # in Cargo.toml
@@ -96,6 +95,8 @@ pic8259_simple = "0.2.0"
 ```
 
 The main abstraction provided by the crate is the [`ChainedPics`] struct that represents the primary/secondary PIC layout we saw above. It is designed to be used in the following way:
+
+クレートによって提供される主な抽象化は、上で紹介したプライマリ/セカンダリPICレイアウトを表す[`ChainedPics`]構造体です。これは以下のように設計されています。
 
 [`ChainedPics`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/struct.ChainedPics.html
 
@@ -112,11 +113,11 @@ pub static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 ```
 
-We're setting the offsets for the pics to the range 32–47 as we noted above. By wrapping the `ChainedPics` struct in a `Mutex` we are able to get safe mutable access (through the [`lock` method][spin mutex lock]), which we need in the next step. The `ChainedPics::new` function is unsafe because wrong offsets could cause undefined behavior.
+上で述べたように、PICSのオフセットを32〜47の範囲に設定しています。このように `ChainedPics` 構造体を `Mutex` で包むことで、次のステップで必要となる安全なミューティアブルアクセスを得ることができます([`lock` メソッド][spin mutex lock]を使用して)。関数 `ChainedPics::new` は、オフセットを間違えると未定義の動作を引き起こす可能性があるため、安全ではありません。
 
 [spin mutex lock]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html#method.lock
 
-We can now initialize the 8259 PIC in our `init` function:
+これで、`init`関数で8259 PICを初期化することができます。
 
 ```rust
 // in src/lib.rs
@@ -128,15 +129,15 @@ pub fn init() {
 }
 ```
 
-We use the [`initialize`] function to perform the PIC initialization. Like the `ChainedPics::new` function, this function is also unsafe because it can cause undefined behavior if the PIC is misconfigured.
+PICの初期化を行うには、[`initialize`]関数を使用します。この関数も `ChainedPics::new` 関数と同様に、PICの設定を誤ると未定義の動作を引き起こす可能性があるため、安全ではありません。
+
+すべてがうまくいけば、`cargo run`を実行したときに"It did not crash"というメッセージが表示されるようになるはずです。
 
 [`initialize`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/struct.ChainedPics.html#method.initialize
 
-If all goes well we should continue to see the "It did not crash" message when executing `cargo run`.
+## 割り込みの有効化
 
-## Enabling Interrupts
-
-Until now nothing happened because interrupts are still disabled in the CPU configuration. This means that the CPU does not listen to the interrupt controller at all, so no interrupts can reach the CPU. Let's change that:
+今まではCPUの設定で割り込みが無効化されたままなので、何も起こりませんでした。つまり、CPUは割り込みコントローラを全く聞かないので、割り込みがCPUに届かないということです。これを変更してみましょう。
 
 ```rust
 // in src/lib.rs
@@ -149,17 +150,17 @@ pub fn init() {
 }
 ```
 
-The `interrupts::enable` function of the `x86_64` crate executes the special `sti` instruction (“set interrupts”) to enable external interrupts. When we try `cargo run` now, we see that a double fault occurs:
+x86_64クレートの `interrupts::enable` 関数は、外部からの割り込みを有効にするために特別な `sti` 命令 (「割り込みの設定」) を実行します。`cargo run` を実行してみると、ダブルフォルトが発生していることがわかります。
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` because of hardware timer](qemu-hardware-timer-double-fault.png)
 
-The reason for this double fault is that the hardware timer (the [Intel 8253] to be exact) is enabled by default, so we start receiving timer interrupts as soon as we enable interrupts. Since we didn't define a handler function for it yet, our double fault handler is invoked.
+このダブルフォルトの理由は、ハードウェアタイマー（正確には [Intel 8253]）がデフォルトで有効になっているため、割り込みを有効にするとすぐにタイマー割り込みの受信を開始するからです。まだハンドラ関数を定義していないので、ダブルフォルトハンドラが呼び出されます。
 
 [Intel 8253]: https://en.wikipedia.org/wiki/Intel_8253
 
-## Handling Timer Interrupts
+## タイマー割り込みのハンドラー
 
-As we see from the graphic [above](#the-8259-pic), the timer uses line 0 of the primary PIC. This means that it arrives at the CPU as interrupt 32 (0 + offset 32). Instead of hardcoding index 32, we store it in an `InterruptIndex` enum:
+[8259 PICの図](#8259-PIC)を見るとわかるように、タイマーはプライマリPICの0行目を使用しています。これは、割り込み番号32(0 + オフセット32)としてCPUに到着することを意味します。インデックス32をハードコーディングする代わりに、`InterruptIndex` enumに格納します。
 
 ```rust
 // in src/interrupts.rs
@@ -181,11 +182,11 @@ impl InterruptIndex {
 }
 ```
 
-The enum is a [C-like enum] so that we can directly specify the index for each variant. The `repr(u8)` attribute specifies that each variant is represented as an `u8`. We will add more variants for other interrupts in the future.
+enumは[Cのようなenum][C-like enum]なので、各変数のインデックスを直接指定することができます。`repr(u8)` 属性は、各変数が `u8` として表現されることを指定します。将来的には、他の割り込み用の変数を追加する予定です。
 
 [C-like enum]: https://doc.rust-lang.org/reference/items/enumerations.html#custom-discriminant-values-for-fieldless-enumerations
 
-Now we can add a handler function for the timer interrupt:
+これで、タイマー割り込みのハンドラ関数を追加することができるようになりました。
 
 ```rust
 // in src/interrupts.rs
@@ -211,20 +212,20 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 }
 ```
 
-Our `timer_interrupt_handler` has the same signature as our exception handlers, because the CPU reacts identically to exceptions and external interrupts (the only difference is that some exceptions push an error code). The [`InterruptDescriptorTable`] struct implements the [`IndexMut`] trait, so we can access individual entries through array indexing syntax.
+この`timer_interrupt_handler`は、CPUは例外や外部割り込みに対しても同じように反応するので、例外ハンドラと同じシグネチャを持っています。（唯一の違いはいくつかの例外はエラーコードをプッシュするということです。）構造体 [`InterruptDescriptorTable`] は [`IndexMut`] を実装しているので、配列にインデックスを用いて個々のエントリにアクセスすることができます。
 
 [`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
-In our timer interrupt handler, we print a dot to the screen. As the timer interrupt happens periodically, we would expect to see a dot appearing on each timer tick. However, when we run it we see that only a single dot is printed:
+タイマー割り込みハンドラでは、画面にドットを表示します。タイマー割り込みは周期的に発生するので、タイマーの目盛りごとにドットが表示されることを期待しています。しかし、実行してみると、1つのドットしか印刷されていません。
 
 ![QEMU printing only a single dot for hardware timer](qemu-single-dot-printed.png)
 
-### End of Interrupt
+### 割り込み終了の通知
 
-The reason is that the PIC expects an explicit “end of interrupt” (EOI) signal from our interrupt handler. This signal tells the controller that the interrupt was processed and that the system is ready to receive the next interrupt. So the PIC thinks we're still busy processing the first timer interrupt and waits patiently for the EOI signal before sending the next one.
+その理由は、PICが割り込みハンドラからの明示的な "割り込み終了"（EOI）信号を期待しているからです。この信号は、割り込みが処理されたこと、システムが次の割り込みを受信する準備ができたことをコントローラに伝えます。PICは最初のタイマ割込みの処理でまだ忙しいと考え、次のタイマ割込みを送信する前にEOI信号を待ちます。
 
-To send the EOI, we use our static `PICS` struct again:
+EOIを送信するには、`PICS`構造体を使用します。
 
 ```rust
 // in src/interrupts.rs
@@ -241,26 +242,26 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 }
 ```
 
-The `notify_end_of_interrupt` figures out whether the primary or secondary PIC sent the interrupt and then uses the `command` and `data` ports to send an EOI signal to respective controllers. If the secondary PIC sent the interrupt both PICs need to be notified because the secondary PIC is connected to an input line of the primary PIC.
+`notify_end_of_interrupt`はプライマリPICとセカンダリPICのどちらが割り込みを送信したかを判別し、`command`ポートと`data`ポートを使ってそれぞれのコントローラにEOI信号を送信します。セカンダリPICが割り込みを送信した場合、セカンダリPICはプライマリPICの入力ラインに接続されているため、両方のPICに通知する必要があります。
 
-We need to be careful to use the correct interrupt vector number, otherwise we could accidentally delete an important unsent interrupt or cause our system to hang. This is the reason that the function is unsafe.
+正しい割り込みベクタ番号を使用するように注意しなければなりません、そうしないと送信されていない重要な割り込みを誤って削除してしまったり、 システムがハングアップしてしまう可能性があります。これがこの関数が安全でない理由です。
 
-When we now execute `cargo run` we see dots periodically appearing on the screen:
+ここで `cargo run` を実行すると、画面上にドットが周期的に現れるのがわかります。
 
 ![QEMU printing consecutive dots showing the hardware timer](qemu-hardware-timer-dots.gif)
 
-### Configuring the Timer
+### タイマーの設定
 
-The hardware timer that we use is called the _Progammable Interval Timer_ or PIT for short. Like the name says, it is possible to configure the interval between two interrupts. We won't go into details here because we will switch to the [APIC timer] soon, but the OSDev wiki has an extensive article about the [configuring the PIT].
+使用しているハードウェアタイマは、**Progammable Interval Timer**、略してPITと呼ばれています。その名の通り、割り込みの間隔を設定することができます。近いうちに[APICタイマー][APIC timer]に切り替える予定なので、ここでは詳しくは触れませんが、OSDevのwikiには[PITの設定][configuring the PIT]についての豊富な記事があります。
 
 [APIC timer]: https://wiki.osdev.org/APIC_timer
 [configuring the PIT]: https://wiki.osdev.org/Programmable_Interval_Timer
 
-## Deadlocks
+## デッドロック
 
-We now have a form of concurrency in our kernel: The timer interrupts occur asynchronously, so they can interrupt our `_start` function at any time. Fortunately Rust's ownership system prevents many types of concurrency related bugs at compile time. One notable exception are deadlocks. Deadlocks occur if a thread tries to acquire a lock that will never become free. Thus the thread hangs indefinitely.
+これでカーネルに並行処理ができました。タイマー割り込みは非同期的に発生するので、いつでも`_start`関数に割り込みをかけることができます。幸いなことに、Rustの所有権システムはコンパイル時に多くのタイプの同時実行に関連するバグを防ぎます。注目すべき例外として、デッドロックがあります。デッドロックは、スレッドが決して自由にならないロックを取得しようとすると発生します。そのため、スレッドはハングアップしてしまいます。
 
-We can already provoke a deadlock in our kernel. Remember, our `println` macro calls the `vga_buffer::_print` function, which [locks a global `WRITER`][vga spinlock] using a spinlock:
+カーネル内ではすでにデッドロックを引き起こすことができます。`println`マクロは`vga_buffer::_print`関数を呼び出しており、スピンロックを使って[`WRITER`をロック][vga spinlock]することを覚えておいてください。
 
 [vga spinlock]: @/edition-2/posts/03-vga-text-buffer/index.md#spinlocks
 
@@ -276,7 +277,7 @@ pub fn _print(args: fmt::Arguments) {
 }
 ```
 
-It locks the `WRITER`, calls `write_fmt` on it, and implicitly unlocks it at the end of the function. Now imagine that an interrupt occurs while the `WRITER` is locked and the interrupt handler tries to print something too:
+これは`WRITER`をロックして`write_fmt`を呼び出し、関数の最後に暗黙のうちにロックを解除します。ここで`WRITER`がロックされている間に割り込みが発生し、割り込みハンドラも何かを印刷しようとしたとします。
 
 Timestep | _start | interrupt_handler
 ---------|------|------------------
@@ -289,11 +290,11 @@ Timestep | _start | interrupt_handler
 … | | …
 _never_ | _unlock `WRITER`_ |
 
-The `WRITER` is locked, so the interrupt handler waits until it becomes free. But this never happens, because the `_start` function only continues to run after the interrupt handler returns. Thus the complete system hangs.
+`WRITER`はロックされているので、割り込みハンドラはそれがフリーになるまで待ちます。しかし、`_start`関数は割り込みハンドラが戻ってきた後も実行を続けるだけなので、このようなことは決して起こりません。このようにして、システム全体がハングアップしてしまいます。
 
-### Provoking a Deadlock
+### デッドロックを起こす
 
-We can easily provoke such a deadlock in our kernel by printing something in the loop at the end of our `_start` function:
+関数`_start`の最後にループ内の何かを表示することで、カーネル内でこのようなデッドロックを簡単に引き起こすことができます。
 
 ```rust
 // in src/main.rs
@@ -308,17 +309,17 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-When we run it in QEMU we get output of the form:
+これをQEMUで実行すると、以下のような出力が得られます。
 
 ![QEMU output with many rows of hyphens and no dots](./qemu-deadlock.png)
 
-We see that only a limited number of hyphens is printed, until the first timer interrupt occurs. Then the system hangs because the timer interrupt handler deadlocks when it tries to print a dot. This is the reason that we see no dots in the above output.
+最初のタイマー割り込みが発生するまで、限られた数のハイフンしか印刷されないことがわかります。タイマー割り込みハンドラがドットを印刷しようとするとデッドロックしてしまうため、システムはハングアップしてしまいます。これが、上の出力でドットが表示されない理由です。
 
-The actual number of hyphens varies between runs because the timer interrupt occurs asynchronously. This non-determinism is what makes concurrency related bugs so difficult to debug.
+タイマー割り込みは非同期的に発生するため、実際のハイフンの数は実行中に変化します。このような非決定性が、並行処理関連のバグのデバッグを困難にしています。
 
-### Fixing the Deadlock
+### デッドロックの修正
 
-To avoid this deadlock, we can disable interrupts as long as the `Mutex` is locked:
+このデッドロックを避けるために、`Mutex`がロックされている限り割り込みを無効にすることができる。
 
 ```rust
 // in src/vga_buffer.rs
@@ -336,12 +337,12 @@ pub fn _print(args: fmt::Arguments) {
 }
 ```
 
-The [`without_interrupts`] function takes a [closure] and executes it in an interrupt-free environment. We use it to ensure that no interrupt can occur as long as the `Mutex` is locked. When we run our kernel now we see that it keeps running without hanging. (We still don't notice any dots, but this is because they're scrolling by too fast. Try to slow down the printing, e.g. by putting a `for _ in 0..10000 {}` inside the loop.)
+関数[without_interrupts`]は [クロージャ][closure]を受け取り、割り込みが発生しない環境で実行します。これは`Mutex`がロックされている限り割り込みが発生しないようにするために使用します。今カーネルを実行してみると、ハングアップすることなく実行し続けていることがわかります。(まだドットを見ることができませんが、これはスクロールの速度が速すぎるためです。ループの中に `for _ in 0..10000 {}` を入れるなどして、印刷を遅くしてみてください。)
 
 [`without_interrupts`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
 
-We can apply the same change to our serial printing function to ensure that no deadlocks occur with it either:
+同じ変更をシリアルモジュールの`_print`関数にも適用することで、デッドロックが発生しないようにすることができます。
 
 ```rust
 // in src/serial.rs
@@ -360,11 +361,11 @@ pub fn _print(args: ::core::fmt::Arguments) {
 }
 ```
 
-Note that disabling interrupts shouldn't be a general solution. The problem is that it increases the worst case interrupt latency, i.e. the time until the system reacts to an interrupt. Therefore interrupts should be only disabled for a very short time.
+割り込みを無効にすることは一般的な解決策ではないことに注意してください。問題は、最悪の場合の割り込み待ち時間、つまりシステムが割り込みに反応するまでの時間が長くなってしまうことです。したがって、割り込みは非常に短い時間だけ無効にすべきです。
 
-## Fixing a Race Condition
+## 競合状態の修正
 
-If you run `cargo test` you might see the `test_println_output` test failing:
+`cargo test`を実行すると、`test_println_output`テストが失敗しているのがわかるでしょう。
 
 ```
 > cargo test --lib
@@ -380,7 +381,7 @@ Error: panicked at 'assertion failed: `(left == right)`
  right: `'S'`', src/vga_buffer.rs:205:9
 ```
 
-The reason is a _race condition_ between the test and our timer handler. Remember, the test looks like this:
+理由は、テストとタイマーハンドラの間にある**競合状態（レースコンディション）**です。テストは以下のようになっていることを思い出してください。
 
 ```rust
 // in src/vga_buffer.rs
@@ -396,11 +397,11 @@ fn test_println_output() {
 }
 ```
 
-The test prints a string to the VGA buffer and then checks the output by manually iterating over the `buffer_chars` array. The race condition occurs because the timer interrupt handler might run between the `println` and the reading of the screen characters. Note that this isn't a dangerous _data race_, which Rust completely prevents at compile time. See the [_Rustonomicon_][nomicon-races] for details.
+このテストでは、VGAバッファに文字列を印刷してから、`buffer_chars`配列を手動で繰り返して出力をチェックします。競合状態が発生するのは、`println`と画面文字の読み込みの間にタイマ割り込みハンドラが実行される可能性があるためです。これは危険な**データ競合**ではないことに注意してください。詳細は[**Rustonomicon**][nomicon-races]を参照してください。
 
 [nomicon-races]: https://doc.rust-lang.org/nomicon/races.html
 
-To fix this, we need to keep the `WRITER` locked for the complete duration of the test, so that the timer handler can't write a `.` to the screen in between. The fixed test looks like this:
+これを修正するには、タイマーハンドラが`.`を画面に出力できないように、テストの全期間にわたって`WRITER`をロックしておく必要があります。修正されたテストは以下のようになります。
 
 ```rust
 // in src/vga_buffer.rs
@@ -422,25 +423,25 @@ fn test_println_output() {
 }
 ```
 
-We performed the following changes:
+以下の変更を行いました。
 
-- We keep the writer locked for the complete test by using the `lock()` method explicitly. Instead of `println`, we use the [`writeln`] macro that allows printing to an already locked writer.
-- To avoid another deadlock, we disable interrupts for the tests duration. Otherwise the test might get interrupted while the writer is still locked.
-- Since the timer interrupt handler can still run before the test, we print an additional newline `\n` before printing the string `s`. This way, we avoid test failure when the timer handler already printed some `.` characters to the current line.
+- `lock()`メソッドを明示的に使用することで、テスト全体でライターをロックしておきます。`println`の代わりに、既にロックされているライターへの出力を可能にする [`writeln`]マクロを使用します。
+- 別のデッドロックを避けるために、テスト期間中は割り込みを無効にします。そうしないと、ライターがロックされている間にテストが中断されてしまうかもしれません。
+- タイマー割り込みハンドラはまだテストの前に実行される可能性があるので、文字列`s`を印刷する前に改行`\n`を追加で印刷します。こうすることで、タイマーハンドラが既に現在の行に`.`文字を印刷していた場合のテスト失敗を避けることができます。
 
 [`writeln`]: https://doc.rust-lang.org/core/macro.writeln.html
 
-With the above changes, `cargo test` now deterministically succeeds again.
+上記の変更により、`cargo test`は再び成功するようになりました。
 
-This was a very harmless race condition that only caused a test failure. As you can imagine, other race conditions can be much more difficult to debug due to their non-deterministic nature. Luckily, Rust prevents us from data races, which are the most serious class of race conditions since they can cause all kinds of undefined behavior, including system crashes and silent memory corruptions.
+これはテストの失敗を引き起こすだけの非常に無害な競合状態でした。ご想像の通り、他の競合状態はその非決定論的な性質のため、デバッグが非常に困難になることがあります。幸いなことに、Rustはデータ競合を防ぐことができます。データ競合は、システムの破壊やサイレントメモリ破損など、あらゆる種類の未定義な動作を引き起こす可能性があるため、最も深刻な競合状態です。
 
-## The `hlt` Instruction
+## `hlt`命令
 
-Until now we used a simple empty loop statement at the end of our `_start` and `panic` functions. This causes the CPU to spin endlessly and thus works as expected. But it is also very inefficient, because the CPU continues to run at full speed even though there's no work to do. You can see this problem in your task manager when you run your kernel: The QEMU process needs close to 100% CPU the whole time.
+これまでは`_start`と`panic`関数の最後に単純な空のループ文を使用していました。これにより、CPUは無限に実行するようになり、期待通りに動作します。しかし、何の作業もしていないのにCPUがフル回転し続けるので、非常に非効率的でもあります。この問題は、カーネルを実行するとタスクマネージャで確認できます。QEMUプロセスは常に100%近くのCPUを必要としています。
 
-What we really want to do is to halt the CPU until the next interrupt arrives. This allows the CPU to enter a sleep state in which it consumes much less energy. The [`hlt` instruction] does exactly that. Let's use this instruction to create an energy efficient endless loop:
+私たちが本当にしたいことは、次の割り込みが来るまでCPUを停止させることです。これにより、CPUはスリープ状態になり、消費するエネルギーが大幅に少なくなります。[`hlt`命令][hlt instruction]はまさにこれを実行します。この命令を使って、エネルギー効率の良いエンドレスループを作ってみましょう。
 
-[`hlt` instruction]: https://en.wikipedia.org/wiki/HLT_(x86_instruction)
+[hlt instruction]: https://en.wikipedia.org/wiki/HLT_(x86_instruction)
 
 ```rust
 // in src/lib.rs
@@ -452,11 +453,13 @@ pub fn hlt_loop() -> ! {
 }
 ```
 
-The `instructions::hlt` function is just a [thin wrapper] around the assembly instruction. It is safe because there's no way it can compromise memory safety.
+
+関数`instructions::hlt`は、アセンブリ命令を[薄いラッパー (thin wrapper)][thin wrapper]で囲んだだけのものです。メモリの安全性を損なうことがないので安全です。
 
 [thin wrapper]: https://github.com/rust-osdev/x86_64/blob/5e8e218381c5205f5777cb50da3ecac5d7e3b1ab/src/instructions/mod.rs#L16-L22
 
-We can now use this `hlt_loop` instead of the endless loops in our `_start` and `panic` functions:
+
+これで、`_start`や`panic`関数の無限ループの代わりに`hlt_loop`を使うことができるようになりました。
 
 ```rust
 // in src/main.rs
@@ -479,7 +482,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 ```
 
-Let's update our `lib.rs` as well:
+同様に`lib.rs`も更新しましょう。
 
 ```rust
 // in src/lib.rs
@@ -501,23 +504,23 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 }
 ```
 
-When we run our kernel now in QEMU, we see a much lower CPU usage.
+QEMUでカーネルを実行すると、CPUの使用量が大幅に減りました。
 
-## Keyboard Input
+## キーボード入力
 
-Now that we are able to handle interrupts from external devices we are finally able to add support for keyboard input. This will allow us to interact with our kernel for the first time.
+外部デバイスからの割り込みを扱えるようになったので、ついにキーボード入力のサポートを追加することができます。これにより、初めてカーネルと対話できるようになります。
 
 <aside class="post_aside">
 
-Note that we only describe how to handle [PS/2] keyboards here, not USB keyboards. However the mainboard emulates USB keyboards as PS/2 devices to support older software, so we can safely ignore USB keyboards until we have USB support in our kernel.
+ここでは[PS/2]キーボードの扱い方を記述しているだけで、USBキーボードの扱い方は記述していないことに注意してください。しかし、メインボードは古いソフトウェアをサポートするためにUSBキーボードをPS/2デバイスとしてエミュレートするので、カーネルでUSBをサポートするまではUSBキーボードを無視しても問題ありません。
 
 </aside>
 
 [PS/2]: https://en.wikipedia.org/wiki/PS/2_port
 
-Like the hardware timer, the keyboard controller is already enabled by default. So when you press a key the keyboard controller sends an interrupt to the PIC, which forwards it to the CPU. The CPU looks for a handler function in the IDT, but the corresponding entry is empty. Therefore a double fault occurs.
+ハードウェアタイマーと同様に、キーボードコントローラはデフォルトですでに有効になっています。そのため、キーを押すとキーボードコントローラはPICに割り込みを送り、それをCPUに転送します。CPUはIDTでハンドラ関数を探しますが、対応するエントリは空です。そのため、ダブルフォルトが発生します。
 
-So let's add a handler function for the keyboard interrupt. It's quite similar to how we defined the handler for the timer interrupt, it just uses a different interrupt number:
+そこで、キーボード割り込みのハンドラ関数を追加してみましょう。タイマー割り込みのハンドラを定義したのと似ており、割り込み番号が違うだけです。
 
 ```rust
 // in src/interrupts.rs
@@ -554,13 +557,15 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-As we see from the graphic [above](#the-8259-pic), the keyboard uses line 1 of the primary PIC. This means that it arrives at the CPU as interrupt 33 (1 + offset 32). We add this index as a new `Keyboard` variant to the `InterruptIndex` enum. We don't need to specify the value explicitly, since it defaults to the previous value plus one, which is also 33. In the interrupt handler, we print a `k` and send the end of interrupt signal to the interrupt controller.
-
 We now see that a `k` appears on the screen when we press a key. However, this only works for the first key we press, even if we continue to press keys no more `k`s appear on the screen. This is because the keyboard controller won't send another interrupt until we have read the so-called _scancode_ of the pressed key.
 
-### Reading the Scancodes
+[8259 PICの図](#8259-PIC)を見るとわかるように、キーボードはプライマリPICの1行目を使用しています。これは、割り込み33(1 + オフセット32)としてCPUに到達することを意味します。このインデックスを `InterruptIndex` enumに新しい`Keyboard`変数として追加します。割り込みハンドラでは`k`を出力して割り込み終了信号を割り込みコントローラに送信します。
 
-To find out _which_ key was pressed, we need to query the keyboard controller. We do this by reading from the data port of the PS/2 controller, which is the [I/O port] with number `0x60`:
+これで、キーを押すと`k`が画面に表示されることがわかります。しかし、これは最初に押されたキーに対してのみ機能し、キーを押し続けても画面に`k`が表示されなくなります。これは、押されたキーの**スキャンコード (scancode) **を読み取るまで、キーボードコントローラが次の割り込みを送信しないためです。
+
+### スキャンコードの読み取り
+
+どのキーが押されたかを調べるには、キーボードコントローラに問い合わせる必要があります。これを行うには、PS/2コントローラのデータポート（番号`0x60`の[I/Oポート][I/O port]）から読み込む必要がある。
 
 [I/O port]: @/edition-2/posts/04-testing/index.md#i-o-ports
 
@@ -583,17 +588,18 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard's data port. This byte is called the [_scancode_] and is a number that represents the key press/release. We don't do anything with the scancode yet, we just print it to the screen:
+キーボードのデータポートからバイトを読み込むには、`x86_64`クレートの[`Port`]型を使います。このバイトは[__scancode__]と呼ばれ、キーを押す/離すときを表す数値です。このスキャンコードに対してまだ何もせず、画面に印刷だけをします。
 
 [`Port`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/port/struct.Port.html
-[_scancode_]: https://en.wikipedia.org/wiki/Scancode
+[__scancode__]: https://en.wikipedia.org/wiki/Scancode
 
 ![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)
 
-The above image shows me slowly typing "123". We see that adjacent keys have adjacent scancodes and that pressing a key causes a different scancode than releasing it. But how do we translate the scancodes to the actual key actions exactly?
+上の画像は、私がゆっくりと"123"を入力しているところを示しています。隣接するキーには隣接するスキャンコードがあり、キーを押すと離すのとは異なるスキャンコードが発生することがわかります。しかし、スキャンコードを実際のキー操作に正確に変換するにはどうすればいいのでしょうか？
 
-### Interpreting the Scancodes
-There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. All three go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. Later computers fortunately did not continue the trend of defining new scancode sets, but rather emulated the existing sets and extended them. Today most keyboards can be configured to emulate any of the three sets.
+### スキャンコードの解釈
+
+スキャンコードとキーの間のマッピングには3つの異なる標準があり、いわゆる**スキャンコードセット**と呼ばれています。これら3つの規格はすべて初期のIBMコンピュータのキーボードにさかのぼります：[IBM XT]、[IBM 3270 PC]、そして[IBM AT]です。後のコンピュータは幸いにも、新しいスキャンコードセットを定義する傾向を継続することはなく、むしろ既存のセットをエミュレートして拡張しました。今日では、ほとんどのキーボードは3つのセットのいずれかをエミュレートするように設定できます。
 
 [IBM XT]: https://en.wikipedia.org/wiki/IBM_Personal_Computer_XT
 [IBM 3270 PC]: https://en.wikipedia.org/wiki/IBM_3270_PC
@@ -601,9 +607,11 @@ There are three different standards for the mapping between scancodes and keys, 
 
 By default, PS/2 keyboards emulate scancode set 1 ("XT"). In this set, the lower 7 bits of a scancode byte define the key, and the most significant bit defines whether it's a press ("0") or a release ("1"). Keys that were not present on the original [IBM XT] keyboard, such as the enter key on the keypad, generate two scancodes in succession: a `0xe0` escape byte and then a byte representing the key. For a list of all set 1 scancodes and their corresponding keys, check out the [OSDev Wiki][scancode set 1].
 
+デフォルトでは、PS/2キーボードはスキャンコードセット1（"XT"）をエミュレートします。このセットでは、スキャンコードバイトの下位7ビットがキーを定義し、最上位ビットがプレス（"0"）かリリース（"1"）かを定義します。オリジナルの[IBM XT]キーボードには存在しなかったキー、例えばキーパッドのエンターキーは、連続して2つのスキャンコードを生成します。`0xe0`エスケープバイトとキーを表すバイトです。すべてのセット1のスキャンコードとそれに対応するキーのリストについては、[OSDev Wiki][scancode set 1]を参照してください。
+
 [scancode set 1]: https://wiki.osdev.org/Keyboard#Scan_Code_Set_1
 
-To translate the scancodes to keys, we can use a match statement:
+スキャンコードをキーに変換するには、`match`文を使用します。
 
 ```rust
 // in src/interrupts.rs
@@ -641,17 +649,17 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-The above code translates keypresses of the number keys 0-9 and ignores all other keys. It uses a [match] statement to assign a character or `None` to each scancode. It then uses [`if let`] to destructure the optional `key`. By using the same variable name `key` in the pattern, we [shadow] the previous declaration, which is a common pattern for destructuring `Option` types in Rust.
+上記のコードは、数字キー0~9のキー押下を翻訳し、他のすべてのキーを無視します。[match]文を用いて、各スキャンコードに文字または`None`を割り当てます。次に、オプションの`key`をデストラクトするために[`if let`]を使います。パターン内で同じ変数名`key`を使用することで、前の宣言を[シャドーイング][shadow]しています。
 
 [match]: https://doc.rust-lang.org/book/ch06-02-match.html
 [`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
 [shadow]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
 
-Now we can write numbers:
+これで数字が書けるようになりました。
 
 ![QEMU printing numbers to the screen](qemu-printing-numbers.gif)
 
-Translating the other keys works in the same way. Fortunately there is a crate named [`pc-keyboard`] for translating scancodes of scancode sets 1 and 2, so we don't have to implement this ourselves. To use the crate, we add it to our `Cargo.toml` and import it in our `lib.rs`:
+他のキーの翻訳も同じように行います。幸いなことに、スキャンコードセット1と2を翻訳するためのクレート[`pc-keyboard`]があるので、自分たちで実装する必要はありません。クレートを使うには、それを`Cargo.toml`に追加して`lib.rs`にインポートします。
 
 [`pc-keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/
 
@@ -662,7 +670,7 @@ Translating the other keys works in the same way. Fortunately there is a crate n
 pc-keyboard = "0.5.0"
 ```
 
-Now we can use this crate to rewrite our `keyboard_interrupt_handler`:
+このクレートを使って`keyboard_interrupt_handler`を書き換えることができます。
 
 ```rust
 // in/src/interrupts.rs
@@ -701,38 +709,40 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-We use the `lazy_static` macro to create a static [`Keyboard`] object protected by a Mutex. We initialize the `Keyboard` with an US keyboard layout and the scancode set 1. The [`HandleControl`] parameter allows to map `ctrl+[a-z]` to the Unicode characters `U+0001` through `U+001A`. We don't want to do that, so we use the `Ignore` option to handle the `ctrl` like normal keys.
+マクロ`lazy_static`を用いて、Mutexで保護された静的な[`Keyboard`]オブジェクトを作成します。この `Keyboard`をUSキーボードレイアウトで初期化し、スキャンコードセットを1に設定します。[`HandleControl`]パラメータでは、`ctrl+[a-z]`をUnicode文字`U+0001`から`U+001A`にマップすることができます。これを行いたくないので、`Ignore`オプションを使用して`ctrl`を通常のキーのように扱うようにします。
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/enum.HandleControl.html
 
 On each interrupt, we lock the Mutex, read the scancode from the keyboard controller and pass it to the [`add_byte`] method, which translates the scancode into an `Option<KeyEvent>`. The [`KeyEvent`] contains which key caused the event and whether it was a press or release event.
 
+各割り込みでは、Mutexをロックし、キーボードコントローラからスキャンコードを読み取り、それを[`add_byte`]メソッドに渡し、スキャンコードを`Option<KeyEvent>`に変換します。[`KeyEvent`]には、イベントの原因となったキーと、それがプレスイベントなのかリリースイベントなのかが含まれています。
+
 [`Keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html
 [`add_byte`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.add_byte
 [`KeyEvent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.KeyEvent.html
 
-To interpret this key event, we pass it to the [`process_keyevent`] method, which translates the key event to a character if possible. For example, translates a press event of the `A` key to either a lowercase `a` character or an uppercase `A` character, depending on whether the shift key was pressed.
+このキーイベントを解釈するために、[`process_keyevent`]メソッドに渡すと、変換可能であれば、キーイベントを文字に変換してくれます。例えば、シフトキーが押されたかどうかに応じて、`A`キーの押下イベントを小文字の`a`文字か大文字の`A`文字に変換します。
 
 [`process_keyevent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
 
-With this modified interrupt handler we can now write text:
+この修正された割り込みハンドラを使って、テキストを書くことができるようになりました。
 
 ![Typing "Hello World" in QEMU](qemu-typing.gif)
 
-### Configuring the Keyboard
+### キーボードの設定
 
-It's possible to configure some aspects of a PS/2 keyboard, for example which scancode set it should use. We won't cover it here because this post is already long enough, but the OSDev Wiki has an overview of possible [configuration commands].
+PS/2キーボードのいくつかの側面、例えばどのスキャンコードセットを使用するかなどを設定することができます。この記事はすでに十分に長いのでここでは取り上げませんが、OSDev Wikiには可能な[設定コマンド][configuration commands]の概要が記載されています。
 
 [configuration commands]: https://wiki.osdev.org/PS/2_Keyboard#Commands
 
-## Summary
+## まとめ
 
-This post explained how to enable and handle external interrupts. We learned about the 8259 PIC and its primary/secondary layout, the remapping of the interrupt numbers, and the "end of interrupt" signal. We implemented handlers for the hardware timer and the keyboard and learned about the `hlt` instruction, which halts the CPU until the next interrupt.
+この投稿では、外部割り込みを有効にして処理する方法を説明しました。8259 PICとそのプライマリ/セカンダリレイアウト、割り込み番号のリマッピング、「割り込み終了（EOI）」信号について学びました。ハードウェアタイマーとキーボードのハンドラを実装し、次の割り込みまでCPUを停止させる`hlt`命令について学びました。
 
-Now we are able to interact with our kernel and have some fundamental building blocks for creating a small shell or simple games.
+これで、カーネルと対話できるようになり、小さなシェルや簡単なゲームを作成するための基本的な構成要素を手に入れることができました。
 
-## What's next?
+## 次の記事は？
 
-Timer interrupts are essential for an operating system, because they provide a way to periodically interrupt the running process and regain control in the kernel. The kernel can then switch to a different process and create the illusion that multiple processes run in parallel.
+タイマー割り込みは、実行中のプロセスを定期的に中断してカーネルの制御を取り戻す方法を提供するため、オペレーティングシステムにとって不可欠です。カーネルは別のプロセスに切り替えて、複数のプロセスが並列に走っているような錯覚を起こすことができます。
 
-But before we can create processes or threads, we need a way to allocate memory for them. The next posts will explore memory management to provide this fundamental building block.
+しかし、プロセスやスレッドを作成する前に、それらのためにメモリを割り当てる方法が必要です。次の記事では、この基本的な構成要素を提供するためのメモリ管理を探っていきます。
