@@ -192,12 +192,9 @@ pub extern "C" fn _start() -> ! {
 
 ではどうやったら私達はこの問題を避けられるでしょうか？例外スタックフレームをプッシュすることは、CPU自身が行ってしまうので、取り除くことはできません。つまりどうにかしてダブルフォルト例外が発生したときスタックが常に正常であることを確かにする必要があります。幸いにもx86_64アーキテクチャにはこの問題の解決策を持っています。
 
-## Switching Stacks
 ## スタックを切り替える
-The x86_64 architecture is able to switch to a predefined, known-good stack when an exception occurs. This switch happens at hardware level, so it can be performed before the CPU pushes the exception stack frame.
 x86_64アーキテクチャは例外発生時に予め定義されている既知の正常なスタックに切り替えることができます。この切り替えはハードウェアレベルで発生するので、CPUが例外スタックフレームをプッシュする前に行うことができます。
 
-The switching mechanism is implemented as an _Interrupt Stack Table_ (IST). The IST is a table of 7 pointers to known-good stacks. In Rust-like pseudo code:
 切り替えの仕組みは**割り込みスタックテーブル**（IST）として実装されています。ISTは７つの既知の正常なポインタのテーブルです。Rust風の疑似コードで表すとこのようになります。
 
 ```rust
@@ -207,47 +204,39 @@ struct InterruptStackTable {
 ```
 
 For each exception handler, we can choose a stack from the IST through the `stack_pointers` field in the corresponding [IDT entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack whenever a double fault occurs. This switch would happen before anything is pushed, so it would prevent the triple fault.
-各例外ハンドラに対して、私達は対応する[IDTエントリ]の`stack_pointers`フィールドによってスタックをISTから選ぶことができます。例えば、IST中の最初のスタックをダブルフォルトハンドラのために使うことができます。
+各例外ハンドラに対して、私達は対応する[IDTエントリ]の`stack_pointers`フィールドによってスタックをISTから選ぶことができます。例えば、IST中の最初のスタックをダブルフォルトハンドラのために使うことができます。そうすると、CPUがダブルフォルトが発生したとき、いつでも自動的にこのスタックに切り替えをします。この切り替えは何かがプッシュされる前に起きるので、トリプルフォルトを防ぐことになります。
 
 [IDTエントリ]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
-### The IST and TSS
 ### ISTとTSS
-The Interrupt Stack Table (IST) is part of an old legacy structure called _[Task State Segment]_ \(TSS). The TSS used to hold various information (e.g. processor register state) about a task in 32-bit mode and was for example used for [hardware context switching]. However, hardware context switching is no longer supported in 64-bit mode and the format of the TSS changed completely.
 割り込みスタックテーブル（IST）は**[テーブルステートセグメント]**（TSS）という古いレガシーな構造体の一部です。TSSはかつては様々な32ビットモードでのタスクに関する情報（例：プロセッサのレジスタの状態）を保持していて、例えば[ハードウェアコンテキストスイッチング]に使われていました。しかし、ハードウェアコンテキストスイッチングは64ビットではサポートされなくなり、TSSのフォーマットは完全に変わりました。
 
 [タスクステートセグメント]: https://en.wikipedia.org/wiki/Task_state_segment
 [ハードウェアコンテキストスイッチング]: https://wiki.osdev.org/Context_Switching#Hardware_Context_Switching
 
-On x86_64, the TSS no longer holds any task specific information at all. Instead, it holds two stack tables (the IST is one of them). The only common field between the 32-bit and 64-bit TSS is the pointer to the [I/O port permissions bitmap].
 x86_64ではTSSはタスク固有の情報は全く持たなくなりました。代わりに、２つのスタックテーブル（ISTがその１つ）を持つようになりました。唯一32ビットと64ビットのTSSで共通のフィールドは[I/Oポート権限ビットマップ]へのポインタのみです。
 
 [I/Oポート権限ビットマップ]: https://en.wikipedia.org/wiki/Task_state_segment#I.2FO_port_permissions
 
-The 64-bit TSS has the following format:
 64ビットのTSSは下記のようなフォーマットです。
 
-Field  | Type
+フィールド  | 型
 ------ | ----------------
 <span style="opacity: 0.5">(reserved)</span> | `u32`
-Privilege Stack Table | `[u64; 3]`
+特権スタックテーブル | `[u64; 3]`
 <span style="opacity: 0.5">(reserved)</span> | `u64`
-Interrupt Stack Table | `[u64; 7]`
+割り込みスタックテーブル | `[u64; 7]`
 <span style="opacity: 0.5">(reserved)</span> | `u64`
 <span style="opacity: 0.5">(reserved)</span> | `u16`
-I/O Map Base Address | `u16`
+I/Oマップベースアドレス | `u16`
 
-The _Privilege Stack Table_ is used by the CPU when the privilege level changes. For example, if an exception occurs while the CPU is in user mode (privilege level 3), the CPU normally switches to kernel mode (privilege level 0) before invoking the exception handler. In that case, the CPU would switch to the 0th stack in the Privilege Stack Table (since 0 is the target privilege level). We don't have any user mode programs yet, so we ignore this table for now.
 **特権スタックテーブル**は特権レベルが変わったときにCPUに使われます。例えば、CPUがユーザーモード（特権レベル3）の時に例外が発生した場合、CPUは通常は例外ハンドラを呼び出す前にカーネルモード（特権レベル0）に切り替わります。この場合、CPUは特権レベルスタックテーブルの0番目のスタックに切り替わります。
 
-### Creating a TSS
 ### TSSをつくる
-Let's create a new TSS that contains a separate double fault stack in its interrupt stack table. For that we need a TSS struct. Fortunately, the `x86_64` crate already contains a [`TaskStateSegment` struct] that we can use.
 割り込みスタックテーブルにダブルフォルト用の別のスタックを含めた新しいTSSをつくってみましょう。そのためにはTSS構造体が必要です。幸いにも、`x86_64`クレートにすでに[`TaskStateSegment`構造体]は含まれているので、これを使うことができます。
 
 [`TaskStateSegment`構造体]: https://docs.rs/x86_64/0.12.1/x86_64/structures/tss/struct.TaskStateSegment.html
 
-We create the TSS in a new `gdt` module (the name will make sense later):
 新しい`gdt`モジュール内でTSSをつくります（名前の意味は後でわかるでしょう）。
 
 ```rust
@@ -279,35 +268,27 @@ lazy_static! {
 }
 ```
 
-We use `lazy_static` because Rust's const evaluator is not yet powerful enough to do this initialization at compile time. We define that the 0th IST entry is the double fault stack (any other IST index would work too). Then we write the top address of a double fault stack to the 0th entry. We write the top address because stacks on x86 grow downwards, i.e. from high addresses to low addresses.
-Rustの定数評価機はこの初期化をコンパイル時に行うことがまだできないので`lazy_static`を使います。私達は0番目のISTエントリはダブルフォルト用のスタックだと定義します（他のISTのインデックスでも動くでしょう）。
-そして、ダブルフォルト用スタックの先頭アドレスを0番目のエントリに書き込みます。先頭アドレスを書き込むのはx86のスタックは下、つまり高いアドレスから低いアドレスに向かって伸びていくからです。
+Rustの定数評価機はこの初期化をコンパイル時に行うことがまだできないので`lazy_static`を使います。私達は0番目のISTエントリはダブルフォルト用のスタックだと定義します（他のISTのインデックスでも動くでしょう）。そして、ダブルフォルト用スタックの先頭アドレスを0番目のエントリに書き込みます。先頭アドレスを書き込むのはx86のスタックは下、つまり高いアドレスから低いアドレスに向かって伸びていくからです。
 
-We haven't implemented memory management yet, so we don't have a proper way to allocate a new stack. Instead, we use a `static mut` array as stack storage for now. The `unsafe` is required because the compiler can't guarantee race freedom when mutable statics are accessed. It is important that it is a `static mut` and not an immutable `static`, because otherwise the bootloader will map it to a read-only page. We will replace this with a proper stack allocation in a later post, then the `unsafe` will be no longer needed at this place.
 私達はまだメモリ管理を実装していません。そのため、新しいスタックを確保する適切な方法がありません。その代わり今回は、スタックのストレージとして`static mut`な配列を使います。`unsafe`はコンパイラが変更可能な静的変数がアクセスされるとき競合がないことを保証できないため必要です。これが不変の`static`ではなく`static mut`であることは重要です。そうでなければブートローダーはこれをリードオンリーのページにマップしてしまうからです。私達は後の記事でこの部分を適切なスタック確保に置き換えます。そうしたらこの部分での`unsafe`は必要なくなります。
 
-Note that this double fault stack has no guard page that protects against stack overflow. This means that we should not do anything stack intensive in our double fault handler because a stack overflow might corrupt the memory below the stack.
 ちなみに、このダブルフォルトスタックはスタックオーバーフローに対する保護をするガードページを持ちません。これはつまり、スタックオーバーフローがスタックより下のメモリと衝突するかもしれないので、私達はダブルフォルトハンドラ内でスタックを多く使うようなことをするべきではないということです。
 
-#### Loading the TSS
 #### TSSを読み込む
-Now that we created a new TSS, we need a way to tell the CPU that it should use it. Unfortunately this is a bit cumbersome, since the TSS uses the segmentation system (for historical reasons). Instead of loading the table directly, we need to add a new segment descriptor to the [Global Descriptor Table] \(GDT). Then we can load our TSS invoking the [`ltr` instruction] with the respective GDT index. (This is the reason why we named our module `gdt`.)
-新しいTSSをつくったので、私達はCPUにそれを使うように教える方法が必要です。残念ながら、これはちょっと面倒くさいです。なぜならTSSは（歴史的な理由で）セグメンテーションシステムを使うためです。テーブルを直接読み込むのではなく、新しいセグメントディスクリプタを[Global Descriptor Table]（GDT）に追加する必要があります。そうすると各自のGDTインデックスで[`ltr`命令]を呼び出すことで私達のTSSを読み込むことができます。
+新しいTSSをつくったので、私達はCPUにそれを使うように教える方法が必要です。残念ながら、これはちょっと面倒くさいです。なぜならTSSは（歴史的な理由で）セグメンテーションシステムを使うためです。テーブルを直接読み込むのではなく、新しいセグメントディスクリプタを[グローバルディスクリプタテーブル]（GDT）に追加する必要があります。そうすると各自のGDTインデックスで[`ltr`命令]を呼び出すことで私達のTSSを読み込むことができます。
 
-[Global Descriptor Table]: https://web.archive.org/web/20190217233448/https://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
+[グローバルディスクリプタテーブル]: https://web.archive.org/web/20190217233448/https://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
 [`ltr`命令]: https://www.felixcloutier.com/x86/ltr
 
-### The Global Descriptor Table
 ### グローバルディスクリプタテーブル
-The Global Descriptor Table (GDT) is a relict that was used for [memory segmentation] before paging became the de facto standard. It is still needed in 64-bit mode for various things such as kernel/user mode configuration or TSS loading.
 グローバルディスクリプタテーブル（GDT）はページングがデファクトスタンダードになる以前の[メモリセグメンテーション]のため使われていた遺物です。64ビットモードでもカーネル・ユーザーモードの設定やTSSの読み込みなど様々なことのため未だに必要です。
 
 [メモリセグメンテーション]: https://en.wikipedia.org/wiki/X86_memory_segmentation
 
 The GDT is a structure that contains the _segments_ of the program. It was used on older architectures to isolate programs from each other, before paging became the standard. For more information about segmentation check out the equally named chapter of the free [“Three Easy Pieces” book]. While segmentation is no longer supported in 64-bit mode, the GDT still exists. It is mostly used for two things: Switching between kernel space and user space, and loading a TSS structure.
-GDTはプログラムの**セグメント**を含む構造です。ページングが標準になる以前に、プログラム同士を独立させるためにより古いアーキテクチャで使われていました。セグメンテーション
+GDTはプログラムの**セグメント**を含む構造です。ページングが標準になる以前に、プログラム同士を独立させるためにより古いアーキテクチャで使われていました。セグメンテーションに関するより詳しい情報は無料の[「Three Easy Peices」]という本の同じ名前の章を見てください。セグメンテーションは64ビットモードではもうサポートされていませんが、GDTはまだ存在しています。GDTは主にカーネル空間とユーザー空間の切り替えとTSS構造体の読み込みの２つのことに使われています。
 
-[“Three Easy Pieces” book]: http://pages.cs.wisc.edu/~remzi/OSTEP/
+[「Three Easy Pieces」]: http://pages.cs.wisc.edu/~remzi/OSTEP/
 
 #### Creating a GDT
 Let's create a static `GDT` that includes a segment for our `TSS` static:
