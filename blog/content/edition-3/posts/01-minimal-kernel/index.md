@@ -637,7 +637,19 @@ unable to build with the standard library, try:
 
 It still fails. The problem is that cargo needs a copy of the Rust source code in order to recompile the `core` crate. The error message helpfully suggest to provide such a copy by installing the `rust-src` component.
 
-After running the suggested `rustup component add rust-src` command, the build should now finally succeed:
+Instead of running the suggested `rustup component add rust-src` command, we an also record the dependency on the `rust-src` component in our `rust-toolchain` file:
+
+```toml
+# in rust-toolchain
+
+[toolchain]
+channel = "nightly"
+components = ["rust-src"]
+```
+
+This way, `rustup` will automatically download the required components so that no manual steps are necessary.
+
+After installing the `rust-src` component (either manually or automatically), the build should finally succeeds:
 
 ```
 > cargo build --target x86_64-blog_os.json -Z build-std=core
