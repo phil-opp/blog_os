@@ -110,7 +110,7 @@ pub static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 ```
 
-上で述べたように、PICSのオフセットを32〜47の範囲に設定しています。このように `ChainedPics`構造体を`Mutex`で包むことで、（[`lock` メソッド][spin mutex lock]を使用することにより）安全にアクセスすることができます。これは次のステップで必要です。関数 `ChainedPics::new`は、オフセットを間違えると未定義の動作を引き起こす可能性があるため、安全ではありません。
+上で述べたように、PICSのオフセットを32〜47の範囲に設定しています。このように `ChainedPics`構造体を`Mutex`でラップし、[`lock`メソッド][spin mutex lock]を使用することにより、安全にアクセスすることができます。これは次のステップで必要です。関数 `ChainedPics::new`は、オフセットを間違えると未定義の動作を引き起こす可能性があるため、安全ではありません。
 
 [spin mutex lock]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html#method.lock
 
@@ -147,7 +147,7 @@ pub fn init() {
 }
 ```
 
-x86_64クレートの`interrupts::enable`関数は、外部からの割り込みを有効にするために特別な`sti` 命令 (set interrupts、つまり割り込みの設定の略)を実行します。`cargo run`を実行してみると、ダブルフォルトが発生していることがわかります。
+x86_64クレートの`interrupts::enable`関数は、外部からの割り込みを有効にするために特別な`sti` 命令（set interrupts、つまり割り込みの設定の略）を実行します。`cargo run`を実行してみると、ダブルフォルトが発生していることがわかります。
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` because of hardware timer](qemu-hardware-timer-double-fault.png)
 
@@ -157,7 +157,7 @@ x86_64クレートの`interrupts::enable`関数は、外部からの割り込み
 
 ## タイマー割り込みのハンドラー
 
-[8259 PICの図](#8259-PIC)を見るとわかるように、タイマーはプライマリPICのライン0を使用しています。これは、割り込み番号32（0 + 32（オフセットの値））としてCPUに到着することを意味します。32の値をハードコーディングする代わりに、`InterruptIndex` enumに格納します。
+[8259 PICの図](#8259-pic)を見るとわかるように、タイマーはプライマリPICのライン0を使用しています。これは、割り込み番号32（0 + 32（オフセットの値））としてCPUに到着することを意味します。32の値をハードコーディングする代わりに、`InterruptIndex`列挙型に格納します。
 
 ```rust
 // in src/interrupts.rs
@@ -179,7 +179,7 @@ impl InterruptIndex {
 }
 ```
 
-このenumは[C言語ライクな列挙型][C-like enum]なので、各ヴァリアントのインデックスを直接指定することができます。`repr(u8)` 属性は、各ヴァリアントが `u8` として表現されることを指定します。将来的には、他の割り込み用のヴァリアントを追加する予定です。
+これは[C言語ライクな列挙型][C-like enum]なので、各ヴァリアントのインデックスを直接指定することができます。`repr(u8)` 属性は、各ヴァリアントが `u8` として表現されることを指定します。将来的には、他の割り込み用のヴァリアントを追加する予定です。
 
 [C-like enum]: https://doc.rust-lang.org/reference/items/enumerations.html#custom-discriminant-values-for-fieldless-enumerations
 
@@ -249,7 +249,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 ### タイマーの設定
 
-使用しているハードウェアタイマは、**Progammable Interval Timer**、略してPITと呼ばれています。その名の通り、割り込みの間隔を設定することができます。近いうちに[APICタイマー][APIC timer]に切り替える予定なので、ここでは詳しくは触れませんが、OSDevのwikiには[PITの設定][configuring the PIT]についての豊富な記事があります。
+使用しているハードウェアタイマは、__Progammable Interval Timer（PIT）__ と呼ばれています。その名の通り、割り込みの間隔を設定することができます。近いうちに[APICタイマー][APIC timer]に切り替える予定なので、ここでは詳しくは触れませんが、OSDevのwikiには[PITの設定][configuring the PIT]についての豊富な記事があります。
 
 [APIC timer]: https://wiki.osdev.org/APIC_timer
 [configuring the PIT]: https://wiki.osdev.org/Programmable_Interval_Timer
@@ -276,7 +276,7 @@ pub fn _print(args: fmt::Arguments) {
 
 これは`WRITER`をロックして`write_fmt`を呼び出し、関数の最後に暗黙のうちにロックを解除します。ここで`WRITER`がロックされている間に割り込みが発生し、割り込みハンドラも何かを出力しようとしたとします。
 
-タイムスタンブ | _start | interrupt_handler
+タイムスタンブ | `_start` | 割り込みハンドラ
 ---------|------|------------------
 0 | `println!`を呼び出す      | &nbsp;
 1 | `print`が`WRITER`のロックを取得する | &nbsp;
@@ -285,7 +285,7 @@ pub fn _print(args: fmt::Arguments) {
 4 | | `print`が`WRITER`のロックを取得しようとする（しかしすでにロックは取得されている）
 5 | | `print`が`WRITER`のロックを取得しようとする（しかしすでにロックは取得されている）
 … | | …
-**決して起こらない** | **`WRITER`のロックを解除** |
+**決して起こらない** | **`WRITER`のロックを解除する** |
 
 `WRITER`はロックされているので、割り込みハンドラはそれが解放されるまで待ちます。しかし、`_start`関数は割り込みハンドラがリターンしたあとにのみ実行を続行するようになっているので、このようなことは決して起こりません。このようにして、システム全体がハングアップしてしまいます。
 
@@ -334,12 +334,12 @@ pub fn _print(args: fmt::Arguments) {
 }
 ```
 
-関数[without_interrupts`]は[クロージャ][closure]を受け取り、割り込みが発生しない環境で実行します。これは`Mutex`がロックされている限り割り込みが発生しないようにするために使用します。今カーネルを実行してみると、ハングアップすることなく実行し続けていることがわかります。(まだドットを見ることはできませんが、これはスクロールの速度が速すぎるためです。ループの中に`for _ in 0..10000 {}`のコードを入れるなどして、印刷を遅くしてみてください。)
+関数[`without_interrupts`]は[クロージャ][closure]を受け取り、割り込みが発生しない環境で実行します。これは`Mutex`がロックされている限り割り込みが発生しないようにするために使用します。今カーネルを実行してみると、ハングアップすることなく実行し続けていることがわかります。(まだドットを見ることはできませんが、これはスクロールの速度が速すぎるためです。ループの中に`for _ in 0..10000 {}`のコードを入れるなどして、出力を遅くしてみてください。)
 
 [`without_interrupts`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
 
-同じ変更をシリアルモジュールの`_print`関数にも適用することで、デッドロックが発生しないようにすることができます。
+同じ変更を`serial`モジュールの`_print`関数にも適用することで、デッドロックが発生しないようにすることができます。
 
 ```rust
 // in src/serial.rs
@@ -378,7 +378,7 @@ Error: panicked at 'assertion failed: `(left == right)`
  right: `'S'`', src/vga_buffer.rs:205:9
 ```
 
-理由は、テストとタイマーハンドラの間にある**競合状態（レースコンディション）**です。テストは以下のようになっていることを思い出してください。
+理由は、テストとタイマーハンドラの間にある **競合状態（レースコンディション）** です。テストは以下のようになっていることを思い出してください。
 
 ```rust
 // in src/vga_buffer.rs
@@ -552,9 +552,9 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-[8259 PICの図](#8259-PIC)を見るとわかるように、キーボードはプライマリPICのライン1を使用しています。これは、割り込み33（1 + 32（オフセットの値））としてCPUに到達することを意味します。このインデックス番号を`InterruptIndex` enumに新しい`Keyboard`ヴァリアントとして追加します。デフォルトの動作として前の値に1を足すため、33の値を明示的に指定する必要はありません。割り込みハンドラでは`k`を出力して割り込み終了信号を割り込みコントローラに送信します。
+[8259 PICの図](#8259-pic)を見るとわかるように、キーボードはプライマリPICのライン1を使用しています。これは、割り込み33（1 + 32（オフセットの値））としてCPUに到達することを意味します。このインデックス番号を`InterruptIndex`列挙型に`Keyboard`ヴァリアントとして追加します。デフォルトの動作として前の値に1を足すため、33の値を明示的に指定する必要はありません。割り込みハンドラでは`k`を出力して割り込み終了信号を割り込みコントローラに送信します。
 
-これで、キーを押すと`k`が画面に表示されることがわかります。しかし、これは最初に押されたキーに対してのみ機能し、キーを押し続けても画面に`k`が表示されなくなります。これは、押されたキーの**スキャンコード (scancode) **を読み取るまで、キーボードコントローラが次の割り込みを送信しないためです。
+これで、キーを押すと`k`が画面に表示されることがわかります。しかし、これは最初に押されたキーに対してのみ機能し、キーを押し続けても画面に`k`が表示されなくなります。これは、押されたキーの **スキャンコード（scancode）** を読み取るまで、キーボードコントローラが次の割り込みを送信しないためです。
 
 ### スキャンコードの読み取り
 
@@ -581,7 +581,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-キーボードのデータポートからバイトを読み込むには、`x86_64`クレートの[`Port`]型を使います。このバイトは[スキャンコード（scancode）][scancode]と呼ばれ、キーを押す/離すときの値を表す数値です。私たちはこのスキャンコードに対してまだ何もせず、画面にスキャンコードを出力することだけを行います。
+キーボードのデータポートからバイトを読み込むには、`x86_64`クレートの[`Port`]型を使います。このバイトは[スキャンコード（scancode）][scancode]と呼ばれ、キーのプレス/リリースを表す数値です。私たちはこのスキャンコードに対してまだ何もせず、画面にスキャンコードを出力することだけを行います。
 
 [`Port`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/port/struct.Port.html
 [scancode]: https://en.wikipedia.org/wiki/Scancode
