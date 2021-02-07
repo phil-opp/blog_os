@@ -595,8 +595,9 @@ rustup override set nightly
 
 Alternatively, you can add a file called **`rust-toolchain`** to the project's root directory with the required Rust version:
 
-```
-nightly
+```toml
+[toolchain]
+channel = "nightly"
 ```
 
 After doing one of these things, both the `cargo` and `rustc` command should use a nightly version of Rust when invoked from within the current directory. You can verify that you have a nightly version installed and active by running `rustc --version`: The version number should contain `-nightly` at the end, for example:
