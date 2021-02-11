@@ -14,9 +14,10 @@ icon = '''
 '''
 +++
 
-In this post, we explore the boot process on both BIOS and UEFI-based systems. We combine the [minimal kernel] created in the previous post with a bootloader. The result is a bootable disk image, which can be started in the [QEMU] emulator and run on real hardware.
+In this post, we explore the boot process on both BIOS and UEFI-based systems. We combine the [minimal kernel] created in the previous post with a bootloader to create a bootable disk image. We then show how this image can be started in the [QEMU] emulator and run on real hardware.
 
 [minimal kernel]: @/edition-3/posts/01-minimal-kernel/index.md
+[QEMU]: https://www.qemu.org/
 
 <!-- more -->
 
