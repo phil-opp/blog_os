@@ -647,7 +647,19 @@ channel = "nightly"
 components = ["rust-src"]
 ```
 
-This way, `rustup` will automatically download the required components so that no manual steps are necessary.
+This way, `rustup` will automatically download the required components so that no manual steps are necessary. You can also automatically install components such as [`rustfmt`] or [`clippy`] this way if you like to use them:
+
+
+```toml
+# in rust-toolchain
+
+[toolchain]
+channel = "nightly"
+components = ["rust-src", "rustfmt", "clippy"]
+```
+
+[`rustfmt`]: https://github.com/rust-lang/rustfmt
+[`clippy`]: https://github.com/rust-lang/rust-clippy
 
 After installing the `rust-src` component (either manually or automatically), the build should finally succeeds:
 
@@ -726,7 +738,7 @@ cargo kbuild
 
 The name of the alias doesn't matter, so you can also name the alias `kb` if you like it even shorter. Note that overriding the built-in `build` command is not possible.
 
-One drawback of the alias approach is that you need to define a separate alias for every cargo subcommand (e.g. [`cargo check`] or [`cargo doc`]), which you want to use. You also need to adjust your IDE (e.g. [rust-analyzer]) to use a non-standard build/check command. So this approach is clearly just a workaound until proper package-specific defaults are implemented in Cargo.
+One drawback of the alias approach is that you need to define a separate alias for every cargo subcommand (e.g. [`cargo check`], [`cargo doc`], or [`cargo clippy`][`clippy`]), which you want to use. You also need to adjust your IDE (e.g. [rust-analyzer]) to use a non-standard build/check command. So this approach is clearly just a workaound until proper package-specific defaults are implemented in Cargo.
 
 [`cargo check`]: https://doc.rust-lang.org/cargo/commands/cargo-check.html
 [`cargo doc`]: https://doc.rust-lang.org/cargo/commands/cargo-doc.html
