@@ -464,7 +464,19 @@ From the `kernel_dir`, we can then construct the `kernel_manifest` and `target_d
 
 #### Creating the Disk Images
 
-We can now use our `boot` crate to create some bootable disk images from our kernel:
+There is one last step before we can create the bootable disk images: The `bootloader` build requires the [rustup component] `llvm-tools-preview`. To install it, we can either run `rustup component add llvm-tools-preview` or specify it in our `rust-toolchain` file:
+
+[rustup component]: https://rust-lang.github.io/rustup/concepts/components.html
+
+```toml
+# in rust-toolchain
+
+[toolchain]
+channel = "nightly"
+components = ["rust-src", "rustfmt", "clippy", "llvm-tools-preview"]
+```
+
+After that can finally use our `boot` crate to create some bootable disk images from our kernel:
 
 ```bash
 > cargo kbuild
