@@ -192,7 +192,7 @@ To use the `bootloader` crate, we first need to add a dependency on it:
 # in Cargo.toml
 
 [dependencies]
-bootloader = "0.10.0-alpha-01"          # TODO
+bootloader = "0.10.0-alpha-02"          # TODO
 ```
 
 For normal Rust crates, this step would be all that's needed for adding them as a dependency. However, the `bootloader` crate is a bit special. The problem is that it needs access to our kernel _after compilation_ in order to create a bootable disk image. However, cargo has no support for automatically running code after a successful build, so we need some manual build code for this. (There is a proposal for [post-build scripts] that would solve this issue, but it is not clear yet whether the Cargo team wants to add such a feature.)
