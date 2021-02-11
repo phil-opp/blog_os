@@ -285,13 +285,12 @@ Rustの定数評価機はこの初期化をコンパイル時に行うことが�
 
 [メモリセグメンテーション]: https://en.wikipedia.org/wiki/X86_memory_segmentation
 
-The GDT is a structure that contains the _segments_ of the program. It was used on older architectures to isolate programs from each other, before paging became the standard. For more information about segmentation check out the equally named chapter of the free [“Three Easy Pieces” book]. While segmentation is no longer supported in 64-bit mode, the GDT still exists. It is mostly used for two things: Switching between kernel space and user space, and loading a TSS structure.
 GDTはプログラムの**セグメント**を含む構造です。ページングが標準になる以前に、プログラム同士を独立させるためにより古いアーキテクチャで使われていました。セグメンテーションに関するより詳しい情報は無料の[「Three Easy Peices」]という本の同じ名前の章を見てください。セグメンテーションは64ビットモードではもうサポートされていませんが、GDTはまだ存在しています。GDTは主にカーネル空間とユーザー空間の切り替えとTSS構造体の読み込みの２つのことに使われています。
 
 [「Three Easy Pieces」]: http://pages.cs.wisc.edu/~remzi/OSTEP/
 
-#### Creating a GDT
-Let's create a static `GDT` that includes a segment for our `TSS` static:
+#### GDTをつくる
+`TSS`の静的変数のセグメントを含む静的`GDT`をつくりましょう。
 
 ```rust
 // in src/gdt.rs
@@ -308,11 +307,11 @@ lazy_static! {
 }
 ```
 
-As before, we use `lazy_static` again. We create a new GDT with a code segment and a TSS segment.
+前と同様に、再び`lazy_static`を使います。
 
-#### Loading the GDT
+#### GDTを読み込む
 
-To load our GDT we create a new `gdt::init` function, that we call from our `init` function:
+GDTを読み込むに新しく`gdt::init`関数をつくり、これを`init`関数から呼び出します。
 
 ```rust
 // in src/gdt.rs
@@ -329,19 +328,21 @@ pub fn init() {
 }
 ```
 
-Now our GDT is loaded (since the `_start` function calls `init`), but we still see the boot loop on stack overflow.
+これでGDTが読み込まれます（`_start`関数は`init`を呼び出すため）が、まだスタックオーバーフローで起動ループが起きてしまってます。
 
-### The final Steps
+### 最後のステップ
 
 The problem is that the GDT segments are not yet active because the segment and TSS registers still contain the values from the old GDT. We also need to modify the double fault IDT entry so that it uses the new stack.
+問題はGDTセグメントとTSSレジスタが古いGDTからの値を含んでいるため、GDTセグメントがまだ有効になっていないことです。ダブルフォルトのIDTエントリが新しいスタックを使うように変更する必要もあります。
 
 In summary, we need to do the following:
+まとめると、私達は次のようなことをする必要があります。
 
-1. **Reload code segment register**: We changed our GDT, so we should reload `cs`, the code segment register. This is required since the old segment selector could point a different GDT descriptor now (e.g. a TSS descriptor).
-2. **Load the TSS** : We loaded a GDT that contains a TSS selector, but we still need to tell the CPU that it should use that TSS.
-3. **Update the IDT entry**: As soon as our TSS is loaded, the CPU has access to a valid interrupt stack table (IST). Then we can tell the CPU that it should use our new double fault stack by modifying our double fault IDT entry.
+1. **コードセグメントレジスタを再読込する**：GDTを変更するので、コードセグメントレジスタ`cs`を再読込する必要があります。
+2. **TSSをロードする**：TSSセレクタを含むGDTをロードしましたが、CPUにこのTSSを使うよう教えてあげる必要があります。
+3. **IDTエントリを更新する**：TSSがロードされると同時に、CPUは正常な割り込みスタックテーブル（IST）へアクセスできるようになります。そうしたら、ダブルフォルトIDTエントリを変更することで、CPUに新しいダブルフォルトスタックを使うよう教えてあげることができます。
 
-For the first two steps, we need access to the `code_selector` and `tss_selector` variables in our `gdt::init` function. We can achieve this by making them part of the static through a new `Selectors` struct:
+最初の２つのステップとして、私達は`gdt::init`関数の中で`code_selector`と`tss_selector`変数にアクセスする必要があります。これは、その変数たちを新しい`Selectors`構造体を使い静的変数にすることで達成できます。
 
 ```rust
 // in src/gdt.rs
@@ -363,7 +364,7 @@ struct Selectors {
 }
 ```
 
-Now we can use the selectors to reload the `cs` segment register and load our `TSS`:
+これで私達は`cs`セグメントレジスタを再読込して`TSS`を読み込むのにセレクタたちを使うことができます。
 
 ```rust
 // in src/gdt.rs
@@ -380,12 +381,12 @@ pub fn init() {
 }
 ```
 
-We reload the code segment register using [`set_cs`] and to load the TSS using [`load_tss`]. The functions are marked as `unsafe`, so we need an `unsafe` block to invoke them. The reason is that it might be possible to break memory safety by loading invalid selectors.
+[`set_cs`]を使ってコードセグメントレジスタを再読込して、[`load_tss`]を使ってTSSを読み込んでいます。この関数たちは`unsafe`とマークされているので、呼び出すには`unsafe`ブロックが必要です。`unsafe`なのは、不正なセレクタを読み込むことでメモリ安全性を壊す可能性があるからです。
 
 [`set_cs`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/segmentation/fn.set_cs.html
 [`load_tss`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/tables/fn.load_tss.html
 
-Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
+これで正常なTSSと割り込みスタックテーブルを読み込みこんだので、私達はIDT内のダブルフォルトハンドラにスタックインデックスをセットすることができます。
 
 ```rust
 // in src/interrupts.rs
@@ -406,19 +407,19 @@ lazy_static! {
 }
 ```
 
-The `set_stack_index` method is unsafe because the the caller must ensure that the used index is valid and not already used for another exception.
+`set_stack_index`メソッドは呼び出し側が使っているインデックスが正しく他の例外で使われていないかを確かめる必要があるので安全ではないです。
 
-That's it! Now the CPU should switch to the double fault stack whenever a double fault occurs. Thus, we are able to catch _all_ double faults, including kernel stack overflows:
+これで全部です。CPUはダブルフォルトが発生したら常にダブルフォルトスタックに切り替えるでしょう。よって、私達はカーネルスタックオーバーフローを含む**すべての**ダブルフォルトをキャッチすることができます。
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` and a dump of the exception stack frame](qemu-double-fault-on-stack-overflow.png)
 
-From now on we should never see a triple fault again! To ensure that we don't accidentally break the above, we should add a test for this.
+これからはトリプルフォルトを見ることは二度とないでしょう。上のことを誤って壊さないことを確かにするため、これについてのテストを追加しましょう。
 
-## A Stack Overflow Test
+## スタックオーバーフローテスト
 
-To test our new `gdt` module and ensure that the double fault handler is correctly called on a stack overflow, we can add an integration test. The idea is to do provoke a double fault in the test function and verify that the double fault handler is called.
+新しい`gdt`モジュールをテストしダブルフォルトハンドラがスタックオーバーフローで正しく呼ばれることを確かにするために、インテグレーションテストを足します。アイデアはテスト関数内でダブルフォルトを引き起こしダブルフォルトハンドラが呼び出されていることを確かめるというものです。
 
-Let's start with a minimal skeleton:
+最小のスケルトンから始めましょう。
 
 ```rust
 // in tests/stack_overflow.rs
@@ -439,7 +440,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-Like our `panic_handler` test, the test will run [without a test harness]. The reason is that we can't continue execution after a double fault, so more than one test doesn't make sense. To disable, the test harness for the test, we add the following to our `Cargo.toml`:
+`panic_handler`のテストと同様、テストは[テストハーネスなし]で実行されます。理由は私達はダブルフォルト後に実行を続けることができず、１つより多くのテストは意味をなさないためです。テストハーネスを無効にするために、以下を`Cargo.toml`に追加します。
 
 ```toml
 # in Cargo.toml
@@ -449,13 +450,13 @@ name = "stack_overflow"
 harness = false
 ```
 
-[without a test harness]: @/edition-2/posts/04-testing/index.md#no-harness-tests
+[テストハーネスなし]: @/edition-2/posts/04-testing/index.md#no-harness-tests
 
-Now `cargo test --test stack_overflow` should compile successfully. The test fails of course, since the `unimplemented` macro panics.
+これで`cargo test --test stack_overflow`でのコンパイルは成功するでしょう。`unimplemented`マクロがパニックを起こすため、テストはもちろん失敗します。
 
-### Implementing `_start`
+### `_start`を実装する
 
-The implementation of the `_start` function looks like this:
+`_start`関数の実装はこのようになります。
 
 ```rust
 // in tests/stack_overflow.rs
@@ -469,7 +470,7 @@ pub extern "C" fn _start() -> ! {
     blog_os::gdt::init();
     init_test_idt();
 
-    // trigger a stack overflow
+    // スタックオーバーフローを起こす
     stack_overflow();
 
     panic!("Execution continued after stack overflow");
@@ -477,24 +478,25 @@ pub extern "C" fn _start() -> ! {
 
 #[allow(unconditional_recursion)]
 fn stack_overflow() {
-    stack_overflow(); // for each recursion, the return address is pushed
-    volatile::Volatile::new(0).read(); // prevent tail recursion optimizations
+    stack_overflow(); // 再帰のたびにリターンアドレスがプッシュされる
+    volatile::Volatile::new(0).read(); // 末尾最適化を防ぐ
 }
 ```
 
-We call our `gdt::init` function to initialize a new GDT. Instead of calling our `interrupts::init_idt` function, we call a `init_test_idt` function that will be explained in a moment. The reason is that we want to register a custom double fault handler that does a `exit_qemu(QemuExitCode::Success)` instead of panicking.
+新しいGDTを初期化するために`gdt::init`関数を呼びます。`interrupts::init_idt`関数を呼び出す代わりに、すぐ後に説明する`init_test_idt`関数を呼びます。なぜなら、私達はパニックの代わりに`exit_qemu(QemuExitCode::Success)`をするカスタムしたダブルフォルトハンドラを登録したいからです。
 
 The `stack_overflow` function is almost identical to the function in our `main.rs`. The only difference is that we do an additional [volatile] read at the end of the function using the [`Volatile`] type to prevent a compiler optimization called [_tail call elimination_]. Among other things, this optimization allows the compiler to transform a function whose last statement is a recursive function call into a normal loop. Thus, no additional stack frame is created for the function call, so that the stack usage does remain constant.
+`stack_overflow`関数は`main.rs`の中にある関数とほとんど同じです。唯一の違いは関数の末尾で**[末尾呼び出し最適化]**と呼ばれるコンパイラの最適化を防ぐために[`Volativle`]タイプを使って追加の[volatile]読み込みを行っていることです。他のところでは、この最適化はコンパイラが最後の宣言が再帰関数呼び出しである関数を通常のループに変換することを許します。結果として、追加のスタックフレームが関数呼び出しではつくられず、スタックの使用量が変わらないままとなります。
 
 [volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
 [`Volatile`]: https://docs.rs/volatile/0.2.6/volatile/struct.Volatile.html
-[_tail call elimination_]: https://en.wikipedia.org/wiki/Tail_call
+[末尾呼び出し最適化]: https://ja.wikipedia.org/wiki/%E6%9C%AB%E5%B0%BE%E5%86%8D%E5%B8%B0#%E6%9C%AB%E5%B0%BE%E5%91%BC%E5%87%BA%E3%81%97%E6%9C%80%E9%81%A9%E5%8C%96
 
-In our case, however, we want that the stack overflow happens, so we add a dummy volatile read statement at the end of the function, which the compiler is not allowed to remove. Thus, the function is no longer _tail recursive_ and the transformation into a loop is prevented. We also add the `allow(unconditional_recursion)` attribute to silence the compiler warning that the function recurses endlessly.
+私達の場合は、しかしながら、スタックオーバーフローを起こしたいので、ダミーのコンパイラが除去することが許されていないvolatile読み込み文を関数の末尾に追加します。その結果、関数は決して**末尾再帰**ではなくなり、ループへの変換は防がれます。更に関数が無限に再帰することに対するコンパイラの警告をなくすために`allow(unconditional_recursion)`属性を追加します。
 
-### The Test IDT
+### IDTのテスト 
 
-As noted above, the test needs its own IDT with a custom double fault handler. The implementation looks like this:
+上で述べたように、テストはカスタムしたダブルフォルトハンドラを含む専用のIDTが必要です。実装はこのようになります。
 
 ```rust
 // in tests/stack_overflow.rs
@@ -520,11 +522,11 @@ pub fn init_test_idt() {
 }
 ```
 
-The implementation is very similar to our normal IDT in `interrupts.rs`. Like in the normal IDT, we set a stack index into the IST for the double fault handler in order to switch to a separate stack. The `init_test_idt` function loads the IDT on the CPU through the `load` method.
+実装は`interrupts.rs`内の通常のIDTと非常に似ています。通常のIDT同様、分離されたスタックに切り替えるようダブルフォルトハンドラ用のISTにスタックインデックスをセットします。`init_test_idt`関数は`load`メソッドによりCPU上にIDTを読み込みます。
 
-### The Double Fault Handler
+### ダブルフォルトハンドラ
 
-The only missing piece is our double fault handler. It looks like this:
+唯一欠けているのはダブルフォルトハンドラです。このようになります。
 
 ```rust
 // in tests/stack_overflow.rs
@@ -542,16 +544,16 @@ extern "x86-interrupt" fn test_double_fault_handler(
 }
 ```
 
-When the double fault handler is called, we exit QEMU with a success exit code, which marks the test as passed. Since integration tests are completely separate executables, we need to set `#![feature(abi_x86_interrupt)]` attribute again at the top of our test file.
+ダブルフォルトハンドラが呼ばれるとき、私達はQEMUを正常な終了コードで終了し、テストを成功とマークします。インテグレーションテストは完全に分けられた実行ファイルなので、私達はテストファイルの先頭で`#![feature(abi_x86_interrupt)]`属性を再びセットする必要があります。
 
-Now we can run our test through `cargo test --test stack_overflow` (or `cargo test` to run all tests). As expected, we see the `stack_overflow... [ok]` output in the console. Try to comment out the `set_stack_index` line: it should cause the test to fail.
+これで私達は`cargo test --test stack_overflow`（もしくは全部のテストを走らせるよう`cargo test`）でテストを走らせることができます。期待していたとおり、`stack_overflow... [ok]`とコンソールに出力されるのがわかります。`set_stack_index`の行をコメントアウトすると、テストは失敗するでしょう。
 
-## Summary
-In this post we learned what a double fault is and under which conditions it occurs. We added a basic double fault handler that prints an error message and added an integration test for it.
+## まとめ
+この記事では私達はダブルフォルトが何であるかとどういう条件下で発生するかを学びました。エラーメッセージを出力する基本的なダブルフォルトハンドラを追加しまし、そのためのインテグレーションテストを追加しました。
 
-We also enabled the hardware supported stack switching on double fault exceptions so that it also works on stack overflow. While implementing it, we learned about the task state segment (TSS), the contained interrupt stack table (IST), and the global descriptor table (GDT), which was used for segmentation on older architectures.
+また、私達はスタックオーバーフローでも動くよう、ハードウェア支援によるダブルフォルト発生時のスタック切り替えを有効化しました。実装していく中で、古いアーキテクチャでのセグメンテーションで使われていたタスクステートセグメント（TSS）、割り込みスタックテーブル（IST）、グローバルディスクリプタテーブル（GDT）についても学びました。
 
-## What's next?
-The next post explains how to handle interrupts from external devices such as timers, keyboards, or network controllers. These hardware interrupts are very similar to exceptions, e.g. they are also dispatched through the IDT. However, unlike exceptions, they don't arise directly on the CPU. Instead, an _interrupt controller_ aggregates these interrupts and forwards them to CPU depending on their priority. In the next we will explore the [Intel 8259] \(“PIC”) interrupt controller and learn how to implement keyboard support.
+## 次は？
+次の記事ではどのようにタイマーやキーボードやネットワークコントローラのような外部デバイスからの割り込みを処理するかを説明します。これらのハードウェア割り込みは例外によく似ています。例えば、これらはIDTからディスパッチされます。しかしながら、例外とは違い、それらはCPUから直接発生しません。代わりに、**割り込みコントローラ**がこれらの割り込みを集めて、優先度によってそれらをCPUに向かわせます。次回は私達は[Intel 8259]（PIC）割り込みコントローラを研究し、どのようにキーボードのサポートを実装するかを学びます。
 
 [Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259
