@@ -87,8 +87,6 @@ Some bootloaders also include a basic user interface for [choosing between multi
 
 Writing a BIOS bootloader is cumbersome as it requires assembly language and a lot of non insightful steps like _“write this magic value to this processor register”_. Therefore we don't cover bootloader creation in this post and instead use the existing [`bootloader`] crate to make our kernel bootable. If you are interested in building your own BIOS bootloader: Stay tuned, a set of posts on this topic is already planned! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
 
-[bootimage]: https://github.com/rust-osdev/bootimage
-
 #### The Future of BIOS
 
 As noted above, most modern systems still support booting operating systems written for the legacy BIOS firmware for backwards-compatibility. However, there are [plans to remove this support soon][end-bios-support]. Thus, it is strongly recommended to make operating system kernels compatible with the newer UEFI standard too. Fortunately, it is possible to create a kernel that supports booting on both BIOS (for older systems) and UEFI (for modern systems).
@@ -268,7 +266,7 @@ The [Readme of the `bootloader` crate][`bootloader` Readme] describes how to cre
 Since following these steps manually is cumbersome, we create a script to automate it. For that we create a new `boot` crate in a subdirectory, in which we will implement the build steps:
 
 ```
-cargo new --bin bootimage
+cargo new --bin boot
 ```
 
 This command creates a new `boot` subfolder with a `Cargo.toml` and a `src/main.rs` in it. Since this new cargo project will be tightly coupled with our main project, it makes sense to combine the two crates as a [cargo workspace]. This way, they will share the same `Cargo.lock` for their dependencies and place their compilation artifacts in a common `target` folder. To create such a workspace, we add the following to the `Cargo.toml` of our main project:
@@ -299,14 +297,14 @@ To keep this post short, we won't include the code to parse the JSON output and 
 [`locate_bootloader`]: https://docs.rs/bootloader-locator/0.0.4/bootloader_locator/fn.locate_bootloader.html
 
 ```toml
-# in bootimage/Cargo.toml
+# in boot/Cargo.toml
 
 [dependencies]
 bootloader-locator = "0.0.4"
 ```
 
 ```rust
-// in bootimage/src/main.rs
+// in boot/src/main.rs
 
 use bootloader_locator::locate_bootloader; // new
 
@@ -341,7 +339,7 @@ Let's try to invoke that command from our `main` function. For that we use the [
 [`process::Command`]: https://doc.rust-lang.org/std/process/struct.Command.html
 
 ```rust
-// in bootimage/src/main.rs
+// in boot/src/main.rs
 
 use std::process::Command; // new
 
