@@ -310,6 +310,7 @@ use bootloader_locator::locate_bootloader; // new
 
 pub fn main() {
     let bootloader_manifest = locate_bootloader("bootloader").unwrap();
+    dbg!(bootloader_manifest);
 }
 ```
 
@@ -322,6 +323,21 @@ If you're interested in how the `locate_bootloader` function works, [check out i
 
 [locate_bootloader source]: https://docs.rs/crate/bootloader-locator/0.0.4/source/src/lib.rs
 [`json` crate]: https://docs.rs/json/0.12.4/json/
+
+Let's try to run it to see whether it works. If everything succeeds, the [`dbg!`] macro should print the path to the `bootloader` source code. Note that we need to run the `boot` binary from the root directory of our workspace, not from within the `boot` directory. Otherwise the `locate_bootloader` function would operate on the `boot/Cargo.toml`, where it won't find a bootloader dependency.
+
+[`dbg!`]: https://doc.rust-lang.org/std/macro.dbg.html
+
+To run the `boot` crate from our workspace root (i.e. the kernel directory), we can pass a [`--package`] argument to `cargo run`:
+
+[`--package`]: https://doc.rust-lang.org/cargo/commands/cargo-run.html#package-selection
+
+```
+> cargo run --package boot
+[boot/src/main.rs:5] bootloader_manifest = "/.../.cargo/.../bootloader-.../Cargo.toml"
+```
+
+It worked! We see that the bootloader source code lives somewhere in the `.cargo` directory in our user directory. By querying the source code for the exact bootloader version that our kernel is using, we ensure that the bootloader and the kernel use the exact same version of the `BootInfo` type. This is important because the `BootInfo` type is not stable yet, so undefined behavior can occur when when using different `BootInfo` versions.
 
 #### Running the Build Command
 
@@ -407,6 +423,8 @@ We still need to fill in the paths we marked as `todo!` above. We start with the
 
 ```rust
 // in `main` in boot/src/main.rs
+
+use std::path::Path;
 
 // TODO: don't hardcore this
 let kernel_binary = Path::new("target/x86_64-blog_os/debug/blog_os").canonicalize().unwrap();
