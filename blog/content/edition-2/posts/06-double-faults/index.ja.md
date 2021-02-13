@@ -214,7 +214,7 @@ struct InterruptStackTable {
 
 x86_64ではTSSはタスク固有の情報は全く持たなくなりました。代わりに、２つのスタックテーブル（ISTがその１つ）を持つようになりました。唯一32ビットと64ビットのTSSで共通のフィールドは[I/Oポート権限ビットマップ]へのポインタのみです。
 
-[I/Oポート権限ビットマップ]: https://ja.wikipedia.org/wiki/Task_state_segment#I/O%E8%A8%B1%E5%8F%AF%E3%83%93%E3%83%83%E3%83%88%E3%83%9E%E3%83%83%E3%83%97
+[I/Oポート権限ビットマップ]: https://ja.wikipedia.org/wiki/Task_state_segment#I/O許可ビットマップ
 
 64ビットのTSSは下記のようなフォーマットです。
 
@@ -281,7 +281,7 @@ Rustの定数評価機はこの初期化をコンパイル時に行うことが�
 ### グローバルディスクリプタテーブル
 グローバルディスクリプタテーブル（GDT）はページングがデファクトスタンダードになる以前の[メモリセグメンテーション]のため使われていた遺物です。64ビットモードでもカーネル・ユーザーモードの設定やTSSの読み込みなど様々なことのため未だに必要です。
 
-[メモリセグメンテーション]: https://ja.wikipedia.org/wiki/%E3%82%BB%E3%82%B0%E3%83%A1%E3%83%B3%E3%83%88%E6%96%B9%E5%BC%8F
+[メモリセグメンテーション]: https://ja.wikipedia.org/wiki/セグメント方式
 
 GDTはプログラムの**セグメント**を含む構造です。ページングが標準になる以前に、プログラム同士を独立させるためにより古いアーキテクチャで使われていました。セグメンテーションに関するより詳しい情報は無料の[「Three Easy Peices」]という本の同じ名前の章を見てください。セグメンテーションは64ビットモードではもうサポートされていませんが、GDTはまだ存在しています。GDTは主にカーネル空間とユーザー空間の切り替えとTSS構造体の読み込みの２つのことに使われています。
 
@@ -485,7 +485,7 @@ fn stack_overflow() {
 
 [volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
 [`Volatile`]: https://docs.rs/volatile/0.2.6/volatile/struct.Volatile.html
-[末尾呼び出し最適化]: https://ja.wikipedia.org/wiki/%E6%9C%AB%E5%B0%BE%E5%86%8D%E5%B8%B0#%E6%9C%AB%E5%B0%BE%E5%91%BC%E5%87%BA%E3%81%97%E6%9C%80%E9%81%A9%E5%8C%96
+[末尾呼び出し最適化]: https://ja.wikipedia.org/wiki/末尾再帰#末尾呼出し最適化
 
 私達の場合は、しかしながら、スタックオーバーフローを起こしたいので、ダミーのコンパイラが除去することが許されていないvolatile読み込み文を関数の末尾に追加します。その結果、関数は決して**末尾再帰**ではなくなり、ループへの変換は防がれます。更に関数が無限に再帰することに対するコンパイラの警告をなくすために`allow(unconditional_recursion)`属性を追加します。
 
