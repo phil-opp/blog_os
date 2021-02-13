@@ -12,11 +12,11 @@ translation_based_on_commit = "27ac0e1acc36f640d7045b427da2ed65b945756b"
 translators = ["garasubo"]
 +++
 
-この記事ではCPUが例外ハンドラの呼び出しに失敗したときに起きる、ダブルフォルト例外について詳細に見ていきます。この例外をハンドルすることによって、システムリセットを起こす重大な**トリプルフォルト**を避けることができます。あらゆる場合においてトリプルフォルトを防ぐにはダブルフォルトを別にカーネルスタック上でキャッチするために**Interrup Stack Table**をセットアップする必要があります。
+この記事ではCPUが例外ハンドラの呼び出しに失敗したときに起きる、ダブルフォルト例外について詳細に見ていきます。この例外をハンドルすることによって、システムリセットを起こす重大な**トリプルフォルト**を避けることができます。あらゆる場合においてトリプルフォルトを防ぐにはダブルフォルトを別にカーネルスタック上でキャッチするために**割り込みスタックテーブル**をセットアップする必要があります。
 
 <!-- more -->
 
-このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください (訳注: リンクは原文(英語)のものになります)。また[こちら][at the bottom]にコメントを残すこともできます。この記事の完全なソースコードは[`post-06` ブランチ][post branch]にあります。
+このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください（訳注: リンクは原文(英語)のものになります）。また[こちら][at the bottom]にコメントを残すこともできます。この記事の完全なソースコードは[`post-06` ブランチ][post branch]にあります。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -25,11 +25,11 @@ translators = ["garasubo"]
 <!-- toc -->
 
 ## ダブルフォルトとは
-簡単に言うとダブルフォルトとはCPUが例外ハンドラを呼び出すことに失敗したときに起きる特別な例外です。例えば、ページフォルトが起きたが、ページフォルトハンドラが[Interrupt Descriptor Table][IDT] (IDT)に登録されていないときに発生します。つまり、C++での`catch(...)`やJavaやC#の`catch(Exception e)`ような、例外のあるプログラミング言語のcatch-allブロックのようなものです。
+簡単に言うとダブルフォルトとはCPUが例外ハンドラを呼び出すことに失敗したときに起きる特別な例外です。例えば、ページフォルトが起きたが、ページフォルトハンドラが[割り込みディスクリプタテーブル][IDT]（IDT: Interrupt Descriptor Table）（訳注: 翻訳当時、リンク先未訳）に登録されていないときに発生します。つまり、C++での`catch(...)`やJavaやC#の`catch(Exception e)`ような、例外のあるプログラミング言語のcatch-allブロックのようなものです。
 
 [IDT]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
-ダブルフォルトは通常の例外のように振る舞います。ベクター番号`8`を持ち、IDTに通常のハンドラ関数として定義できます。ダブルフォルトがハンドルされないと、重大な_トリプルフォルト_が起きてしまうため、ダブルフォルトハンドラを設定するのはとても重要です。トリプルフォルトはキャッチすることができず、ほとんどのハードウェアはシステムリセットを起こします。
+ダブルフォルトは通常の例外のように振る舞います。ベクター番号`8`を持ち、IDTに通常のハンドラ関数として定義できます。ダブルフォルトがハンドルされないと、重大な**トリプルフォルト**が起きてしまうため、ダブルフォルトハンドラを設定するのはとても重要です。トリプルフォルトはキャッチすることができず、ほとんどのハードウェアはシステムリセットを起こします。
 
 ### ダブルフォルトを起こす
 ハンドラ関数を定義していない例外を発生させることでダブルフォルトを起こしてみましょう。
@@ -91,9 +91,9 @@ extern "x86-interrupt" fn double_fault_handler(
 }
 ```
 
-私達のハンドラは短いエラーメッセージを出力して、例外スタックフレームをダンプします。ダブルフォルトハンドラのエラーコードは常に0なので、プリントすることはないでしょう。ブレークポイントハンドラとの一つの違いは、ダブルフォルトハンドラは[**発散する**]ことです。なぜかというと、`x86_64`アーキテクチャではダブルフォルト例外から復帰するすることは許されていないからです。
+私達のハンドラは短いエラーメッセージを出力して、例外スタックフレームをダンプします。ダブルフォルトハンドラのエラーコードは常に0なので、プリントすることはないでしょう。ブレークポイントハンドラとの一つの違いは、ダブルフォルトハンドラは[発散する]（diverging）（訳注: 翻訳当時、リンク先未訳）ことです。なぜかというと、`x86_64`アーキテクチャではダブルフォルト例外から復帰するすることは許されていないからです。
 
-[**発散する**]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
+[発散する]: https://doc.rust-jp.rs/rust-by-example-ja/fn/diverging.html
 
 ここで私達のカーネルをスタートさせると、ダブルフォルトハンドラが呼び出されていることがわかることでしょう。
 
@@ -125,8 +125,7 @@ CPUはダブルフォルトハンドラを呼べるようになったので、�
 3. ゼロ除算ハンドラがブレークポイント例外を発生したが、ブレークポイントハンドラがスワップアウトされていたら？
 4. カーネルがスタックをオーバーフローさせて_ガードページ_にヒットしたら？
 
-Fortunately, the AMD64 manual ([PDF][AMD64 manual]) has an exact definition (in Section 8.2.9). According to it, a “double fault exception _can_ occur when a second exception occurs during the handling of a prior (first) exception handler”. The _“can”_ is important: Only very specific combinations of exceptions lead to a double fault. These combinations are:
-幸いにもAMD64のマニュアル（[PDF][AMD64 manual]）には正確な定義が書かれています（8.2.9章）。それによると「ダブルフォルト例外は直前の（一度目の）例外ハンドラの処理中に二度目の例外が発生したとき**起きうる**」と書かれています。**起きうる**というのが重要で、とても特別な例外の組み合わせでのみダブルフォルトとなります。この組み合わせは以下のようになっています
+幸いにもAMD64のマニュアル（[PDF][AMD64 manual]）には正確な定義が書かれています（8.2.9章）。それによると「ダブルフォルト例外は直前の（一度目の）例外ハンドラの処理中に二度目の例外が発生したとき**起きうる** （can occur）」と書かれています。**起きうる**というのが重要で、とても特別な例外の組み合わせでのみダブルフォルトとなります。この組み合わせは以下のようになっています。
 
 最初の例外 | 二度目の例外
 ----------------|-----------------
@@ -195,7 +194,7 @@ pub extern "C" fn _start() -> ! {
 ## スタックを切り替える
 x86_64アーキテクチャは例外発生時に予め定義されている既知の正常なスタックに切り替えることができます。この切り替えはハードウェアレベルで発生するので、CPUが例外スタックフレームをプッシュする前に行うことができます。
 
-切り替えの仕組みは**割り込みスタックテーブル**（IST）として実装されています。ISTは７つの既知の正常なポインタのテーブルです。Rust風の疑似コードで表すとこのようになります。
+切り替えの仕組みは**割り込みスタックテーブル**（IST: Interrupt Stack Table）として実装されています。ISTは７つの既知の正常なポインタのテーブルです。Rust風の疑似コードで表すとこのようになります。
 
 ```rust
 struct InterruptStackTable {
@@ -203,7 +202,6 @@ struct InterruptStackTable {
 }
 ```
 
-For each exception handler, we can choose a stack from the IST through the `stack_pointers` field in the corresponding [IDT entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack whenever a double fault occurs. This switch would happen before anything is pushed, so it would prevent the triple fault.
 各例外ハンドラに対して、私達は対応する[IDTエントリ]の`stack_pointers`フィールドによってスタックをISTから選ぶことができます。例えば、IST中の最初のスタックをダブルフォルトハンドラのために使うことができます。そうすると、CPUがダブルフォルトが発生したとき、いつでも自動的にこのスタックに切り替えをします。この切り替えは何かがプッシュされる前に起きるので、トリプルフォルトを防ぐことになります。
 
 [IDTエントリ]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
@@ -283,7 +281,7 @@ Rustの定数評価機はこの初期化をコンパイル時に行うことが�
 ### グローバルディスクリプタテーブル
 グローバルディスクリプタテーブル（GDT）はページングがデファクトスタンダードになる以前の[メモリセグメンテーション]のため使われていた遺物です。64ビットモードでもカーネル・ユーザーモードの設定やTSSの読み込みなど様々なことのため未だに必要です。
 
-[メモリセグメンテーション]: https://en.wikipedia.org/wiki/X86_memory_segmentation
+[メモリセグメンテーション]: https://ja.wikipedia.org/wiki/%E3%82%BB%E3%82%B0%E3%83%A1%E3%83%B3%E3%83%88%E6%96%B9%E5%BC%8F
 
 GDTはプログラムの**セグメント**を含む構造です。ページングが標準になる以前に、プログラム同士を独立させるためにより古いアーキテクチャで使われていました。セグメンテーションに関するより詳しい情報は無料の[「Three Easy Peices」]という本の同じ名前の章を見てください。セグメンテーションは64ビットモードではもうサポートされていませんが、GDTはまだ存在しています。GDTは主にカーネル空間とユーザー空間の切り替えとTSS構造体の読み込みの２つのことに使われています。
 
@@ -332,10 +330,8 @@ pub fn init() {
 
 ### 最後のステップ
 
-The problem is that the GDT segments are not yet active because the segment and TSS registers still contain the values from the old GDT. We also need to modify the double fault IDT entry so that it uses the new stack.
 問題はGDTセグメントとTSSレジスタが古いGDTからの値を含んでいるため、GDTセグメントがまだ有効になっていないことです。ダブルフォルトのIDTエントリが新しいスタックを使うように変更する必要もあります。
 
-In summary, we need to do the following:
 まとめると、私達は次のようなことをする必要があります。
 
 1. **コードセグメントレジスタを再読込する**：GDTを変更するので、コードセグメントレジスタ`cs`を再読込する必要があります。
@@ -450,7 +446,7 @@ name = "stack_overflow"
 harness = false
 ```
 
-[テストハーネスなし]: @/edition-2/posts/04-testing/index.md#no-harness-tests
+[テストハーネスなし]: @/edition-2/posts/04-testing/index.ja.md#no-harness-tests
 
 これで`cargo test --test stack_overflow`でのコンパイルは成功するでしょう。`unimplemented`マクロがパニックを起こすため、テストはもちろん失敗します。
 
@@ -485,7 +481,6 @@ fn stack_overflow() {
 
 新しいGDTを初期化するために`gdt::init`関数を呼びます。`interrupts::init_idt`関数を呼び出す代わりに、すぐ後に説明する`init_test_idt`関数を呼びます。なぜなら、私達はパニックの代わりに`exit_qemu(QemuExitCode::Success)`をするカスタムしたダブルフォルトハンドラを登録したいからです。
 
-The `stack_overflow` function is almost identical to the function in our `main.rs`. The only difference is that we do an additional [volatile] read at the end of the function using the [`Volatile`] type to prevent a compiler optimization called [_tail call elimination_]. Among other things, this optimization allows the compiler to transform a function whose last statement is a recursive function call into a normal loop. Thus, no additional stack frame is created for the function call, so that the stack usage does remain constant.
 `stack_overflow`関数は`main.rs`の中にある関数とほとんど同じです。唯一の違いは関数の末尾で**[末尾呼び出し最適化]**と呼ばれるコンパイラの最適化を防ぐために[`Volativle`]タイプを使って追加の[volatile]読み込みを行っていることです。他のところでは、この最適化はコンパイラが最後の宣言が再帰関数呼び出しである関数を通常のループに変換することを許します。結果として、追加のスタックフレームが関数呼び出しではつくられず、スタックの使用量が変わらないままとなります。
 
 [volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
@@ -556,4 +551,4 @@ extern "x86-interrupt" fn test_double_fault_handler(
 ## 次は？
 次の記事ではどのようにタイマーやキーボードやネットワークコントローラのような外部デバイスからの割り込みを処理するかを説明します。これらのハードウェア割り込みは例外によく似ています。例えば、これらはIDTからディスパッチされます。しかしながら、例外とは違い、それらはCPUから直接発生しません。代わりに、**割り込みコントローラ**がこれらの割り込みを集めて、優先度によってそれらをCPUに向かわせます。次回は私達は[Intel 8259]（PIC）割り込みコントローラを研究し、どのようにキーボードのサポートを実装するかを学びます。
 
-[Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259
+[Intel 8259]: https://ja.wikipedia.org/wiki/Intel_8259
