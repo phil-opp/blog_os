@@ -20,6 +20,19 @@
             {{ post.summary | safe }}
             <a class="read-more" href="{{ post.path | safe }}"><em>read&nbsp;more&nbsp;»</em></a>
 
+            {% if page.extra.extra_content %}
+            <aside class="post-extra-content">
+                <h4>Extra Content:</h4>
+                {% for name in page.extra.extra_content %}
+                    {% set path = page.relative_path | split(pat="/") | slice(end=-1) | concat(with=name) | join(sep="/") %}
+
+                    {% set extra_page = get_page(path = path) %}
+
+                    <a href = "{{ extra_page.path | safe }}">{{ extra_page.title }}</a>{% if not loop.last %},{% endif %}
+                {% endfor %}
+            </aside>
+            {% endif %}
+
             {%- if lang and not_translated and lang != config.default_language -%}
             <aside class="no-translation">
                 (This post is not translated yet.)

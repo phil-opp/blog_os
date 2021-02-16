@@ -12,6 +12,8 @@ icon = '''
   <path d="M3 8.812a4.999 4.999 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812z"/>
 </svg>
 '''
+
+extra_content = ["uefi.md"]
 +++
 
 In this post, we explore the boot process on both BIOS and UEFI-based systems. We combine the [minimal kernel] created in the previous post with a bootloader to create a bootable disk image. We then show how this image can be started in the [QEMU] emulator and run on real hardware.
@@ -144,12 +146,9 @@ Bootloaders and kernels typically need additional information about the system, 
 
 As it is probably clear at this point, the UEFI interface is very powerful and complex. The wide range of functionality makes it even possible to write an operating system directly as an UEFI application, using the UEFI services provided by the system table instead of creating own drivers. In practice, however, most operating systems use UEFI only for the bootloader since own drivers give you better performance and more control over the system. We will also follow this path for our OS implementation.
 
-To keep this post focused, we won't cover the creation of an UEFI bootloader here. Instead, we will use the already mentioned [`bootloader`] crate, which allows loading our kernel on both UEFI and BIOS systems.
+To keep this post focused, we won't cover the creation of an UEFI bootloader here. Instead, we will use the already mentioned [`bootloader`] crate, which allows loading our kernel on both UEFI and BIOS systems. If you're interested in how to create an UEFI bootloader yourself, check out our extra post about [**UEFI Booting**].
 
-If you're interested in how to create an UEFI bootloader: We are planning to cover this in detail in a separate series of posts. If you can't wait, check out our [`uefi` crate] and the [_An EFI App a bit rusty_] post by Gil Mendes.
-
-[_An EFI App a bit rusty_]: https://gil0mendes.io/blog/an-efi-app-a-bit-rusty/
-[`uefi` crate]: https://github.com/rust-osdev/uefi-rs/
+[**UEFI Booting**]: @/edition-3/posts/02-booting/uefi.md
 
 ### The Multiboot Standard
 
