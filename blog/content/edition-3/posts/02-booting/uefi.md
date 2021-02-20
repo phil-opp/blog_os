@@ -20,3 +20,168 @@ This post is an addendum to our main [**Booting**] post. It explains how to crea
 [**Booting**]: @/edition-3/posts/02-booting/index.md
 
 <!-- more -->
+
+This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].
+
+[GitHub]: https://github.com/phil-opp/blog_os
+[at the bottom]: #comments
+
+<!-- toc -->
+
+## Minimal UEFI App
+
+```rust
+use core::ffi::c_void;
+
+#[no_mangle]
+pub extern "efiapi" fn efi_main(
+    image: *mut c_void,
+    system_table: *const c_void,
+) -> usize {
+    loop {}
+}
+```
+
+We don't need to create a custom target because Rust has a built-in target for the UEFI environment named `x86_64-unknown-uefi`. We can use `rustc TODO` to print this target as JSON:
+
+```jsonc
+// TODO
+```
+
+We see that the target sets the entry point to a function named `efi_main`. This is the reason that we chose this name for our entry function above. The target also defines that PE executables should be created.
+
+To compile our project, we need to use cargo's `build-std` and `build-std-features` arguments because Rust does not ship a precompiled version of `core` crate for the UEFI target. For more details, see our [_Minimal Kernel_] post.
+
+The full build command looks like this:
+
+```bash
+cargo build --target x86_64-unknown-uefi -Z build-std=core -Z build-std-features=TODO
+```
+
+This results in a `.efi` file in our `target/TODO` folder.
+
+## Bootable Disk Image
+
+To make our minimal UEFI app bootable, we need to create a new [GPT] disk image with a [EFI system partition]. On that partition, we need to put our `.efi` file under `TODO`. Then the UEFI firmware should automatically detect and load it when we boot from the corresponding disk.
+
+To create this disk image, we create a new `disk_image` executable:
+
+TODO
+
+TODO: use the `gpt` and `fat32` crates to create the partitions
+
+The reason for using a FAT32 partition is that this is the only partition type that the UEFI standard requires. In practice, most UEFI firmware implementations also support the NTFS filesystem, but we can't rely on that since this is not required by the standard.
+
+Now we can run our `disk_image` executable to create the bootable disk image:
+
+TODO
+
+This results in a `.fat` and a `.img` file next to our `.efi` executable. These files can be launched in QEMU and on real hardware as described in the main [_Booting_] post. However, we don't see anything on the screen yet since we only `loop {}` in our `efi_main`:
+
+TODO screenshot
+
+Let's fix this by using the `uefi` crate.
+
+## The `uefi` Crate
+
+In order to print something to the screen, we need to call some functions provided by the UEFI firmware. These functions can be invoked through the `system_table` argument passed to our `efi_main` function. This table provides [function pointers] for all kinds of functionality, including access to the screen, disk, or network.
+
+Since the system table has a standardized format that is identical on all systems, it makes sense to create an abstraction for it. This is what the `uefi` crate does. It provides a [`SystemTable`] type that abstracts the UEFI system table functions as normal Rust methods. It is not complete, but the most important functions are all available.
+
+To use the crate, we first add it as a dependency in our `Cargo.toml`:
+
+```toml
+# TODO
+```
+
+Now we can change the types of the `image` and `system_table` arguments in our `efi_main` declaration:
+
+```rust
+// TODO
+```
+
+Since the Rust compiler is not able to typecheck the function signature of the entry point function, we could accidentally use the wrong signature here. To prevent this (and the resulting undefined behavior), the `uefi` crate provides an `entry` macro to enforce the correct signature. To use it, we change our `main.rs` like this:
+
+```rust
+// TODO
+```
+
+Now we can safely use the types provided by the `uefi` crate.
+
+### Printing to Screen
+
+The UEFI standard supports multiple interfaces for printing to the screen. The most simple one is the text-based TODO. To use it, ... TODO.
+
+The text-based output is only available before exiting UEFI boot services. TODO explain
+
+The UEFI standard also supports a pixel-based framebuffer for screen output through the GOP protocol. This framebuffer also stays available after exiting boot services, so it makes sense to set it up before switching to the kernel. The protocol can be set up like this:
+
+TODO
+
+See the [TODO] post for how to draw and render text using this framebuffer.
+
+### Memory Allocation
+
+### Physical Memory Map
+
+### APIC Base
+
+## Loading the Kernel
+
+We already saw how to set up a framebuffer for screen output and query the physical memory map and the APIC base register address. This is already all the system information that a basic kernel needs from the bootloader.
+
+The next step is to load the kernel executable. This involves loading the kernel from disk into memory, allocating a stack for it, and setting up a new page table hierarchy to properly map it to virtual memory.
+
+### Loading it from Disk
+
+One approach for including our kernel could be to place it in the FAT partition created by our `disk_image` crate. Then we could use the TODO protocol of the `uefi` crate to load it from disk into memory.
+
+To keep things simple, we will use a different appoach here. Instead of loading the kernel separately, we place its bytes as a `static` variable inside our bootloader executable. This way, the UEFI firmware directly loads it into memory when launching the bootloader. To implement this, we can use the [`include_bytes`] macro of Rust's `core` library:
+
+```rust
+// TODO
+```
+
+### Parsing the Kernel
+
+Now that we have our kernel executable in memory, we need to parse it. In the following, we assume that the kernel uses the ELF executable format, which is popular in the Linux world. This is also the excutable format that the kernel created in this blog series uses.
+
+The ELF format is structured like this:
+
+TODO
+
+The various headers are useful in different situations. For loading the executable into memory, the _program header_ is most relevant. It looks like this:
+
+TODO
+
+TODO: mention readelf/objdump/etc for looking at program header
+
+There are already a number of ELF parsing crates in the Rust ecosystem, so we don't need to create our own. In the following, we will use the [`xmas_elf`] crate, but other crates might work equally well.
+
+TODO: load program segements and print them
+
+TODO: .bss section -> mem_size might be larger than file_size
+
+### Page Table Mappings
+
+TODO:
+
+- create new page table
+- map each segment
+    - special-case: mem_size > file_size
+
+### Create a Stack
+
+## Switching to Kernel
+
+## Challenges
+
+### Boot Information
+
+- Physical Memory
+
+### Integration in Build System
+
+### Common Interface with BIOS
+
+### Configurability
