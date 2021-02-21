@@ -95,7 +95,7 @@ extern "x86-interrupt" fn double_fault_handler(
 
 [発散する]: https://doc.rust-jp.rs/rust-by-example-ja/fn/diverging.html
 
-ここで私達のカーネルをスタートさせると、ダブルフォルトハンドラが呼び出されていることがわかることでしょう。
+ここで私達のカーネルを起動すると、ダブルフォルトハンドラが呼び出されていることがわかることでしょう。
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` and the exception stack frame](qemu-catch-double-fault.png)
 
