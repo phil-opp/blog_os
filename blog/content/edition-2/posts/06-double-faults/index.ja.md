@@ -25,7 +25,7 @@ translators = ["garasubo"]
 <!-- toc -->
 
 ## ダブルフォルトとは
-簡単に言うとダブルフォルトとはCPUが例外ハンドラを呼び出すことに失敗したときに起きる特別な例外です。例えば、ページフォルトが起きたが、ページフォルトハンドラが[割り込みディスクリプタテーブル][IDT]（IDT: Interrupt Descriptor Table）（訳注: 翻訳当時、リンク先未訳）に登録されていないときに発生します。つまり、C++での`catch(...)`やJavaやC#の`catch(Exception e)`ような、例外のあるプログラミング言語のcatch-allブロックのようなものです。
+簡単に言うとダブルフォルトとはCPUが例外ハンドラを呼び出すことに失敗したときに起きる特別な例外です。例えば、ページフォルトが起きたが、ページフォルトハンドラが[割り込みディスクリプタテーブル][IDT]（IDT: Interrupt Descriptor Table）（訳注: 翻訳当時、リンク先未訳）に登録されていないときに発生します。つまり、C++での`catch(...)`や、JavaやC#の`catch(Exception e)`ような、例外のあるプログラミング言語のcatch-allブロックのようなものです。
 
 [IDT]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
