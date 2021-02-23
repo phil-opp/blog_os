@@ -30,7 +30,51 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 ## Minimal UEFI App
 
+We start by creating a new `cargo` project with a `Cargo.toml` and a `src/main.rs`:
+
+```toml
+# in Cargo.toml
+
+[package]
+name = "uefi_app"
+version = "0.1.0"
+authors = ["Your Name <your-email@example.com>"]
+edition = "2018"
+
+[dependencies]
+```
+
+This `uefi_app` project is independent of the OS kernel created in the [_Booting_], so we use a separate directory.
+
+[_Booting_]: @/edition-3/posts/02-booting/index.md
+
+In the `src/main.rs`, we create a minimal `no_std` executable as shown in the [_Minimal Kernel_] post:
+
+[_Minimal Kernel_]: @/edition-3/posts/01-minimal-kernel/index.md
+
 ```rust
+// in src/main.rs
+
+#![no_std]
+#![no_main]
+
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+```
+
+The `#![no_std]` attribute disables the linking of the Rust standard library, which is not available on bare metal. The `#![no_main]` attribute, we disable the normal entry point function that based on the C runtime. The `#[panic_handler]` attribute specifies which function should be called when a panic occurs.
+
+Next, we create an entry point function named `efi_main`:
+
+```rust
+// in src/main.rs
+
+#![feature(abi_efiapi)]
+
 use core::ffi::c_void;
 
 #[no_mangle]
@@ -42,35 +86,162 @@ pub extern "efiapi" fn efi_main(
 }
 ```
 
-We don't need to create a custom target because Rust has a built-in target for the UEFI environment named `x86_64-unknown-uefi`. We can use `rustc TODO` to print this target as JSON:
+This function signature is standardized by the UEFI specification, which is available [in PDF form][uefi-pdf] on [uefi.org]. You can find the signature of the entry point function in section 4.1. Since UEFI also defines a specific [calling convention] (in section 2.3), we set the [`efiapi` calling convention] for our function. Since support for this calling function is still unstable in Rust, we need to add `#![feature(abi_efiapi)]` at the very top of our file.
 
-```jsonc
-// TODO
+[uefi-pdf]: https://uefi.org/sites/default/files/resources/UEFI%20Spec%202.8B%20May%202020.pdf
+[uefi.org]: https://uefi.org/specifications
+[calling convention]: https://en.wikipedia.org/wiki/Calling_convention
+[`efiapi` calling convention]: https://github.com/rust-lang/rust/issues/65815
+
+The function takes two arguments: an _image handle_ and a _system table_. The image handle is a firmware-allocated handle that identifies the UEFI image. The system table contains some input and output handles and provides access to various functions provided by the UEFI firmware. The function returns an `EFI_STATUS` integer to signal whether the function was successful. It is normally only returned by UEFI apps that are not bootloaders, e.g. UEFI drivers or apps that are launched manually from the UEFI shell. Bootloaders typically pass control to a OS kernel and never return.
+
+### UEFI Target
+
+For our minimal kernel, we needed to create a [custom target] because none of the [officially supported targets] was suitable. For our UEFI application we are more lucky: Rust has built-in support for a **`x86_64-unknown-uefi`** target, which we can use without problems.
+
+[custom target]: @/edition-3/posts/01-minimal-kernel/index.md#kernel-target
+[officially supported targets]: https://doc.rust-lang.org/rustc/platform-support.html
+
+ If you're curious, you can query the JSON specification of the target with the following command:
+
+```bash
+rustc +nightly --print target-spec-json -Z unstable-options --target x86_64-unknown-uefi
 ```
 
-We see that the target sets the entry point to a function named `efi_main`. This is the reason that we chose this name for our entry function above. The target also defines that PE executables should be created.
+This outputs looks something like the following:
 
-To compile our project, we need to use cargo's `build-std` and `build-std-features` arguments because Rust does not ship a precompiled version of `core` crate for the UEFI target. For more details, see our [_Minimal Kernel_] post.
+```json
+{
+  "abi-return-struct-as-int": true,
+  "allows-weak-linkage": false,
+  "arch": "x86_64",
+  "code-model": "large",
+  "cpu": "x86-64",
+  "data-layout": "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+  "disable-redzone": true,
+  "emit-debug-gdb-scripts": false,
+  "exe-suffix": ".efi",
+  "executables": true,
+  "features": "-mmx,-sse,+soft-float",
+  "is-builtin": true,
+  "is-like-msvc": true,
+  "is-like-windows": true,
+  "linker": "rust-lld",
+  "linker-flavor": "lld-link",
+  "lld-flavor": "link",
+  "llvm-target": "x86_64-unknown-windows",
+  "max-atomic-width": 64,
+  "os": "uefi",
+  "panic-strategy": "abort",
+  "pre-link-args": {
+    "lld-link": [
+      "/NOLOGO",
+      "/NXCOMPAT",
+      "/entry:efi_main",
+      "/subsystem:efi_application"
+    ],
+    "msvc": [
+      "/NOLOGO",
+      "/NXCOMPAT",
+      "/entry:efi_main",
+      "/subsystem:efi_application"
+    ]
+  },
+  "singlethread": true,
+  "split-debuginfo": "packed",
+  "stack-probes": {
+    "kind": "call"
+  },
+  "target-pointer-width": "64"
+}
+```
+
+From the output we can derive multiple properties of the target:
+
+- The `exe-suffix` is `.efi`, which means that all executables compiled for this target have the suffix `.efi`.
+- As for our [kernel target][custom target], both the redzone and SSE are disabled.
+- The `is-like-windows` is an indicator that the target uses the conventions of Windows world, e.g. [PE] instead of [ELF] executables.
+- The LLD linker is used, which means that we don't have to install any additional linker even when compiling on non-Windows systems.
+- Like for all (most?) bare-metal targets, the `panic-strategy` is set to `abort` to disable unwinding.
+- Various linker arguments are specified. For example, the `/entry` argument sets the name of the entry point function. This is the reason that we named our entry point function `efi_main` and applied the `#[no_mangle]` attribute above.
+
+[PE]: https://en.wikipedia.org/wiki/Portable_Executable
+[ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+
+If you're interested in understanding all these fields, check out the docs for Rust's internal [`Target`] and [`TargetOptions`] types. These are the types that the above JSON is converted to.
+
+[`Target`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_target/spec/struct.Target.html
+[`TargetOptions`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_target/spec/struct.TargetOptions.html
+
+### Building
+
+Even though the `x86_64-unknown-uefi` target is built-in, there are no precompiled versions of the `core` library available for it. This means that we need to use cargo's [`build-std` feature] as described in the [_Minimal Kernel_][minimal-kernel-build-std] post.
+
+[`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
+[minimal-kernel-build-std]: @/edition-3/posts/01-minimal-kernel/index.md#the-build-std-option
+
+A nightly Rust compiler is required for building, so we need to set up a [rustup override] for the directory. We can do this either by running a [`rustup ovrride` command] or by adding a [`rust-toolchain` file].
+
+[rustup override]: https://rust-lang.github.io/rustup/overrides.html
+[`rustup override` command]: https://rust-lang.github.io/rustup/overrides.html#directory-overrides
+[`rust-toolchain` file]: https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
 
 The full build command looks like this:
 
 ```bash
-cargo build --target x86_64-unknown-uefi -Z build-std=core -Z build-std-features=TODO
+cargo build --target x86_64-unknown-uefi -Z build-std=core \
+    -Z build-std-features=compiler-builtins-mem
 ```
 
-This results in a `.efi` file in our `target/TODO` folder.
+This results in a `uefi_app.efi` file in our `x86_64-unknown-uefi/debug` folder. Congratulations! We just created our own minimal UEFI app.
 
 ## Bootable Disk Image
 
-To make our minimal UEFI app bootable, we need to create a new [GPT] disk image with a [EFI system partition]. On that partition, we need to put our `.efi` file under `TODO`. Then the UEFI firmware should automatically detect and load it when we boot from the corresponding disk.
+To make our minimal UEFI app bootable, we need to create a new [GPT] disk image with a [EFI system partition]. On that partition, we need to put our `.efi` file under `efi\boot\bootx64.efi`. Then the UEFI firmware should automatically detect and load it when we boot from the corresponding disk. See the section about the [UEFI boot process][uefi-boot-process] in the _Booting_ post for more details.
+
+[GPT]: https://en.wikipedia.org/wiki/GUID_Partition_Table
+[EFI system partition]: https://en.wikipedia.org/wiki/EFI_system_partition
+[uefi-boot-process]:  @/edition-3/posts/02-booting/index.md#boot-process-1
 
 To create this disk image, we create a new `disk_image` executable:
 
+```bash
+> cargo new --bin disk_image
+```
+
+This creates a new cargo project in a `disk_image` subdirectory. To share the `target` folder and `Cargo.lock` file with our `uefi_app` project, we set up a cargo workspace:
+
+```toml
+# in Cargo.toml
+
+[workspace]
+members = ["disk_image"]
+```
+
+### FAT Partition
+
+The first step is to create an EFI system partition formatted with the [FAT] file system. The reason for using FAT is that this is the only file system that the UEFI standard requires. In practice, most UEFI firmware implementations also support the [NTFS] filesystem, but we can't rely on that since this is not required by the standard.
+
+[FAT]: https://en.wikipedia.org/wiki/File_Allocation_Table
+[NTFS]: https://en.wikipedia.org/wiki/NTFS
+
+To create a new FAT file system, we use the [`fatfs`] crate:
+
+[`fatfs`]: https://docs.rs/fatfs/0.3.5/fatfs/
+
+```toml
+# in disk_image/Cargo.toml
+
+[dependencies]
+fatfs = "0.3.5"
+```
+
 TODO
 
-TODO: use the `gpt` and `fat32` crates to create the partitions
+### GPT Disk Image
 
-The reason for using a FAT32 partition is that this is the only partition type that the UEFI standard requires. In practice, most UEFI firmware implementations also support the NTFS filesystem, but we can't rely on that since this is not required by the standard.
+
+### Running
 
 Now we can run our `disk_image` executable to create the bootable disk image:
 
