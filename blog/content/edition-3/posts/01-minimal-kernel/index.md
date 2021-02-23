@@ -473,10 +473,12 @@ In order to create an operating system kernel, we need to choose a target that d
 }
 ```
 
-Most fields are required by LLVM to generate code for that platform. For example, the [`data-layout`] field defines the size of various integer, floating point, and pointer types. Then there are fields that Rust uses for conditional compilation, such as `target-pointer-width`. The third kind of fields define how the crate should be built. For example, the `pre-link-args` field specifies arguments passed to the [linker].
+Most fields are required by LLVM to generate code for that platform. For example, the [`data-layout`] field defines the size of various integer, floating point, and pointer types. Then there are fields that Rust uses for conditional compilation, such as `target-pointer-width`. The third kind of fields define how the crate should be built. For example, the `pre-link-args` field specifies arguments passed to the [linker]. For a full list of available fields and their meaning, check out the docs for Rust's internal [`Target`] and [`TargetOptions`] types.
 
 [`data-layout`]: https://llvm.org/docs/LangRef.html#data-layout
 [linker]: https://en.wikipedia.org/wiki/Linker_(computing)
+[`Target`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_target/spec/struct.Target.html
+[`TargetOptions`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_target/spec/struct.TargetOptions.html
 
 We also target `x86_64` systems with our kernel, so our target specification will look very similar to the one above. Let's start by creating a `x86_64-blog_os.json` file (choose any name you like) with the common content:
 
