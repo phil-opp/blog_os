@@ -218,9 +218,9 @@ This creates a new cargo project in a `disk_image` subdirectory. To share the `t
 members = ["disk_image"]
 ```
 
-### FAT Partition
+### FAT Filesystem
 
-The first step is to create an EFI system partition formatted with the [FAT] file system. The reason for using FAT is that this is the only file system that the UEFI standard requires. In practice, most UEFI firmware implementations also support the [NTFS] filesystem, but we can't rely on that since this is not required by the standard.
+The first step to create an EFI system partition is to create a new partition image formatted with the [FAT] file system. The reason for using FAT is that this is the only file system that the UEFI standard requires. In practice, most UEFI firmware implementations also support the [NTFS] filesystem, but we can't rely on that since this is not required by the standard.
 
 [FAT]: https://en.wikipedia.org/wiki/File_Allocation_Table
 [NTFS]: https://en.wikipedia.org/wiki/NTFS
@@ -236,22 +236,208 @@ To create a new FAT file system, we use the [`fatfs`] crate:
 fatfs = "0.3.5"
 ```
 
-TODO
+We leave the `main` function unchanged for now and instead create a `create_fat_filesystem` function next to it:
+
+```rust
+// in disk_image/src/main.rs
+
+use std::{fs, io, path::Path};
+
+fn create_fat_filesystem(fat_path: &Path, efi_file: &Path) {
+    // retrieve size of `.efi` file and round it up
+    let efi_size = fs::metadata(&efi_file).unwrap().len();
+    let mb = 1024 * 1024; // size of a megabyte
+                          // round it to next megabyte
+    let efi_size_rounded = ((efi_size - 1) / mb + 1) * mb;
+
+    // create new filesystem image file at the given path and set its length
+    let fat_file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&fat_path)
+        .unwrap();
+    fat_file.set_len(efi_size_rounded).unwrap();
+
+    // create new FAT file system and open it
+    let format_options = fatfs::FormatVolumeOptions::new();
+    fatfs::format_volume(&fat_file, format_options).unwrap();
+    let filesystem = fatfs::FileSystem::new(&fat_file, fatfs::FsOptions::new()).unwrap();
+
+    // copy EFI file to FAT filesystem
+    let root_dir = filesystem.root_dir();
+    root_dir.create_dir("efi").unwrap();
+    root_dir.create_dir("efi/boot").unwrap();
+    let mut bootx64 = root_dir.create_file("efi/boot/bootx64.efi").unwrap();
+    bootx64.truncate().unwrap();
+    io::copy(&mut fs::File::open(&efi_file).unwrap(), &mut bootx64).unwrap();
+}
+```
+
+We first use [`fs::metadata`] to query the size of our `.efi` file and then round it up to the next megabyte. We then use this rounded size to create a new FAT filesystem image file. I'm not sure if the rounding is really necessary, but I had some problems with the `fatfs` crate when trying to use the unaligned size.
+
+[`fs::metadata`]: https://doc.rust-lang.org/std/fs/fn.metadata.html
+
+After creating the file that should hold the FAT filesystem image, we use the [`format_volume`] function of `fatfs` to create the new FAT filesystem. After creating it, we use the [`FileSystem::new`] function to open it. The last step is to create the `efi/boot` directory and the `bootx64.efi` file on the filesystem. To write our `.efi` file to the filesystem image, we use the [`io::copy`] function of the Rust standard library.
+
+[`format_volume`]: https://docs.rs/fatfs/0.3.5/fatfs/fn.format_volume.html
+[`FileSystem::new`]: https://docs.rs/fatfs/0.3.5/fatfs/struct.FileSystem.html#method.new
+[`io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
+
+Note that we're not doing any error handling here to keep the code short. This is not that problematic because the `disk_image` crate is only part of our build process, but you still might to use at least [`expect`] instead of `unwrap()` or an error handling crate such as [`anyhow`].
+
+[`expect`]: https://doc.rust-lang.org/std/result/enum.Result.html#method.expect
+[`anyhow`]: https://docs.rs/anyhow/1.0.38/anyhow/
 
 ### GPT Disk Image
 
+To make the FAT filesystem that we just created bootable, we need to place it as an [EFI system partition] on a [`GPT`]-formatted disk. To create the GPT disk image, we use the [`gpt`] crate:
 
-### Running
+[`GPT`]: https://en.wikipedia.org/wiki/GUID_Partition_Table
+[`gpt`]: https://docs.rs/gpt/2.0.0/gpt/
 
-Now we can run our `disk_image` executable to create the bootable disk image:
+```toml
+# in disk_image/Cargo.toml
 
-TODO
+[dependencies]
+gpt = "2.0.0"
+```
 
-This results in a `.fat` and a `.img` file next to our `.efi` executable. These files can be launched in QEMU and on real hardware as described in the main [_Booting_] post. However, we don't see anything on the screen yet since we only `loop {}` in our `efi_main`:
+Like for the FAT image, we create a separate function to create the GPT disk image:
+
+```rust
+// in disk_image/src/main.rs
+
+use std::{convert::TryFrom, fs::File, io::Seek};
+
+fn create_gpt_disk(disk_path: &Path, fat_image: &Path) {
+    // create new file
+    let mut disk = fs::OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .read(true)
+        .write(true)
+        .open(&disk_path)
+        .unwrap();
+
+    // set file size
+    let partition_size: u64 = fs::metadata(&fat_image).unwrap().len();
+    let disk_size = partition_size + 1024 * 64; // for GPT headers
+    disk.set_len(disk_size).unwrap();
+
+    // create a protective MBR at LBA0 so that disk is not considered
+    // unformatted on BIOS systems
+    let mbr = gpt::mbr::ProtectiveMBR::with_lb_size(
+        u32::try_from((disk_size / 512) - 1).unwrap_or(0xFF_FF_FF_FF),
+    );
+    mbr.overwrite_lba0(&mut disk).unwrap();
+
+    // create new GPT structure
+    let block_size = gpt::disk::LogicalBlockSize::Lb512;
+    let mut gpt = gpt::GptConfig::new()
+        .writable(true)
+        .initialized(false)
+        .logical_block_size(block_size)
+        .create_from_device(Box::new(&mut disk), None)
+        .unwrap();
+    gpt.update_partitions(Default::default()).unwrap();
+
+    // add new EFI system partition and get its byte offset in the file
+    let partition_id = gpt
+        .add_partition("boot", partition_size, gpt::partition_types::EFI, 0)
+        .unwrap();
+    let partition = gpt.partitions().get(&partition_id).unwrap();
+    let start_offset = partition.bytes_start(block_size).unwrap();
+
+    // close the GPT structure and write out changes
+    gpt.write().unwrap();
+
+    // place the FAT filesystem in the newly created partition
+    disk.seek(io::SeekFrom::Start(start_offset)).unwrap();
+    io::copy(&mut File::open(&fat_image).unwrap(), &mut disk).unwrap();
+}
+```
+
+First, we create a new disk image file at the given `disk_path`. We set its size to the size of the FAT partition plus some extra amount to account for the GPT structure itself.
+
+To ensure that the disk image is not detected as an unformatted disk on older systems and accidentally overwritten, we create a so-called [_protective MBR_]. The idea is to create a normal [master boot record] structure on the disk that specifies a single partition that spans the whole disk. This way, older systems that don't know the `GPT` format see a disk formatted with an unknown parititon type instead of an unformatted disk.
+
+[_protective MBR_]: https://en.wikipedia.org/wiki/GUID_Partition_Table#Protective_MBR_(LBA_0)
+[master boot record]: https://en.wikipedia.org/wiki/Master_boot_record
+
+Next, we create the actual [`GPT`] structure through the [`GptConfig`] type and its [`create_from_device`] method. The result is a [`GptDisk`] type that writes to our `disk` file. Since we want to start with an empty partition table, we use the [`update_partitions`] method to reset the partition table. This isn't strictly necessary since we create a completely new GPT disk, but it's better to be safe.
+
+[`GptConfig`]: https://docs.rs/gpt/2.0.0/gpt/struct.GptConfig.html
+[`create_from_device`]: https://docs.rs/gpt/2.0.0/gpt/struct.GptConfig.html#method.create_from_device
+[`GptDisk`]: https://docs.rs/gpt/2.0.0/gpt/struct.GptDisk.html
+[`update_partitions`]: https://docs.rs/gpt/2.0.0/gpt/struct.GptDisk.html#method.update_partitions
+
+After resetting the new partition table, we create a new partition named `boot` in the partition table. This operation only looks for a free region on the disk and stores the offset and size of that region in the table, together with the partition name and type (an [EFI system partition] in this case). It does not write any bytes to the partition itself. To do that later, we keep track of the `start_offset` of the partition.
+
+At this point, we are done with the GPT structure. To write it out to our `disk` file, we use the [`GptDisk::write`] function.
+
+[`GptDisk::write`]: https://docs.rs/gpt/2.0.0/gpt/struct.GptDisk.html#method.write
+
+The final step is to write our `FAT` filesystem image to the newly created partition. For that we use the [`Seek::seek`] function to move the file cursor to the `start_offset` of the parititon. We then use the [`io::copy`] function to copy all the bytes from our `FAT` image file to the disk partition.
+
+[`Seek::seek`]: https://doc.rust-lang.org/std/io/trait.Seek.html#tymethod.seek
+
+### Putting it Together
+
+We now have functions to create the FAT filesystem and GPT disk image. We just need to put them together in our `main` function:
+
+```rust
+// in disk_image/src/main.rs
+
+use std::path::PathBuf;
+
+fn main() {
+    // take efi file path as command line argument
+    let mut args = std::env::args();
+    let _exe_name = args.next().unwrap();
+    let efi_path = PathBuf::from(args.next()
+        .expect("path to `.efi` files must be given as argument"));
+
+    let fat_path = efi_path.with_extension("fat");
+    let disk_path = fat_path.with_extension("img");
+
+    create_fat_filesystem(&fat_path, &efi_path);
+    create_gpt_disk(&disk_path, &fat_path);
+}
+```
+
+To be flexible, we take the path to the `.efi` file as command line argument. For retrieving the arguments we use the [`env::args`] function. The first argument is always set to the path of the executable itself by the operating system, even if the executable is invoked without arguments. We don't need it, so we prefix the variable name with an underscore to silence the "unused variable" warning.
+
+[`env::args`]: https://doc.rust-lang.org/std/env/fn.args.html
+
+Note that this is a very rudimentary way of doing argument parsing. There are a lot of crates out there that provide nice abstractions for this, for example [`clap`], [`structopt`], or [`argh`]. It is strongly recommend to use such a crate instead of writing your own argument parsing.
+
+[`clap`]: https://docs.rs/clap/2.33.3/clap/index.html
+[`structopt`]: https://docs.rs/structopt/0.3.21/structopt/
+[`argh`]: https://docs.rs/argh/0.1.4/argh/
+
+From the `efi_path` given as argument, we construct the `fat_path` and `disk_path`. By changing only the file extension using [`Path::with_extension`], we place the FAT and GPT image file next to our `.efi` file. The final step is to invoke our `create_fat_filesystem` and `create_gpt_disk` functions with the corresponding paths as argument.
+
+[`Path::with_extension`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.with_extension
+
+Now we can run our `disk_image` executable to create the bootable disk image from our `uefi_app`:
+
+```
+cargo run --package disk_image -- target/x86_64-unknown-uefi/debug/uefi_app.efi
+```
+
+Note the additional `--` argument. The `cargo run` uses this special argument to separate `cargo run` arguments from the arguments that should be passed to the compiled executable. The path of course depends on your working directory, i.e. whether you run it from the project root or from the `disk_image` subdirectory. It also depends on whether you compiled the `uefi_app` in debug or `--release` mode.
+
+The result of this command is a `.fat` and a `.img` file next to the given `.efi` executable. These files can be launched in QEMU and on real hardware [as described][run-instructions] in the main _Booting_ post. The result is a black screen:
+
+[run-instructions]: @/edition-3/posts/02-booting/index.md#running-our-kernel
 
 TODO screenshot
 
-Let's fix this by using the `uefi` crate.
+We don't see anything on the screen yet since we only `loop {}` in our `efi_main`. Let's fix this and print something to the screen by using the [`uefi`] crate.
+
+[`uefi`]: https://docs.rs/uefi/0.8.0/uefi/
 
 ## The `uefi` Crate
 
@@ -269,7 +455,7 @@ Now we can change the types of the `image` and `system_table` arguments in our `
 
 ```rust
 // TODO
-```
+``
 
 Since the Rust compiler is not able to typecheck the function signature of the entry point function, we could accidentally use the wrong signature here. To prevent this (and the resulting undefined behavior), the `uefi` crate provides an `entry` macro to enforce the correct signature. To use it, we change our `main.rs` like this:
 
