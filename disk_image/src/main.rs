@@ -2,11 +2,23 @@ use std::{
     convert::TryFrom,
     fs::{self, File},
     io::{self, Seek},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 fn main() {
-    println!("Hello, world!");
+    // take efi file path as command line argument
+    let mut args = std::env::args();
+    let _exe_name = args.next().unwrap();
+    let efi_path = PathBuf::from(
+        args.next()
+            .expect("path to `.efi` files must be given as argument"),
+    );
+
+    let fat_path = efi_path.with_extension("fat");
+    let disk_path = fat_path.with_extension("img");
+
+    create_fat_filesystem(&fat_path, &efi_path);
+    create_gpt_disk(&disk_path, &fat_path);
 }
 
 fn create_fat_filesystem(fat_path: &Path, efi_file: &Path) {
