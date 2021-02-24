@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 fatfs = "0.3.5"
+gpt = "2.0.0"
