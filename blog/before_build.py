@@ -69,7 +69,7 @@ while True:
 
     month = month + 1
     if month > 12:
-        month = 0
+        month = 1
         year = year + 1
 
 lines.reverse()
