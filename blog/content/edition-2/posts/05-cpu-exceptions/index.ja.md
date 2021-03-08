@@ -1,20 +1,24 @@
 +++
-title = "CPU Exceptions"
+title = "CPU例外"
 weight = 5
-path = "cpu-exceptions"
+path = "ja/cpu-exceptions"
 date  = 2018-06-17
 
 [extra]
 chapter = "Interrupts"
+# Please update this when updating the translation
+translation_based_on_commit = "904d203f3696ebefa7ca037d403a391ccbb2a867"
+# GitHub usernames of the people that translated this post
+translators = ["woodyZootopia"]
 +++
 
-CPU exceptions occur in various erroneous situations, for example when accessing an invalid memory address or when dividing by zero. To react to them we have to set up an _interrupt descriptor table_ that provides handler functions. At the end of this post, our kernel will be able to catch [breakpoint exceptions] and to resume normal execution afterwards.
+CPU例外は、例えば無効なメモリアドレスにアクセスしたときやゼロ除算したときなど、様々なミスによって発生します。それらに対して反応するために、ハンドラ関数を提供する **<ruby>割り込み記述子表<rp> (</rp><rt>interrupt descriptor table</rt><rp>) </rp></ruby>** を設定しなくてはなりません。この記事を読み終わる頃には、私達のカーネルは[ブレークポイント例外][breakpoint exceptions]を捕捉し、その後通常の実行を継続できるようになっているでしょう。
 
 [breakpoint exceptions]: https://wiki.osdev.org/Exceptions#Breakpoint
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-05`][post branch] branch.
+このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください (訳注: リンクは原文(英語)のものになります)。また[こちら][at the bottom]にコメントを残すこともできます。この記事の完全なソースコードは[`post-05` ブランチ][post branch]にあります。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -22,67 +26,67 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 <!-- toc -->
 
-## Overview
-An exception signals that something is wrong with the current instruction. For example, the CPU issues an exception if the current instruction tries to divide by 0. When an exception occurs, the CPU interrupts its current work and immediately calls a specific exception handler function, depending on the exception type.
+## 概要
+例外とは、今実行している命令はなにかおかしいぞ、ということを示すものです。例えば、現在の命令が0で割ろうとするときにCPUは例外を発します。例外が起こったら、CPUは現在行われている作業に割り込み、例外の種類に従って、即座に特定の例外ハンドラ関数を呼びます。
 
-On x86 there are about 20 different CPU exception types. The most important are:
+x86には20種類のCPU例外があります。中でも重要なものは：
 
-- **Page Fault**: A page fault occurs on illegal memory accesses. For example, if the current instruction tries to read from an unmapped page or tries to write to a read-only page.
-- **Invalid Opcode**: This exception occurs when the current instruction is invalid, for example when we try to use newer [SSE instructions] on an old CPU that does not support them.
-- **General Protection Fault**: This is the exception with the broadest range of causes. It occurs on various kinds of access violations such as trying to execute a privileged instruction in user level code or writing reserved fields in configuration registers.
-- **Double Fault**: When an exception occurs, the CPU tries to call the corresponding handler function. If another exception occurs _while calling the exception handler_, the CPU raises a double fault exception. This exception also occurs when there is no handler function registered for an exception.
-- **Triple Fault**: If an exception occurs while the CPU tries to call the double fault handler function, it issues a fatal _triple fault_. We can't catch or handle a triple fault. Most processors react by resetting themselves and rebooting the operating system.
+- **<ruby>ページフォルト<rp> (</rp><rt>Page Fault</rt><rp>) </rp></ruby>**: ページフォルトは不正なメモリアクセスの際に発生します。例えば、現在の命令がマップされていないページから読み込もうとしたり、読み込み専用のページに書き込もうとしたときに生じます。
+- **<ruby>無効な<rp> (</rp><rt>Invalid</rt><rp>) </rp></ruby><ruby>命令コード<rp> (</rp><rt>Opcode</rt><rp>) </rp></ruby>**: この例外は現在の命令が無効であるときに発生します。例えば、[SSE命令][SSE instructions]という新しい命令をサポートしていない旧式のCPU上でこれを実行しようとしたときに生じます。
+- **<ruby>一般保護違反<rp> (</rp><rt>General Protection Fault</rt><rp>) </rp></ruby>**: これは、例外の中でも、最もいろいろな理由で発生しうるものです。ユーザーレベルのコードで<ruby>特権命令<rp> (</rp><rt>privileged instruction</rt><rp>) </rp></ruby>を実行しようとしたときや、設定レジスタの保護領域に書き込もうとしたときなど、様々な種類のアクセス違反によって生じます。
+- **<ruby>ダブルフォルト<rp> (</rp><rt>Double Fault</rt><rp>) </rp></ruby>**: 例外が起こったとき、CPUは対応するハンドラ関数を呼び出そうとします。 この例外ハンドラを **呼び出している間に** 別の例外が起こった場合、CPUはダブルフォルト例外を出します。この例外はまた、ある例外に対してハンドラ関数が登録されていないときにも起こります。
+- **<ruby>トリプルフォルト<rp> (</rp><rt>Triple Fault</rt><rp>) </rp></ruby>**: CPUがダブルフォルトのハンドラ関数を呼び出そうとしている間に例外が発生したら、CPUは **トリプルフォルト** という致命的な例外を発します。トリプルフォルトを捕捉したり処理したりすることはできません。これが起こると、多くのプロセッサは自らをリセットしてOSを再起動することで対応します。
 
 [SSE instructions]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
 
-For the full list of exceptions check out the [OSDev wiki][exceptions].
+例外の完全な一覧を見たい場合は、[OSDev wiki][exceptions]を見てください。
 
 [exceptions]: https://wiki.osdev.org/Exceptions
 
-### The Interrupt Descriptor Table
-In order to catch and handle exceptions, we have to set up a so-called _Interrupt Descriptor Table_ (IDT). In this table we can specify a handler function for each CPU exception. The hardware uses this table directly, so we need to follow a predefined format. Each entry must have the following 16-byte structure:
+### 割り込み記述子表
+例外を捕捉し処理するためには、いわゆる<ruby>割り込み記述子表<rp> (</rp><rt>interrupt descriptor table</rt><rp>) </rp></ruby> (IDT) を設定しないといけません。この表にそれぞれのCPU例外に対するハンドラ関数を指定することができます。ハードウェアはこの表を直接使うので、決められたフォーマットに従わないといけません。それぞれのエントリは以下の16バイトの構造を持たなければなりません：
 
-Type| Name                     | Description
+型  | 名前                     | 説明
 ----|--------------------------|-----------------------------------
-u16 | Function Pointer [0:15]  | The lower bits of the pointer to the handler function.
-u16 | GDT selector             | Selector of a code segment in the [global descriptor table].
-u16 | Options                  | (see below)
-u16 | Function Pointer [16:31] | The middle bits of the pointer to the handler function.
-u32 | Function Pointer [32:63] | The remaining bits of the pointer to the handler function.
-u32 | Reserved                 |
+u16 | 関数ポインタ     [0:15]  | ハンドラ関数へのポインタの下位ビット。
+u16 | GDTセレクタ              | [<ruby>大域記述子表<rp> (</rp><rt>global descriptor table</rt><rp>) </rp></ruby>][global descriptor table]におけるコードセグメントを選ぶ。
+u16 | オプション               | （下を参照）
+u16 | 関数ポインタ     [16:31] | ハンドラ関数へのポインタの中位ビット。
+u32 | 関数ポインタ     [32:63] | ハンドラ関数へのポインタの上位ビット。
+u32 | 予約済                   |
 
 [global descriptor table]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
-The options field has the following format:
+オプション部は以下のフォーマットになっています：
 
-Bits  | Name                              | Description
-------|-----------------------------------|-----------------------------------
-0-2   | Interrupt Stack Table Index       | 0: Don't switch stacks, 1-7: Switch to the n-th stack in the Interrupt Stack Table when this handler is called.
-3-7   | Reserved              |
-8     | 0: Interrupt Gate, 1: Trap Gate   | If this bit is 0, interrupts are disabled when this handler is called.
-9-11  | must be one                       |
-12    | must be zero                      |
-13‑14 | Descriptor Privilege Level (DPL)  | The minimal privilege level required for calling this handler.
-15    | Present                           |
+ビット  | 名前                                                                                           | 説明
+--------|------------------------------------------------------------------------------------------------|-------------------------------------
+0-2     | 割り込みスタックテーブルインデックス                                                           | 0ならスタックを変えない。1から7なら、ハンドラが呼ばれたとき、割り込みスタック表のその数字のスタックに変える。
+3-7     | 予約済                                                                                         |
+8       | 0: 割り込みゲート、1: トラップゲート                                                           | 0なら、このハンドラが呼ばれたとき割り込みは無効化される。
+9-11    | 1にしておかないといけない                                                                      |
+12      | 0にしておかないといけない                                                                      |
+13‑14   | <ruby>記述子の特権レベル<rp> (</rp><rt>Descriptor Privilege Level</rt><rp>) </rp></ruby> (DPL) | このハンドラを呼ぶ際に必要になる最低限の特権レベル。
+15      | Present                                                                                        |
 
-Each exception has a predefined IDT index. For example the invalid opcode exception has table index 6 and the page fault exception has table index 14. Thus, the hardware can automatically load the corresponding IDT entry for each exception. The [Exception Table][exceptions] in the OSDev wiki shows the IDT indexes of all exceptions in the “Vector nr.” column.
+それぞれの例外がIDTの何番目に対応するかは事前に定義されています。例えば、"無効な命令コード"例外は6番目で、"ページフォルト"例外は14番目です。これにより、ハードウェアがそれぞれの例外に対応するIDTの設定を（特に設定の必要なく）自動的に読み出せるというわけです。OSDev wikiの[「例外表」][exceptions]の "Vector nr." 列にすべての例外のIDTインデックスが記されています。
 
-When an exception occurs, the CPU roughly does the following:
+例外が起こると、ざっくりCPUは以下のことを行います：
 
-1. Push some registers on the stack, including the instruction pointer and the [RFLAGS] register. (We will use these values later in this post.)
-2. Read the corresponding entry from the Interrupt Descriptor Table (IDT). For example, the CPU reads the 14-th entry when a page fault occurs.
-3. Check if the entry is present. Raise a double fault if not.
-4. Disable hardware interrupts if the entry is an interrupt gate (bit 40 not set).
-5. Load the specified [GDT] selector into the CS segment.
-6. Jump to the specified handler function.
+1. 命令ポインタと[RFLAGS]レジスタ（これらの値は後で使います）を含むレジスタをスタックにプッシュする。
+2. 割り込み記述子表から対応するエントリを読む。例えば、ページフォルトが起こったときはCPUは14番目のエントリを読む。
+3. エントリが存在しているのかチェックする。そうでなければダブルフォルトを起こす。
+4. エントリが割り込みゲートなら（40番目のビットが0なら）ハードウェア割り込みを無効にする。
+5. 指定された[GDT]セレクタをCSセグメントに読み込む。
+6. 指定されたハンドラ関数にジャンプする。
 
 [RFLAGS]: https://en.wikipedia.org/wiki/FLAGS_register
 [GDT]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
-Don't worry about steps 4 and 5 for now, we will learn about the global descriptor table and hardware interrupts in future posts.
+ステップ4と5について今深く考える必要はありません。今後の記事で大域記述子表 (Global Descriptor Table, 略してGDT) とハードウェア割り込みについては学んでいきます。
 
-## An IDT Type
-Instead of creating our own IDT type, we will use the [`InterruptDescriptorTable` struct] of the `x86_64` crate, which looks like this:
+## IDT型
+自前でIDTの型を作る代わりに、`x86_64`クレートの[`InterruptDescriptorTable`構造体][`InterruptDescriptorTable` struct]を使います。こんな見た目をしています：
 
 [`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 
@@ -109,109 +113,109 @@ pub struct InterruptDescriptorTable {
     pub simd_floating_point: Entry<HandlerFunc>,
     pub virtualization: Entry<HandlerFunc>,
     pub security_exception: Entry<HandlerFuncWithErrCode>,
-    // some fields omitted
+    // いくつかのフィールドは省略している
 }
 ```
 
-The fields have the type [`idt::Entry<F>`], which is a struct that represents the fields of an IDT entry (see the table above). The type parameter `F` defines the expected handler function type. We see that some entries require a [`HandlerFunc`] and some entries require a [`HandlerFuncWithErrCode`]. The page fault even has its own special type: [`PageFaultHandlerFunc`].
+この構造体のフィールドは[`idt::Entry<F>`]という型を持っています。これはIDTのエントリのフィールド（上の表を見てください）を表す構造体です。型パラメータ`F`は、期待されるハンドラ関数の型を表します。エントリの中には、[`HandlerFunc`]型を要求するものや、[`HandlerFuncWithErrCode`]型を要求するものがあることがわかります。ページフォルトに至っては、[`PageFaultHandlerFunc`]という自分専用の型を要求していますね。
 
 [`idt::Entry<F>`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/struct.Entry.html
 [`HandlerFunc`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/type.HandlerFunc.html
 [`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
 [`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/type.PageFaultHandlerFunc.html
 
-Let's look at the `HandlerFunc` type first:
+まず`HandlerFunc`型を見てみましょう：
 
 ```rust
 type HandlerFunc = extern "x86-interrupt" fn(_: &mut InterruptStackFrame);
 ```
 
-It's a [type alias] for an `extern "x86-interrupt" fn` type. The `extern` keyword defines a function with a [foreign calling convention] and is often used to communicate with C code (`extern "C" fn`). But what is the `x86-interrupt` calling convention?
+これは、`extern "x86-interrupt" fn`型への[型エイリアス][type alias]です。`extern`は[外部呼び出し規約][foreign calling convention]に従う関数を定義するのに使われ、おもにC言語のコードとの間で通信をしたいときに使われます (`extern "C" fn`) 。しかし、`x86-interrupt`呼び出し規約とは何なのでしょう？
 
 [type alias]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
 [foreign calling convention]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
-## The Interrupt Calling Convention
-Exceptions are quite similar to function calls: The CPU jumps to the first instruction of the called function and executes it. Afterwards the CPU jumps to the return address and continues the execution of the parent function.
+## 例外の呼び出し規約
+例外は関数呼び出しと非常に似ています。CPUが呼び出された関数の最初の命令にジャンプし、それを実行します。その後、CPUはリターンアドレスにジャンプし、親関数の実行を続けます。
 
-However, there is a major difference between exceptions and function calls: A function call is invoked voluntary by a compiler inserted `call` instruction, while an exception might occur at _any_ instruction. In order to understand the consequences of this difference, we need to examine function calls in more detail.
+しかし、例外と関数呼び出しには大きな違いが一つあるのです：関数呼び出しはコンパイラによって挿入された`call`命令によって自発的に引き起こされますが、例外は **どんな命令の実行中でも** 起こる可能性があるのです。この違いの結果を理解するためには、関数呼び出しについてより詳しく見ていく必要があります。
 
-[Calling conventions] specify the details of a function call. For example, they specify where function parameters are placed (e.g. in registers or on the stack) and how results are returned. On x86_64 Linux, the following rules apply for C functions (specified in the [System V ABI]):
+[呼び出し規約][Calling conventions]は関数呼び出しについて事細かく指定しています。例えば、関数のパラメータがどこに置かれるべきか（例えば、レジスタなのかスタックなのか）や、結果がどのように返されるべきかを指定しています。x86_64上のLinuxでは、C言語の関数に関しては以下のルールが適用されます（これは[System V ABI]で指定されています）：
 
 [Calling conventions]: https://en.wikipedia.org/wiki/Calling_convention
 [System V ABI]: https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf
 
-- the first six integer arguments are passed in registers `rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`
-- additional arguments are passed on the stack
-- results are returned in `rax` and `rdx`
+- 最初の6つの整数引数は、レジスタ`rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`で渡される
+- 追加の引数はスタックで渡される
+- 結果は`rax`と`rdx`で返される
 
-Note that Rust does not follow the C ABI (in fact, [there isn't even a Rust ABI yet][rust abi]), so these rules apply only to functions declared as `extern "C" fn`.
+注意してほしいのは、RustはC言語のABIに従っていない（実は、[RustのABIすらまだありません][rust abi]）ので、このルールは`extern "C" fn`と宣言された関数にしか適用しないということです。
 
 [rust abi]: https://github.com/rust-lang/rfcs/issues/600
 
-### Preserved and Scratch Registers
-The calling convention divides the registers in two parts: _preserved_ and _scratch_ registers.
+### PreservedレジスタとScratchレジスタ
+呼び出し規約はレジスタを2種類に分けています：<ruby>preserved<rp> (</rp><rt>保存</rt><rp>) </rp></ruby>レジスタと<ruby>scratch<rp> (</rp><rt>下書き</rt><rp>) </rp></ruby>レジスタです。
 
-The values of _preserved_ registers must remain unchanged across function calls. So a called function (the _“callee”_) is only allowed to overwrite these registers if it restores their original values before returning. Therefore these registers are called _“callee-saved”_. A common pattern is to save these registers to the stack at the function's beginning and restore them just before returning.
+preservedレジスタの値は関数呼び出しの前後で変化してはいけません。ですので、呼び出された関数（訳注：callの受け身で"callee"と呼ばれます）は、リターンする前にその値をもとに戻す場合に限り、その値を上書きできます。そのため、これらのレジスタは<ruby>callee-saved<rp> (</rp><rt>呼び出し先によって保存される</rt><rp>) </rp></ruby>と呼ばれます。よくやる方法は、関数の最初でそのレジスタをスタックに保存し、リターンする直前にその値をもとに戻すことです。
 
-In contrast, a called function is allowed to overwrite _scratch_ registers without restrictions. If the caller wants to preserve the value of a scratch register across a function call, it needs to backup and restore it before the function call (e.g. by pushing it to the stack). So the scratch registers are _caller-saved_.
+それとは対照的に、呼び出された関数はscratchレジスタを何の制限もなく上書きすることができます。呼び出し元の関数がscratchレジスタの値を関数呼び出しの間保存しておきたいなら、関数呼び出しの前に自分で（スタックにプッシュするなどして）バックアップしておいて、もとに戻す必要があります。なので、scratchレジスタは<ruby>caller-saved<rp> (</rp><rt>呼び出し元によって保存される</rt><rp>) </rp></ruby>です。
 
-On x86_64, the C calling convention specifies the following preserved and scratch registers:
+x86_64においては、C言語の呼び出し規約は以下のpreservedとscratchレジスタを指定します：
 
-preserved registers | scratch registers
----|---
+preservedレジスタ                               | scratchレジスタ
+---                                             | ---
 `rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11`
-_callee-saved_ | _caller-saved_
+_callee-saved_                                  | _caller-saved_
 
-The compiler knows these rules, so it generates the code accordingly. For example, most functions begin with a `push rbp`, which backups `rbp` on the stack (because it's a callee-saved register).
+コンパイラはこれらのルールを知っているので、それにしたがってコードを生成します。例えば、ほとんどの関数は`push rbp`から始まるのですが、これは`rbp`をスタックにバックアップしているのです（`rbp`はcallee-savedなレジスタであるため）。
 
-### Preserving all Registers
-In contrast to function calls, exceptions can occur on _any_ instruction. In most cases we don't even know at compile time if the generated code will cause an exception. For example, the compiler can't know if an instruction causes a stack overflow or a page fault.
+### すべてのレジスタを保存する
+関数呼び出しとは対象的に、例外は **どんな命令の最中にも** 起きる可能性があります。多くの場合、生成されたコードが例外を引き起こすのかどうかは、コンパイル時には見当も付きません。例えば、コンパイラはある命令がスタックオーバーフローやページフォルトを起こすのか知ることができません。
 
-Since we don't know when an exception occurs, we can't backup any registers before. This means that we can't use a calling convention that relies on caller-saved registers for exception handlers. Instead, we need a calling convention means that preserves _all registers_. The `x86-interrupt` calling convention is such a calling convention, so it guarantees that all register values are restored to their original values on function return.
+いつ例外が起きるのかわからない以上、レジスタを事前にバックアップしておくことは不可能です。つまり、caller-savedレジスタを利用する呼び出し規約は、例外ハンドラには使えないということです。代わりに、 **すべてのレジスタを** 保存する規約を使わないといけません。`x86-interrupt`呼び出し規約はそのような呼び出し規約なので、関数が戻るときにすべてのレジスタが元の値に戻されることを保証してくれるというわけです。
 
-Note that this does not mean that all registers are saved to the stack at function entry. Instead, the compiler only backs up the registers that are overwritten by the function. This way, very efficient code can be generated for short functions that only use a few registers.
+これは、関数の初めにすべてのレジスタがスタックに保存されるということを意味しないことに注意してください。その代わりに、コンパイラは関数によって上書きされてしまうレジスタのみをバックアップします。こうすれば、数個のレジスタしか使わない短い関数に対して、とても効率的なコードが生成できるでしょう。
 
 ### The Interrupt Stack Frame
-On a normal function call (using the `call` instruction), the CPU pushes the return address before jumping to the target function. On function return (using the `ret` instruction), the CPU pops this return address and jumps to it. So the stack frame of a normal function call looks like this:
+通常の関数呼び出し（`call`命令を使います）においては、CPUは対象の関数にジャンプする前にリターンアドレスをプッシュします。関数がリターンするとき（`ret`命令を使います）、CPUはこのリターンアドレスをポップし、そこにジャンプします。そのため、通常の関数呼び出しの際のスタックフレームは以下のようになっています：
 
 ![function stack frame](function-stack-frame.svg)
 
-For exception and interrupt handlers, however, pushing a return address would not suffice, since interrupt handlers often run in a different context (stack pointer, CPU flags, etc.). Instead, the CPU performs the following steps when an interrupt occurs:
+しかし、例外と割り込みハンドラについては、リターンアドレスをプッシュするだけではだめです。なぜなら、割り込みハンドラはしばしば（スタックポインタや、CPUフラグなどが）異なる状況で実行されるからです。ですので、代わりに、CPUは割り込みが起こると以下の手順を実行します。
 
-1. **Aligning the stack pointer**: An interrupt can occur at any instructions, so the stack pointer can have any value, too. However, some CPU instructions (e.g. some SSE instructions) require that the stack pointer is aligned on a 16 byte boundary, therefore the CPU performs such an alignment right after the interrupt.
-2. **Switching stacks** (in some cases): A stack switch occurs when the CPU privilege level changes, for example when a CPU exception occurs in an user mode program. It is also possible to configure stack switches for specific interrupts using the so-called _Interrupt Stack Table_ (described in the next post).
-3. **Pushing the old stack pointer**: The CPU pushes the values of the stack pointer (`rsp`) and the stack segment (`ss`) registers at the time when the interrupt occurred (before the alignment). This makes it possible to restore the original stack pointer when returning from an interrupt handler.
-4. **Pushing and updating the `RFLAGS` register**: The [`RFLAGS`] register contains various control and status bits. On interrupt entry, the CPU changes some bits and pushes the old value.
-5. **Pushing the instruction pointer**: Before jumping to the interrupt handler function, the CPU pushes the instruction pointer (`rip`) and the code segment (`cs`). This is comparable to the return address push of a normal function call.
-6. **Pushing an error code** (for some exceptions): For some specific exceptions such as page faults, the CPU pushes an error code, which describes the cause of the exception.
-7. **Invoking the interrupt handler**: The CPU reads the address and the segment descriptor of the interrupt handler function from the corresponding field in the IDT. It then invokes this handler by loading the values into the `rip` and `cs` registers.
+1. **スタックポインタをアラインする**: 割り込みはあらゆる命令において発生しうるので、スタックポインタもあらゆる値を取る可能性があります。しかし、CPU命令のうちいくつか（例えばSSE命令の一部など）はスタックポインタが16バイトの倍数になっていることを要求するので、そうなるようにCPUは割り込みの直後にスタックポインタを<ruby>揃え<rp> (</rp><rt>アラインし</rt><rp>) </rp></ruby>ます。
+2. （場合によっては）**スタックを変更する**: スタックの変更は、例えばCPU例外がユーザーモードのプログラムで起こったときに、CPUの特権レベルを変更するときに起こります。いわゆる<ruby>割り込みスタック表<rp> (</rp><rt>Interrupt Stack Table</rt><rp>) </rp></ruby>を使うことで、特定の割り込みに対しスタックを変更するよう設定することも可能です。割り込みスタック表については次の記事で説明します。
+3. **古いスタックポインタをプッシュする**: CPUは、割り込みが発生した際の（アラインされる前の）スタックポインタレジスタ（`rsp`）とスタックセグメントレジスタ（`ss`）の値をプッシュします。これにより、割り込みハンドラからリターンしてきたときにもとのスタックポインタを復元することが可能になります。
+4. **`RFLAGS`レジスタをプッシュして更新する**: [`RFLAGS`]レジスタは状態や制御のための様々なビットを保持しています。割り込みに入るとき、CPUはビットのうちいくつかを変更し古い値をプッシュしておきます。
+5. **命令ポインタをプッシュする**: 割り込みハンドラ関数にジャンプする前に、CPUは命令ポインタ（`rip`）とコードセグメント（`cs`）をプッシュします。これは通常の関数呼び出しにおける戻り値のプッシュに対応します。
+6. **エラーコードをプッシュする** (for some exceptions): ページフォルトのような特定の例外の場合、CPUはエラーコードをプッシュします。これは、例外の原因を説明するものです。
+7. **割り込みハンドラを呼び出す**: CPUは割り込みハンドラ関数のアドレスと<ruby>セグメント記述子<rp> (</rp><rt>segment descriptor</rt><rp>) </rp></ruby>をIDTの対応するフィールドから読み出します。そして、この値を`rip`と`cs`レジスタに書き出してから、ハンドラを呼び出します。
 
 [`RFLAGS`]: https://en.wikipedia.org/wiki/FLAGS_register
 
-So the _interrupt stack frame_ looks like this:
+ですので、<ruby>割り込み時のスタックフレーム<rp> (</rp><rt>interrupt stack frame</rt><rp>) </rp></ruby>は以下のようになります：
 
 ![interrupt stack frame](exception-stack-frame.svg)
 
-In the `x86_64` crate, the interrupt stack frame is represented by the [`InterruptStackFrame`] struct. It is passed to interrupt handlers as `&mut` and can be used to retrieve additional information about the exception's cause. The struct contains no error code field, since only some few exceptions push an error code. These exceptions use the separate [`HandlerFuncWithErrCode`] function type, which has an additional `error_code` argument.
+`x86_64`クレートにおいては、割り込み時のスタックフレームは[`InterruptStackFrame`]構造体によって表現されます。これは割り込みハンドラに`&mut`として渡すことができ、これを使うことで例外の原因に関して追加で情報を手に入れることができます。エラーコードは例外のうちいくつかしかプッシュしないので、構造体にはエラーコードのためのフィールドはありません。これらの例外は[`HandlerFuncWithErrCode`]という別の関数型を使いますが、これらは追加で`error_code`引数を持ちます。
 
 [`InterruptStackFrame`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/struct.InterruptStackFrame.html
 
-### Behind the Scenes
-The `x86-interrupt` calling convention is a powerful abstraction that hides almost all of the messy details of the exception handling process. However, sometimes it's useful to know what's happening behind the curtain. Here is a short overview of the things that the `x86-interrupt` calling convention takes care of:
+### 舞台裏では何が
+`x86-interrupt`呼び出し規約は、この例外<ruby>処理<rp> (</rp><rt>ハンドル</rt><rp>) </rp></ruby>プロセスのややこしいところをほぼ全て隠蔽してくれる、強力な抽象化です。しかし、その後ろで何が起こっているのかを知っておいたほうが良いこともあるでしょう。以下に、`x86-interrupt`呼び出し規約がやってくれることを簡単なリストにして示しました。
 
-- **Retrieving the arguments**: Most calling conventions expect that the arguments are passed in registers. This is not possible for exception handlers, since we must not overwrite any register values before backing them up on the stack. Instead, the `x86-interrupt` calling convention is aware that the arguments already lie on the stack at a specific offset.
-- **Returning using `iretq`**: Since the interrupt stack frame completely differs from stack frames of normal function calls, we can't return from handlers functions through the normal `ret` instruction. Instead, the `iretq` instruction must be used.
-- **Handling the error code**: The error code, which is pushed for some exceptions, makes things much more complex. It changes the stack alignment (see the next point) and needs to be popped off the stack before returning. The `x86-interrupt` calling convention handles all that complexity. However, it doesn't know which handler function is used for which exception, so it needs to deduce that information from the number of function arguments. That means that the programmer is still responsible to use the correct function type for each exception. Luckily, the `InterruptDescriptorTable` type defined by the `x86_64` crate ensures that the correct function types are used.
-- **Aligning the stack**: There are some instructions (especially SSE instructions) that require a 16-byte stack alignment. The CPU ensures this alignment whenever an exception occurs, but for some exceptions it destroys it again later when it pushes an error code. The `x86-interrupt` calling convention takes care of this by realigning the stack in this case.
+- **引数を取得する**: 多くの呼び出し規約においては、引数はレジスタを使って渡されることを想定しています。例外ハンドラにおいては、スタックにバックアップする前にレジスタの値を上書きしてはいけないので、これは不可能です。代わりに、`x86-interrupt`呼び出し規約は、引数が既に特定のオフセットでスタック上にあることを認識しています。
+- **`iretq`を使ってリターンする**: 割り込み時のスタックフレームは通常の関数呼び出しのスタックフレームとは全く異なるため、通常の `ret` 命令を使ってハンドラ関数から戻ることはできません。その代わりに、`iretq` 命令を使う必要があります。
+- **エラーコードを処理する**: いくつかの例外の場合、エラーコードがプッシュされるのですが、これが状況をより複雑にします。エラーコードはスタックのアラインメントを変更し（次の箇条を参照）、リターンする前にスタックからポップされる必要があります。`x86-interrupt`呼び出し規約は、このややこしい仕組みをすべて処理してくれます。しかし、どのハンドラ関数がどの例外に使われているかは呼び出し規約側にはわからないので、関数の引数の数からその情報を推測する必要があります。つまり、プログラマはやはりそれぞれの例外に対して正しい関数型を使う責任があるということです。幸いにも、`x86_64`クレートで定義されている`InterruptDescriptorTable`型が、正しい関数型が確実に使われるようにしてくれます。
+- **スタックをアラインする**: 一部の命令（特にSSE命令）には、16バイトのスタックアラインメントを必要とするものがあります。CPUは例外が発生したときには必ずこのようにスタックが<ruby>整列<rp> (</rp><rt>アライン</rt><rp>) </rp></ruby>されることを保証しますが、例外の中には、エラーコードをプッシュしたとき再びスタックの整列を壊してしまうものもあります。この場合、`x86-interrupt`の呼び出し規約は、スタックを再整列させることでこの問題を解決します。
 
-If you are interested in more details: We also have a series of posts that explains exception handling using [naked functions] linked [at the end of this post][too-much-magic].
+もしより詳しく知りたい場合は、例外の処理について[naked function][naked functions]を使って説明する一連の記事があります。[この記事の最下部][too-much-magic]にそこへのリンクがあります。
 
 [naked functions]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
-[too-much-magic]: #too-much-magic
+[too-much-magic]: #sasuganijian-dan-sugi
 
-## Implementation
-Now that we've understood the theory, it's time to handle CPU exceptions in our kernel. We'll start by creating a new interrupts module in `src/interrupts.rs`, that first creates an `init_idt` function that creates a new `InterruptDescriptorTable`:
+## 実装
+理論を理解したところで、私達のカーネルでCPUの例外を実際に処理していきましょう。まず、`src/interrupts.rs`に新しい割り込みのためのモジュールを作ります。このモジュールはまず、`init_idt`関数という、新しい`InterruptDescriptorTable`を作る関数を定義します。
 
 ``` rust
 // in src/lib.rs
@@ -227,15 +231,15 @@ pub fn init_idt() {
 }
 ```
 
-Now we can add handler functions. We start by adding a handler for the [breakpoint exception]. The breakpoint exception is the perfect exception to test exception handling. Its only purpose is to temporarily pause a program when the breakpoint instruction `int3` is executed.
+これで、ハンドラ関数を追加していくことができます。まず、[ブレークポイント例外][breakpoint exception]のハンドラを追加するところから始めましょう。ブレークポイント例外は、例外処理のテストをするのにうってつけの例外なのです。この例外の唯一の目的は、ブレークポイント命令`int3`が実行された時、プログラムを一時停止させるということです。
 
 [breakpoint exception]: https://wiki.osdev.org/Exceptions#Breakpoint
 
-The breakpoint exception is commonly used in debuggers: When the user sets a breakpoint, the debugger overwrites the corresponding instruction with the `int3` instruction so that the CPU throws the breakpoint exception when it reaches that line. When the user wants to continue the program, the debugger replaces the `int3` instruction with the original instruction again and continues the program. For more details, see the ["_How debuggers work_"] series.
+ブレークポイント例外はよくデバッガによって使われます。ユーザーがブレークポイントを設定すると、デバッガが対応する命令を`int3`命令で置き換え、その行に到達したときにCPUがブレークポイント例外を投げるようにするのです。ユーザがプログラムを続行したい場合は、デバッガは`int3`命令をもとの命令に戻してプログラムを再開します。より詳しく知るには、[How debuggers work]["_How debuggers work_"]というシリーズ記事を読んでください。
 
 ["_How debuggers work_"]: https://eli.thegreenplace.net/2011/01/27/how-debuggers-work-part-2-breakpoints
 
-For our use case, we don't need to overwrite any instructions. Instead, we just want to print a message when the breakpoint instruction is executed and then continue the program. So let's create a simple `breakpoint_handler` function and add it to our IDT:
+今回の場合、命令を上書きする必要はありません。ブレークポイント命令が実行された時、メッセージを表示したうえで実行を継続したいだけです。ですので、単純な`breakpoint_handler`関数を作ってIDTに追加してみましょう。
 
 ```rust
 // in src/interrupts.rs
@@ -255,9 +259,9 @@ extern "x86-interrupt" fn breakpoint_handler(
 }
 ```
 
-Our handler just outputs a message and pretty-prints the interrupt stack frame.
+私達のハンドラは、ただメッセージを出力し、割り込みスタックフレームを整形して出力するだけです。
 
-When we try to compile it, the following error occurs:
+これをコンパイルしようとすると、以下のエラーが起こります：
 
 ```
 error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue #40180)
@@ -271,10 +275,10 @@ error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue
    = help: add #![feature(abi_x86_interrupt)] to the crate attributes to enable
 ```
 
-This error occurs because the `x86-interrupt` calling convention is still unstable. To use it anyway, we have to explicitly enable it by adding `#![feature(abi_x86_interrupt)]` on the top of our `lib.rs`.
+このエラーは、`x86-interrupt`呼び出し規約がまだ不安定なために発生します。これを強制的に使うためには、`lib.rs`の最初に`#![feature(abi_x86_interrupt)]`を追記して、この機能を明示的に有効化してやる必要があります。
 
-### Loading the IDT
-In order that the CPU uses our new interrupt descriptor table, we need to load it using the [`lidt`] instruction. The `InterruptDescriptorTable` struct of the `x86_64` provides a [`load`][InterruptDescriptorTable::load] method function for that. Let's try to use it:
+### IDTを読み込む
+CPUがこの割り込みディスクリプタテーブル(IDT)を使用するためには、[`lidt`]命令を使ってこれを読み込む必要があります。`x86_64`の`InterruptDescriptorTable`構造体には、そのための[`load`][InterruptDescriptorTable::load]というメソッド関数が用意されています。それを使ってみましょう：
 
 [`lidt`]: https://www.felixcloutier.com/x86/lgdt:lidt
 [InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
@@ -289,7 +293,7 @@ pub fn init_idt() {
 }
 ```
 
-When we try to compile it now, the following error occurs:
+これをコンパイルしようとすると、以下のエラーが発生します：
 
 ```
 error: `idt` does not live long enough
@@ -303,16 +307,16 @@ error: `idt` does not live long enough
    = note: borrowed value must be valid for the static lifetime...
 ```
 
-So the `load` methods expects a `&'static self`, that is a reference that is valid for the complete runtime of the program. The reason is that the CPU will access this table on every interrupt until we load a different IDT. So using a shorter lifetime than `'static` could lead to use-after-free bugs.
+`load`メソッドは（`idt`に）`&'static self`、つまりプログラムの実行されている間ずっと有効な参照を期待しています。これは、私達が別のIDTを読み込まない限り、CPUは割り込みのたびにこの表にアクセスするからです。そのため、`'static`より短いライフタイムの場合、<ruby>use-after-free<rp> (</rp><rt>解放後にアクセス</rt><rp>) </rp></ruby>バグが発生する可能性があります。
 
-In fact, this is exactly what happens here. Our `idt` is created on the stack, so it is only valid inside the `init` function. Afterwards the stack memory is reused for other functions, so the CPU would interpret random stack memory as IDT. Luckily, the `InterruptDescriptorTable::load` method encodes this lifetime requirement in its function definition, so that the Rust compiler is able to prevent this possible bug at compile time.
+実際、これはまさにここで起こっていることです。私達の`idt`はスタック上に生成されるので、`init`関数の中でしか有効ではないのです。この関数が終わると、このスタックメモリは他の関数に使い回されるので、CPUはランダムに中身が変更されたスタックメモリをIDTとして解釈してしまうのです。幸運にも、`InterruptDescriptorTable::load`メソッドは関数定義にこのライフタイムの要件を組み込んでいるので、Rustコンパイラはこのバグをコンパイル時に未然に防ぐことができたというわけです。
 
-In order to fix this problem, we need to store our `idt` at a place where it has a `'static` lifetime. To achieve this we could allocate our IDT on the heap using [`Box`] and then convert it to a `'static` reference, but we are writing an OS kernel and thus don't have a heap (yet).
+この問題を解決するには、`idt`を`'static`なライフタイムの場所に格納する必要があります。これを達成するには、[`Box`]を使ってIDTをヒープに割当て、続いてそれを`'static`な参照に変換すればよいです。しかし、私達はOSのカーネルを書いている途中であり、（まだ）ヒープを持っていません。
 
 [`Box`]: https://doc.rust-lang.org/std/boxed/struct.Box.html
 
 
-As an alternative we could try to store the IDT as a `static`:
+別の方法として、IDTを`static`として保存してみましょう：
 
 ```rust
 static IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();
@@ -323,7 +327,7 @@ pub fn init_idt() {
 }
 ```
 
-However, there is a problem: Statics are immutable, so we can't modify the breakpoint entry from our `init` function. We could solve this problem by using a [`static mut`]:
+しかし、問題が発生します：staticは<ruby>不変<rp> (</rp><rt>イミュータブル</rt><rp>) </rp></ruby>なので、`init`関数でエントリを変更することができません。これは[`static mut`]を使って解決できそうです：
 
 [`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
@@ -338,14 +342,14 @@ pub fn init_idt() {
 }
 ```
 
-This variant compiles without errors but it's far from idiomatic. `static mut`s are very prone to data races, so we need an [`unsafe` block] on each access.
+このように変更するとエラーなくコンパイルできますが、このような書き方は全く慣用的ではありません。`static mut`はデータ競合を非常に起こしやすいので、アクセスするたびに[unsafeブロック][`unsafe` block]が必要になります。
 
 [`unsafe` block]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
-#### Lazy Statics to the Rescue
-Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values.
+#### Lazy Staticsならきっとなんとかしてくれる
+幸いにも、例の`lazy_static`マクロが存在します。このマクロは`static`をコンパイル時に評価する代わりに、最初に参照されたときに初期化を行います。このため、初期化時にはほとんどすべてのことができ、実行時にのみ決定する値を読み込むこともできます。
 
-We already imported the `lazy_static` crate when we [created an abstraction for the VGA text buffer][vga text buffer lazy static]. So we can directly use the `lazy_static!` macro to create our static IDT:
+[VGAテキストバッファの抽象化をした][vga text buffer lazy static]ときに、すでに`lazy_static`クレートはインポートしました。そのため、すぐに`lazy_static!`マクロを使って静的なIDTを作ることができます。
 
 [vga text buffer lazy static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
@@ -367,11 +371,11 @@ pub fn init_idt() {
 }
 ```
 
-Note how this solution requires no `unsafe` blocks. The `lazy_static!` macro does use `unsafe` behind the scenes, but it is abstracted away in a safe interface.
+この解決法では、`unsafe`ブロックが必要ないことに注目してください。`lazy_static!`マクロはその内部で確かに`unsafe`を使っているのですが、安全なインターフェースの中に抽象化されているのです。
 
-### Running it
+### 実行する
 
-The last step for making exceptions work in our kernel is to call the `init_idt` function from our `main.rs`. Instead of calling it directly, we introduce a general `init` function in our `lib.rs`:
+カーネルで例外を動作させるための最後のステップは、`main.rs`から`init_idt`関数を呼び出すことです。直接呼び出す代わりに、より一般的な`init`関数を`lib.rs`に導入します：
 
 ```rust
 // in src/lib.rs
@@ -382,8 +386,9 @@ pub fn init() {
 ```
 
 With this function we now have a central place for initialization routines that can be shared between the different `_start` functions in our `main.rs`, `lib.rs`, and integration tests.
+この関数により、`main.rs`、`lib.rs`、それに結合テストにおける異なる`_start`関数で共有できる、初期化ルーチンの中心地ができました。
 
-Now we can update the `_start` function of our `main.rs` to call `init` and then trigger a breakpoint exception:
+`main.rs`内の`_start`関数を更新して、`init`を呼び出し、そのあとブレークポイント例外を発生させるようにしてみましょう：
 
 ```rust
 // in src/main.rs
@@ -406,17 +411,19 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-When we run it in QEMU now (using `cargo run`), we see the following:
+（`cargo run`を使って）QEMU内でこれを実行すると、以下のようになります
 
 ![QEMU printing `EXCEPTION: BREAKPOINT` and the interrupt stack frame](qemu-breakpoint-exception.png)
 
-It works! The CPU successfully invokes our breakpoint handler, which prints the message, and then returns back to the `_start` function, where the `It did not crash!` message is printed.
+うまくいきました！CPUは私達のブレークポイントハンドラを呼び出すのに成功し、これがメッセージを出力し、そのあと`_start`関数に戻って、`It did not crash!`のメッセージを出力しました。
 
-We see that the interrupt stack frame tells us the instruction and stack pointers at the time when the exception occurred. This information is very useful when debugging unexpected exceptions.
+割り込みスタックフレームは、例外が発生した時の命令とスタックポインタを教えてくれることがわかります。これは、予期せぬ例外をデバッグする際に非常に便利です。
 
-### Adding a Test
+### テストを追加する
 
 Let's create a test that ensures that the above continues to work. First, we update the `_start` function to also call `init`:
+
+上記の動作が継続することを確認するテストを作成してみましょう。まず、`_start` 関数を更新して `init` を呼び出すようにします。
 
 ```rust
 // in src/lib.rs
@@ -431,9 +438,9 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-Remember, this `_start` function is used when running `cargo test --lib`, since Rust's tests the `lib.rs` completely independent of the `main.rs`. We need to call `init` here to set up an IDT before running the tests.
+Rustのテストでは、`main.rs`とは全く無関係に`lib.rs`をテストするので、この`_start`関数は`cargo test --lib`を実行する際に使用されることを思い出してください。テストを実行する前にIDTを設定するために、ここで`init`を呼び出す必要があります。
 
-Now we can create a `test_breakpoint_exception` test:
+では、`test_breakpoint_exception`テストを作ってみましょう：
 
 ```rust
 // in src/interrupts.rs
@@ -445,23 +452,23 @@ fn test_breakpoint_exception() {
 }
 ```
 
-The test invokes the `int3` function to trigger a breakpoint exception. By checking that the execution continues afterwards, we verify that our breakpoint handler is working correctly.
+このテストでは、`int3`関数を呼び出してブレークポイント例外を発生させます。その後も実行が続くことを確認することで、ブレークポイントハンドラが正しく動作していることを保証します。
 
-You can try this new test by running `cargo test` (all tests) or `cargo test --lib` (only tests of `lib.rs` and its modules). You should see the following in the output:
+この新しいテストを試すには、`cargo test`（すべてのテストを試したい場合）または`cargo test --lib`（`lib.rs`とそのモジュールのテストのみの場合）を実行すればよいです。出力は以下のようになるはずです：
 
 ```
 blog_os::interrupts::test_breakpoint_exception...	[ok]
 ```
 
-## Too much Magic?
-The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own IDT type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed. Note that these posts are based on the [first edition] of this blog and might be out of date.
+## さすがに簡単すぎ？
+`x86-interrupt`呼び出し規約と[`InterruptDescriptorTable`]型のおかげで、例外処理のプロセスは比較的わかりやすく、面倒なところはありませんでした。「これではさすがに簡単すぎる、例外処理の闇をすべて学び尽くしたい」というあなた向けの記事もあります：私達の[Handling Exceptions with Naked Functions][“Handling Exceptions with Naked Functions”]シリーズ（未訳）では、`x86-interrupt`呼び出し規約を使わずに例外を処理する方法を学び、さらには独自のIDT型を定義します。`x86-interrupt`呼び出し規約や、`x86_64`クレートが存在する前は、これらの記事が主な例外処理に関する記事でした。なお、これらの記事はこのブログの[第1版][first edition]をもとにしているので、内容が古くなっている可能性があることに注意してください。
 
 [“Handling Exceptions with Naked Functions”]: @/edition-1/extra/naked-exceptions/_index.md
 [`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.12.1/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [first edition]: @/edition-1/_index.md
 
-## What's next?
-We've successfully caught our first exception and returned from it! The next step is to ensure that we catch all exceptions, because an uncaught exception causes a fatal [triple fault], which leads to a system reset. The next post explains how we can avoid this by correctly catching [double faults].
+## 次は？
+例外を捕捉し、そこから戻ってくることに成功しました！次のステップは、すべての例外を捕捉できるようにすることです。なぜなら、補足されなかった例外は致命的な[トリプルフォルト][triple fault]を引き起こし、これはシステムリセットにつながってしまうからです。次の記事では、[ダブルフォルト][double faults]を正しく捕捉することで、これを回避できることを説明します。
 
 [triple fault]: https://wiki.osdev.org/Triple_Fault
 [double faults]: https://wiki.osdev.org/Double_Fault#Double_Fault
