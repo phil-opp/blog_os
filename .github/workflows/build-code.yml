@@ -16,6 +16,7 @@ jobs:
   check:
     name: Check
     strategy:
+      fail-fast: false
       matrix:
         platform: [
           ubuntu-latest,
@@ -41,6 +42,7 @@ jobs:
   test:
     name: Test
     strategy:
+      fail-fast: false
       matrix:
         platform: [
           ubuntu-latest,
