@@ -18,7 +18,7 @@ icon = '''
 '''
 +++
 
-This post is an addendum to our main [**Booting**] post. It explains how to create a basic UEFI bootloader from scratch.
+This post is an addendum to our main [**Booting**] post. It explains how to create a basic UEFI application from scratch that can be directly booted on modern x86_64 systems. This includes creating a minimal application suitable for the UEFI environment, turning it into a bootable disk image, and interacting with the hardware through the UEFI system tables and the `uefi` crate. We also outline how to turn the resulting application into a bootloader.
 
 [**Booting**]: @/edition-3/posts/02-booting/index.md
 
