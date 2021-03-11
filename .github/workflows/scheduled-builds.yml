@@ -28,6 +28,6 @@ jobs:
       - name: Invoke workflow
         uses: benc-uk/workflow-dispatch@v1.1
         with:
-          workflow: Build Code
+          workflow: Code
           token: ${{ secrets.SCHEDULED_BUILDS_TOKEN }}
           ref: ${{ matrix.branch }}
