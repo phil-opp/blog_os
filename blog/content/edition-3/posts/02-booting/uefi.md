@@ -432,41 +432,73 @@ cargo run --package disk_image -- target/x86_64-unknown-uefi/debug/uefi_app.efi
 
 Note the additional `--` argument. The `cargo run` uses this special argument to separate `cargo run` arguments from the arguments that should be passed to the compiled executable. The path of course depends on your working directory, i.e. whether you run it from the project root or from the `disk_image` subdirectory. It also depends on whether you compiled the `uefi_app` in debug or `--release` mode.
 
-The result of this command is a `.fat` and a `.img` file next to the given `.efi` executable. These files can be launched in QEMU and on real hardware [as described][run-instructions] in the main _Booting_ post. The result is a black screen:
+The result of this command is a `.fat` and a `.img` file next to the given `.efi` executable. These files can be launched in QEMU and on real hardware [as described][run-instructions] in the main _Booting_ post. The result should look something like this:
 
 [run-instructions]: @/edition-3/posts/02-booting/index.md#running-our-kernel
 
 TODO screenshot
 
-We don't see anything on the screen yet since we only `loop {}` in our `efi_main`. Let's fix this and print something to the screen by using the [`uefi`] crate.
+We don't see any output from our `uefi_app` on the screen yet since we only `loop {}` in our `efi_main`. Instead, we see some output from the UEFI firmware itself that was created before our application was started.
 
 [`uefi`]: https://docs.rs/uefi/0.8.0/uefi/
+
+Let's try to improve this by printing something to the screen from our `uefi_app` as well.
 
 ## The `uefi` Crate
 
 In order to print something to the screen, we need to call some functions provided by the UEFI firmware. These functions can be invoked through the `system_table` argument passed to our `efi_main` function. This table provides [function pointers] for all kinds of functionality, including access to the screen, disk, or network.
 
+[function pointers]: https://en.wikipedia.org/wiki/Function_pointer
+
 Since the system table has a standardized format that is identical on all systems, it makes sense to create an abstraction for it. This is what the `uefi` crate does. It provides a [`SystemTable`] type that abstracts the UEFI system table functions as normal Rust methods. It is not complete, but the most important functions are all available.
+
+[`SystemTable`]: https://docs.rs/uefi/0.8.0/uefi/table/struct.SystemTable.html
 
 To use the crate, we first add it as a dependency in our `Cargo.toml`:
 
 ```toml
-# TODO
+# in Cargo.toml
+
+[dependencies]
+uefi = "0.8.0"
 ```
 
 Now we can change the types of the `image` and `system_table` arguments in our `efi_main` declaration:
 
 ```rust
-// TODO
-``
+// in src/main.rs
 
-Since the Rust compiler is not able to typecheck the function signature of the entry point function, we could accidentally use the wrong signature here. To prevent this (and the resulting undefined behavior), the `uefi` crate provides an `entry` macro to enforce the correct signature. To use it, we change our `main.rs` like this:
-
-```rust
-// TODO
+#[no_mangle]
+pub extern "efiapi" fn efi_main(
+    image: uefi::Handle,
+    system_table: uefi::table::SystemTable<uefi::table::Boot>,
+) -> uefi::Status {
+    loop {}
+}
 ```
 
-Now we can safely use the types provided by the `uefi` crate.
+Instead of using raw pointers and an anonymous `usize` return type, we now use the [`Handle`], [`SystemTable`], and [`Status`] abstraction types provided by the `uefi` crate. This way, we can use the higher-level API provided by the crate instead of carefully calculating pointer offsets to access the system table manually.
+
+[`Handle`]: https://docs.rs/uefi/0.8.0/uefi/data_types/struct.Handle.html
+[`Status`]: https://docs.rs/uefi/0.8.0/uefi/struct.Status.html
+
+While the above function signature works, it is very fragile because the Rust compiler is not able to typecheck the function signature of entry point functions. Thus, we could accidentally use the wrong signature (e.g. after updating the `uefi` crate), which would cause undefined behavior. To prevent this, the `uefi` crate provides an [`entry` macro] to enforce the correct signature. To use it, we change our entry point function in the following way:
+
+[`entry` macro]: https://docs.rs/uefi/0.8.0/uefi/prelude/attr.entry.html
+
+```rust
+// in src/main.rs
+
+#[entry]
+fn efi_main(
+    image: uefi::Handle,
+    system_table: uefi::table::SystemTable<uefi::table::Boot>,
+) -> uefi::Status {
+    loop {}
+}
+```
+
+The macro already inserts the `#[no_mangle]` attribute and the `pub extern "efiapi"` modifiers for us, so we no longer need them. We will now get a compile error if the function signature is not correct (try it if you like).
 
 ### Printing to Screen
 
