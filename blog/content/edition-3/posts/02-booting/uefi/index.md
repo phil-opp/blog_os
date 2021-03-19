@@ -18,7 +18,7 @@ icon = '''
 '''
 +++
 
-This post is an addendum to our main [**Booting**] post. It explains how to create a basic UEFI application from scratch that can be directly booted on modern x86_64 systems. This includes creating a minimal application suitable for the UEFI environment, turning it into a bootable disk image, and interacting with the hardware through the UEFI system tables and the `uefi` crate. We also outline how to turn the resulting application into a bootloader.
+This post is an addendum to our main [**Booting**] post. It explains how to create a basic UEFI application from scratch that can be directly booted on modern x86_64 systems. This includes creating a minimal application suitable for the UEFI environment, turning it into a bootable disk image, and interacting with the hardware through the UEFI system tables and the `uefi` crate.
 
 [**Booting**]: @/edition-3/posts/02-booting/index.md
 
@@ -454,7 +454,7 @@ Since the system table has a standardized format that is identical on all system
 
 [`SystemTable`]: https://docs.rs/uefi/0.8.0/uefi/table/struct.SystemTable.html
 
-To use the crate, we first add it as a dependency in our `Cargo.toml`:
+To use the crate, we first add it as a dependency in our root `Cargo.toml` (_not in `disk_image/Cargo.toml`_):
 
 ```toml
 # in Cargo.toml
@@ -489,6 +489,8 @@ While the above function signature works, it is very fragile because the Rust co
 ```rust
 // in src/main.rs
 
+use uefi::prelude::entry;
+
 #[entry]
 fn efi_main(
     image: uefi::Handle,
@@ -502,29 +504,258 @@ The macro already inserts the `#[no_mangle]` attribute and the `pub extern "efia
 
 ### Printing to Screen
 
-The UEFI standard supports multiple interfaces for printing to the screen. The most simple one is the text-based TODO. To use it, ... TODO.
+The UEFI standard supports multiple interfaces for printing to the screen. The most simple one is the _Simple Text Output_ protocol, which provides a console-like output interface. It is described in section 11.4 of the UEFI specification ([PDF][uefi-pdf]). We can use it through the [`SystemTable::stdout`] method provided by theThe `uefi` crate supports`uefi` crate:
 
-The text-based output is only available before exiting UEFI boot services. TODO explain
+[`SystemTable::stdout`]: https://docs.rs/uefi/0.8.0/uefi/table/struct.SystemTable.html#method.stdout
 
-The UEFI standard also supports a pixel-based framebuffer for screen output through the GOP protocol. This framebuffer also stays available after exiting boot services, so it makes sense to set it up before switching to the kernel. The protocol can be set up like this:
+```rust
+// in src/main.rs
 
-TODO
+use core::fmt::Write;
 
-See the [TODO] post for how to draw and render text using this framebuffer.
+#[entry]
+fn efi_main(
+    image: uefi::Handle,
+    system_table: uefi::table::SystemTable<uefi::table::Boot>,
+) -> uefi::Status {
+    let stdout = system_table.stdout();
+    stdout.clear().unwrap().unwrap();
+    writeln!(stdout, "Hello World!").unwrap();
+
+    loop {}
+}
+```
+
+We first use the [`SystemTable::stdout`] method to get an [`Output`] reference. Through this reference, we can then [`clear`] the screen and write a "Hello World!" message through Rust's [`writeln`] macro. In order to be able to use the macro, we need to import the [`fmt::Write`] trait. Since this is only prototype code, we use the [`Result::unwrap`] method to panic on errors. For the `clear` call, we additionally call the [`Completion::unwrap`] method to ensure that the UEFI firmware did not throw any warnings.
+
+[`Output`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/text/struct.Output.html
+[`clear`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/text/struct.Output.html#method.clear
+[`writeln`]: https://doc.rust-lang.org/nightly/core/macro.writeln.html
+[`fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
+[`Result::unwrap`]: https://doc.rust-lang.org/nightly/core/result/enum.Result.html#method.unwrap
+[`Completion::unwrap`]: https://docs.rs/uefi/0.8.0/uefi/struct.Completion.html
+
+After recompiling and creating a new disk image, we can now see out "Hello World!" on the screen:
+
+```bash
+> cargo build --target x86_64-unknown-uefi -Z build-std=core \
+    -Z build-std-features=compiler-builtins-mem
+> cargo run --package disk_image -- target/x86_64-unknown-uefi/debug/uefi_app.efi
+> qemu-system-x86_64 -drive format=raw,file=target/x86_64-unknown-uefi/debug/uefi_app.fat \
+    -bios # [...] TODO
+```
+
+![QEMU window with "Hello World!" output](hello-world-qemu.png)
+
+The [`Output`] type also allows to use different colors through its [`set_color`] method and some other customization options.
+
+[`set_color`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/text/struct.Output.html#method.set_color
+
+All of these functions are directly provided by the UEFI firmware, the `uefi` crate just provides some abstractions for this. By looking at the source code of the `uefi` crate, we see that the [`SystemTable`][system-table-src] is just a pointer to a [`SystemTableImpl`] struct, which is created by the UEFI firmware in a standardized format (see section _4.3_ of the UEFI specification ([PDF][uefi-pdf])). It has a `stdout` field, which is a pointer to an [`Output`][output-src] table fillThe `uefi` crate supportsd with [function pointers]. The methods of the `Output` type are just [small wrappers] around these function pointers, so all of the functionality is implemented directly in the UEFI firmware.
+
+[system-table-src]: https://docs.rs/uefi/0.8.0/src/uefi/table/system.rs.html#44-47
+[`SystemTableImpl`]: https://docs.rs/uefi/0.8.0/src/uefi/table/system.rs.html#209-230
+[output-src]: https://docs.rs/uefi/0.8.0/src/uefi/proto/console/text/output.rs.html#13-29
+[small wrappers]: https://docs.rs/uefi/0.8.0/src/uefi/proto/console/text/output.rs.html#41-43
+
+### Boot Services
+
+If we take a closer look at the documentation of the [`SystemTable`] type, we see that it has a generic `View` parameter. The documentation provides a good explanation why this parameter is needed:
+
+> [...] Not all UEFI services will remain accessible forever. Some services, called "boot services", may only be called during a bootstrap stage where the UEFI firmware still has control of the hardware, and will become unavailable once the firmware hands over control of the hardware to an operating system loader. Others, called "runtime services", may still be used after that point [...]
+>
+> We handle this state transition by providing two different views of the UEFI system table, the "Boot" view and the "Runtime" view.
+
+The distinction between "boot" and "runtime" services is defined directly by the UEFI standard ( in section 6), the `uefi` crate just provides an abstraction for this. The distinction is necessary because the UEFI firmware provides such a wide range of functionality, for example a memory allocator or access to network devices. These functions can easily conflict with operating system functionality, so they are only available before an operating system is loaded. To hand over hardware control from the UEFI firmware to an operating system, the UEFI standard provides an `ExitBootServices` function. The `uefi` crate abstracts this function as an [`SystemTable::exit_boot_services`] method.
+
+[`SystemTable::exit_boot_services`]: https://docs.rs/uefi/0.8.0/uefi/table/struct.SystemTable.html#method.exit_boot_services
+
+### Interesting UEFI Protocols
+
+The UEFI firmware supports many different hardware functions through so-called protocols. Most of them are not used by traditional operating systems, which instead implement their own drivers and access the different hardware devices directly. There are multiple reasons for this. For one, many protocols are no longer available after exiting boot services, so using the protocols is only possible as long as UEFI stays in control of the hardware (including physical memory allocation). Other reasons are performance (most drivers provided by UEFI are not optimized), control (not all device features are supported in UEFI), and compatibility (most operating systems want to run on non-UEFI systems too).
+
+Even if most operating systems quickly use the `ExitBootServices` function to take over hardware control, there are still a few useful UEFI protocols that are useful when implementing a bootloader. In the following, we present a few useful protocols and show how to use them.
 
 ### Memory Allocation
 
+As already mentioned above, the UEFI firmware is in control of memory until we use `ExitBootServices`. To supply additional memory to applications, the UEFI standard defines different memory allocation functions, which are defined in section _6.2_ of the standard ([PDF][uefi-pdf]). The `uefi` crate supports them too: We have to use the [`SystemTable::boot_services`] function to get access to the [`BootServices`] table. Then we can call the [`allocate_pool`] method to allocate a number of bytes from a UEFI-managed memory pool. Alternatively, we can allocate a number of 4KiB pages through [`allocate_pages`]. To free allocated memory again, we can use the [`free_pool`] and [`free_pages`] methods.
+
+[`SystemTable::boot_services`]: https://docs.rs/uefi/0.8.0/uefi/table/struct.SystemTable.html#method.boot_services
+[`BootServices`]: https://docs.rs/uefi/0.8.0/uefi/table/boot/struct.BootServices.html
+[`allocate_pool`]: https://docs.rs/uefi/0.8.0/uefi/table/boot/struct.BootServices.html#method.allocate_pool
+[`allocate_pages`]: https://docs.rs/uefi/0.8.0/uefi/table/boot/struct.BootServices.html#method.allocate_pages
+[`free_pool`]: https://docs.rs/uefi/0.8.0/uefi/table/boot/struct.BootServices.html#method.free_pool
+[`free_pages`]: https://docs.rs/uefi/0.8.0/uefi/table/boot/struct.BootServices.html#method.free_pages
+
+Using these methods, it is possible to create a Rust-compatible [`GlobalAlloc`], which allows linking the [`alloc`] crate (see the other posts on this blog). The `uefi` crate already provides such an allocator if we enable its `alloc` feature:
+
+[`GlobalAlloc`]: https://doc.rust-lang.org/nightly/core/alloc/trait.GlobalAlloc.html
+[`alloc`]: https://doc.rust-lang.org/nightly/alloc/index.html
+
+```toml
+# in Cargo.toml
+
+[dependencies]
+uefi = { version = "0.8.0", features = ["alloc"] }
+```
+
+Now we can use the `alloc` crate in our UEFI application:
+
+```rust
+// in src/main.rs
+
+// the `alloc_error_handler` attribute is still unstable
+#![feature(alloc_error_handler)]
+
+// link the alloc crate
+extern crate alloc;
+
+use alloc::vec::Vec;
+
+#[entry]
+fn efi_main(
+    image: uefi::Handle,
+    system_table: uefi::table::SystemTable<uefi::table::Boot>,
+) -> uefi::Status {
+    // ... (as before)
+
+    // initialize the allocator
+    unsafe {
+        uefi::alloc::init(system_table.boot_services());
+    }
+
+    // we can now use the allocator
+    let mut v = Vec::new();
+    v.push(1);
+    v.push(2);
+    writeln!(stdout, "v = {:?}", v).unwrap();
+
+    loop {}
+}
+
+/// This function is called when an allocation fails,
+/// typically because the system is out of memory.
+#[alloc_error_handler]
+fn alloc_error(_layout: Layout) -> ! {
+    panic!("out of memory")
+}
+```
+
+To compile it, we need a slight modification to our build command since the `alloc` crate needs to be cross-compiled for our UEFI target as well:
+
+```shell
+cargo build --target x86_64-unknown-uefi -Z build-std=core,alloc \
+     -Z build-std-features=compiler-builtins-mem
+```
+
+The only change is that `build-std` is now set to `core,alloc` instead of just `core`.
+
+Note that the UEFI-provided allocation functions are only usable until `ExitBootServices` is called. This is the reason that the `uefi::alloc::init` function requires `unsafe`.
+
+### Locating the ACPI Tables
+
+The [ACPI] standard is used to discover and configure hardware devices. It consists of multiple tables that are placed somewhere in memory. To find out where in memory these tables are, we can use the UEFI configuration table, which is defined in section _4.6_ of the standard ([PDF][uefi-pdf]). To access it with the `uefi` crate, we use the [`SystemTable::config_table`] method, which returns a slice of [`ConfigTableEntry`] structs. To find the relevant ACPI [RSDP] table, we look for an entry with a [GUID] that is equal to [`ACPI_GUID`] or [`ACPI2_GUID`]. The `address` field of that entry then tells us the memory address of the RSPD table.
+
+[ACPI]: https://en.wikipedia.org/wiki/Advanced_Configuration_and_Power_Interface
+[`SystemTable::config_table`]: https://docs.rs/uefi/0.8.0/uefi/table/struct.SystemTable.html#method.config_table
+[`ConfigTableEntry`]: https://docs.rs/uefi/0.8.0/uefi/table/cfg/struct.ConfigTableEntry.html
+[RSDP]: https://wiki.osdev.org/RSDP
+[GUID]: https://de.wikipedia.org/wiki/Globally_Unique_Identifier
+[`ACPI_GUID`]: https://docs.rs/uefi/0.8.0/uefi/table/cfg/constant.ACPI_GUID.html
+[`ACPI2_GUID`]: https://docs.rs/uefi/0.8.0/uefi/table/cfg/constant.ACPI2_GUID.html
+
+Putting things together, the code can look like this:
+
+```rust
+use uefi::table::cfg;
+
+let mut config_entries = system_table.config_table().iter();
+let rsdp_addr = config_entries
+    .find(|entry| matches!(entry.guid, cfg::ACPI_GUID | cfg::ACPI2_GUID))
+    .map(|entry| entry.address);
+```
+
+We won't do anything with RSDP table here, but bootloaders typically provide it to loaded kernels, e.g. via the boot information structure they send.
+
+### Graphics Output
+
+As noted above, the text-based output protocol is only available until exiting UEFI boot services. Another drawback of it is that in only provides a text-based interface instead of allowing to set individual pixels. Fortunately, UEFI also supports a _Graphics Output Protocol_ (GOP) that fixes both of these problems. We can use it in the following way:
+
+```rust
+use uefi::proto::console::gop::GraphicsOutput;
+
+let protocol = system_table.boot_services().locate_protocol::<GraphicsOutput>().unwrap();
+let gop = unsafe { &mut *protocol.get()};
+```
+
+The [`locate_protocol`] method can be used to locate any protocol that implements the [`Protocol`] trait, including [`GraphicsOutput`]. Not all protocols are available on all systems though. In our case, we use `unwrap` to panic if the GOP protocol is not available.
+
+[`locate_protocol`]: https://docs.rs/uefi/0.8.0/uefi/table/boot/struct.BootServices.html#method.locate_protocol
+[`GraphicsOutput`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.GraphicsOutput.html
+[`Protocol`]: https://docs.rs/uefi/0.8.0/uefi/proto/trait.Protocol.html
+
+Since the UEFI-provided functions are neither thread-safe nor reentrant, the `locate_protocol` method returns an [`&UnsafeCell`], which is unsafe to access. We are sure that this is the first and only time that we use the GOP protocol, so we directly convert it to a `&mut` reference by using the [`UnsafeCell::get`] method and then converting the resulting `*mut` pointer via `&mut *`.
+
+[`&UnsafeCell`]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html
+[`UnsafeCell::get`]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html#method.get
+
+The [`GraphicsOutput`] type provides a wide range of functionality for configuring a pixel-based framebuffer. Through [`current_mode_info`], [`modes`], and [`set_mode`] we can query the currently active graphics mode, get a list of all supported modes, and enable a different mode. The [`frame_buffer`] method gives us direct access to the framebuffer through a [`FrameBuffer`] abstraction type. We can then read the raw pointer and size of the framebuffer via [`FrameBuffer::as_mut_ptr`] and [`FrameBuffer::size`].
+
+[`current_mode_info`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.GraphicsOutput.html#method.current_mode_info
+[`modes`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.GraphicsOutput.html#method.modes
+[`set_mode`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.GraphicsOutput.html#method.set_mode
+[`frame_buffer`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.GraphicsOutput.html#method.frame_buffer
+[`FrameBuffer`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.FrameBuffer.html
+[`FrameBuffer::as_mut_ptr`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.FrameBuffer.html#method.as_mut_ptr
+[`FrameBuffer::size`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.FrameBuffer.html#method.size
+
+As already mentioned, the GOP framebuffer stays available even after exiting boot services. Thus we can simply pass the framebuffer pointer, its mode info, and its size to the kernel, which can then easily write to screen, as we show in our [TODO] post.
+
 ### Physical Memory Map
 
-### APIC Base
+When the kernel takes control of memory management, it needs to know which physical memory areas are freely usable, which are still in use, and which are reserved by some hardware devices. To query this _memory map_ from the UEFI firmware, we can use the [`SystemTable::memory_map`] method. However the resulting memory map might still change as long as the UEFI firmware has control over memory and we still call other UEFI functions. For this reason, the UEFI firmware also returns an up-to-date memory map when [exiting boot services], which is the recommended way of retrieving the memory map.
 
-## Loading the Kernel
+[`SystemTable::memory_map`]: https://docs.rs/uefi/0.8.0/uefi/table/boot/struct.BootServices.html#method.memory_map
+[exiting boot services]: https://docs.rs/uefi/0.8.0/uefi/table/struct.SystemTable.html#method.exit_boot_services
+
+To use the [`exit_boot_services`], we need to provide a buffer that is big enough to hold the memory map. To find out how large the buffer needs to be, we can use the [`BootServices::memory_map_size`] method. Then we can use the [`allocate_pool`] method to allocate a buffer region of that size. However, since the `allocate_pool` call might change the memory map, it might become a bit larger than returned by `memory_map_size`. For this reason, we need to allocate a bit extra space. This can be implemented in the following way:
+
+[`exit_boot_services`]: https://docs.rs/uefi/0.8.0/uefi/table/struct.SystemTable.html#method.exit_boot_services
+[`BootServices::memory_map_size`]: https://docs.rs/uefi/0.8.0/uefi/table/boot/struct.BootServices.html#method.memory_map_size
+
+```rust
+use uefi::table::boot::{MemoryDescriptor, MemoryType};
+
+let mmap_storage = {
+    let max_mmap_size = system_table.boot_services().memory_map_size()
+        + 8 * mem::size_of::<MemoryDescriptor>();
+    let ptr = system_table
+        .boot_services()
+        .allocate_pool(MemoryType::LOADER_DATA, max_mmap_size)?
+        .unwrap();
+    unsafe { slice::from_raw_parts_mut(ptr, max_mmap_size) }
+};
+
+let (system_table, memory_map) = system_table
+    .exit_boot_services(image, mmap_storage).unwrap()
+```
+
+This returns a new [`SystemTable`] instance that no longer provides access to the boot services. The `memory_map` return type is an iterator of [`MemoryDescriptor`] instances, which describe the physical start address, size, and type of each memory region.
+
+[`MemoryDescriptor`]: https://docs.rs/uefi/0.8.0/uefi/table/boot/struct.MemoryDescriptor.html
+
+Note that we also need to call `uefi::alloc::exit_boot_services()` before exiting boot services to uninitialize the heap allocator again. Otherwise undefined behavior might occur if we accidentally use the `alloc` crate again afterwards.
+
+## Creating a Bootloader
+
+
+### Loading the Kernel
 
 We already saw how to set up a framebuffer for screen output and query the physical memory map and the APIC base register address. This is already all the system information that a basic kernel needs from the bootloader.
 
 The next step is to load the kernel executable. This involves loading the kernel from disk into memory, allocating a stack for it, and setting up a new page table hierarchy to properly map it to virtual memory.
 
-### Loading it from Disk
+#### Loading it from Disk
 
 One approach for including our kernel could be to place it in the FAT partition created by our `disk_image` crate. Then we could use the TODO protocol of the `uefi` crate to load it from disk into memory.
 
@@ -534,7 +765,7 @@ To keep things simple, we will use a different appoach here. Instead of loading 
 // TODO
 ```
 
-### Parsing the Kernel
+#### Parsing the Kernel
 
 Now that we have our kernel executable in memory, we need to parse it. In the following, we assume that the kernel uses the ELF executable format, which is popular in the Linux world. This is also the excutable format that the kernel created in this blog series uses.
 
@@ -554,7 +785,7 @@ TODO: load program segements and print them
 
 TODO: .bss section -> mem_size might be larger than file_size
 
-### Page Table Mappings
+#### Page Table Mappings
 
 TODO:
 
@@ -562,18 +793,18 @@ TODO:
 - map each segment
     - special-case: mem_size > file_size
 
-### Create a Stack
+#### Create a Stack
 
-## Switching to Kernel
+### Switching to Kernel
 
-## Challenges
+### Challenges
 
-### Boot Information
+#### Boot Information
 
 - Physical Memory
 
-### Integration in Build System
+#### Integration in Build System
 
-### Common Interface with BIOS
+#### Common Interface with BIOS
 
-### Configurability
+#### Configurability
