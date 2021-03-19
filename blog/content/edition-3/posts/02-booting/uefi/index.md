@@ -436,7 +436,7 @@ The result of this command is a `.fat` and a `.img` file next to the given `.efi
 
 [run-instructions]: @/edition-3/posts/02-booting/index.md#running-our-kernel
 
-TODO screenshot
+![QEMU screenshot showing some UEFI firmware output](minimal-uefi-qemu.png)
 
 We don't see any output from our `uefi_app` on the screen yet since we only `loop {}` in our `efi_main`. Instead, we see some output from the UEFI firmware itself that was created before our application was started.
 

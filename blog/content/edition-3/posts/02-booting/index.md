@@ -13,7 +13,7 @@ icon = '''
 </svg>
 '''
 
-extra_content = ["uefi.md"]
+extra_content = ["uefi/index.md"]
 +++
 
 In this post, we explore the boot process on both BIOS and UEFI-based systems. We combine the [minimal kernel] created in the previous post with a bootloader to create a bootable disk image. We then show how this image can be started in the [QEMU] emulator and run on real hardware.
@@ -148,7 +148,7 @@ As it is probably clear at this point, the UEFI interface is very powerful and c
 
 To keep this post focused, we won't cover the creation of an UEFI bootloader here. Instead, we will use the already mentioned [`bootloader`] crate, which allows loading our kernel on both UEFI and BIOS systems. If you're interested in how to create an UEFI bootloader yourself, check out our extra post about [**UEFI Booting**].
 
-[**UEFI Booting**]: @/edition-3/posts/02-booting/uefi.md
+[**UEFI Booting**]: @/edition-3/posts/02-booting/uefi/index.md
 
 ### The Multiboot Standard
 
