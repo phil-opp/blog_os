@@ -748,52 +748,72 @@ Note that we also need to call `uefi::alloc::exit_boot_services()` before exitin
 
 ## Creating a Bootloader
 
+Now that we know how to set up a framebuffer and query relevant system information, we only need a few more steps to turn our UEFI application into a bootloader. These steps includes loading a kernel executable into memory, setting up an execution environment, and passing control to the kernel's entry point function. In the following, we give some high-level instructions for each of these steps.
 
 ### Loading the Kernel
 
-We already saw how to set up a framebuffer for screen output and query the physical memory map and the APIC base register address. This is already all the system information that a basic kernel needs from the bootloader.
+The first step is to load the kernel executable and setting it up properly. This involves loading the kernel from disk into memory, allocating a stack for it, and setting up a new page table hierarchy to properly map it to virtual memory.
 
-The next step is to load the kernel executable. This involves loading the kernel from disk into memory, allocating a stack for it, and setting up a new page table hierarchy to properly map it to virtual memory.
+One approach for including our kernel could be to place it in the FAT partition created by our `disk_image` crate. Then we could use the _simple file system_ protocol of UEFI (see section 12.3 of the standard ([PDF][uefi-pdf])) to load it from disk into memory. The `uefi` crate supports this protocol through its [`SimpleFileSystem`] type.
 
-#### Loading it from Disk
-
-One approach for including our kernel could be to place it in the FAT partition created by our `disk_image` crate. Then we could use the TODO protocol of the `uefi` crate to load it from disk into memory.
+[`SimpleFileSystem`]: https://docs.rs/uefi/0.8.0/uefi/proto/media/fs/struct.SimpleFileSystem.html
 
 To keep things simple, we will use a different appoach here. Instead of loading the kernel separately, we place its bytes as a `static` variable inside our bootloader executable. This way, the UEFI firmware directly loads it into memory when launching the bootloader. To implement this, we can use the [`include_bytes`] macro of Rust's `core` library:
 
+[`include_bytes`]: https://doc.rust-lang.org/nightly/core/macro.include_bytes.html
+
 ```rust
-// TODO
+static KERNEL: &[u8] = include_bytes!("path/to/the/kernel/executable");
 ```
 
-#### Parsing the Kernel
+After loading the kernel executable into memory (one way or another), we need to parse it. In the following, we assume that the kernel uses the [ELF] executable format, which is popular in the Linux world. This is also the excutable format that the kernel created in this blog series uses.
 
-Now that we have our kernel executable in memory, we need to parse it. In the following, we assume that the kernel uses the ELF executable format, which is popular in the Linux world. This is also the excutable format that the kernel created in this blog series uses.
+The ELF format consists of several headers that describe the executable and define a number of sections. Typically, there is a section called `.text` that contains the actual executable code. Immutable values such as string constants are placed in a section named `.rodata` ("read-only data"). For mutable data (e.g. a `static` containing a `Mutex`), a section named `.data` is used. There is also a section named `.bss` that stores all data that is initialized with zero values (this allows to reduce the size of the binary).
 
-The ELF format is structured like this:
+The various ELF headers are useful in different situations. For loading the executable into memory, the _program header_ is most relevant. It basically groups all the sections of the executable into different groups by their access permissions. There are typically four groups:
 
-TODO
+- Read-only and executable: This contains the `.text` section and all other executable code.
+- Read-only: This contains the `.rodata` section and all other sections with immutable, non-executable data.
+- Read-write: This includes the `.data` section and `.bss` sections. The zeroes of the `.bss` section are not actually stored, only its size is listed. Thus, no memory is wasted for storing zeroes.
 
-The various headers are useful in different situations. For loading the executable into memory, the _program header_ is most relevant. It looks like this:
+There are various tools to analyze ELF files and read out most headers. The classical tools are `readelf` and `objdump`. There are also several Rust crates for parsing an ELF files, so we don't need to to implement it on our own. Some examples are [`goblin`], [`elf`], and [`xmas-elf`]. The `xmas-elf` crate works quite well in `no_std` environments, so that's the one I would recommend for a bootloader implementation.
 
-TODO
+[`goblin`]: https://docs.rs/goblin/0.3.4/goblin/
+[`elf`]: https://docs.rs/elf/0.0.10/elf/
+[`xmas-elf`]: https://docs.rs/xmas-elf/0.7.0/xmas_elf/
 
-TODO: mention readelf/objdump/etc for looking at program header
+The parsing and mapping process then looks roughly like this:
 
-There are already a number of ELF parsing crates in the Rust ecosystem, so we don't need to create our own. In the following, we will use the [`xmas_elf`] crate, but other crates might work equally well.
+```rust
+let elf_file = ElfFile::new(KERNEL)?;
+header::sanity_check(&elf_file)?;
 
-TODO: load program segements and print them
+for segment in elf_file_program_iter() {
+    program::sanity_check(segment, &elf_file)?;
+    if let Type::Load = segment.get_type()? {
+        let phys_start = phys_offset(KERNEL) + segment.offset();
+        let phys_end = phys_start + segment.file_size();
 
-TODO: .bss section -> mem_size might be larger than file_size
+        let virt_start = segment.virtual_addr();
+        let virt_end = virt_start + segment.mem_size();
 
-#### Page Table Mappings
+        let permissions = permissions_from_flags(segment.flags());
 
-TODO:
+        for frame in frame(phys_start)..=frame(phys_end -1) {
+            // TODO: create page table mapping for frame with permissions
+            // at corresponding virtual address
+        }
 
-- create new page table
-- map each segment
-    - special-case: mem_size > file_size
+        if virt_end > phys_end {
+            // TODO: there is a `.bss` section in this segment -> map next
+            // (virt_end - phys_end) bytes to free physical frame and initialize
+            // them with zero
+        }
+    }
+}
+```
 
-#### Create a Stack
+After creating a new page table mapping for the kernel this way, we need to allocate a runtime stack for it. For that, we choose a region of unused physical memory and map it to some virtual address. Ideally, we choose the virtual address range in a way that the page immediately before it is not mapped. Thus, we create a so-called _guard page_ that ensures that stack overflows lead to a CPU exception (a page fault) instead of corrupting other data.
 
 ### Switching to Kernel
 
