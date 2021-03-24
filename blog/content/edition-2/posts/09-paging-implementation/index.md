@@ -273,11 +273,11 @@ This means that we need the help of the bootloader, which creates the page table
 - The `map_physical_memory` feature maps the complete physical memory somewhere into the virtual address space. Thus, the kernel can access all physical memory and can follow the [_Map the Complete Physical Memory_](#map-the-complete-physical-memory) approach.
 - With the `recursive_page_table` feature, the bootloader maps an entry of the level 4 page table recursively. This allows the kernel to access the page tables as described in the [_Recursive Page Tables_](#recursive-page-tables) section.
 
-We choose the first approach for our kernel since it is simple, platform-independent, and more powerful (it also allows to access non-page-table-frames). To enable the required bootloader support, we add the `map_physical_memory` feature to our `bootloader` dependency:
+We choose the first approach for our kernel since it is simple, platform-independent, and more powerful (it also allows access to non-page-table-frames). To enable the required bootloader support, we add the `map_physical_memory` feature to our `bootloader` dependency:
 
 ```toml
 [dependencies]
-bootloader = { version = "0.9.3", features = ["map_physical_memory"]}
+bootloader = { version = "0.9.8", features = ["map_physical_memory"]}
 ```
 
 With this feature enabled, the bootloader maps the complete physical memory to some unused virtual address range. To communicate the virtual address range to our kernel, the bootloader passes a _boot information_ structure.
