@@ -10,4 +10,4 @@ edition = "2018"
 members = ["disk_image"]
 
 [dependencies]
-uefi = "0.8.0"
+uefi = { version = "0.8.0", features = ["alloc"] }
