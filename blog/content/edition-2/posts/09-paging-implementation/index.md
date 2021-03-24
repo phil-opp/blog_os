@@ -558,9 +558,8 @@ Let's test our translation function by translating some addresses:
 // in src/main.rs
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    // new imports
+    // new import
     use blog_os::memory::translate_addr;
-    use x86_64::VirtAddr;
 
     […] // hello world and blog_os::init
 
