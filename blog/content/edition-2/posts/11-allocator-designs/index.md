@@ -1019,7 +1019,7 @@ fn list_index(layout: &Layout) -> Option<usize> {
 }
 ```
 
-The block must be have at least the size and alignment required by the given `Layout`. Since we defined that the block size is also its alignment, this means that the `required_block_size` is the [maximum] of the layout's [`size()`] and [`align()`] attributes. To find the next-larger block in the `BLOCK_SIZES` slice, we first use the [`iter()`] method to get an iterator and then the [`position()`] method to find the index of the first block that is as least as large as the `required_block_size`.
+The block must have at least the size and alignment required by the given `Layout`. Since we defined that the block size is also its alignment, this means that the `required_block_size` is the [maximum] of the layout's [`size()`] and [`align()`] attributes. To find the next-larger block in the `BLOCK_SIZES` slice, we first use the [`iter()`] method to get an iterator and then the [`position()`] method to find the index of the first block that is as least as large as the `required_block_size`.
 
 [maximum]: https://doc.rust-lang.org/core/cmp/trait.Ord.html#method.max
 [`size()`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.size
