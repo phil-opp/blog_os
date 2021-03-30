@@ -91,7 +91,7 @@ However, the strong performance and memory benefits of cooperative multitasking 
 
 ## Async/Await in Rust
 
-The Rust language provides first-class support for cooperative multitasking in form of async/await. Before we can explore what async/await is and how it works, we need to understand how _futures_ and asynchronous programming work in Rust.
+The Rust language provides first-class support for cooperative multitasking in the form of async/await. Before we can explore what async/await is and how it works, we need to understand how _futures_ and asynchronous programming work in Rust.
 
 ### Futures
 
