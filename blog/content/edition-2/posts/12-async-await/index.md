@@ -549,6 +549,7 @@ Using heap allocation, we can try to create a self-referential struct:
 
 ```rust
 fn main() {
+    #[allow(unused_mut)]
     let mut heap_value = Box::new(SelfReferential {
         self_ptr: 0 as *const _,
     });
