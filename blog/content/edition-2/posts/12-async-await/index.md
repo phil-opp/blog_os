@@ -687,7 +687,7 @@ For further reading, check out the documentation of the [`pin` module] and the [
 
 #### Pinning and Futures
 
-As we already saw in this post, the [`Future::poll`] method uses pinning in form of a `Pin<&mut Self>` parameter:
+As we already saw in this post, the [`Future::poll`] method uses pinning in the form of a `Pin<&mut Self>` parameter:
 
 [`Future::poll`]: https://doc.rust-lang.org/nightly/core/future/trait.Future.html#tymethod.poll
 
