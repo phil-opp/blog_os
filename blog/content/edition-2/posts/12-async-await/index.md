@@ -1643,7 +1643,7 @@ impl Wake for TaskWaker {
 }
 ```
 
-The trait is still unstable, so we have to add **`#![feature(wake_trait)]`** to the top of our `lib.rs` to use it. Since wakers are commonly shared between the executor and the asynchronous tasks, the trait methods require that the `Self` instance is wrapped in the [`Arc`] type, which implements reference-counted ownership. This means that we have to move our `TaskWaker` to an `Arc` in order to call them.
+Since wakers are commonly shared between the executor and the asynchronous tasks, the trait methods require that the `Self` instance is wrapped in the [`Arc`] type, which implements reference-counted ownership. This means that we have to move our `TaskWaker` to an `Arc` in order to call them.
 
 The difference between the `wake` and `wake_by_ref` methods is that the latter only requires a reference to the `Arc`, while the former takes ownership of the `Arc` and thus often requires an increase of the reference count. Not all types support waking by reference, so implementing the `wake_by_ref` method is optional, however it can lead to better performance because it avoids unnecessary reference count modifications. In our case, we can simply forward both trait methods to our `wake_task` function, which requires only a shared `&self` reference.
 
