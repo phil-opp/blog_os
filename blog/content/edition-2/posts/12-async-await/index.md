@@ -1758,7 +1758,7 @@ if self.task_queue.is_empty() {
 
 In case this interrupt pushes to the `task_queue`, we put the CPU to sleep even though there is now a ready task. In the worst case, this could delay the handling of a keyboard interrupt until the next keypress or the next timer interrupt. So how do we prevent it?
 
-The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`interrupts::enable_and_hlt`][`enable_and_hlt`] function provided by the [`x86_64`] crate. This function is only available since version 0.9.6, so you might need to update your `x86_64` dependency to use it.
+The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`interrupts::enable_and_hlt`][`enable_and_hlt`] function provided by the [`x86_64`] crate.
 
 [`enable_and_hlt`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
