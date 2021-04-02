@@ -68,7 +68,7 @@ comments_notice = "請儘可能使用英語評論。"
 readmore = "更多 »"
 not_translated = "（該文章還沒有被翻譯。）"
 translated_content = "翻譯內容："
-translated_content_notice = "這是對原文章 <strong><a href=\"_original.permalink_\">_original.title_</a></strong> 的社區中文翻譯。它可能不完整，過時或者包含錯誤。 可以在 <a href=\"https://github.com/phil-opp/blog_os/issues/961\"> 上評論和提問！"
+translated_content_notice = "這是對原文章 <strong><a href=\"_original.permalink_\">_original.title_</a></strong> 的社區中文翻譯。它可能不完整，過時或者包含錯誤。可以在 <a href=\"https://github.com/phil-opp/blog_os/issues/961\"> 上評論和提問！"
 translated_by = "翻譯者："
 word_separator = "和"
 
