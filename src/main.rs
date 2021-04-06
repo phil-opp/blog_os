@@ -7,7 +7,7 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use core::{alloc::Layout, fmt::Write, panic::PanicInfo};
-use uefi::{prelude::entry, table::cfg};
+use uefi::{prelude::entry, proto::console::gop::GraphicsOutput, table::cfg};
 
 #[entry]
 fn efi_main(
@@ -33,6 +33,20 @@ fn efi_main(
         .find(|entry| matches!(entry.guid, cfg::ACPI_GUID | cfg::ACPI2_GUID))
         .map(|entry| entry.address);
     writeln!(stdout, "rsdp addr: {:?}", rsdp_addr).unwrap();
+
+    let protocol = system_table
+        .boot_services()
+        .locate_protocol::<GraphicsOutput>()
+        .unwrap()
+        .unwrap();
+    let gop = unsafe { &mut *protocol.get() };
+    writeln!(stdout, "current gop mode: {:?}", gop.current_mode_info()).unwrap();
+    writeln!(
+        stdout,
+        "framebuffer at: {:#p}",
+        gop.frame_buffer().as_mut_ptr()
+    )
+    .unwrap();
 
     loop {}
 }
