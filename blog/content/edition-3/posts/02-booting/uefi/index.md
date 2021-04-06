@@ -654,7 +654,7 @@ Note that the UEFI-provided allocation functions are only usable until `ExitBoot
 
 ### Locating the ACPI Tables
 
-The [ACPI] standard is used to discover and configure hardware devices. It consists of multiple tables that are placed somewhere in memory. To find out where in memory these tables are, we can use the UEFI configuration table, which is defined in section _4.6_ of the standard ([PDF][uefi-pdf]). To access it with the `uefi` crate, we use the [`SystemTable::config_table`] method, which returns a slice of [`ConfigTableEntry`] structs. To find the relevant ACPI [RSDP] table, we look for an entry with a [GUID] that is equal to [`ACPI_GUID`] or [`ACPI2_GUID`]. The `address` field of that entry then tells us the memory address of the RSPD table.
+The [ACPI] standard is used to discover and configure hardware devices. It consists of multiple tables that are placed somewhere in memory by the firmware. To find out where in memory these tables are, we can use the UEFI configuration table, which is defined in section _4.6_ of the standard ([PDF][uefi-pdf]). To access it with the `uefi` crate, we use the [`SystemTable::config_table`] method, which returns a slice of [`ConfigTableEntry`] structs. To find the relevant ACPI [RSDP] table, we look for an entry with a [GUID] that is equal to [`ACPI_GUID`] or [`ACPI2_GUID`]. The `address` field of that entry then tells us the memory address of the RSPD table.
 
 [ACPI]: https://en.wikipedia.org/wiki/Advanced_Configuration_and_Power_Interface
 [`SystemTable::config_table`]: https://docs.rs/uefi/0.8.0/uefi/table/struct.SystemTable.html#method.config_table
@@ -673,6 +673,7 @@ let mut config_entries = system_table.config_table().iter();
 let rsdp_addr = config_entries
     .find(|entry| matches!(entry.guid, cfg::ACPI_GUID | cfg::ACPI2_GUID))
     .map(|entry| entry.address);
+writeln!(stdout, "rsdp addr: {:?}", rsdp_addr).unwrap();
 ```
 
 We won't do anything with RSDP table here, but bootloaders typically provide it to loaded kernels, e.g. via the boot information structure they send.
@@ -684,8 +685,11 @@ As noted above, the text-based output protocol is only available until exiting U
 ```rust
 use uefi::proto::console::gop::GraphicsOutput;
 
-let protocol = system_table.boot_services().locate_protocol::<GraphicsOutput>().unwrap();
-let gop = unsafe { &mut *protocol.get()};
+let protocol = system_table.boot_services().locate_protocol::<GraphicsOutput>()
+    .unwrap().unwrap();
+let gop = unsafe { &mut *protocol.get() };
+writeln!(stdout, "current gop mode: {:?}", gop.current_mode_info()).unwrap();
+writeln!(stdout, "framebuffer at: {:#p}", gop.frame_buffer().as_mut_ptr()).unwrap();
 ```
 
 The [`locate_protocol`] method can be used to locate any protocol that implements the [`Protocol`] trait, including [`GraphicsOutput`]. Not all protocols are available on all systems though. In our case, we use `unwrap` to panic if the GOP protocol is not available.
@@ -709,7 +713,9 @@ The [`GraphicsOutput`] type provides a wide range of functionality for configuri
 [`FrameBuffer::as_mut_ptr`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.FrameBuffer.html#method.as_mut_ptr
 [`FrameBuffer::size`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.FrameBuffer.html#method.size
 
-As already mentioned, the GOP framebuffer stays available even after exiting boot services. Thus we can simply pass the framebuffer pointer, its mode info, and its size to the kernel, which can then easily write to screen, as we show in our [TODO] post.
+As already mentioned, the GOP framebuffer stays available even after exiting boot services. Thus we can simply pass the framebuffer pointer, its mode info, and its size to the kernel, which can then easily write to screen, as we show in our [_Screen Output_] post.
+
+[_Screen Output_]: @/edition-3/posts/03-screen-output/index.md
 
 ### Physical Memory Map
 
@@ -725,6 +731,7 @@ To use the [`exit_boot_services`], we need to provide a buffer that is big enoug
 
 ```rust
 use uefi::table::boot::{MemoryDescriptor, MemoryType};
+use core::{mem, slice};
 
 let mmap_storage = {
     let max_mmap_size = system_table.boot_services().memory_map_size()
@@ -736,8 +743,9 @@ let mmap_storage = {
     unsafe { slice::from_raw_parts_mut(ptr, max_mmap_size) }
 };
 
-let (system_table, memory_map) = system_table
-    .exit_boot_services(image, mmap_storage).unwrap()
+uefi::alloc::exit_boot_services();
+let (system_table, memory_map) = system_table.exit_boot_services(image, mmap_storage)
+    .unwrap().unwrap()
 ```
 
 This returns a new [`SystemTable`] instance that no longer provides access to the boot services. The `memory_map` return type is an iterator of [`MemoryDescriptor`] instances, which describe the physical start address, size, and type of each memory region.
