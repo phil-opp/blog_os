@@ -21,8 +21,6 @@ jobs:
 
     - name: 'Download Zola'
       run: curl -sL https://github.com/getzola/zola/releases/download/v0.12.1/zola-v0.12.1-x86_64-unknown-linux-gnu.tar.gz | tar zxv
-    - name: "Install Python Tools"
-      run: python -m pip install --upgrade pip setuptools wheel
     - name: 'Install Python Libraries'
       run: python -m pip install --user -r requirements.txt
       working-directory: "blog"

@@ -300,7 +300,7 @@ Rustコンパイラは、すべてのシステムにおいて、特定の組み�
 
 [`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
 
-ありがたいことに、`compiler_builtins`クレートにはこれらの必要な関数すべての実装が含まれており、標準ではCライブラリの実装と競合しないように無効化されているだけなのです。これはcargoの[`build-std-features`]フラグを`["computer-builtins-mem"]`に設定することで有効化できます。`build-std`フラグと同じように、このフラグはコマンドラインで`-Z`フラグとして渡すこともできれば、`.cargo/config.toml`ファイルの`unstable`テーブルで設定することもできます。ビルド時は常にこのフラグをセットしたいので、設定ファイルを使う方が良いでしょう：
+ありがたいことに、`compiler_builtins`クレートにはこれらの必要な関数すべての実装が含まれており、標準ではCライブラリの実装と競合しないように無効化されているだけなのです。これはcargoの[`build-std-features`]フラグを`["compiler-builtins-mem"]`に設定することで有効化できます。`build-std`フラグと同じように、このフラグはコマンドラインで`-Z`フラグとして渡すこともできれば、`.cargo/config.toml`ファイルの`unstable`テーブルで設定することもできます。ビルド時は常にこのフラグをセットしたいので、設定ファイルを使う方が良いでしょう：
 
 [`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
 
@@ -313,12 +313,10 @@ build-std-features = ["compiler-builtins-mem"]
 
 （`compiler-builtins-mem`機能のサポートが追加されたのは[つい最近](https://github.com/rust-lang/rust/pull/77284)なので、`2019-09-30`以降のRust nightlyが必要です。）
 
-このとき、裏で`compiler_builtins`クレートの[`mem`機能][`mem` feature]が有効化されています。これにより、このクレートの[`memcpy`などの実装][`memcpy` etc. implementations]に`#[no_mangle]`アトリビュートが適用され、リンカがこれらを利用できるようになっています。これらの関数は今のところ[最適化されておらず][not optimized]、性能は最高ではないかもしれないものの、少なくとも正しい実装ではあるということは知っておく価値があるでしょう。`x86_64`については、[これらの関数を特殊なアセンブリ命令を使って最適化する][memcpy rep movsb]プルリクエストが提出されています。
+このとき、裏で`compiler_builtins`クレートの[`mem`機能][`mem` feature]が有効化されています。これにより、このクレートの[`memcpy`などの実装][`memcpy` etc. implementations]に`#[no_mangle]`アトリビュートが適用され、リンカがこれらを利用できるようになっています。
 
 [`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L51-L52
 [`memcpy` etc. implementations]: (https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69)
-[not optimized]: https://github.com/rust-lang/compiler-builtins/issues/339
-[memcpy rep movsb]: https://github.com/rust-lang/compiler-builtins/pull/365
 
 この変更をもって、私達のカーネルはコンパイラに必要とされているすべての関数の有効な実装を手に入れたので、コードがもっと複雑になっても変わらずコンパイルできるでしょう。
 

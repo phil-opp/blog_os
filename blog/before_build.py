@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import io
-import urllib2
+import urllib
 import datetime
 from github import Github
 
@@ -23,7 +23,7 @@ with io.open("templates/auto/recent-updates.html", 'w', encoding='utf8') as rece
     recent_updates.truncate()
 
     relnotes_issues = g.search_issues("is:merged", repo="phil-opp/blog_os", type="pr", label="relnotes")[:100]
-    recent_relnotes_issues = filter(filter_date, relnotes_issues)
+    recent_relnotes_issues = list(filter(filter_date, relnotes_issues))
 
     if len(recent_relnotes_issues) == 0:
         recent_updates.write(u"No notable updates recently.")
@@ -58,8 +58,8 @@ month = 4
 while True:
     url = "https://rust-osdev.com/this-month/" + str(year) + "-" + str(month).zfill(2) + "/"
     try:
-        urllib2.urlopen(url)
-    except urllib2.HTTPError as e:
+        urllib.request.urlopen(url)
+    except urllib.error.HTTPError as e:
         break
 
     month_str = datetime.date(1900, month, 1).strftime('%B')
@@ -69,7 +69,7 @@ while True:
 
     month = month + 1
     if month > 12:
-        month = 0
+        month = 1
         year = year + 1
 
 lines.reverse()

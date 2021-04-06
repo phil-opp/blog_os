@@ -550,7 +550,7 @@ impl LinkedListAllocator {
 }
 ```
 
-The struct contains a `head` node that points to the first heap region. We are only interested in the value of the `next` pointer, so we set the `size` to 0 in the `ListNone::new` function. Making `head` a `ListNode` instead of just a `&'static mut ListNode` has the advantage that the implementation of the `alloc` method will be simpler.
+The struct contains a `head` node that points to the first heap region. We are only interested in the value of the `next` pointer, so we set the `size` to 0 in the `ListNode::new` function. Making `head` a `ListNode` instead of just a `&'static mut ListNode` has the advantage that the implementation of the `alloc` method will be simpler.
 
 Like for the bump allocator, the `new` function doesn't initialize the allocator with the heap bounds. In addition to maintaining API compatibility, the reason is that the initialization routine requires to write a node to the heap memory, which can only happen at runtime. The `new` function, however, needs to be a [`const` function] that can be evaluated at compile time, because it will be used for initializing the `ALLOCATOR` static. For this reason, we again provide a separate, non-constant `init` method.
 
@@ -948,8 +948,9 @@ For constructing a `FixedSizeBlockAllocator`, we provide the same `new` and `ini
 impl FixedSizeBlockAllocator {
     /// Creates an empty FixedSizeBlockAllocator.
     pub const fn new() -> Self {
+        const EMPTY: Option<&'static mut ListNode> = None;
         FixedSizeBlockAllocator {
-            list_heads: [None; BLOCK_SIZES.len()],
+            list_heads: [EMPTY; BLOCK_SIZES.len()],
             fallback_allocator: linked_list_allocator::Heap::empty(),
         }
     }
@@ -965,7 +966,7 @@ impl FixedSizeBlockAllocator {
 }
 ```
 
-The `new` function just initializes the `list_heads` array with empty nodes and creates an [`empty`] linked list allocator as `fallback_allocator`. Since array initializations using non-`Copy` types are still unstable, we need to add **`#![feature(const_in_array_repeat_expressions)]`** to the beginning of our `lib.rs`. The reason that `None` is not `Copy` in this case is that `ListNode` does not implement `Copy`. Thus, the `Option` wrapper and its `None` variant are not `Copy` either.
+The `new` function just initializes the `list_heads` array with empty nodes and creates an [`empty`] linked list allocator as `fallback_allocator`. The `EMPTY` constant is needed because to tell the Rust compiler that we want to initialize the array with a constant value. Initializing the array directly as `[None; BLOCK_SIZES.len()]` does not work because then the compiler requires that `Option<&'static mut ListNode>` implements the `Copy` trait, which is does not. This is a current limitation of the Rust compiler, which might go away in the future.
 
 [`empty`]: https://docs.rs/linked_list_allocator/0.8.0/linked_list_allocator/struct.Heap.html#method.empty
 

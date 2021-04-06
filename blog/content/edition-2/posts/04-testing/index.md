@@ -34,7 +34,7 @@ This post replaces the (now deprecated) [_Unit Testing_] and [_Integration Tests
 
 Rust has a [built-in test framework] that is capable of running unit tests without the need to set anything up. Just create a function that checks some results through assertions and add the `#[test]` attribute to the function header. Then `cargo test` will automatically find and execute all test functions of your crate.
 
-[built-in test framework]: https://doc.rust-lang.org/book/second-edition/ch11-00-testing.html
+[built-in test framework]: https://doc.rust-lang.org/book/ch11-00-testing.html
 
 Unfortunately it's a bit more complicated for `no_std` applications such as our kernel. The problem is that Rust's test framework implicitly uses the built-in [`test`] library, which depends on the standard library. This means that we can't use the default test framework for our `#[no_std]` kernel.
 
@@ -174,18 +174,18 @@ The functionality of the `isa-debug-exit` device is very simple. When a `value` 
 
 Instead of manually invoking the `in` and `out` assembly instructions, we use the abstractions provided by the [`x86_64`] crate. To add a dependency on that crate, we add it to the `dependencies` section in our `Cargo.toml`:
 
-[`x86_64`]: https://docs.rs/x86_64/0.12.1/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.13.2/x86_64/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.12.1"
+x86_64 = "0.13.2"
 ```
 
 Now we can use the [`Port`] type provided by the crate to create an `exit_qemu` function:
 
-[`Port`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/port/struct.Port.html
 
 ```rust
 // in src/main.rs
@@ -836,7 +836,7 @@ At this point, `cargo run` and `cargo test` should work again. Of course, `cargo
 
 ### Completing the Integration Test
 
-Like our `src/main.rs`, our `tests/basic_boot.rs` executable can import types from our new library. This allows us to import the missing components to complete our test.
+Like our `src/main.rs`, our `tests/basic_boot.rs` executable can import types from our new library. This allows us to import the missing components to complete our test:
 
 ```rust
 // in tests/basic_boot.rs
@@ -849,7 +849,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-Instead of reimplementing the test runner, we use the `test_runner` function from our library. For our `panic` handler, we call the `blog_os::test_panic_handler` function like we did in our `main.rs`.
+Instead of reimplementing the test runner, we use the `test_runner` function from our library by changing the `#![test_runner(crate::test_runner)]` attribute to `#![test_runner(blog_os::test_runner)]`. We then don't need the `test_runner` stub function in `basic_boot.rs` anymore, so we can remove it. For our `panic` handler, we call the `blog_os::test_panic_handler` function like we did in our `main.rs`.
 
 Now `cargo test` exits normally again. When you run it, you see that it builds and runs the tests for our `lib.rs`, `main.rs`, and `basic_boot.rs` separately after each other. For the `main.rs` and the `basic_boot` integration test, it reports "Running 0 tests" since these files don't have any functions annotated with `#[test_case]`.
 
