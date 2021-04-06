@@ -6,8 +6,15 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use core::{alloc::Layout, fmt::Write, panic::PanicInfo};
-use uefi::{prelude::entry, proto::console::gop::GraphicsOutput, table::cfg};
+use core::{alloc::Layout, fmt::Write, mem, panic::PanicInfo, slice};
+use uefi::{
+    prelude::entry,
+    proto::console::gop::GraphicsOutput,
+    table::{
+        boot::{MemoryDescriptor, MemoryType},
+        cfg,
+    },
+};
 
 #[entry]
 fn efi_main(
@@ -47,6 +54,22 @@ fn efi_main(
         gop.frame_buffer().as_mut_ptr()
     )
     .unwrap();
+
+    let mmap_storage = {
+        let max_mmap_size =
+            system_table.boot_services().memory_map_size() + 8 * mem::size_of::<MemoryDescriptor>();
+        let ptr = system_table
+            .boot_services()
+            .allocate_pool(MemoryType::LOADER_DATA, max_mmap_size)?
+            .unwrap();
+        unsafe { slice::from_raw_parts_mut(ptr, max_mmap_size) }
+    };
+
+    uefi::alloc::exit_boot_services();
+    let (system_table, memory_map) = system_table
+        .exit_boot_services(image, mmap_storage)
+        .unwrap()
+        .unwrap();
 
     loop {}
 }
