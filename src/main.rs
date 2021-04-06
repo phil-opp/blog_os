@@ -7,7 +7,7 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use core::{alloc::Layout, fmt::Write, panic::PanicInfo};
-use uefi::prelude::entry;
+use uefi::{prelude::entry, table::cfg};
 
 #[entry]
 fn efi_main(
@@ -27,6 +27,12 @@ fn efi_main(
     v.push(1);
     v.push(2);
     writeln!(stdout, "v = {:?}", v).unwrap();
+
+    let mut config_entries = system_table.config_table().iter();
+    let rsdp_addr = config_entries
+        .find(|entry| matches!(entry.guid, cfg::ACPI_GUID | cfg::ACPI2_GUID))
+        .map(|entry| entry.address);
+    writeln!(stdout, "rsdp addr: {:?}", rsdp_addr).unwrap();
 
     loop {}
 }
