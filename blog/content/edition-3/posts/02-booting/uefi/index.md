@@ -756,13 +756,11 @@ Note that we also need to call `uefi::alloc::exit_boot_services()` before exitin
 
 ## Creating a Bootloader
 
-Now that we know how to set up a framebuffer and query relevant system information, we only need a few more steps to turn our UEFI application into a bootloader. These steps includes loading a kernel executable into memory, setting up an execution environment, and passing control to the kernel's entry point function. In the following, we give some high-level instructions for each of these steps.
+Now that we know how to set up a framebuffer and query relevant system information, we're only missing one crucial function to turn our UEFI application into a bootloader: loading the kernel. This includes loading a kernel executable into memory, setting up an execution environment, and passing control to the kernel's entry point function. Unfortunately, this process can be quite complex so that we cannot cover it here. However, we will give some high-level instructions in the following.
 
-### Loading the Kernel
+### Loading the Kernel from Disk
 
-The first step is to load the kernel executable and setting it up properly. This involves loading the kernel from disk into memory, allocating a stack for it, and setting up a new page table hierarchy to properly map it to virtual memory.
-
-One approach for including our kernel could be to place it in the FAT partition created by our `disk_image` crate. Then we could use the _simple file system_ protocol of UEFI (see section 12.3 of the standard ([PDF][uefi-pdf])) to load it from disk into memory. The `uefi` crate supports this protocol through its [`SimpleFileSystem`] type.
+The first step is to load the kernel executable from disk into main memory. One approach for including our kernel could be to place it in the FAT partition created by our `disk_image` crate. Then we could use the _simple file system_ protocol of UEFI (see section 12.3 of the standard ([PDF][uefi-pdf])) to load it from disk into memory. The `uefi` crate supports this protocol through its [`SimpleFileSystem`] type.
 
 [`SimpleFileSystem`]: https://docs.rs/uefi/0.8.0/uefi/proto/media/fs/struct.SimpleFileSystem.html
 
@@ -773,6 +771,8 @@ To keep things simple, we will use a different appoach here. Instead of loading 
 ```rust
 static KERNEL: &[u8] = include_bytes!("path/to/the/kernel/executable");
 ```
+
+### Parsing the Kernel Executable
 
 After loading the kernel executable into memory (one way or another), we need to parse it. In the following, we assume that the kernel uses the [ELF] executable format, which is popular in the Linux world. This is also the excutable format that the kernel created in this blog series uses.
 
@@ -790,7 +790,7 @@ There are various tools to analyze ELF files and read out most headers. The clas
 [`elf`]: https://docs.rs/elf/0.0.10/elf/
 [`xmas-elf`]: https://docs.rs/xmas-elf/0.7.0/xmas_elf/
 
-The parsing and mapping process then looks roughly like this:
+The parsing process looks roughly like this:
 
 ```rust
 let elf_file = ElfFile::new(KERNEL)?;
@@ -799,40 +799,68 @@ header::sanity_check(&elf_file)?;
 for segment in elf_file_program_iter() {
     program::sanity_check(segment, &elf_file)?;
     if let Type::Load = segment.get_type()? {
-        let phys_start = phys_offset(KERNEL) + segment.offset();
-        let phys_end = phys_start + segment.file_size();
-
-        let virt_start = segment.virtual_addr();
-        let virt_end = virt_start + segment.mem_size();
-
-        let permissions = permissions_from_flags(segment.flags());
-
-        for frame in frame(phys_start)..=frame(phys_end -1) {
-            // TODO: create page table mapping for frame with permissions
-            // at corresponding virtual address
-        }
-
-        if virt_end > phys_end {
-            // TODO: there is a `.bss` section in this segment -> map next
-            // (virt_end - phys_end) bytes to free physical frame and initialize
-            // them with zero
-        }
+        todo!("map segment");
     }
 }
 ```
 
-After creating a new page table mapping for the kernel this way, we need to allocate a runtime stack for it. For that, we choose a region of unused physical memory and map it to some virtual address. Ideally, we choose the virtual address range in a way that the page immediately before it is not mapped. Thus, we create a so-called _guard page_ that ensures that stack overflows lead to a CPU exception (a page fault) instead of corrupting other data.
+### Virtual Memory Mapping
+
+In order to run multiple programs isolated from each other in parallel, modern computers use a technique called [_virtual memory_]. We will cover virtual memory in detail later in this series, but the basic idea is to provide a _virtual address space_ split in 4KiB large blocks called _pages_. A [_page table_] maps each page to an arbitrary block of physical memory. This way, multiple programs can run at the same virtual address without conflict because they map to different physical memory behind the scenes.
+
+[_virtual memory_]: https://en.wikipedia.org/wiki/Virtual_memory
+[_page table_]: https://en.wikipedia.org/wiki/Page_table
+
+Virtual memory also has lots of other advantages such as fine-grained access control (read/write/execute permissions per page), support for safe shared memory (multiple read-only pages can be mapped to the same frame), and transparent swapping (moving some memory content to disk when main memory becomes too full).
+
+For loading our kernel into virtual memory, we first need to create a new page table. In it, we add mappings for all segments of the kernel executable at their specified virtual addresses. We already loaded the kernel into physical memory, so we can calculate the corresponding frame for each page by adding the segment offset to the physical start address of the `KERNEL` static.
+
+Put together, the mapping process could look like this:
+
+```rust
+if let Type::Load = segment.get_type()? {
+    let phys_start = phys_offset(KERNEL) + segment.offset();
+    let phys_end = phys_start + segment.file_size();
+
+    let virt_start = segment.virtual_addr();
+    let virt_end = virt_start + segment.mem_size();
+
+    let permissions = permissions_from_flags(segment.flags());
+
+    for frame in frame(phys_start)..=frame(phys_end -1) {
+        // TODO: create page table mapping for frame with permissions
+        // at corresponding virtual address
+    }
+
+    if virt_end > phys_end {
+        // TODO: there is a `.bss` section in this segment -> map next
+        // (virt_end - phys_end) bytes to free physical frame and initialize
+        // them with zero
+    }
+}
+```
+
+As mentioned above, `.bss`-like sections are not stored in the executable since storing their null bytes would only bloat the executable. This results in ELF segments whose `mem_size()` (i.e. size in memory) is larger than their `file_size()` (i.e. segment size in the executable file). These segments require special handling: We need to allocate additional unused physical frames from the memory map we created above and initialize them with zero. Then we can map the additional `mem_size() - file_size()` bytes to these frames.
+
+### Creating a Stack
+
+After creating the page table mappings for the kernel, we need to allocate a [execution stack] for it. For that, we choose a region of unused physical memory from the physical memory map and map it to some virtual address. Ideally, we choose the virtual address range in a way that the page immediately before it is not mapped. Thus, we create a so-called _guard page_ that ensures that stack overflows lead to a CPU exception (a page fault) instead of corrupting other data.
+
+[execution stack]: https://en.wikipedia.org/wiki/Call_stack
 
 ### Switching to Kernel
 
-### Challenges
+The final step is to switch to the kernel address space and jump to its entry point function. For this, we need to fill the [`CR3`] register with the address of the created kernel page table and the `rsp` stack pointer register with the end address of the stack (the stack grows downwards on x86_64). Then we can use the `jmp` or `call` instruction to jump to the kernel entry point function. These steps require [inline assembly] and should be done directly after each other (in one `asm` block) because changing the `cr3` and `rsp` registers will break any following Rust code in the bootloader.
 
-#### Boot Information
+[`CR3`]: https://en.wikipedia.org/wiki/Control_register#CR3
+[inline assembly]: https://doc.rust-lang.org/unstable-book/library-features/asm.html
 
-- Physical Memory
+The context switch function itself must be mapped to both the kernel and bootloader address spaces at the exact same address. This is required because the address space switch happens directly when reloading the `CR3` register, so while the code is still executing the code of the context switch function. So the context switch function must be mapped in the new address space too. The kernel can of course remove this mapping later.
 
-#### Integration in Build System
+## Summary
 
-#### Common Interface with BIOS
+We saw that the UEFI standard already implements lots of functionality. Rust's built-in support for the `x86_64-unknown-uefi` target makes it quite easy to create a minimal UEFI application. To turn the UEFI application into a bootable disk image, we created a `disk_image` builder binary that uses the [`fatfs`] and [`gpt`] crates.
 
-#### Configurability
+The easiest way to access the services of the UEFI system table is the [`uefi`] crate. It provides abstractions for all kinds of UEFI protocols, including graphics output (text and framebuffer-based), memory allocation, and various system information (e.g. memory map and RSDP address).
+
+To turn the UEFI application into a bootloader, we first need to load the kernel executable from disk into memory. We then parse it and create virtual memory mappings for its segments in a new page table. We also need to allocate and map an execution stack for the kernel. The final step is to load the `CR3` and `rsp` registers accordingly and invoke the kernel's entry point function.
