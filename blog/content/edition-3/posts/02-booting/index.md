@@ -191,7 +191,7 @@ To use the `bootloader` crate, we first need to add a dependency on it:
 # in Cargo.toml
 
 [dependencies]
-bootloader = "0.10.0-alpha-02"          # TODO
+bootloader = "0.10.1"
 ```
 
 For normal Rust crates, this step would be all that's needed for adding them as a dependency. However, the `bootloader` crate is a bit special. The problem is that it needs access to our kernel _after compilation_ in order to create a bootable disk image. However, cargo has no support for automatically running code after a successful build, so we need some manual build code for this. (There is a proposal for [post-build scripts] that would solve this issue, but it is not clear yet whether the Cargo team wants to add such a feature.)
@@ -202,9 +202,9 @@ For normal Rust crates, this step would be all that's needed for adding them as 
 
 Before we look into the bootable disk image creation, we update need to update our `_start` entry point to be compatible with the `bootloader` crate. As we already mentioned above, bootloaders commonly pass additional system information when invoking the kernel, such as the amount of available memory. The `bootloader` crate also follows this convention, so we need to update our `_start` entry point to expect an additional argument.
 
-The [`bootloader` documentation] specifies that a kernel entry point should have the following signature:
+The [`bootloader` documentation][`BootInfo`] specifies that a kernel entry point should have the following signature:
 
-[`bootloader` documentation]: TODO
+[`BootInfo`]: https://docs.rs/bootloader/0.10.1/bootloader/boot_info/struct.BootInfo.html
 
 ```rust
 extern "C" fn(boot_info: &'static mut bootloader::BootInfo) -> ! { ... }
@@ -212,7 +212,7 @@ extern "C" fn(boot_info: &'static mut bootloader::BootInfo) -> ! { ... }
 
 The only difference to our `_start` entry point is the additional `boot_info` argument, which is passed by the `bootloader` crate. This argument is a mutable reference to a [`bootloader::BootInfo`] type, which provides various information about the system.
 
-[`bootloader::BootInfo`]: TODO
+[`bootloader::BootInfo`]: https://docs.rs/bootloader/0.10.1/bootloader/boot_info/struct.BootInfo.html
 
 <div class="note"><details>
 <summary><h5>About <code>extern "C"</code> and <code>!</code></h5></summary>
@@ -256,9 +256,9 @@ After adjusting our entry point for the `bootloader` crate, we can now look into
 
 ### Creating a Disk Image
 
-The [Readme of the `bootloader` crate][`bootloader` Readme] describes how to create a bootable disk image for a kernel. The first step is to find the directory where cargo placed the source code of the `bootloader` dependency. Then, a special build command needs to be executed in that directory, passing the paths to the kernel binary and its `Cargo.toml` as arguments. This will result in multiple disk image files as output, which can be used to boot the kernel on BIOS and UEFI systems.
+The [docs of the `bootloader` crate][`bootloader` docs] describes how to create a bootable disk image for a kernel. The first step is to find the directory where cargo placed the source code of the `bootloader` dependency. Then, a special build command needs to be executed in that directory, passing the paths to the kernel binary and its `Cargo.toml` as arguments. This will result in multiple disk image files as output, which can be used to boot the kernel on BIOS and UEFI systems.
 
-[`bootloader` Readme]: TODO
+[`bootloader` docs]: https://docs.rs/bootloader/0.10.1/bootloader/
 
 #### A `boot` crate
 
@@ -340,14 +340,14 @@ It worked! We see that the bootloader source code lives somewhere in the `.cargo
 
 #### Running the Build Command
 
-The next step is to run the build command of the bootloader. From the [`bootloader` Readme] we learn that the crate requires the following build command:
+The next step is to run the build command of the bootloader. From the [`bootloader` docs] we learn that the crate requires the following build command:
 
 ```
 cargo builder --kernel-manifest path/to/kernel/Cargo.toml \
     --kernel-binary path/to/kernel_bin
 ```
 
-In addition, the Readme recommends to use the `--target-dir` and `--out-dir` arguments when building the bootloader as a dependency to override where cargo places the compilation artifacts.
+In addition, the docs recommend to use the `--target-dir` and `--out-dir` arguments when building the bootloader as a dependency to override where cargo places the compilation artifacts.
 
 Let's try to invoke that command from our `main` function. For that we use the [`process::Command`] type of the standard library, which allows us to spawn new processes and wait for their results:
 
@@ -484,7 +484,7 @@ After that can finally use our `boot` crate to create some bootable disk images 
 
 We first compile our kernel through `cargo kbuild` to ensure that the kernel binary is up to date. Then we run our `boot` crate through `cargo run --package boot`, which takes the kernel binary and builds the bootloader around it. The result are some disk image files named `bootimage-*` next to our kernel binary inside `target/x86_64-blog_os/debug`. Note that the command will only work from the root directory of our project. This is because we hardcoded the `kernel_binary` path in our `main` function. We will fix this later in the post, but first it is time to actually run our kernel!
 
-From the [`bootloader` Readme], we learn that the bootloader the following disk images:
+From the [`bootloader` docs], we learn that the bootloader the following disk images:
 
 - A BIOS boot image named `bootimage-bios-<bin_name>.img`.
 - Multiple images suitable for UEFI booting
@@ -551,8 +551,6 @@ Screen output works through a so-called [_framebuffer_]. A framebuffer is a memo
 
 Since the size, pixel format, and memory location of the framebuffer can vary between different systems, we need to find out these parameters first. The easiest way to do this is to read it from the [boot information structure][`BootInfo`] that the bootloader passes as argument to our kernel entry point:
 
-[`BootInfo`]: TODO
-
 ```rust
 // in src/main.rs
 
@@ -568,11 +566,11 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 Even though most systems support a framebuffer, some might not. The [`BootInfo`] type reflects this by specifying its `framebuffer` field as an [`Option`]. Since screen output won't be essential for our kernel (there are other possible communication channels such as serial ports), we use an [`if let`] statement to run the framebuffer code only if a framebuffer is available.
 
 [`Option`]: https://doc.rust-lang.org/std/option/enum.Option.html
-[`if let`]: TODO
+[`if let`]: https://doc.rust-lang.org/reference/expressions/if-expr.html#if-let-expressions
 
 The [`FrameBuffer`] type provides two methods: The [`info`] method returns a [`FrameBufferInfo`] instance with all kinds of information about the framebuffer format, including the pixel type and the screen resolution. The [`buffer`] method returns the actual framebuffer content in form of a mutable byte [slice].
 
-[`FrameBuffer`]: TODO
+[`FrameBuffer`]: https://docs.rs/bootloader/0.10.1/bootloader/boot_info/struct.FrameBuffer.html
 
 We will look into programming the framebuffer in detail in the next post. For now, let's just try setting the whole screen to some color. For this, we just set every pixel in the byte slice to some fixed value:
 
