@@ -518,26 +518,33 @@ qemu-system-x86_64 -drive \
 
 As a result, you should see a window open that looks like this:
 
-TODO: QEMU screenshot
+![QEMU printing several `INFO:` log messages](qemu-bios.png)
 
-This output comes from the bootloader. As we see, the last line is "Jumping to kernel entry point at […]". This is the point where the `_start` function of our kernel is called. Since we currently only `loop {}` in that function nothing else happens, so it is expected that we don't see any additional output.
+This output comes from the bootloader. As we see, the last line is _"Jumping to kernel entry point at […]"_. This is the point where the `_start` function of our kernel is called. Since we currently only `loop {}` in that function nothing else happens, so it is expected that we don't see any additional output.
 
-Running the UEFI disk image works in a similar way, but we need to pass some additional files to QEMU to emulate an UEFI firmware. This is necessary because QEMU does not support emulating an UEFI firmware natively. The files that we need are provided by the [Open Virtual Machine Firmware (OVMF)][OVMF] project, which implements UEFI support for virtual machines. Unfortunately, the project is only very sparsely documented and not even has a clear homepage.
+Running the UEFI disk image works in a similar way, but we need to pass some additional files to QEMU to emulate an UEFI firmware. This is necessary because QEMU does not support emulating an UEFI firmware natively. The files that we need are provided by the [Open Virtual Machine Firmware (OVMF)][OVMF] project, which is a sub-project of [TianoCore] and implements UEFI support for virtual machines. Unfortunately, the project is only [sparsely documented][ovmf-whitepaper] and does not even have a clear homepage.
 
-[OVMF]: http://www.linux-kvm.org/downloads/lersek/ovmf-whitepaper-c770f8c.txt
+[OVMF]: https://github.com/tianocore/tianocore.github.io/wiki/OVMF
+[TianoCore]: https://www.tianocore.org/
+[ovmf-whitepaper]: https://www.linux-kvm.org/downloads/lersek/ovmf-whitepaper-c770f8c.txt
 
-The easiest way to work with OVMF is to download pre-built images of the code. We provide such images at TODO. Both the `OVMF_CODE.fd` and `OVMF_VARS.fd` files are needed, so download them to a directory of your choice. Using these files, we can then run our UEFI disk image using the following command:
+The easiest way to work with OVMF is to download pre-built images of the code. We provide such images in the [`rust-osdev/ovmf-prebuilt`] repository, which is updated daily from [Gerd Hoffman's RPM builds](https://www.kraxel.org/repos/). The compiled OVMF are provided as [GitHub releases][ovmf-prebuilt-releases].
+
+[`rust-osdev/ovmf-prebuilt`]: https://github.com/rust-osdev/ovmf-prebuilt/
+[ovmf-prebuilt-releases]: https://github.com/rust-osdev/ovmf-prebuilt/releases/latest
+
+To run our UEFI disk image in QEMU, we need the `OVMF_pure-efi.fd` file (other files might work as well). After downloading it, we can then run our UEFI disk image using the following command:
 
 ```
 qemu-system-x86_64 -drive \
     format=raw,file=target/x86_64-blog_os/debug/bootimage-uefi-blog_os.img \
-    -drive if=pflash,format=raw,file=/path/to/OVMF_CODE.fd,
-    -drive if=pflash,format=raw,file=/path/to/OVMF_VARS.fd,
+    -bios /path/to/OVMF_pure-efi.fd,
 ```
 
 If everything works, this command opens a window with the following content:
 
-TODO: QEMU UEFI screenshot
+
+![QEMU printing several `INFO:` log messages](qemu-uefi.png)
 
 The output is a bit different than with the BIOS disk image. Among other things, it explicitly mentions that this is an UEFI boot right on top.
 
