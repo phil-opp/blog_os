@@ -306,6 +306,7 @@ Fortunately, the `compiler_builtins` crate already contains implementations for 
 
 [unstable]
 build-std-features = ["compiler-builtins-mem"]
+build-std = ["core", "compiler_builtins"]
 ```
 
 (Support for the `compiler-builtins-mem` feature was only [added very recently](https://github.com/rust-lang/rust/pull/77284), so you need at least Rust nightly `2020-09-30` for it.)
