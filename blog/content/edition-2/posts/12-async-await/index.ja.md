@@ -829,7 +829,7 @@ impl Task {
 
 この関数は、出力型が `()` の任意のfutureを受け取り、[`Box::pin`] 関数を使ってそれをメモリに固定します。そして、ボックス化されたfutureを `Task` 構造体でラップして返します。ここで `'static` lifetime が必要なのは、返された `Task` が任意の時間だけ生き続けることができるので、futureもその時間だけ有効である必要があるからです。
 
-また、`poll`メソッドを追加して、エクゼqueueタがstored futureをポーリングできるようにしましょう:
+また、`poll`メソッドを追加して、エクゼキュータがstored futureをポーリングできるようにしましょう:
 
 ```rust
 // in src/task/mod.rs
@@ -847,7 +847,7 @@ impl Task {
 
 ### Simple Executor
 
-エクゼqueueタは非常に複雑なものになる可能性があるので、より機能的なエクゼqueueタを後から実装する前に、あえて非常に基本的なエクゼqueueタを作ることから始めます。そのために、まず新しい `task::simple_executor` サブモジュールを作成します:
+エクゼキュータは非常に複雑なものになる可能性があるので、より機能的なエクゼキュータを後から実装する前に、あえて非常に基本的なエクゼキュータを作ることから始めます。そのために、まず新しい `task::simple_executor` サブモジュールを作成します:
 
 ```rust
 // in src/task/mod.rs
@@ -908,13 +908,13 @@ fn dummy_waker() -> Waker {
 
 ##### `RawWaker`
 
-[`RawWaker`] 型では、プログラマが [_virtual method table_] (_vtable_) を明示的に定義する必要があります。このテーブルは、`RawWaker` がクローンされたり、起こされたり、落とされたりしたときに呼び出されるべき関数を指定します。このvtableのレイアウトは[`RawWakerVTable`]という型で定義されています。各関数は、基本的にはheap上に確保された構造体への**型消去された** `&self` ポインタである `*const ()` 引数を受け取ります。参照ではなく `*const ()` ポインタを使う理由は、`RawWaker` の型はnon-genericであるべきだが、それでも任意の型をサポートする必要があるからである。関数に渡されるポインタの値は [`RawWaker::new`] に渡される `data` ポインタです。
+[`RawWaker`] 型では、プログラマが [_virtual method table_] (_vtable_) を明示的に定義する必要があります。このテーブルは、`RawWaker` がクローンされたり、起こされたり、落とされたりしたときに呼び出されるべき関数を指定します。このvtableのレイアウトは[`RawWakerVTable`]という型で定義されています。各関数は、基本的にはheap上に確保された構造体への**型消去された** `&self` ポインタである `*const ()` 引数を受け取ります。参照ではなく `*const ()` ポインタを使う理由は、`RawWaker` の型はnon-genericであるべきだが、それでも任意の型をサポートする必要があるからです。関数に渡されるポインタの値は [`RawWaker::new`] に渡される `data` ポインタです。
 
 [_virtual method table_]: https://en.wikipedia.org/wiki/Virtual_method_table
 [`RawWakerVTable`]: https://doc.rust-lang.org/stable/core/task/struct.RawWakerVTable.html
 [`RawWaker::new`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html#method.new
 
-通常、`RawWaker` は [`Box`] や [`Arc`] 型にラッピングされた、heapに割り当てられた構造体に対して作成されます。このような型では、 [`Box::into_raw`] のようなメソッドを使用して、 `Box<T>` を `*const T` ポインタに変換することができます。このポインタをanonymousの `*const ()` ポインタにキャストして、 `RawWaker::new` に渡すことができます。各vtable関数は同じ`*const ()`を引数として受け取るので、各関数は安全にポインタを`Box<T>`や`&T`にキャストし直して操作することができます。想像できると思いますが、この処理は非常に危険で、間違っても未定義の動作になりやすいです。このような理由から、`RawWaker` を手動で作成することは、必要な場合を除いてお勧めできません。
+通常、`RawWaker` は [`Box`] や [`Arc`] 型にラッピングされた、heapに割り当てられた構造体に対して作成されます。このような型では、 [`Box::into_raw`] のようなメソッドを使用して、 `Box<T>` を `*const T` ポインタに変換することができます。このポインタをanonymousの `*const ()` ポインタにキャストして、 `RawWaker::new` に渡すことができます。各vtable関数は同じ`*const ()`を引数として受け取るので、各関数は安全にポインタを`Box<T>`や`&T`にキャストし直して操作することができます。想像できると思いますが、この処理は非常に危険で、ミスにより未定義動作を引き起こすことが多いです。このような理由から、`RawWaker` を手動で作成することは、必要な場合を除いてお勧めできません。
 
 [`Box`]: https://doc.rust-lang.org/stable/alloc/boxed/struct.Box.html
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
@@ -922,7 +922,7 @@ fn dummy_waker() -> Waker {
 
 ##### A Dummy `RawWaker`
 
-手動で `RawWaker` を作成することはお勧めできませんが、何もしないdummy `Waker` を作成する方法は今のところありません。幸いなことに、何もしたくないという事実は、`dummy_raw_waker`関数を実装する上で比較的安全です:
+手動で `RawWaker` を作成することはお勧めできませんが、何もしないdummy `Waker` を作成する方法は今のところ他にありません。幸いなことに、何もしたくないということで、`dummy_raw_waker`関数の実装は比較的安全です:
 
 ```rust
 // in src/task/simple_executor.rs
@@ -946,7 +946,7 @@ fn dummy_raw_waker() -> RawWaker {
 
 #### A `run` Method
 
-これで `Waker` インスタンスを作成する方法ができたので、これを使ってエクゼqueueタに `run` メソッドを実装することができます。最もシンプルな `run` メソッドは、queueに入っているすべてのタスクを、すべて完了するまでループで繰り返しポーリングするものです。これは `Waker` 型の通知を利用していないのであまり効率的ではありませんが、物事を実行するための簡単な方法です:
+これで `Waker` インスタンスを作成する方法ができたので、これを使ってエクゼキュータに `run` メソッドを実装することができます。最もシンプルな `run` メソッドは、queueに入っているすべてのタスクを、すべて完了するまでループで繰り返しポーリングするものです。これは `Waker` 型の通知を利用していないのであまり効率的ではありませんが、物事を実行するための簡単な方法です:
 
 ```rust
 // in src/task/simple_executor.rs
@@ -1010,7 +1010,7 @@ async fn example_task() {
 - まず、`SimpleExecutor`タイプの新しいインスタンスが、空の`task_queue`とともに作成されます。
 - 次に、非同期の `example_task` 関数を呼び出して、futureを返します。このfutureを `Task` 型でラップして、heapに移動してピン留めし、`spawn` メソッドでタスクをexecutorの `task_queue` に追加します。
 - そして、`run`メソッドを呼び出して、queueの中の一つのタスクの実行を開始します。これには:
-    - タスクを `task_queue` の前に移動させる。
+    - `task_queue` の先頭からタスクをpopする。
     - タスク用の `RawWaker` を作成し、それを [`Waker`] インスタンスに変換し、そこから [`Context`] インスタンスを作成しています。
     - 先ほど作成した `Context` を使って、タスクのfutureに [`poll`] メソッドを呼び出します。
     - この `example_task` は何も待たないので、最初の `poll` 呼び出しで終了するまで直接実行することができます。ここで _"async number: 42"_ の行が表示されます。
@@ -1019,9 +1019,9 @@ async fn example_task() {
 
 ### Async Keyboard Input
 
-私たちのシンプルなエクゼqueueタは、`Waker`通知を利用せず、単純にすべてのタスクを完了するまでループさせます。今回の例では、最初の `poll` 呼び出しで `example_task` が直接実行されて終了するので、これは問題になりませんでした。適切な `Waker` の実装によるパフォーマンス上の利点を見るためには、まず真の非同期タスクを作成する必要があります。つまり、最初の `poll` 呼び出しで `Poll::Pending` を返すようなタスクです。
+私たちのシンプルなエクゼキュータは、`Waker`通知を利用せず、単純にすべてのタスクを完了するまでループさせます。今回の例では、最初の `poll` 呼び出しで `example_task` が直接実行されて終了するので、これは問題になりませんでした。適切な `Waker` の実装によるパフォーマンス上の利点を見るためには、まず真の非同期タスクを作成する必要があります。つまり、最初の `poll` 呼び出しで `Poll::Pending` を返すようなタスクです。
 
-私たちのシステムには、すでにこのために利用できるある種のasynchronicityがあります: hardware interrupts。[_Interrupts_]の項でご紹介したように、ハードウェアによる割り込みは、外部からの任意のタイミングで発生させることができます。例えば、ハードウェア・タイマーは、あらかじめ定義された時間が経過すると、CPUに割り込みを送ります。CPUは割り込みを受信すると、即座にinterrupt descriptor table (IDT)で定義された対応するハンドラー関数に制御を移します。
+すでに**ハードウェア割り込み**という非同期性があるので、それをこのために使うことができます。[_Interrupts_]の項でご紹介したように、ハードウェアによる割り込みは、外部からの任意のタイミングで発生させることができます。例えば、ハードウェア・タイマーは、あらかじめ定義された時間が経過すると、CPUに割り込みを送ります。CPUは割り込みを受信すると、即座にinterrupt descriptor table (IDT)で定義された対応するハンドラー関数に制御を移します。
 
 [_Interrupts_]: @/edition-2/posts/07-hardware-interrupts/index.md
 
@@ -1029,7 +1029,7 @@ async fn example_task() {
 
 #### Scancode Queue
 
-現在、キーボードの入力を割り込みハンドラで直接処理しています。割り込みハンドラは重要な作業を中断する可能性があるため、できるだけ短くする必要があるため、これは長期的には良いアイデアではありません。その代わり、割り込みハンドラは必要最小限の作業(e.g. キーボードのscancodeの読み取りなど)のみを行い、残りの作業(e.g. scancodeの解釈など)はバックグラウンドタスクに任せるべきです。
+現在、キーボードの入力を割り込みハンドラで直接処理しています。割り込みハンドラは重要な作業を中断する可能性がある以上できるだけ短くする必要があるため、これは長期的には良いアイデアではありません。その代わり、割り込みハンドラは必要最小限の作業(e.g. キーボードのscancodeの読み取りなど)のみを行い、残りの作業(e.g. scancodeの解釈など)はバックグラウンドタスクに任せるべきです。
 
 バックグラウンドタスクに作業を委ねるための一般的なパターンは、ある種のqueueを作成することです。割り込みハンドラは仕事の単位をqueueにpushし、バックグラウンドタスクはqueue内の仕事を処理します。今回のキーボード割込みに適用すると、割込みハンドラはキーボードからscancodeを読み取って、それをqueueにpushした後、returnするだけということになります。キーボードタスクは、queueの反対側に位置し、pushされた各scancodeを解釈して処理します:
 
