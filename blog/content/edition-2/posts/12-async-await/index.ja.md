@@ -40,7 +40,7 @@ hardware interruptでのタスク切り替え処理を下図に示します:
 
 ![](regain-control-on-interrupt.svg)
 
-最初の行では，CPUがプログラム`A`のタスク`A1`を実行しています．他のすべてのタスクは一時停止しています。2行目では、CPUにhardware interruptが入ります。[_Hardware Interrupts_]の記事で説明したように、CPUは直ちにタスク`A1`の実行を停止し、割り込み記述子テーブル(IDT)に定義されている割り込みハンドラにジャンプします。この割り込みハンドラを介して、OSは再びCPUを制御できるようになり、タスク`A1`の継続ではなく、タスク`B1`に切り替えることができます。
+最初の行では、CPUがプログラム`A`のタスク`A1`を実行しています。他のすべてのタスクは一時停止しています。2行目では、CPUにhardware interruptが入ります。[_Hardware Interrupts_]の記事で説明したように、CPUは直ちにタスク`A1`の実行を停止し、割り込み記述子テーブル(IDT)に定義されている割り込みハンドラにジャンプします。この割り込みハンドラを介して、OSは再びCPUを制御できるようになり、タスク`A1`の継続ではなく、タスク`B1`に切り替えることができます。
 
 [_Hardware Interrupts_]: @/edition-2/posts/07-hardware-interrupts/index.md
 
@@ -67,7 +67,7 @@ preemptive multitaskingとスレッドは、信頼されていないユーザー
 
 cooperative multitaskingでは、実行中のタスクを任意のタイミングで強制的に停止させるのではなく、各タスクが自発的にCPUの制御を放棄するまで実行させます。これにより、例えば、I/O操作を待つ必要がある場合など、都合の良いタイミングでタスクを一時停止させることができます。
 
-cooperative multitaskingは、言語レベルで使われることが多いです。具体的には、[coroutines]や[async/await]などの形で登場します。これは、プログラマやコンパイラがプログラムに[_yield_]操作を挿入することで、CPUの制御を放棄し、他のタスクを実行させるというものです。例えば，複雑なループの各反復の後に yield を挿入することができます．
+cooperative multitaskingは、言語レベルで使われることが多いです。具体的には、[coroutines]や[async/await]などの形で登場します。これは、プログラマやコンパイラがプログラムに[_yield_]操作を挿入することで、CPUの制御を放棄し、他のタスクを実行させるというものです。例えば、複雑なループの各反復の後に yield を挿入することができます。
 
 [coroutines]: https://en.wikipedia.org/wiki/Coroutine
 [async/await]: https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html
@@ -99,19 +99,19 @@ _future_ は、まだ利用できない可能性のある値を表します。�
 
 #### Example
 
-futures の概念は、小さな例で説明するのが一番です:
+future の概念は、小さな例で説明するのが一番です:
 
 ![シーケンス図: main は `read_file` を呼び出して戻るまでブロックされ、次に `foo()` を呼び出して戻るまでブロックされます。同じ処理が繰り返されますが、今回は `async_read_file` が呼ばれ、直接 future が返されます。そして `foo()` が再び呼ばれ、今度はファイルのロードと同時に実行されます。ファイルは `foo()` が戻る前に利用可能になります。](async-example.svg)
 
-このシーケンス図は，ファイルシステムからファイルを読み込み，関数 `foo` を呼び出す `main` 関数を示している．この処理は2回繰り返されます．同期的な `read_file` の呼び出しと、非同期的な `async_read_file` の呼び出しです。
+このシーケンス図は、ファイルシステムからファイルを読み込み、関数 `foo` を呼び出す `main` 関数を示している。この処理は2回繰り返されます。同期的な `read_file` の呼び出しと、非同期的な `async_read_file` の呼び出しです。
 
-同期呼び出しの場合，`main`関数はファイルシステムからファイルが読み込まれるまで待つ必要があります．それが終わって初めて，`foo`関数を呼び出すことができ，結果を再び待つ必要があります．
+同期呼び出しの場合、`main`関数はファイルシステムからファイルが読み込まれるまで待つ必要があります。それが終わって初めて、`foo`関数を呼び出すことができ、結果を再び待つ必要があります。
 
 非同期の `async_read_file` 呼び出しでは、ファイルシステムが直接futureを返し、バックグラウンドで非同期にファイルをロードします。これにより、`main`関数は`foo`をより早く呼び出すことができ、`foo`はファイルのロードと並行して実行されます。この例では、ファイルのロードは `foo` が戻る前に終了しているので、`main` は `foo` が戻った後にさらに待つことなく、ファイルを直接処理することができます。
 
 #### Futures in Rust
 
-Rustでは、futuresは[`Future`]という形容詞で表され、次のようになります:
+Rustでは、futuresは[`Future`]という trait で表され、次のようになります:
 
 [`Future`]: https://doc.rust-lang.org/nightly/core/future/trait.Future.html
 
@@ -122,9 +122,9 @@ pub trait Future {
 }
 ```
 
-[関連する型] `Output` は非同期値の型を指定します。例えば、上の図の `async_read_file` 関数は、`Output` を `File` に設定した `Future` インスタンスを返します。
+[関連型] `Output` は非同期値の型を指定します。例えば、上の図の `async_read_file` 関数は、`Output` を `File` に設定した `Future` インスタンスを返します。
 
-[関連する型]: https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types
+[関連型]: https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types
 
 [`poll`]メソッドは、その値がすでに利用可能かどうかをチェックすることができます。このメソッドは、以下のような [`Poll`] 列挙体を返します。
 
@@ -138,9 +138,9 @@ pub enum Poll<T> {
 }
 ```
 
-値が既に利用可能な場合(例えば，ファイルがディスクから完全に読み込まれた場合)，その値は `Ready` variantにラップされて返されます。それ以外の場合は，`Pending` variantが返され，呼び出し側に値がまだ利用できないことを知らせます．
+値が既に利用可能な場合(例えば、ファイルがディスクから完全に読み込まれた場合)、その値は `Ready` variantにラップされて返されます。それ以外の場合は、`Pending` variantが返され、呼び出し側に値がまだ利用できないことを知らせます。
 
-`poll`メソッドは2つの引数を取ります。`self: Pin<&mut Self>`と`cx: &mut Context`です。前者は通常の `&mut self` の参照のように動作しますが、`self` の値がそのメモリロケーションに [_pinned_] されるという違いがあります。`Pin`とその必要性を理解するには、まずasync/awaitの仕組みを理解しなければなりません。そのため、この記事の後半で説明します。
+`poll`メソッドは2つの引数を取ります。`self: Pin<&mut Self>`と`cx: &mut Context`です。前者は通常の `&mut self` の参照のように動作しますが、`self` の値がそのメモリロケーションに [_pin_] されるという違いがあります。`Pin`とその必要性を理解するには、まずasync/awaitの仕組みを理解しなければなりません。そのため、この記事の後半で説明します。
 
 [_pinned_]: https://doc.rust-lang.org/nightly/core/pin/index.html
 
@@ -150,11 +150,11 @@ pub enum Poll<T> {
 
 ### Working with Futures
 
-futuresがどのように定義されているか、また、`poll`メソッドの基本的な考え方を理解しました。しかし、futuresを効果的に使う方法はまだわかっていません。問題は、futuresが非同期タスクの結果を表していて、それがまだ利用できない可能性があることです。しかし、実際には、これらの値が次の計算のために直接必要になることがよくあります。そこで問題となるのは，どうすれば効率的にfutureの値を取り出すことができるかということです．
+futuresがどのように定義されているか、また、`poll`メソッドの基本的な考え方を理解しました。しかし、futuresを効果的に使う方法はまだわかっていません。問題は、futuresが非同期タスクの結果を表していて、それがまだ利用できない可能性があることです。しかし、実際には、これらの値が次の計算のために直接必要になることがよくあります。そこで問題となるのは、どうすれば効率的にfutureの値を取り出すことができるかということです。
 
 #### Waiting on Futures
 
-1つの可能な答えは、将来の準備が整うまで待つことです。これは次のようなものです:
+1つの可能な答えは、futureの準備が整うまで待つことです。これは次のようなものです:
 
 ```rust
 let future = async_read_file("foo.txt");
@@ -168,11 +168,11 @@ let file_content = loop {
 
 ここでは、`poll`をループで何度も呼び出すことで、futureを積極的に待つようにしています。`poll`の引数はここでは重要ではないので、省略しています。このソリューションは動作しますが、値が利用可能になるまでCPUを忙しくさせているので、非常に非効率的です。
 
-より効率的なアプローチは、futureが利用可能になるまで現在のスレッドを_block_することです。もちろん、これはスレッドがある場合にのみ可能なことで、この解決策は少なくとも現時点では、私たちのカーネルでは機能しません。ブロッキングがサポートされているシステムでも、非同期タスクが再び同期タスクになってしまい、並列タスクの潜在的なパフォーマンスの利点が阻害されてしまうため、ブロッキングは好まれません。
+より効率的なアプローチは、futureが利用可能になるまで現在のスレッドを **ブロック** することです。もちろん、これはスレッドがある場合にのみ可能なことで、この解決策は少なくとも現時点では、私たちのカーネルでは機能しません。ブロッキングがサポートされているシステムでも、非同期タスクが再び同期タスクになってしまい、並列タスクの潜在的なパフォーマンスの利点が阻害されてしまうため、ブロッキングは好まれません。
 
 #### Future Combinators
 
-待機する代わりに、future combinatorsを使うこともできます。future combinatorsは `map` のようなメソッドで、[`Iterator`] のメソッドと同じように、futureを連鎖させたり組み合わせたりすることができます。futureを待つのではなく、これらのcombinatorsはfuture自身を返し、`poll`のマッピング操作を適用する。
+待機する代わりに、future combinatorsを使うこともできます。future combinatorsは `map` のようなメソッドで、[`Iterator`] のメソッドと同じように、futureを連鎖させたり組み合わせたりすることができます。futureを待つのではなく、これらのcombinatorsはfuture自身を返し、`poll`のマッピング操作を適用します。
 
 [`Iterator`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html
 
@@ -209,13 +209,13 @@ fn file_len() -> impl Future<Output = usize> {
 }
 ```
 
-このコードは，[_pinning_]を扱っていないので，完全には動作しませんが，例としては十分です．基本的なアイデアは，`string_len` 関数が，与えられた `Future` インスタンスを，新しい `StringLen` 構造体にラップするというもので，この構造体も `Future` を実装しています．ラップされたfutureがポーリングされると，内部のfutureをポーリングします．値がまだ準備できていない場合は，ラップされたfutureからも `Poll::Pending` が返されます．値の準備ができていれば，`Poll::Ready` variantから文字列が抽出され，その長さが計算されます．その後、再び `Poll::Ready` にラップされて返されます。
+このコードは、[_pinning_]を扱っていないので、完全には動作しませんが、例としては十分です。基本的なアイデアは、`string_len` 関数が、与えられた `Future` インスタンスを、新しい `StringLen` 構造体にラップするというもので、この構造体も `Future` を実装しています。ラップされたfutureがポーリングされると、内部のfutureをポーリングします。値がまだ準備できていない場合は、ラップされたfutureからも `Poll::Pending` が返されます。値の準備ができていれば、`Poll::Ready` variantから文字列が抽出され、その長さが計算されます。その後、再び `Poll::Ready` にラップされて返されます。
 
 [_pinning_]: https://doc.rust-lang.org/stable/core/pin/index.html
 
-この`string_len`関数を使えば，非同期の文字列を待つことなく，その長さを計算することができます．この関数は再び`Future`を返すので，呼び出し側は返された値を直接扱うことはできず，再びコンビネータ関数を使う必要があります．このようにして，コールグラフ全体が非同期になり，どこかの時点で，例えばmain関数の中で，一度に複数のfutureを効率的に待つことができるようになりました．
+この`string_len`関数を使えば、非同期の文字列を待つことなく、その長さを計算することができます。この関数は再び`Future`を返すので、呼び出し側は返された値を直接扱うことはできず、再びコンビネータ関数を使う必要があります。このようにして、コールグラフ全体が非同期になり、どこかの時点で、例えばmain関数の中で、一度に複数のfutureを効率的に待つことができるようになりました。
 
-combinator関数を手動で書くのは難しいので，ライブラリで提供されることが多いです．Rustの標準ライブラリ自体はまだcombinatorのメソッドを提供していませんが，半公式(かつ`no_std`互換)の[`futures`]クレートは提供しています．その[`FutureExt`] traitは，[`map`]や[`then`]といった高レベルのコンビネータメソッドを提供しており，これを使って任意のクロージャで結果を操作することができます。
+combinator関数を手動で書くのは難しいので、ライブラリで提供されることが多いです。Rustの標準ライブラリ自体はまだcombinatorのメソッドを提供していませんが、半公式(かつ`no_std`互換)の[`futures`]クレートは提供しています。その[`FutureExt`] traitは、[`map`]や[`then`]といった高レベルのコンビネータメソッドを提供しており、これを使って任意のクロージャで結果を操作することができます。
 
 [`futures`]: https://docs.rs/futures/0.3.4/futures/
 [`FutureExt`]: https://docs.rs/futures/0.3.4/futures/future/trait.FutureExt.html
@@ -224,7 +224,7 @@ combinator関数を手動で書くのは難しいので，ライブラリで提�
 
 ##### Advantages
 
-future combinatorsの大きな利点は、操作を非同期に保つことができることです。非同期I/Oインターフェイスと組み合わせることで、このアプローチは非常に高いパフォーマンスを実現します。future combinatorsは通常の構造体として実装されていますが、traitの実装があるため、コンパイラが過剰に最適化してしまうのです。詳細については、Rustのエコシステムにfuturesが追加されたことを発表した[_Zero-cost futures in Rust_]の記事を参照してください。
+future combinatorsの大きな利点は、Operationを非同期に保つことができることです。非同期I/Oインターフェイスと組み合わせることで、このアプローチは非常に高いパフォーマンスを実現します。future combinatorsは通常の構造体として実装されていますが、traitの実装があるため、そのおかげで、コンパイラはこれを非常によく最適化できます。詳細については、Rustのエコシステムにfuturesが追加されたことを発表した[_Zero-cost futures in Rust_]の記事を参照してください。
 
 [_Zero-cost futures in Rust_]: https://aturon.github.io/blog/2016/08/11/futures/
 
@@ -248,13 +248,13 @@ fn example(min_len: usize) -> impl Future<Output = String> {
 
 ここでは、ファイル `foo.txt` を読み込んでから、[`then`] コンビネータを使って、ファイルの内容に基づいて 2 番目の future を連鎖させています。もしコンテンツの長さが与えられた `min_len` よりも小さければ、別の `bar.txt` ファイルを読み込んで、[`map`] コンビネータを使って `content` に追加します。それ以外の場合は、`foo.txt` の内容のみを返します。
 
-そうしないと `min_len` のライフタイムエラーが発生してしまうので、`then` に渡すクロージャには [`move` キーワード]を使用する必要があります。[`Either`] ラッパーを使う理由は、if と else のブロックは常に同じ型でなければならないからです。ブロックの中で異なるfutureの型を返しているので、ラッパーの型を使って単一の型に統一する必要があります。[`ready`] 関数は、値をfutureにラップして、すぐに準備ができるようにします。`Either` ラッパーはラップされた値が`Future`を実装していることを期待しているので，ここではこの関数が必要です．
+そうしないと `min_len` のライフタイムエラーが発生してしまうので、`then` に渡すクロージャには [`move` キーワード]を使用する必要があります。[`Either`] ラッパーを使う理由は、if と else のブロックは常に同じ型でなければならないからです。ブロックの中で異なるfutureの型を返しているので、ラッパーの型を使って単一の型に統一する必要があります。[`ready`] 関数とは、もう既に手元にあるデータを、『一瞬で準備の完了するfuture』へと変換する関数です。`Either` ラッパーはラップされた値が`Future`を実装していることを期待しているので、ここではこの関数が必要です。
 
 [`move` キーワード]: https://doc.rust-lang.org/std/keyword.move.html
 [`Either`]: https://docs.rs/futures/0.3.4/futures/future/enum.Either.html
 [`ready`]: https://docs.rs/futures/0.3.4/futures/future/fn.ready.html
 
-ご想像のとおり、大規模なプロジェクトでは非常に複雑なコードになることがあります。特に、借用や異なるライフタイムが関係する場合は複雑になります。このような理由から、Rustにasync/awaitのサポートを追加するために多くの作業が行われ、非同期のコードをよりシンプルに書くことができるようになりました。
+ご想像のとおり、大規模なプロジェクトでは非常に複雑なコードになることがあります。特に、借用や異なるライフタイムが関係する場合は複雑になります。このような理由から、Rustにasync/awaitのサポートを追加するために多くの作業が行われ、非同期のコードを圧倒的にシンプルに書くことができるようになりました。
 
 ### The Async/Await Pattern
 
@@ -286,11 +286,11 @@ async fn example(min_len: usize) -> String {
 
 ([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=d93c28509a1c67661f31ff820281d434))
 
-この関数は，[上記](#drawbacks)のcombinator関数を使った `example` 関数をそのまま翻訳したものです(#欠点)．.await` 演算子を使うことで，クロージャや `Either` 型を必要とせずに future の値を取得することができます．その結果、通常の同期コードを書くようにコードを書くことができます。ただし、「これは非同期コードである」という違いはあります。
+この関数は、[上記](#drawbacks)のcombinator関数を使った `example` 関数をそのまま翻訳したものです(#欠点). `.await` 演算子を使うことで、クロージャや `Either` 型を必要とせずに future の値を取得することができます。その結果、通常の同期コードを書くようにコードを書くことができます。ただし、「これは非同期コードである」という違いはあります。
 
 #### State Machine Transformation
 
-コンパイラはこのシーンで何をしているかというと、`async`関数の本体を[_state machine_]に変換し、`.await`を呼び出すたびに異なる状態を表すようにしています。上記の `example` 関数の場合、コンパイラは以下の4つの状態を持つステートマシンを作成します:
+舞台裏で何をしているかというと、`async`関数の本体を[_state machine_]に変換し、`.await`を呼び出すたびに異なる状態を表すようにしています。上記の `example` 関数の場合、コンパイラは以下の4つの状態を持つステートマシンを作成します:
 
 [_state machine_]: https://en.wikipedia.org/wiki/Finite-state_machine
 
@@ -302,7 +302,7 @@ async fn example(min_len: usize) -> String {
 
 ![Four states: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-basic.svg)
 
-この図では、矢印で状態の切り替えを、ダイヤ形で代替手段を表現しています。例えば、`foo.txt`のファイルが準備できていない場合、 _"no"_ と書かれたパスが取られ、 _"Waiting on foo.txt"_ の状態になります。それ以外の場合は、 _"yes"_ のパスが取られます。キャプションのない小さな赤いダイヤは、`example`関数の`if content.len() < 100`の分岐を表しています。
+この図では、矢印で状態の切り替えを、ダイヤ形で条件分岐を表現しています。例えば、`foo.txt`のファイルが準備できていない場合、 _"no"_ と書かれたパスが取られ、 _"Waiting on foo.txt"_ の状態になります。それ以外の場合は、 _"yes"_ のパスが取られます。キャプションのない小さな赤いダイヤは、`example`関数の`if content.len() < 100`の分岐を表しています。
 
 最初の `poll` 呼び出しで関数が開始され、まだ準備ができていないfutureに到達するまで実行されていることがわかります。パス上のすべてのfutureが準備できていれば、関数は _"End"_ 状態まで実行でき、そこで結果を `Poll::Ready` でラップして返します。そうでなければ、ステートマシンは待機状態になり、`Poll::Pending`を返します。次の `poll` 呼び出し時には、ステートマシンは最後の待ち状態から開始し、最後の操作を再試行します。
 
@@ -344,13 +344,13 @@ struct EndState {}
 
 "start "と _"Waiting on foo.txt"_ の状態では、`min_len`パラメータを保存する必要があります。これは後に`content.len()`と比較する際に必要になるからです。 _"Waiting on foo.txt"_ 状態では、さらに`foo_txt_future`が格納されます。これは、`async_read_file`コールが返したfutureを表します。このfutureは、ステートマシンが継続する際に再びポーリングされる必要があるため、保存する必要があります。
 
-_"Waiting on bar.txt"_の状態には、`bar.txt`の準備ができた後の文字列の連結に必要な`content`変数が含まれています。また、`bar.txt`のロード中を表す`bar_txt_future`も格納されています。この構造体には、`min_len`変数は含まれていません。これは、`content.len()`の比較の後では、もはや必要ないからです。end"_の状態では、関数はすでに完了まで実行されているので、変数は格納されません。
+_"Waiting on bar.txt"_ の状態には、`bar.txt`の準備ができた後の文字列の連結に必要な`content`変数が含まれています。また、`bar.txt`のロード中を表す`bar_txt_future`も格納されています。この構造体には、`min_len`変数は含まれていません。これは、`content.len()`の比較の後では、もはや必要ないからです。 _"end"_ の状態では、関数はすでに完了まで実行されているので、変数は格納されません。
 
-これは、コンパイラが生成するコードの例に過ぎないことに注意してください。構造体の名前やフィールドのレイアウトは実装上の詳細であり、異なる可能性があります。
+コンパイラが生成しうるコードの一例に過ぎないことに注意してください。構造体の名前やフィールドのレイアウトは実装上の詳細であり、異なる可能性があります。
 
 #### The Full State Machine Type
 
-コンパイラが生成するコードの正確さは実装上の問題ですが，生成されたステートマシンが `example` 関数に対してどのように見えるかを想像することは，理解を助けることになります．異なる状態を表し、必要な変数を含む構造体はすでに定義されています。これらの構造体の上にステートマシンを作成するには、これらの構造体を[`enum`]構造体にまとめることができます:
+具体的にコンパイラがどのようなコードを生成するのかは実装依存ですが、`example` 関数に対してどのようなステートマシンが生成されうるかを想像することは、理解を助けることになります。異なる状態を表し、必要な変数を含む構造体はすでに定義されています。これらの構造体の上にステートマシンを作成するという方法があります。これらの構造体を[`enum`]構造体にまとめることができます:
 
 [`enum`]: https://doc.rust-lang.org/book/ch06-01-defining-an-enum.html
 
@@ -363,7 +363,7 @@ enum ExampleStateMachine {
 }
 ```
 
-各状態に対応して個別のenum variantを定義し，対応するstate構造体をフィールドとして各variantに追加しています．状態の遷移を実装するために，コンパイラは `example` 関数に基づいて `Future` 形質の実装を生成します:
+各状態に対応して個別のenum variantを定義し、対応するstate構造体をフィールドとして各variantに追加しています。状態の遷移を実装するために、コンパイラは `example` 関数に基づいて `Future` traitの実装を生成します:
 
 ```rust
 impl Future for ExampleStateMachine {
@@ -382,7 +382,7 @@ impl Future for ExampleStateMachine {
 }
 ```
 
-関数 `example` の戻り値であるため，futureの `Output` タイプは `String` となります．`poll`関数を実装するために，`loop` の中で現在の状態に対するmatch文を使います。これは，可能な限り次の状態に切り替え，継続できないときには明示的に `return Poll::Pending` を使用するというものです。
+関数 `example` の戻り値であるため、futureの `Output` タイプは `String` となります。`poll`関数を実装するために、`loop` の中で現在の状態に対するmatch文を使います。これは、可能な限り次の状態に切り替え、継続できないときには明示的に `return Poll::Pending` を使用するというものです。
 
 簡略化のため、簡略化したコードのみを示し、[pinning][_pinning_]、所有権、寿命などは扱っていません。そのため、このコードと以下のコードは疑似コードとして扱い、直接使用しないでください。もちろん、実際にコンパイラが生成したコードは、おそらく異なる方法ではあるものの、すべてを正しく処理します。
 
@@ -401,7 +401,7 @@ ExampleStateMachine::Start(state) => {
 }
 ```
 
-ステートマシンが `Start` 状態にあるのは，関数の先頭に位置するときです．この例では，`example`関数のボディから最初の`.await`までのすべてのコードを実行します．`.await`の操作を処理するために，`self`ステートマシンの状態を`WaitingOnFooTxt`に変更し，`WaitingOnFooTxtState`構造体の構築を行います．
+関数の冒頭ではステートマシンが `Start` 状態にあります。この例では、`example`関数のボディから最初の`.await`までのすべてのコードを実行します。`.await`の操作を処理するために、`self`ステートマシンの状態を`WaitingOnFooTxt`に変更し、`WaitingOnFooTxtState`構造体の構築を行います。
 
 `match self {...}`Hogeステートメントはループで実行されるため、実行は次に `WaitingOnFooTxt` アームにジャンプします:
 
@@ -430,7 +430,7 @@ ExampleStateMachine::WaitingOnFooTxt(state) => {
 
 このマッチアームでは、まず `foo_txt_future` の `poll` 関数を呼び出します。もし準備ができていなければ、ループを抜けて `Poll::Pending` を返します。この場合、`self`は`WaitingOnFooTxt`状態のままなので、ステートマシンの次の`poll`コールは同じマッチアームに入り、`foo_txt_future`のポーリングを再試行することになります。
 
-`foo_txt_future`の準備ができたら、その結果を`content`変数に代入して、引き続き`example`関数のコードを実行します。`content.len()`がstate構造体に保存されている`min_len`よりも小さければ，`bar.txt`ファイルが非同期に読み込まれます．`.await`の操作を再び状態の変化に変換し、今回は`WaitingOnBarTxt`の状態にします。ループ内で `match` を実行しているので、実行はその後の新しい状態のマッチアームに直接ジャンプし、そこで `bar_txt_future` がポーリングされます。
+`foo_txt_future`の準備ができたら、その結果を`content`変数に代入して、引き続き`example`関数のコードを実行します。`content.len()`がstate構造体に保存されている`min_len`よりも小さければ、`bar.txt`ファイルが非同期に読み込まれます。`.await`の操作を再び状態の変化に変換し、今回は`WaitingOnBarTxt`の状態にします。ループ内で `match` を実行しているので、実行はその後の新しい状態のマッチアームに直接ジャンプし、そこで `bar_txt_future` がポーリングされます。
 
 `else`の分岐に入った場合、それ以上の`.await`操作は発生しません。関数の最後に到達して、`Poll::Ready`で包まれた`content`を返します。また、現在の状態を `End` に変更します。
 
@@ -449,7 +449,7 @@ ExampleStateMachine::WaitingOnBarTxt(state) => {
 }
 ```
 
-`WaitingOnFooTxt`の状態と同様に、まず`bar_txt_future`をポーリングします。まだ保留中であれば、ループを抜けて `Poll::Pending` を返します。そうでなければ、`example`関数の最後の操作を行います。`content`変数とfutureからの結果を連結します。ステートマシンを `End` 状態に更新して、`Poll::Ready` で包まれた結果を返します。
+`WaitingOnFooTxt`の状態と同様に、まず`bar_txt_future`をポーリングします。まだ保留中であれば、ループを抜けて `Poll::Pending` を返します。そうでなければ、`example`関数の最後の操作(つまり、`content`変数とfutureからの結果を連結します)を行います。ステートマシンを `End` 状態に更新して、`Poll::Ready` で包まれた結果を返します。
 
 最後に、`End`ステートのコードは以下のようになります:
 
@@ -459,13 +459,13 @@ ExampleStateMachine::End(_) => {
 }
 ```
 
-Futuresは `Poll::Ready` を返した後、再びポーリングされるべきではありません。したがって、すでに `End` の状態にあるときに `poll` が呼ばれるとパニックになります。
+Futuresは `Poll::Ready` を返した後、再びポーリングされるべきではありません。したがって、すでに `End` の状態にあるときに `poll` が呼ばれるとパニックするようにしましょう。
 
-これで、コンパイラが生成するステートマシンとその `Future` 形質の実装がどのように見えるかがわかりました。実際には、コンパイラは異なる方法でコードを生成しています。 (一応、現在は[_generators_]をベースにした実装になっていますが、これはあくまでも実装の詳細です。)
+これで、コンパイラが生成するステートマシンとその `Future` traitの実装がどのように見えるかがわかりました。実際には、コンパイラは異なる方法でコードを生成しています。 (一応、現在は[_generators_]をベースにした実装になっていますが、これはあくまでも実装の詳細です。)
 
 [_generators_]: https://doc.rust-lang.org/nightly/unstable-book/language-features/generators.html
 
-パズルの最後のピースは，生成された `example` 関数自体のコードです．関数のヘッダは次のように定義されていたことを思い出してください:
+パズルの最後のピースは、生成された `example` 関数自体のコードです。関数のヘッダは次のように定義されていたことを思い出してください:
 
 ```rust
 async fn example(min_len: usize) -> String
@@ -481,9 +481,9 @@ fn example(min_len: usize) -> ExampleStateMachine {
 }
 ```
 
-この関数は，`async`修飾子を持たなくなり，`Future` traitを実装した`ExampleStateMachine`型を明示的に返すようになりました．予想通り，ステートマシンは `Start` 状態で構築され，対応するステート構造体は `min_len` パラメータで初期化されます。
+この関数は、`async`修飾子を持たなくなり、`Future` traitを実装した`ExampleStateMachine`型を明示的に返すようになりました。予想通り、ステートマシンは `Start` 状態で構築され、対応するステート構造体は `min_len` パラメータで初期化されます。
 
-この関数は、ステートマシンの実行を開始しないことに注意してください。これは、Rustにおけるfuturesの基本的な設計上の決定です。最初にポーリングされるまで何もしません。
+この関数は、ステートマシンの実行を開始しないことに注意してください。これは『最初にポーリングされるまで何もしない』という、Rustにおけるfuturesの基本的な設計上の決定を反映したものです。
 
 ### Pinning
 
@@ -502,7 +502,7 @@ async fn pin_example() -> i32 {
 }
 ```
 
-この関数は、内容が `1`, `2`, `3` の小さな `array` を作成します。そして，配列の最後の要素への参照を作成し，それを `element` 変数に格納します．次に，文字列に変換された数値を非同期的に `foo.txt` ファイルに書き込みます．最後に，`element`で参照していた数値を返します。
+この関数は、内容が `1`, `2`, `3` の小さな `array` を作成します。そして、配列の最後の要素への参照を作成し、それを `element` 変数に格納します。次に、文字列に変換された数値を非同期的に `foo.txt` ファイルに書き込みます。最後に、`element`で参照していた数値を返します。
 
 この関数は単一の `await` オペレーションを使用するため、結果として得られるステートマシンには start、end、"waiting on write" の 3 つの状態があります。この関数は引数を取らないので、開始状態の構造体は空です。先ほどと同じように、この時点で関数は終了しているので、終了状態の構造体も空になります。"waiting on write"の状態を表す構造体はもっと面白いです:
 
@@ -513,7 +513,7 @@ struct WaitingOnWriteState {
 }
 ```
 
-戻り値には `element` が必要であり、 `array` は `element` によって参照されるので、`array` と `element` の両方の変数を格納する必要がある。`element`は参照なので、参照されている要素への _pointer_ (i.e. a memory address)を格納します。ここでは、メモリアドレスの例として、`0x1001c` を使用しました。実際には、`array`フィールドの最後の要素のアドレスである必要がありますので、構造体がメモリ内のどこに存在するかに依存します。このような内部ポインタを持つ構造体は、フィールドの1つから自分自身を参照するため、 _self-referential_ 構造体と呼ばれます。
+戻り値には `element` が必要であり、 `array` は `element` によって参照されるので、`array` と `element` の両方の変数を格納する必要があります。`element`は参照なので、参照されている要素への **ポインタ** (つまり、メモリ上のアドレス)を格納します。ここでは、メモリアドレスの例として、`0x1001c` を使用しました。実際には、`array`フィールドの最後の要素のアドレスである必要がありますので、構造体がメモリ内のどこに存在するかに依存します。このような内部ポインタを持つ構造体は、フィールドの1つから自分自身を参照するため、 _self-referential_ 構造体と呼ばれます。
 
 #### The Problem with Self-Referential Structs
 
@@ -532,7 +532,7 @@ struct WaitingOnWriteState {
 dangling pointer問題を解決するための基本的なアプローチは3つあります:
 
 - **Update the pointer on move:** このアイデアは、構造体がメモリ内で移動するたびに内部ポインタを更新し、移動後も有効になるようにするものです。残念ながら、この方法では Rust に大規模な変更を加える必要があり、その結果、パフォーマンスが大幅に低下する可能性があります。その理由は、ある種のランタイムがすべての構造体フィールドの型を追跡し、移動操作のたびにポインタの更新が必要かどうかをチェックする必要があるからです。
-- **Store an offset instead of self-references:**: ポインタを更新する必要性を回避するために、コンパイラは自己参照を構造体の先頭からのオフセットとして格納することを試みることができます。例えば、上記の `WaitingOnWriteState` 構造体の `element` フィールドは、値が 8 の `element_offset` フィールドの形で保存できます。これは、参照先の配列要素が構造体の先頭から 8 バイト後に始まるからです。構造体を移動してもオフセットは変わらないので、フィールドの更新は必要ありません。
+- **Store an offset instead of self-references:**: ポインタを更新する必要性を回避するために、コンパイラは自己参照を構造体の先頭からのオフセットとして格納することを試みるという手があります。例えば、上記の `WaitingOnWriteState` 構造体の `element` フィールドは、値が 8 の `element_offset` フィールドの形で保存できます。これは、参照先の配列要素が構造体の先頭から 8 バイト後に始まるからです。構造体を移動してもオフセットは変わらないので、フィールドの更新は必要ありません。
 
   このアプローチの問題点は、コンパイラがすべての自己参照を検出する必要があることです。これは、参照の値がユーザーの入力に依存する可能性があるため、コンパイル時には不可能です。そのため、参照を分析して状態構造体を正しく作成するために、再びランタイムシステムが必要になります。これではランタイムのコストがかかるだけでなく、コンパイラの最適化もできないため、再び大きなパフォーマンスの低下を招くことになります。
 - **Forbid moving the struct:** 上で見たように、ポインタがぶら下がるのは、構造体をメモリ上で移動させたときだけです。自己参照構造体の移動操作を完全に禁止することで、この問題も回避することができます。この方法の大きな利点は、ランタイムの追加コストなしに、型システムレベルで実装できることです。欠点は、自己参照構造体の移動操作を処理する負担がプログラマにかかってしまうことです。
@@ -569,7 +569,7 @@ struct SelfReferential {
 
 `SelfReferential` という名前のシンプルな構造体を作成します。この構造体には1つのポインタフィールドが含まれます。まず、この構造体をNULLポインタで初期化し、`Box::new`を使ってheap上に確保します。次に、heapに割り当てられた構造体のメモリアドレスを決定し、それを `ptr` 変数に格納します。最後に、`ptr`変数を`self_ptr`フィールドに代入して、構造体を自己参照にします。
 
-このコードを[on the playground][playground-self-ref]で実行すると，heap値のアドレスとその内部ポインタが等しいことがわかります．これは，`self_ptr`フィールドが有効な自己参照であることを意味します．`heap_value` 変数は単なるポインタなので，それを移動させても（例えば関数に渡しても）構造体自体のアドレスは変わらないので，ポインタを移動させても`self_ptr`は有効なままです．
+このコードを[playground][playground-self-ref]で実行すると、heap値のアドレスとその内部ポインタが等しいことがわかります。これは、`self_ptr`フィールドが有効な自己参照であることを意味します。`heap_value` 変数は単なるポインタなので、それを移動させても（例えば関数に渡しても）構造体自体のアドレスは変わらないので、ポインタを移動させても`self_ptr`は有効なままです。
 
 しかし、この例を破る方法はまだあります。`Box<T>`から移動したり、その内容を置き換えたりすることができます:
 
@@ -583,11 +583,11 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 
 ([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
 
-ここでは，[`mem::replace`]関数を使用して，heapに割り当てられた値を新しい構造体のインスタンスで置き換えています．これにより、元の `heap_value` をスタックに移動させることができますが、構造体の `self_ptr` フィールドは、古いheapアドレスを指し示すダングリングポインタになっています。この例をプレイグラウンドで実行してみると、印刷された _"value at:"_ と _"internal reference:"_ の行には、実際に異なるポインタが表示されていることがわかります。つまり、値をheapに割り当てるだけでは、自己参照を安全にするには不十分なのです。
+ここでは、[`mem::replace`]関数を使用して、heapに割り当てられた値を新しい構造体のインスタンスで置き換えています。これにより、元の `heap_value` をスタックに移動させることができますが、構造体の `self_ptr` フィールドは、古いheapアドレスを指し示すダングリングポインタになっています。この例をプレイグラウンドで実行してみると、印刷された _"value at:"_ と _"internal reference:"_ の行には、実際に異なるポインタが表示されていることがわかります。つまり、値をheapに割り当てるだけでは、自己参照を安全にするには不十分なのです。
 
 [`mem::replace`]: https://doc.rust-lang.org/nightly/core/mem/fn.replace.html
 
-上記の破損を許した根本的な問題は、`Box<T>`によって、heapに割り当てられた値への`&mut T`参照を得ることができることです。この `&mut` 参照によって， [`mem::replace`] や [`mem::swap`] などのメソッドを使って，heapに割り当てられた値を無効にすることが可能になります．この問題を解決するためには，自己参照構造体への `&mut` 参照が作成できないようにする必要があります．
+上記の破損を許した根本的な問題は、`Box<T>`によって、heapに割り当てられた値への`&mut T`参照を得ることができることです。この `&mut` 参照によって、 [`mem::replace`] や [`mem::swap`] などのメソッドを使って、heapに割り当てられた値を無効にすることが可能になります。この問題を解決するためには、自己参照構造体への `&mut` 参照が作成できないようにする必要があります。
 
 [`mem::swap`]: https://doc.rust-lang.org/nightly/core/mem/fn.swap.html
 
@@ -612,11 +612,11 @@ struct SelfReferential {
 }
 ```
 
-そこで、[`PhantomPinned`]型の2つ目の `_pin` フィールドを追加することでオプトアウトします。この型はゼロサイズのマーカー型で、`Unpin` trait を _not_ implementation することだけが目的です。[auto traits][_auto trait_]の仕組み上、`Unpin`ではない1つのフィールドがあれば、完全な構造体が`Unpin`をオプトアウトするのに十分です。
+そこで、[`PhantomPinned`]型の2つ目の `_pin` フィールドを追加することでオプトアウトします。この型はゼロサイズのマーカー型で、`Unpin` trait を実装**しない**ようにすることだけが目的です。[auto traits][_auto trait_]の仕組み上、`Unpin`ではない1つのフィールドがあれば、構造体全体が`Unpin`をオプトアウトするのに十分です。
 
 [`PhantomPinned`]: https://doc.rust-lang.org/nightly/core/marker/struct.PhantomPinned.html
 
-第二のステップは、例題の `Box<SelfReferential>` 型を `Pin<Box<SelfReferential>` 型に変更することです。これを行う最も簡単な方法は、heapに割り当てられた値を作成するために、[Box::new`]ではなく、[Box::pin`]関数を使用することです:
+第二のステップは、例題の `Box<SelfReferential>` 型を `Pin<Box<SelfReferential>>` 型に変更することです。これを行う最も簡単な方法は、heapに割り当てられた値を作成するために、[Box::new`]ではなく、[Box::pin`]関数を使用することです:
 
 [`Box::pin`]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html#method.pin
 [`Box::new`]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html#method.new
@@ -650,7 +650,7 @@ error[E0596]: cannot borrow data in a dereference of `std::pin::Pin<std::boxed::
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
 ```
 
-どちらのエラーも、`Pin<Box<SelfReferential>>` 型が `DerefMut` trait を実装しなくなったために発生します。なぜなら、`DerefMut` trait は `&mut` 参照を返してしまうからで、これを防ぎたいのです。これは、`Unpin` をオプトアウトして、`Box::new` を `Box::pin` に変更したからこそ起こる現象です。
+どちらのエラーも、`Pin<Box<SelfReferential>>` 型が `DerefMut` trait を実装しなくなったために発生します。これはまさに求めていた結果であり、というのも、`DerefMut` trait は `&mut` 参照を返してしまうからで、これを防ぎたいのです。これは、`Unpin` をオプトアウトして、`Box::new` を `Box::pin` に変更したからこそ起こる現象です。
 
 ここで問題になるのは、コンパイラが16行目の型の移動を禁止するだけでなく、10行目の`self_ptr`フィールドの初期化も禁止してしまうことです。これは、コンパイラが `&mut` 参照の有効な使用と無効な使用を区別できないために起こります。初期化を再開するには、安全ではない [get_unchecked_mut`] メソッドを使用する必要があります:
 
@@ -666,21 +666,21 @@ unsafe {
 
 ([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=b9ebbb11429d9d79b3f9fffe819e2018))
 
-[`get_unchecked_mut`] 関数は `Pin<Box<T>>` ではなく `Pin<&mut T>` で動作するため、事前に値の変換に [`Pin::as_mut`] を使用する必要があります。その後，`get_unchecked_mut` が返す `&mut` 参照を使って，`self_ptr` フィールドを設定することができます。
+[`get_unchecked_mut`] 関数は `Pin<Box<T>>` ではなく `Pin<&mut T>` で動作するため、事前に値の変換に [`Pin::as_mut`] を使用する必要があります。その後、`get_unchecked_mut` が返す `&mut` 参照を使って、`self_ptr` フィールドを設定することができます。
 
 [`Pin::as_mut`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.as_mut
 
-これで残された唯一のエラーは、`mem::replace`での望ましいエラーです。この操作は、heapに割り当てられた値をスタックに移動させようとするもので、`self_ptr` フィールドに格納されている自己参照を破壊することになります。`Unpin`を使用せず、`Pin<Box<T>>` を使用することで、コンパイル時にこの操作を防ぐことができ、自己参照構造体を安全に扱うことができます。先ほど見たように、コンパイラは自己参照の生成が安全であることを(まだ)証明することができないので、安全でないブロックを使用して、自分で正しさを検証する必要があります。
+これで残された唯一のエラーは、`mem::replace`での望ましいエラーです。この操作は、heapに割り当てられた値をスタックに移動させようとするもので、`self_ptr` フィールドに格納されている自己参照を破壊することになります。`Unpin`を使用せず、`Pin<Box<T>>` を使用することで、コンパイル時にこの操作を防ぐことができ、自己参照構造体を安全に扱うことができます。先ほど見たように、コンパイラは自己参照の生成が安全であることを(まだ)証明することができないので、unsafe ブロックを使用して、自分で正しさを検証する必要があります。
 
 #### Stack Pinning and `Pin<&mut T>`
 
-前のセクションでは、`Pin<Box<T>>` を使って、heapに割り当てられた自己参照の値を安全に作成する方法を学びました。この方法は（安全でない構造を除けば）うまく機能し、比較的安全ですが、必要なheapの割り当てにはパフォーマンス上のコストがかかります。Rust は常に可能な限り _zero-cost abstractions_ を提供したいと考えていますので、pinning API では、スタックに割り当てられた値を指す `Pin<&mut T>` インスタンスを作成することもできます。
+前のセクションでは、`Pin<Box<T>>` を使って、heapに割り当てられた自己参照の値を安全に作成する方法を学びました。この方法は(安全でない構造を除けば)うまく機能し、比較的安全ですが、必要なheapの割り当てにはパフォーマンス上のコストがかかります。Rust は常に可能な限り _zero-cost abstractions_ を提供したいと考えていますので、pinning API では、スタックに割り当てられた値を指す `Pin<&mut T>` インスタンスを作成することもできます。
 
 ラップされた値の所有権を持つ `Pin<Box<T>>` インスタンスとは異なり、`Pin<&mut T>` インスタンスはラップされた値を一時的に借りるだけです。これは、プログラマーが自分で追加の保証をする必要があるため、事態をより複雑にしています。最も重要なことは、`Pin<&mut T>` は、参照される `T` のライフタイム全体にわたって固定されていなければならないということですが、これはスタックベースの変数の場合には検証が困難です。この問題を解決するために、[`pin-utils`]のような crate が存在しますが、自分が何をしているかを本当に理解していない限り、スタックへの固定はお勧めできません。
 
 [`pin-utils`]: https://docs.rs/pin-utils/0.1.0-alpha.4/pin_utils/
 
-詳しくは、[pin` module]と[`Pin::new_unchecked`]メソッドのドキュメントをご覧ください。
+詳しくは、[`pin` module]と[`Pin::new_unchecked`]メソッドのドキュメントをご覧ください。
 
 [`pin` module]: https://doc.rust-lang.org/nightly/core/pin/index.html
 [`Pin::new_unchecked`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.new_unchecked
@@ -695,11 +695,11 @@ unsafe {
 fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 ```
 
-このメソッドが通常の`&mut self`ではなくHogehogeを取る理由は、[上][self-ref-async-await]で見たように、async/awaitから生成されるfutureのインスタンスはしばしば自己言及的であるからです。`Self` を `Pin` にラップして、async/await から生成された自己参照のfuturesに対して、コンパイラに `Unpin` を選択させることで、`poll` 呼び出しの間にfuturesがメモリ内で移動しないことが保証されます。これにより、すべての内部参照が有効であることが保証されます。
+このメソッドが通常の`&mut self`ではなく`self: Pin<&mut Self>`を取る理由は、[上][self-ref-async-await]で見たように、async/awaitから生成されるfutureのインスタンスは自己参照構造体です。`Self` を `Pin` にラップして、async/await から生成された自己参照のfuturesに対して、コンパイラに `Unpin` を選択させることで、`poll` 呼び出しの間にfutureがメモリ内で移動しないことが保証されます。これにより、すべての内部参照が有効であることが保証されます。
 
 [self-ref-async-await]: @/edition-2/posts/12-async-await/index.md#self-referential-structs
 
-注目すべきは、最初の `poll` コールの前にfutureを動かすことは問題ないということです。これは、futuresがlazyであり、最初にポーリングされるまで何もしないという事実に起因しています。そのため、生成されたステートマシンの `start` 状態には、関数の引数だけが含まれており、内部参照は含まれていません。`poll` を呼び出すために、呼び出し側はまずfutureを `Pin` にラップしなければなりません。これにより、futureがメモリ上で移動できなくなります。スタックの固定化はより難しいので、[`Box::pin`]と[`Pin::as_mut`]を組み合わせて使用することをお勧めします。
+注目すべきは、最初の `poll` コールの前にfutureを動かすことは問題ないということです。これは、futureがlazyであり、最初にポーリングされるまで何もしないという事実に起因しています。そのため、生成されたステートマシンの `start` 状態には、関数の引数だけが含まれており、内部参照は含まれていません。`poll` を呼び出すために、呼び出し側はまずfutureを `Pin` にラップしなければなりません。これにより、futureがメモリ上で移動できなくなります。スタック上で正しく pin するのは、ヒープ上でするよりも難しいので、[`Box::pin`]と[`Pin::as_mut`]を組み合わせて使用することをお勧めします。
 
 [`futures`]: https://docs.rs/futures/0.3.4/futures/
 
@@ -710,20 +710,20 @@ fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 
 ### Executors and Wakers
 
-async/awaitを使えば、人間工学的に完全な非同期でfuturesを扱うことができます。しかし、上で学んだように、futuresはポーリングされるまで何もしません。つまり、どこかの時点で`poll`を呼ばないと、非同期コードは実行されないということです。
+async/awaitを使えば、人間工学的に完全な非同期でfutureを扱うことができます。しかし、上で学んだように、futureはポーリングされるまで何もしません。つまり、どこかの時点で`poll`を呼ばないと、非同期コードは実行されないということです。
 
-単一のfutureであれば、[上述のように](#waiting-on-futures)ループを使って常に手動で各futureを待つことができます。しかし、この方法は非常に効率が悪く、多数のfutureを作成するプログラムでは実用的ではありません。この問題を解決する最も一般的な方法は、システム内のすべてのfutureが終了するまでポーリングする責任を負う、グローバルな_executor_を定義することです。
+単一のfutureであれば、[上述のように](#waiting-on-futures)ループを使って常に手動で各futureを待つことができます。しかし、この方法は非常に効率が悪く、多数のfutureを作成するプログラムでは実用的ではありません。この問題を解決する最も一般的な方法は、システム内のすべてのfutureが終了するまでポーリングする責任を負う、グローバルな _executor_ を定義することです。
 
 #### Executors
 
-executorの目的は、ある種の `spawn` メソッドを使って、独立したtasksとしてfuturesを生成することです。executorは、すべてのfuturesが完了するまでポーリングする責任があります。すべてのfuturesを中央で管理することの大きな利点は、あるfuturesが `Poll::Pending` を返すたびに、executorが別のfuturesに切り替えることができることです。このようにして、非同期の処理が並行して実行され、CPUは忙しくなります。
+executorの目的は、ある種の `spawn` メソッドを使って、独立したtaskとしてfutureを生成することです。そうすることで executor はすべてのfutureが完了するまでポーリングする責任を担うのです。すべてのfutureを中央で管理することの大きな利点は、あるfutureが `Poll::Pending` を返すたびに、executorが別のfutureに切り替えることができることです。このようにして、非同期の処理が並行して実行され、CPUをずっと忙しくしておけます。
 
-多くのexecutorの実装では、複数のCPUコアを持つシステムを利用することもできます。これらの実装では、十分な作業量があればすべてのコアを利用できる[thread pool]を作成したり、[work stealing]などの手法を用いてコア間の負荷を分散させたりします。また、低レイテンシーとメモリオーバーヘッドに最適化した、組み込みシステム用の特別なexecutorの実装もあります。
+多くのexecutorの実装では、システムが複数のCPUコアを持っている場合にそれを生かすことができます。これらの実装では、十分な作業量があればすべてのコアを利用できる[thread pool]を作成したり、[work stealing]などの手法を用いてコア間の負荷を分散させたりします。また、低レイテンシーとメモリオーバーヘッドに最適化した、組み込みシステム用の特別なexecutorの実装もあります。
 
 [thread pool]: https://en.wikipedia.org/wiki/Thread_pool
 [work stealing]: https://en.wikipedia.org/wiki/Work_stealing
 
-futuresを何度もポーリングするオーバーヘッドを避けるために、executorsは通常、Rustのfuturesがサポートする_waker_ APIを利用します。
+futureを何度もポーリングするオーバーヘッドを避けるために、executorsは通常、Rustのfutureがサポートする_waker_ APIを利用します。
 
 #### Wakers
 
@@ -739,31 +739,31 @@ async fn write_file() {
 }
 ```
 
-この関数は文字列 "Hello" を `foo.txt` ファイルに非同期的に書き込みます。ハードディスクへの書き込みには時間がかかるので、このfutureの最初の `poll` コールはおそらく `Poll::Pending` を返すでしょう。しかし、ハードディスクドライバは `poll` 呼び出しに渡された `Waker` を内部に保存し、ファイルがディスクに書き込まれたときにそれを使ってエクゼqueueタに通知します。これにより、エクゼqueueタはwakerの通知を受け取る前に、再びfutureを `poll` しようとして時間を無駄にする必要がありません。
+この関数は文字列 "Hello" を `foo.txt` ファイルに非同期的に書き込みます。ハードディスクへの書き込みには時間がかかるので、このfutureの最初の `poll` コールはおそらく `Poll::Pending` を返すでしょう。しかし、ハードディスクドライバは `poll` 呼び出しに渡された `Waker` を内部に保存し、ファイルがディスクに書き込まれたときにそれを使ってエクゼキュータに通知します。これにより、エクゼキュータはwakerの通知を受け取る前に、再びfutureを `poll` しようとして時間を無駄にする必要がありません。
 
 この記事の実装セクションで、wakerをサポートした独自のexecutorを作成する際に、`Waker`タイプがどのように機能するかを詳しく見ていきます。
 
 ### Cooperative Multitasking?
 
-この記事の冒頭で、preemptive and cooperative multitaskingについて説明しました。preemptive multitaskingは、OSが実行中のタスクを強制的に切り替えることに依存していますが、cooperative multitaskingでは、タスクが定期的に _yield_ 操作によって自発的にCPUの制御を放棄する必要があります。cooperative multitaskingの大きな利点は、タスクが自分で状態を保存できることです。これにより、コンテキスト・スイッチの効率が向上し、タスク間で同じコールスタックを共有することが可能になります。
+この記事の冒頭で、preemptive multitasking と cooperative multitaskingについて説明しました。preemptive multitaskingは、OSが実行中のタスクを強制的に切り替えることに依存していますが、cooperative multitaskingでは、タスクが定期的に _yield_ 操作によって自発的にCPUの制御を放棄する必要があります。cooperative multitaskingの大きな利点は、タスクが自分で状態を保存できることです。これにより、コンテキスト・スイッチの効率が向上し、タスク間で同じコールスタックを共有することが可能になります。
 
-すぐにはわからないかもしれませんが、futuresとasync/awaitは、cooperative multitaskingパターンの実装です:
+すぐにはわからないかもしれませんが、futureとasync/awaitは、cooperative multitaskingパターンの実装です:
 
 - executorに追加される各futureは、基本的に協力なタスクです。
-- futures は、明示的なyield operationを使用する代わりに、`Poll::Pending`（もしくは最後に`Poll::Ready`）を返すことで、CPU コアの制御を放棄します。
+- future は、明示的なyield operationを使用する代わりに、`Poll::Pending`（もしくは最後に`Poll::Ready`）を返すことで、CPU コアの制御を放棄します。
   - futureがCPUを手放すことを強制するものは何もありません。望むならば、例えばループで無限に回転させるなどして、`poll`から決して戻らないようにすることができます。
   - それぞれのfutureは、executor内の他のfutureの実行をブロックできるため、悪意がないことを信用する必要があります。
-- futuresは、次の `poll` 呼び出しで実行を継続するために必要なすべての状態を内部に保存します。async/awaitでは、コンパイラが必要なすべての変数を自動的に検出し、生成されたステートマシンの内部に格納します。
+- futureは、次の `poll` 呼び出しで実行を継続するために必要なすべての状態を内部に保存します。async/awaitでは、コンパイラが必要なすべての変数を自動的に検出し、生成されたステートマシンの内部に格納します。
   - 継続に必要な最低限の状態のみが保存されます。
   - `poll`メソッドはreturn時にコールスタックを放棄するので、同じスタックを他のfutureのポーリングに使用することができます。
 
-futuresとasync/awaitは、cooperative multitaskingのパターンに完全に適合していることがわかりますが、使用している用語が異なるだけです。以下では、"task "と "future"という用語を互換的に使用しています。
+futureとasync/awaitは、cooperative multitaskingのパターンに完全に適合していることがわかりますが、使用している用語が異なるだけです。以下では、"task "と "future"という用語を互換的に使用しています。
 
 ## Implementation
 
-futures と async/await に基づいたcooperative multitaskingが Rust でどのように動作するかを理解したので、今度はカーネルにそのサポートを追加しましょう。[`Future`] trait は `core` ライブラリの一部であり、async/await は言語自体の機能なので、`#![no_std]` カーネルで使用するために特別なことをする必要はありません。唯一の要件は、Rust の少なくとも nightly `2020-03-25` を使用することです。なぜなら、async/await は以前は `no_std` に対応していなかったからです。
+future と async/await に基づいたcooperative multitaskingが Rust でどのように動作するかを理解したので、今度はカーネルにそのサポートを追加しましょう。[`Future`] trait は `core` ライブラリの一部であり、async/await は言語自体の機能なので、`#![no_std]` カーネルで使用するために特別なことをする必要はありません。唯一の要件は、Rust の少なくとも nightly `2020-03-25` を使用することです。なぜなら、async/await は以前は `no_std` に対応していなかったからです。
 
-最近のナイトリーでは、`main.rs` で async/await を使い始めることができます:
+最近のnightlyでは、`main.rs` で async/await を使い始めることができます:
 
 ```rust
 // in src/main.rs
@@ -806,14 +806,14 @@ pub struct Task {
 `Task` 構造体は、ピン留めされ、heapに割り当てられ、empty type `()` を出力として持つ、動的にディスパッチされるfutureのnewtypeのラッパーです。詳細を見てみましょう:
 
 - 私たちは、タスクに関連するfutureが `()` を返すことを要求しています。これは、タスクが結果を返さず、副作用のために実行されることを意味します。例えば、上で定義した`example_task`関数は、戻り値はありませんが、副作用として画面に何かを表示します。
-- `dyn`キーワードは、`Box`に[_trait object_]を格納することを示しています。これはfuture上のメソッドが[_動的にディスパッチされる_]ことを意味しており、`Task` 型に異なるタイプのfutureを格納することが可能になります。これは重要なことで、各 `async fn` は独自の型を持っており、複数の異なるタスクを作成できるようにしたいと考えています。
-- [pinningについて]で学んだように、`Pin<Box>` 型は、値をheap上に配置し、その値への `&mut` 参照の作成を防ぐことで、メモリ内で値が移動できないようにします。これは、async/awaitによって生成されたfuturesが自己参照である可能性があるため、重要です。つまり、futureが移動されたときに無効になるような自分自身へのポインタを含む可能性があります。
+- `dyn`キーワードは、`Box`に[_trait object_]を格納することを示しています。これはfuture上のメソッドが[_動的にディスパッチされる_]ことを意味しており、`Task` 型に異なるタイプのfutureを格納することが可能になります。各 `async fn` はそれぞれ異なる型を持っている一方で、複数の異なるタスクを作成できるようにしたいので、これは重要です。
+- [pinningについて]で学んだように、`Pin<Box>` 型は、値をheap上に配置し、その値への `&mut` 参照の作成を防ぐことで、メモリ内で値が移動できないようにします。これは、async/awaitによって生成されたfutureが自己参照構造体である可能性があるため、重要です。つまり、futureが移動されたときに無効になるような自分自身へのポインタを含む可能性があります。
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
 [_動的にディスパッチされる_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [pinningについて]: #pinning
 
-futures から新しい `Task` 構造体を作成できるように、`new` 関数を作成します:
+future から新しい `Task` 構造体を作成できるように、`new` 関数を作成します:
 
 ```rust
 // in src/task/mod.rs
@@ -829,7 +829,7 @@ impl Task {
 
 この関数は、出力型が `()` の任意のfutureを受け取り、[`Box::pin`] 関数を使ってそれをメモリに固定します。そして、ボックス化されたfutureを `Task` 構造体でラップして返します。ここで `'static` lifetime が必要なのは、返された `Task` が任意の時間だけ生き続けることができるので、futureもその時間だけ有効である必要があるからです。
 
-また、`poll`メソッドを追加して、エクゼqueueタがstored futureをポーリングできるようにしました:
+また、`poll`メソッドを追加して、エクゼqueueタがstored futureをポーリングできるようにしましょう:
 
 ```rust
 // in src/task/mod.rs
@@ -843,7 +843,7 @@ impl Task {
 }
 ```
 
-`Future` trait の [`poll`] メソッドは `Pin<&mut T>` 型で呼び出されることを期待しているので、[`Pin::as_mut`] メソッドを使って `self.future` フィールドをまず `Pin<Box<T>>` 型に変換します。そして、変換された `self.future` フィールドに対して `poll` を呼び出し、その結果を返します。`Task::poll`メソッドは、これから作成するexecutorからのみ呼び出されるべきものなので、この関数は`task`モジュールのプライベートなものにしています。
+`Future` trait の [`poll`] メソッドは `Pin<Box<T>>` 型で呼び出されることを期待しているので、[`Pin::as_mut`] メソッドを使って `self.future` フィールドをまず `Pin<&mut T>` 型に変換します。そして、変換された `self.future` フィールドに対して `poll` を呼び出し、その結果を返します。`Task::poll`メソッドは、これから作成するexecutorからのみ呼び出されるべきものなので、この関数は`task`モジュールのプライベートなものにしています。
 
 ### Simple Executor
 
@@ -878,7 +878,7 @@ impl SimpleExecutor {
 }
 ```
 
-この構造体には、[`VecDeque`]型の`task_queue`フィールドが1つ含まれています。これは基本的に、両端でpushとpopの操作ができるvectorです。この型を使うアイデアは、最後に `spawn` メソッドを使って新しいタスクを挿入し、前から次のタスクを実行するためにpopするというものです。これにより、単純な[FIFO queue](_"first in, first out"_)が得られます。
+この構造体には、[`VecDeque`]型の`task_queue`フィールドが1つ含まれています。これは基本的に、両端でpushとpopの操作ができるvectorです。この型を使うアイデアは、最後に `spawn` メソッドを使って新しいタスクを末尾に挿入し、前から次のタスクを実行するために先頭からpopするというものです。これにより、単純な[FIFO queue](_"first in, first out"_)が得られます。
 
 [`VecDeque`]: https://doc.rust-lang.org/stable/alloc/collections/vec_deque/struct.VecDeque.html
 [FIFO queue]: https://en.wikipedia.org/wiki/FIFO_(computing_and_electronics)
@@ -908,13 +908,13 @@ fn dummy_waker() -> Waker {
 
 ##### `RawWaker`
 
-[`RawWaker`] 型では、プログラマが [_virtual method table_] (_vtable_) を明示的に定義する必要があります。このテーブルは、`RawWaker` がクローンされたり、起こされたり、落とされたりしたときに呼び出されるべき関数を指定します。このvtableのレイアウトは[`RawWakerVTable`]という型で定義されています。各関数は，基本的にはheap上に確保された構造体への _type-erased_ `&self` ポインタである `*const ()` 引数を受け取ります．適切な参照ではなく `*const ()` ポインタを使う理由は，`RawWaker` の型はnon-genericであるべきだが，それでも任意の型をサポートする必要があるからである．関数に渡されるポインタの値は [`RawWaker::new`] に渡される `data` ポインタです。
+[`RawWaker`] 型では、プログラマが [_virtual method table_] (_vtable_) を明示的に定義する必要があります。このテーブルは、`RawWaker` がクローンされたり、起こされたり、落とされたりしたときに呼び出されるべき関数を指定します。このvtableのレイアウトは[`RawWakerVTable`]という型で定義されています。各関数は、基本的にはheap上に確保された構造体への**型消去された** `&self` ポインタである `*const ()` 引数を受け取ります。参照ではなく `*const ()` ポインタを使う理由は、`RawWaker` の型はnon-genericであるべきだが、それでも任意の型をサポートする必要があるからである。関数に渡されるポインタの値は [`RawWaker::new`] に渡される `data` ポインタです。
 
 [_virtual method table_]: https://en.wikipedia.org/wiki/Virtual_method_table
 [`RawWakerVTable`]: https://doc.rust-lang.org/stable/core/task/struct.RawWakerVTable.html
 [`RawWaker::new`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html#method.new
 
-通常、`RawWaker` は [`Box`] や [`Arc`] 型にラッピングされた、heapに割り当てられた構造体に対して作成されます。このような型では， [`Box::into_raw`] のようなメソッドを使用して， `Box<T>` を `*const T` ポインタに変換することができます．このポインタをanonymousの `*const ()` ポインタにキャストして， `RawWaker::new` に渡すことができます．各vtable関数は同じ`*const ()`を引数として受け取るので，各関数は安全にポインタを`Box<T>`や`&T`にキャストし直して操作することができます．想像できると思いますが，この処理は非常に危険で，間違っても未定義の動作になりやすいです．このような理由から，`RawWaker` を手動で作成することは，必要な場合を除いてお勧めできません．
+通常、`RawWaker` は [`Box`] や [`Arc`] 型にラッピングされた、heapに割り当てられた構造体に対して作成されます。このような型では、 [`Box::into_raw`] のようなメソッドを使用して、 `Box<T>` を `*const T` ポインタに変換することができます。このポインタをanonymousの `*const ()` ポインタにキャストして、 `RawWaker::new` に渡すことができます。各vtable関数は同じ`*const ()`を引数として受け取るので、各関数は安全にポインタを`Box<T>`や`&T`にキャストし直して操作することができます。想像できると思いますが、この処理は非常に危険で、間違っても未定義の動作になりやすいです。このような理由から、`RawWaker` を手動で作成することは、必要な場合を除いてお勧めできません。
 
 [`Box`]: https://doc.rust-lang.org/stable/alloc/boxed/struct.Box.html
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
@@ -940,9 +940,9 @@ fn dummy_raw_waker() -> RawWaker {
 }
 ```
 
-まず，`no_op`と`clone`という2つの内部関数を定義します．`no_op`関数は`*const ()`のポインタを受け取り，何もしません．また，`clone`関数は`*const ()`のポインタを受け取り，`dummy_raw_waker`を再度呼び出して新しい`RawWaker`を返します．これらの2つの関数を使って最小限の `RawWakerVTable` を作成します。`clone`関数はクローン作成のために用いられ、それ以外の操作には`no_op`関数が用いられます。`RawWaker`は何もしないので、クローンを作る代わりに`clone`から新しい`RawWaker`を返しても問題ありません。
+まず、`no_op`と`clone`という2つの内部関数を定義します。`no_op`関数は`*const ()`のポインタを受け取り、何もしません。また、`clone`関数は`*const ()`のポインタを受け取り、`dummy_raw_waker`を再度呼び出して新しい`RawWaker`を返します。これらの2つの関数を使って最小限の `RawWakerVTable` を作成します。`clone`関数はクローン作成のために用いられ、それ以外の操作には`no_op`関数が用いられます。`RawWaker`は何もしないので、クローンを作る代わりに`clone`から新しい`RawWaker`を返しても問題ありません。
 
-`vtable`を作成した後，[`RawWaker::new`]関数を使って`RawWaker`を作成します．渡された `*const ()` は，どのvtable関数も使用しないので，重要ではありません．そのため，単にnullポインタを渡します。
+`vtable`を作成した後、[`RawWaker::new`]関数を使って`RawWaker`を作成します。渡された `*const ()` は、どのvtable関数も使用しないので、重要ではありません。そのため、単にnullポインタを渡します。
 
 #### A `run` Method
 
@@ -1008,7 +1008,7 @@ async fn example_task() {
 この例で起こる様々なステップをまとめてみましょう:
 
 - まず、`SimpleExecutor`タイプの新しいインスタンスが、空の`task_queue`とともに作成されます。
-- 次に，非同期の `example_task` 関数を呼び出して，futureを返します．このfutureを `Task` 型でラップして、heapに移動してピン留めし、`spawn` メソッドでタスクをexecutorの `task_queue` に追加します。
+- 次に、非同期の `example_task` 関数を呼び出して、futureを返します。このfutureを `Task` 型でラップして、heapに移動してピン留めし、`spawn` メソッドでタスクをexecutorの `task_queue` に追加します。
 - そして、`run`メソッドを呼び出して、queueの中の一つのタスクの実行を開始します。これには:
     - タスクを `task_queue` の前に移動させる。
     - タスク用の `RawWaker` を作成し、それを [`Waker`] インスタンスに変換し、そこから [`Context`] インスタンスを作成しています。
@@ -1035,7 +1035,7 @@ async fn example_task() {
 
 ![Scancode queue with 8 slots on the top. Keyboard interrupt handler on the bottom left with a "push scancode" arrow to the left of the queue. Keyboard task on the bottom right with a "pop scancode" queue coming from the right side of the queue.](scancode-queue.svg)
 
-そのqueueを簡単に実装したものがmutex-protected [`VecDeque`]になります。しかし、割り込みハンドラにmutexを使用することは、デッドロックにつながりやすいため、あまり良いアイデアではありません。例えば，キーボードタスクがqueueをロックしているときにユーザがキーを押すと，割込みハンドラは再度ロックを取得しようとして，無期限にハングアップしてしまいます。この方法のもう一つの問題点は，`VecDeque`が満杯になったときに新しいヒープの割り当てを行うことで，自動的に容量を増やしてしまうことです．これは、アロケータが内部でmutexを使用しているため、再びデッドロックを引き起こす可能性があります。さらに、ヒープが断片化されていると、ヒープの割り当てに失敗したり、かなりの時間がかかったりするという問題もあります。
+そのqueueを簡単に実装したものがmutex-protected [`VecDeque`]になります。しかし、割り込みハンドラにmutexを使用することは、デッドロックにつながりやすいため、あまり良いアイデアではありません。例えば、キーボードタスクがqueueをロックしているときにユーザがキーを押すと、割込みハンドラは再度ロックを取得しようとして、無期限にハングアップしてしまいます。この方法のもう一つの問題点は、`VecDeque`が満杯になったときに新しいヒープの割り当てを行うことで、自動的に容量を増やしてしまうことです。これは、アロケータが内部でmutexを使用しているため、再びデッドロックを引き起こす可能性があります。さらに、ヒープが断片化されていると、ヒープの割り当てに失敗したり、かなりの時間がかかったりするという問題もあります。
 
 これらの問題を防ぐためには、`push`操作にmutexやアロケートを必要としないqueueの実装が必要です。このようなqueueは、要素のpushとpopにロックフリーの[atomic operations]を用いることで実装できます。この方法では、`&self`の参照だけを必要とする`push`と`pop`の操作を作成することができ、したがって、mutexなしで使用することができます。`push`での割り当てを避けるために、queueはあらかじめ割り当てられた固定サイズのバッファでバックアップすることができます。これにより、queueは _bound_ (i.e. 最大の長さを持つ)ことになりますが、実際には、queueの長さに妥当な上限を定義することが可能な場合が多いので、これは大きな問題ではありません。
 
@@ -1175,13 +1175,13 @@ impl ScancodeStream {
 }
 ```
 
-`_private`フィールドの目的は、モジュールの外部から構造体を構築できないようにすることです。そのため，この型を構築するには，`new`関数が唯一の方法となります。この関数では，まず，`SCANCODE_QUEUE`という静的変数を初期化しようとします．既に初期化されている場合にはパニックを起こし、1つの`ScancodeStream`インスタンスしか作成できないようにします。
+`_private`フィールドの目的は、モジュールの外部から構造体を構築できないようにすることです。そのため、この型を構築するには、`new`関数が唯一の方法となります。この関数では、まず、`SCANCODE_QUEUE`という静的変数を初期化しようとします。既に初期化されている場合にはパニックを起こし、1つの`ScancodeStream`インスタンスしか作成できないようにします。
 
 非同期タスクがscancodesを利用できるようにするためには、次のステップとして `poll` のようなメソッドを実装して、queueから次のscancodeを取り出そうとします。これは、私たちの型に[`Future`]特性を実装するべきであるように聞こえますが、これはここでは全く適合しません。問題は、`Future` trait は単一の非同期値を抽象化するだけであり、`Poll` メソッドが `Poll::Ready` を返した後は二度と呼び出されないことを期待しています。しかし、私たちのscancode queueは複数の非同期値を含んでいるので、ポーリングし続けても問題ありません。
 
 ##### The `Stream` Trait
 
-複数の非同期値を得る型は一般的なので、[`futures`]クレートはそのような型のための便利な抽象化である[`Stream`]形質を提供しています。この trait は次のように定義されています:
+複数の非同期値を得る型は一般的なので、[`futures`]クレートはそのような型のための便利な抽象化である[`Stream`] traitを提供しています。この trait は次のように定義されています:
 
 [`Stream`]: https://rust-lang.github.io/async-book/05_streams/01_chapter.html
 
@@ -1199,7 +1199,7 @@ pub trait Stream {
 - 関連する型の名前は、`Output`ではなく`Item`です。
 - `Stream` trait では、`Poll<Self::Item>` を返す `poll` メソッドの代わりに、`Poll<Option<Self::Item>>` を返す `poll_next` メソッドが定義されています(追加の `Option` に注意)。
 
-また、意味的な違いもあります。`poll_next` は，ストリームが終了したことを知らせるために `Poll::Ready(None)` を返すまで，繰り返し呼び出すことができます．この点で，このメソッドは [`Iterator::next`] メソッドに似ています．このメソッドも最後の値の後に `None` を返します。
+また、意味的な違いもあります。`poll_next` は、ストリームが終了したことを知らせるために `Poll::Ready(None)` を返すまで、繰り返し呼び出すことができます。この点で、このメソッドは [`Iterator::next`] メソッドに似ています。このメソッドも最後の値の後に `None` を返します。
 
 [`Iterator::next`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html#tymethod.next
 
@@ -1338,7 +1338,7 @@ pub(crate) fn add_scancode(scancode: u8) {
 
 #### Keyboard Task
 
-さて、`ScancodeStream`に`Stream`形質を実装したので、これを使って非同期のキーボードタスクを作ることができます:
+さて、`ScancodeStream`に`Stream` traitを実装したので、これを使って非同期のキーボードタスクを作ることができます:
 
 ```rust
 // in src/task/keyboard.rs
@@ -1365,7 +1365,7 @@ pub async fn print_keypresses() {
 }
 ```
 
-このコードは、この記事で修正する前の[keyboard interrupt handler]にあったコードと非常によく似ています。唯一の違いは、I/O portからscancodeを読み込むのではなく、`ScancodeStream`からscancodeを取得することです。このために、まず新しい `Scancode` ストリームを作成し、次に [`StreamExt`] 形質が提供する [`next`] メソッドを繰り返し使用して、ストリーム内の次の要素に解決する `Future` を取得します。これに `await` 演算子を用いることで，futureの結果を非同期的に待ちます．
+このコードは、この記事で修正する前の[keyboard interrupt handler]にあったコードと非常によく似ています。唯一の違いは、I/O portからscancodeを読み込むのではなく、`ScancodeStream`からscancodeを取得することです。このために、まず新しい `Scancode` ストリームを作成し、次に [`StreamExt`] traitが提供する [`next`] メソッドを繰り返し使用して、ストリーム内の次の要素に解決する `Future` を取得します。これに `await` 演算子を用いることで、futureの結果を非同期的に待ちます。
 
 [keyboard interrupt handler]: @/edition-2/posts/07-hardware-interrupts/index.md#interpreting-the-scancodes
 [`next`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html#method.next
@@ -1431,7 +1431,7 @@ impl TaskId {
 }
 ```
 
-この関数は，各IDが一度だけ割り当てられることを保証するために，[`AtomicU64`]型の静的な`NEXT_ID`変数を使用します。[`fetch_add`]メソッドは，1回のアトミックな操作で，値を増やし，前の値を返します．つまり，`TaskId::new` メソッドが並列に呼ばれた場合でも，すべてのIDが一度だけ返されることになります．[`Ordering`]パラメータは，コンパイラが命令ストリームにおける`fetch_add`操作の順序を変更することを許可するかどうかを定義します．ここではIDが一意であることだけを要求しているので、最も弱い要求を持つ`Relaxed`の順序で十分です。
+この関数は、各IDが一度だけ割り当てられることを保証するために、[`AtomicU64`]型の静的な`NEXT_ID`変数を使用します。[`fetch_add`]メソッドは、1回のアトミックな操作で、値を増やし、前の値を返します。つまり、`TaskId::new` メソッドが並列に呼ばれた場合でも、すべてのIDが一度だけ返されることになります。[`Ordering`]パラメータは、コンパイラが命令ストリームにおける`fetch_add`操作の順序を変更することを許可するかどうかを定義します。ここではIDが一意であることだけを要求しているので、最も弱い要求を持つ`Relaxed`の順序で十分です。
 
 [`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
 [`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
@@ -1505,7 +1505,7 @@ impl Executor {
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
 [`SegQueue`]: https://docs.rs/crossbeam-queue/0.2.1/crossbeam_queue/struct.SegQueue.html
 
-`Executor`を作成するために，簡単な`new`関数を用意しました．`task_queue`の容量は100としていますが、これは当面の間は十分すぎる量です。将来的に100以上のタスクが同時に発生するような場合には、このサイズを簡単に増やすことができます。
+`Executor`を作成するために、簡単な`new`関数を用意しました。`task_queue`の容量は100としていますが、これは当面の間は十分すぎる量です。将来的に100以上のタスクが同時に発生するような場合には、このサイズを簡単に増やすことができます。
 
 #### Spawning Tasks
 
@@ -1643,9 +1643,9 @@ impl Wake for TaskWaker {
 }
 ```
 
-Waker は通常、executorと非同期タスクの間で共有されるので、この trait メソッドでは、`Self` インスタンスを、参照カウントされた所有権を実装する [`Arc`] 型でラップする必要があります。つまり，これらのメソッドを呼び出すためには，`TaskWaker` を `Arc` に移動させる必要があります．
+Waker は通常、executorと非同期タスクの間で共有されるので、この trait メソッドでは、`Self` インスタンスを、参照カウントされた所有権を実装する [`Arc`] 型でラップする必要があります。つまり、これらのメソッドを呼び出すためには、`TaskWaker` を `Arc` に移動させる必要があります。
 
-`wake`と`wake_by_ref`メソッドの違いは、後者は`Arc`への参照のみを必要とするのに対し、前者は`Arc`の所有権を取得するため、しばしば参照カウントの増加を必要とすることです。すべての型がwaking by referenceをサポートしているわけではないので、`wake_by_ref` メソッドの実装はオプションですが、不必要な参照カウントの変更を避けることができるので、パフォーマンスの向上につながります。今回の例では，両方の trait メソッドを単純に `wake_task` 関数にフォワードすることで，共有の `&self` 参照だけで済みます。
+`wake`と`wake_by_ref`メソッドの違いは、後者は`Arc`への参照のみを必要とするのに対し、前者は`Arc`の所有権を取得するため、しばしば参照カウントの増加を必要とすることです。すべての型がwaking by referenceをサポートしているわけではないので、`wake_by_ref` メソッドの実装はオプションですが、不必要な参照カウントの変更を避けることができるので、パフォーマンスの向上につながります。今回の例では、両方の trait メソッドを単純に `wake_task` 関数にフォワードすることで、共有の `&self` 参照だけで済みます。
 
 ##### Creating Wakers
 
@@ -1781,7 +1781,7 @@ impl Executor {
 }
 ```
 
-競合状態を避けるために，`task_queue` が空であるかどうかを確認する前に，割り込みを無効にします．空いていれば、[`enable_and_hlt`]関数を使用して割り込みを有効にし、単一のアトミック操作としてCPUをスリープさせます。queueが空でない場合は、`run_ready_tasks` が戻ってきた後に、割り込みがタスクを起動したことを意味します。その場合は、再び割り込みを有効にして、`hlt`を実行せずに直接実行を継続します。
+競合状態を避けるために、`task_queue` が空であるかどうかを確認する前に、割り込みを無効にします。空いていれば、[`enable_and_hlt`]関数を使用して割り込みを有効にし、単一のアトミック操作としてCPUをスリープさせます。queueが空でない場合は、`run_ready_tasks` が戻ってきた後に、割り込みがタスクを起動したことを意味します。その場合は、再び割り込みを有効にして、`hlt`を実行せずに直接実行を継続します。
 
 これで、実行することがないときには、executorが適切にCPUをスリープ状態にします。再び`cargo run`を使ってカーネルを実行すると、QEMUプロセスのCPU使用率が大幅に低下していることがわかります。
 
@@ -1803,7 +1803,7 @@ executorは、効率的な方法でタスクを実行できるようになりま
 
 この記事ではまず、**multitasking**について紹介し、実行中のタスクを定期的に強制的に中断させる _preemptive_ multitasking と、タスクが自発的にCPUの制御を放棄するまで実行させる _cooperative_ multitasking の違いを説明しました。
 
-次に、Rustがサポートする**async/await**がどのようにしてcooperative multitaskingの言語レベルの実装を提供しているかを調べました。Rustは、非同期タスクを抽象化するポーリングベースの`Future` traitをベースにして実装しています。async/awaitを使うと、通常の同期コードとほぼ同じようにfuturesを扱うことができます。違いは、非同期関数が再び `Future` を返すことで、それを実行するためにはどこかの時点でexecutorに追加する必要があります。
+次に、Rustがサポートする**async/await**がどのようにしてcooperative multitaskingの言語レベルの実装を提供しているかを調べました。Rustは、非同期タスクを抽象化するポーリングベースの`Future` traitをベースにして実装しています。async/awaitを使うと、通常の同期コードとほぼ同じようにfutureを扱うことができます。違いは、非同期関数が再び `Future` を返すことで、それを実行するためにはどこかの時点でexecutorに追加する必要があります。
 
 舞台裏では、コンパイラが async/await コードを _state machine_ に変換し、各 `.await` オペレーションが可能なpause pointに対応するようにします。プログラムに関する知識を活用することで、コンパイラは各pause pointの最小限の状態のみを保存することができ、その結果、タスクあたりのメモリ消費量は非常に小さくなります。一つの課題は、生成されたステートマシンに _self-referential_ 構造体が含まれている可能性があることです。例えば、非同期関数のローカル変数が互いに参照している場合などです。ポインタの無効化を防ぐために、Rustは`Pin`型を用いて、futureが最初にポーリングされた後は、メモリ内で移動できないようにしています。
 
