@@ -12,10 +12,10 @@ chapter = "Multitasking"
 
 <!-- more -->
 
-このブログは[GitHub]でオープンに開発されています。何か問題や質問があれば、そこで課題を開いてください。また、[下部]にコメントを残すこともできます。この記事の完全なソースコードは、[`post-12`][post branch]ブランチにあります。
+このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください (訳注: リンクは原文(英語)のものになります)。また[こちら][at the bottom]にコメントを残すこともできます。この記事の完全なソースコードは[`post-12` ブランチ][post branch]にあります。
 
 [GitHub]: https://github.com/phil-opp/blog_os
-[下部]: #comments
+[at the bottom]: #comments
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-12
 
 <!-- toc -->
