@@ -504,7 +504,7 @@ The macro already inserts the `#[no_mangle]` attribute and the `pub extern "efia
 
 ### Printing to Screen
 
-The UEFI standard supports multiple interfaces for printing to the screen. The most simple one is the _Simple Text Output_ protocol, which provides a console-like output interface. It is described in section 11.4 of the UEFI specification ([PDF][uefi-pdf]). We can use it through the [`SystemTable::stdout`] method provided by theThe `uefi` crate supports`uefi` crate:
+The UEFI standard supports multiple interfaces for printing to the screen. The most simple one is the _Simple Text Output_ protocol, which provides a console-like output interface. It is described in section 11.4 of the UEFI specification ([PDF][uefi-pdf]). We can use it through the [`SystemTable::stdout`] method provided by the `uefi` crate:
 
 [`SystemTable::stdout`]: https://docs.rs/uefi/0.8.0/uefi/table/struct.SystemTable.html#method.stdout
 
@@ -551,7 +551,7 @@ The [`Output`] type also allows to use different colors through its [`set_color`
 
 [`set_color`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/text/struct.Output.html#method.set_color
 
-All of these functions are directly provided by the UEFI firmware, the `uefi` crate just provides some abstractions for this. By looking at the source code of the `uefi` crate, we see that the [`SystemTable`][system-table-src] is just a pointer to a [`SystemTableImpl`] struct, which is created by the UEFI firmware in a standardized format (see section _4.3_ of the UEFI specification ([PDF][uefi-pdf])). It has a `stdout` field, which is a pointer to an [`Output`][output-src] table fillThe `uefi` crate supportsd with [function pointers]. The methods of the `Output` type are just [small wrappers] around these function pointers, so all of the functionality is implemented directly in the UEFI firmware.
+All of these functions are directly provided by the UEFI firmware, the `uefi` crate just provides some abstractions for this. By looking at the source code of the `uefi` crate, we see that the [`SystemTable`][system-table-src] is just a pointer to a [`SystemTableImpl`] struct, which is created by the UEFI firmware in a standardized format (see section _4.3_ of the UEFI specification ([PDF][uefi-pdf])). It has a `stdout` field, which is a pointer to an [`Output`][output-src] table. The methods of the `Output` type are just [small wrappers] around these function pointers, so all of the functionality is implemented directly in the UEFI firmware.
 
 [system-table-src]: https://docs.rs/uefi/0.8.0/src/uefi/table/system.rs.html#44-47
 [`SystemTableImpl`]: https://docs.rs/uefi/0.8.0/src/uefi/table/system.rs.html#209-230
