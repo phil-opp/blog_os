@@ -298,7 +298,7 @@ async fn example(min_len: usize) -> String {
 
 各ステートは、関数の異なるpause pointを表しています。 **"Start"** と **"End"** の状態は、関数の実行開始時と終了時を表しています。 **"Waiting on foo.txt"** の状態は、関数が最初の`async_read_file` の結果を待っていることを表しています。同様に、 **"Waiting on bar.txt"** 状態は、関数が2つ目の`async_read_file`の結果を待っているpause pointを表しています。
 
-ステートマシンは、各 `poll` コールを可能な状態遷移とすることで、`Future` 特性を実装しています:
+ステートマシンは、各 `poll` コールを可能な状態遷移とすることで、`Future` traitを実装しています:
 
 ![Four states: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-basic.svg)
 
@@ -382,7 +382,7 @@ impl Future for ExampleStateMachine {
 }
 ```
 
-関数 `example` の戻り値であるため、futureの `Output` タイプは `String` となります。`poll`関数を実装するために、`loop` の中で現在の状態に対するmatch文を使います。これは、可能な限り次の状態に切り替え、継続できないときには明示的に `return Poll::Pending` を使用するというものです。
+関数 `example` の戻り値であるため、futureの `Output` 型は `String` となります。`poll`関数を実装するために、`loop` の中で現在の状態に対するmatch文を使います。これは、可能な限り次の状態に切り替え、継続できないときには明示的に `return Poll::Pending` を使用するというものです。
 
 簡略化のため、簡略化したコードのみを示し、[pinning][**pinning**]、所有権、寿命などは扱っていません。そのため、このコードと以下のコードは疑似コードとして扱い、直接使用しないでください。もちろん、実際にコンパイラが生成したコードは、おそらく異なる方法ではあるものの、すべてを正しく処理します。
 
@@ -593,7 +593,7 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 
 #### `Pin<Box<T>>` and `Unpin`
 
-pinning APIは、[`Pin`]ラッパー型と[`Unpin`]マーカー特性という形で、`&mut T`問題に対する解決策を提供します。これらの型の背景にある考え方は、ラップされた値への `&mut` 参照を取得するために使用できる `Pin` のすべてのメソッド (例えば、[`get_mut`][pin-get-mut] や [`deref_mut`][pin-deref-mut]) を `Unpin` trait にゲートすることです。`Unpin` traitは[_auto trait_]であり、明示的にオプトアウトした型を除くすべての型に対して自動的に実装されます。自己参照構造体は `Unpin` をオプトアウトすることで、`Pin<Box<T>>` 型から `&mut T` を得る (安全な) 方法がありません。その結果、それらの内部の自己参照が有効であることが保証されます。
+pinning APIは、[`Pin`]ラッパー型と[`Unpin`]マーカーtraitという形で、`&mut T`問題に対する解決策を提供します。これらの型の背景にある考え方は、ラップされた値への `&mut` 参照を取得するために使用できる `Pin` のすべてのメソッド (例えば、[`get_mut`][pin-get-mut] や [`deref_mut`][pin-deref-mut]) を `Unpin` trait にゲートすることです。`Unpin` traitは[_auto trait_]であり、明示的にオプトアウトした型を除くすべての型に対して自動的に実装されます。自己参照構造体は `Unpin` をオプトアウトすることで、`Pin<Box<T>>` 型から `&mut T` を得る (安全な) 方法がありません。その結果、それらの内部の自己参照が有効であることが保証されます。
 
 [`Pin`]: https://doc.rust-lang.org/stable/core/pin/struct.Pin.html
 [`Unpin`]: https://doc.rust-lang.org/nightly/std/marker/trait.Unpin.html
@@ -601,7 +601,7 @@ pinning APIは、[`Pin`]ラッパー型と[`Unpin`]マーカー特性という�
 [pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#impl-DerefMut
 [_auto trait_]: https://doc.rust-lang.org/reference/special-types-and-traits.html#auto-traits
 
-例として、上記の `SelfReferential` タイプを更新して、`Unpin` を除外してみましょう:
+例として、上記の `SelfReferential` 型を更新して、`Unpin` を除外してみましょう:
 
 ```rust
 use core::marker::PhantomPinned;
@@ -727,7 +727,7 @@ futureを何度もポーリングするオーバーヘッドを避けるため�
 
 #### Wakers
 
-waker APIの背景にある考え方は、特別な[`Waker`]タイプが[`Context`]タイプにラップされて、`poll`の各呼び出しに渡されるというものです。この `Waker` 型はexecutorによって作成され、非同期タスクがその(部分的な)完了を知らせるために使用することができます。その結果、executorは以前に `Poll::Pending` を返したfutureに対して、対応するwakerから通知されるまで `poll` をコールする必要がありません。
+waker APIの背景にある考え方は、特別な[`Waker`]型が[`Context`]型にラップされて、`poll`の各呼び出しに渡されるというものです。この `Waker` 型はexecutorによって作成され、非同期タスクがその(部分的な)完了を知らせるために使用することができます。その結果、executorは以前に `Poll::Pending` を返したfutureに対して、対応するwakerから通知されるまで `poll` をコールする必要がありません。
 
 [`Context`]: https://doc.rust-lang.org/nightly/core/task/struct.Context.html
 
@@ -741,7 +741,7 @@ async fn write_file() {
 
 この関数は文字列 "Hello" を `foo.txt` ファイルに非同期的に書き込みます。ハードディスクへの書き込みには時間がかかるので、このfutureの最初の `poll` コールはおそらく `Poll::Pending` を返すでしょう。しかし、ハードディスクドライバは `poll` 呼び出しに渡された `Waker` を内部に保存し、ファイルがディスクに書き込まれたときにそれを使ってexecutorに通知します。これにより、executorはwakerの通知を受け取る前に、再びfutureを `poll` しようとして時間を無駄にする必要がありません。
 
-この記事の実装セクションで、wakerをサポートした独自のexecutorを作成する際に、`Waker`タイプがどのように機能するかを詳しく見ていきます。
+この記事の実装セクションで、wakerをサポートした独自のexecutorを作成する際に、`Waker`型がどのように機能するかを詳しく見ていきます。
 
 ### 協調的マルチタスク?
 
@@ -806,7 +806,7 @@ pub struct Task {
 `Task` 構造体は、ピン留めされ、heapに割り当てられ、empty type `()` を出力として持つ、動的にディスパッチされるfutureのnewtypeのラッパーです。詳細を見てみましょう:
 
 - 私たちは、タスクに関連するfutureが `()` を返すことを要求しています。これは、タスクが結果を返さず、副作用のために実行されることを意味します。例えば、上で定義した`example_task`関数は、戻り値はありませんが、副作用として画面に何かを表示します。
-- `dyn`キーワードは、`Box`に[_trait object_]を格納することを示しています。これはfuture上のメソッドが[_動的にディスパッチされる_]ことを意味しており、`Task` 型に異なるタイプのfutureを格納することが可能になります。各 `async fn` はそれぞれ異なる型を持っている一方で、複数の異なるタスクを作成できるようにしたいので、これは重要です。
+- `dyn`キーワードは、`Box`に[_trait object_]を格納することを示しています。これはfuture上のメソッドが[_動的にディスパッチされる_]ことを意味しており、`Task` 型に異なる型のfutureを格納することが可能になります。各 `async fn` はそれぞれ異なる型を持っている一方で、複数の異なるタスクを作成できるようにしたいので、これは重要です。
 - [pinningについて]で学んだように、`Pin<Box>` 型は、値をheap上に配置し、その値への `&mut` 参照の作成を防ぐことで、メモリ内で値が移動できないようにします。これは、async/awaitによって生成されたfutureが自己参照構造体である可能性があるため、重要です。つまり、futureが移動されたときに無効になるような自分自身へのポインタを含む可能性があります。
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
@@ -967,7 +967,7 @@ impl SimpleExecutor {
 }
 ```
 
-この関数は `while let` ループを使用して、`task_queue` 内のすべてのタスクを処理します。各タスクでは、まず `dummy_waker` 関数が返す `Waker` インスタンスをラップして `Context` タイプを作成します。そして、この `context` で `Task::poll` メソッドを呼び出します。もし `poll` メソッドが `Poll::Ready` を返せば、タスクは終了し、次のタスクに進むことができます。タスクがまだ `Poll::Pending` であれば、そのタスクを再びqueueの後ろに追加して、次のループの繰り返しで再びポーリングされるようにします。
+この関数は `while let` ループを使用して、`task_queue` 内のすべてのタスクを処理します。各タスクでは、まず `dummy_waker` 関数が返す `Waker` インスタンスをラップして `Context` 型を作成します。そして、この `context` で `Task::poll` メソッドを呼び出します。もし `poll` メソッドが `Poll::Ready` を返せば、タスクは終了し、次のタスクに進むことができます。タスクがまだ `Poll::Pending` であれば、そのタスクを再びqueueの後ろに追加して、次のループの繰り返しで再びポーリングされるようにします。
 
 #### Trying It
 
@@ -1007,7 +1007,7 @@ async fn example_task() {
 
 この例で起こる様々なステップをまとめてみましょう:
 
-- まず、`SimpleExecutor`タイプの新しいインスタンスが、空の`task_queue`とともに作成されます。
+- まず、`SimpleExecutor`型の新しいインスタンスが、空の`task_queue`とともに作成されます。
 - 次に、非同期の `example_task` 関数を呼び出して、futureを返します。このfutureを `Task` 型でラップして、heapに移動してピン留めし、`spawn` メソッドでタスクをexecutorの `task_queue` に追加します。
 - そして、`run`メソッドを呼び出して、queueの中の一つのタスクの実行を開始します。これには:
     - `task_queue` の先頭からタスクをpopする。
@@ -1029,26 +1029,26 @@ async fn example_task() {
 
 #### Scancode Queue
 
-現在、キーボードの入力を割り込みハンドラで直接処理しています。割り込みハンドラは重要な作業を中断する可能性がある以上できるだけ短くする必要があるため、これは長期的には良いアイデアではありません。その代わり、割り込みハンドラは必要最小限の作業(e.g. キーボードのscancodeの読み取りなど)のみを行い、残りの作業(e.g. scancodeの解釈など)はバックグラウンドタスクに任せるべきです。
+現在、キーボードの入力を割り込みハンドラで直接処理しています。割り込みハンドラは重要な作業を中断する可能性がある以上できるだけ短くする必要があるため、これは長期的には良いアイデアではありません。その代わり、割り込みハンドラは必要最小限の作業(例: キーボードのscancodeの読み取りなど)のみを行い、残りの作業(例: scancodeの解釈など)はバックグラウンドタスクに任せるべきです。
 
 バックグラウンドタスクに作業を委ねるための一般的なパターンは、ある種のqueueを作成することです。割り込みハンドラは仕事の単位をqueueにpushし、バックグラウンドタスクはqueue内の仕事を処理します。今回のキーボード割込みに適用すると、割込みハンドラはキーボードからscancodeを読み取って、それをqueueにpushした後、returnするだけということになります。キーボードタスクは、queueの反対側に位置し、pushされた各scancodeを解釈して処理します:
 
 ![Scancode queue with 8 slots on the top. Keyboard interrupt handler on the bottom left with a "push scancode" arrow to the left of the queue. Keyboard task on the bottom right with a "pop scancode" queue coming from the right side of the queue.](scancode-queue.svg)
 
-そのqueueを簡単に実装したものがmutex-protected [`VecDeque`]になります。しかし、割り込みハンドラにmutexを使用することは、デッドロックにつながりやすいため、あまり良いアイデアではありません。例えば、キーボードタスクがqueueをロックしているときにユーザがキーを押すと、割込みハンドラは再度ロックを取得しようとして、無期限にハングアップしてしまいます。この方法のもう一つの問題点は、`VecDeque`が満杯になったときに新しいヒープの割り当てを行うことで、自動的に容量を増やしてしまうことです。これは、アロケータが内部でmutexを使用しているため、再びデッドロックを引き起こす可能性があります。さらに、ヒープが断片化されていると、ヒープの割り当てに失敗したり、かなりの時間がかかったりするという問題もあります。
+そのqueueを簡単に実装したものがmutex-protected [`VecDeque`]になります。しかし、割り込みハンドラにmutexを使用することは、デッドロックにつながりやすいため、あまり良いアイデアではありません。例えば、キーボードタスクがqueueをロックしているときにユーザがキーを押すと、割込みハンドラは再度ロックを取得しようとして、無期限にハングアップしてしまいます。この方法のもう一つの問題点は、`VecDeque`が満杯になったときに新しいヒープの割り当てを行うことで、自動的に容量を増やしてしまうことです。これは、アロケータが内部でmutexを使用しているため、これまたデッドロックを引き起こす可能性があります。さらに、ヒープが断片化されていると、ヒープの割り当てに失敗したり、かなりの時間がかかったりするという問題もあります。
 
-これらの問題を防ぐためには、`push`操作にmutexやアロケートを必要としないqueueの実装が必要です。このようなqueueは、要素のpushとpopにロックフリーの[atomic operations]を用いることで実装できます。この方法では、`&self`の参照だけを必要とする`push`と`pop`の操作を作成することができ、したがって、mutexなしで使用することができます。`push`での割り当てを避けるために、queueはあらかじめ割り当てられた固定サイズのバッファでバックアップすることができます。これにより、queueは **bound** (i.e. 最大の長さを持つ)ことになりますが、実際には、queueの長さに妥当な上限を定義することが可能な場合が多いので、これは大きな問題ではありません。
+これらの問題を防ぐためには、`push`操作にmutexやアロケートを必要としないqueueの実装が必要です。このようなqueueは、要素のpushとpopにロックフリーの[atomic operations]を用いることで実装できます。この方法では、`&self`の参照だけを必要とする`push`と`pop`の操作を作成することができ、したがって、mutexなしで使用することができます。`push`での割り当てを避けるために、あらかじめ割り当てられた固定サイズのバッファ上にqueueを作ります。これにより、queueは **bound** (すなわち最大の長さを持つ)ことになりますが、実際には、queueの長さに妥当な上限を定義することが可能な場合が多いので、これは大きな問題ではありません。
 
 [atomic operations]: https://doc.rust-lang.org/core/sync/atomic/index.html
 
 ##### The `crossbeam` Crate
 
-このようなqueueを正しく効率的に実装するのは非常に難しいので、既存の、よくテストされた実装にこだわることをお勧めします。concurrent programmingのために様々なmutex-free型を実装している人気のあるRustプロジェクトの1つに[`crossbeam`]があります。このプロジェクトでは、[`ArrayQueue`]という名前の型が提供されており、今回のケースでまさに必要なものです。そして幸運なことに、この型はアロケーションをサポートする `no_std` クレートと完全に互換性があります。
+このようなqueueを正しく効率的に実装するのは非常に難しいので、既存の、よくテストされた実装を使うことをお勧めします。concurrent programmingのために様々なmutex-free型を実装している人気のあるRustプロジェクトの1つに[`crossbeam`]があります。このプロジェクトでは、[`ArrayQueue`]という名前の型が提供されており、今回のケースでまさに必要なものです。そして幸運なことに、この型はアロケーションをサポートする `no_std` クレートと完全に互換性があります。
 
 [`crossbeam`]: https://github.com/crossbeam-rs/crossbeam
 [`ArrayQueue`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html
 
-このタイプを使用するには、`crossbeam-queue` クレートへの依存関係を追加する必要があります:
+この型を使用するには、`crossbeam-queue` クレートへの依存関係を追加する必要があります:
 
 ```toml
 # in Cargo.toml
@@ -1080,7 +1080,7 @@ use crossbeam_queue::ArrayQueue;
 static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 ```
 
-[`ArrayQueue::new`]はヒープの割り当てを行いますが、これはコンパイル時にはできないので([yet][const-heap-alloc])、スタティック変数を直接初期化することはできません。代わりに、[`conquer_once`]クレートの[`OnceCell`]型を使用して、静的な値の安全な1回限りの初期化を行うことができます。このクレートを組み込むには、`Cargo.toml`に依存関係として追加する必要があります:
+[`ArrayQueue::new`]はヒープの割り当てを行いますが、これはコンパイル時には([まだ][const-heap-alloc])できないので、静的変数を直接初期化することはできません。代わりに、[`conquer_once`]クレートの[`OnceCell`]型を使用して、静的な値の安全な1回限りの初期化を行うことができます。このクレートをインクルードするには、`Cargo.toml`に依存関係として追加する必要があります:
 
 [`ArrayQueue::new`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html#method.new
 [const-heap-alloc]: https://github.com/rust-lang/const-eval/issues/20
@@ -1122,7 +1122,7 @@ pub(crate) fn add_scancode(scancode: u8) {
 }
 ```
 
-初期化されたqueueへの参照を得るために、[`OnceCell::try_get`]を使用します。queueがまだ初期化されていない場合は、キーボードのscancodeを無視して、警告を表示します。この関数は、ヒープの割り当てを行うべきではない割り込みハンドラから呼び出されるため、この関数でqueueの初期化を試みないことが重要です。この関数は、`main.rs`から呼び出し可能であってはならないので、`pub(crate)`の可視性を使用して、`lib.rs`からのみ利用できるようにしています。
+初期化されたqueueへの参照を得るために、[`OnceCell::try_get`]を使用します。queueがまだ初期化されていない場合は、キーボードのscancodeを無視して、警告を表示します。この関数は、ヒープの割り当てを行うべきではない割り込みハンドラから呼び出されるため、この関数でqueueの初期化を試みないことが重要です。この関数は、`main.rs`から呼び出し可能であってはならないので、`pub(crate)`を使用して、`lib.rs`からのみ利用できるようにしています。
 
 [`OnceCell::try_get`]: https://docs.rs/conquer-once/0.2.0/conquer_once/raw/struct.OnceCell.html#method.try_get
 
@@ -1177,7 +1177,7 @@ impl ScancodeStream {
 
 `_private`フィールドの目的は、モジュールの外部から構造体を構築できないようにすることです。そのため、この型を構築するには、`new`関数が唯一の方法となります。この関数では、まず、`SCANCODE_QUEUE`という静的変数を初期化しようとします。既に初期化されている場合にはパニックを起こし、1つの`ScancodeStream`インスタンスしか作成できないようにします。
 
-非同期タスクがscancodesを利用できるようにするためには、次のステップとして `poll` のようなメソッドを実装して、queueから次のscancodeを取り出そうとします。これは、私たちの型に[`Future`]特性を実装するべきであるように聞こえますが、これはここでは全く適合しません。問題は、`Future` trait は単一の非同期値を抽象化するだけであり、`Poll` メソッドが `Poll::Ready` を返した後は二度と呼び出されないことを期待しています。しかし、私たちのscancode queueは複数の非同期値を含んでいるので、ポーリングし続けても問題ありません。
+非同期タスクがscancodesを利用できるようにするためには、次のステップとして `poll` のようなメソッドを実装して、queueから次のscancodeを取り出そうとします。これは、私たちの型に[`Future`]特性を実装するべきであるように聞こえますが、これはここではうまくいきません。問題は、`Future` trait は単一の非同期値を抽象化するだけであり、`Poll` メソッドが `Poll::Ready` を返した後は二度と呼び出されないことを期待しています。しかし、私たちのscancode queueは複数の非同期値を含んでいるので、ポーリングし続けても問題ありません。
 
 ##### The `Stream` Trait
 
@@ -1205,7 +1205,7 @@ pub trait Stream {
 
 ##### Implementing `Stream`
 
-では、`SCANCODE_QUEUE`の値を非同期に提供するために、`ScancodeStream`に`Stream`型を実装してみましょう。そのためにはまず、`Stream`型を含む`futures-util`クレートへの依存関係を追加する必要があります:
+では、`SCANCODE_QUEUE`の値を非同期に提供するために、`ScancodeStream`に`Stream`型を実装してみましょう。そのためにはまず、`Stream`型がある`futures-util`クレートへの依存関係を追加する必要があります:
 
 ```toml
 # in Cargo.toml
@@ -1216,9 +1216,9 @@ default-features = false
 features = ["alloc"]
 ```
 
-クレート `no_std` と互換性を持たせるためにデフォルトの機能を無効にし、アロケーションベースの型を利用できるように `alloc` 機能を有効にしています（これは後で必要になります）。<span class="gray">(なお、メインの `futures` クレートに依存関係を追加して、`futures-util` クレートを再エクスポートすることもできますが、この場合は依存関係の数が増え、コンパイル時間が長くなります。)</span>
+クレート `no_std` と互換性を持たせるためにデフォルトの機能を無効にし、アロケーションベースの型を利用できるように `alloc` 機能を有効にしています（これは後で必要になります）。<span class="gray">(なお、`futures-util` クレートを再エクスポートしているメインの `futures` クレートの方に依存関係を追加することもできますが、この場合は依存関係の数が増え、コンパイル時間が長くなります。)</span>
 
-これで、`Stream`という特性をインポートして実装できるようになりました:
+これで、`Stream`というtraitをインポートして実装できるようになりました:
 
 ```rust
 // in src/task/keyboard.rs
@@ -1239,19 +1239,19 @@ impl Stream for ScancodeStream {
 }
 ```
 
-まず、[`OnceCell::try_get`]メソッドを使って、初期化されたscancode queueへの参照を取得します。`new`関数でqueueを初期化しているので、これが失敗することはないはずです。したがって、初期化されていない場合には、安全に`expect`メソッドを使ってパニックを起こすことができます。次に、[`ArrayQueue::pop`]メソッドを使って、queueから次の要素を取得しようとします。もし成功すれば、`Poll::Ready(Some(...))`でラップされたscancodeを返します。失敗した場合は、queueが空であることを意味します。その場合は、`Poll::Pending`を返します。
+まず、[`OnceCell::try_get`]メソッドを使って、初期化されたscancode queueへの参照を取得します。`new`関数でqueueを初期化しているので、これが失敗することはないはずです。したがって、「初期化されていない場合には、`expect`メソッドを使ってパニックを起こす」としても安全です。次に、[`ArrayQueue::pop`]メソッドを使って、queueから次の要素を取得しようとします。もし成功すれば、`Poll::Ready(Some(...))`でラップされたscancodeを返します。失敗した場合は、queueが空であることを意味します。その場合は、`Poll::Pending`を返します。
 
 [`ArrayQueue::pop`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html#method.pop
 
 #### Waker Support
 
-`Futures::poll`メソッドと同様に、`Stream::poll_next`メソッドは、`Poll::Pending`が返された後、非同期タスクが準備ができたら実行者に通知することを要求します。こうすることで、executorは通知されるまで同じタスクを再度ポーリングする必要がなくなり、待機中のタスクのパフォーマンスオーバーヘッドを大幅に削減することができます。
+`Futures::poll`メソッドと同様に、`Stream::poll_next`メソッドは、`Poll::Pending`が返された後、非同期タスクが準備ができたらexecutorに通知することを要求します。こうすることで、executorは通知されるまで同じタスクを再度ポーリングする必要がなくなり、待機中のタスクのパフォーマンスオーバーヘッドを大幅に削減することができます。
 
 この通知を送るために、タスクは渡された[`Context`]参照から[`Waker`]を取り出してどこかに保存しなければなりません。タスクの準備ができたら、保存されている `Waker` に対して [`wake`] メソッドを呼び出して、タスクが再びポーリングされるべきであることをexecutorに通知しなければなりません。
 
 ##### AtomicWaker
 
-`Waker`通知を`ScancodeStream`に実装するためには、poll callsの間に`Waker`を保存できる場所が必要です。これは `add_scancode` 関数からアクセスできる必要があるため、`ScancodeStream` 自身のフィールドとして保存することはできません。これを解決するには、`futures-util` クレートが提供する [`AtomicWaker`] 型の静的変数を使用します。`ArrayQueue`型と同様に、この型はアトミックな命令に基づいており、スタティックに安全に保存して、同時に変更することができます。
+`Waker`通知を`ScancodeStream`に実装するためには、poll callsの間に`Waker`を保存できる場所が必要です。これは `add_scancode` 関数からアクセスできる必要があるため、`ScancodeStream` 自身のフィールドとして保存することはできません。これを解決するには、`futures-util` クレートが提供する [`AtomicWaker`] 型の静的変数を使用します。`ArrayQueue`型と同様に、この型はアトミックな命令に基づいており、静的変数に安全に保存でき、並行的に安全に変更することもできます。
 
 [`AtomicWaker`]: https://docs.rs/futures-util/0.3.4/futures_util/task/struct.AtomicWaker.html
 
@@ -1265,11 +1265,11 @@ use futures_util::task::AtomicWaker;
 static WAKER: AtomicWaker = AtomicWaker::new();
 ```
 
-アイデアとしては、`poll_next`の実装では、現在のwakerをこのstaticに格納し、`add_scancode`関数では、新しいscancodeがqueueに追加されたときに、`wake`関数を呼び出すというものです。
+アイデアとしては、`poll_next`では、現在のwakerをこのstaticに格納し、`add_scancode`関数では、新しいscancodeがqueueに追加されたときに、`wake`関数を呼び出すというものです。
 
 ##### Storing a Waker
 
-`poll`/`poll_next` で定義されているコントラクトでは、タスクが `Poll::Pending` を返したときに、渡された `Waker` に対してwakeupを登録することを要求しています。この要求を満たすために、`poll_next` の実装を変更してみましょう:
+`poll`/`poll_next` が要求する前提条件として、タスクが `Poll::Pending` を返したときに、渡された `Waker` に対してwakeupを登録することというのがあります。この要求を満たすために、`poll_next` の実装を変更してみましょう:
 
 ```rust
 // in src/task/keyboard.rs
@@ -1397,15 +1397,15 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 ![QEMU printing ".....H...e...l...l..o..... ...W..o..r....l...d...!"](qemu-keyboard-output.gif)
 
-コンピュータのCPU使用率を監視してみると、`QEMU`プロセスが継続的にCPUを忙しくしていることがわかります。これは、`SimpleExecutor` がループで何度も何度もタスクをポーリングするからです。つまり、キーボードのキーを何も押さなくても、実行者は `print_keypresses` タスクの `poll` を繰り返し呼び出しています。
+コンピュータのCPU使用率を監視してみると、`QEMU`プロセスが継続的にCPUを忙しくしていることがわかります。これは、`SimpleExecutor` がループで何度も何度もタスクをポーリングするからです。つまり、キーボードのキーを何も押さなくても、executorは `print_keypresses` タスクの `poll` を繰り返し呼び出しています。
 
 ### Executor with Waker Support
 
-このパフォーマンスの問題を解決するためには、`Waker`の通知を適切に利用するexecutorを作成する必要があります。この方法では、次のキーボード割り込みが発生したときに実行者に通知されるので、`print_keypresses`タスクを何度もポーリングする必要はありません。
+このパフォーマンスの問題を解決するためには、`Waker`の通知を適切に利用するexecutorを作成する必要があります。この方法では、次のキーボード割り込みが発生したときにexecutorに通知されるので、`print_keypresses`タスクを何度もポーリングする必要はありません。
 
 #### Task Id
 
-waker通知を適切にサポートするexecutorを作成するための最初のステップは、各タスクに一意のIDを与えることです。これは、どのタスクが起こされるべきかを指定する方法が必要だからです。まず、新しい `TaskId` ラッパータイプを作成します:
+waker通知を適切にサポートするexecutorを作成するための最初のステップは、各タスクに一意のIDを与えることです。これは、どのタスクが起こされるべきかを指定する方法が必要だからです。まず、新しい `TaskId` ラッパー型を作成します:
 
 ```rust
 // in src/task/mod.rs
@@ -1461,7 +1461,7 @@ impl Task {
 
 #### The `Executor` Type
 
-新しい `Executor` タイプを `task::executor` モジュールで作成します:
+新しい `Executor` 型を `task::executor` モジュールで作成します:
 
 ```rust
 // in src/task/mod.rs
@@ -1567,7 +1567,7 @@ impl Executor {
 }
 ```
 
-この関数の基本的な考え方は、私たちの `SimpleExecutor` と似ています。`task_queue` にあるすべてのタスクをループし、各タスクのwakerを作成し、ポーリングします。しかし、保留中のタスクを `task_queue` の最後に戻すのではなく、`TaskWaker` の実装に、待機中のタスクをqueueに戻すことを任せます。このwakerタイプの実装については、後ほどご紹介します。
+この関数の基本的な考え方は、私たちの `SimpleExecutor` と似ています。`task_queue` にあるすべてのタスクをループし、各タスクのwakerを作成し、ポーリングします。しかし、保留中のタスクを `task_queue` の最後に戻すのではなく、`TaskWaker` の実装に、待機中のタスクをqueueに戻すことを任せます。このwaker型の実装については、後ほどご紹介します。
 
 この `run_ready_tasks` メソッドの実装の詳細を見てみましょう:
 
@@ -1601,7 +1601,7 @@ struct TaskWaker {
 }
 ```
 
-`task_queue`の所有権はexecutorとwakerの間で共有されるので、[`Arc`]ラッパータイプを使って、参照カウント式の共有所有権を実装します。
+`task_queue`の所有権はexecutorとwakerの間で共有されるので、[`Arc`]ラッパー型を使って、参照カウント式の共有所有権を実装します。
 
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
 
@@ -1649,7 +1649,7 @@ Waker は通常、executorと非同期タスクの間で共有されるので、
 
 ##### Creating Wakers
 
-`Waker` 型は、`Wake` 特性を実装したすべての `Arc` ラッピングされた値の [`From`] 変換をサポートしているので、`Executor::run_ready_tasks` メソッドで必要となる `TaskWaker::new` 関数を実装することができます:
+`Waker` 型は、`Wake` traitを実装したすべての `Arc` ラッピングされた値の [`From`] 変換をサポートしているので、`Executor::run_ready_tasks` メソッドで必要となる `TaskWaker::new` 関数を実装することができます:
 
 [`From`]: https://doc.rust-lang.org/nightly/core/convert/trait.From.html
 
@@ -1790,9 +1790,9 @@ impl Executor {
 executorは、効率的な方法でタスクを実行できるようになりました。待機中のタスクのポーリングを避けるためにwaker通知を利用し、現在やるべきことがないときはCPUをスリープさせます。しかし、このexecutorはまだ非常に基本的なものであり、機能を拡張する方法はたくさんあります:
 
 - **Scheduling**: 現在、我々は[`VecDeque`]型を使用して、先入れ先出し(FIFO)戦略を`task_queue`に実装しています。これはしばしば **round robin** スケジューリングとも呼ばれます。この戦略は、すべてのワークロードにとって最も効率的であるとは限りません。例えば、レイテンシーが重要なタスクや、I/Oを大量に行うタスクを優先させることは意味があるかもしれません。詳しくは、『_Operating Systems: Three Easy Pieces』の「スケジューリングの章」や、[Wikipedia article on scheduling][scheduling-wiki]をご覧ください。
-- **Task Spawning**: 現在、私たちの `Executor::spawn` メソッドは `&mut self` の参照を必要とするため、`run` メソッドを開始した後は利用できません。この問題を解決するには、追加の `Spawner` タイプを作成します。このタイプは、ある種のqueueをexecutorと共有し、タスク自身の中からタスクを作成することができます。このqueueは、例えば `task_queue` を直接使用することもできますし、executorが実行ループの中でチェックする別のqueueを使用することもできます。
+- **Task Spawning**: 現在、私たちの `Executor::spawn` メソッドは `&mut self` の参照を必要とするため、`run` メソッドを開始した後は利用できません。この問題を解決するには、追加の `Spawner` 型を作成します。この型は、ある種のqueueをexecutorと共有し、タスク自身の中からタスクを作成することができます。このqueueは、例えば `task_queue` を直接使用することもできますし、executorが実行ループの中でチェックする別のqueueを使用することもできます。
 - **Utilizing Threads**: まだスレッドのサポートはしていませんが、次の投稿で追加する予定です。これにより、executorの複数のインスタンスを異なるスレッドで起動することが可能になります。このアプローチの利点は、他のタスクが同時に実行できるため、長時間実行するタスクによって課せられる遅延を減らすことができることです。また、この方法では、複数のCPUコアを利用することもできます。
-- **Load Balancing**: スレッドサポートを追加した場合、すべてのCPUコアが利用されるように、実行者間でどのようにタスクを分配するかが重要になります。このための一般的なテクニックは、[_work stealing_]です。
+- **Load Balancing**: スレッドサポートを追加した場合、すべてのCPUコアが利用されるように、executor間でどのようにタスクを分配するかが重要になります。このための一般的なテクニックは、[_work stealing_]です。
 
 [scheduling chapter]: http://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched.pdf
 [_Operating Systems: Three Easy Pieces_]: http://pages.cs.wisc.edu/~remzi/OSTEP/
@@ -1807,9 +1807,9 @@ executorは、効率的な方法でタスクを実行できるようになりま
 
 舞台裏では、コンパイラが async/await コードを **state machine** に変換し、各 `.await` オペレーションが可能なpause pointに対応するようにします。プログラムに関する知識を活用することで、コンパイラは各pause pointの最小限の状態のみを保存することができ、その結果、タスクあたりのメモリ消費量は非常に小さくなります。一つの課題は、生成されたステートマシンに **self-referential** 構造体が含まれている可能性があることです。例えば、非同期関数のローカル変数が互いに参照している場合などです。ポインタの無効化を防ぐために、Rustは`Pin`型を用いて、futureが最初にポーリングされた後は、メモリ内で移動できないようにしています。
 
-私たちの**実装**では、まず、`Waker`タイプを全く使わずに、busy loopですべてのspawnされたタスクをポーリングする非常に基本的なexecutorを作成しました。次に、非同期のキーボードタスクを実装することで、waker通知の利点を示しました。このタスクは、`crossbeam`クレートが提供するミューテックスフリーの`ArrayQueue`型を使って、静的な`SCANCODE_QUEUE`を定義します。キーボード割り込みハンドラは、キープレスを直接処理する代わりに、受信したすべての scancode をキューに入れ、登録されている `Waker` をウェイクして、新しい入力が利用可能であることを通知します。受信側では、`ScancodeStream`タイプを作成して、キュー内の次の scancode に解決する`Future`を提供しています。これにより、非同期の `print_keypresses` タスクを作成することができました。このタスクは、キュー内の scancode を解釈して印刷するために async/await を使用します。
+私たちの**実装**では、まず、`Waker`型を全く使わずに、busy loopですべてのspawnされたタスクをポーリングする非常に基本的なexecutorを作成しました。次に、非同期のキーボードタスクを実装することで、waker通知の利点を示しました。このタスクは、`crossbeam`クレートが提供するミューテックスフリーの`ArrayQueue`型を使って、静的な`SCANCODE_QUEUE`を定義します。キーボード割り込みハンドラは、キープレスを直接処理する代わりに、受信したすべての scancode をキューに入れ、登録されている `Waker` をウェイクして、新しい入力が利用可能であることを通知します。受信側では、`ScancodeStream`型を作成して、キュー内の次の scancode に解決する`Future`を提供しています。これにより、非同期の `print_keypresses` タスクを作成することができました。このタスクは、キュー内の scancode を解釈して印刷するために async/await を使用します。
 
-キーボードタスクのwaker通知を利用するために、新しい `Executor` タイプを作成しました。このタイプは、ready タスク用に `Arc` 共有の `task_queue` を使用します。 私たちは`TaskWaker`型を実装し、起こされたタスクのIDを直接この`task_queue`にpushし、それをexecutorが再びポーリングするようにしました。また、実行可能なタスクがないときに電力を節約するために、`hlt`命令を用いてCPUをスリープさせる機能を追加しました。最後に、マルチコアへの対応など、executorの拡張の可能性について述べました。
+キーボードタスクのwaker通知を利用するために、新しい `Executor` 型を作成しました。この型は、ready タスク用に `Arc` 共有の `task_queue` を使用します。 私たちは`TaskWaker`型を実装し、起こされたタスクのIDを直接この`task_queue`にpushし、それをexecutorが再びポーリングするようにしました。また、実行可能なタスクがないときに電力を節約するために、`hlt`命令を用いてCPUをスリープさせる機能を追加しました。最後に、マルチコアへの対応など、executorの拡張の可能性について述べました。
 
 ## What's Next?
 
