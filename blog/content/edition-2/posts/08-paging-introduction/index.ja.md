@@ -1,5 +1,5 @@
 +++
-title = "Introduction to Paging"
+title = "ページング入門"
 weight = 8
 path = "ja/paging-introduction"
 date = 2019-01-14
@@ -12,11 +12,11 @@ translation_based_on_commit = "3315bfe2f63571f5e6e924d58ed32afd8f39f892"
 translators = ["woodyZootopia"]
 +++
 
-This post introduces _paging_, a very common memory management scheme that we will also use for our operating system. It explains why memory isolation is needed, how _segmentation_ works, what _virtual memory_ is, and how paging solves memory fragmentation issues. It also explores the layout of multilevel page tables on the x86_64 architecture.
+この記事では**ページング**を紹介します。これは、私達のオペレーティングシステムにも使う、とても一般的なメモリ管理方式です。なぜメモリの<ruby>分離<rp> (</rp><rt>isolation</rt><rp>) </rp></ruby>が必要なのか、**セグメンテーション**がどのようにして働くのか、**仮想メモリ**とは何なのか、ページングがいかにしてメモリ<ruby>断片化<rp> (</rp><rt>フラグメンテーション</rt><rp>) </rp></ruby>の問題を解決するのかを説明します。また、x86_64アーキテクチャにおける、マルチレベルページテーブルのレイアウトについても説明します。
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom].  The complete source code for this post can be found in the [`post-08`][post branch] branch.
+このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください（訳注: リンクは原文(英語)のものになります）。また[こちら][at the bottom]にコメントを残すこともできます。この記事の完全なソースコードは[`post-08` ブランチ][post branch]にあります。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -24,176 +24,177 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 <!-- toc -->
 
-## Memory Protection
+## メモリの保護
 
-One main task of an operating system is to isolate programs from each other. Your web browser shouldn't be able to interfere with your text editor, for example. To achieve this goal, operating systems utilize hardware functionality to ensure that memory areas of one process are not accessible by other processes. There are different approaches, depending on the hardware and the OS implementation.
+オペレーティングシステムの主な役割の一つに、プログラムを互いに分離するということがあります。例えば、ウェブブラウザがテキストエディタに干渉してはいけません。この目的を達成するために、オペレーティングシステムはハードウェアの機能を利用して、あるプロセスのメモリ領域に他のプロセスがアクセスできないようにします。ハードウェアやOSの実装によって、さまざまなアプローチがあります。
 
-As an example, some ARM Cortex-M processors (used for embedded systems) have a [_Memory Protection Unit_] (MPU), which allows you to define a small number (e.g. 8) of memory regions with different access permissions (e.g. no access, read-only, read-write). On each memory access the MPU ensures that the address is in a region with correct access permissions and throws an exception otherwise. By changing the regions and access permissions on each process switch, the operating system can ensure that each process only accesses its own memory, and thus isolate processes from each other.
+例として、ARM Cortex-Mプロセッサ（組み込みシステムに使われています）のいくつかには、[メモリ保護ユニット][_Memory Protection Unit_] (Memory Protection Unit, MPU) が搭載されており、異なるアクセス権限（例えば、アクセス不可、読み取り専用、読み書きなど）を持つメモリ領域を少数（例えば8個）定義することができます。MPUは、メモリアクセスのたびに、そのアドレスが正しいアクセス許可を持つ領域にあるかどうかを確認し、そうでなければ例外を投げます。プロセスを変更するごとにその領域とアクセス許可を変更すれば、オペレーティングシステムはそれぞれのプロセスが自身のメモリにのみアクセスすることを保証し、したがってプロセスを互いに分離することができます。
 
 [_Memory Protection Unit_]: https://developer.arm.com/docs/ddi0337/e/memory-protection-unit/about-the-mpu
 
-On x86, the hardware supports two different approaches to memory protection: [segmentation] and [paging].
+x86においては、ハードウェアは2つの異なるメモリ保護の方法をサポートしています：[セグメンテーション][segmentation]と[ページング][paging]です。
 
 [segmentation]: https://en.wikipedia.org/wiki/X86_memory_segmentation
 [paging]: https://en.wikipedia.org/wiki/Virtual_memory#Paged_virtual_memory
 
-## Segmentation
+## セグメンテーション
 
-Segmentation was already introduced in 1978, originally to increase the amount of addressable memory. The situation back then was that CPUs only used 16-bit addresses, which limited the amount of addressable memory to 64KiB. To make more than these 64KiB accessible, additional segment registers were introduced, each containing an offset address. The CPU automatically added this offset on each memory access, so that up to 1MiB of memory were accessible.
+セグメンテーションは1978年にはすでに導入されており、当初の目的はアドレス可能なメモリの量を増やすためでした。当時、CPUは16bitのアドレスしか使えなかったので、アドレス可能なメモリは64KiBに限られていました。この64KiBを超えてアクセスするために、セグメントレジスタが追加され、それぞれにオフセットアドレスが設定されました。CPUがメモリにアクセスするとき、毎回このオフセットを自動的に加算するので、最大1MiBのメモリにアクセスできるようになりました。
 
-The segment register is chosen automatically by the CPU, depending on the kind of memory access: For fetching instructions the code segment `CS` is used and for stack operations (push/pop) the stack segment `SS` is used. Other instructions use data segment `DS` or the extra segment `ES`. Later two additional segment registers `FS` and `GS` were added, which can be used freely.
+メモリアクセスの種類によって、セグメントレジスタは自動的にCPUによって選ばれます。命令の<ruby>引き出し<rp> (</rp><rt>フェッチ</rt><rp>) </rp></ruby>にはコードセグメント`CS`が使用され、スタック操作（プッシュ・ポップ）にはスタックセグメント`SS`が使用されます。その他の命令では、データセグメント`DS`やエクストラセグメント`ES`が使用されます。その後、自由に使用できる`FS`と`GS`というセグメントレジスタも追加されました。
 
-In the first version of segmentation, the segment registers directly contained the offset and no access control was performed. This was changed later with the introduction of the [_protected mode_]. When the CPU runs in this mode, the segment descriptors contain an index into a local or global [_descriptor table_], which contains – in addition to an offset address – the segment size and access permissions. By loading separate global/local descriptor tables for each process that confine memory accesses to the process's own memory areas, the OS can isolate processes from each other.
+セグメンテーションの初期バージョンでは、セグメントレジスタは直接オフセットを格納しており、アクセス制御は行われていませんでした。これは後に[<ruby>プロテクトモード<rp> (</rp><rt>protected mode</rt><rp>) </rp></ruby>][_protected mode_]が導入されたことで変更されました。CPUがこのモードで実行している時、セグメント<ruby>記述子<rp> (</rp><rt>ディスクリプタ</rt><rp>) </rp></ruby>は<ruby>局所<rp> (</rp><rt>ローカル</rt><rp>) </rp></ruby>または<ruby>大域<rp> (</rp><rt>グローバル</rt><rp>) </rp>[**</ruby><ruby>記述子表<rp> (</rp><rt>ディスクリプタテーブル</rt><rp>) </rp></ruby>**][_descriptor table_]を格納します。これには（オフセットアドレスに加えて）セグメントのサイズとアクセス許可が格納されます。それぞれのプロセスに対し、メモリアクセスをプロセス自身のメモリ領域にのみ制限するような大域/局所記述子表をロードすることで、OSはプロセスを互いに隔離することができます。
 
 [_protected mode_]: https://en.wikipedia.org/wiki/X86_memory_segmentation#Protected_mode
 [_descriptor table_]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
-By modifying the memory addresses before the actual access, segmentation already employed a technique that is now used almost everywhere: _virtual memory_.
+メモリアドレスを実際にアクセスされる前に変更するという点において、セグメンテーションは今やほぼすべての場所で使われている**仮想メモリ**というテクニックをすでに採用していたと言えます。
 
-### Virtual Memory
+### 仮想メモリ
 
-The idea behind virtual memory is to abstract away the memory addresses from the underlying physical storage device. Instead of directly accessing the storage device, a translation step is performed first. For segmentation, the translation step is to add the offset address of the active segment. Imagine a program accessing memory address `0x1234000` in a segment with offset `0x1111000`: The address that is really accessed is `0x2345000`.
+仮想メモリの背景にある考え方は、下層にある物理的なストレージデバイスからメモリアドレスを抽象化することです。ストレージデバイスに直接アクセスするのではなく、先に何らかの変換ステップが踏まれます。セグメンテーションの場合、この変換ステップとはアクティブなセグメントのオフセットアドレスを追加することです。例えば、オフセット`0x1111000`のセグメントにあるプログラムが`0x1234000`というメモリアドレスにアクセスすると、実際にアクセスされるアドレスは`0x2345000`になります。
 
-To differentiate the two address types, addresses before the translation are called _virtual_ and addresses after the translation are called _physical_. One important difference between these two kinds of addresses is that physical addresses are unique and always refer to the same, distinct memory location. Virtual addresses on the other hand depend on the translation function. It is entirely possible that two different virtual addresses refer to the same physical address. Also, identical virtual addresses can refer to different physical addresses when they use different translation functions.
+この2種類のアドレスを区別するため、変換前のアドレスを **仮想（アドレス）** と、変換後のアドレスを **物理（アドレス）** と呼びます。この2種類のアドレスの重要な違いの一つは、物理アドレスは常に同じ一意なメモリ位置を指すということです。いっぽう仮想アドレス（の指す場所）は変換する関数に依存します。二つの異なる仮想アドレスが同じ物理アドレスを指すということは十分にありえます。また、変換関数が異なっていれば、同じ仮想アドレスが別の物理アドレスを示すということもありえます。
 
-An example where this property is useful is running the same program twice in parallel:
-
+この特性が役立つ例として、同じプログラムを2つ並行して実行するという状況が挙げられます。
 
 ![Two virtual address spaces with address 0–150, one translated to 100–250, the other to 300–450](segmentation-same-program-twice.svg)
 
-Here the same program runs twice, but with different translation functions. The first instance has an segment offset of 100, so that its virtual addresses 0–150 are translated to the physical addresses 100–250. The second instance has offset 300, which translates its virtual addresses  0–150 to physical addresses 300–450. This allows both programs to run the same code and use the same virtual addresses without interfering with each other.
+同じプログラムを2つ実行していますが、別の変換関数が使われています。1つ目のインスタンスではセグメントのオフセットが100なので、0から150の仮想アドレスは100から250に変換されます。2つ目のインスタンスではオフセットが300なので、0から150の仮想アドレスが300から450に変換されます。これにより、プログラムが互いに干渉することなく同じコード、同じ仮想アドレスを使うことができます。
 
-Another advantage is that programs can be placed at arbitrary physical memory locations now, even if they use completely different virtual addresses. Thus, the OS can utilize the full amount of available memory without needing to recompile programs.
+もう一つの利点は、プログラムが全く異なる仮想アドレスを使っていたとしても、物理メモリ上の任意の場所に置くことができるということです。したがって、OSはプログラムを再コンパイルすることなく、利用可能なメモリをフルに活用することができます。
 
-### Fragmentation
+### <ruby>断片化<rp> (</rp><rt>fragmentation</rt><rp>) </rp></ruby>
 
-The differentiation between virtual and physical addresses makes segmentation really powerful. However, it has the problem of fragmentation. As an example, imagine that we want to run a third copy of the program we saw above:
+物理アドレスと仮想アドレスを分けることにより、セグメンテーションは非常に強力なものとなっています。しかし、これにより断片化という問題が発生します。例として、上で見たプログラムの3つ目を実行したいとしましょう：
 
 ![Three virtual address spaces, but there is not enough continuous space for the third](segmentation-fragmentation.svg)
 
-There is no way to map the third instance of the program to virtual memory without overlapping, even though there is more than enough free memory available. The problem is that we need _continuous_ memory and can't use the small free chunks.
+開放されているメモリは十分にあるにも関わらず、プログラムのインスタンスを重ねることなく物理メモリに対応づけることはできません。ここで必要なのは **連続した** メモリであり、開放されたメモリが小さな塊であっては使えないためです。
 
-One way to combat this fragmentation is to pause execution, move the used parts of the memory closer together, update the translation, and then resume execution:
+この断片化に対処する方法の一つは、実行を一時停止し、メモリの使用されている部分を寄せ集めて、変換関数を更新し、実行を再開することでしょう：
 
 ![Three virtual address spaces after defragmentation](segmentation-fragmentation-compacted.svg)
 
-Now there is enough continuous space to start the third instance of our program.
+これで、プログラムの3つ目のインスタンスを開始するのに十分な連続したスペースができました。
 
-The disadvantage of this defragmentation process is that is needs to copy large amounts of memory which decreases performance. It also needs to be done regularly before the memory becomes too fragmented. This makes performance unpredictable, since programs are paused at random times and might become unresponsive.
+このデフラグメンテーションという処理の欠点は、大量のメモリをコピーしなければならず、パフォーマンスを低下させてしまうことです。また、メモリが断片化しすぎる前に定期的に実行しないといけません。すると、プログラムが時々一時停止して、反応がなくなるので、性能が予測不可能になってしまいます。
 
-The fragmentation problem is one of the reasons that segmentation is no longer used by most systems. In fact, segmentation is not even supported in 64-bit mode on x86 anymore. Instead _paging_ is used, which completely avoids the fragmentation problem.
+ほとんどのシステムでセグメンテーションが用いられなくなった理由の一つに、この断片化の問題があります。実際、x86の64ビットモードでは、セグメンテーションはもはやサポートされていません。代わりに **ページング** が使用されており、これにより断片化の問題は完全に回避されます。
 
-## Paging
+## ページング
 
-The idea is to divide both the virtual and the physical memory space into small, fixed-size blocks. The blocks of the virtual memory space are called _pages_ and the blocks of the physical address space are called _frames_. Each page can be individually mapped to a frame, which makes it possible to split larger memory regions across non-continuous physical frames.
+ページングの考え方は、仮想メモリ空間と物理メモリ空間の両方を、サイズの固定された小さなブロックに分割するというものです。仮想メモリ空間のブロックは **ページ** と呼ばれ、物理アドレス空間のブロックは **フレーム** と呼ばれます。各ページはフレームに独立してマッピングできるので、大きなメモリ領域を連続していない物理フレームに分割することが可能です。
 
-The advantage of this becomes visible if we recap the example of the fragmented memory space, but use paging instead of segmentation this time:
+この方法の利点は、セグメンテーションの代わりにページングを使ってもう一度上のメモリ空間断片化の状況を見てみれば明らかになります：
 
 ![With paging the third program instance can be split across many smaller physical areas](paging-fragmentation.svg)
 
-In this example we have a page size of 50 bytes, which means that each of our memory regions is split across three pages. Each page is mapped to a frame individually, so a continuous virtual memory region can be mapped to non-continuous physical frames. This allows us to start the third instance of the program without performing any defragmentation before.
+この例では、ページサイズは50バイトなので、それぞれのメモリ領域が3つのページに分割されます。それぞれのページは個別にフレームに対応付けられるので、連続した仮想メモリ領域を非連続な物理フレームへと対応付けられるのです。これにより、デフラグを事前に実行することなく、3つ目のプログラムのインスタンスを開始することができるようになります。
 
-### Hidden Fragmentation
+### 隠された断片化
 
-Compared to segmentation, paging uses lots of small, fixed sized memory regions instead of a few large, variable sized regions. Since every frame has the same size, there are no frames that are too small to be used so that no fragmentation occurs.
+少ない数の可変なサイズのメモリ領域を使っていたセグメンテーションと比べると、ページングでは大量の小さい固定サイズのメモリ領域を使います。すべてのフレームが同じ大きさなので、「小さすぎて使えないフレーム」などというものは存在せず、したがって断片化も起きません。
 
-Or it _seems_ like no fragmentation occurs. There is still some hidden kind of fragmentation, the so-called _internal fragmentation_. Internal fragmentation occurs because not every memory region is an exact multiple of the page size. Imagine a program of size 101 in the above example: It would still need three pages of size 50, so it would occupy 49 bytes more than needed. To differentiate the two types of fragmentation, the kind of fragmentation that happens when using segmentation is called _external fragmentation_.
+というより、**目に見える** 断片化は起きていない、という方が正しいでしょう。**<ruby>内部<rp> (</rp><rt>internal</rt><rp>) </rp></ruby>断片化**と呼ばれる、目に見えない断片化は依然として起こっています。内部断片化は、すべてのメモリ領域がページサイズの整数倍ぴったりにはならないために生じます。例えば、上の例でサイズが101のプログラムを考えてみてください：この場合でもサイズ50のページが3つ必要で、必要な量より49バイト多く占有します。これらの2種類の断片化を区別するため、セグメンテーションを使うときに起きる断片化は **<ruby>外部<rp> (</rp><rt>external</rt><rp>) </rp></ruby>断片化** と呼ばれます。
 
-Internal fragmentation is unfortunate, but often better than the external fragmentation that occurs with segmentation. It still wastes memory, but does not require defragmentation and makes the amount of fragmentation predictable (on average half a page per memory region).
+内部断片化が起こるのは残念なことですが、セグメンテーションで発生していた外部断片化よりも優れていることが多いです。確かにメモリ領域は無駄にしますが、デフラグメンテーションをする必要がなく、また断片化の量も予想できるからです（平均するとメモリ領域ごとにページの半分）。
 
-### Page Tables
+### ページテーブル
 
-We saw that each of the potentially millions of pages is individually mapped to a frame. This mapping information needs to be stored somewhere. Segmentation uses an individual segment selector register for each active memory region, which is not possible for paging since there are way more pages than registers. Instead paging uses a table structure called _page table_ to store the mapping information.
+最大で何百万ものページがそれぞれ独立にフレームに対応付けられることを見てきました。この対応付けの情報はどこかに保存されなければなりません。セグメンテーションでは、有効なメモリ領域ごとに個別のセグメントセレクタを使っていましたが、ページングではレジスタよりも遥かに多くのページが使われるので、これは不可能です。代わりにページングでは **ページテーブル** と呼ばれる<ruby>表<rp> (</rp><rt>テーブル</rt><rp>) </rp></ruby>構造を使って対応付の情報を保存します。
 
-For our above example the page tables would look like this:
+上の例では、ページテーブルは以下のようになります：
 
 ![Three page tables, one for each program instance. For instance 1 the mapping is 0->100, 50->150, 100->200. For instance 2 it is 0->300, 50->350, 100->400. For instance 3 it is 0->250, 50->450, 100->500.](paging-page-tables.svg)
 
-We see that each program instance has its own page table. A pointer to the currently active table is stored in a special CPU register. On `x86`, this register is called `CR3`. It is the job of the operating system to load this register with the pointer to the correct page table before running each program instance.
+それぞれのプログラムのインスタンスが独自のページテーブルを持っているのが分かります。現在有効なテーブルへのポインタは、特殊なCPUのレジスタに格納されます。`x86`においては、このレジスタは`CR3`と呼ばれています。それぞれのプログラムのインスタンスを実行する前に、正しいページテーブルを指すポインタをこのレジスタにロードするのはOSの役割です。
 
-On each memory access, the CPU reads the table pointer from the register and looks up the mapped frame for the accessed page in the table. This is entirely done in hardware and completely transparent to the running program. To speed up the translation process, many CPU architectures have a special cache that remembers the results of the last translations.
+それぞれのメモリアクセスにおいて、CPUはテーブルへのポインタをレジスタから読み出し、テーブル内のアクセスされたページから対応するフレームを見つけ出します。これは完全にハードウェア内で行われ、実行しているプログラムからはこの動作は見えません。変換プロセスを高速化するために、多くのCPUアーキテクチャは前回の変換の結果を覚えておく専用のキャッシュを持っています。
 
-Depending on the architecture, page table entries can also store attributes such as access permissions in a flags field. In the above example, the "r/w" flag makes the page both readable and writable.
+アーキテクチャによっては、ページテーブルのエントリは"Flags"フィールドにあるアクセス許可のような属性も保持することができます。上の例では、"r/w"フラグがあることにより、このページは読み書きのどちらも可能だということを示しています。
 
-### Multilevel Page Tables
+### <ruby>複数層<rp> (</rp><rt>Multilevel</rt><rp>) </rp></ruby>ページテーブル
 
-The simple page tables we just saw have a problem in larger address spaces: they waste memory. For example, imagine a program that uses the four virtual pages `0`, `1_000_000`, `1_000_050`, and `1_000_100` (we use `_` as a thousands separator):
+上で見たシンプルなページテーブルには、アドレス空間が大きくなってくると問題が発生します：メモリが無駄になるのです。たとえば、`0`, `1_000_000`, `1_000_050` および `1_000_100`（3ケタごとの区切りとして`_`を用いています）の4つの仮想ページを使うプログラムを考えてみましょう。
 
 ![Page 0 mapped to frame 0 and pages `1_000_000`–`1_000_150` mapped to frames 100–250](single-level-page-table.svg)
 
-It only needs 4 physical frames, but the page table has over a million entries. We can't omit the empty entries because then the CPU would no longer be able to jump directly to the correct entry in the translation process (e.g. it is no longer guaranteed that the fourth page uses the fourth entry).
+このプログラムはたった4つしか物理フレームを必要としていないのに、テーブルには100万以上ものエントリが存在してしまっています。空のエントリを省略した場合、変換プロセスにおいてCPUが正しいエントリに直接ジャンプすることができなくなってしまうので、それはできません（たとえば、4つめのページが4つめのエントリを使っていることが保証されなくなってしまいます）。
 
-To reduce the wasted memory, we can use a **two-level page table**. The idea is that we use different page tables for different address regions. An additional table called _level 2_ page table contains the mapping between address regions and (level 1) page tables.
+この無駄になるメモリを減らすことができる、 **2層ページテーブル** を使ってみましょう。発想としては、それぞれのアドレス領域に異なるページテーブルを使うというものです。**レベル2** ページテーブルと呼ばれる追加のページテーブルは、アドレス領域と（レベル1の）ページテーブルのあいだの対応を格納します。
 
-This is best explained by an example. Let's define that each level 1 page table is responsible for a region of size `10_000`. Then the following tables would exist for the above example mapping:
+これを理解するには、例を見るのが一番です。それぞれのレベル1テーブルは大きさ`10_000`の領域に対応するとします。すると、以下のテーブルが上のマッピングの例に対応するものとなります：
 
 ![Page 0 points to entry 0 of the level 2 page table, which points to the level 1 page table T1. The first entry of T1 points to frame 0, the other entries are empty. Pages `1_000_000`–`1_000_150` point to the 100th entry of the level 2 page table, which points to a different level 1 page table T2. The first three entries of T2 point to frames 100–250, the other entries are empty.](multilevel-page-table.svg)
 
-Page 0 falls into the first `10_000` byte region, so it uses the first entry of the level 2 page table. This entry points to level 1 page table T1, which specifies that page `0` points to frame `0`.
+ページ0は最初の`10_000`バイト領域に入るので、レベル2ページテーブルの最初のエントリを使います。このエントリはT1というレベル1ページテーブルを指し、このページテーブルはページ`0`はフレーム`0`に対応すると指定します。
 
-The pages `1_000_000`, `1_000_050`, and `1_000_100` all fall into the 100th `10_000` byte region, so they use the 100th entry of the level 2 page table. This entry points at a different level 1 page table T2, which maps the three pages to frames `100`, `150`, and `200`. Note that the page address in level 1 tables does not include the region offset, so e.g. the entry for page `1_000_050` is just `50`.
+ページ`1_000_000`, `1_000_050`および`1_000_100`はすべて、`10_000`バイトの大きさの領域100個目に入るので、レベル2ページテーブルの100個目のエントリを使います。このエントリは、T2というべつのレベル1テーブルを指しており、このレベル1テーブルはこれらの3つのページをフレーム`100`, `150`および`200`に対応させています。レベル1テーブルにおけるページアドレスには領域のオフセットは含まれていない、つまり例えば、`1_000_050`というページのエントリは単に`50`である、ということに注意してください。
 
-We still have 100 empty entries in the level 2 table, but much fewer than the million empty entries before. The reason for this savings is that we don't need to create level 1 page tables for the unmapped memory regions between `10_000` and `1_000_000`.
+レベル2テーブルにはまだ100個の空のエントリがありますが、前の100万にくらべればこれはずっと少ないです。これほど節約できる理由は、`10_000`から`10_000_000`の、対応付けのないメモリ領域のためのレベル1テーブルを作る必要がないためです。
 
-The principle of two-level page tables can be extended to three, four, or more levels. Then the page table register points at the highest level table, which points to the next lower level table, which points to the next lower level, and so on. The level 1 page table then points at the mapped frame. The principle in general is called a _multilevel_ or _hierarchical_ page table.
+2層ページテーブルの理論は、3、4、それ以上に多くの層に拡張することができます。このとき、ページテーブルレジスタは最も高いレベルのテーブルを指し、そのテーブルは次に低いレベルのテーブルを指し、それはさらに低いレベルのものを、と続きます。そして、レベル1のテーブルは対応するフレームを指します。この理論は一般に **<ruby>複数層<rp> (</rp><rt>multilevel</rt><rp>) </rp></ruby>** ページテーブルや、 **<ruby>階層型<rp> (</rp><rt>hierarchical</rt><rp>) </rp></ruby>** ページテーブルと呼ばれます。
 
-Now that we know how paging and multilevel page tables works, we can look at how paging is implemented in the x86_64 architecture (we assume in the following that the CPU runs in 64-bit mode).
+ページングと複数層ページテーブルのしくみが理解できたので、x86_64アーキテクチャにおいてどのようにページングが実装されているのかについて見ていきましょう（以下では、CPUは64ビットモードで動いているとします）。
 
-## Paging on x86_64
+## x86_64におけるページング
 
-The x86_64 architecture uses a 4-level page table and a page size of 4KiB. Each page table, independent of the level, has a fixed size of 512 entries. Each entry has a size of 8 bytes, so each table is 512 * 8B = 4KiB large and thus fits exactly into one page.
+x86_64アーキテクチャは4層ページテーブルを使っており、ページサイズは4KiBです。それぞれのページテーブルは、層によらず512のエントリを持っています。それぞれのエントリの大きさは8バイトなので、それぞれのテーブルは512 * 8B = 4KiBであり、よってぴったり1ページに収まります。
 
-The page table index for level is derived directly from the virtual address:
+（各）レベルのページテーブルインデックスは、仮想アドレスから直接求められます：
 
 ![Bits 0–12 are the page offset, bits 12–21 the level 1 index, bits 21–30 the level 2 index, bits 30–39 the level 3 index, and bits 39–48 the level 4 index](x86_64-table-indices-from-address.svg)
 
-We see that each table index consists of 9 bits, which makes sense because each table has 2^9 = 512 entries. The lowest 12 bits are the offset in the 4KiB page (2^12 bytes = 4KiB). Bits 48 to 64 are discarded, which means that x86_64 is not really 64-bit since it only supports 48-bit addresses.
+それぞれのテーブルインデックスは9ビットからなることがわかります。それぞれのテーブルに2^9 = 512エントリあることを考えるとこれは妥当です。最下位の12ビットは4KiBページ内でのオフセット（2^12バイト = 4KiB）です。48ビットから64ビットは捨てられます。つまり、x86_64は48ビットのアドレスにしか対応しておらず、そのため実際には64ビットではないということです。
 
 [5-level page table]: https://en.wikipedia.org/wiki/Intel_5-level_paging
 
-Even though bits 48 to 64 are discarded, they can't be set to arbitrary values. Instead all bits in this range have to be copies of bit 47 in order to keep addresses unique and allow future extensions like the 5-level page table. This is called _sign-extension_ because it's very similar to the [sign extension in two's complement]. When an address is not correctly sign-extended, the CPU throws an exception.
+48ビットから64ビットが捨てられるからといって、任意の値にしてよいということではありません。この範囲のすべてのビットは、アドレスを一意にし、5層ページテーブルのような将来の拡張に備えるため、47ビットの値と同じにしないといけません。これは、[2の補数における符号拡張][sign extension in two's complement]によく似ているので、 **<ruby>符号<rp> (</rp><rt>sign</rt><rp>) </rp></ruby><ruby>拡張<rp> (</rp><rt>extension</rt><rp>) </rp></ruby>** とよばれています。アドレスが適切に符号拡張されていない場合、CPUは例外を投げます。
 
 [sign extension in two's complement]: https://en.wikipedia.org/wiki/Two's_complement#Sign_extension
 
-It's worth noting that the recent "Ice Lake" Intel CPUs optionally support [5-level page tables] to extends virtual addresses from 48-bit to 57-bit. Given that optimizing our kernel for a specific CPU does not make sense at this stage, we will only work with standard 4-level page tables in this post.
+近年発売されたIntelのIce LakeというCPUは、[5層ページテーブル][5-level page tables]にオプションで対応していて、仮想アドレスが48ビットから57ビットまで延長されているということは書いておく価値があるでしょう。いまの段階で私たちのカーネルをこの特定のCPUに最適化する意味はないので、この記事では標準の4層ページテーブルのみを使うことにします。
 
 [5-level page tables]: https://en.wikipedia.org/wiki/Intel_5-level_paging
 
-### Example Translation
+### 変換の例
 
-Let's go through an example to understand how the translation process works in detail:
+この変換プロセスの仕組みをより詳細に理解するために、例を挙げてみてみましょう。
 
 ![An example 4-level page hierarchy with each page table shown in physical memory](x86_64-page-table-translation.svg)
 
-The physical address of the currently active level 4 page table, which is the root of the 4-level page table, is stored in the `CR3` register. Each page table entry then points to the physical frame of the next level table. The entry of the level 1 table then points to the mapped frame. Note that all addresses in the page tables are physical instead of virtual, because otherwise the CPU would need to translate those addresses too (which could cause a never-ending recursion).
+現在有効なレベル4ページテーブルの物理アドレス、つまりレベル4ページテーブルの「<ruby>根<rp> (</rp><rt>root</rt><rp>) </rp></ruby>」は`CR3`レジスタに格納されています。それぞれのページテーブルエントリは、次のレベルのテーブルの物理フレームを指しています。そして、レベル1のテーブルは対応するフレームを指しています。なお、ページテーブル内のアドレスは全て仮想ではなく物理アドレスであることに注意してください。さもなければ、CPUは（変換プロセス中に）それらのアドレスも変換しなくてはならず、無限再帰に陥ってしまうかもしれません。
 
-The above page table hierarchy maps two pages (in blue). From the page table indices we can deduce that the virtual addresses of these two pages are `0x803FE7F000` and `0x803FE00000`. Let's see what happens when the program tries to read from address `0x803FE7F5CE`. First, we convert the address to binary and determine the page table indices and the page offset for the address:
+上のページテーブル階層構造は、最終的に（青色の）2つのページへの対応を行っています。ページテーブルのインデックスから、これらの2つのページの仮想アドレスは`0x803FE7F000`と`0x803FE00000`であると推論できます。プログラムがアドレス`0x803FE7F5CE`から読み込もうとしたときに何が起こるかを見てみましょう。まず、アドレスを2進数に変換し、アドレスのページテーブルインデックスとページオフセットが何であるかを決定します：
 
 ![The sign extension bits are all 0, the level 4 index is 1, the level 3 index is 0, the level 2 index is 511, the level 1 index is 127, and the page offset is 0x5ce](x86_64-page-table-translation-addresses.png)
 
-With these indices, we can now walk the page table hierarchy to determine the mapped frame for the address:
+これらのインデックス情報をもとにページテーブル階層構造を移動して、このアドレスに対応するフレームを決定します：
 
-- We start by reading the address of the level 4 table out of the `CR3` register.
-- The level 4 index is 1, so we look at the entry with index 1 of that table, which tells us that the level 3 table is stored at address 16KiB.
-- We load the level 3 table from that address and look at the entry with index 0, which points us to the level 2 table at 24KiB.
-- The level 2 index is 511, so we look at the last entry of that page to find out the address of the level 1 table.
-- Through the entry with index 127 of the level 1 table we finally find out that the page is mapped to frame 12KiB, or 0x3000 in hexadecimal.
-- The final step is to add the page offset to the frame address to get the physical address 0x3000 + 0x5ce = 0x35ce.
+- まず、`CR3`レジスタからレベル4テーブルのアドレスを読み出します。
+- レベル4のインデックスは1なので、このテーブルの1つ目のインデックスを見ます。すると、レベル3テーブルはアドレス16KiBに格納されていると分かります。
+- レベル3テーブルをそのアドレスから読み出し、インデックス0のエントリを見ると、レベル2テーブルは24KiBにあると教えてくれます。
+- レベル2のインデックスは511なので、このページの最後のエントリを見て、レベル1テーブルのアドレスを見つけます。
+- レベル1テーブルの127番目のエントリを読むことで、ついに対象のページは12KiB（16進数では0x3000）のフレームに対応づけられていると分かります。
+- 最後のステップは、ページオフセットをフレームアドレスに足して、物理アドレスを得ることです。0x3000 + 0x5ce = 0x35ce
 
 ![The same example 4-level page hierarchy with 5 additional arrows: "Step 0" from the CR3 register to the level 4 table, "Step 1" from the level 4 entry to the level 3 table, "Step 2" from the level 3 entry to the level 2 table, "Step 3" from the level 2 entry to the level 1 table, and "Step 4" from the level 1 table to the mapped frames.](x86_64-page-table-translation-steps.svg)
 
-The permissions for the page in the level 1 table are `r`, which means read-only. The hardware enforces these permissions and would throw an exception if we tried to write to that page. Permissions in higher level pages restrict the possible permissions in lower level, so if we set the level 3 entry to read-only, no pages that use this entry can be writable, even if lower levels specify read/write permissions.
+レベル1テーブルにあるこのページのパーミッション（訳注：ページテーブルにおいて、Flagsとある列）は`r`であり、これは読み込み専用という意味です。これらのようなパーミッションに対する侵害はハードウェアによって保護されており、このページに書き込もうとした場合は例外が投げられます。より高いレベルのページにおけるパーミッションは、下のレベルにおいて可能なパーミッションを制限します。たとえばレベル3エントリを読み込み専用にした場合、下のレベルで読み書きを許可したとしても、このエントリをつかうページはすべて書き込み不可になります。
 
-It's important to note that even though this example used only a single instance of each table, there are typically multiple instances of each level in each address space. At maximum, there are:
+この例ではそれぞれのテーブルの<ruby>実体<rp> (</rp><rt>インスタンス</rt><rp>) </rp></ruby>を1つずつしか使いませんでしたが、普通それぞれのアドレス空間において、各レベルに対して複数のインスタンスが使われるということは知っておく価値があるでしょう。最大で
 
-- one level 4 table,
-- 512 level 3 tables (because the level 4 table has 512 entries),
-- 512 * 512 level 2 tables (because each of the 512 level 3 tables has 512 entries), and
-- 512 * 512 * 512 level 1 tables (512 entries for each level 2 table).
+- 1個のレベル4テーブル
+- 512個のレベル3テーブル（レベル4テーブルには512エントリあるので）
+- 512 * 512個のレベル2テーブル（512個のレベル3テーブルそれぞれに512エントリあるので）
+- 512 * 512 * 512個のレベル1テーブル（それぞれのレベル2テーブルに512エントリあるので）
 
-### Page Table Format
+があります。
 
-Page tables on the x86_64 architecture are basically an array of 512 entries. In Rust syntax:
+### ページテーブルの形式
+
+x86_64アーキテクチャにおけるページテーブルは詰まるところ512個のエントリの配列です。Rustの構文では：
 
 ```rust
 #[repr(align(4096))]
@@ -202,42 +203,43 @@ pub struct PageTable {
 }
 ```
 
+`repr`属性で示されるように、ページテーブルはアラインされる必要があります。つまり4KiBごとの境界に揃えられる必要がある、ということです。この要求により、ページテーブルはつねにページひとつを完全に使うので、エントリをとても小さくできる最適化が可能になります。
 As indicated by the `repr` attribute, page tables need to be page aligned, i.e. aligned on a 4KiB boundary. This requirement guarantees that a page table always fills a complete page and allows an optimization that makes entries very compact.
 
-Each entry is 8 bytes (64 bits) large and has the following format:
+それぞれのエントリは8バイト（64ビット）の大きさであり、以下の形式です：
 
-Bit(s) | Name | Meaning
------- | ---- | -------
-0 | present | the page is currently in memory
-1 | writable | it's allowed to write to this page
-2 | user accessible | if not set, only kernel mode code can access this page
-3 | write through caching | writes go directly to memory
-4 | disable cache | no cache is used for this page
-5 | accessed | the CPU sets this bit when this page is used
-6 | dirty | the CPU sets this bit when a write to this page occurs
-7 | huge page/null | must be 0 in P1 and P4, creates a 1GiB page in P3, creates a 2MiB page in P2
-8 | global | page isn't flushed from caches on address space switch (PGE bit of CR4 register must be set)
-9-11 | available | can be used freely by the OS
-12-51 | physical address | the page aligned 52bit physical address of the frame or the next page table
-52-62 | available | can be used freely by the OS
-63 | no execute | forbid executing code on this page (the NXE bit in the EFER register must be set)
+ビット | 名前                  | 意味
+------ | ----                  | -------
+0      | present               | このページはメモリ内にある
+1      | writable              | このページへの書き込みは許可されている
+2      | user accessible       | 0の場合、カーネルモードのみこのページにアクセスできる
+3      | write through caching | 書き込みはメモリに対して直接行われる
+4      | disable cache         | このページにキャッシュを使わない
+5      | accessed              | このページが使われているとき、CPUはこのビットを1にする
+6      | dirty                 | このページへの書き込みが行われたとき、CPUはこのビットを1にする
+7      | huge page/null        | P1とP4においては0で、P3においては1GiBのページを、P2においては2MiBのページを作る
+8      | global                | キャッシュにあるこのページはアドレス空間変更の際に初期化されない（CR4レジスタのPGEビットが1である必要がある）
+9-11   | available             | OSが自由に使える
+12-51  | physical address      | 
+52-62  | available             | OSが自由に使える
+63     | no execute            | このページにおいてプログラムを実行することを禁じる（EFERレジスタのNXEビットが1である必要がある）
 
-We see that only bits 12–51 are used to store the physical frame address, the remaining bits are used as flags or can be freely used by the operating system. This is possible because we always point to a 4096-byte aligned address, either to a page-aligned page table or to the start of a mapped frame. This means that bits 0–11 are always zero, so there is no reason to store these bits because the hardware can just set them to zero before using the address. The same is true for bits 52–63, because the x86_64 architecture only supports 52-bit physical addresses (similar to how it only supports 48-bit virtual addresses).
+12-51ビットだけが物理フレームアドレスを格納するのに使われていて、残りのビットはフラグやオペレーティングシステムが自由に使うようになっていることがわかります。これが可能なのは、常に4096バイト単位のページに<ruby>揃え<rp> (</rp><rt>アライン</rt><rp>) </rp></ruby>られたアドレス（ページテーブルか、対応づけられたフレームの先頭）を指しているからです。これは、0-11ビットは常にゼロであることを意味し、したがってこれらのビットを格納しておく必要はありません。ハードウェアがアドレスを使用する前に、それらのビットをゼロとして（追加して）やれば良いからです。同じことが52-63ビットについてもいえます。なぜならx86_64アーキテクチャは52ビットの物理アドレスしかサポートしていないからです（仮想アドレスを48ビットしかサポートしていないのと似ています）。
 
-Let's take a closer look at the available flags:
+上のフラグについてより詳しく見てみましょう：
 
-- The `present` flag differentiates mapped pages from unmapped ones. It can be used to temporarily swap out pages to disk when main memory becomes full. When the page is accessed subsequently, a special exception called _page fault_ occurs, to which the operating system can react by reloading the missing page from disk and then continuing the program.
-- The `writable` and `no execute` flags control whether the contents of the page are writable or contain executable instructions respectively.
-- The `accessed` and `dirty` flags are automatically set by the CPU when a read or write to the page occurs. This information can be leveraged by the operating system e.g. to decide which pages to swap out or whether the page contents were modified since the last save to disk.
-- The `write through caching` and `disable cache` flags allow to control the caches for every page individually.
-- The `user accessible` flag makes a page available to userspace code, otherwise it is only accessible when the CPU is in kernel mode. This feature can be used to make [system calls] faster by keeping the kernel mapped while an userspace program is running. However, the [Spectre] vulnerability can allow userspace programs to read these pages nonetheless.
-- The `global` flag signals to the hardware that a page is available in all address spaces and thus does not need to be removed from the translation cache (see the section about the TLB below) on address space switches. This flag is commonly used together with a cleared `user accessible` flag to map the kernel code to all address spaces.
-- The `huge page` flag allows to create pages of larger sizes by letting the entries of the level 2 or level 3 page tables directly point to a mapped frame. With this bit set, the page size increases by factor 512 to either 2MiB = 512 * 4KiB for level 2 entries or even 1GiB = 512 * 2MiB for level 3 entries. The advantage of using larger pages is that fewer lines of the translation cache and fewer page tables are needed.
+- `present`フラグは、対応付けられているページとそうでないページを区別します。このフラグは、メインメモリが一杯になったとき、ページを一時的にディスクにスワップしたいときに使うことができます。後でページがアクセスされたら、 **ページフォルト** という特別な例外が発生するので、オペレーティングシステムは不足しているページをディスクから読み出すことでこれに対応し、プログラムを再開します。
+- `writable`と`no execute`フラグはそれぞれ、このページの中身が書き込み可能かと、実行可能な命令であるかを制御します。
+- `accessed`と`dirty`フラグは、ページへの読み込みか書き込みが行われたときにCPUによって自動的に1にセットされます。この情報はオペレーティングシステムによって活用することができます――例えば、どのページをスワップするかや、ページの中身が最後にディスクに保存されて以降に修正されたかを確認することができます。
+- `write through caching`と`disable cache`フラグで、キャッシュの制御をページごとに独立して行うことができます。
+- `user accessible`フラグはページをユーザー空間のプログラムに利用可能にします。このフラグが1になっていない場合、CPUがカーネルモードのときにのみアクセスできます。この機能は、ユーザ空間のプログラムが実行している間もカーネル（の使用しているメモリ）を対応付けたままにしておくことで、[システムコール][system calls]を高速化するために使うことができます。しかし、[Spectre]脆弱性を使うと、この機能があるにもかかわらず、ユーザ空間プログラムがこれらのページを読むことができてしまいます。
+- `global`フラグは、このページはすべてのアドレス空間で利用可能であり、よってアドレス空間の変更時に変換キャッシュ（TLBに関する下のセクションを読んでください）から取り除く必要がないことをハードウェアに伝えます。
+- `huge page`フラグを使うと、レベル2か3のページが対応付けられたフレームを直接指すようにすることで、より大きいサイズのページを作ることができます。このビットが1のとき、ページの大きさは512倍になるので、レベル2のエントリの場合は2MiB = 512 * 4KiBに、レベル3のエントリの場合は1GiB = 512 * 2MiBにもなります。大きいページを使うことのメリットは、必要な変換キャッシュのラインの数やページテーブルの数が少なくなることです。
 
 [system calls]: https://en.wikipedia.org/wiki/System_call
 [Spectre]: https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)
 
-The `x86_64` crate provides types for [page tables] and their [entries], so we don't need to create these structures ourselves.
+`x86_64`クレートが[ページテーブル][page tables]とその[エントリ][entries]のための型を提供してくれているので、これらの構造体を私達自身で作る必要はありません。
 
 [page tables]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/page_table/struct.PageTable.html
 [entries]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
