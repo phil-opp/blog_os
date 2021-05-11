@@ -12,7 +12,7 @@ translation_based_on_commit = "3315bfe2f63571f5e6e924d58ed32afd8f39f892"
 translators = ["woodyZootopia"]
 +++
 
-この記事では**ページング**を紹介します。これは、私達のオペレーティングシステムにも使う、とても一般的なメモリ管理方式です。なぜメモリの<ruby>分離<rp> (</rp><rt>isolation</rt><rp>) </rp></ruby>が必要なのか、**セグメンテーション**がどのようにして働くのか、**仮想メモリ**とは何なのか、ページングがいかにしてメモリ<ruby>断片化<rp> (</rp><rt>フラグメンテーション</rt><rp>) </rp></ruby>の問題を解決するのかを説明します。また、x86_64アーキテクチャにおける、マルチレベルページテーブルのレイアウトについても説明します。
+この記事では**ページング**を紹介します。これは、私達のオペレーティングシステムにも使う、とても一般的なメモリ管理方式です。なぜメモリの分離が必要なのか、**セグメンテーション**がどういう仕組みなのか、**仮想メモリ**とは何なのか、ページングがいかにしてメモリ<ruby>断片化<rp> (</rp><rt>フラグメンテーション</rt><rp>) </rp></ruby>の問題を解決するのかを説明します。また、x86_64アーキテクチャにおける、マルチレベルページテーブルのレイアウトについても説明します。
 
 <!-- more -->
 
@@ -28,7 +28,7 @@ translators = ["woodyZootopia"]
 
 オペレーティングシステムの主な役割の一つに、プログラムを互いに分離するということがあります。例えば、ウェブブラウザがテキストエディタに干渉してはいけません。この目的を達成するために、オペレーティングシステムはハードウェアの機能を利用して、あるプロセスのメモリ領域に他のプロセスがアクセスできないようにします。ハードウェアやOSの実装によって、さまざまなアプローチがあります。
 
-例として、ARM Cortex-Mプロセッサ（組み込みシステムに使われています）のいくつかには、[メモリ保護ユニット][_Memory Protection Unit_] (Memory Protection Unit, MPU) が搭載されており、異なるアクセス権限（例えば、アクセス不可、読み取り専用、読み書きなど）を持つメモリ領域を少数（例えば8個）定義することができます。MPUは、メモリアクセスのたびに、そのアドレスが正しいアクセス許可を持つ領域にあるかどうかを確認し、そうでなければ例外を投げます。プロセスを変更するごとにその領域とアクセス許可を変更すれば、オペレーティングシステムはそれぞれのプロセスが自身のメモリにのみアクセスすることを保証し、したがってプロセスを互いに分離することができます。
+例として、ARM Cortex-Mプロセッサ（組み込みシステムに使われています）のいくつかには、[メモリ保護ユニット][_Memory Protection Unit_] (Memory Protection Unit, MPU) が搭載されており、異なるアクセス権限（例えば、アクセス不可、読み取り専用、読み書きなど）を持つメモリ領域を少数（例えば8個）定義できます。MPUは、メモリアクセスのたびに、そのアドレスが正しいアクセス許可を持つ領域にあるかどうかを確認し、そうでなければ例外を投げます。プロセスを変更するごとにその領域とアクセス許可を変更すれば、オペレーティングシステムはそれぞれのプロセスが自身のメモリにのみアクセスすることを保証し、したがってプロセスを互いに分離できます。
 
 [_Memory Protection Unit_]: https://developer.arm.com/docs/ddi0337/e/memory-protection-unit/about-the-mpu
 
@@ -39,11 +39,11 @@ x86においては、ハードウェアは2つの異なるメモリ保護の方�
 
 ## セグメンテーション
 
-セグメンテーションは1978年にはすでに導入されており、当初の目的はアドレス可能なメモリの量を増やすためでした。当時、CPUは16bitのアドレスしか使えなかったので、アドレス可能なメモリは64KiBに限られていました。この64KiBを超えてアクセスするために、セグメントレジスタが追加され、それぞれにオフセットアドレスが設定されました。CPUがメモリにアクセスするとき、毎回このオフセットを自動的に加算するので、最大1MiBのメモリにアクセスできるようになりました。
+セグメンテーションは1978年にはすでに導入されており、当初の目的はアドレス可能なメモリの量を増やすためでした。当時、CPUは16bitのアドレスしか使えなかったので、アドレス可能なメモリは64KiBに限られていました。この64KiBを超えてアクセスするために、セグメントレジスタが追加され、このそれぞれにオフセットアドレスが格納されるようになりました。CPUがメモリにアクセスするとき、毎回このオフセットを自動的に加算するので、最大1MiBのメモリにアクセスできるようになりました。
 
 メモリアクセスの種類によって、セグメントレジスタは自動的にCPUによって選ばれます。命令の<ruby>引き出し<rp> (</rp><rt>フェッチ</rt><rp>) </rp></ruby>にはコードセグメント`CS`が使用され、スタック操作（プッシュ・ポップ）にはスタックセグメント`SS`が使用されます。その他の命令では、データセグメント`DS`やエクストラセグメント`ES`が使用されます。その後、自由に使用できる`FS`と`GS`というセグメントレジスタも追加されました。
 
-セグメンテーションの初期バージョンでは、セグメントレジスタは直接オフセットを格納しており、アクセス制御は行われていませんでした。これは後に[<ruby>プロテクトモード<rp> (</rp><rt>protected mode</rt><rp>) </rp></ruby>][_protected mode_]が導入されたことで変更されました。CPUがこのモードで実行している時、セグメント<ruby>記述子<rp> (</rp><rt>ディスクリプタ</rt><rp>) </rp></ruby>は<ruby>局所<rp> (</rp><rt>ローカル</rt><rp>) </rp></ruby>または<ruby>大域<rp> (</rp><rt>グローバル</rt><rp>) </rp>[**</ruby><ruby>記述子表<rp> (</rp><rt>ディスクリプタテーブル</rt><rp>) </rp></ruby>**][_descriptor table_]を格納します。これには（オフセットアドレスに加えて）セグメントのサイズとアクセス許可が格納されます。それぞれのプロセスに対し、メモリアクセスをプロセス自身のメモリ領域にのみ制限するような大域/局所記述子表をロードすることで、OSはプロセスを互いに隔離することができます。
+セグメンテーションの初期バージョンでは、セグメントレジスタは直接オフセットを格納しており、アクセス制御は行われていませんでした。これは後に[<ruby>プロテクトモード<rp> (</rp><rt>protected mode</rt><rp>) </rp></ruby>][_protected mode_]が導入されたことで変更されました。CPUがこのモードで実行している時、セグメント<ruby>記述子<rp> (</rp><rt>ディスクリプタ</rt><rp>) </rp></ruby>は<ruby>局所<rp> (</rp><rt>ローカル</rt><rp>) </rp></ruby>または<ruby>大域<rp> (</rp><rt>グローバル</rt><rp>) </rp>[**</ruby><ruby>記述子表<rp> (</rp><rt>ディスクリプタテーブル</rt><rp>) </rp></ruby>**][_descriptor table_]を格納します。これには（オフセットアドレスに加えて）セグメントのサイズとアクセス<ruby>許可設定<rp> (</rp><rt>パーミッション</rt><rp>) </rp></ruby>が格納されます。それぞれのプロセスに対し、メモリアクセスをプロセスのメモリ領域にのみ制限するような大域/局所記述子表をロードすることで、OSはプロセスを互いに隔離できます。
 
 [_protected mode_]: https://en.wikipedia.org/wiki/X86_memory_segmentation#Protected_mode
 [_descriptor table_]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
@@ -60,9 +60,9 @@ x86においては、ハードウェアは2つの異なるメモリ保護の方�
 
 ![Two virtual address spaces with address 0–150, one translated to 100–250, the other to 300–450](segmentation-same-program-twice.svg)
 
-同じプログラムを2つ実行していますが、別の変換関数が使われています。1つ目のインスタンスではセグメントのオフセットが100なので、0から150の仮想アドレスは100から250に変換されます。2つ目のインスタンスではオフセットが300なので、0から150の仮想アドレスが300から450に変換されます。これにより、プログラムが互いに干渉することなく同じコード、同じ仮想アドレスを使うことができます。
+同じプログラムを2つ実行していますが、別の変換関数が使われています。1つ目の<ruby>実体<rp> (</rp><rt>インスタンス</rt><rp>) </rp></ruby>ではセグメントのオフセットが100なので、0から150の仮想アドレスは100から250に変換されます。2つ目のインスタンスではオフセットが300なので、0から150の仮想アドレスが300から450に変換されます。これにより、プログラムが互いに干渉することなく同じコード、同じ仮想アドレスを使うことができます。
 
-もう一つの利点は、プログラムが全く異なる仮想アドレスを使っていたとしても、物理メモリ上の任意の場所に置くことができるということです。したがって、OSはプログラムを再コンパイルすることなく、利用可能なメモリをフルに活用することができます。
+もう一つの利点は、プログラムが全く異なる仮想アドレスを使っていたとしても、物理メモリ上の任意の場所に置けるということです。したがって、OSはプログラムを再コンパイルすることなく利用可能なメモリをフルに活用できます。
 
 ### <ruby>断片化<rp> (</rp><rt>fragmentation</rt><rp>) </rp></ruby>
 
@@ -70,7 +70,7 @@ x86においては、ハードウェアは2つの異なるメモリ保護の方�
 
 ![Three virtual address spaces, but there is not enough continuous space for the third](segmentation-fragmentation.svg)
 
-開放されているメモリは十分にあるにも関わらず、プログラムのインスタンスを重ねることなく物理メモリに対応づけることはできません。ここで必要なのは **連続した** メモリであり、開放されたメモリが小さな塊であっては使えないためです。
+開放されているメモリは十分にあるにも関わらず、プログラムのインスタンスを重ねることなく物理メモリに対応づけることはできません。ここで必要なのは **連続した** メモリであり、開放されているメモリが小さな塊であっては使えないためです。
 
 この断片化に対処する方法の一つは、実行を一時停止し、メモリの使用されている部分を寄せ集めて、変換関数を更新し、実行を再開することでしょう：
 
@@ -78,7 +78,7 @@ x86においては、ハードウェアは2つの異なるメモリ保護の方�
 
 これで、プログラムの3つ目のインスタンスを開始するのに十分な連続したスペースができました。
 
-このデフラグメンテーションという処理の欠点は、大量のメモリをコピーしなければならず、パフォーマンスを低下させてしまうことです。また、メモリが断片化しすぎる前に定期的に実行しないといけません。すると、プログラムが時々一時停止して、反応がなくなるので、性能が予測不可能になってしまいます。
+このデフラグメンテーションという処理の欠点は、大量のメモリをコピーしなければならず、パフォーマンスを低下させてしまうことです。また、メモリが断片化しすぎる前に定期的に実行しないといけません。そうすると、プログラムが時々一時停止して反応がなくなるので、性能が予測不可能になってしまいます。
 
 ほとんどのシステムでセグメンテーションが用いられなくなった理由の一つに、この断片化の問題があります。実際、x86の64ビットモードでは、セグメンテーションはもはやサポートされていません。代わりに **ページング** が使用されており、これにより断片化の問題は完全に回避されます。
 
@@ -86,11 +86,11 @@ x86においては、ハードウェアは2つの異なるメモリ保護の方�
 
 ページングの考え方は、仮想メモリ空間と物理メモリ空間の両方を、サイズの固定された小さなブロックに分割するというものです。仮想メモリ空間のブロックは **ページ** と呼ばれ、物理アドレス空間のブロックは **フレーム** と呼ばれます。各ページはフレームに独立してマッピングできるので、大きなメモリ領域を連続していない物理フレームに分割することが可能です。
 
-この方法の利点は、セグメンテーションの代わりにページングを使ってもう一度上のメモリ空間断片化の状況を見てみれば明らかになります：
+この方法の利点は、上のメモリ空間断片化の状況をもう一度、セグメンテーションの代わりにページングを使って見てみれば明らかになります：
 
 ![With paging the third program instance can be split across many smaller physical areas](paging-fragmentation.svg)
 
-この例では、ページサイズは50バイトなので、それぞれのメモリ領域が3つのページに分割されます。それぞれのページは個別にフレームに対応付けられるので、連続した仮想メモリ領域を非連続な物理フレームへと対応付けられるのです。これにより、デフラグを事前に実行することなく、3つ目のプログラムのインスタンスを開始することができるようになります。
+この例では、ページサイズは50バイトなので、それぞれのメモリ領域が3つのページに分割されます。それぞれのページは個別にフレームに対応付けられるので、連続した仮想メモリ領域を非連続な物理フレームへと対応付けられるのです。これにより、デフラグを事前に実行することなく、3つ目のプログラムのインスタンスを開始できるようになります。
 
 ### 隠された断片化
 
@@ -112,7 +112,7 @@ x86においては、ハードウェアは2つの異なるメモリ保護の方�
 
 それぞれのメモリアクセスにおいて、CPUはテーブルへのポインタをレジスタから読み出し、テーブル内のアクセスされたページから対応するフレームを見つけ出します。これは完全にハードウェア内で行われ、実行しているプログラムからはこの動作は見えません。変換プロセスを高速化するために、多くのCPUアーキテクチャは前回の変換の結果を覚えておく専用のキャッシュを持っています。
 
-アーキテクチャによっては、ページテーブルのエントリは"Flags"フィールドにあるアクセス許可のような属性も保持することができます。上の例では、"r/w"フラグがあることにより、このページは読み書きのどちらも可能だということを示しています。
+アーキテクチャによっては、ページテーブルのエントリは"Flags"フィールドにあるアクセス許可のような属性も保持できます。上の例では、"r/w"フラグがあることにより、このページは読み書きのどちらも可能だということを示しています。
 
 ### <ruby>複数層<rp> (</rp><rt>Multilevel</rt><rp>) </rp></ruby>ページテーブル
 
@@ -120,9 +120,9 @@ x86においては、ハードウェアは2つの異なるメモリ保護の方�
 
 ![Page 0 mapped to frame 0 and pages `1_000_000`–`1_000_150` mapped to frames 100–250](single-level-page-table.svg)
 
-このプログラムはたった4つしか物理フレームを必要としていないのに、テーブルには100万以上ものエントリが存在してしまっています。空のエントリを省略した場合、変換プロセスにおいてCPUが正しいエントリに直接ジャンプすることができなくなってしまうので、それはできません（たとえば、4つめのページが4つめのエントリを使っていることが保証されなくなってしまいます）。
+このプログラムはたった4つしか物理フレームを必要としていないのに、テーブルには100万以上ものエントリが存在してしまっています。空のエントリを省略した場合、変換プロセスにおいてCPUが正しいエントリに直接ジャンプできなくなってしまうので、それはできません（たとえば、4つめのページが4つめのエントリを使っていることが保証されなくなってしまいます）。
 
-この無駄になるメモリを減らすことができる、 **2層ページテーブル** を使ってみましょう。発想としては、それぞれのアドレス領域に異なるページテーブルを使うというものです。**レベル2** ページテーブルと呼ばれる追加のページテーブルは、アドレス領域と（レベル1の）ページテーブルのあいだの対応を格納します。
+この無駄になるメモリを減らせる、 **2層ページテーブル** を使ってみましょう。発想としては、それぞれのアドレス領域に異なるページテーブルを使うというものです。**レベル2** ページテーブルと呼ばれる追加のページテーブルは、アドレス領域と（レベル1の）ページテーブルのあいだの対応を格納します。
 
 これを理解するには、例を見るのが一番です。それぞれのレベル1テーブルは大きさ`10_000`の領域に対応するとします。すると、以下のテーブルが上のマッピングの例に対応するものとなります：
 
@@ -134,7 +134,7 @@ x86においては、ハードウェアは2つの異なるメモリ保護の方�
 
 レベル2テーブルにはまだ100個の空のエントリがありますが、前の100万にくらべればこれはずっと少ないです。これほど節約できる理由は、`10_000`から`10_000_000`の、対応付けのないメモリ領域のためのレベル1テーブルを作る必要がないためです。
 
-2層ページテーブルの理論は、3、4、それ以上に多くの層に拡張することができます。このとき、ページテーブルレジスタは最も高いレベルのテーブルを指し、そのテーブルは次に低いレベルのテーブルを指し、それはさらに低いレベルのものを、と続きます。そして、レベル1のテーブルは対応するフレームを指します。この理論は一般に **<ruby>複数層<rp> (</rp><rt>multilevel</rt><rp>) </rp></ruby>** ページテーブルや、 **<ruby>階層型<rp> (</rp><rt>hierarchical</rt><rp>) </rp></ruby>** ページテーブルと呼ばれます。
+2層ページテーブルの理論は、3、4、それ以上に多くの層に拡張できます。このとき、ページテーブルレジスタは最も高いレベルのテーブルを指し、そのテーブルは次に低いレベルのテーブルを指し、それはさらに低いレベルのものを、と続きます。そして、レベル1のテーブルは対応するフレームを指します。この理論は一般に **<ruby>複数層<rp> (</rp><rt>multilevel</rt><rp>) </rp></ruby>** ページテーブルや、 **<ruby>階層型<rp> (</rp><rt>hierarchical</rt><rp>) </rp></ruby>** ページテーブルと呼ばれます。
 
 ページングと複数層ページテーブルのしくみが理解できたので、x86_64アーキテクチャにおいてどのようにページングが実装されているのかについて見ていきましょう（以下では、CPUは64ビットモードで動いているとします）。
 
@@ -164,7 +164,7 @@ x86_64アーキテクチャは4層ページテーブルを使っており、ペ�
 
 ![An example 4-level page hierarchy with each page table shown in physical memory](x86_64-page-table-translation.svg)
 
-現在有効なレベル4ページテーブルの物理アドレス、つまりレベル4ページテーブルの「<ruby>根<rp> (</rp><rt>root</rt><rp>) </rp></ruby>」は`CR3`レジスタに格納されています。それぞれのページテーブルエントリは、次のレベルのテーブルの物理フレームを指しています。そして、レベル1のテーブルは対応するフレームを指しています。なお、ページテーブル内のアドレスは全て仮想ではなく物理アドレスであることに注意してください。さもなければ、CPUは（変換プロセス中に）それらのアドレスも変換しなくてはならず、無限再帰に陥ってしまうかもしれません。
+現在有効なレベル4ページテーブルの物理アドレス、つまりレベル4ページテーブルの「<ruby>根<rp> (</rp><rt>root</rt><rp>) </rp></ruby>」は`CR3`レジスタに格納されています。それぞれのページテーブルエントリは、次のレベルのテーブルの物理フレームを指しています。そして、レベル1のテーブルは対応するフレームを指しています。なお、ページテーブル内のアドレスは全て仮想ではなく物理アドレスであることに注意してください。さもなければ、CPUは（変換プロセス中に）それらのアドレスも変換しなくてはならず、無限再帰に陥ってしまうかもしれないからです。
 
 上のページテーブル階層構造は、最終的に（青色の）2つのページへの対応を行っています。ページテーブルのインデックスから、これらの2つのページの仮想アドレスは`0x803FE7F000`と`0x803FE00000`であると推論できます。プログラムがアドレス`0x803FE7F5CE`から読み込もうとしたときに何が起こるかを見てみましょう。まず、アドレスを2進数に変換し、アドレスのページテーブルインデックスとページオフセットが何であるかを決定します：
 
@@ -181,7 +181,7 @@ x86_64アーキテクチャは4層ページテーブルを使っており、ペ�
 
 ![The same example 4-level page hierarchy with 5 additional arrows: "Step 0" from the CR3 register to the level 4 table, "Step 1" from the level 4 entry to the level 3 table, "Step 2" from the level 3 entry to the level 2 table, "Step 3" from the level 2 entry to the level 1 table, and "Step 4" from the level 1 table to the mapped frames.](x86_64-page-table-translation-steps.svg)
 
-レベル1テーブルにあるこのページのパーミッション（訳注：ページテーブルにおいて、Flagsとある列）は`r`であり、これは読み込み専用という意味です。これらのようなパーミッションに対する侵害はハードウェアによって保護されており、このページに書き込もうとした場合は例外が投げられます。より高いレベルのページにおけるパーミッションは、下のレベルにおいて可能なパーミッションを制限します。たとえばレベル3エントリを読み込み専用にした場合、下のレベルで読み書きを許可したとしても、このエントリをつかうページはすべて書き込み不可になります。
+レベル1テーブルにあるこのページのパーミッション（訳注：ページテーブルにおいて、Flagsとある列）は`r`であり、これは読み込み専用という意味です。これらのようなパーミッションに対する侵害はハードウェアによって保護されており、このページに書き込もうとした場合は例外が投げられます。より高いレベルのページにおけるパーミッションは、下のレベルにおいて可能なパーミッションを制限します。たとえばレベル3エントリを読み込み専用にした場合、下のレベルで読み書きを許可したとしても、このエントリを使うページはすべて書き込み不可になります。
 
 この例ではそれぞれのテーブルの<ruby>実体<rp> (</rp><rt>インスタンス</rt><rp>) </rp></ruby>を1つずつしか使いませんでしたが、普通それぞれのアドレス空間において、各レベルに対して複数のインスタンスが使われるということは知っておく価値があるでしょう。最大で
 
@@ -203,8 +203,7 @@ pub struct PageTable {
 }
 ```
 
-`repr`属性で示されるように、ページテーブルはアラインされる必要があります。つまり4KiBごとの境界に揃えられる必要がある、ということです。この要求により、ページテーブルはつねにページひとつを完全に使うので、エントリをとても小さくできる最適化が可能になります。
-As indicated by the `repr` attribute, page tables need to be page aligned, i.e. aligned on a 4KiB boundary. This requirement guarantees that a page table always fills a complete page and allows an optimization that makes entries very compact.
+`repr`属性で示されるように、ページテーブルはアラインされる必要があります。つまり4KiBごとの境界に揃えられる必要がある、ということです。この条件により、ページテーブルはつねにページひとつを完全に使うので、エントリをとてもコンパクトにできる最適化が可能になります。
 
 それぞれのエントリは8バイト（64ビット）の大きさであり、以下の形式です：
 
@@ -230,9 +229,9 @@ As indicated by the `repr` attribute, page tables need to be page aligned, i.e. 
 
 - `present`フラグは、対応付けられているページとそうでないページを区別します。このフラグは、メインメモリが一杯になったとき、ページを一時的にディスクにスワップしたいときに使うことができます。後でページがアクセスされたら、 **ページフォルト** という特別な例外が発生するので、オペレーティングシステムは不足しているページをディスクから読み出すことでこれに対応し、プログラムを再開します。
 - `writable`と`no execute`フラグはそれぞれ、このページの中身が書き込み可能かと、実行可能な命令であるかを制御します。
-- `accessed`と`dirty`フラグは、ページへの読み込みか書き込みが行われたときにCPUによって自動的に1にセットされます。この情報はオペレーティングシステムによって活用することができます――例えば、どのページをスワップするかや、ページの中身が最後にディスクに保存されて以降に修正されたかを確認することができます。
+- `accessed`と`dirty`フラグは、ページへの読み込みか書き込みが行われたときにCPUによって自動的に1にセットされます。この情報はオペレーティングシステムによって活用でき、例えば、どのページをスワップするかや、ページの中身が最後にディスクに保存されて以降に修正されたかを確認できます。
 - `write through caching`と`disable cache`フラグで、キャッシュの制御をページごとに独立して行うことができます。
-- `user accessible`フラグはページをユーザー空間のプログラムに利用可能にします。このフラグが1になっていない場合、CPUがカーネルモードのときにのみアクセスできます。この機能は、ユーザ空間のプログラムが実行している間もカーネル（の使用しているメモリ）を対応付けたままにしておくことで、[システムコール][system calls]を高速化するために使うことができます。しかし、[Spectre]脆弱性を使うと、この機能があるにもかかわらず、ユーザ空間プログラムがこれらのページを読むことができてしまいます。
+- `user accessible`フラグはページをユーザー空間のコードが利用できるようにします。このフラグが1になっていない場合、CPUがカーネルモードのときにのみアクセスできます。この機能は、ユーザ空間のプログラムが実行している間もカーネル（の使用しているメモリ）を対応付けたままにしておくことで、[システムコール][system calls]を高速化するために使うことができます。しかし、[Spectre]脆弱性を使うと、この機能があるにもかかわらず、ユーザ空間プログラムがこれらのページを読むことができてしまいます。
 - `global`フラグは、このページはすべてのアドレス空間で利用可能であり、よってアドレス空間の変更時に変換キャッシュ（TLBに関する下のセクションを読んでください）から取り除く必要がないことをハードウェアに伝えます。
 - `huge page`フラグを使うと、レベル2か3のページが対応付けられたフレームを直接指すようにすることで、より大きいサイズのページを作ることができます。このビットが1のとき、ページの大きさは512倍になるので、レベル2のエントリの場合は2MiB = 512 * 4KiBに、レベル3のエントリの場合は1GiB = 512 * 2MiBにもなります。大きいページを使うことのメリットは、必要な変換キャッシュのラインの数やページテーブルの数が少なくなることです。
 
@@ -244,32 +243,32 @@ As indicated by the `repr` attribute, page tables need to be page aligned, i.e. 
 [page tables]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/page_table/struct.PageTable.html
 [entries]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
-### The Translation Lookaside Buffer
+### トランスレーション・ルックアサイド・バッファ
 
-A 4-level page table makes the translation of virtual addresses expensive, because each translation requires 4 memory accesses. To improve performance, the x86_64 architecture caches the last few translations in the so-called _translation lookaside buffer_ (TLB). This allows to skip the translation when the translation is still cached.
+4層ページテーブルを使うと、仮想アドレスを変換するたびに4回メモリアクセスを行わないといけないので、変換のコストは大きくなります。性能改善のために、x86_64アーキテクチャは、直前数回の変換内容を **トランスレーション・ルックアサイド・バッファ (translation lookaside buffer, TLB)** と呼ばれるところにキャッシュします。これにより、前の変換がまだキャッシュされているなら、変換をスキップできます。
 
-Unlike the other CPU caches, the TLB is not fully transparent and does not update or remove translations when the contents of page tables change. This means that the kernel must manually update the TLB whenever it modifies a page table. To do this, there is a special CPU instruction called [`invlpg`] (“invalidate page”) that removes the translation for the specified page from the TLB, so that it is loaded again from the page table on the next access. The TLB can also be flushed completely by reloading the `CR3` register, which simulates an address space switch. The `x86_64` crate provides Rust functions for both variants in the [`tlb` module].
+他のCPUキャッシュと異なり、TLBは完全に透明ではなく、ページテーブルの内容が変わったときに変換内容を更新したり取り除いたりしてくれません（訳注：キャッシュが<ruby>透明<rp> (</rp><rt>transparent</rt><rp>) </rp></ruby>であるとは、利用者がキャッシュの存在を意識する必要がないという意味）。つまり、カーネルがページテーブルを変更したときは、カーネル自らTLBを更新しないといけないということです。これを行うために、[`invlpg`]（"invalidate page"、ページを無効化の意）という特別なCPU命令があります。これは指定されたページの変換をTLBから取り除き、次のアクセスの際に再び読み込まれるようにします。また、TLBは`CR3`レジスタを再読み込みすることでも初期化できます。`CR3`レジスタの再読み込み、アドレス空間が変更されたという状況を模擬するのです。`x86_64`クレートの[`tlb`モジュール][`tlb` module]が、両方のやり方のRust関数を提供しています。
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
 [`tlb` module]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/tlb/index.html
 
-It is important to remember flushing the TLB on each page table modification because otherwise the CPU might keep using the old translation, which can lead to non-deterministic bugs that are very hard to debug.
+ページテーブルを修正したときは毎回TLBを初期化しないといけないことはしっかりと覚えておいてください。さもないと、CPUは古い変換を使いつづけるかもしれず、これはデバッグの非常に難しい、予測不能なバグに繋がるかもしれないためです。
 
-## Implementation
+## 実装
 
-One thing that we did not mention yet: **Our kernel already runs on paging**. The bootloader that we added in the ["A minimal Rust Kernel"] post already set up a 4-level paging hierarchy that maps every page of our kernel to a physical frame. The bootloader does this because paging is mandatory in 64-bit mode on x86_64.
+ひとつ言っていなかったことがあります：**わたしたちのカーネルはすでにページングを使っています**。[Rustでつくる最小のカーネル]["A minimal Rust Kernel"]の記事で追加したブートローダは、すでに私たちのカーネルのすべてのページを物理フレームに対応付けるような4層ページ階層構造を設定しているのです。ブートローダがこれを行う理由は、x86_64の64ビットモードにおいてページングは必須となっているからです。
 
-["A minimal Rust kernel"]: @/edition-2/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
+["A minimal Rust kernel"]: @/edition-2/posts/02-minimal-rust-kernel/index.ja.md#butoimeziwozuo-ru
 
-This means that every memory address that we used in our kernel was a virtual address. Accessing the VGA buffer at address `0xb8000` only worked because the bootloader _identity mapped_ that memory page, which means that it mapped the virtual page `0xb8000` to the physical frame `0xb8000`.
+つまり、私達がカーネルにおいて使ってきたすべてのメモリアドレスは、仮想アドレスだったということです。アドレス`0xb8000`にあるVGAバッファへのアクセスが上手くいっていたのは、ひとえにブートローダがこのメモリページを **恒等対応** させていた、つまり、仮想ページ`0xb8000`を物理フレーム`0xb8000`に対応させていたからです。
 
-Paging makes our kernel already relatively safe, since every memory access that is out of bounds causes a page fault exception instead of writing to random physical memory. The bootloader even set the correct access permissions for each page, which means that only the pages containing code are executable and only data pages are writable.
+ページングにより、境界外メモリアクセスをしてもおかしな物理メモリに書き込むのではなくページフォルト例外を起こすようになっているため、私達のカーネルはすでに比較的安全になっていました。ブートローダはそれぞれのページに正しいパーミッションを設定しさえしてくれるので、コードを含むページだけが実行可能であり、データを含むページだけが書き込み可能になっています。
 
-### Page Faults
+### ページフォルト
 
-Let's try to cause a page fault by accessing some memory outside of our kernel. First, we create a page fault handler and register it in our IDT, so that we see a page fault exception instead of a generic [double fault] :
+カーネルの外のメモリにアクセスすることによって、ページフォルトを引き起こしてみましょう。まず、通常の[ダブルフォルト][double fault]ではなくページフォルト例外が得られるように、ページフォルト<ruby>処理関数<rp> (</rp><rt>ハンドラ</rt><rp>) </rp></ruby>を作ってIDTに追加しましょう：
 
-[double fault]: @/edition-2/posts/06-double-faults/index.md
+[double fault]: @/edition-2/posts/06-double-faults/index.ja.md
 
 ```rust
 // in src/interrupts.rs
@@ -303,7 +302,7 @@ extern "x86-interrupt" fn page_fault_handler(
 }
 ```
 
-The [`CR2`] register is automatically set by the CPU on a page fault and contains the accessed virtual address that caused the page fault. We use the [`Cr2::read`] function of the `x86_64` crate to read and print it. The [`PageFaultErrorCode`] type provides more information about the type of memory access that caused the page fault, for example whether it was caused by a read or write operation. For this reason we print it too. We can't continue execution without resolving the page fault, so we enter a [`hlt_loop`] at the end.
+[`CR2`]レジスタは、ページフォルト時にCPUによって自動的に設定されており、その値はアクセスされページフォルトを引き起こした仮想アドレスになっています。`x86_64`クレートの[`Cr2::read`]関数を使ってこれを読み込み出力します。[`PageFaultErrorCode`]型は、ページフォルトを引き起こしたメモリアクセスの種類についてより詳しい情報を提供します（例えば、読み込みと書き込みのどちらによるものなのか、など）。そのため、これも出力します。ページフォルトを解決して実行を継続することはできないので、最後は[`hlt_loop`]に入ります。
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
 [`Cr2::read`]: https://docs.rs/x86_64/0.13.2/x86_64/registers/control/struct.Cr2.html#method.read
@@ -311,7 +310,7 @@ The [`CR2`] register is automatically set by the CPU on a page fault and contain
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
 [`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.md#the-hlt-instruction
 
-Now we can try to access some memory outside our kernel:
+それではカーネル外のメモリにアクセスしてみましょう：
 
 ```rust
 // in src/main.rs
@@ -335,26 +334,26 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-When we run it, we see that our page fault handler is called:
+これを実行すると、ページフォルトハンドラが呼びだされたのを見ることができます：
 
 ![EXCEPTION: Page Fault, Accessed Address: VirtAddr(0xdeadbeaf), Error Code: CAUSED_BY_WRITE, InterruptStackFrame: {…}](qemu-page-fault.png)
 
-The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access. The error code tells us through the [`CAUSED_BY_WRITE`] that the fault occurred while trying to perform a write operation. It tells us even more through the [bits that are _not_ set][`PageFaultErrorCode`]. For example, the fact that the `PROTECTION_VIOLATION` flag is not set means that the page fault occurred because the target page wasn't present.
+`CR2`レジスタは確かに私達がアクセスしようとしていたアドレスである`0xdeadbeaf`を格納しています。エラーコードが[`CAUSED_BY_WRITE`]なので、この<ruby>障害<rp> (</rp><rt>フォルト</rt><rp>) </rp></ruby>は<ruby>write<rp> (</rp><rt>書き込み</rt><rp>) </rp></ruby>操作の実行中に発生したのだと分かります。更に、[1にセットされていないビット][`PageFaultErrorCode`]からも情報を得ることができます。例えば、`PROTECTION_VIOLATION`フラグが1にセットされていないことから、ページフォルトは対象のページが存在しなかったために発生したのだと分かります。
 
 [`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
 
-We see that the current instruction pointer is `0x2031b2`, so we know that this address points to a code page. Code pages are mapped read-only by the bootloader, so reading from this address works but writing causes a page fault. You can try this by changing the `0xdeadbeaf` pointer to `0x2031b2`:
+ページフォルトを起こした時点での命令ポインタは`0x2031b2`であるので、このアドレスはコードページを指しているとわかります。コードページはブートローダによって読み込み専用に指定されているので、このアドレスからの読み込みは大丈夫ですが、このページへの書き込みはページフォルトを起こします。`0xdeadbeaf`へのポインタを`0x2031b2`に変更して、これを試してみましょう。
 
 ```rust
-// Note: The actual address might be different for you. Use the address that
-// your page fault handler reports.
+// 注意：実際のアドレスは個々人で違うかもしれません。
+// あなたのページフォルトハンドラが報告した値を使ってください。
 let ptr = 0x2031b2 as *mut u32;
 
-// read from a code page
+// コードページから読み込む
 unsafe { let x = *ptr; }
 println!("read worked");
 
-// write to a code page
+// コードページへと書き込む
 unsafe { *ptr = 42; }
 println!("write worked");
 ```
@@ -363,13 +362,13 @@ By commenting out the last line, we see that the read access works, but the writ
 
 ![QEMU with output: "read worked, EXCEPTION: Page Fault, Accessed Address: VirtAddr(0x2031b2), Error Code: PROTECTION_VIOLATION | CAUSED_BY_WRITE, InterruptStackFrame: {…}"](qemu-page-fault-protection.png)
 
-We see that the _"read worked"_ message is printed, which indicates that the read operation did not cause any errors. However, instead of the _"write worked"_ message a page fault occurs. This time the [`PROTECTION_VIOLATION`] flag is set in addition to the [`CAUSED_BY_WRITE`] flag, which indicates that the page was present, but the operation was not allowed on it. In this case, writes to the page are not allowed since code pages are mapped as read-only.
+"read worked"というメッセージが表示されますが、これは読み込み操作が何のエラーも発生させなかったことを示しています。しかし、"write worked"のメッセージではなく、ページフォルトが発生してしまいました。今回は[`CAUSED_BY_WRITE`]フラグに加えて[`PROTECTION_VIOLATION`]フラグがセットされています。これは、ページは存在していたものの、それに対する今回の操作が許可されていなかったということを示します。今回の場合、ページへの書き込みは、コードページが読み込み専用に指定されているため許可されていませんでした。
 
 [`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
-### Accessing the Page Tables
+### ページテーブルへのアクセス
 
-Let's try to take a look at the page tables that define how our kernel is mapped:
+私達のカーネルがどのように（実メモリに）対応づけられているのかを定義しているページテーブルを見てみましょう。
 
 ```rust
 // in src/main.rs
@@ -389,34 +388,34 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-The [`Cr3::read`] function of the `x86_64` returns the currently active level 4 page table from the `CR3` register. It returns a tuple of a [`PhysFrame`] and a [`Cr3Flags`] type. We are only interested in the frame, so we ignore the second element of the tuple.
+`x86_64`クレートの[`Cr3::read`]関数は、現在有効なレベル4ページテーブルを`CR3`レジスタから（読みとって）返します。この関数は[`PhysFrame`]型と[`Cr3Flags`]型のタプルを返します。私達はフレームにしか興味がないので、タプルの2つ目の要素は無視しました。
 
 [`Cr3::read`]: https://docs.rs/x86_64/0.13.2/x86_64/registers/control/struct.Cr3.html#method.read
 [`PhysFrame`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/frame/struct.PhysFrame.html
 [`Cr3Flags`]: https://docs.rs/x86_64/0.13.2/x86_64/registers/control/struct.Cr3Flags.html
 
-When we run it, we see the following output:
+これを実行すると、以下の出力を得ます：
 
 ```
 Level 4 page table at: PhysAddr(0x1000)
 ```
 
-So the currently active level 4 page table is stored at address `0x1000` in _physical_ memory, as indicated by the [`PhysAddr`] wrapper type. The question now is: how can we access this table from our kernel?
+というわけで、現在有効なレベル4ページテーブルは、[`PhysAddr`]ラッパ型が示すように、 **物理** メモリのアドレス`0x1000`に格納されています。ここで疑問が生まれます：このテーブルに私達のカーネルからアクセスするにはどうすればいいのでしょう？
 
 [`PhysAddr`]: https://docs.rs/x86_64/0.13.2/x86_64/addr/struct.PhysAddr.html
 
-Accessing physical memory directly is not possible when paging is active, since programs could easily circumvent memory protection and access memory of other programs otherwise. So the only way to access the table is through some virtual page that is mapped to the physical frame at address `0x1000`. This problem of creating mappings for page table frames is a general problem, since the kernel needs to access the page tables regularly, for example when allocating a stack for a new thread.
+ページングが有効なとき、物理メモリに直接アクセスすることはできません。もしそれができたら、プログラムは容易くメモリ保護を回避して他のプログラムのメモリにアクセスできてしまうだろうからです。ですので、テーブルにアクセスする唯一の方法は、アドレス`0x1000`の物理フレームに対応づけられているような仮想ページにアクセスすることです。ページテーブルの存在するフレームへの対応づけを作るのは（実用上も必要になる）一般的な問題です。なぜなら、例えば新しいスレッドのためにスタックを割り当てるときなど、カーネルは日常的にページテーブルにアクセスする必要があるためです。
 
-Solutions to this problem are explained in detail in the next post.
+この問題への解決策は次の記事で詳細に論じます。
 
-## Summary
+## まとめ
 
-This post introduced two memory protection techniques: segmentation and paging. While the former uses variable-sized memory regions and suffers from external fragmentation, the latter uses fixed-sized pages and allows much more fine-grained control over access permissions.
+この記事では2つのメモリ保護技術を紹介しました：セグメンテーションとページングです。前者は可変サイズのメモリ領域を使用するため外部断片化の問題が存在するのに対し、後者は固定サイズのページを使用するためアクセス許可に関して遥かに細やかな制御が可能となっていました。
 
-Paging stores the mapping information for pages in page tables with one or more levels. The x86_64 architecture uses 4-level page tables and a page size of 4KiB. The hardware automatically walks the page tables and caches the resulting translations in the translation lookaside buffer (TLB). This buffer is not updated transparently and needs to be flushed manually on page table changes.
+ページングは、（仮想メモリと物理メモリの）対応情報を1層以上のページテーブルに格納します。x86_64アーキテクチャにおいては4層ページテーブルが使用され、ページサイズは4KiBです。ハードウェアは自動的にページテーブルを辿り、変換の結果をトランスレーション・ルックアサイド・バッファ (TLB) にキャッシュします。このバッファは自動的に更新されない（「透明ではない」）ので、ページテーブルの変更時には明示的に初期化する必要があります。
 
-We learned that our kernel already runs on top of paging and that illegal memory accesses cause page fault exceptions. We tried to access the currently active page tables, but we weren't able to do it because the CR3 register stores a physical address that we can't access directly from our kernel.
+私達のカーネルは既にページングによって動いており、不正なメモリアクセスはページフォルト例外を発生させるということを学びました。現在有効なページテーブルへとアクセスしたかったのですが、CR3レジスタに格納されている物理アドレスはカーネルから直接アクセスできないものであるため、それはできませんでした。
 
-## What's next?
+## 次は？
 
-The next post explains how to implement support for paging in our kernel. It presents different ways to access physical memory from our kernel, which makes it possible to access the page tables that our kernel runs on. At this point we are able to implement functions for translating virtual to physical addresses and for creating new mappings in the page tables.
+次の記事では、私達のカーネルをページングに対応させる方法について説明します。私達のカーネルから物理メモリにアクセスする幾つかの方法を示すので、これらを用いれば私達のカーネルが動作しているページテーブルにアクセスできます。そうすると、仮想アドレスを物理アドレスに変換する関数を実装でき、ページテーブルに新しい対応づけを作れるようになります。
