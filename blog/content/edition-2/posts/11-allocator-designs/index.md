@@ -173,7 +173,6 @@ error[E0594]: cannot assign to `self.next` which is behind a `&` reference
   --> src/allocator/bump.rs:29:9
    |
 26 |     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-   |                     ----- help: consider changing this to be a mutable reference: `&mut self`
 ...
 29 |         self.next = alloc_start + layout.size();
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `self` is a `&` reference, so the data it refers to cannot be written
@@ -185,8 +184,6 @@ The error occurs because the [`alloc`] and [`dealloc`] methods of the `GlobalAll
 
 [`alloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.alloc
 [`dealloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.dealloc
-
-Note that the compiler suggestion to change `&self` to `&mut self` in the method declaration does not work here. The reason is that the method signature is defined by the `GlobalAlloc` trait and can't be changed on the implementation side. (I opened an [issue](https://github.com/rust-lang/rust/issues/68049) in the Rust repository about the invalid suggestion.)
 
 #### `GlobalAlloc` and Mutability
 
