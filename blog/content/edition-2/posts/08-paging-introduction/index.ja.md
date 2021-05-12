@@ -358,7 +358,7 @@ unsafe { *ptr = 42; }
 println!("write worked");
 ```
 
-By commenting out the last line, we see that the read access works, but the write access causes a page fault:
+最後の2行をコメントアウトすると、読み込みアクセスだけになるので実行は成功しますが、そうしなかった場合ページフォルトが発生します：
 
 ![QEMU with output: "read worked, EXCEPTION: Page Fault, Accessed Address: VirtAddr(0x2031b2), Error Code: PROTECTION_VIOLATION | CAUSED_BY_WRITE, InterruptStackFrame: {…}"](qemu-page-fault-protection.png)
 
