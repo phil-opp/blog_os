@@ -25,8 +25,8 @@ dependencies = [
  "pic8259_simple",
  "spin",
  "uart_16550",
- "volatile",
- "x86_64",
+ "volatile 0.2.7",
+ "x86_64 0.13.6",
 ]
 
 [[package]]
@@ -106,12 +106,12 @@ dependencies = [
 
 [[package]]
 name = "uart_16550"
-version = "0.2.12"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d45a3c9181dc9ba7d35d02b3c36d1604155289d935b7946510fb3d2f4b976d9"
+checksum = "503a6c0e6d82daa87985e662d120c0176b09587c92a68db22781b28ae95405dd"
 dependencies = [
  "bitflags",
- "x86_64",
+ "x86_64 0.14.2",
 ]
 
 [[package]]
@@ -121,11 +121,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6b06ad3ed06fef1713569d547cdbdb439eafed76341820fb0e0344f29a41945"
 
 [[package]]
-name = "x86_64"
-version = "0.13.2"
+name = "volatile"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b871116e3c83dad0795580b10b2b1dd05cb52ec719af36180371877b09681f7f"
+checksum = "e4c2dbd44eb8b53973357e6e207e370f0c1059990df850aca1eca8947cf464f0"
+
+[[package]]
+name = "x86_64"
+version = "0.13.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "021b49a4cb0a0d9490265cc169ca816014cbf61d3f3b75424815912977b81871"
 dependencies = [
  "bit_field",
  "bitflags",
+]
+
+[[package]]
+name = "x86_64"
+version = "0.14.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13f09cffc08ee86bf5e4d147f107a43de0885c53ffad799b39f4ad203fb2a27d"
+dependencies = [
+ "bit_field",
+ "bitflags",
+ "volatile 0.4.4",
 ]
