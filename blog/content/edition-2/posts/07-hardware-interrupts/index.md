@@ -75,29 +75,29 @@ Each controller can be configured through two [I/O ports], one “command” por
 
 The default configuration of the PICs is not usable, because it sends interrupt vector numbers in the range 0–15 to the CPU. These numbers are already occupied by CPU exceptions, for example number 8 corresponds to a double fault. To fix this overlapping issue, we need to remap the PIC interrupts to different numbers. The actual range doesn't matter as long as it does not overlap with the exceptions, but typically the range 32–47 is chosen, because these are the first free numbers after the 32 exception slots.
 
-The configuration happens by writing special values to the command and data ports of the PICs. Fortunately there is already a crate called [`pic8259_simple`], so we don't need to write the initialization sequence ourselves. In case you are interested how it works, check out [its source code][pic crate source], it's fairly small and well documented.
+The configuration happens by writing special values to the command and data ports of the PICs. Fortunately there is already a crate called [`pic8259`], so we don't need to write the initialization sequence ourselves. In case you are interested how it works, check out [its source code][pic crate source], it's fairly small and well documented.
 
-[pic crate source]: https://docs.rs/crate/pic8259_simple/0.2.0/source/src/lib.rs
+[pic crate source]: https://docs.rs/crate/pic8259/0.10.0/source/src/lib.rs
 
 To add the crate as dependency, we add the following to our project:
 
-[`pic8259_simple`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/
+[`pic8259`]: https://docs.rs/pic8259/0.10.0/pic8259/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pic8259_simple = "0.2.0"
+pic8259 = "0.10.1"
 ```
 
 The main abstraction provided by the crate is the [`ChainedPics`] struct that represents the primary/secondary PIC layout we saw above. It is designed to be used in the following way:
 
-[`ChainedPics`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/struct.ChainedPics.html
+[`ChainedPics`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html
 
 ```rust
 // in src/interrupts.rs
 
-use pic8259_simple::ChainedPics;
+use pic8259::ChainedPics;
 use spin;
 
 pub const PIC_1_OFFSET: u8 = 32;
@@ -125,7 +125,7 @@ pub fn init() {
 
 We use the [`initialize`] function to perform the PIC initialization. Like the `ChainedPics::new` function, this function is also unsafe because it can cause undefined behavior if the PIC is misconfigured.
 
-[`initialize`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/struct.ChainedPics.html#method.initialize
+[`initialize`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html#method.initialize
 
 If all goes well we should continue to see the "It did not crash" message when executing `cargo run`.
 
@@ -200,7 +200,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     print!(".");
 }
@@ -208,7 +208,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 Our `timer_interrupt_handler` has the same signature as our exception handlers, because the CPU reacts identically to exceptions and external interrupts (the only difference is that some exceptions push an error code). The [`InterruptDescriptorTable`] struct implements the [`IndexMut`] trait, so we can access individual entries through array indexing syntax.
 
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
 In our timer interrupt handler, we print a dot to the screen. As the timer interrupt happens periodically, we would expect to see a dot appearing on each timer tick. However, when we run it we see that only a single dot is printed:
@@ -225,7 +225,7 @@ To send the EOI, we use our static `PICS` struct again:
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     print!(".");
 
@@ -333,7 +333,7 @@ pub fn _print(args: fmt::Arguments) {
 
 The [`without_interrupts`] function takes a [closure] and executes it in an interrupt-free environment. We use it to ensure that no interrupt can occur as long as the `Mutex` is locked. When we run our kernel now we see that it keeps running without hanging. (We still don't notice any dots, but this is because they're scrolling by too fast. Try to slow down the printing, e.g. by putting a `for _ in 0..10000 {}` inside the loop.)
 
-[`without_interrupts`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.without_interrupts.html
+[`without_interrupts`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
 
 We can apply the same change to our serial printing function to ensure that no deadlocks occur with it either:
@@ -538,7 +538,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     print!("k");
 
@@ -563,7 +563,7 @@ To find out _which_ key was pressed, we need to query the keyboard controller. W
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
 
@@ -580,7 +580,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard's data port. This byte is called the [_scancode_] and is a number that represents the key press/release. We don't do anything with the scancode yet, we just print it to the screen:
 
-[`Port`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
 
 ![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)
@@ -604,7 +604,7 @@ To translate the scancodes to keys, we can use a match statement:
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
 
@@ -663,7 +663,7 @@ Now we can use this crate to rewrite our `keyboard_interrupt_handler`:
 // in/src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
     use spin::Mutex;
