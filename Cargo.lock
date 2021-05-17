@@ -22,7 +22,7 @@ dependencies = [
  "lazy_static",
  "linked_list_allocator",
  "pc-keyboard",
- "pic8259_simple",
+ "pic8259",
  "spin",
  "uart_16550",
  "volatile 0.2.7",
@@ -34,12 +34,6 @@ name = "bootloader"
 version = "0.9.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfe7a297d22859b1cb0b939cfa0b01288d77804c8544acefd2c1135135587f7d"
-
-[[package]]
-name = "cpuio"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d531514efb06912141fa65967447de805691b685a7565c87d1765afe34a98aa7"
 
 [[package]]
 name = "lazy_static"
@@ -75,12 +69,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c6f2d937e3b8d63449b01401e2bae4041bc9dd1129c2e3e0d239407cf6635ac"
 
 [[package]]
-name = "pic8259_simple"
-version = "0.2.0"
+name = "pic8259"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af2a5497fb8e59bf8015f67b7dff238d75ef445e03f23edac24ac3a8f09be952"
+checksum = "08cc920d83ee33c0f9b73aa441e75468bf2d10c959a3eb6260cf720b05ac91a1"
 dependencies = [
- "cpuio",
+ "x86_64",
 ]
 
 [[package]]
