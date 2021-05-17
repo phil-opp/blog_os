@@ -77,7 +77,7 @@ The default configuration of the PICs is not usable, because it sends interrupt 
 
 The configuration happens by writing special values to the command and data ports of the PICs. Fortunately there is already a crate called [`pic8259`], so we don't need to write the initialization sequence ourselves. In case you are interested how it works, check out [its source code][pic crate source], it's fairly small and well documented.
 
-[pic crate source]: https://docs.rs/crate/pic8259/0.2.0/source/src/lib.rs
+[pic crate source]: https://docs.rs/crate/pic8259/0.10.0/source/src/lib.rs
 
 To add the crate as dependency, we add the following to our project:
 
