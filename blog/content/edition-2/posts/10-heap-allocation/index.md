@@ -528,7 +528,7 @@ To use the crate, we first need to add a dependency on it in our `Cargo.toml`:
 # in Cargo.toml
 
 [dependencies]
-linked_list_allocator = "0.8.0"
+linked_list_allocator = "0.9.0"
 ```
 
 Then we can replace our dummy allocator with the allocator provided by the crate:
@@ -548,7 +548,7 @@ The struct is named `LockedHeap` because it uses the [`spinning_top::Spinlock`] 
 
 Setting the `LockedHeap` as global allocator is not enough. The reason is that we use the [`empty`] constructor function, which creates an allocator without any backing memory. Like our dummy allocator, it always returns an error on `alloc`. To fix this, we need to initialize the allocator after creating the heap:
 
-[`empty`]: https://docs.rs/linked_list_allocator/0.8.0/linked_list_allocator/struct.LockedHeap.html#method.empty
+[`empty`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.LockedHeap.html#method.empty
 
 ```rust
 // in src/allocator.rs
@@ -571,8 +571,8 @@ pub fn init_heap(
 We use the [`lock`] method on the inner spinlock of the `LockedHeap` type to get an exclusive reference to the wrapped [`Heap`] instance, on which we then call the [`init`] method with the heap bounds as arguments. It is important that we initialize the heap _after_ mapping the heap pages, since the [`init`] function already tries to write to the heap memory.
 
 [`lock`]: https://docs.rs/lock_api/0.3.3/lock_api/struct.Mutex.html#method.lock
-[`Heap`]: https://docs.rs/linked_list_allocator/0.8.0/linked_list_allocator/struct.Heap.html
-[`init`]: https://docs.rs/linked_list_allocator/0.8.0/linked_list_allocator/struct.Heap.html#method.init
+[`Heap`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html
+[`init`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.init
 
 After initializing the heap, we can now use all allocation and collection types of the built-in [`alloc`] crate without error:
 
