@@ -81,7 +81,7 @@ lazy_static! {
 
 // new
 extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: &mut InterruptStackFrame, _error_code: u64) -> !
+    stack_frame: InterruptStackFrame, _error_code: u64) -> !
 {
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
@@ -229,7 +229,7 @@ The _Privilege Stack Table_ is used by the CPU when the privilege level changes.
 ### Creating a TSS
 Let's create a new TSS that contains a separate double fault stack in its interrupt stack table. For that we need a TSS struct. Fortunately, the `x86_64` crate already contains a [`TaskStateSegment` struct] that we can use.
 
-[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.13.2/x86_64/structures/tss/struct.TaskStateSegment.html
+[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
 
 We create the TSS in a new `gdt` module (the name will make sense later):
 
@@ -375,8 +375,8 @@ pub fn init() {
 
 We reload the code segment register using [`set_cs`] and load the TSS using [`load_tss`]. The functions are marked as `unsafe`, so we need an `unsafe` block to invoke them. The reason is that it might be possible to break memory safety by loading invalid selectors.
 
-[`set_cs`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/segmentation/fn.set_cs.html
-[`load_tss`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/tables/fn.load_tss.html
+[`set_cs`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/segmentation/fn.set_cs.html
+[`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
 
 Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 
@@ -526,7 +526,7 @@ use blog_os::{exit_qemu, QemuExitCode, serial_println};
 use x86_64::structures::idt::InterruptStackFrame;
 
 extern "x86-interrupt" fn test_double_fault_handler(
-    _stack_frame: &mut InterruptStackFrame,
+    _stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -> ! {
     serial_println!("[ok]");
