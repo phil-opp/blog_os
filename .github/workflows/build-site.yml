@@ -68,7 +68,7 @@ jobs:
     name: "Deploy Generated Site"
     runs-on: ubuntu-latest
     needs: [build_site, check_spelling]
-    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'schedule')
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
 
     steps:
     - name: "Download Generated Site"
