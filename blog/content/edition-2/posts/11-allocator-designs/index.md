@@ -172,8 +172,6 @@ Note that we don't perform any bounds checks or alignment adjustments, so this i
 error[E0594]: cannot assign to `self.next` which is behind a `&` reference
   --> src/allocator/bump.rs:29:9
    |
-26 |     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-...
 29 |         self.next = alloc_start + layout.size();
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `self` is a `&` reference, so the data it refers to cannot be written
 ```
