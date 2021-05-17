@@ -12,7 +12,7 @@ harness = false
 bootloader = "0.9.8"
 volatile = "0.2.6"
 spin = "0.5.2"
-x86_64 = "0.13.2"
+x86_64 = "0.14.2"
 uart_16550 = "0.2.0"
 
 [dependencies.lazy_static]
