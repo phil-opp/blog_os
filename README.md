@@ -1,6 +1,6 @@
 # Blog OS (Heap Allocation)
 
-[![Build Status](https://github.com/phil-opp/blog_os/workflows/Build%20Code/badge.svg?branch=post-10)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Build+Code%22+branch%3Apost-10)
+[![Build Status](https://github.com/phil-opp/blog_os/workflows/Code/badge.svg?branch=post-10)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Code%22+branch%3Apost-10)
 
 This repository contains the source code for the [Heap Allocation][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
