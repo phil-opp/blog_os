@@ -1,6 +1,6 @@
 # Blog OS (Hardware Interrupts)
 
-[![Build Status](https://github.com/phil-opp/blog_os/workflows/Build%20Code/badge.svg?branch=post-07)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Build+Code%22+branch%3Apost-07)
+[![Build Status](https://github.com/phil-opp/blog_os/workflows/Code/badge.svg?branch=post-07)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Code%22+branch%3Apost-07)
 
 This repository contains the source code for the [Hardware Interrupts][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
