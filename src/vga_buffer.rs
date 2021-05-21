@@ -99,6 +99,7 @@ impl Writer {
                     color_code,
                 });
                 self.column_position += 1;
+                unsafe { update_cursor(row, col) } //new
             }
         }
     }
@@ -168,4 +169,29 @@ macro_rules! println {
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
+}
+
+#[inline]
+pub unsafe fn update_cursor(x: usize, y: usize) {
+    let pos: u16 = x as u16 * BUFFER_WIDTH as u16 + y as u16;
+    llvm_asm!("outb %al,%dx"
+        :
+        :"{dx}"(0x3D4),"{al}"(0x0F)
+        :
+    );
+    llvm_asm!("outb %al,%dx"
+        :
+        :"{dx}"(0x3D5),"{al}"(pos & 0xFF)
+        :
+    );
+    llvm_asm!("outb %al,%dx"
+        :
+        :"{dx}"(0x3D4),"{al}"(0x0E)
+        :
+    );
+    llvm_asm!("outb %al,%dx"
+        :
+        :"{dx}"(0x3D5),"{al}"( (pos>>8) & 0xFF)
+        :
+    );
 }
