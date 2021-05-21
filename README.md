@@ -1,6 +1,6 @@
 # Blog OS (Double Faults)
 
-[![Build Status](https://github.com/phil-opp/blog_os/workflows/Build%20Code/badge.svg?branch=post-06)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Build+Code%22+branch%3Apost-06)
+[![Build Status](https://github.com/phil-opp/blog_os/workflows/Code/badge.svg?branch=post-06)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Code%22+branch%3Apost-06)
 
 This repository contains the source code for the [Double Faults][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
