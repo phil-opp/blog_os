@@ -9,7 +9,7 @@ chapter = "Memory Management"
 # Please update this when updating the translation
 translation_based_on_commit = "3315bfe2f63571f5e6e924d58ed32afd8f39f892"
 # GitHub usernames of the people that translated this post
-translators = ["woodyZootopia"]
+translators = ["woodyZootopia", "JohnTitor"]
 +++
 
 この記事では**ページング**を紹介します。これは、私達のオペレーティングシステムにも使う、とても一般的なメモリ管理方式です。なぜメモリの分離が必要なのか、**セグメンテーション**がどういう仕組みなのか、**仮想メモリ**とは何なのか、ページングがいかにしてメモリ<ruby>断片化<rp> (</rp><rt>フラグメンテーション</rt><rp>) </rp></ruby>の問題を解決するのかを説明します。また、x86_64アーキテクチャにおける、マルチレベルページテーブルのレイアウトについても説明します。
