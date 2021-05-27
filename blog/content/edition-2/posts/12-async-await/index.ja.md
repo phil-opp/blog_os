@@ -2,7 +2,7 @@
 title = "Async/Await"
 weight = 12
 path = "ja/async-await"
-date = 2021-05-03
+date = 2020-03-27
 
 [extra]
 chapter = "Multitasking"
