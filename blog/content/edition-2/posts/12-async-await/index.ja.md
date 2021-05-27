@@ -180,7 +180,7 @@ let file_content = loop {
 
 [`Iterator`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html
 
-例として、`Future<Output = String>`を`Future<Output = usize>`に変換するためのシンプルな`string_len`コンビネーターは次のようになります
+例として、`Future<Output = String>`を`Future<Output = usize>`に変換するためのシンプルな`string_len`コンビネータは次のようになります：
 
 ```rust
 struct StringLen<F> {
