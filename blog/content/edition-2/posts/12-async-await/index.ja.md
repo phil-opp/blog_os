@@ -176,7 +176,7 @@ let file_content = loop {
 
 #### Future Combinators
 
-待機する代わりに、future combinatorsを使うこともできます。future combinatorsは `map` のようなメソッドで、[`Iterator`] のメソッドと同じように、futureを連鎖させたり組み合わせたりすることができます。futureを待つのではなく、これらのcombinatorsはfuture自身を返し、`poll`のマッピング操作を適用します。
+待機する代わりに、future combinatorsを使うこともできます。future combinatorsは `map` のようなメソッドで、[`Iterator`] のメソッドと同じように、futureを連鎖させたり組み合わせたりすることができます。futureを待つのではなく、これらのcombinatorsはfuture自身を返し、それによって`poll`のマッピング操作が適用されます。
 
 [`Iterator`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html
 
