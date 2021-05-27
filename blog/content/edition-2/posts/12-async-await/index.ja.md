@@ -449,7 +449,7 @@ ExampleStateMachine::WaitingOnBarTxt(state) => {
 }
 ```
 
-`WaitingOnFooTxt`の状態と同様に、まず`bar_txt_future`をポーリングします。まだ保留中であれば、ループを抜けて `Poll::Pending` を返します。そうでなければ、`example`関数の最後の操作(つまり、`content`変数とfutureからの結果を連結します)を行います。ステートマシンを `End` 状態に更新して、`Poll::Ready` で包まれた結果を返します。
+`WaitingOnFooTxt`の状態と同様に、まず`bar_txt_future`をポーリングします。まだ保留中 (pending) であれば、ループを抜けて `Poll::Pending` を返します。そうでなければ、`example`関数の最後の操作（`content`変数とfutureからの結果の連結）を行います。ステートマシンを `End` 状態に更新して、`Poll::Ready` でラップされた結果を返します。
 
 最後に、`End`ステートのコードは以下のようになります:
 
