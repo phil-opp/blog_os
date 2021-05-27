@@ -432,7 +432,7 @@ ExampleStateMachine::WaitingOnFooTxt(state) => {
 
 `foo_txt_future`の準備ができたら、その結果を`content`変数に代入して、引き続き`example`関数のコードを実行します。`content.len()`がstate構造体に保存されている`min_len`よりも小さければ、`bar.txt`ファイルが非同期に読み込まれます。`.await`の操作を再び状態の変化に変換し、今回は`WaitingOnBarTxt`の状態にします。ループ内で `match` を実行しているので、実行はその後の新しい状態のマッチアームに直接ジャンプし、そこで `bar_txt_future` がポーリングされます。
 
-`else`の分岐に入った場合、それ以上の`.await`操作は発生しません。関数の最後に到達して、`Poll::Ready`で包まれた`content`を返します。また、現在の状態を `End` に変更します。
+`else`の分岐に入った場合、それ以上の`.await`操作は発生しません。関数の最後に到達したため、`Poll::Ready`でラップされた`content`を返します。また、現在の状態を `End` に変更します。
 
 `WaitingOnBarTxt`ステートのコードは以下のようになります:
 
