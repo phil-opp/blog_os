@@ -140,7 +140,7 @@ pub enum Poll<T> {
 
 値が既に利用可能な場合(例えば、ファイルがディスクから完全に読み込まれた場合)、その値は `Ready` variantにラップされて返されます。それ以外の場合は、`Pending` variantが返され、呼び出し側に値がまだ利用できないことを知らせます。
 
-`poll`メソッドは2つの引数を取ります。`self: Pin<&mut Self>`と`cx: &mut Context`です。前者は通常の `&mut self` の参照のように動作しますが、`self` の値がそのメモリロケーションに [_pin_] されるという違いがあります。`Pin`とその必要性を理解するには、まずasync/awaitの仕組みを理解しなければなりません。そのため、この記事の後半で説明します。
+`poll`メソッドは2つの引数を取ります。`self: Pin<&mut Self>`と`cx: &mut Context`です。前者は通常の `&mut self` の参照のように動作しますが、`self` の値がそのメモリロケーションに [_pin_][_pinned_] されるという違いがあります。`Pin`とその必要性を理解するには、まずasync/awaitの仕組みを理解しなければなりません。そのため、それについてはこの記事の後半で説明します。
 
 [_pinned_]: https://doc.rust-lang.org/nightly/core/pin/index.html
 
