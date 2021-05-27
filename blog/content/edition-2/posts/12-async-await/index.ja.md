@@ -294,7 +294,7 @@ async fn example(min_len: usize) -> String {
 
 #### State Machine Transformation
 
-舞台裏で何をしているかというと、`async`関数の本体を[_state machine_]に変換し、`.await`を呼び出すたびに異なる状態を表すようにしています。上記の `example` 関数の場合、コンパイラは以下の4つの状態を持つステートマシンを作成します:
+舞台裏で何をしているかというと、`async`関数の本体を[**ステートマシン (state machine)**]に変換し、`.await`を呼び出すたびに異なる状態を表すようにしています。上記の `example` 関数の場合、コンパイラは以下の4つの状態を持つステートマシンを作成します:
 
 [_state machine_]: https://en.wikipedia.org/wiki/Finite-state_machine
 
