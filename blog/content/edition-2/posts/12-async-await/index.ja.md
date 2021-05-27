@@ -73,7 +73,7 @@ hardware interruptでのタスク切り替え処理を下図に示します:
 [async/await]: https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html
 [_yield_]: https://en.wikipedia.org/wiki/Yield_(multithreading)
 
-協調的マルチタスクと[asynchronous operations]を組み合わせるのが一般的です。asynchronous operations では、Operationが終了するまで待って、その間に他のタスクが実行できないようにする代わりに、操作がまだ終了していない場合は"not ready"というステータスを返します。この場合、待機中のタスクは yield operation を実行して他のタスクを実行させることができます。
+協調的マルチタスクと[asynchronous operations]を組み合わせるのが一般的です。asynchronous operations では、操作 (operation) が終了するまで待って、その間に他のタスクが実行できないようにする代わりに、操作がまだ終了していない場合は"not ready"というステータスを返します。この場合、待機中のタスクは yield operation を実行して他のタスクを実行させることができます。
 
 [asynchronous operations]: https://en.wikipedia.org/wiki/Asynchronous_I/O
 
