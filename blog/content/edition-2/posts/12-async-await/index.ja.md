@@ -461,7 +461,7 @@ ExampleStateMachine::End(_) => {
 
 Futuresは `Poll::Ready` を返した後、再びポーリングされるべきではありません。したがって、すでに `End` の状態にあるときに `poll` が呼ばれるとパニックするようにしましょう。
 
-これで、コンパイラが生成するステートマシンとその `Future` traitの実装がどのように見えるかがわかりました。実際には、コンパイラは異なる方法でコードを生成しています。 (一応、現在は[_generators_]をベースにした実装になっていますが、これはあくまでも実装の詳細です。)
+コンパイラが生成するステートマシンとその `Future` traitの実装はこのようになっている**かもしれません**。実際には、コンパイラは異なる方法でコードを生成しています。 (一応、現在は[_generators_]をベースにした実装になっていますが、これはあくまでも実装の詳細です。)
 
 [_generators_]: https://doc.rust-lang.org/nightly/unstable-book/language-features/generators.html
 
