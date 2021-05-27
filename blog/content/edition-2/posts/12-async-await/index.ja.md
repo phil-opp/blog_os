@@ -44,7 +44,7 @@ hardware interruptでのタスク切り替え処理を下図に示します:
 
 [_Hardware Interrupts_]: @/edition-2/posts/07-hardware-interrupts/index.md
 
-#### Saving State
+#### 状態の保存
 
 タスクは任意の時点で中断されるため、計算の途中である可能性もあります。後で再開できるようにするために、OSは、タスクの[コールスタック]やすべてのCPUレジスタの値など、タスクの状態全体をバックアップする必要があります。この作業を[_context switch_]といいます。
 
