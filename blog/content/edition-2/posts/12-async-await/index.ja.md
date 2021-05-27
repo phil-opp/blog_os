@@ -7,9 +7,9 @@ date = 2020-03-27
 [extra]
 chapter = "Multitasking"
 # Please update this when updating the translation
-translation_based_on_commit = "3315bfe2f63571f5e6e924d58ed32afd8f39f892"
+translation_based_on_commit = "bf4f88107966c7ab1327c3cdc0ebfbd76bad5c5f"
 # GitHub usernames of the people that translated this post
-translators = ["kahirokunn", "garasubo", "sozysozbot", "woodyZootopia""]
+translators = ["kahirokunn", "garasubo", "sozysozbot", "woodyZootopia"]
 +++
 
 この記事では、Rustの**協調的マルチタスク**と**async/await**機能について説明します。Rustのasync/await機能については、`Future` trait の設計、ステートマシンの変換、 **pinning** などを含めて詳しく説明します。そして、非同期キーボードタスクと基本的なexecutorを作成することで、カーネルにasync/awaitの基本的なサポートを追加します。
@@ -300,7 +300,7 @@ async fn example(min_len: usize) -> String {
 
 ![Four states: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-states.svg)
 
-各ステートは、関数の異なるpause pointを表しています。 **"Start"** と **"End"** の状態は、関数の実行開始時と終了時を表しています。 **"Waiting on foo.txt"** の状態は、関数が最初の`async_read_file` の結果を待っていることを表しています。同様に、 **"Waiting on bar.txt"** 状態は、関数が2つ目の`async_read_file`の結果を待っているpause pointを表しています。
+各ステートは、関数の異なる待ち状態を表しています。 **"Start"** と **"End"** の状態は、関数の実行開始時と終了時を表しています。 **"Waiting on foo.txt"** の状態は、関数が最初の`async_read_file` の結果を待っていることを表しています。同様に、 **"Waiting on bar.txt"** 状態は、関数が2つ目の`async_read_file`の結果を待っている待ち状態を表しています。
 
 ステートマシンは、各 `poll` 呼び出しを可能な状態遷移とすることで、`Future` traitを実装しています:
 
@@ -407,7 +407,7 @@ ExampleStateMachine::Start(state) => {
 
 関数の冒頭ではステートマシンが `Start` 状態にあります。このとき、`example`関数の中身を最初の`.await`まですべて実行します。`.await`の操作を処理するために、`self`ステートマシンの状態を`WaitingOnFooTxt`に変更し、`WaitingOnFooTxtState`構造体の構築を行います。
 
-`match self {...}`Hogeステートメントはループで実行されるため、実行は次に `WaitingOnFooTxt` アームにジャンプします:
+`match self {...}`文はloopで実行されるので、実行は`WaitingOnFooTxt`アームにジャンプします:
 
 ```rust
 ExampleStateMachine::WaitingOnFooTxt(state) => {
@@ -1809,7 +1809,7 @@ executorは、効率的な方法でタスクを実行できるようになりま
 
 次に、Rustがサポートする**async/await**がどのようにして協調的マルチタスクの言語レベルの実装を提供しているかを調べました。Rustは、非同期タスクを抽象化するポーリングベースの`Future` traitをベースにして実装しています。async/awaitを使うと、通常の同期コードとほぼ同じようにfutureを扱うことができます。違いは、非同期関数が再び `Future` を返すことで、それを実行するためにはどこかの時点でexecutorに追加する必要があります。
 
-舞台裏では、コンパイラが async/await コードを **state machine** に変換し、各 `.await` オペレーションが可能なpause pointに対応するようにします。プログラムに関する知識を活用することで、コンパイラは各pause pointの最小限の状態のみを保存することができ、その結果、タスクあたりのメモリ消費量は非常に小さくなります。一つの課題は、生成されたステートマシンに **self-referential** 構造体が含まれている可能性があることです。例えば、非同期関数のローカル変数が互いに参照している場合などです。ポインタの無効化を防ぐために、Rustは`Pin`型を用いて、futureが最初にポーリングされた後は、メモリ内で移動できないようにしています。
+舞台裏では、コンパイラが async/await コードを **state machine** に変換し、各 `.await` オペレーションが可能な街状態に対応するようにします。プログラムに関する知識を活用することで、コンパイラは各待ち状態の最小限の状態のみを保存することができ、その結果、タスクあたりのメモリ消費量は非常に小さくなります。一つの課題は、生成されたステートマシンに **self-referential** 構造体が含まれている可能性があることです。例えば、非同期関数のローカル変数が互いに参照している場合などです。ポインタの無効化を防ぐために、Rustは`Pin`型を用いて、futureが最初にポーリングされた後は、メモリ内で移動できないようにしています。
 
 私たちの**実装**では、まず、`Waker`型を全く使わずに、busy loopですべてのspawnされたタスクをポーリングする非常に基本的なexecutorを作成しました。次に、非同期のキーボードタスクを実装することで、waker通知の利点を示しました。このタスクは、`crossbeam`クレートが提供するミューテックスフリーの`ArrayQueue`型を使って、静的な`SCANCODE_QUEUE`を定義します。キーボード割り込みハンドラは、キープレスを直接処理する代わりに、受信したすべての scancode をキューに入れ、登録されている `Waker` をウェイクして、新しい入力が利用可能であることを通知します。受信側では、`ScancodeStream`型を作成して、キュー内の次の scancode に解決する`Future`を提供しています。これにより、非同期の `print_keypresses` タスクを作成することができました。このタスクは、キュー内の scancode を解釈して印刷するために async/await を使用します。
 
