@@ -405,7 +405,7 @@ ExampleStateMachine::Start(state) => {
 }
 ```
 
-関数の冒頭ではステートマシンが `Start` 状態にあります。この例では、`example`関数のボディから最初の`.await`までのすべてのコードを実行します。`.await`の操作を処理するために、`self`ステートマシンの状態を`WaitingOnFooTxt`に変更し、`WaitingOnFooTxtState`構造体の構築を行います。
+関数の冒頭ではステートマシンが `Start` 状態にあります。このとき、`example`関数の中身を最初の`.await`まですべて実行します。`.await`の操作を処理するために、`self`ステートマシンの状態を`WaitingOnFooTxt`に変更し、`WaitingOnFooTxtState`構造体の構築を行います。
 
 `match self {...}`Hogeステートメントはループで実行されるため、実行は次に `WaitingOnFooTxt` アームにジャンプします:
 
