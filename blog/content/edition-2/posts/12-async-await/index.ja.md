@@ -290,7 +290,7 @@ async fn example(min_len: usize) -> String {
 
 ([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=d93c28509a1c67661f31ff820281d434))
 
-この関数は、[上記](#drawbacks)のcombinator関数を使った `example` 関数をそのまま翻訳したものです(#欠点). `.await` 演算子を使うことで、クロージャや `Either` 型を必要とせずに future の値を取得することができます。その結果、通常の同期コードを書くようにコードを書くことができます。ただし、「これは非同期コードである」という違いはあります。
+この関数は、[上記](#drawbacks)のcombinator関数を使った `example` 関数をそのまま翻訳したものです。 `.await` 演算子を使うことで、クロージャや `Either` 型を必要とせずに future の値を取得することができます。その結果、まるで通常の同期コードを書いているかのように非同期コードを書くことができます。
 
 #### State Machine Transformation
 
