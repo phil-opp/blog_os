@@ -59,7 +59,7 @@ hardware interruptでのタスク切り替え処理を下図に示します:
 
 [_thread of execution_]: https://en.wikipedia.org/wiki/Thread_(computing)
 
-#### Discussion
+#### 議論
 
 非協調的マルチタスクの主な利点は、OSがタスクの許容実行時間を完全に制御できることです。これにより、各タスクが協力しなくても、CPU時間を公平に確保できることが保証されます。これは、サードパーティのタスクを実行する場合や、複数のユーザーがシステムを共有する場合に特に重要です。
 
