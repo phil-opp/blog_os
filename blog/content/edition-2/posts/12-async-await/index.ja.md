@@ -228,7 +228,7 @@ combinator関数を手動で書くのは難しいので、ライブラリで提�
 
 ##### Advantages
 
-future combinatorsの大きな利点は、Operationを非同期に保つことができることです。非同期I/Oインターフェイスと組み合わせることで、このアプローチは非常に高いパフォーマンスを実現します。future combinatorsは通常の構造体として実装されていますが、traitの実装があるため、そのおかげで、コンパイラはこれを非常によく最適化できます。詳細については、Rustのエコシステムにfuturesが追加されたことを発表した[_Zero-cost futures in Rust_]の記事を参照してください。
+future combinatorsの大きな利点は、操作を非同期に保つことができることです。非同期I/Oインターフェイスと組み合わせることで、このアプローチは非常に高いパフォーマンスを実現します。future combinatorsは通常のtrait実装付き構造体として実装されているため、コンパイラはこれを非常によく最適化できます。詳細については、Rustのエコシステムにfuturesが追加されたことを発表した[_Zero-cost futures in Rust_]の記事を参照してください。
 
 [_Zero-cost futures in Rust_]: https://aturon.github.io/blog/2016/08/11/futures/
 
