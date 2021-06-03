@@ -1623,7 +1623,7 @@ impl TaskWaker {
 
 参照されている `task_queue` に `task_id` をpushします。[`ArrayQueue`]型の変更は共有参照だけが必要なので、このメソッドは `&mut self` の代わりに `&self` に実装することができます。
 
-##### `Wake` Trait
+##### `Wake`トレイト
 
 Futureのポーリングに`TaskWaker`型を使うには、まずこれを[`Waker`]インスタンスに変換する必要があります。これは [`Future::poll`] メソッドが引数として [`Context`] インスタンスを取るためで、このインスタンスは `Waker` 型からしか構築できません。これは [`RawWaker`] 型の実装を提供することで可能ですが、代わりに `Arc` ベースの [`Wake`][wake-trait] trait を実装し、標準ライブラリが提供する [`From`] の実装を使用して `Waker` を構築する方が、よりシンプルで安全でしょう。
 
