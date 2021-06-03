@@ -46,7 +46,7 @@ translators = ["kahirokunn", "garasubo", "sozysozbot", "woodyZootopia"]
 
 最初の行では、CPUがプログラム`A`のタスク`A1`を実行しています。他のすべてのタスクは一時停止しています。2行目では、CPUにハードウェア割り込みが入ります。[**ハードウェア割り込み**]（訳注: 翻訳当時、リンク先未訳）の記事で説明したように、CPUは直ちにタスク`A1`の実行を停止し、割り込み記述子テーブル(IDT)に定義されている割り込みハンドラにジャンプします。この割り込みハンドラを介して、OSは再びCPUを制御できるようになり、タスク`A1`の継続ではなく、タスク`B1`に切り替えることができます。
 
-[_Hardware Interrupts_]: @/edition-2/posts/07-hardware-interrupts/index.md
+[**ハードウェア割り込み**]: @/edition-2/posts/07-hardware-interrupts/index.md
 
 #### 状態の保存
 
