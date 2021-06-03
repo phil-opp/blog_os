@@ -1369,7 +1369,7 @@ pub async fn print_keypresses() {
 }
 ```
 
-このコードは、この記事で修正する前の[keyboard interrupt handler]にあったコードと非常によく似ています。唯一の違いは、I/O portからscancodeを読み込むのではなく、`ScancodeStream`からscancodeを取得することです。このために、まず新しい `Scancode` ストリームを作成し、次に [`StreamExt`] traitが提供する [`next`] メソッドを繰り返し使用して、ストリーム内の次の要素に解決する `Future` を取得します。これに `await` 演算子を用いることで、futureの結果を非同期的に待ちます。
+このコードは、この記事で修正する前の[キーボードの割り込みハンドラ]にあったコードと非常によく似ています。唯一の違いは、I/Oポートからスキャンコードを読み込むのではなく、`ScancodeStream`からスキャンコードを取得することです。このために、まず新しい `Scancode` ストリームを作成し、次に [`StreamExt`]トレイトが提供する [`next`] メソッドを繰り返し使用して、ストリーム内の次の要素に解決する `Future` を取得します。これに `await` 演算子を用いることで、futureの結果を非同期的に待ちます。
 
 [keyboard interrupt handler]: @/edition-2/posts/07-hardware-interrupts/index.md#interpreting-the-scancodes
 [`next`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html#method.next
