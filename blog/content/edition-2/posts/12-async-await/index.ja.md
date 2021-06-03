@@ -77,7 +77,7 @@ translators = ["kahirokunn", "garasubo", "sozysozbot", "woodyZootopia"]
 [async/await]: https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html
 [_yield_]: https://en.wikipedia.org/wiki/Yield_(multithreading)
 
-協調的マルチタスクと[asynchronous operations]を組み合わせるのが一般的です。asynchronous operations では、操作 (operation) が終了するまで待って、その間に他のタスクが実行できないようにする代わりに、操作がまだ終了していない場合は"not ready"というステータスを返します。この場合、待機中のタスクは yield operation を実行して他のタスクを実行させることができます。
+協調的マルチタスクは[非同期I/O]と組み合わせるのが一般的です。非同期I/O では、操作が終了するまで待って、その間に他のタスクが実行できないようにする代わりに、操作がまだ終了していない場合は"not ready"というステータスを返します。この場合、待機中のタスクは yieldを実行して他のタスクを実行させることができます。
 
 [非同期I/O]: https://ja.wikipedia.org/wiki/%E9%9D%9E%E5%90%8C%E6%9C%9FIO
 
