@@ -34,64 +34,70 @@ translators = ["woodyZootopia"]
 
 To implement the approach, we will need support from the bootloader, so we'll configure it first. Afterward, we will implement a function that traverses the page table hierarchy in order to translate virtual to physical addresses. Finally, we learn how to create new mappings in the page tables and how to find unused memory frames for creating new page tables.
 
-## Accessing Page Tables
+この方法を実装するには、ブートローダーからの補助が必要になるので、まずこれに設定を加えます。その後で、ページテーブルの階層構造を移動して、仮想アドレスを物理アドレスに変換する関数を実装します。最後に、ページテーブルに新しい対応関係を作る方法と、それを作るための未使用メモリを見つける方法を学びます。
 
-Accessing the page tables from our kernel is not as easy as it may seem. To understand the problem let's take a look at the example 4-level page table hierarchy of the previous post again:
+## ページテーブルにアクセスする
+
+私達のカーネルからページテーブルにアクセスするのは案外難しいです。この問題を理解するために、前回の記事の4層ページテーブルをもう一度見てみましょう：
 
 ![An example 4-level page hierarchy with each page table shown in physical memory](../paging-introduction/x86_64-page-table-translation.svg)
 
-The important thing here is that each page entry stores the _physical_ address of the next table. This avoids the need to run a translation for these addresses too, which would be bad for performance and could easily cause endless translation loops.
+ここで需要なのは、それぞれのページテーブルのエントリは次のテーブルの**物理**アドレスであるということです。これにより、それらのアドレスに対しても変換することを避けられます。もしこの変換が行われたとしたら、性能的にも良くないですし、容易に変換の無限ループに陥りかねません。
 
-The problem for us is that we can't directly access physical addresses from our kernel since our kernel also runs on top of virtual addresses. For example, when we access address `4 KiB` we access the _virtual_ address `4 KiB`, not the _physical_ address `4 KiB` where the level 4 page table is stored. When we want to access the physical address `4 KiB`, we can only do so through some virtual address that maps to it.
+問題は、私達のカーネル自体も仮想アドレスの上で動いているため、カーネルから直接物理アドレスにアクセスすることができないということです。例えば、アドレス`4KiB`にアクセスしたとき、私達は**仮想**アドレス`4KiB`にアクセスしているのであって、レベル4ページテーブルが格納されている**物理**アドレス`4KiB`にアクセスしているのではありません。物理アドレス`4KiB`にアクセスしたいなら、それに対応づけられている何らかの仮想アドレスを通じてのみ可能です。
 
-So in order to access page table frames, we need to map some virtual pages to them. There are different ways to create these mappings that all allow us to access arbitrary page table frames.
+そのため、ページテーブルのフレームにアクセスするためには、どこかの仮想ページをそれに対応づけなければいけません。このような、任意のページテーブルのフレームにアクセスできるようにしてくれる対応付けを作る方法にはいくつかあります。
 
-### Identity Mapping
+### 恒等対応
 
-A simple solution is to **identity map all page tables**:
+シンプルな方法として、**すべてのページテーブルを恒等対応させる**ということが考えられるでしょう：
 
 ![A virtual and a physical address space with various virtual pages mapped to the physical frame with the same address](identity-mapped-page-tables.svg)
 
-In this example, we see various identity-mapped page table frames. This way the physical addresses of page tables are also valid virtual addresses so that we can easily access the page tables of all levels starting from the CR3 register.
+この例では、いくつかの恒等対応したページテーブルのフレームが見てとれます。こうすることで、ページテーブルの物理アドレスは仮想アドレスとしても正当になり、よってCR3レジスタから始めることで全てのレベルのページテーブルに簡単にアクセスできます。
 
-However, it clutters the virtual address space and makes it more difficult to find continuous memory regions of larger sizes. For example, imagine that we want to create a virtual memory region of size 1000 KiB in the above graphic, e.g. for [memory-mapping a file]. We can't start the region at `28 KiB` because it would collide with the already mapped page at `1004 KiB`. So we have to look further until we find a large enough unmapped area, for example at `1008 KiB`. This is a similar fragmentation problem as with [segmentation].
+しかし、この方法では仮想アドレス空間が散らかってしまい、より大きいサイズの連続したメモリを見つけることが難しくなります。例えば、上の図において、[ファイルをメモリにマップする][memory-mapping a file]ために1000KiBの大きさの仮想メモリ領域を作りたいとします。`28KiB`を始点として領域を作ろうとすると、`1004KiB`のところで既存のページと衝突してしまうのでうまくいきません。そのため、`1008KiB`のような、十分な広さで対応付けのない領域が見つかるまで更に探さないといけません。これは[セグメンテーション][segmentation]の時にみた断片化の問題に似ています。
 
 [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
 [segmentation]: @/edition-2/posts/08-paging-introduction/index.md#fragmentation
 
 Equally, it makes it much more difficult to create new page tables, because we need to find physical frames whose corresponding pages aren't already in use. For example, let's assume that we reserved the _virtual_ 1000 KiB memory region starting at `1008 KiB` for our memory-mapped file. Now we can't use any frame with a _physical_ address between `1000 KiB` and `2008 KiB` anymore, because we can't identity map it.
+同様に、新しいページテーブルを作ることもずっと難しくなります。なぜなら、対応するページがまだ使われていない物理フレームを見つけないといけないからです。例えば、メモリ<ruby>マップト<rp> (</rp><rt>に対応づけられた</rt><rp>) </rp></ruby>ファイルのために`1008KiB`から1000KiBにわたって仮想メモリを占有したとしましょう。すると、すると、物理アドレス`1000KiB`から`2008KiB`までのフレームは、もう恒等対応を作ることができないので、使用することができません。
 
-### Map at a Fixed Offset
+### 固定オフセットの対応
 
 To avoid the problem of cluttering the virtual address space, we can **use a separate memory region for page table mappings**. So instead of identity mapping page table frames, we map them at a fixed offset in the virtual address space. For example, the offset could be 10 TiB:
+仮想アドレス空間を散らかしてしまうという問題を回避するために、**ページテーブルの対応づけのために別のメモリ領域を使う**ことができます。ページテーブルを恒等対応させる代わりに、仮想アドレス空間で一定のオフセットをおいて対応づけてみましょう。例えば、オフセットを10TiBにしてみましょう：
 
 ![The same figure as for the identity mapping, but each mapped virtual page is offset by 10 TiB.](page-tables-mapped-at-offset.svg)
 
 By using the virtual memory in the range `10TiB..(10TiB + physical memory size)` exclusively for page table mappings, we avoid the collision problems of the identity mapping. Reserving such a large region of the virtual address space is only possible if the virtual address space is much larger than the physical memory size. This isn't a problem on x86_64 since the 48-bit address space is 256 TiB large.
+`10TiB`から`10TiB+物理メモリ全体の大きさ`の範囲の仮想メモリをページテーブルの対応付け専用に使うことで、恒等対応のときに存在していた衝突問題を回避しています。このように巨大な領域を仮想アドレス空間内に用意するのは、仮想アドレス空間が物理メモリの大きさより遥かに大きい場合にのみ可能です。x86_64については、（x86_64で用いられている）48bit（仮想）アドレス空間は256TiBもの大きさがあるので、これは問題ではありません。
 
-This approach still has the disadvantage that we need to create a new mapping whenever we create a new page table. Also, it does not allow accessing page tables of other address spaces, which would be useful when creating a new process.
+この方法では、新しいページテーブルを作るたびに新しい対応付けを作る必要があるという欠点があります。また、他のアドレス空間のページテーブルにアクセスすることができると、新しいプロセスを作るときに便利なのですがこれも不可能です。
 
-### Map the Complete Physical Memory
+### 物理メモリ全体を対応付ける
 
-We can solve these problems by **mapping the complete physical memory** instead of only page table frames:
+これらの問題はページテーブルのフレームだけと言わず**物理メモリ全体を対応付け**てしまえば解決します：
 
 ![The same figure as for the offset mapping, but every physical frame has a mapping (at 10TiB + X) instead of only page table frames.](map-complete-physical-memory.svg)
 
-This approach allows our kernel to access arbitrary physical memory, including page table frames of other address spaces. The reserved virtual memory range has the same size as before, with the difference that it no longer contains unmapped pages.
+この方法を使えば、私達のカーネルは他のアドレス空間を含め任意の物理メモリにアクセスできます。用意する仮想メモリの範囲は以前と同じであり、違うのは全てのページが対応付けられているということです。
 
-The disadvantage of this approach is that additional page tables are needed for storing the mapping of the physical memory. These page tables need to be stored somewhere, so they use up a part of physical memory, which can be a problem on devices with a small amount of memory.
+この方法の欠点は、物理メモリへの対応付けを格納するために、追加でページテーブルが必要になるところです。これらのページテーブルもどこかに格納されなければならず、したがって物理メモリの一部を占有することになります。これはメモリの量が少ないデバイスにおいては問題となりえます。
 
-On x86_64, however, we can use [huge pages] with size 2MiB for the mapping, instead of the default 4KiB pages. This way, mapping 32 GiB of physical memory only requires 132 KiB for page tables since only one level 3 table and 32 level 2 tables are needed. Huge pages are also more cache efficient since they use fewer entries in the translation lookaside buffer (TLB).
+しかし、x86_64においては、通常の4KiBサイズのページに代わって、大きさ2MiBの[huge pages]を対応付けに使うことができます。こうすれば、例えば32GiBの物理メモリを対応付けるのに、レベル3テーブル1個とレベル2テーブル32個があればいいので、たったの132KiBしか必要ではありません。huge pagesは、トランスレーション・ルックアサイド・バッファ (TLB) のエントリをあまり使わないので、キャッシュ的にも効率が良いです。
 
 [huge pages]: https://en.wikipedia.org/wiki/Page_%28computer_memory%29#Multiple_page_sizes
 
-### Temporary Mapping
+### 一時的な対応関係
 
-For devices with very small amounts of physical memory, we could **map the page tables frames only temporarily** when we need to access them. To be able to create the temporary mappings we only need a single identity-mapped level 1 table:
+物理メモリの量が非常に限られたデバイスについては、アクセスする必要があるときだけ**ページテーブルのフレームを一時的に対応づける**という方法が考えられます。そのような一時的な対応を作りたいときには、たった一つだけ恒等対応させられたレベル1テーブルがあれば良いです：
 
 ![A virtual and a physical address space with an identity mapped level 1 table, which maps its 0th entry to the level 2 table frame, thereby mapping that frame to page with address 0](temporarily-mapped-page-tables.svg)
 
 The level 1 table in this graphic controls the first 2 MiB of the virtual address space. This is because it is reachable by starting at the CR3 register and following the 0th entry in the level 4, level 3, and level 2 page tables. The entry with index `8` maps the virtual page at address `32 KiB` to the physical frame at address `32 KiB`, thereby identity mapping the level 1 table itself. The graphic shows this identity-mapping by the horizontal arrow at `32 KiB`.
+この図におけるレベル1テーブルは仮想アドレス空間の最初の2MiBを制御しています。なぜなら、CR3レジスタから始めて、レベル4、3、2のページテーブルの0番目のエントリを辿ることで到達できるからです。
 
 By writing to the identity-mapped level 1 table, our kernel can create up to 511 temporary mappings (512 minus the entry required for the identity mapping). In the above example, the kernel created two temporary mappings:
 
