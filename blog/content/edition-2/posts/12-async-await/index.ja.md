@@ -302,7 +302,7 @@ async fn example(min_len: usize) -> String {
 
 各ステートは、関数の異なる待ち状態を表しています。 **"Start"** と **"End"** の状態は、関数の実行開始時と終了時を表しています。 **"Waiting on foo.txt"** の状態は、関数が最初の`async_read_file` の結果を待っていることを表しています。同様に、 **"Waiting on bar.txt"** 状態は、関数が2つ目の`async_read_file`の結果を待っている待ち状態を表しています。
 
-ステートマシンは、各 `poll` 呼び出しを可能な状態遷移とすることで、`Future` traitを実装しています:
+ステートマシンは、各 `poll` 呼び出しを可能な状態遷移に変換することで、`Future` traitを実装しています:
 
 ![Four states: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-basic.svg)
 
