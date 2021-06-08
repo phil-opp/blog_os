@@ -575,7 +575,7 @@ struct SelfReferential {
 
 このコードを[playground][playground-self-ref]で実行すると、heap値のアドレスとその内部ポインタが等しいことがわかります。これは、`self_ptr`フィールドが有効な自己参照であることを意味します。`heap_value` 変数は単なるポインタなので、それを移動させても（例えば関数に渡しても）構造体自体のアドレスは変わらないので、ポインタを移動させても`self_ptr`は有効なままです。
 
-しかし、この例を破る方法はまだあります。`Box<T>`から移動したり、その内容を置き換えたりすることができます:
+しかし、この例を破綻させてしまう方法はまだあります。`Box<T>`からその中身をムーブしたり、その内容を置き換えたりすることができます:
 
 ```rust
 let stack_value = mem::replace(&mut *heap_value, SelfReferential {
