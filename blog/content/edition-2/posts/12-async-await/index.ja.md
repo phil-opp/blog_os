@@ -616,7 +616,7 @@ struct SelfReferential {
 }
 ```
 
-そこで、[`PhantomPinned`]型の2つ目の `_pin` フィールドを追加することでオプトアウトします。この型はゼロサイズのマーカー型で、`Unpin` trait を実装**しない**ようにすることだけが目的です。[自動トレイト][_auto trait_]の仕組み上、`Unpin`ではない1つのフィールドがあれば、構造体全体が`Unpin`をオプトアウトするのに十分です。
+[`PhantomPinned`]型の2つ目のフィールド `_pin` を追加することで`Unpin`を使用しないようにします。この型はゼロサイズのマーカー型で、`Unpin` trait を実装**しない**ようにするためだけに置かれています。[自動トレイト][_auto trait_]の仕組み上、`Unpin`ではないフィールドが1つでもあれば、構造体全体が`Unpin`を使用しないようになります。
 
 [`PhantomPinned`]: https://doc.rust-lang.org/nightly/core/marker/struct.PhantomPinned.html
 
