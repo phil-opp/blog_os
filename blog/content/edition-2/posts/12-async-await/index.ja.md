@@ -434,7 +434,7 @@ ExampleStateMachine::WaitingOnFooTxt(state) => {
 
 このマッチアームでは、まず `foo_txt_future` の `poll` 関数を呼び出します。もし準備ができていなければ、ループを抜けて `Poll::Pending` を返します。この場合、`self`は`WaitingOnFooTxt`状態のままなので、ステートマシンの次の`poll`呼び出しは同じマッチアームに入り、`foo_txt_future`のポーリングを再試行することになります。
 
-`foo_txt_future`の準備ができたら、その結果を`content`変数に代入して、引き続き`example`関数のコードを実行します。`content.len()`がstate構造体に保存されている`min_len`よりも小さければ、`bar.txt`ファイルが非同期に読み込まれます。`.await`の操作を再び状態の変化に変換し、今回は`WaitingOnBarTxt`の状態にします。ループ内で `match` を実行しているので、その後新しい状態のマッチアームに直接ジャンプし、そこで `bar_txt_future` がポーリングされます。
+`foo_txt_future`の準備ができたら、その結果を`content`変数に代入して、引き続き`example`関数のコードを実行します。`content.len()`がstate構造体に保存されている`min_len`よりも小さければ、`bar.txt`ファイルが非同期に読み込まれます。`.await`の操作を再び状態の変化に変換し、今回は`WaitingOnBarTxt`の状態にします。ループ内で `match` を実行しているので、その後新しい状態のマッチアームにすぐにジャンプし、そこで `bar_txt_future` がポーリングされます。
 
 `else`の分岐に入った場合、それ以上の`.await`操作は発生しません。関数の最後に到達したため、`Poll::Ready`でラップされた`content`を返します。また、現在の状態を `End` に変更します。
 
