@@ -707,7 +707,8 @@ fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 
 [`futures`]: https://docs.rs/futures/0.3.4/futures/
 
-自分でスタックピンニングを使ってfutureのコンビネータ関数を安全に実装する方法を知りたい場合は、比較的短い `futures` クレートの [source of `map` combinator method][map-src] と pin ドキュメントの [projections and structural pinning] のセクションを見てください。
+スタック変数のピン留めを使ってfutureのコンビネータ関数を安全に実装する方法を知りたい場合は、比較的短い `futures` クレートの [`map` コンビネータメソッドのソースコード][map-src] と pin のドキュメントの [projections and structural pinning] のセクションを見てください。
+
 
 [map-src]: https://docs.rs/futures-util/0.3.4/src/futures_util/future/future/map.rs.html
 [projections and structural pinning]: https://doc.rust-lang.org/stable/std/pin/index.html#projections-and-structural-pinning
