@@ -699,7 +699,7 @@ unsafe {
 fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 ```
 
-このメソッドが通常の`&mut self`ではなく`self: Pin<&mut Self>`を取る理由は、[上][self-ref-async-await]で見たように、async/awaitから生成されるfutureのインスタンスは自己参照構造体です。`Self` を `Pin` にラップして、async/await から生成された自己参照のfuturesに対して、コンパイラに `Unpin` を選択させることで、`poll` 呼び出しの間にfutureがメモリ内で移動しないことが保証されます。これにより、すべての内部参照が有効であることが保証されます。
+このメソッドが通常の`&mut self`ではなく`self: Pin<&mut Self>`を取る理由は、[上][self-ref-async-await]で見たように、async/awaitから生成されるfutureのインスタンスはしばしば自己参照しているためです。`Self` を `Pin` にラップして、async/await から生成された自己参照のfutureに対して、コンパイラに `Unpin` を選択させることで、`poll` 呼び出しの間にfutureがメモリ内で移動しないことが保証されます。これにより、すべての内部参照が有効であることが保証されます。
 
 [self-ref-async-await]: @/edition-2/posts/12-async-await/index.md#self-referential-structs
 
