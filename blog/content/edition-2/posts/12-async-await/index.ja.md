@@ -620,7 +620,7 @@ struct SelfReferential {
 
 [`PhantomPinned`]: https://doc.rust-lang.org/nightly/core/marker/struct.PhantomPinned.html
 
-第二のステップは、例題の `Box<SelfReferential>` 型を `Pin<Box<SelfReferential>>` 型に変更することです。これを行う最も簡単な方法は、ヒープに割り当てられた値を作成するために、[Box::new`]ではなく、[Box::pin`]関数を使用することです:
+第二のステップは、上の例の `Box<SelfReferential>` 型を `Pin<Box<SelfReferential>>` 型に変更することです。これを行う最も簡単な方法は、ヒープに値を割り当てるために、[`Box::new`]関数ではなく[`Box::pin`]関数を使用することです:
 
 [`Box::pin`]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html#method.pin
 [`Box::new`]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html#method.new
