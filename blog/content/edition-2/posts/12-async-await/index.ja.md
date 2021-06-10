@@ -371,7 +371,7 @@ enum ExampleStateMachine {
 
 ```rust
 impl Future for ExampleStateMachine {
-    type Output = String; // return type of `example`
+    type Output = String; // `example`の返り値の型
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         loop {
