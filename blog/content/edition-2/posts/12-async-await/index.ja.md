@@ -634,7 +634,7 @@ let mut heap_value = Box::pin(SelfReferential {
 
 `Box::new` を `Box::pin` に変更することに加えて、構造体を初期化するコード（イニシャライザ）に新しい `_pin` フィールドを追加する必要があります。`PhantomPinned` はゼロサイズの型なので、初期化に必要なのはその型名だけです。
 
-今、[調整した例を実行してみると](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=961b0db194bbe851ff4d0ed08d3bd98a)、もう動作しないことがわかります:
+今、[調整した例を実行してみると](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=961b0db194bbe851ff4d0ed08d3bd98a)、動作しなくなっていることがわかります:
 
 ```
 error[E0594]: cannot assign to data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>`
