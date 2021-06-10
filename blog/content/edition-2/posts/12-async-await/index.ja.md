@@ -1260,7 +1260,7 @@ impl Stream for ScancodeStream {
 
 ##### AtomicWaker
 
-`Waker`通知を`ScancodeStream`に実装するためには、poll callsの間に`Waker`を保存できる場所が必要です。これは `add_scancode` 関数からアクセスできる必要があるため、`ScancodeStream` 自身のフィールドとして保存することはできません。これを解決するには、`futures-util` クレートが提供する [`AtomicWaker`] 型の静的変数を使用します。`ArrayQueue`型と同様に、この型はアトミックな命令に基づいており、静的変数に安全に保存でき、並行的に安全に変更することもできます。
+`Waker`通知を`ScancodeStream`に実装するためには、ポーリング呼び出しが終わってから次のポーリング呼び出しまでの間`Waker`を保存できる場所が必要です。これは `add_scancode` 関数からアクセスできる必要があるため、`ScancodeStream` 自身のフィールドとして保存することはできません。これを解決するには、`futures-util` クレートが提供する [`AtomicWaker`] 型の静的変数を使用します。`ArrayQueue`型と同様に、この型はアトミックな命令に基づいており、静的変数に安全に保存でき、並行的に安全に変更することもできます。
 
 [`AtomicWaker`]: https://docs.rs/futures-util/0.3.4/futures_util/task/struct.AtomicWaker.html
 
@@ -1274,11 +1274,11 @@ use futures_util::task::AtomicWaker;
 static WAKER: AtomicWaker = AtomicWaker::new();
 ```
 
-アイデアとしては、`poll_next`では、現在のwakerをこのstaticに格納し、`add_scancode`関数では、新しいスキャンコードがキューに追加されたときに、`wake`関数を呼び出すというものです。
+アイデアとしては、`poll_next`では、現在のwakerをこの静的変数に格納し、`add_scancode`関数では、新しいスキャンコードがキューに追加されたときに、`wake`関数を呼び出すというものです。
 
-##### Wakerを保存
+##### Wakerを保存する
 
-`poll`/`poll_next` が要求する前提条件として、タスクが `Poll::Pending` を返したときに、渡された `Waker` のwakeupを登録することというのがあります。この要求を満たすために、`poll_next` の実装を変更してみましょう:
+`poll`/`poll_next` が要求する前提条件として、タスクが `Poll::Pending` を返したときに、渡された `Waker` の<ruby>wakeup<rp> (</rp><rt>目覚まし</rt><rp>) </rp></ruby>が起こるように登録することというのがあります。この要求を満たすために、`poll_next` の実装を変更してみましょう:
 
 ```rust
 // in src/task/keyboard.rs
@@ -1290,6 +1290,7 @@ impl Stream for ScancodeStream {
         let queue = SCANCODE_QUEUE
             .try_get()
             .expect("scancode queue not initialized");
+            //      "スキャンコードキューが初期化されていない"
 
         // 近道
         if let Ok(scancode) = queue.pop() {
@@ -1310,9 +1311,9 @@ impl Stream for ScancodeStream {
 
 前回と同様に、まず [`OnceCell::try_get`] 関数を使用して、初期化されたスキャンコードキューへの参照を取得します。そして、キューからの `pop` を試みてみて、成功したら `Poll::Ready` を返します。このようにすれば、キューが空でないときにwakerを登録することによるパフォーマンスのオーバーヘッドを回避することができます。
 
-最初の `queue.pop()` の呼び出しが成功しなかった場合、キューは空であるかもしれません。かもしれないというのは、割り込みハンドラがチェックの直後に非同期的にキューを満たした可能性があるからです。この競合状態は次のチェックでも発生する可能性があるので、2回目のチェックの前に `WAKER` 静的変数に `Waker` を登録する必要があります。こうすることで、`Poll::Pending`を返す前にwakeupが起こるかもしれませんが、チェックの後にpushされたスキャンコードに対してwakeupが得られることが保証されます。
+最初の `queue.pop()` の呼び出しが成功しなかった場合、キューは空であるかもしれません。かもしれないというのは、割り込みハンドラがチェックの直後に非同期的にキューを満たした可能性があるからです。この競合状態は次のチェックでも発生する可能性があるので、2回目のチェックの前に `WAKER` 静的変数に `Waker` を登録する必要があります。こうすることで、`Poll::Pending`を返す前にwakeupが起こるかもしれませんが、チェックの後にpushされた全てのスキャンコードに対してwakeupが得られることは保証されます。
 
-渡された [`Context`] に含まれる `Waker` を [`AtomicWaker::register`] 関数で登録した後、2回目のキューからのpopを試みます。成功すると `Poll::Ready` を返します。また、wakerの通知が不要になったので、[`AtomicWaker::take`]を使って登録したwakerを再び削除します。もし `queue.pop()` が2回目の失敗をした場合は、先ほどと同様に `Poll::Pending` を返しますが、今回のプログラムではwakerが登録されるようになっています。
+渡された [`Context`] に含まれる `Waker` を [`AtomicWaker::register`] 関数で登録した後、2回目のキューからのpopを試みます。成功すると `Poll::Ready` を返します。また、wakerの通知が不要になったので、[`AtomicWaker::take`]を使って先ほど登録したwakerを削除します。もし `queue.pop()` が再び失敗した場合は、先ほどと同様に `Poll::Pending` を返しますが、今回のプログラムではwakerが登録されたうえでリターンするようになっています。
 
 [`AtomicWaker::register`]: https://docs.rs/futures-util/0.3.4/futures_util/task/struct.AtomicWaker.html#method.register
 [`AtomicWaker::take`]: https://docs.rs/futures/0.3.4/futures/task/struct.AtomicWaker.html#method.take
@@ -1409,7 +1410,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 コンピュータのCPU使用率を監視してみると、`QEMU`プロセスがCPUをずっと忙しくしていることがわかります。これは、`SimpleExecutor` がループで何度も何度もタスクをポーリングするからです。つまり、キーボードのキーを何も押さなくても、executorは `print_keypresses` タスクの `poll` を繰り返し呼び出しています。
 
-### Wakerサポート付きのExecutor
+### WakerをサポートするExecutor
 
 このパフォーマンスの問題を解決するためには、`Waker`の通知を適切に利用するexecutorを作成する必要があります。この方法では、次のキーボード割り込みが発生したときにexecutorに通知されるので、`print_keypresses`タスクを何度もポーリングする必要はありません。
 
@@ -1424,11 +1425,11 @@ waker通知を適切にサポートするexecutorを作成するための最初�
 struct TaskId(u64);
 ```
 
-`TaskId` 構造体は `u64` の単純なラッパー型です。`TaskId`構造体は、print可能、コピー可能、比較可能、ソート可能にするために、いくつかのtraitを継承します。最後の`Ord`が重要なのは、後ほど `TaskId` を [`BTreeMap`] のキーとなる型として使用したいからです。
+`TaskId` 構造体は `u64` の単純なラッパー型です。`TaskId`構造体は、print可能、コピー可能、比較可能、ソート可能にするために、いくつかのtraitを継承します。最後の`Ord`が重要なのは、後ほど `TaskId`型を [`BTreeMap`] のキーとして使用したいからです。
 
 [`BTreeMap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
 
-新しいユニークなIDを作成する為に，`TaskID::new`関数を作ります:
+新しい一意なIDを作成する為に，`TaskID::new`関数を作ります:
 
 ```rust
 use core::sync::atomic::{AtomicU64, Ordering};
@@ -1441,7 +1442,7 @@ impl TaskId {
 }
 ```
 
-この関数は、各IDが一度だけ割り当てられることを保証するために、[`AtomicU64`]型の静的な`NEXT_ID`変数を使用します。[`fetch_add`]メソッドは、1回のアトミックな操作で、値を増やし更に前の値を返します。つまり、`TaskId::new` メソッドが並列に呼ばれた場合でも、すべてのIDが一度だけ返されることになります。[`Ordering`]パラメータは、コンパイラが命令ストリームにおける`fetch_add`操作の順序を変更することを許可するかどうかを定義します。ここではIDが一意であることだけを要求しているので、最も弱い要求を持つ`Relaxed`の順序で十分です。
+この関数は、各IDが一度だけ割り当てられることを保証するために、[`AtomicU64`]型の静的な`NEXT_ID`変数を使用します。[`fetch_add`]メソッドは、1回のアトミックな操作で、値を増やし更に前の値を返します。つまり、`TaskId::new` メソッドが並列に呼ばれた場合でも、すべてのIDが一度だけ返されることになります。[`Ordering`]パラメータは、コンパイラが命令ストリームにおける`fetch_add`操作の順序を変更することを許可するかどうかを定義します。ここではIDが一意であることだけを要求しているので、最も弱い要求を持つ`Relaxed`という順序づけで十分です。
 
 [`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
 [`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
