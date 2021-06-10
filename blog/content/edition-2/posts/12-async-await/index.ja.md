@@ -1066,7 +1066,7 @@ features = ["alloc"]
 
 デフォルトでは、クレートは標準ライブラリに依存しています。`no_std`互換にするためには、そのデフォルト機能を無効にして、代わりに`alloc`機能を有効にする必要があります<span class="gray">(メインの `crossbeam` クレートに依存しても、ここでは動作しないことに注意してください。なぜなら、`no_std` に対する `queue` モジュールのエクスポートがないからです。これを修正するために [pull request](https://github.com/crossbeam-rs/crossbeam/pull/480) を提出しましたが、まだ crates.io でリリースされていませんでした）</span>。
 
-##### Queueの実装
+##### キューの実装
 
 `ArrayQueue`型を使って、新しい`task::keyboard`モジュールの中に、グローバルなスキャンコードキューを作ることができます:
 
@@ -1184,7 +1184,7 @@ impl ScancodeStream {
 
 非同期タスクがスキャンコードを利用できるようにするためには、次のステップとしてキューから次のスキャンコードを取り出そうとする `poll` のようなメソッドを実装します。これは、私たちの型に[`Future`]特性を実装するべきであるように聞こえますが、これはここではうまくいきません。問題は、`Future` trait は単一の非同期値を抽象化するだけであり、`Poll` メソッドが `Poll::Ready` を返した後は二度と呼び出されないことを期待しています。しかし、私たちのスキャンコード キューは複数の非同期値を含んでいるので、ポーリングし続けても問題ありません。
 
-##### `Stream` トレイト
+##### `Stream` trait
 
 複数の非同期値を生じる型はよく使われるので、[`futures`]クレートはそのような型のための便利な抽象化である[`Stream`] traitを提供しています。この trait は次のように定義されています:
 
@@ -1202,13 +1202,13 @@ pub trait Stream {
 この定義は、[`Future`] traitとよく似ていますが、以下のような違いがあります:
 
 - 関連する型の名前は、`Output`ではなく`Item`です。
-- `Stream` trait では、`Poll<Self::Item>` を返す `poll` メソッドの代わりに、`Poll<Option<Self::Item>>` を返す `poll_next` メソッドが定義されています(追加の `Option` に注意)。
+- `Stream` trait では、`Poll<Self::Item>` を返す `poll` メソッドの代わりに、`Poll<Option<Self::Item>>` を返す `poll_next` メソッドが定義されています（`Option` が追加されていることに注意）。
 
-また、意味的な違いもあります。`poll_next` は、ストリームが終了したことを知らせるために `Poll::Ready(None)` を返すまで、繰り返し呼び出すことができます。この点で、このメソッドは [`Iterator::next`] メソッドに似ています。このメソッドも最後の値の後に `None` を返します。
+また、意味的な違いもあります。`poll_next` は、ストリームが終了したことを知らせる `Poll::Ready(None)` が返されるまで繰り返し呼び出すことができます。この点で、このメソッドは [`Iterator::next`] メソッドに似ています。このメソッドも最後の値の後に `None` を返します。
 
 [`Iterator::next`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html#tymethod.next
 
-##### `Stream`を実装
+##### `Stream`を実装する
 
 では、`SCANCODE_QUEUE`の値を非同期に提供するために、`ScancodeStream`に`Stream`型を実装してみましょう。そのためにはまず、`Stream`型がある`futures-util`クレートへの依存関係を追加する必要があります:
 
@@ -1221,7 +1221,7 @@ default-features = false
 features = ["alloc"]
 ```
 
-クレート `no_std` と互換性を持たせるためにデフォルトの機能を無効にし、アロケーションベースの型を利用できるように `alloc` 機能を有効にしています（これは後で必要になります）。<span class="gray">(なお、`futures-util` クレートを再エクスポートしているメインの `futures` クレートの方に依存関係を追加することもできますが、この場合は依存関係の数が増え、コンパイル時間が長くなります。)</span>
+このクレートが`no_std` と互換性を持つようにするためデフォルトの機能を無効にし、アロケーションベースの型を利用できるように `alloc` 機能を有効にしています（これは後で必要になります）。<span class="gray">（なお、`futures-util` クレートを再エクスポートしているメインの `futures` クレートの方に依存関係を追加することもできますが、この場合は依存関係の数が増え、コンパイル時間が長くなります）</span>
 
 これで、`Stream`というtraitをインポートして実装できるようになりました:
 
@@ -1244,11 +1244,11 @@ impl Stream for ScancodeStream {
 }
 ```
 
-まず、[`OnceCell::try_get`]メソッドを使って、初期化されたscancode queueへの参照を取得します。`new`関数でqueueを初期化しているので、これが失敗することはないはずです。したがって、「初期化されていない場合には、`expect`メソッドを使ってパニックを起こす」としても安全です。次に、[`ArrayQueue::pop`]メソッドを使って、queueから次の要素を取得しようとします。もし成功すれば、`Poll::Ready(Some(...))`でラップされたscancodeを返します。失敗した場合は、queueが空であることを意味します。その場合は、`Poll::Pending`を返します。
+まず、[`OnceCell::try_get`]メソッドを使って、初期化されたスキャンコードキューへの参照を取得します。`new`関数でキューを初期化しているので、これが失敗することはないはずです。したがって、初期化されていない場合には`expect`メソッドを使ってパニックを起こすようにしても大丈夫です。次に、[`ArrayQueue::pop`]メソッドを使って、キューから次の要素を取得しようとします。もし成功すれば、`Poll::Ready(Some(...))`でラップされたスキャンコードを返します。失敗した場合は、キューが空であることを意味します。その場合は、`Poll::Pending`を返します。
 
 [`ArrayQueue::pop`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html#method.pop
 
-#### Wakerをサポート
+#### Wakerをサポートする
 
 `Futures::poll`メソッドと同様に、`Stream::poll_next`メソッドは、`Poll::Pending`が返された後、非同期タスクが準備ができたらexecutorに通知することを要求します。こうすることで、executorは通知されるまで同じタスクを再度ポーリングする必要がなくなり、待機中のタスクのパフォーマンスオーバーヘッドを大幅に削減することができます。
 
@@ -1270,11 +1270,11 @@ use futures_util::task::AtomicWaker;
 static WAKER: AtomicWaker = AtomicWaker::new();
 ```
 
-アイデアとしては、`poll_next`では、現在のwakerをこのstaticに格納し、`add_scancode`関数では、新しいscancodeがqueueに追加されたときに、`wake`関数を呼び出すというものです。
+アイデアとしては、`poll_next`では、現在のwakerをこのstaticに格納し、`add_scancode`関数では、新しいスキャンコードがキューに追加されたときに、`wake`関数を呼び出すというものです。
 
 ##### Wakerを保存
 
-`poll`/`poll_next` が要求する前提条件として、タスクが `Poll::Pending` を返したときに、渡された `Waker` に対してwakeupを登録することというのがあります。この要求を満たすために、`poll_next` の実装を変更してみましょう:
+`poll`/`poll_next` が要求する前提条件として、タスクが `Poll::Pending` を返したときに、渡された `Waker` のwakeupを登録することというのがあります。この要求を満たすために、`poll_next` の実装を変更してみましょう:
 
 ```rust
 // in src/task/keyboard.rs
@@ -1287,7 +1287,7 @@ impl Stream for ScancodeStream {
             .try_get()
             .expect("scancode queue not initialized");
 
-        // fast path
+        // 近道
         if let Ok(scancode) = queue.pop() {
             return Poll::Ready(Some(scancode));
         }
@@ -1304,16 +1304,17 @@ impl Stream for ScancodeStream {
 }
 ```
 
-前回と同様に、まず [`OnceCell::try_get`] 関数を使用して、初期化されたscancode queueへの参照を取得します。そして、queueからの `pop` を楽観的に試み、成功したら `Poll::Ready` を返します。このようにして、queueが空でないときにwakerを登録するというパフォーマンスのオーバーヘッドを回避することができます。
+前回と同様に、まず [`OnceCell::try_get`] 関数を使用して、初期化されたスキャンコード キューへの参照を取得します。そして、キューからの `pop` を試みてみて、成功したら `Poll::Ready` を返します。このようにすれば、キューが空でないときにwakerを登録することによるパフォーマンスのオーバーヘッドを回避することができます。
 
-最初の `queue.pop()` の呼び出しが成功しなかった場合、queueは潜在的に空です。ただ、潜在的にというのは、割り込みハンドラがチェックの直後に非同期的にqueueを満たした可能性があるからです。この競合状態は次のチェックでも発生する可能性があるので、2回目のチェックの前に `WAKER` スタティックに `Waker` を登録する必要があります。こうすることで、`Poll::Pending`を返す前にwakeupが起こるかもしれませんが、チェックの後にpushされたscancodeに対してwakeupが得られることが保証されます。
+最初の `queue.pop()` の呼び出しが成功しなかった場合、キューは空であるかもしれません。かもしれないというのは、割り込みハンドラがチェックの直後に非同期的にキューを満たした可能性があるからです。この競合状態は次のチェックでも発生する可能性があるので、2回目のチェックの前に `WAKER` 静的変数に `Waker` を登録する必要があります。こうすることで、`Poll::Pending`を返す前にwakeupが起こるかもしれませんが、チェックの後にpushされたスキャンコードに対してwakeupが得られることが保証されます。
 
-渡された [`Context`] に含まれる `Waker` を [`AtomicWaker::register`] 関数で登録した後、queueからのpopを2回目に試みます。成功すると `Poll::Ready` を返します。また、wakerの通知が不要になったので、[`AtomicWaker::take`]を使って登録したwakerを再び削除します。もし `queue.pop()` が2回目の失敗をした場合は、先ほどと同様に `Poll::Pending` を返しますが、今度は登録されたwakerを返します。
+渡された [`Context`] に含まれる `Waker` を [`AtomicWaker::register`] 関数で登録した後、2回目のキューからのpopを試みます。成功すると `Poll::Ready` を返します。また、wakerの通知が不要になったので、[`AtomicWaker::take`]を使って登録したwakerを再び削除します。もし `queue.pop()` が2回目の失敗をした場合は、先ほどと同様に `Poll::Pending` を返しますが、今回のプログラムではwakerが登録されるようになっています。
 
 [`AtomicWaker::register`]: https://docs.rs/futures-util/0.3.4/futures_util/task/struct.AtomicWaker.html#method.register
 [`AtomicWaker::take`]: https://docs.rs/futures/0.3.4/futures/task/struct.AtomicWaker.html#method.take
 
-(まだ)`Poll::Pending`を返さなかったタスクに対してwakeupが発生する方法は2つあることに注意してください。1つは、`Poll::Pending`を返す直前にwakeupが発生する、前述の競合状態です。もうひとつの方法は、wakeupを登録した後にqueueが空でなくなり、`Poll::Ready`が返される場合です。これらの偽のwakeupは防ぐことができないので、executorはこれらを正しく処理する必要があります。
+（まだ）`Poll::Pending`を返さなかったタスクに対してwakeupが発生する方法は2つあることに注意してください。1つは、`Poll::Pending`を返す直前にwakeupが発生する、前述の競合状態です。もうひとつの方法は、wakeupを登録した後にキューが空でなくなり、`Poll::Ready`が返される場合です。これらの偽のwakeupは防ぐことができないので、executorはこれらを正しく処理する必要があります。
+
 
 ##### 保存されているWakerを起こす
 
@@ -1335,11 +1336,11 @@ pub(crate) fn add_scancode(scancode: u8) {
 }
 ```
 
-今回行った唯一の変更点は、scancode queueへのpushが成功した場合に、`WAKER.wake()`への呼び出しを追加したことです。`WAKER` staticにwakerが登録されていれば、このメソッドは同じ名前の[`wake`]メソッドをそのwakerに対して呼び出し、executorに通知します。そうでなければ、この操作はno-op、つまり何も起こりません。
+今回行った唯一の変更点は、スキャンコードキューへのpushが成功した場合の`WAKER.wake()`への呼び出しを追加したことです。このメソッドは、`WAKER` staticにwakerが登録されていれば、同じ名前の[`wake`]メソッドをそのwakerに対して呼び出すことにより、executorに通知します。そうでなければ、この操作はno-op、つまり何も起こりません。
 
 [`wake`]: https://doc.rust-lang.org/stable/core/task/struct.Waker.html#method.wake
 
-そうしないと、queueがまだ空なのにタスクが早く起こされてしまう可能性があるからです。そうしないと、queueがまだ空なのにタスクが早く起こされてしまう可能性があるからです。これは例えば、マルチスレッドのexecutorを使用して、起こされたタスクを別のCPUコアで同時に開始する場合などに起こります。まだスレッドをサポートしていませんが、近日中にサポートを追加する予定であり、その際に問題が発生しないようにしたいと考えています。
+キューにpushした後で`wake`を呼び出すというのが重要で、そうしないと、キューがまだ空なのにタスクが尚早にwakeされてしまう可能性があります。これは例えば、起こされたタスクを別のCPUコアで同時に開始するようなマルチスレッドのexecutorを使用している場合などに起こります。まだ私達はスレッドをサポートしてはいませんが、近日中にサポートを追加する予定であり、その際に問題が発生しないようにしたいと考えています。
 
 #### キーボードタスク
 
@@ -1370,7 +1371,7 @@ pub async fn print_keypresses() {
 }
 ```
 
-このコードは、この記事で修正する前の[キーボードの割り込みハンドラ]にあったコードと非常によく似ています。唯一の違いは、I/Oポートからスキャンコードを読み込むのではなく、`ScancodeStream`からスキャンコードを取得することです。このために、まず新しい `Scancode` ストリームを作成し、次に [`StreamExt`]トレイトが提供する [`next`] メソッドを繰り返し使用して、ストリーム内の次の要素に解決する `Future` を取得します。これに `await` 演算子を用いることで、futureの結果を非同期的に待ちます。
+このコードは、この記事で修正する前の[keyboard interrupt handler]にあったコードと非常によく似ています。唯一の違いは、I/O portからスキャンコードを読み込むのではなく、`ScancodeStream`からスキャンコードを取得することです。このために、まず新しい `Scancode` ストリームを作成し、次に [`StreamExt`] traitが提供する [`next`] メソッドを繰り返し使用して、ストリーム内の次の要素を返す `Future` を取得します。これに `await` 演算子を用いることで、futureの結果を非同期的に待ちます。
 
 [keyboard interrupt handler]: @/edition-2/posts/07-hardware-interrupts/index.md#interpreting-the-scancodes
 [`next`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html#method.next
@@ -1402,7 +1403,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 ![QEMU printing ".....H...e...l...l..o..... ...W..o..r....l...d...!"](qemu-keyboard-output.gif)
 
-コンピュータのCPU使用率を監視してみると、`QEMU`プロセスが継続的にCPUを忙しくしていることがわかります。これは、`SimpleExecutor` がループで何度も何度もタスクをポーリングするからです。つまり、キーボードのキーを何も押さなくても、executorは `print_keypresses` タスクの `poll` を繰り返し呼び出しています。
+コンピュータのCPU使用率を監視してみると、`QEMU`プロセスがCPUをずっと忙しくしていることがわかります。これは、`SimpleExecutor` がループで何度も何度もタスクをポーリングするからです。つまり、キーボードのキーを何も押さなくても、executorは `print_keypresses` タスクの `poll` を繰り返し呼び出しています。
 
 ### Wakerサポート付きのExecutor
 
@@ -1419,7 +1420,7 @@ waker通知を適切にサポートするexecutorを作成するための最初�
 struct TaskId(u64);
 ```
 
-`TaskId` 構造体は `u64` の単純なラッパー型です。`TaskId`構造体は、print可能、コピー可能、比較可能、ソート可能にするために、いくつかのTraitを継承します。特に後者が重要なのは、後ほど `TaskId` を [`BTreeMap`] のキーとなる型として使用したいからです。
+`TaskId` 構造体は `u64` の単純なラッパー型です。`TaskId`構造体は、print可能、コピー可能、比較可能、ソート可能にするために、いくつかのtraitを継承します。最後の`Ord`が重要なのは、後ほど `TaskId` を [`BTreeMap`] のキーとなる型として使用したいからです。
 
 [`BTreeMap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
 
@@ -1436,7 +1437,7 @@ impl TaskId {
 }
 ```
 
-この関数は、各IDが一度だけ割り当てられることを保証するために、[`AtomicU64`]型の静的な`NEXT_ID`変数を使用します。[`fetch_add`]メソッドは、1回のアトミックな操作で、値を増やし、前の値を返します。つまり、`TaskId::new` メソッドが並列に呼ばれた場合でも、すべてのIDが一度だけ返されることになります。[`Ordering`]パラメータは、コンパイラが命令ストリームにおける`fetch_add`操作の順序を変更することを許可するかどうかを定義します。ここではIDが一意であることだけを要求しているので、最も弱い要求を持つ`Relaxed`の順序で十分です。
+この関数は、各IDが一度だけ割り当てられることを保証するために、[`AtomicU64`]型の静的な`NEXT_ID`変数を使用します。[`fetch_add`]メソッドは、1回のアトミックな操作で、値を増やし更に前の値を返します。つまり、`TaskId::new` メソッドが並列に呼ばれた場合でも、すべてのIDが一度だけ返されることになります。[`Ordering`]パラメータは、コンパイラが命令ストリームにおける`fetch_add`操作の順序を変更することを許可するかどうかを定義します。ここではIDが一意であることだけを要求しているので、最も弱い要求を持つ`Relaxed`の順序で十分です。
 
 [`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
 [`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
@@ -1462,7 +1463,7 @@ impl Task {
 }
 ```
 
-新しい`id`フィールドにより、タスクに一意の名前を付けることが可能になり、これは特定のタスクを起こすために必要です。
+新しい`id`フィールドにより、特定のタスクを起こすために必要な、一意な名前をタスクに付けることが可能になります。
 
 #### `Executor`型
 
@@ -1499,18 +1500,18 @@ impl Executor {
 }
 ```
 
-`SimpleExecutor`で行ったように、タスクを[`VecDeque`]に格納する代わりに、タスクIDの`task_queue`と、実際の`Task`インスタンスを格納する`tasks`という名前の[`BTreeMap`]を使用します。このマップは、特定のタスクを効率的に継続できるように、`TaskId`でインデックス化されています。
+`SimpleExecutor`で行ったようにタスクを[`VecDeque`]に格納する代わりに、タスクIDを格納する`task_queue`と、実際の`Task`インスタンスを格納する`tasks`という名前の[`BTreeMap`]を使用します。このマップは、特定のタスクを効率的に継続できるように、`TaskId`でインデックス化されています。
 
-`task_queue`フィールドはタスクIDの[`ArrayQueue`]で、**reference counting** を実装した[`Arc`]型にラップされています。参照カウントは、複数の所有者の間で値の所有権を共有することを可能にします。これは、ヒープ上に値を割り当て、その値へのアクティブな参照の数をカウントすることで動作します。アクティブな参照の数がゼロになると、その値は不要になり、解放されます。
+`task_queue`フィールドはタスクIDの[`ArrayQueue`]で、**参照カウント** を実装している[`Arc`]型にラップされています。参照カウントは、複数の所有者の間で値の所有権を共有することを可能にします。これは、ヒープ上に値を割り当て、その値への有効な参照の数をカウントすることで動作します。有効な参照の数がゼロになると、その値は不要になり、解放されます。
 
-この `Arc<ArrayQueue>` 型を `task_queue` に使用しているのは、executorとwakerの間で共有されるからです。wakerは起こされたタスクのIDをqueueにpushするというものです。executorはqueueの受信側に座り、`tasks`マップからIDによって起こされたタスクを取り出し、それを実行します。[`SegQueue`]のような無制限のqueueではなく、固定サイズのqueueを使う理由は、割り当ててはいけない割込みハンドラがこのqueueにpushするからです。
+この `Arc<ArrayQueue>` 型を `task_queue` に使用しているのは、executorとwakerの間で共有されるからです。考え方としては、wakerは起こされたタスクのIDをキューにpushします。executorはキューの受信側におり、`tasks`マップからIDによって起こされたタスクを取り出し、それを実行します。[`SegQueue`]のような無制限のキューではなく、固定サイズのキューを使う理由は、アロケートを行ってはならない割込みハンドラがこのキューにpushするからです。
 
-`Executor` 型には、`task_queue` と `tasks` マップに加えて、`waker_cache` フィールドがあり、これもマップです。このマップはタスクが作成された後にそのタスクの[`Waker`]をキャッシュします。これには2つの理由があります。1つ目は、同じタスクの複数回のwakeupに対して、毎回新しいwakeupを作成するのではなく、同じwakeupを再利用することでパフォーマンスを向上させることです。2つ目は、reference-counted wakerが割り込みハンドラ内で解放されないようにするためです。これはデッドロックにつながる可能性があるからです(これについては以下で詳しく説明します)。
+`Executor` 型には、`task_queue` と `tasks` マップに加えて、`waker_cache` フィールドがあり、これもマップです。このマップはタスクが作成された後にそのタスクの[`Waker`]をキャッシュします。これには2つの理由があります。1つ目は、同じタスクの複数回のwakeupに対して、毎回新しいwakeupを作成するのではなく、同じwakeupを再利用することでパフォーマンスを向上させるためです。2つ目は、参照カウントされるwakerが割り込みハンドラ内で解放されないようにするためです。これはデッドロックにつながる可能性があるからです（これについては後で詳しく説明します）。
 
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
 [`SegQueue`]: https://docs.rs/crossbeam-queue/0.2.1/crossbeam_queue/struct.SegQueue.html
 
-`Executor`を作成するために、簡単な`new`関数を用意しました。`task_queue`の容量は100としていますが、これは当面の間は十分すぎる量です。将来的に100以上のタスクが同時に発生するような場合には、このサイズを簡単に増やすことができます。
+`Executor`を作成するために、簡単な`new`関数を用意しました。`task_queue`の容量は100としていますが、これは当面の間は十分すぎる量です。将来的に100以上のタスクが同時に発生するような場合には、このサイズは簡単に増やすことができます。
 
 #### タスクの生成
 
@@ -1530,7 +1531,7 @@ impl Executor {
 }
 ```
 
-同じIDのタスクがすでにマップ内に存在する場合、[`BTreeMap::insert`]メソッドはそれを返します。各タスクはユニークなIDを持っているので、このようなことは絶対に起こってはならず、この場合はコードのバグを示すのでパニックになります。同様に、`task_queue` がいっぱいになったときもパニックになります。
+同じIDのタスクがすでにマップ内に存在する場合、[`BTreeMap::insert`]メソッドはそれを返します。各タスクはユニークなIDを持っているので、このようなことは絶対に起こってはならず、この場合は私達のコードにバグがあることになるのでパニックします。同様に、`task_queue` がいっぱいになったときもパニックします。
 
 #### Tasksの実行
 
@@ -1543,7 +1544,7 @@ use core::task::{Context, Poll};
 
 impl Executor {
     fn run_ready_tasks(&mut self) {
-        // borrow checkerのエラーを回避するために`self`を再構築する
+        // 借用チェッカのエラーを回避するために`self`を分配する
         let Self {
             tasks,
             task_queue,
@@ -1553,7 +1554,7 @@ impl Executor {
         while let Ok(task_id) = task_queue.pop() {
             let task = match tasks.get_mut(&task_id) {
                 Some(task) => task,
-                None => continue, // task no longer exists
+                None => continue, // タスクはもう存在しない
             };
             let waker = waker_cache
                 .entry(task_id)
@@ -1561,7 +1562,7 @@ impl Executor {
             let mut context = Context::from_waker(waker);
             match task.poll(&mut context) {
                 Poll::Ready(()) => {
-                    // task done -> remove it and its cached waker
+                    // タスクは完了したので、タスクとそのキャッシュされたwakerを取り除く
                     tasks.remove(&task_id);
                     waker_cache.remove(&task_id);
                 }
@@ -1572,15 +1573,15 @@ impl Executor {
 }
 ```
 
-この関数の基本的な考え方は、私たちの `SimpleExecutor` と似ています。`task_queue` にあるすべてのタスクをループし、各タスクのwakerを作成し、ポーリングします。しかし、保留中のタスクを `task_queue` の最後に戻すのではなく、`TaskWaker` の実装に、待機中のタスクをqueueに戻すことを任せます。このwaker型の実装については、後ほどご紹介します。
+この関数の基本的な考え方は、私たちの `SimpleExecutor` と似ています。`task_queue` にあるすべてのタスクをループし、各タスクのwakerを作成し、ポーリングします。しかし、自分で保留中のタスクを `task_queue` の最後に戻すのではなく、`TaskWaker` の実装に、待機中のタスクをqueueに戻すことを任せます。このwaker型の実装については、後ほどご紹介します。
 
 この `run_ready_tasks` メソッドの実装の詳細を見てみましょう:
 
-- 借用チェックのエラーを避けるために、[_destructuring_]を使って`self`を3つのフィールドに分割しています。つまり、私たちの実装ではクロージャの中から `self.task_queue` にアクセスする必要があり、現在は `self` を完全に借りようとしています。これはborrow checkerの基本的な問題であり、[RFC 2229]が[implementation][RFC 2229 impl]されたときに解決されるでしょう。
+- 借用チェッカのエラーを避けるために、[**分配 (destructuring)**][_destructuring_]を使って`self`を3つのフィールドに分割しています。というのも、私たちの実装ではクロージャの中から `self.task_queue` にアクセスする必要があるのですが、今のRustはそれを行うために `self` を完全に借用してしまうのです。これは借用チェッカの基本的な問題であり、[RFC 2229]が[実装][RFC 2229 impl]されたときに解決されるでしょう。
 
-- ポップアップされた各タスクIDに対して、`tasks`マップから対応するタスクのmutable referenceを取得します。この `ScancodeStream` の実装では、タスクをスリープさせる必要があるかどうかをチェックする前にwakeupを登録するので、もはや存在しないタスクに対してwakeupが発生することがあります。この場合には、単純にwakeupを無視して、queueから次のIDで続行します。
+- popされた各タスクIDに対して、`tasks`マップから対応するタスクの可変参照を取得します。私達の `ScancodeStream` の実装では、タスクをスリープさせる必要があるかどうかをチェックする前にwakeupを登録するので、もはや存在しないタスクに対してwakeupが発生することがあります。この場合には、単純にwakeupを無視して、キューから次のIDを取得して続行します。
 
-- poll毎にwakerを作成することによるパフォーマンスのオーバーヘッドを避けるために、`waker_cache`マップを使用して、各タスクのwakerが作成された後に保存します。これには、[`BTreeMap::entry`]メソッドと[`Entry::or_insert_with`]を組み合わせて使用し、新しいwakerがまだ存在しない場合には新しいwakerを作成して、そのwakerへの変異可能な参照を取得します。新しいwakerを作成するには、`task_queue` をクローンして、タスク ID と共に `TaskWaker::new` 関数に渡します (以下の実装)。`task_queue` は `Arc` にラップされているので、`clone` は値の参照カウントを増やすだけですが、それでも同じヒープに割り当てられたqueueを指しています。このようにwakerを再利用することは、すべてのwakerの実装で可能なわけではありませんが、私たちの `TaskWaker` 型ではそれが可能であることに注意してください。
+- poll毎にwakerを作成することによるパフォーマンスのオーバーヘッドを避けるために、`waker_cache`マップを使用して、作成された各タスクのwakerを保存します。これには、[`BTreeMap::entry`]メソッドと[`Entry::or_insert_with`]を組み合わせて使用し、新しいwakerがまだ存在しない場合には新しいwakerを作成して、そのwakerへのミュータブルな参照を取得します。新しいwakerを作成するには、`task_queue` をクローンして、タスク ID と共に `TaskWaker::new` 関数に渡します (実装は後述)。`task_queue` は `Arc` にラップされているので、`clone` は値の参照カウントを増やすだけで、同じヒープに割り当てられたキューを指しています。このようにwakerを再利用することは、すべてのwakerの実装で可能なわけではありませんが、私たちの `TaskWaker` 型ではそれが可能であることに注意してください。
 
 [_destructuring_]: https://doc.rust-lang.org/book/ch18-03-pattern-syntax.html#destructuring-to-break-apart-values
 [RFC 2229]: https://github.com/rust-lang/rfcs/pull/2229
@@ -1622,11 +1623,11 @@ impl TaskWaker {
 }
 ```
 
-参照されている `task_queue` に `task_id` をpushします。[`ArrayQueue`]型の変更は共有参照だけが必要なので、このメソッドは `&mut self` の代わりに `&self` に実装することができます。
+参照されている `task_queue` に `task_id` をpushします。[`ArrayQueue`]型の変更には共有参照だけがあればよいので、このメソッドは `&mut self` ではなく `&self` に実装することができます。
 
 ##### `Wake`トレイト
 
-Futureのポーリングに`TaskWaker`型を使うには、まずこれを[`Waker`]インスタンスに変換する必要があります。これは [`Future::poll`] メソッドが引数として [`Context`] インスタンスを取るためで、このインスタンスは `Waker` 型からしか構築できません。これは [`RawWaker`] 型の実装を提供することで可能ですが、代わりに `Arc` ベースの [`Wake`][wake-trait] trait を実装し、標準ライブラリが提供する [`From`] の実装を使用して `Waker` を構築する方が、よりシンプルで安全でしょう。
+Futureのポーリングに`TaskWaker`型を使うには、まずこれを[`Waker`]インスタンスに変換する必要があります。これは [`Future::poll`] メソッドが引数として [`Context`] インスタンスを取るためで、このインスタンスは `Waker` 型からしか構築できません。これは [`RawWaker`] 型の実装を提供することによって可能ですが、代わりに `Arc` ベースの [`Wake`][wake-trait] trait を実装し、標準ライブラリが提供する [`From`] の実装を使用して `Waker` を構築する方が、よりシンプルで安全でしょう。
 
 traitの実装は以下のようになっています:
 
@@ -1650,11 +1651,11 @@ impl Wake for TaskWaker {
 
 Waker は通常、executorと非同期タスクの間で共有されるので、この trait メソッドでは、`Self` インスタンスを、参照カウントされた所有権を実装する [`Arc`] 型でラップする必要があります。つまり、これらのメソッドを呼び出すためには、`TaskWaker` を `Arc` に移動させる必要があります。
 
-`wake`と`wake_by_ref`メソッドの違いは、後者は`Arc`への参照のみを必要とするのに対し、前者は`Arc`の所有権を取得するため、しばしば参照カウントの増加を必要とすることです。すべての型がwaking by referenceをサポートしているわけではないので、`wake_by_ref` メソッドの実装はオプションですが、不必要な参照カウントの変更を避けることができるので、パフォーマンスの向上につながります。今回の例では、両方の trait メソッドを単純に `wake_task` 関数にフォワードすることで、共有の `&self` 参照だけで済みます。
+`wake`と`wake_by_ref`メソッドの違いは、後者は`Arc`への参照のみを必要とするのに対し、前者は`Arc`の所有権を取得するため、しばしば参照カウントの増加を必要とすることです。すべての型が参照によるwakeをサポートしているわけではないので、`wake_by_ref` メソッドを実装するかは自由ですが、不必要な参照カウントの変更を避けることができるので、パフォーマンスの向上につながります。今回の例では、両方の trait メソッドで単純に `wake_task` 関数を呼び出すようにします。この関数は、共有の `&self` 参照しか要求しません。
 
 ##### Wakerを生成
 
-`Waker` 型は、`Wake` traitを実装したすべての `Arc` ラッピングされた値の [`From`] 変換をサポートしているので、`Executor::run_ready_tasks` メソッドで必要となる `TaskWaker::new` 関数を実装することができます:
+`Waker` 型は、`Wake` traitを実装したすべての `Arc` ラッピングされた値からの [`From`] 変換をサポートしているので、`Executor::run_ready_tasks` メソッドで必要となる `TaskWaker::new` 関数を実装することができます:
 
 [`From`]: https://doc.rust-lang.org/nightly/core/convert/trait.From.html
 
@@ -1691,7 +1692,7 @@ impl Executor {
 }
 ```
 
-このメソッドは `run_ready_tasks` 関数をループで呼び出すだけです。理論的には、`tasks`マップが空になったときにこの関数から戻ることもできますが、`keyboard_task`が終了しないので、このようなことは起こらず、単純な`loop`で十分です。この関数は決して戻りませんので、`!`という戻り値の型を使って、コンパイラにこの関数が[diverging]であることを示します。
+このメソッドは `run_ready_tasks` 関数の呼び出しをループするだけです。理論的には、`tasks`マップが空になったときにこの関数からリターンすることもできますが、`keyboard_task`が終了しないのでそれは起こらず、よって単純な`loop`で十分です。この関数は決してリターンしませんので、`!`という戻り値の型を使って、コンパイラにこの関数が[発散する (diverging) ][diverging]ことを示します。
 
 [diverging]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
@@ -1703,7 +1704,7 @@ impl Executor {
 use blog_os::task::executor::Executor; // new
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    // […] init_heap、test_mainを含む初期化ルーチン
+    // init_heap、test_mainを含む初期化ルーチンを省略
 
     let mut executor = Executor::new(); // new
     executor.spawn(Task::new(example_task()));
