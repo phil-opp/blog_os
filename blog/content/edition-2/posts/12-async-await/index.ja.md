@@ -375,7 +375,7 @@ impl Future for ExampleStateMachine {
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         loop {
-            match self { // TODO: handle pinning
+            match self { // TODO: ピン留めを処理する
                 ExampleStateMachine::Start(state) => {…}
                 ExampleStateMachine::WaitingOnFooTxt(state) => {…}
                 ExampleStateMachine::WaitingOnBarTxt(state) => {…}
