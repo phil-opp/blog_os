@@ -670,7 +670,7 @@ unsafe {
 
 ([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=b9ebbb11429d9d79b3f9fffe819e2018))
 
-[`get_unchecked_mut`] 関数は `Pin<Box<T>>` ではなく `Pin<&mut T>` で動作するため、事前に値の変換に [`Pin::as_mut`] を使用する必要があります。その後、`get_unchecked_mut` が返す `&mut` 参照を使って、`self_ptr` フィールドを設定することができます。
+[`get_unchecked_mut`] 関数は `Pin<Box<T>>` ではなく `Pin<&mut T>` に対して動作するため、事前に [`Pin::as_mut`] を使用して値を変換する必要があります。その後、`get_unchecked_mut` が返す `&mut` 参照を使って、`self_ptr` フィールドを設定することができます。
 
 [`Pin::as_mut`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.as_mut
 
