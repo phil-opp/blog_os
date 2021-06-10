@@ -587,7 +587,7 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 
 ([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
 
-ここでは、[`mem::replace`]関数を使用して、ヒープに割り当てられた値を新しい構造体のインスタンスで置き換えています。これにより、元の `heap_value` をスタックに移動させることができますが、構造体の `self_ptr` フィールドは、古いヒープアドレスを指し示すダングリングポインタになっています。この例をプレイグラウンドで実行してみると、出力された**"value at:"** と **"internal reference:"** の行には、実際に異なるポインタが表示されていることがわかります。つまり、値をヒープに割り当てるだけでは、自己参照を安全にするには不十分なのです。
+ここでは、[`mem::replace`]関数を使用して、ヒープに割り当てられた値を新しい構造体のインスタンスで置き換えています。これにより、元の `heap_value` をスタックに移動させることができますが、構造体の `self_ptr` フィールドは、古いヒープアドレスを指し示すダングリングポインタになっています。この例をplaygroundで実行してみると、出力された**"value at:"** と **"internal reference:"** の行には、たしかに異なるポインタが表示されていることがわかります。つまり、値をヒープに割り当てるだけでは、自己参照を安全にするには不十分なのです。
 
 [`mem::replace`]: https://doc.rust-lang.org/nightly/core/mem/fn.replace.html
 
