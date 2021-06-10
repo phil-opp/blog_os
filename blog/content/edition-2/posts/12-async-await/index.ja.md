@@ -346,7 +346,7 @@ struct WaitingOnBarTxtState {
 struct EndState {}
 ```
 
-"start "と **"Waiting on foo.txt"** の状態では、`min_len`パラメータを保存する必要があります。これは後に`content.len()`と比較する際に必要になるからです。 **"Waiting on foo.txt"** 状態では、さらに`foo_txt_future`が格納されます。これは、`async_read_file`呼び出しが返したfutureを表します。このfutureは、ステートマシンが継続する際に再びポーリングされる必要があるため、保存する必要があります。
+"start" と **"Waiting on foo.txt"** の状態では、`min_len`パラメータを保存する必要があります。これは後に`content.len()`と比較する際に必要になるからです。 **"Waiting on foo.txt"** 状態では、さらに`foo_txt_future`が格納されます。これは、`async_read_file`呼び出しが返したfutureを表します。このfutureは、ステートマシンが継続する際に再びポーリングされる必要があるため、保存する必要があります。
 
 **"Waiting on bar.txt"** の状態には、`bar.txt`の準備ができた後の文字列の連結に必要な`content`変数が含まれています。また、`bar.txt`がロード中であることを表す`bar_txt_future`も格納されています。この構造体には、`min_len`変数は含まれていません。これは、`content.len()`の比較の後では、もはや必要ないからです。 **"end"** の状態では、関数はすでに完了まで実行されているので、変数は格納されません。
 
