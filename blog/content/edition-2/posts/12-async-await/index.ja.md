@@ -605,7 +605,7 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 [pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#impl-DerefMut
 [_auto trait_]: https://doc.rust-lang.org/reference/special-types-and-traits.html#auto-traits
 
-例として、上記の `SelfReferential` 型を更新して、`Unpin` を除外してみましょう:
+例として、上記の `SelfReferential` 型を更新して、`Unpin` を使用しないようにしてみましょう:
 
 ```rust
 use core::marker::PhantomPinned;
