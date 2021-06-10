@@ -1583,7 +1583,7 @@ impl Executor {
 
 - poll毎にwakerを作成することによるパフォーマンスのオーバーヘッドを避けるために、`waker_cache`マップを使用して、作成された各タスクのwakerを保存します。これには、[`BTreeMap::entry`]メソッドと[`Entry::or_insert_with`]を組み合わせて使用し、新しいwakerがまだ存在しない場合には新しいwakerを作成して、そのwakerへのミュータブルな参照を取得します。新しいwakerを作成するには、`task_queue` をクローンして、タスク ID と共に `TaskWaker::new` 関数に渡します (実装は後述)。`task_queue` は `Arc` にラップされているので、`clone` は値の参照カウントを増やすだけで、同じヒープに割り当てられたキューを指しています。このようにwakerを再利用することは、すべてのwakerの実装で可能なわけではありませんが、私たちの `TaskWaker` 型ではそれが可能であることに注意してください。
 
-[_destructuring_]: https://doc.rust-lang.org/book/ch18-03-pattern-syntax.html#destructuring-to-break-apart-values
+[_destructuring_]: https://doc.rust-jp.rs/book-ja/ch18-03-pattern-syntax.html#%E6%A7%8B%E9%80%A0%E4%BD%93%E3%82%92%E5%88%86%E9%85%8D%E3%81%99%E3%82%8B
 [RFC 2229]: https://github.com/rust-lang/rfcs/pull/2229
 [RFC 2229 impl]: https://github.com/rust-lang/rust/issues/53488
 
@@ -1625,11 +1625,11 @@ impl TaskWaker {
 
 参照されている `task_queue` に `task_id` をpushします。[`ArrayQueue`]型の変更には共有参照だけがあればよいので、このメソッドは `&mut self` ではなく `&self` に実装することができます。
 
-##### `Wake`トレイト
+##### `Wake` Trait
 
 Futureのポーリングに`TaskWaker`型を使うには、まずこれを[`Waker`]インスタンスに変換する必要があります。これは [`Future::poll`] メソッドが引数として [`Context`] インスタンスを取るためで、このインスタンスは `Waker` 型からしか構築できません。これは [`RawWaker`] 型の実装を提供することによって可能ですが、代わりに `Arc` ベースの [`Wake`][wake-trait] trait を実装し、標準ライブラリが提供する [`From`] の実装を使用して `Waker` を構築する方が、よりシンプルで安全でしょう。
 
-traitの実装は以下のようになっています:
+traitの実装は以下のようにします:
 
 [wake-trait]: https://doc.rust-lang.org/nightly/alloc/task/trait.Wake.html
 
@@ -1653,7 +1653,7 @@ Waker は通常、executorと非同期タスクの間で共有されるので、
 
 `wake`と`wake_by_ref`メソッドの違いは、後者は`Arc`への参照のみを必要とするのに対し、前者は`Arc`の所有権を取得するため、しばしば参照カウントの増加を必要とすることです。すべての型が参照によるwakeをサポートしているわけではないので、`wake_by_ref` メソッドを実装するかは自由ですが、不必要な参照カウントの変更を避けることができるので、パフォーマンスの向上につながります。今回の例では、両方の trait メソッドで単純に `wake_task` 関数を呼び出すようにします。この関数は、共有の `&self` 参照しか要求しません。
 
-##### Wakerを生成
+##### Wakerを生成する
 
 `Waker` 型は、`Wake` traitを実装したすべての `Arc` ラッピングされた値からの [`From`] 変換をサポートしているので、`Executor::run_ready_tasks` メソッドで必要となる `TaskWaker::new` 関数を実装することができます:
 
@@ -1672,7 +1672,7 @@ impl TaskWaker {
 }
 ```
 
-渡された `task_id` と `task_queue` を使って `TaskWaker` を作成します。次に `TaskWaker` を `Arc` で囲み、`Waker::from` の実装を使用してそれを [`Waker`] に変換します。この `from` メソッドは、`TaskWaker` 型の [`RawWakerVTable`] と [`RawWaker`] インスタンスの構築を行います。このメソッドの詳細については、[implementation in the `alloc` crate][waker-from-impl]をご覧ください。
+渡された `task_id` と `task_queue` を使って `TaskWaker` を作成します。次に `TaskWaker` を `Arc` で囲み、`Waker::from` の実装を使用してそれを [`Waker`] に変換します。この `from` メソッドは、`TaskWaker` 型の [`RawWakerVTable`] と [`RawWaker`] インスタンスの構築を行います。このメソッドの詳細について興味のある場合は、[`alloc`クレート内での実装][waker-from-impl]をご覧ください。
 
 [waker-from-impl]: https://github.com/rust-lang/rust/blob/cdb50c6f2507319f29104a25765bfb79ad53395c/src/liballoc/task.rs#L58-L87
 
@@ -1713,17 +1713,17 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 }
 ```
 
-必要なのは import と型名を変更するだけです。関数 `run` は分岐しているとマークされているので、コンパイラはこの関数が決して戻らないことを認識し、`kernel_main` 関数の最後に `hlt_loop` を呼び出す必要がなくなりました。
+必要なのは、インポート部（`use`のところ）と型名を変更することだけです。関数 `run` は発散する関数となっているので、コンパイラはこの関数が決してリターンしないことを認識し、そのため`kernel_main` 関数の最後に `hlt_loop` を呼び出す必要はもうありません。
 
-ここで、`cargo run`を使ってカーネルを実行すると、キーボード入力が正常に動作することがわかります:
+ここで、`cargo run`を使ってカーネルを実行すると、キーボード入力が変わらず正常に動作することがわかります:
 
 ![QEMU printing ".....H...e...l...l..o..... ...a..g..a....i...n...!"](qemu-keyboard-output-again.gif)
 
-しかし、QEMUのCPU使用率は一向に向上しませんでした。その理由は、CPUをずっとbusy状態にしているからです。タスクが再び起こされるまでポーリングすることはなくなりましたが、busy loopで`task_queue`をチェックしています。この問題を解決するには、やるべき仕事がなくなったらCPUをスリープさせる必要があります。
+しかし、QEMUのCPU使用量は全く減っていません。その理由は、CPUをずっとbusy状態にしているからです。タスクが再び起こされるまでポーリングすることはなくなりましたが、`task_queue`をチェックし続けるbusy loop（忙しないループの意）に入っているのです。この問題を解決するには、やるべき仕事がなくなったらCPUをスリープさせる必要があります。
 
-#### アイドルならスリープする
+#### 何もすることがない (idle) ならスリープする
 
-基本的な考え方は、`task_queue`が空になったときに[`hlt` instruction]を実行するというものです。この命令は、次の割り込みが来るまでCPUをスリープ状態にします。割り込みが入るとCPUがすぐに活動を再開するので、割り込みハンドラが`task_queue`にpushされたときにも直接反応できるようになっています。
+基本的な考え方は、`task_queue`が空になったときに[`hlt`命令]を実行するというものです。この命令は、次の割り込みが来るまでCPUをスリープ状態にします。割り込みが入るとCPUがすぐに活動を再開するので、割り込みハンドラが`task_queue`にpushされたときにも直接反応できるようになっています。
 
 [`hlt` instruction]: https://en.wikipedia.org/wiki/HLT_(x86_instruction)
 
@@ -1748,7 +1748,7 @@ impl Executor {
 }
 ```
 
-`sleep_if_idle`は、`task_queue`が空になるまでループする`run_ready_tasks`の直後に呼び出されるので、queueを再度チェックする必要はないと思われるかもしれません。しかし、`run_ready_tasks` が戻ってきた直後にハードウェア割り込みが発生する可能性があるため、`sleep_if_idle` 関数が呼ばれた時点でqueueに新しいタスクがあるかもしれません。queueがまだ空の場合のみ、[`x86_64`]クレートが提供する[`instructions::hlt`]ラッパー関数を介して`hlt`命令を実行することで、CPUをスリープさせます。
+`sleep_if_idle`は、`task_queue`が空になるまでループする`run_ready_tasks`の直後に呼び出されるので、キューを再度チェックする必要はないと思われるかもしれません。しかし、`run_ready_tasks` がリターンしてきた直後にハードウェア割り込みが発生する可能性があるため、`sleep_if_idle` 関数が呼ばれた時点ではキューに新しいタスクがあるかもしれません。キューがまだ空であった場合のみ、[`x86_64`]クレートが提供する[`instructions::hlt`]ラッパー関数を介して`hlt`命令を実行することで、CPUをスリープさせます。
 
 [`instructions::hlt`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/fn.hlt.html
 [`x86_64`]: https://docs.rs/x86_64/0.13.2/x86_64/index.html
@@ -1787,18 +1787,18 @@ impl Executor {
 }
 ```
 
-競合状態を避けるために、`task_queue` が空であるかどうかを確認する前に、割り込みを無効にします。空いていれば、[`enable_and_hlt`]関数を使用して割り込みを有効にし、単一のアトミック操作としてCPUをスリープさせます。queueが空でない場合は、`run_ready_tasks` が戻ってきた後に、割り込みがタスクを起動したことを意味します。その場合は、再び割り込みを有効にして、`hlt`を実行せずに直接実行を継続します。
+競合状態を避けるために、`task_queue` が空であるかどうかを確認する前に、割り込みを無効にします。空いていれば、[`enable_and_hlt`]関数を使用して、単一のアトミック操作として割り込みを有効にしCPUをスリープさせます。キューが空でない場合は、`run_ready_tasks` がリターンしてきた後に、割り込みがタスクを起動したことを意味します。その場合は、再び割り込みを有効にして、`hlt`を実行せずにすぐに実行を継続します。
 
-これで、実行することがないときには、executorが適切にCPUをスリープ状態にします。再び`cargo run`を使ってカーネルを実行すると、QEMUプロセスのCPU使用率が大幅に低下していることがわかります。
+これで、実行することがないときには、executorが適切にCPUをスリープ状態にするようになりました。再び`cargo run`を使ってカーネルを実行すると、QEMUプロセスのCPU使用率が大幅に低下していることがわかります。
 
-#### 可能な拡張機能
+#### 考えられる機能拡張
 
 executorは、効率的な方法でタスクを実行できるようになりました。待機中のタスクのポーリングを避けるためにwaker通知を利用し、現在やるべきことがないときはCPUをスリープさせます。しかし、このexecutorはまだ非常に基本的なものであり、機能を拡張する方法はたくさんあります:
 
-- **Scheduling**: 現在、我々は[`VecDeque`]型を使用して、先入れ先出し(FIFO)戦略を`task_queue`に実装しています。これはしばしば **round robin** スケジューリングとも呼ばれます。この戦略は、すべてのワークロードにとって最も効率的であるとは限りません。例えば、レイテンシーが重要なタスクや、I/Oを大量に行うタスクを優先させることは意味があるかもしれません。詳しくは、『_Operating Systems: Three Easy Pieces』の「スケジューリングの章」や、[Wikipedia article on scheduling][scheduling-wiki]をご覧ください。
-- **Task Spawning**: 現在、私たちの `Executor::spawn` メソッドは `&mut self` の参照を必要とするため、`run` メソッドを開始した後は利用できません。この問題を解決するには、追加の `Spawner` 型を作成します。この型は、ある種のqueueをexecutorと共有し、タスク自身の中からタスクを作成することができます。このqueueは、例えば `task_queue` を直接使用することもできますし、executorが実行ループの中でチェックする別のqueueを使用することもできます。
-- **Utilizing Threads**: まだスレッドのサポートはしていませんが、次の投稿で追加する予定です。これにより、executorの複数のインスタンスを異なるスレッドで起動することが可能になります。このアプローチの利点は、他のタスクが同時に実行できるため、長時間実行するタスクによって課せられる遅延を減らすことができることです。また、この方法では、複数のCPUコアを利用することもできます。
-- **Load Balancing**: スレッドサポートを追加した場合、すべてのCPUコアが利用されるように、executor間でどのようにタスクを分配するかが重要になります。このための一般的なテクニックは、[_work stealing_]です。
+- **スケジューリング**: 現在、我々は[`VecDeque`]型を使用して、先入れ先出し(FIFO)戦略を`task_queue`に実装しています。これはしばしば **ラウンドロビン (round robin)** スケジューリングとも呼ばれます。この戦略は、すべてのワークロードにとって最も効率的であるとは限りません。例えば、レイテンシーが重要なタスクや、I/Oを大量に行うタスクを優先させることは意味があるかもしれません。詳しくは、[_Operating Systems: Three Easy Pieces_]の[スケジューリングの章][scheduling chapter]や、[スケジューリングに関するWikipediaの記事][scheduling-wiki]をご覧ください。
+- **タスクの発生 (spawn)**: 現在、私たちの `Executor::spawn` メソッドは `&mut self` の参照を必要とするため、`run` メソッドを開始した後は利用できません。この問題を解決するには、追加で `Spawner` 型を作成します。この型は、ある種のキューをexecutorと共有し、タスク自身の中からタスクを作成することができます。このキューには、例えば `task_queue` を直接使用することもできますし、executorが実行ループの中でチェックする別のキューを使用することもできます。
+- **スレッドを活用する**: まだスレッドのサポートはしていませんが、次の投稿で追加する予定です。これにより、executorの複数のインスタンスを異なるスレッドで起動することが可能になります。このアプローチの利点は、複数のタスクが同時に実行できるため、長時間実行するタスクによって課せられる遅延を減らすことができることです。また、この方法では、複数のCPUコアを利用することもできます。
+- **負荷の分配**: スレッドをサポートするようにした場合、すべてのCPUコアが利用されるように、executor間でどのようにタスクを分配するかが重要になります。このための一般的なテクニックは、[_work stealing_]です。
 
 [scheduling chapter]: http://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched.pdf
 [_Operating Systems: Three Easy Pieces_]: http://pages.cs.wisc.edu/~remzi/OSTEP/
