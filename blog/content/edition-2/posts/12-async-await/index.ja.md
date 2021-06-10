@@ -703,7 +703,7 @@ fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 
 [self-ref-async-await]: @/edition-2/posts/12-async-await/index.md#self-referential-structs
 
-注目すべきは、最初の `poll` 呼び出しの前にfutureを動かすことは問題ないということです。これは、futureがlazyであり、最初にポーリングされるまで何もしないという事実に起因しています。そのため、生成されたステートマシンの `start` 状態には、関数の引数だけが含まれており、内部参照は含まれていません。`poll` を呼び出すために、呼び出し側はまずfutureを `Pin` にラップしなければなりません。これにより、futureがメモリ上で移動できなくなります。スタック上で正しく pin するのは、ヒープ上でするよりも難しいので、[`Box::pin`]と[`Pin::as_mut`]を組み合わせて使用することをお勧めします。
+注目すべきは、最初の `poll` 呼び出しの前にfutureを移動させることは問題ないということです。これは、futureがlazyであり、最初にポーリングされるまで何もしないという事実に起因しています。そのため、生成されたステートマシンの `start` 状態には、関数の引数だけが含まれており、内部参照は含まれていません。`poll` を呼び出すためには、呼び出し側はまずfutureを `Pin` にラップしなければなりません。これにより、futureがメモリ上で移動できなくなります。スタック上で正しく pin するのは、ヒープ上でするよりも難しいので、[`Box::pin`]と[`Pin::as_mut`]を組み合わせて使用することをお勧めします。
 
 [`futures`]: https://docs.rs/futures/0.3.4/futures/
 
