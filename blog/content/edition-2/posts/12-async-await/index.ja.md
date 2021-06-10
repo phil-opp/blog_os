@@ -438,7 +438,7 @@ ExampleStateMachine::WaitingOnFooTxt(state) => {
 
 `else`の分岐に入った場合、それ以上の`.await`操作は発生しません。関数の最後に到達したため、`Poll::Ready`でラップされた`content`を返します。また、現在の状態を `End` に変更します。
 
-`WaitingOnBarTxt`ステートのコードは以下のようになります:
+`WaitingOnBarTxt`の状態のコードは以下のようになります:
 
 ```rust
 ExampleStateMachine::WaitingOnBarTxt(state) => {
