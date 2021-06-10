@@ -736,7 +736,7 @@ waker APIの背景にある考え方は、特別な[`Waker`]型が[`Context`]型
 
 [`Context`]: https://doc.rust-lang.org/nightly/core/task/struct.Context.html
 
-これは、小さな例で説明するのが一番です。:
+これは、小さな例で説明するのが一番です:
 
 ```rust
 async fn write_file() {
@@ -746,7 +746,7 @@ async fn write_file() {
 
 この関数は文字列 "Hello" を `foo.txt` ファイルに非同期的に書き込みます。ハードディスクへの書き込みには時間がかかるので、このfutureの最初の `poll` 呼び出しはおそらく `Poll::Pending` を返すでしょう。しかし、ハードディスクドライバは `poll` 呼び出しに渡された `Waker` を内部に保存し、ファイルがディスクに書き込まれたときにそれを使ってexecutorに通知します。これにより、executorはwakerの通知を受け取るまでの間、再びfutureを `poll` して時間を無駄にせずにすみます。
 
-この記事の実装セクションで、Wakerをサポートした独自のexecutorを作成する際に、`Waker`型がどのように機能するかを詳しく見ていきます。
+この記事の実装セクションで、wakerをサポートした独自のexecutorを作成する際に、`Waker`型がどのように機能するかを詳しく見ていきます。
 
 ### 協調的マルチタスク?
 
@@ -754,9 +754,9 @@ async fn write_file() {
 
 すぐにはわからないかもしれませんが、futureとasync/awaitは、協調的マルチタスクの実装になっています:
 
-- executorに追加される各futureは、基本的に協力なタスクです。
+- 簡単に言ってしまえば、executorに追加される各futureが1つの協調的タスクです。
 - future は、明示的なyield operationを使用する代わりに、`Poll::Pending`（もしくは終了時に`Poll::Ready`）を返すことで、CPU コアの制御を放棄します。
-  - futureがCPUを手放すことを強制するものは何もありません。望むならば、例えばループで無限に回転させるなどして、`poll`から決して戻らないようにすることができます。
+  - futureがCPUの制御を手放すことを強制するものは何もありません。やろうと思えば、例えばループを無限に回すなどして、`poll`から決してリターンしないようにすることができます。
   - それぞれのfutureは、executor内の他のfutureの実行をブロックできるため、悪意がないことを信用する必要があります。
 - futureは、次の `poll` 呼び出しで実行を継続するために必要なすべての状態を内部に保存します。async/awaitでは、コンパイラが必要なすべての変数を自動的に検出し、生成されたステートマシンの内部に格納します。
   - 継続に必要な最低限の状態のみが保存されます。
@@ -768,7 +768,7 @@ futureとasync/awaitは、協調的マルチタスクのパターンに完全に
 
 future と async/await に基づいた協調的マルチタスクが Rust でどのように動作するかを理解したので、私達のカーネルにそのサポートを追加しましょう。[`Future`] trait は `core` ライブラリの一部であり、async/await は言語自体の機能なので、これらを`#![no_std]` カーネルで使用するために特別なことをする必要はありません。唯一の要件は、Rust の nightly `2020-03-25` 以降を使用することです。なぜなら、async/await はこれ以前は `no_std` に対応していなかったからです。
 
-最近のnightlyでは、`main.rs` で async/await を使い始めることができます:
+それ以降のnightlyでは、`main.rs` で async/await を使うことができます:
 
 ```rust
 // in src/main.rs
@@ -785,7 +785,7 @@ async fn example_task() {
 
 関数 `async_number` は `async fn` なので、コンパイラはこれを `Future` を実装したステートマシンに変換します。この関数は `42` しか返さないので、できあがったfutureは最初の `poll` 呼び出しですぐに `Poll::Ready(42)` を返します。`async_number`と同様に、`example_task`関数も`async fn`です。この関数は `async_number` が返す数値を待ち、`println` マクロを使ってその数値を表示します。
 
-`example_task` が返す future を実行するには、`Poll::Ready` を返すことで完了を知らせるまで、`poll` を呼び出す必要があります。そのためには、シンプルなexecutor typeを作成する必要があります。
+`example_task` が返す future を実行するには、それが`Poll::Ready` を返すことで完了を知らせてくれるまで、`poll` を呼び出し続ける必要があります。そのためには、シンプルなexecutorの型を作成する必要があります。
 
 ### タスク
 
@@ -834,7 +834,7 @@ impl Task {
 
 この関数は、出力型が `()` の任意のfutureを受け取り、[`Box::pin`] 関数を使ってそれをメモリにピン留めします。そして、Box化されたfutureを `Task` 構造体でラップして返します。ここで `'static` ライフタイムが必要なのは、返された `Task` が任意の時間だけ生き続けることができるので、futureもその時間だけ有効である必要があるからです。
 
-また、`poll`メソッドを追加して、エクゼキュータが格納されたfutureをポーリングできるようにしましょう:
+`poll`メソッドも追加して、executorが格納されたfutureをポーリングできるようにしましょう:
 
 ```rust
 // in src/task/mod.rs
@@ -852,7 +852,7 @@ impl Task {
 
 ### 単純なExecutor
 
-executorは非常に複雑なものになる可能性があるので、より機能的なexecutorを後から実装する前に、あえて非常に基本的なexecutorを作ることから始めます。そのために、まず新しい `task::simple_executor` サブモジュールを作成します:
+executorは非常に複雑なものになる可能性があるので、より機能的なexecutorを実装していく前に、あえて非常に基本的なexecutorを作ることから始めます。そのために、まず新しい `task::simple_executor` サブモジュールを作成します:
 
 ```rust
 // in src/task/mod.rs
@@ -883,14 +883,14 @@ impl SimpleExecutor {
 }
 ```
 
-この構造体には、[`VecDeque`]型の`task_queue`フィールドが1つ含まれています。これは基本的に、両端でpushとpopの操作ができるvectorです。この型を使うアイデアは、最後に `spawn` メソッドを使って新しいタスクを末尾に挿入し、前から次のタスクを実行するために先頭からpopするというものです。これにより、単純な[FIFO queue](_"first in, first out"_)が得られます。
+この構造体には、[`VecDeque`]型の`task_queue`フィールドが1つ含まれています。これは要するに、両端でpushとpopの操作ができるvectorです。この型を使うのは、`spawn` メソッドによって新しいタスクを末尾に挿入し、次のタスクを実行する際先頭からpopしたいからです。これにより、単純な[FIFO queue](_"first in, first out"_)が得られます。
 
 [`VecDeque`]: https://doc.rust-lang.org/stable/alloc/collections/vec_deque/struct.VecDeque.html
 [FIFO queue]: https://en.wikipedia.org/wiki/FIFO_(computing_and_electronics)
 
-#### ダミーウェイカー
+#### ダミーのWaker
 
-`poll`メソッドを呼び出すためには、[`Context`]型を作成して、[`Waker`]型をラップする必要があります。簡単に始めるために、まず何もしないdummy wakerを作ります。このために、さまざまな `Waker` のメソッドの実装を定義した [`RawWaker`] インスタンスを作成し、 [`Waker::from_raw`] 関数を使用して `Waker` に変換します:
+`poll`メソッドを呼び出すためには、[`Context`]型を作成して、[`Waker`]型をラップする必要があります。簡単に始めるために、まず何もしないダミーのwakerを作ります。このために、さまざまな `Waker` のメソッドの実装を定義した [`RawWaker`] インスタンスを作成し、 [`Waker::from_raw`] 関数を使用して `Waker` に変換します:
 
 [`RawWaker`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html
 [`Waker::from_raw`]: https://doc.rust-lang.org/stable/core/task/struct.Waker.html#method.from_raw
@@ -909,17 +909,17 @@ fn dummy_waker() -> Waker {
 }
 ```
 
-`from_raw` 関数はunsafeです。なぜならば、プログラマが `RawWaker` の文書化された要件を守らないと、未定義の動作が発生する可能性があるからです。`dummy_raw_waker` 関数の実装を見る前に、まず `RawWaker` 型がどのように動作するかを理解しましょう。
+`from_raw` 関数はunsafeです。なぜならば、プログラマがドキュメントに書かれた `RawWaker` の要件を守らないと、未定義の動作が発生する可能性があるからです。`dummy_raw_waker` 関数の実装を見る前に、まず `RawWaker` 型がどのように動作するかを理解しましょう。
 
 ##### `RawWaker`
 
-[`RawWaker`] 型では、プログラマが [_virtual method table_] (_vtable_) を明示的に定義する必要があります。このテーブルは、`RawWaker` がクローンされたり、起こされたり、落とされたりしたときに呼び出されるべき関数を指定します。このvtableのレイアウトは[`RawWakerVTable`]という型で定義されています。各関数は、基本的にはheap上に確保された構造体への**型消去された** `&self` ポインタである `*const ()` 引数を受け取ります。参照ではなく `*const ()` ポインタを使う理由は、`RawWaker` の型はnon-genericであるべきだが、それでも任意の型をサポートする必要があるからです。関数に渡されるポインタの値は [`RawWaker::new`] に渡される `data` ポインタです。
+[`RawWaker`] 型では、プログラマが [_virtual method table_] (_vtable_) を明示的に定義する必要があります。このテーブルは、`RawWaker` がクローンされたり、起こされたり、ドロップされたりしたときに呼び出されるべき関数を指定します。このvtableのレイアウトは[`RawWakerVTable`]という型で定義されています。各関数は、基本的には（例えばヒープ上に確保された）構造体への**型消去された** `&self` ポインタである `*const ()` 引数を受け取ります。通常の参照ではなく `*const ()` ポインタを使う理由は、`RawWaker` の型は非ジェネリックであるべきで、かつ任意の型をサポートする必要があるからです。関数に渡されるポインタの値は [`RawWaker::new`] に渡される `data` ポインタです。
 
 [_virtual method table_]: https://en.wikipedia.org/wiki/Virtual_method_table
 [`RawWakerVTable`]: https://doc.rust-lang.org/stable/core/task/struct.RawWakerVTable.html
 [`RawWaker::new`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html#method.new
 
-通常、`RawWaker` は [`Box`] や [`Arc`] 型にラッピングされた、heapに割り当てられた構造体に対して作成されます。このような型では、 [`Box::into_raw`] のようなメソッドを使用して、 `Box<T>` を `*const T` ポインタに変換することができます。このポインタをanonymousの `*const ()` ポインタにキャストして、 `RawWaker::new` に渡すことができます。各vtable関数は同じ`*const ()`を引数として受け取るので、各関数は安全にポインタを`Box<T>`や`&T`にキャストし直して操作することができます。想像できると思いますが、この処理は非常に危険で、ミスにより未定義動作を引き起こすことが多いです。このような理由から、`RawWaker` を手動で作成することは、必要な場合を除いてお勧めできません。
+通常、`RawWaker` は [`Box`] や [`Arc`] 型にラップされた、ヒープに割り当てられた構造体に対して作成されます。このような型では、 [`Box::into_raw`] のようなメソッドを使用して、 `Box<T>` を `*const T` ポインタに変換することができます。更にこのポインタを `*const ()` 無名（関数）ポインタにキャストして、 `RawWaker::new` に渡すことができます。各vtable関数はどれも`*const ()`を引数として受け取るので、各関数は安全にポインタを`Box<T>`や`&T`にキャストし直して操作することができます。想像できると思いますが、この処理は非常に危険で、ミスにより未定義動作を引き起こすことが多いです。このような理由から、`RawWaker` を自分の手で作成することは、必要な場合を除いてお勧めできません。
 
 [`Box`]: https://doc.rust-lang.org/stable/alloc/boxed/struct.Box.html
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
@@ -927,7 +927,7 @@ fn dummy_waker() -> Waker {
 
 ##### ダミーの`RawWaker`
 
-手動で `RawWaker` を作成することはお勧めできませんが、何もしないdummy `Waker` を作成する方法は今のところ他にありません。幸いなことに、何もしたくないということで、`dummy_raw_waker`関数の実装は比較的安全です:
+自分の手で `RawWaker` を作成することはお勧めできませんが、何もしないダミーの `Waker` を作成する方法は今のところ他にありません。幸いなことに、何かをさせたいわけではないので、`dummy_raw_waker`関数の実装は比較的安全です:
 
 ```rust
 // in src/task/simple_executor.rs
@@ -945,13 +945,13 @@ fn dummy_raw_waker() -> RawWaker {
 }
 ```
 
-まず、`no_op`と`clone`という2つの内部関数を定義します。`no_op`関数は`*const ()`のポインタを受け取り、何もしません。また、`clone`関数は`*const ()`のポインタを受け取り、`dummy_raw_waker`を再度呼び出して新しい`RawWaker`を返します。これらの2つの関数を使って最小限の `RawWakerVTable` を作成します。`clone`関数はクローン作成のために用いられ、それ以外の操作には`no_op`関数が用いられます。`RawWaker`は何もしないので、クローンを作る代わりに`clone`から新しい`RawWaker`を返しても問題ありません。
+まず、`no_op`と`clone`という2つの内部関数を定義します。`no_op`関数は`*const ()`のポインタを受け取り、何もしません。また、`clone`関数は`*const ()`のポインタを受け取り、`dummy_raw_waker`を再度呼び出して新しい`RawWaker`を返します。これらの2つの関数を使って最小限の `RawWakerVTable` を作成します。`clone`関数はクローン作成のために用いられ、それ以外の操作には`no_op`関数が用いられます。`RawWaker`は何もしないので、クローンを作る代わりに`clone`から新しい`RawWaker`を返しても問題はありません。
 
-`vtable`を作成した後、[`RawWaker::new`]関数を使って`RawWaker`を作成します。渡された `*const ()` は、どのvtable関数も使用しないので、重要ではありません。そのため、単にnullポインタを渡します。
+`vtable`を作成した後、[`RawWaker::new`]関数を使って`RawWaker`を作成します。どのvtable関数も渡された `*const ()` を使用しないので、 これが何であっても構いません。そのため、単にnullポインタを渡します。
 
 #### `run`メソッド
 
-これで `Waker` インスタンスを作成する方法ができたので、これを使ってexecutorに `run` メソッドを実装することができます。最もシンプルな `run` メソッドは、queueに入っているすべてのタスクを、すべて完了するまでループで繰り返しポーリングするものです。これは `Waker` 型の通知を利用していないのであまり効率的ではありませんが、物事を実行するための簡単な方法です:
+これで `Waker` インスタンスを作成する方法ができたので、これを使ってexecutorに `run` メソッドを実装することができます。最もシンプルな `run` メソッドは、キューに入っているすべてのタスクを、すべて完了するまでループで繰り返しポーリングするものです。これは `Waker` 型からの通知を利用していないのであまり効率的ではありませんが、とりあえず実行させるための簡易な方法です:
 
 ```rust
 // in src/task/simple_executor.rs
@@ -972,7 +972,7 @@ impl SimpleExecutor {
 }
 ```
 
-この関数は `while let` ループを使用して、`task_queue` 内のすべてのタスクを処理します。各タスクでは、まず `dummy_waker` 関数が返す `Waker` インスタンスをラップして `Context` 型を作成します。そして、この `context` で `Task::poll` メソッドを呼び出します。もし `poll` メソッドが `Poll::Ready` を返せば、タスクは終了し、次のタスクに進むことができます。タスクがまだ `Poll::Pending` であれば、そのタスクを再びqueueの後ろに追加して、次のループの繰り返しで再びポーリングされるようにします。
+この関数は `while let` ループを使用して、`task_queue` 内のすべてのタスクを処理します。各タスクでは、まず `dummy_waker` 関数が返す `Waker` インスタンスをラップして `Context` 型を作成します。そして、この `context` で `Task::poll` メソッドを呼び出します。もし `poll` メソッドが `Poll::Ready` を返せば、タスクは終了し、次のタスクに進むことができます。タスクがまだ `Poll::Pending` であれば、そのタスクを再びキューの後ろに追加して、次のループの繰り返しで再びポーリングされるようにします。
 
 #### 試してみよう
 
@@ -990,7 +990,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     executor.spawn(Task::new(example_task()));
     executor.run();
 
-    // […] test_main, "it did not crash" message, hlt_loop
+    // […] test_main, "it did not crash" のメッセージ, hlt_loop
 }
 
 // 以下は、上の方で既に定義されているexample_task関数です.
@@ -1006,7 +1006,7 @@ async fn example_task() {
 }
 ```
 
-実行してみると、期待通りの **"async number: 42"** メッセージがスクリーンに表示されています:
+実行してみると、期待通り **"async number: 42"** のメッセージがスクリーンに表示されています:
 
 ![QEMU printing "Hello World", "async number: 42", and "It did not crash!"](qemu-simple-executor.png)
 
