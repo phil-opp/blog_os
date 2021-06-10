@@ -654,7 +654,7 @@ error[E0596]: cannot borrow data in a dereference of `std::pin::Pin<std::boxed::
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
 ```
 
-どちらのエラーも、`Pin<Box<SelfReferential>>` 型が `DerefMut` trait を実装しなくなったために発生します。これはまさに求めていた結果であり、というのも、`DerefMut` trait は `&mut` 参照を返してしまうからで、これを防ぎたいのです。これは、`Unpin` をオプトアウトして、`Box::new` を `Box::pin` に変更したからこそ起こる現象です。
+どちらのエラーも、`Pin<Box<SelfReferential>>` 型が `DerefMut` trait を実装しなくなったために発生します。これはまさに求めていた結果であり、というのも、`DerefMut` trait は `&mut` 参照を返してしまうからで、私達はこれを防ぎたかったのです。これは、`Unpin` を使用しないようにして、`Box::new` を `Box::pin` に変更したからこそ起こる現象です。
 
 ここで問題になるのは、コンパイラが16行目の型の移動を禁止するだけでなく、10行目の`self_ptr`フィールドの初期化も禁止してしまうことです。これは、コンパイラが `&mut` 参照の有効な使用と無効な使用を区別できないために起こります。初期化を再開するには、安全ではない [get_unchecked_mut`] メソッドを使用する必要があります:
 
