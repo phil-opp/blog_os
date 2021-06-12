@@ -10,12 +10,28 @@
 </p>
 {% endmacro support %}
 
-{% macro utterances() %}
-    <script src="https://utteranc.es/client.js"
+{% macro giscus(discussion_number=0) %}
+    <div class="giscus"></div>
+
+    {% if discussion_number == 0 %}
+        {% set discussion_mapping="og:title" %}
+    {% else %}
+        {% set discussion_mapping="number" %}
+    {% endif %}
+
+    <script src="https://giscus.app/client.js"
         data-repo="phil-opp/blog_os"
-        data-issue-term="url"
-        data-label="comments"
+        data-repo-id="MDEwOlJlcG9zaXRvcnkzOTU3NTEwMQ=="
+        data-category="Post Comments"
+        data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMzMDE4OTg1"
+        data-mapping="og:title"
+        data-reactions-enabled="1"
+        data-theme="preferred_color_scheme"
         crossorigin="anonymous"
         async>
     </script>
-{% endmacro utterances %}
+
+    <p class="comment-directly-on-github">
+        Instead of authenticating the <a href="https://giscus.app">giscus</a> application, you can also comment directly on the <span class="discussion_link">on GitHub. Just click the <i>"X comments"</i> link at the <a href="#comments">top</a> — or the date of any comment — to go to the GitHub discussion.</span>
+    </p>
+{% endmacro giscus %}

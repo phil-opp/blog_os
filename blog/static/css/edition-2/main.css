@@ -462,3 +462,11 @@ a strong {
 .status-update-list li {
   margin-bottom: .5rem;
 }
+
+#comments {
+  visibility: hidden;
+}
+
+.comment-directly-on-github {
+  margin-top: 1rem;
+}
