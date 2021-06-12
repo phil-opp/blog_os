@@ -97,12 +97,6 @@
     <section>
         <h2 id="comments" class="{% if page.extra.rtl %}right-to-left{% endif %}">{{ trans(key="comments", lang=lang) }}</h2>
 
-        {%- if page.lang != "en" %}
-        <p class="{% if page.extra.rtl %}right-to-left{% endif %}">
-            {{ trans(key="comments_notice", lang=lang) }}
-        </p>
-        {% endif %}
-
         {% if page.extra.comments_search_term %}
             {% set search_term=page.extra.comments_search_term %}
         {% elif page.lang != "en" %}
@@ -113,6 +107,12 @@
             {% set search_term=page.title %}
         {% endif %}
         {{ snippets::giscus(search_term=search_term) }}
+
+        {%- if page.lang != "en" %}
+        <p class="{% if page.extra.rtl %}right-to-left{% endif %}">
+            {{ trans(key="comments_notice", lang=lang) }}
+        </p>
+        {% endif %}
     </section>
 
     <aside class="page-aside-right">
