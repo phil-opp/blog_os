@@ -4,7 +4,6 @@
 {% import "snippets.html" as snippets %}
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
-{% block head %}<meta property="og:title" content="{{ page.title }}" />{% endblock head %}
 
 {% block header %}
     {% if lang != "en" -%}
@@ -104,7 +103,7 @@
         </p>
         {% endif %}
 
-        {{ snippets::giscus() }}
+        {{ snippets::giscus(search_term=page.title) }}
     </section>
 
     <aside class="page-aside-right">
