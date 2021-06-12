@@ -3,7 +3,6 @@
 {% import "snippets.html" as snippets %}
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
-{% block head %}<meta property="og:title" content="{{ page.title }}" />{% endblock head %}
 
 {% block main %}
     <h1>{{ page.title }}</h1>
@@ -18,7 +17,7 @@
     <hr>
     <section>
         <h2 id="comments">Comments</h2>
-        {{ snippets::giscus() }}
+        {{ snippets::giscus(search_term=page.title ~ " (News Post)") }}
     </section>
 
 {% endblock after_main %}
