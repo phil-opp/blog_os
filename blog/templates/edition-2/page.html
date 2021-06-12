@@ -4,6 +4,8 @@
 {% import "snippets.html" as snippets %}
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+{% block head %}<meta property="og:title" content="{{ page.title }}" />{% endblock head %}
+
 {% block header %}
     {% if lang != "en" -%}
     <aside id="all-posts-link"><a href="{{ config.base_url | safe }}/{{ lang }}" title="All Posts">{{ trans(key="all_posts", lang=lang) }}</a></aside>
@@ -102,7 +104,7 @@
         </p>
         {% endif %}
 
-        {{ snippets::utterances() }}
+        {{ snippets::giscus() }}
     </section>
 
     <aside class="page-aside-right">

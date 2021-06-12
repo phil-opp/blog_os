@@ -3,6 +3,7 @@
 {% import "snippets.html" as snippets %}
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
+{% block head %}<meta property="og:title" content="{{ page.title }}" />{% endblock head %}
 
 {% block description -%}
 {{ page.summary | safe | striptags | truncate(length=150) }}
@@ -16,7 +17,7 @@
 {% block after_main %}
     <hr>
     <section>
-        <h2>Comments</h2>
-        {{ snippets::utterances() }}
+        <h2 id="comments">Comments</h2>
+        {{ snippets::giscus() }}
     </section>
 {% endblock after_main %}
