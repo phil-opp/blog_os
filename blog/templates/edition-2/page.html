@@ -103,7 +103,12 @@
         </p>
         {% endif %}
 
-        {{ snippets::giscus(search_term=page.title) }}
+        {% if page.extra.comments_search_term %}
+            {% set search_term=page.extra.comments_search_term %}
+        {% else %}
+            {% set search_term=page.title %}
+        {% endif %}
+        {{ snippets::giscus(search_term=search_term) }}
     </section>
 
     <aside class="page-aside-right">

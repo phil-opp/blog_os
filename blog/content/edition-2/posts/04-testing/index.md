@@ -6,6 +6,7 @@ date = 2019-04-27
 
 [extra]
 chapter = "Bare Bones"
+comments_search_term = 1009
 +++
 
 This post explores unit and integration testing in `no_std` executables. We will use Rust's support for custom test frameworks to execute test functions inside our kernel. To report the results out of QEMU, we will use different features of QEMU and the `bootimage` tool.

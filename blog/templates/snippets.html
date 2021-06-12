@@ -18,7 +18,11 @@
         data-repo-id="MDEwOlJlcG9zaXRvcnkzOTU3NTEwMQ=="
         data-category="Post Comments"
         data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMzMDE4OTg1"
+    {% if search_term is number %}
+        data-mapping="number"
+    {% else %}
         data-mapping="specific"
+    {% endif %}
         data-term="{{ search_term }}"
         data-reactions-enabled="1"
         data-theme="preferred_color_scheme"
