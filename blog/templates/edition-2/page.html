@@ -105,6 +105,8 @@
 
         {% if page.extra.comments_search_term %}
             {% set search_term=page.extra.comments_search_term %}
+        {% elif page.lang != "en" %}
+            {% set search_term=page.title ~ " (" ~ page.lang ~ ")" %}
         {% else %}
             {% set search_term=page.title %}
         {% endif %}
