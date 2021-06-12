@@ -106,7 +106,9 @@
         {% if page.extra.comments_search_term %}
             {% set search_term=page.extra.comments_search_term %}
         {% elif page.lang != "en" %}
-            {% set search_term=page.title ~ " (" ~ page.lang ~ ")" %}
+            {% set translations = page.translations | filter(attribute="lang", value="en") %}
+            {% set original = translations.0 %}
+            {% set search_term=original.title ~ " (" ~ page.lang ~ ")" %}
         {% else %}
             {% set search_term=page.title %}
         {% endif %}
