@@ -598,7 +598,7 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 
 #### `Pin<Box<T>>`と`Unpin`
 
-ピン留めのAPIは、[`Pin`]ラッパー型と[`Unpin`]マーカートレイトという形で、`&mut T`問題に対する解決策を提供します。これらの型の背景にある考え方は、（`Pin`によって）ラップされた値への `&mut` 参照を取得するために使用できる `Pin` のすべてのメソッド (例えば、[`get_mut`][pin-get-mut] や [`deref_mut`][pin-deref-mut]) を `Unpin` trait に限定することです。`Unpin` トレイトは[**自動トレイト**][_auto trait_]であり、明示的に使用しないよう宣言した型を除くすべての型に対して自動的に実装されます。自己参照構造体は `Unpin` を使用しないようにさせることで、`Pin<Box<T>>` 型から `&mut T` を得る (安全な) 方法を無くすことができます。その結果、それらの内部の自己参照が有効であることが保証されます。
+ピン留めのAPIは、[`Pin`]ラッパー型と[`Unpin`]マーカーtraitという形で、`&mut T`問題に対する解決策を提供します。これらの型の背景にある考え方は、（`Pin`によって）ラップされた値への `&mut` 参照を取得するために使用できる `Pin` のすべてのメソッド (例えば、[`get_mut`][pin-get-mut] や [`deref_mut`][pin-deref-mut]) を `Unpin` trait に限定することです。`Unpin` traitは[**自動trait**][_auto trait_]であり、明示的に使用しないよう宣言した型を除くすべての型に対して自動的に実装されます。自己参照構造体は `Unpin` を使用しないようにさせることで、`Pin<Box<T>>` 型から `&mut T` を得る (安全な) 方法を無くすことができます。その結果、それらの内部の自己参照が有効であることが保証されます。
 
 [`Pin`]: https://doc.rust-lang.org/stable/core/pin/struct.Pin.html
 [`Unpin`]: https://doc.rust-lang.org/nightly/std/marker/trait.Unpin.html
@@ -617,7 +617,7 @@ struct SelfReferential {
 }
 ```
 
-[`PhantomPinned`]型の2つ目のフィールド `_pin` を追加することで`Unpin`を使用しないようにします。この型はゼロサイズのマーカー型で、`Unpin` trait を実装**しない**ようにするためだけに置かれています。[自動トレイト][_auto trait_]の仕組み上、`Unpin`ではないフィールドが1つでもあれば、構造体全体が`Unpin`を使用しないようになります。
+[`PhantomPinned`]型の2つ目のフィールド `_pin` を追加することで`Unpin`を使用しないようにします。この型はゼロサイズのマーカー型で、`Unpin` trait を実装**しない**ようにするためだけに置かれています。[自動trait][_auto trait_]の仕組み上、`Unpin`ではないフィールドが1つでもあれば、構造体全体が`Unpin`を使用しないようになります。
 
 [`PhantomPinned`]: https://doc.rust-lang.org/nightly/core/marker/struct.PhantomPinned.html
 
