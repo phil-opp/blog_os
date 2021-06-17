@@ -1,7 +1,7 @@
 # Building Blog OS using Docker
 Inspired by [redox].
 You just need `git`, `make`, and `docker`.
-It is beter to use a non-privileged user to run the `docker` command, which is usually achieved by adding the user to the `docker` group.
+It is better to use a non-privileged user to run the `docker` command, which is usually achieved by adding the user to the `docker` group.
 
 ## Run the container to build Blog OS
 You can build the docker image using `make docker_build` and run it using `make docker_run`.
