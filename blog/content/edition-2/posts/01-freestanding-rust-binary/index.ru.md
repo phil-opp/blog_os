@@ -141,3 +141,18 @@ fn panic(_info: &PanicInfo) -> ! {
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
+## Языковой предмет `eh_personality`
+
+Языковые предметы это специальный функции и типы, которые необходимы компилятору. Например, трэйт [`Copy`] эхто языковой предмет, которые указывает компилятору какой тип [_семантику копирования_][`Copy`]. Если мы посмотрим на исходный код [реализации][copy code] этого трэйта, то можно увидеть специальный аттрибут `#[lang = "copy"]`, которые указывает на то, что это языковой предмет.
+
+[`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
+[copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
+
+Хотя создание собственных реализаций языковых предметов возможна, это следует делать только в крайнем случае. Причина в том, что языковые предметы являются крайне нестабильными частями реализации и даже не проверяются на тип (поэтому компилятор даже не проверяет, имеет ли функция правильные типы аргументов). К счастью, существует более стабильный способ исправить вышеупомянутую ошибку языкового предмета.
+
+Языковой предмет [`eh_personality`][language item] указывает на функцию, которая используется для реализации [раскрутки стэка][stack unwinding]. По стандарту, Rust использует раскрутку для запуска деструктуров для всех _живых_ стэковых переменных в случае появлении [паники][panic]. Это гарантирует, что вся использованная память будет освобождена, и позволяет родительскому потоку перехватить панику и продолжить выполнение. Раскрутка очень сложный процесс и требует некоторых специльных библиотек ОС (например, [libunwind] для Linux или [structured exception handling] для Windows), так что мы не должны использовать их для нашей операицонной системы.
+
+[language item]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
+[stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
+[libunwind]: https://www.nongnu.org/libunwind/
+[structured exception handling]: https://docs.microsoft.com/de-de/windows/win32/debug/structured-exception-handling
