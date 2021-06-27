@@ -116,3 +116,28 @@ error: language item required, but not found: `eh_personality`
 ```
 
 Сейчас компилятор не может найти `#[panic_handler]` функцию и _языковой предмет(`eh_personality`)_.
+
+## Реализация _паники_
+
+Аттрибут `pаnic_handler` определяет функцию, которая должна вызываться, когда происходит [паника (panic)][panic]. Стандартная библиотека предоставляет собственную функцию обработчика паники, но после отключения стандартной библиотеки ма должны написать собственный обработчик:
+
+[panic]: https://doc.rust-lang.org/stable/book/ch09-01-unrecoverable-errors-with-panic.html
+
+```rust
+// in main.rs
+
+use core::panic::PanicInfo;
+
+/// This function is called on panic.
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+```
+
+Параметр [`PanicInfo`][PanicInfo] содержит название файла, строку где произошла паника и дополнительное сообщение с пояснением. Это функцию никогда ничего не должна возвращать и такая функция называется [расходящиеся функцию][diverging functions] и она возращает ["невозможный" тип]["never" type] `!`. На данный момент у нас нет особых инструментов, которые мы бы могли использовать, чтобы заполнить это функцию, поэтому мы просто войдем в бесконечный цикл.
+
+[PanicInfo]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
+[diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
+[“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
+
