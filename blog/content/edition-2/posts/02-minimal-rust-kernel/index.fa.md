@@ -202,19 +202,19 @@ For more information, see our post on [disabling SIMD](@/edition-2/posts/02-mini
 
 ```json
 {
-  "llvm-target": "x86_64-unknown-none",
-  "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
-  "arch": "x86_64",
-  "target-endian": "little",
-  "target-pointer-width": "64",
-  "target-c-int-width": "32",
-  "os": "none",
-  "executables": true,
-  "linker-flavor": "ld.lld",
-  "linker": "rust-lld",
-  "panic-strategy": "abort",
-  "disable-redzone": true,
-  "features": "-mmx,-sse,+soft-float"
+    "llvm-target": "x86_64-unknown-none",
+    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+    "arch": "x86_64",
+    "target-endian": "little",
+    "target-pointer-width": "64",
+    "target-c-int-width": "32",
+    "os": "none",
+    "executables": true,
+    "linker-flavor": "ld.lld",
+    "linker": "rust-lld",
+    "panic-strategy": "abort",
+    "disable-redzone": true,
+    "features": "-mmx,-sse,+soft-float"
 }
 ```
 
