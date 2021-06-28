@@ -528,4 +528,4 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 
 [次の記事][next post]では、この独立したバイナリを最小限の OS カーネルにするために必要なステップを説明しています。カスタムターゲットの作成、実行可能ファイルとブートローダの組み合わせ、画面に何か文字を表示する方法について説明しています。
 
-[next post]: @/edition-2/posts/02-minimal-rust-kernel/index.md
+[next post]: @/edition-2/posts/02-minimal-rust-kernel/index.ja.md
