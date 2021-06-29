@@ -156,3 +156,28 @@ fn panic(_info: &PanicInfo) -> ! {
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
 [libunwind]: https://www.nongnu.org/libunwind/
 [structured exception handling]: https://docs.microsoft.com/de-de/windows/win32/debug/structured-exception-handling
+
+### Отключение раскрутки
+
+Существуют и другие случаи использования, для которых раскрутка нежелательна, поэтому Rust предоставляет опцию [отмены при панике][abort on panic]. Это отключает генерацию информации о символах раскрутки и, таким образом, значительно уменьшает размер двоичного файла. Есть несколько мест, где мы можем отключить раскрутку. Самый простой способ - добавить следующие строки в наш `Cargo.toml`:
+
+```toml
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+```
+
+Это устанавливает стратегию паники на `abort`(отмены) как для профиля `dev` (используемого для `cargo build`), так и для профиля `release` (используемого для `cargo build --release`). Теперь языковой предмет `eh_personality` больше не должен требоваться.
+
+[abort on panic]: https://github.com/rust-lang/rust/pull/32900
+
+Теперь мы исправили обе вышеуказанные ошибки. Однако, если мы попытаемся скомпилировать его теперь, возникнет другая ошибка:
+
+```
+> cargo build
+error: requires `start` lang_item
+```
+
+В нашей программе отсутствует языковой предмет `start`, который определяет начальную точку входа в программу.
