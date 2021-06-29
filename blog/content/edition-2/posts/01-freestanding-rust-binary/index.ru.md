@@ -293,6 +293,161 @@ cargo build --target thumbv7em-none-eabihf
 
 <summary>Аргументы компоновщика</summary>
 
+В этом разделе мы рассмотрим ошибки компоновщика, возникающие в Linux, Windows и macOS, и объясним, как их решить, передав компоновщику дополнительные аргументы. Обратите внимание, что формат исполняемого файла и компоновщик отличаются в разных операционных системах, поэтому для каждой системы требуется свой набор аргументов.
+
+#### Linux
+
+На Linux возникает следующая ошибка компоновщика (сокращенно):
+
+```
+error: linking with `cc` failed: exit code: 1
+  |
+  = note: "cc" […]
+  = note: /usr/lib/gcc/../x86_64-linux-gnu/Scrt1.o: In function `_start':
+          (.text+0x12): undefined reference to `__libc_csu_fini'
+          /usr/lib/gcc/../x86_64-linux-gnu/Scrt1.o: In function `_start':
+          (.text+0x19): undefined reference to `__libc_csu_init'
+          /usr/lib/gcc/../x86_64-linux-gnu/Scrt1.o: In function `_start':
+          (.text+0x25): undefined reference to `__libc_start_main'
+          collect2: error: ld returned 1 exit status
+```
+
+Проблема заключается в том, что компоновщик по умолчанию включает процедуру запуска C runtime, которая также называется `_start`. Она требует некоторых символов стандартной библиотеки C `libc`, которые мы не включаем из-за атрибута `no_std`, поэтому компоновщик не может подключить эти библиотеки, поэтому появляются ошибки. Чтобы решить эту проблему, мы можем сказать компоновщику, что он не должен компоновать процедуру запуска C, передав флаг `-nostartfiles`.
+
+Одним из способов передачи атрибутов компоновщика через cargo является команда `cargo rustc`. Команда ведет себя точно так же, как `cargo build`, но позволяет передавать опции `rustc`, базовому компилятору Rust. У `rustc` есть флаг `-C link-arg`, который передает аргумент компоновщику. В совокупности наша новая команда сборки выглядит следующим образом:
+
+```
+cargo rustc -- -C link-arg=-nostartfiles
+```
+
+Теперь наш модуль собирается как независимый исполняемый файл в Linux!
+
+Нам не нужно было явно указывать имя нашей функции точки входа, поскольку компоновщик по умолчанию ищет функцию с именем `_start`.
+
+#### Windows
+
+В Windows возникает другая ошибка компоновщика (сокращенно):
+
+```
+error: linking with `link.exe` failed: exit code: 1561
+  |
+  = note: "C:\\Program Files (x86)\\…\\link.exe" […]
+  = note: LINK : fatal error LNK1561: entry point must be defined
+```
+
+Ошибка "точка входа должна быть определена"(_"entry point must be defined"_) означает, что компоновщик не может найти точку входа. В Windows имя точки входа по умолчанию [зависит от используемой подсистемы][windows-subsystems]. Для подсистемы `CONSOLE` компоновщик ищет функцию с именем `mainCRTStartup`, а для подсистемы `WINDOWS` - функцию с именем `WinMainCRTStartup`. Чтобы переопределить названия точки входа на `_start`, мы можем передать компоновщику аргумент `/ENTRY`:
+
+[windows-subsystems]: https://docs.microsoft.com/en-us/cpp/build/reference/entry-entry-point-symbol
+
+```
+cargo rustc -- -C link-arg=/ENTRY:_start
+```
+
+Из разного формата аргументов мы ясно видим, что компоновщик Windows - это совершенно другая программа, чем компоновщик Linux.
+
+Теперь возникает другая ошибка компоновщика:
+
+```
+error: linking with `link.exe` failed: exit code: 1221
+  |
+  = note: "C:\\Program Files (x86)\\…\\link.exe" […]
+  = note: LINK : fatal error LNK1221: a subsystem can't be inferred and must be
+          defined
+```
+
+Эта ошибка возникает из-за того, что исполняемые файлы Windows могут использовать различные [подсистемы][windows-subsystems]. Для обычных программ они определяются в зависимости от имени точки входа: если точка входа называется `main`, то используется подсистема `CONSOLE`, а если точка входа называется `WinMain`, то используется подсистема `WINDOWS`. Поскольку наша функция `_start` имеет другое имя, нам нужно явно указать подсистему:
+
+```
+cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
+```
+
+Здесь мы используем подсистему `CONSOLE`, но подойдет и подсистема `WINDOWS`. Вместо того, чтобы передавать `-C link-arg` несколько раз, мы используем `-C link-args`, который принимает список аргументов, разделенных пробелами.
+
+С помощью этой команды наш исполняемый файл должен успешно скомпилироваться под Windows.
+
+#### macOS
+
+На macOS возникает следующая ошибка компоновщика (сокращенно):
+
+```
+error: linking with `cc` failed: exit code: 1
+  |
+  = note: "cc" […]
+  = note: ld: entry point (_main) undefined. for architecture x86_64
+          clang: error: linker command failed with exit code 1 […]
+```
+
+Это сообщение об ошибке говорит нам, что компоновщик не может найти функцию точки входа с именем по умолчанию `main` (по какой-то причине в macOS все функции имеют префикс `_`). Чтобы установить точку входа в нашу функцию `_start`, мы передаем аргумент компоновщика `-e`:
+
+```
+cargo rustc -- -C link-args="-e __start"
+```
+
+Флаг `-e` задает имя функции точки входа. Поскольку в macOS все функции имеют дополнительный префикс `_`, нам нужно установить точку входа на `__start` вместо `_start`.
+
+Теперь возникает следующая ошибка компоновщика:
+
+```
+error: linking with `cc` failed: exit code: 1
+  |
+  = note: "cc" […]
+  = note: ld: dynamic main executables must link with libSystem.dylib
+          for architecture x86_64
+          clang: error: linker command failed with exit code 1 […]
+```
+
+macOS [официально не поддерживает статически скомпонованные двоичные файлы][static binary] и по умолчанию требует от программ компоновки библиотеки `libSystem`. Чтобы отменить это и скомпоновать статический двоичный файл, мы передаем компоновщику флаг `-static`:
+
+[static binary]: https://developer.apple.com/library/archive/qa/qa1118/_index.html
+
+```
+cargo rustc -- -C link-args="-e __start -static"
+```
+
+Этого все равно недостаточно, так как возникает третья ошибка компоновщика:
+
+```
+error: linking with `cc` failed: exit code: 1
+  |
+  = note: "cc" […]
+  = note: ld: library not found for -lcrt0.o
+          clang: error: linker command failed with exit code 1 […]
+```
+
+Эта ошибка возникает из-за того, что программы на macOS по умолчанию ссылаются на `crt0` ("C runtime zero"). Это похоже на ошибку, которую мы имели в Linux, и также может быть решена добавлением аргумента компоновщика `-nostartfiles`:
+
+```
+cargo rustc -- -C link-args="-e __start -static -nostartfiles"
+```
+
+Теперь наша программа должна успешно скомпилироваться на macOS.
+
+#### Объединение команд сборки
+
+Сейчас у нас разные команды сборки в зависимости от платформы хоста, что не идеально. Чтобы избежать этого, мы можем создать файл с именем `.cargo/config.toml`, который будет содержать аргументы для конкретной платформы:
+
+```toml
+# in .cargo/config.toml
+
+[target.'cfg(target_os = "linux")']
+rustflags = ["-C", "link-arg=-nostartfiles"]
+
+[target.'cfg(target_os = "windows")']
+rustflags = ["-C", "link-args=/ENTRY:_start /SUBSYSTEM:console"]
+
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
+```
+
+Ключ `rustflags` содержит аргументы, которые автоматически добавляются к каждому вызову `rustc`. Более подробную информацию о файле `.cargo/config.toml` можно найти в [официальной документации](https://doc.rust-lang.org/cargo/reference/config.html).
+
+Теперь наша программа должна собираться на всех трех платформах с помощью простой `cargo build`.
+
+#### Должны ли вы это делать?
+
+Хотя можно создать отдельный исполняемый файл для Linux, Windows и macOS, это, вероятно, не очень хорошая идея. Причина в том, что наш исполняемый файл все еще ожидает различных вещей, например, инициализации стека при вызове функции `_start`. Без C runtime некоторые из этих требований могут быть не выполнены, что может привести к сбою нашей программы, например, из-за ошибки сегментации.
+
+Если вы хотите создать минимальный двоичный файл, работающий поверх существующей операционной системы, то включение `libc` и установка атрибута `#[start]`, как описано [здесь] (https://doc.rust-lang.org/1.16.0/book/no-stdlib.html), вероятно, будет лучшей идеей.
 
 </details>
 
