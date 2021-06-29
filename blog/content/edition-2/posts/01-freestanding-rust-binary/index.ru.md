@@ -232,3 +232,128 @@ pub extern "C" fn _start() -> ! {
 [`exit` system call]: https://en.wikipedia.org/wiki/Exit_(system_call)
 
 Если мы выполним `cargo build` сейчас, мы получаем ошибку компоновщика (_linker_ error).
+
+## Ошибки компоновщика
+
+Компоновщик - это программа, которая объединяет сгенерированный код в исполняемый файл. Поскольку формат исполняемого файла отличается в Linux, Windows и macOS, в каждой системе есть свой компоновщик, который выдает разные ошибки. Основная причина ошибок одна и та же: конфигурация компоновщика по умолчанию предполагает, что наша программа зависит от C runtime, а это не так.
+
+Чтобы устранить ошибки, нам нужно сообщить компоновщику, что он не должен включать C runtime. Мы можем сделать это, передав компоновщику определенный набор аргументов или выполнив компиляцию для голого железа.
+
+### Компиляция для голого железа
+
+По умолчанию Rust пытается создать исполняемый файл, который может быть запущен в вашем текущем системном окружении. Например, если вы используете Windows на `x86_64`, Rust пытается создать исполняемый файл `.exe` Windows, который использует инструкции `x86_64`. Это окружение называется вашей "хост-системой".
+
+Для описания различных окружений Rust использует строку [_target triple_]. Вы можете узнать тройку вашей хост-системы, выполнив команду `rustc --version --verbose`:
+
+[_target triple_]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+
+```
+rustc 1.35.0-nightly (474e7a648 2019-04-07)
+binary: rustc
+commit-hash: 474e7a6486758ea6fc761893b1a49cd9076fb0ab
+commit-date: 2019-04-07
+host: x86_64-unknown-linux-gnu
+release: 1.35.0-nightly
+LLVM version: 8.0
+```
+
+Приведенный выше результат получен от системы `x86_64` Linux. Мы видим, что тройка `host` - это `x86_64-unknown-linux-gnu`, которая включает архитектуру процессора (`x86_64`), производителя (`unknown`), операционную систему (`linux`) и [ABI] (`gnu`).
+
+[ABI]: https://en.wikipedia.org/wiki/Application_binary_interface
+
+Компилируя для нашей тройки хоста, компилятор Rust и компоновщик предполагают наличие базовой операционной системы, такой как Linux или Windows, которая по умолчанию использует C runtime, что вызывает ошибки компоновщика. Поэтому, чтобы избежать ошибок компоновщика, мы можем скомпилировать для другого окружения без базовой операционной системы.
+
+Примером такого "голого" окружения является тройка `thumbv7em-none-eabihf`, которая описывает [ARM] архитектуру. Детали не важны, важно лишь то, что тройка не имеет базовой операционной системы, на что указывает `none` в тройке. Чтобы иметь возможность компилировать для этой системы, нам нужно добавить ее в rustup:
+
+[ARM]: https://en.wikipedia.org/wiki/ARM_architecture
+
+```
+rustup target add thumbv7em-none-eabihf
+```
+
+Это загружает копию стандартной (и корневой) библиотеки для системы. Теперь мы можем собрать наш независимый исполняемый файл для этой системы:
+
+```
+cargo build --target thumbv7em-none-eabihf
+```
+
+Передавая аргумент `--target`, мы [кросс-компилируем][cross compile] наш исполняемый файл для голого железа. Поскольку система, под которую мы компилируем, не имеет операционной системы, компоновщик не пытается компоновать C runtime, и наша компиляция проходит успешно без каких-либо ошибок компоновщика.
+
+[cross compile]: https://en.wikipedia.org/wiki/Cross_compiler
+
+Именно этот подход мы будем использовать для сборки ядра нашей ОС. Вместо `thumbv7em-none-eabihf` мы будем использовать [custom target], который описывает `x86_64` архитектуру окружения. Подробности будут описаны в следующем посте.
+
+[custom target]: https://doc.rust-lang.org/rustc/targets/custom.html
+
+### Аргументы компоновщика
+
+Вместо компиляции для голой системы можно также разрешить ошибки компоновщика, передав ему определенный набор аргументов. Мы не будем использовать этот подход для нашего ядра, поэтому данный раздел является необязательным и приводится только для полноты картины. Щелкните на _"Аргументы компоновщика"_ ниже, чтобы показать необязательное содержание.
+
+<details>
+
+<summary>Аргументы компоновщика</summary>
+
+
+</details>
+
+## Итоги
+
+Минимальный независимый исполняемый бинарный файл Rust выглядит примерно так:
+
+`src/main.rs`:
+
+```rust
+#![no_std] // don't link the Rust standard library
+#![no_main] // disable all Rust-level entry points
+
+use core::panic::PanicInfo;
+
+#[no_mangle] // don't mangle the name of this function
+pub extern "C" fn _start() -> ! {
+    // this function is the entry point, since the linker looks for a function
+    // named `_start` by default
+    loop {}
+}
+
+/// This function is called on panic.
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+```
+
+`Cargo.toml`:
+
+```toml
+[package]
+name = "crate_name"
+version = "0.1.0"
+authors = ["Author Name <author@example.com>"]
+
+# the profile used for `cargo build`
+[profile.dev]
+panic = "abort" # disable stack unwinding on panic
+
+# the profile used for `cargo build --release`
+[profile.release]
+panic = "abort" # disable stack unwinding on panic
+```
+
+Для компиляции этого бинарного файла, мы должны компиляровать для голой системы, такой как `thumbv7em-none-eabihf`:
+
+```
+cargo build --target thumbv7em-none-eabihf
+```
+
+В качестве альтернативы, мы можем скомпилировать его для хост-системы, передав дополнительные аргументы компоновщика:
+
+```bash
+# Linux
+cargo rustc -- -C link-arg=-nostartfiles
+# Windows
+cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
+# macOS
+cargo rustc -- -C link-args="-e __start -static -nostartfiles"
+```
+
+Обратите внимание, что это лишь минимальный пример независимого бинарного файла Rust. Этот бинарник ожидает различных вещей, например, что стек инициализируется при вызове функции `_start`. **Поэтому для любого реального использования такого бинарного файла требуется больше шагов разработки**.
