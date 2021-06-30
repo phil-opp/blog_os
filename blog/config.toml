@@ -100,7 +100,7 @@ translated_by = "ترجمه توسط"
 word_separator = "و"
 
 
-[translation.ru]
+[translations.ru]
 lang_name = "Russian"
 toc = "Содержание"
 all_posts = "« Все посты"
