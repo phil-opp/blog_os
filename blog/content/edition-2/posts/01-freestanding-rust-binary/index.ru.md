@@ -1,5 +1,5 @@
 +++
-title = "Независимый бинанрник на Rust"
+title = "Независимый бинарный файл на Rust"
 weight = 1
 path = "ru/freestanding-rust-binary"
 date = 2018-02-10
