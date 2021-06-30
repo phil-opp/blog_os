@@ -127,7 +127,7 @@ pub struct InterruptDescriptorTable {
 まず`HandlerFunc`型を見てみましょう：
 
 ```rust
-type HandlerFunc = extern "x86-interrupt" fn(_: &mut InterruptStackFrame);
+type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 ```
 
 これは、`extern "x86-interrupt" fn`型への[型エイリアス][type alias]です。`extern`は[外部呼び出し規約][foreign calling convention]に従う関数を定義するのに使われ、おもにC言語のコードと連携したいときに使われます (`extern "C" fn`) 。しかし、`x86-interrupt`呼び出し規約とは何なのでしょう？
@@ -253,7 +253,7 @@ pub fn init_idt() {
 }
 
 extern "x86-interrupt" fn breakpoint_handler(
-    stack_frame: &mut InterruptStackFrame)
+    stack_frame: InterruptStackFrame)
 {
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
@@ -267,7 +267,7 @@ extern "x86-interrupt" fn breakpoint_handler(
 error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue #40180)
   --> src/main.rs:53:1
    |
-53 | / extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut InterruptStackFrame) {
+53 | / extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
 54 | |     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 55 | | }
    | |_^

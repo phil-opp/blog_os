@@ -295,7 +295,7 @@ use x86_64::structures::idt::PageFaultErrorCode;
 use crate::hlt_loop;
 
 extern "x86-interrupt" fn page_fault_handler(
-    stack_frame: &mut InterruptStackFrame,
+    stack_frame: InterruptStackFrame,
     error_code: PageFaultErrorCode,
 ) {
     use x86_64::registers::control::Cr2;

@@ -129,7 +129,7 @@ pub struct InterruptDescriptorTable {
 بیایید ابتدا به نوع `HandlerFunc` نگاه کنیم:
 
 ```rust
-type HandlerFunc = extern "x86-interrupt" fn(_: &mut InterruptStackFrame);
+type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 ```
 
 این یک [نوع مستعار(type alias)] برای نوع "`extern "x86-interrupt" fn` است. کلمه کلیدی `extern` تابعی را با یک [قرارداد فراخوانی خارجی] تعریف می کند و اغلب برای برقراری ارتباط با کد C استفاده می شود(`extern "C" fn`) . اما قرارداد فراخوانی `x86-interrupt` چیست؟
@@ -255,7 +255,7 @@ pub fn init_idt() {
 }
 
 extern "x86-interrupt" fn breakpoint_handler(
-    stack_frame: &mut InterruptStackFrame)
+    stack_frame: InterruptStackFrame)
 {
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
@@ -269,7 +269,7 @@ extern "x86-interrupt" fn breakpoint_handler(
 error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue #40180)
   --> src/main.rs:53:1
    |
-53 | / extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut InterruptStackFrame) {
+53 | / extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
 54 | |     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 55 | | }
    | |_^

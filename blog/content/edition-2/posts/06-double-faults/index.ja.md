@@ -84,7 +84,7 @@ lazy_static! {
 
 // new
 extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: &mut InterruptStackFrame, _error_code: u64) -> !
+    stack_frame: InterruptStackFrame, _error_code: u64) -> !
 {
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
@@ -488,7 +488,7 @@ fn stack_overflow() {
 
 しかし、ここではスタックオーバーフローを起こしたいので、コンパイラに削除されない、ダミーのvolatile読み込み文を関数の末尾に追加します。その結果、関数は**末尾再帰**ではなくなり、ループへの変換は防がれます。更に関数が無限に再帰することに対するコンパイラの警告をなくすために`allow(unconditional_recursion)`属性を追加します。
 
-### IDTのテスト 
+### IDTのテスト
 
 上で述べたように、テストはカスタムしたダブルフォルトハンドラを含む専用のIDTが必要です。実装はこのようになります：
 
@@ -529,7 +529,7 @@ use blog_os::{exit_qemu, QemuExitCode, serial_println};
 use x86_64::structures::idt::InterruptStackFrame;
 
 extern "x86-interrupt" fn test_double_fault_handler(
-    _stack_frame: &mut InterruptStackFrame,
+    _stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -> ! {
     serial_println!("[ok]");

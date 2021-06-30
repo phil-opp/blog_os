@@ -89,7 +89,7 @@ lazy_static! {
 
 // new
 extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: &mut InterruptStackFrame, _error_code: u64) -> !
+    stack_frame: InterruptStackFrame, _error_code: u64) -> !
 {
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
@@ -543,7 +543,7 @@ use blog_os::{exit_qemu, QemuExitCode, serial_println};
 use x86_64::structures::idt::InterruptStackFrame;
 
 extern "x86-interrupt" fn test_double_fault_handler(
-    _stack_frame: &mut InterruptStackFrame,
+    _stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -> ! {
     serial_println!("[ok]");

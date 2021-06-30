@@ -1144,7 +1144,7 @@ pub(crate) fn add_scancode(scancode: u8) {
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame
+    _stack_frame: InterruptStackFrame
 ) {
     use x86_64::instructions::port::Port;
 

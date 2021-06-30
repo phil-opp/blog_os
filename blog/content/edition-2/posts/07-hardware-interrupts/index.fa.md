@@ -205,7 +205,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     print!(".");
 }
@@ -230,7 +230,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     print!(".");
 
@@ -543,7 +543,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     print!("k");
 
@@ -568,7 +568,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
 
@@ -609,7 +609,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
 
@@ -668,7 +668,7 @@ pc-keyboard = "0.5.0"
 // in/src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
     use spin::Mutex;
