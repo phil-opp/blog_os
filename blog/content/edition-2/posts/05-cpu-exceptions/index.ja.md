@@ -88,7 +88,7 @@ u32 | 予約済                   |
 ## IDT型
 自前でIDTの型を作る代わりに、`x86_64`クレートの[`InterruptDescriptorTable`構造体][`InterruptDescriptorTable` struct]を使います。こんな見た目をしています：
 
-[`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 
 ``` rust
 #[repr(C)]
@@ -119,10 +119,10 @@ pub struct InterruptDescriptorTable {
 
 この構造体のフィールドは[`idt::Entry<F>`]という型を持っています。これはIDTのエントリのフィールド（上の表を見てください）を表す構造体です。型パラメータ`F`は、期待されるハンドラ関数の型を表します。エントリの中には、[`HandlerFunc`]型を要求するものや、[`HandlerFuncWithErrCode`]型を要求するものがあることがわかります。ページフォルトに至っては、[`PageFaultHandlerFunc`]という自分専用の型を要求していますね。
 
-[`idt::Entry<F>`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.Entry.html
-[`HandlerFunc`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/type.HandlerFunc.html
-[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
-[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/type.PageFaultHandlerFunc.html
+[`idt::Entry<F>`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.Entry.html
+[`HandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFunc.html
+[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
+[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.PageFaultHandlerFunc.html
 
 まず`HandlerFunc`型を見てみましょう：
 
@@ -199,7 +199,7 @@ _callee-saved_                                  | _caller-saved_
 
 `x86_64`クレートにおいては、割り込み時のスタックフレームは[`InterruptStackFrame`]構造体によって表現されます。これは割り込みハンドラに`&mut`として渡されるため、これを使うことで例外の原因に関して追加で情報を手に入れることができます。例外のすべてがエラーコードをプッシュするわけではないので、この構造体にはエラーコードのためのフィールドはありません。これらの例外は[`HandlerFuncWithErrCode`]という別の関数型を使いますが、これらは追加で`error_code`引数を持ちます。
 
-[`InterruptStackFrame`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.InterruptStackFrame.html
+[`InterruptStackFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptStackFrame.html
 
 ### 舞台裏では何が
 `x86-interrupt`呼び出し規約は、この例外<ruby>処理<rp> (</rp><rt>ハンドル</rt><rp>) </rp></ruby>プロセスのややこしいところをほぼ全て隠蔽してくれる、強力な抽象化です。しかし、その後ろで何が起こっているのかを知っておいたほうが良いこともあるでしょう。以下に、`x86-interrupt`呼び出し規約がやってくれることを簡単なリストにして示しました。
@@ -281,7 +281,7 @@ error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue
 CPUがこの割り込みディスクリプタテーブル(IDT)を使用するためには、[`lidt`]命令を使ってこれを読み込む必要があります。`x86_64`の`InterruptDescriptorTable`構造体には、そのための[`load`][InterruptDescriptorTable::load]というメソッド関数が用意されています。それを使ってみましょう：
 
 [`lidt`]: https://www.felixcloutier.com/x86/lgdt:lidt
-[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
+[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
 
 ```rust
 // in src/interrupts.rs
@@ -460,7 +460,7 @@ blog_os::interrupts::test_breakpoint_exception...	[ok]
 `x86-interrupt`呼び出し規約と[`InterruptDescriptorTable`]型のおかげで、例外処理のプロセスは比較的わかりやすく、面倒なところはありませんでした。「これではさすがに簡単すぎる、例外処理の闇をすべて学び尽くしたい」というあなた向けの記事もあります：私達の[Handling Exceptions with Naked Functions][“Handling Exceptions with Naked Functions”]シリーズ（未訳）では、`x86-interrupt`呼び出し規約を使わずに例外を処理する方法を学び、さらには独自のIDT型を定義します。`x86-interrupt`呼び出し規約や、`x86_64`クレートが存在する前は、これらの記事が主な例外処理に関する記事でした。なお、これらの記事はこのブログの[第1版][first edition]をもとにしているので、内容が古くなっている可能性があることに注意してください。
 
 [“Handling Exceptions with Naked Functions”]: @/edition-1/extra/naked-exceptions/_index.md
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [first edition]: @/edition-1/_index.md
 
 ## 次は？

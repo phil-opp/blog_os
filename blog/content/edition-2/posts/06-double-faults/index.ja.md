@@ -232,7 +232,7 @@ I/Oマップベースアドレス | `u16`
 ### TSSをつくる
 割り込みスタックテーブルにダブルフォルト用のスタックを含めた新しいTSSをつくってみましょう。そのためにはTSS構造体が必要です。幸いにも、すでに`x86_64`クレートに[`TaskStateSegment`構造体]が含まれているので、これを使っていきます。
 
-[`TaskStateSegment`構造体]: https://docs.rs/x86_64/0.12.1/x86_64/structures/tss/struct.TaskStateSegment.html
+[`TaskStateSegment`構造体]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
 
 新しい`gdt`モジュール内でTSSをつくります（名前の意味は後でわかるでしょう）：
 
@@ -378,8 +378,8 @@ pub fn init() {
 
 [`set_cs`]を使ってコードセグメントレジスタを再読み込みして、[`load_tss`]を使ってTSSを読み込んでいます。これらの関数は`unsafe`とマークされているので、呼び出すには`unsafe`ブロックが必要です。`unsafe`なのは、不正なセレクタを読み込むことでメモリ安全性を壊す可能性があるからです。
 
-[`set_cs`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/segmentation/fn.set_cs.html
-[`load_tss`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/tables/fn.load_tss.html
+[`set_cs`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/segmentation/fn.set_cs.html
+[`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
 
 これで正常なTSSと割り込みスタックテーブルを読み込みこんだので、私達はIDT内のダブルフォルトハンドラにスタックインデックスをセットすることができます：
 
