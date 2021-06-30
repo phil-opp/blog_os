@@ -12,7 +12,7 @@ languages = [
     { code = "zh-TW" }, # Chinese (traditional)
     { code = "ja" }, # Japanese
     { code = "fa" }, # Persian
-	{ code = "ru" }, # Russian
+    { code = "ru" }, # Russian
 ]
 
 ignored_content = ["*/README.md"]
