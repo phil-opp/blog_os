@@ -57,3 +57,26 @@ translators = ["MrZloHex"]
 
 Если вы заинтересованы в создании собственного загрузчика: Оставайтесь с нами, набор постов на эту тему уже запланирован! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
 
+#### Стандарт Multiboot
+
+Чтобы избежать того, что каждая операционная система реализует свой собственный загрузчик, который совместим только с одной ОС, [Free Software Foundation] в 1995 году создал открытый стандарт загрузчика под названием [Multiboot]. Стандарт определяет интерфейс между загрузчиком и операционной системой, так что любой совместимый с Multiboot загрузчик может загружать любую совместимую с Multiboot операционную систему. Эталонной реализацией является [GNU GRUB], который является самым популярным загрузчиком для систем Linux.
+
+[Free Software Foundation]: https://en.wikipedia.org/wiki/Free_Software_Foundation
+[Multiboot]: https://wiki.osdev.org/Multiboot
+[GNU GRUB]: https://en.wikipedia.org/wiki/GNU_GRUB
+
+Чтобы сделать ядро совместимым с Multiboot, нужно просто вставить так называемый [Multiboot заголовок][Multiboot header] в начало файла ядра. Это делает загрузку ОС в GRUB очень простой. Однако у GRUB и стандарта Multiboot есть и некоторые проблемы:
+
+[Multiboot header]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
+
+- Они поддерживают только 32-битный защищенный режим. Это означает, что для перехода на 64-битный длинный режим необходимо выполнить конфигурацию процессора.
+- Они предназначены для того, чтобы упростить загрузчик вместо ядра. Например, ядро должно быть связано с [скорректированным размером страницы по умолчанию][adjusted default page size], потому что иначе GRUB не сможет найти заголовок Multiboot. Другой пример - [информация запуска][boot information], которая передается ядру, содержит множество структур, зависящих от архитектуры, вместо того, чтобы предоставлять чистые абстракции.
+- И GRUB, и стандарт Multiboot документированы очень скудно.
+- GRUB должен быть установлен на хост-системе, чтобы создать загрузочный образ диска из файла ядра. Это усложняет разработку под Windows или Mac.
+
+[adjusted default page size]: https://wiki.osdev.org/Multiboot#Multiboot_2
+[boot information]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
+
+Из-за этих недостатков мы решили не использовать GRUB или стандарт Multiboot. Однако мы планируем добавить поддержку Multiboot в наш инструмент [bootimage], чтобы можно было загружать ваше ядро и на системе GRUB. Если вы заинтересованы в написании ядра, совместимого с Multiboot, ознакомьтесь с [первым выпуском][first edition] этой серии блогов.
+
+[first edition]: @/edition-1/_index.md
