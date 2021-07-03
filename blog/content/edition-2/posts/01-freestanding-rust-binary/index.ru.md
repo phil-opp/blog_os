@@ -517,4 +517,4 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 
 В [следующем посте][next post] описаны шаги, необходимые для превращения нашего независимого бинарного файла в минимальное ядро операционной системы. Сюда входит создание пользовательской системы, объединение нашего исполняемого файла с загрузчиком и изучение того, как вывести что-то на экран.
 
-[next post]: @/edition-2/posts/02-minimal-rust-kernel/index.md
+[next post]: @/edition-2/posts/02-minimal-rust-kernel/index.ru.md
