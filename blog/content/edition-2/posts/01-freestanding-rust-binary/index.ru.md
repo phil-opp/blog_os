@@ -18,7 +18,7 @@ translators = ["MrZloHex"]
 Этот блог открыто разрабатывается на [GitHub]. Если у вас есть несколько проблем или вопросов, пожалуйста откройте _issue_. Также можете оставлять комментарии [в конце файла][at the bottom]. Полный исходный код для этого поста вы можете найти [`post-01`][post branch] ветке репозитория.
 
 [GitHub]: https://github.com/phil-opp/blog_os
-[at the bottom]: #commentsний ком
+[at the bottom]: #comments
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-01
 
 <!-- toc -->
