@@ -342,3 +342,52 @@ target = "x86_64-blog_os.json"
 Теперь мы можем скомпилировать наше ядро для голого металла с помощью простой `cargo build`. Однако наша точка входа `_start`, которая будет вызываться загрузчиком, все еще пуста. Пришло время вывести что-нибудь на экран.
 
 ### Вывод на экран
+
+Самым простым способом печати текста на экран на данном этапе является [текстовый буфер VGA][VGA text buffer]. Это специальная область памяти, сопоставленная с аппаратным обеспечением VGA, которая содержит содержимое, отображаемое на экране. Обычно он состоит из 25 строк, каждая из которых содержит 80 символьных ячеек. Каждая символьная ячейка отображает символ ASCII с некоторыми цветами переднего и заднего плана. Вывод на экран выглядит следующим образом:
+
+[VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
+
+![screen output for common ASCII characters](https://upload.wikimedia.org/wikipedia/commons/f/f8/Codepage-437.png)
+
+Точное расположение буфера VGA мы обсудим в следующем посте, где мы напишем первый небольшой драйвер для него. Для печати "Hello World!" нам достаточно знать, что буфер расположен по адресу `0xb8000` и что каждая символьная ячейка состоит из байта ASCII и байта цвета.
+
+Реализация выглядит следующим образом:
+
+```rust
+static HELLO: &[u8] = b"Hello World!";
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    let vga_buffer = 0xb8000 as *mut u8;
+
+    for (i, &byte) in HELLO.iter().enumerate() {
+        unsafe {
+            *vga_buffer.offset(i as isize * 2) = byte;
+            *vga_buffer.offset(i as isize * 2 + 1) = 0xb;
+        }
+    }
+
+    loop {}
+}
+```
+
+Сначала мы приводим целое число `0xb8000` к [сырому  указателю][raw pointer]. Затем мы [итерируем][iterate] по байтам [статической][static] `HELLO` [байтовой строки][byte string]. Мы используем метод [`enumerate`], чтобы дополнительно получить бегущую переменную `i`. В теле цикла for мы используем метод [`offset`] для записи байта строки и соответствующего байта цвета (`0xb` - светло-голубой).
+
+[iterate]: https://doc.rust-lang.org/stable/book/ch13-02-iterators.html
+[static]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
+[`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
+[byte string]: https://doc.rust-lang.org/reference/tokens.html#byte-string-literals
+[raw pointer]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
+
+Обратите внимание, что вокруг всех записей в память стоит блок [`unsafe`]. Причина в том, что компилятор Rust не может доказать, что сырые указатели, которые мы создаем, действительны. Они могут указывать куда угодно и привести к повреждению данных. Помещая их в блок `unsafe`, мы, по сути, говорим компилятору, что абсолютно уверены в правильности операций. Обратите внимание, что блок `unsafe` не отключает проверки безопасности Rust. Он только позволяет вам делать [пять дополнительных вещей][five additional things].
+
+[`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
+[five additional things]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers
+
+Я хочу подчеркнуть, что **это не тот способ, которым мы хотим делать вещи в Rust!** Очень легко ошибиться при работе с сырыми указателями внутри небезопасных блоков, например, мы можем легко записать за конец буфера, если мы не будем осторожны.
+
+Поэтому мы хотим минимизировать использование `unsafe` настолько, насколько это возможно. Rust дает нам возможность сделать это путем создания безопасных абстракций. Например, мы можем создать тип буфера VGA, который инкапсулирует всю небезопасность и гарантирует, что извне _невозможно_ сделать что-либо неправильно. Таким образом, нам понадобится лишь минимальное количество `небезопасных` блоков и мы можем быть уверены, что не нарушаем [безопасность памяти][memory safety]. Мы создадим такую безопасную абстракцию буфера VGA в следующем посте.
+
+[memory safety]: https://en.wikipedia.org/wiki/Memory_safety
+
