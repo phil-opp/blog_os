@@ -215,4 +215,84 @@ Cargo поддерживает различные целевые системы 
 }
 ```
 
+### Компиляция ядра
 
+Компиляция для нашей новой целевой платформы будет использовать соглашения Linux (я не совсем уверен, почему, я предполагаю, что это просто LLVM по умолчанию). Это означает, что нам нужна точка входа с именем `_start`, как описано в [предыдущем посте][previous post]:
+
+[previous post]: @/edition-2/posts/01-freestanding-rust-binary/index.ru.md
+
+```rust
+// src/main.rs
+
+#![no_std] // don't link the Rust standard library
+#![no_main] // disable all Rust-level entry points
+
+use core::panic::PanicInfo;
+
+/// This function is called on panic.
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+
+#[no_mangle] // don't mangle the name of this function
+pub extern "C" fn _start() -> ! {
+    // this function is the entry point, since the linker looks for a function
+    // named `_start` by default
+    loop {}
+}
+```
+
+Обратите внимание, что точка входа должна называться `_start` независимо от используемой ОС.
+
+Теперь мы можем собрать ядро для нашей новой цели, передав имя файла JSON в качестве `--target`:
+
+```
+> cargo build --target x86_64-blog_os.json
+
+error[E0463]: can't find crate for `core`
+```
+
+Не получается! Ошибка сообщает нам, что компилятор Rust больше не находит [библиотеку `core`][`core` library]. Эта библиотека содержит основные типы Rust, такие как `Result`, `Option` и итераторы, и неявно связана со всеми модулями `no_std`.
+
+[`core` library]: https://doc.rust-lang.org/nightly/core/index.html
+
+Проблема в том, что корневая (`core`) библиотека распространяется вместе с компилятором Rust как _прекомпилированная_ библиотека. Поэтому она действительна только для поддерживаемых тройных хостов (например, `x86_64-unknown-linux-gnu`), но не для нашей пользовательской целевой платформы. Если мы хотим скомпилировать код для других целевых платформ, нам нужно сначала перекомпилировать `core` для этих целей.
+
+### Функция `build-std`
+
+Вот тут-то и приходит на помощь функция [`build-std`][`build-std` feature] в cargo. Она позволяет перекомпилировать `core` и другие стандартные библиотеки по требованию, вместо того, чтобы использовать предварительно скомпилированные версии, поставляемые вместе с установкой Rust. Эта функция очень новая и еще не закончена, поэтому она помечена как "нестабильная" и доступна только на [nightly Rust].
+
+[`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
+[nightly Rust]: #установка-rust-nightly
+
+Чтобы использовать эту функцию, нам нужно создать файл [конфигураций cargo][cargo configuration] по адресу `.cargo/config.toml` со следующим содержимым:
+
+[cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
+
+
+```toml
+# in .cargo/config.toml
+
+[unstable]
+build-std = ["core", "compiler_builtins"]
+```
+
+Это говорит cargo, что он должен перекомпилировать библиотеки `core` и `compiler_builtins`. Последняя необходима, поскольку является зависимостью от `core`. Чтобы перекомпилировать эти библиотеки, cargo нужен доступ к исходному коду rust, который мы можем установить с помощью команды `rustup component add rust-src`.
+
+<div class="note">
+
+**Note:** Ключ конфигурации `unstable.build-std` требует как минимум Rust nightly от 2020-07-15.
+
+</div>
+
+```
+> cargo build --target x86_64-blog_os.json
+   Compiling core v0.0.0 (/…/rust/src/libcore)
+   Compiling rustc-std-workspace-core v1.99.0 (/…/rust/src/tools/rustc-std-workspace-core)
+   Compiling compiler_builtins v0.1.32
+   Compiling blog_os v0.1.0 (/…/blog_os)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
+```
+
+Мы видим, что `cargo build` теперь перекомпилирует библиотеки `core`, `rustc-std-workspace-core` (зависимость от `compiler_builtins`) и `compiler_builtins` для нашей пользовательской целевой платформы.
