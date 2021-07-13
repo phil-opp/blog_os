@@ -177,7 +177,7 @@ Cargo поддерживает различные целевые системы 
 
 Мы пишем ядро, поэтому в какой-то момент нам понадобится обрабатывать прерывания. Чтобы сделать это безопасно, мы должны отключить определенную оптимизацию указателя стека, называемую _"красной зоной"_, поскольку в противном случае она приведет к повреждениям стека. Для получения дополнительной информации см. нашу отдельную статью об [отключении красной зоны][disabling the red zone].
 
-[disabling the red zone]: @/edition-2/posts/02-minimal-rust-kernel/disable-red-zone/index.md
+[disabling the red zone]: @/edition-2/posts/02-minimal-rust-kernel/disable-red-zone/index.ru.md
 
 ```json
 "features": "-mmx,-sse,+soft-float",
