@@ -1418,7 +1418,7 @@ The `TaskId` struct is a simple wrapper type around `u64`. We derive a number of
 
 [`BTreeMap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
 
-To create a new unique ID, we create a `TaskID::new` function:
+To create a new unique ID, we create a `TaskId::new` function:
 
 ```rust
 use core::sync::atomic::{AtomicU64, Ordering};

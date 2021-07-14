@@ -716,7 +716,7 @@ fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 
 ### Executor と Waker
 
-async/awaitを使えば、かつ完全に非同期的なfutureを簡単に扱うことができます。しかし、上で学んだように、futureはポーリングされるまで何もしません。つまり、どこかの時点で`poll`を呼ばないと、非同期コードは実行されないということです。
+async/awaitを使えば、完全に非同期的なfutureを簡単に扱うことができます。しかし、上で学んだように、futureはポーリングされるまで何もしません。つまり、どこかの時点で`poll`を呼ばないと、非同期コードは実行されないということです。
 
 単一のfutureであれば、[上述のように](#futurewodai-tu)ループを使って常に手動で各futureを待つことができます。しかし、この方法は非常に効率が悪く、多数のfutureを作成するプログラムでは実用的ではありません。この問題を解決する最も一般的な方法は、システム内のすべてのfutureが終了するまでポーリングする責任を負う、グローバルな **executor** を定義することです。
 
@@ -1429,7 +1429,7 @@ struct TaskId(u64);
 
 [`BTreeMap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
 
-新しい一意なIDを作成する為に，`TaskID::new`関数を作ります:
+新しい一意なIDを作成する為に，`TaskId::new`関数を作ります:
 
 ```rust
 use core::sync::atomic::{AtomicU64, Ordering};
