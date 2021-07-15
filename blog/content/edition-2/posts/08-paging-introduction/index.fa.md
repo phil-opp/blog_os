@@ -166,7 +166,7 @@ rtl = true
 ![An example 4-level page hierarchy with each page table shown in physical memory](x86_64-page-table-translation.svg)
 
 آدرس فیزیکی جدول صفحه سطح 4 که در حال حاضر فعال می‌باشد، و ریشه جدول صفحه سطح 4 است، در ثبات `CR3` ذخیره می‌شود. سپس هر ورودی جدول صفحه به قاب فیزیکی جدول سطح بعدی اشاره می‌کند. سپس ورودی جدول سطح 1 به قاب نگاشت شده اشاره می‌کند. توجه داشته باشید که تمام آدرس‌های موجود در جدول‌های صفحه فیزیکی هستند، به جای این‌که مجازی باشند، زیرا در غیر این‌صورت CPU نیاز به ترجمه آن آدرس‌ها نیز دارد (که این امر می‌تواند باعث بازگشت بی‌پایان شود).
-	
+
 سلسله مراتب جدول صفحه بالا، دو صفحه را نگاشت می‌کند (به رنگ آبی). از اندیس‌های جدول صفحه می‌توان نتیجه گرفت که آدرس‌های مجازی این دو صفحه `0x803FE7F000` و `0x803FE00000` است. بیایید ببینیم چه اتفاقی می‌افتد وقتی برنامه سعی می‌کند از آدرس `0x803FE7F5CE` بخواند. ابتدا آدرس را به باینری تبدیل می‌کنیم و اندیس‌های جدول صفحه و آفست صفحه را برای آدرس تعیین می‌کنیم:
 
 ![The sign extension bits are all 0, the level 4 index is 1, the level 3 index is 0, the level 2 index is 511, the level 1 index is 127, and the page offset is 0x5ce](x86_64-page-table-translation-addresses.png)
@@ -239,17 +239,17 @@ Bit(s) | Name | Meaning
 
 کریت `x86_64` انواع مختلفی را برای [جدول‌های صفحه] و [ورودی‌های] آن‌ها فراهم می‌کند، بنابراین نیازی نیست که خودمان این ساختارها را ایجاد کنیم.
 
-[جدول‌های صفحه]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/page_table/struct.PageTable.html
-[ورودی‌های]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
+[جدول‌های صفحه]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTable.html
+[ورودی‌های]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
 ### بافر ترجمه Lookaside
 
-یک جدول صفحه 4 سطحی، ترجمه آدرس‌های مجازی را پُر هزینه‌ می‌کند، زیرا هر ترجمه به 4 دسترسی حافظه نیاز دارد. برای بهبود عملکرد، معماری x86_64 آخرین ترجمه‌ها را در _translation lookaside buffer_ یا به اختصار TLB ذخیره می‌کند. و این به ما اجازه می‌دهد تا از ترجمه کردن مجدد ترجمه‌هایی که در حافظه پنهان قرار دارند خودداری کنیم. 
+یک جدول صفحه 4 سطحی، ترجمه آدرس‌های مجازی را پُر هزینه‌ می‌کند، زیرا هر ترجمه به 4 دسترسی حافظه نیاز دارد. برای بهبود عملکرد، معماری x86_64 آخرین ترجمه‌ها را در _translation lookaside buffer_ یا به اختصار TLB ذخیره می‌کند. و این به ما اجازه می‌دهد تا از ترجمه کردن مجدد ترجمه‌هایی که در حافظه پنهان قرار دارند خودداری کنیم.
 
 برخلاف سایر حافظه‌های پنهان پردازنده، TLB کاملاً شفاف نبوده و با تغییر محتوای جدول‌های صفحه، ترجمه‌ها را به‌روز و حذف نمی‌کند. این بدان معنی است که هسته هر زمان که جدول صفحه را تغییر می‌دهد باید TLB را به صورت دستی به‌روز کند. برای انجام این کار، یک دستورالعمل ویژه پردازنده وجود دارد به نام [`invlpg`] ("صفحه نامعتبر") که ترجمه برای صفحه مشخص شده را از TLB حذف می‌کند، بنابراین دوباره از جدول صفحه در دسترسی بعدی بارگیری می‌شود. TLB همچنین می‌تواند با بارگیری مجدد رجیستر `CR3`، که یک تعویض فضای آدرس را شبیه‌سازی می‌کند، کاملاً فلاش (کلمه: flush) شود. کریت `x86_64` توابع راست را برای هر دو نوع در [ماژول `tlb`] فراهم می‌کند.
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
-[ماژول `tlb`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/tlb/index.html
+[ماژول `tlb`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tlb/index.html
 
 مهم است که به یاد داشته باشید که TLB را روی هر جدول صفحه فلاش کنید، زیرا در غیر این‌صورت پردازنده ممکن است از ترجمه قدیمی استفاده کند، که می‌تواند منجر به باگ‌های غیرقطعی شود که اشکال‌زدایی آن بسیار سخت است.
 
@@ -288,7 +288,7 @@ use x86_64::structures::idt::PageFaultErrorCode;
 use crate::hlt_loop;
 
 extern "x86-interrupt" fn page_fault_handler(
-    stack_frame: &mut InterruptStackFrame,
+    stack_frame: InterruptStackFrame,
     error_code: PageFaultErrorCode,
 ) {
     use x86_64::registers::control::Cr2;
@@ -304,8 +304,8 @@ extern "x86-interrupt" fn page_fault_handler(
 ثبات [`CR2`] به‌طور خودکار توسط CPU روی خطای صفحه تنظیم می‌شود و حاوی آدرس مجازی قابل دسترسی است که باعث رخ دادن خطای صفحه شده است. ما برای خواندن و چاپ آن از تابع [`Cr2::read`] کریت ` x86_64` استفاده می‌کنیم. نوع [`PageFaultErrorCode`] اطلاعات بیشتری در مورد نوع دسترسی به حافظه‌ای که باعث خطای صفحه شده است، فراهم می کند، به عنوان مثال این امر به دلیل خواندن یا نوشتن بوده است. به همین دلیل ما آن را نیز چاپ می‌کنیم. بدون رفع خطای صفحه نمی‌توانیم به اجرا ادامه دهیم، بنابراین در انتها یک [hlt_loop] اضافه می‌کنیم.
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
-[`Cr2::read`]: https://docs.rs/x86_64/0.13.2/x86_64/registers/control/struct.Cr2.html#method.read
-[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
+[`Cr2::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr2.html#method.read
+[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
 [`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.md#the-hlt-instruction
 
@@ -339,7 +339,7 @@ pub extern "C" fn _start() -> ! {
 
 ثبات `CR2` در واقع حاوی` 0xdeadbeaf` هست، آدرسی که سعی کردیم به آن دسترسی پیدا کنیم. کد خطا از طریق [`CAUSED_BY_WRITE`] به ما می‌گوید که خطا هنگام تلاش برای انجام یک عملیات نوشتن رخ داده است. حتی از طریق [بیت‌هایی که تنظیم _نشده‌اند_][`PageFaultErrorCode`] اطلاعات بیشتری به ما می‌دهد. به عنوان مثال، عدم تنظیم پرچم `PROTECTION_VIOLATION` به این معنی است که خطای صفحه رخ داده است زیرا صفحه هدف وجود ندارد.
 
-[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
+[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
 
 می‌بینیم که اشاره‌گر دستورالعمل فعلی `0x2031b2` می‌باشد، بنابراین می‌دانیم که این آدرس به یک صفحه کد اشاره دارد. صفحات کد توسط بوت‌لودر بصورت فقط خواندنی نگاشت می‌شوند، بنابراین خواندن از این آدرس امکان‌پذیر است اما نوشتن باعث خطای صفحه می‌شود. می‌توانید این کار را با تغییر اشاره‌گر `0xdeadbeaf` به `0x2031b2` امتحان کنید:
 
@@ -363,7 +363,7 @@ println!("write worked");
 
 می‌بینیم که پیام _"read worked"_ چاپ شده است، که نشان می‌دهد عملیات خواندن هیچ خطایی ایجاد نکرده است. با این حال، به جای پیام _"write worked"_ خطای صفحه رخ می‌دهد. این بار پرچم [`PROTECTION_VIOLATION`] علاوه بر پرچم [`CAUSED_BY_WRITE`] تنظیم شده است، که نشان‌دهنده‌ وجود صفحه است، اما عملیات روی آن مجاز نیست. در این حالت نوشتن در صفحه مجاز نیست زیرا صفحات کد به صورت فقط خواندنی نگاشت می‌شوند.
 
-[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
+[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
 ### دسترسی به جدول‌های صفحه
 
@@ -389,9 +389,9 @@ pub extern "C" fn _start() -> ! {
 
 تابع [`Cr3::read`] از ` x86_64` جدول صفحه سطح 4 که در حال حاضر فعال است را از ثبات `CR3` برمی‌گرداند. یک تاپل (کلمه: tuple) از نوع [`PhysFrame`] و [`Cr3Flags`] برمی‌گرداند. ما فقط به قاب علاقه‌مَندیم، بنابراین عنصر دوم تاپل را نادیده می‌گیریم.
 
-[`Cr3::read`]: https://docs.rs/x86_64/0.13.2/x86_64/registers/control/struct.Cr3.html#method.read
-[`PhysFrame`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/frame/struct.PhysFrame.html
-[`Cr3Flags`]: https://docs.rs/x86_64/0.13.2/x86_64/registers/control/struct.Cr3Flags.html
+[`Cr3::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3.html#method.read
+[`PhysFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/frame/struct.PhysFrame.html
+[`Cr3Flags`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3Flags.html
 
 هنگامی که آن را اجرا می‌کنیم، خروجی زیر را مشاهده می‌کنیم:
 
@@ -401,7 +401,7 @@ Level 4 page table at: PhysAddr(0x1000)
 
 بنابراین جدول صفحه سطح 4 که در حال حاضر فعال است در آدرس `0x100` در حافظه _فیزیکی_ ذخیره می‌شود، همان‌طور که توسط نوع بسته‌بندی [`PhysAddr`] نشان داده شده است. حال سوال این است: چگونه می‌توانیم از هسته خود به این جدول دسترسی پیدا کنیم؟
 
-[`PhysAddr`]: https://docs.rs/x86_64/0.13.2/x86_64/addr/struct.PhysAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.PhysAddr.html
 
 دسترسی مستقیم به حافظه فیزیکی در هنگام فعال بودن صفحه‌بندی امکان پذیر نیست، زیرا برنامه‌ها به راحتی می‌توانند محافظت از حافظه (ترجمه: memory protection) را دور بزنند و در غیر این‌صورت به حافظه سایر برنامه‌ها دسترسی پیدا می‌کنند. بنابراین تنها راه دسترسی به جدول از طریق برخی از صفحه‌های مجازی است که به قاب فیزیکی در آدرس`0x1000` نگاشت شده. این مشکل ایجاد نگاشت برای قاب‌های جدول صفحه یک مشکل کلی است، زیرا هسته به طور مرتب به جدول‌های صفحه دسترسی دارد، به عنوان مثال هنگام اختصاص پشته برای یک نخِ (ترجمه: thread) جدید.
 

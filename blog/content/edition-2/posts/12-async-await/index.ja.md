@@ -1144,7 +1144,7 @@ pub(crate) fn add_scancode(scancode: u8) {
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame
+    _stack_frame: InterruptStackFrame
 ) {
     use x86_64::instructions::port::Port;
 
@@ -1756,8 +1756,8 @@ impl Executor {
 
 `sleep_if_idle`は、`task_queue`が空になるまでループする`run_ready_tasks`の直後に呼び出されるので、キューを再度チェックする必要はないと思われるかもしれません。しかし、`run_ready_tasks` がリターンしてきた直後にハードウェア割り込みが発生する可能性があるため、`sleep_if_idle` 関数が呼ばれた時点ではキューに新しいタスクがあるかもしれません。キューがまだ空であった場合のみ、[`x86_64`]クレートが提供する[`instructions::hlt`]ラッパー関数を介して`hlt`命令を実行することで、CPUをスリープさせます。
 
-[`instructions::hlt`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/fn.hlt.html
-[`x86_64`]: https://docs.rs/x86_64/0.13.2/x86_64/index.html
+[`instructions::hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/fn.hlt.html
+[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/index.html
 
 残念ながら、この実装には微妙な競合状態が残っています。割り込みは非同期であり、いつでも発生する可能性があるため、`is_empty` のチェックと `hlt` の呼び出しの間に割り込みが発生する可能性があります:
 
@@ -1772,7 +1772,7 @@ if self.task_queue.is_empty() {
 
 その答えは、チェックの前にCPUの割り込みを無効にし、`hlt`命令と一緒にアトミックに再度有効にすることです。この方法では、その間に発生するすべての割り込みが `hlt` 命令の後に遅延されるため、wakeupが失敗することはありません。この方法を実装するには、[`x86_64`]クレートが提供する[`interrupts::enable_and_hlt`][`enable_and_hlt`]関数を使用します。
 
-[`enable_and_hlt`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
+[`enable_and_hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
 更新された `sleep_if_idle` 関数の実装は次のようになります:
 

@@ -89,7 +89,7 @@ lazy_static! {
 
 // new
 extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: &mut InterruptStackFrame, _error_code: u64) -> !
+    stack_frame: InterruptStackFrame, _error_code: u64) -> !
 {
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
@@ -242,7 +242,7 @@ I/O Map Base Address | `u16`
 
 بیایید یک TSS جدید ایجاد کنیم که شامل یک پشته خطای دوگانه جداگانه در جدول پشته وقفه خود باشد. برای این منظور ما به یک ساختار TSS نیاز داریم. خوشبختانه کریت `x86_64` از قبل حاوی [ساختار `TaskStateSegment`] است که می‌توانیم از آن استفاده کنیم.
 
-[ساختار `TaskStateSegment`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/tss/struct.TaskStateSegment.html
+[ساختار `TaskStateSegment`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
 
 ما TSS را در یک ماژول جدید به نام `gdt` ایجاد می‌کنیم (نام این ماژول بعداً برای‌تان معنا پیدا می‌کند):
 
@@ -391,8 +391,8 @@ pub fn init() {
 
 ما با استفاده از [`set_cs`] ثبات کد سگمنت را بارگذاری مجدد می‌کنیم و برای بارگذاری TSS با از [`load_tss`] استفاده می‌کنیم. توابع به عنوان `unsafe` علامت گذاری شده‌اند، بنابراین برای فراخوانی آن‌ها به یک بلوک `unsafe` نیاز داریم. چون ممکن است با بارگذاری انتخاب‌گرهای نامعتبر، ایمنی حافظه از بین برود.
 
-[`set_cs`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/segmentation/fn.set_cs.html
-[`load_tss`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/tables/fn.load_tss.html
+[`set_cs`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/segmentation/fn.set_cs.html
+[`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
 
 اکنون که یک TSS معتبر و جدول پشته‌ وقفه را بارگذاری کردیم، می‌توانیم اندیس پشته را برای کنترل کننده خطای دوگانه در IDT تنظیم کنیم:
 
@@ -543,7 +543,7 @@ use blog_os::{exit_qemu, QemuExitCode, serial_println};
 use x86_64::structures::idt::InterruptStackFrame;
 
 extern "x86-interrupt" fn test_double_fault_handler(
-    _stack_frame: &mut InterruptStackFrame,
+    _stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -> ! {
     serial_println!("[ok]");

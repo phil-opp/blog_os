@@ -173,18 +173,18 @@ test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 这里我们使用 [`x86_64`] crate提供的抽象，而不是手动调用`in`或`out`指令。为了添加对该crate的依赖，我们可以将其添加到我们的 `Cargo.toml`中的 `dependencies` 小节中去:
 
 
-[`x86_64`]: https://docs.rs/x86_64/0.7.5/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.11.0"
+x86_64 = "0.14.2"
 ```
 
 现在我们可以使用crate中提供的[`Port`] 类型来创建一个`exit_qemu` 函数了:
 
-[`Port`]: https://docs.rs/x86_64/0.7.0/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
 
 ```rust
 // in src/main.rs
