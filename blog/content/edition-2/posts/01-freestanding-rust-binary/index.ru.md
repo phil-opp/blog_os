@@ -28,7 +28,7 @@ translators = ["MrZloHex"]
 
 [heap]: https://en.wikipedia.org/wiki/Heap_(data_structure)
 
-Это значит, что нельзя использовать большинство [стандартных библиотек Rust][Rust Standart library], но также есть еще множество других возможностей, которые предоставляет Rust и их _можно использовать_. Как пример того, что можно использовать это: [итераторы][iterators], [замыкания][closures], [соответствия по шаблону][pattern matching], [опции][option] и[результат][result], [форматирование строк][string formatting] и, конечно же, [систему владения][ownership system]. Эти функции дают возможность для написания ядра в очень выразительном и высоко-уровневом стиле без беспокойства о [неопределенном поведении][undefined behavior] или [сохранности памяти][memory safety].
+Это значит, что нельзя использовать большую часть [стандартной библиотеки Rust][Rust Standard library], но остается множество других возможностей Rust, которые _можно использовать_. Например, [итераторы][iterators], [замыкания][closures], [сопоставление с образцом][pattern matching], [`Option`][option] и [`Result`][result], [форматирование строк][string formatting] и, конечно же, [систему владения][ownership system]. Эти функции дают возможность для написания ядра в очень выразительном и высоко-уровневом стиле, не беспокоясь о [неопределенном поведении][undefined behavior] или [сохранности памяти][memory safety].
 
 [option]: https://doc.rust-lang.org/core/option/
 [result]:https://doc.rust-lang.org/core/result/
