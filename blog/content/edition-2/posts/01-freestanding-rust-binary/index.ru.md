@@ -115,7 +115,7 @@ error: `#[panic_handler]` function required, but not found
 error: language item required, but not found: `eh_personality`
 ```
 
-Сейчас компилятор не может найти `#[panic_handler]` функцию и _языковой предмет(`eh_personality`)_.
+Сейчас компилятор не может найти функцию `#[panic_handler]` и «элемент языка».
 
 ## Реализация _паники_
 
