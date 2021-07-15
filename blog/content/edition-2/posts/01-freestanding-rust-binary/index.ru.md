@@ -169,7 +169,7 @@ panic = "abort"
 panic = "abort"
 ```
 
-Это устанавливает стратегию паники на `abort`(отмены) как для профиля `dev` (используемого для `cargo build`), так и для профиля `release` (используемого для `cargo build --release`). Теперь языковой предмет `eh_personality` больше не должен требоваться.
+Это устанавливает стратегию паники на `abort` (прерывание) как для профиля `dev` (используемого для `cargo build`), так и для профиля `release` (используемого для `cargo build --release`). Теперь элемент языка `eh_personality` больше не должен требоваться.
 
 [abort on panic]: https://github.com/rust-lang/rust/pull/32900
 
