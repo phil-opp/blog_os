@@ -281,7 +281,7 @@ cargo build --target thumbv7em-none-eabihf
 
 [cross compile]: https://en.wikipedia.org/wiki/Cross_compiler
 
-Именно этот подход мы будем использовать для сборки ядра нашей ОС. Вместо `thumbv7em-none-eabihf` мы будем использовать [custom target], который описывает `x86_64` архитектуру окружения. Подробности будут описаны в следующем посте.
+Именно этот подход мы будем использовать для сборки ядра нашей ОС. Вместо `thumbv7em-none-eabihf` мы будем использовать [custom target], который описывает окружение для архитектуры `x86_64`. Подробности будут описаны в следующем посте.
 
 [custom target]: https://doc.rust-lang.org/rustc/targets/custom.html
 
