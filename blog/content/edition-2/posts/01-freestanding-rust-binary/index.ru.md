@@ -51,7 +51,7 @@ translators = ["MrZloHex"]
 [standard library]: https://doc.rust-lang.org/std/
 [attribute]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
 
-Мы начнем с создания нового cargo проекта. Самый простой способ сделать это, через командную строку:
+Мы начнем с создания нового проекта cargo. Самый простой способ сделать это &mdash; через командную строку:
 
 ```
 cargo new blog_os --bin -- edition 2018
