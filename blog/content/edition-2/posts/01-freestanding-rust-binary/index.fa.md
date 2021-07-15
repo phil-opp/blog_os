@@ -160,7 +160,7 @@ fn panic(_info: &PanicInfo) -> ! {
 [آیتم زبان `eh_personality`]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
 [بازکردن پشته (Stack Unwinding)]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
 [libunwind]: https://www.nongnu.org/libunwind/
-[مدیریت اکسپشن ساخت یافته]: https://docs.microsoft.com/de-de/windows/win32/debug/structured-exception-handling
+[مدیریت اکسپشن ساخت یافته]: https://docs.microsoft.com/en-us/windows/win32/debug/structured-exception-handling
 
 ### غیرفعال کردن Unwinding
 
