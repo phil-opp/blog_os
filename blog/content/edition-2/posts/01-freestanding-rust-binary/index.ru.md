@@ -414,7 +414,7 @@ error: linking with `cc` failed: exit code: 1
           clang: error: linker command failed with exit code 1 […]
 ```
 
-Эта ошибка возникает из-за того, что программы на macOS по умолчанию ссылаются на `crt0` ("C runtime zero"). Это похоже на ошибку, которую мы имели в Linux, и также может быть решена добавлением аргумента компоновщика `-nostartfiles`:
+Эта ошибка возникает из-за того, что программы на macOS по умолчанию ссылаются на `crt0` ("C runtime zero"). Она похожа на ошибку под Linux и тоже может быть решена добавлением аргумента компоновщика `-nostartfiles`:
 
 ```
 cargo rustc -- -C link-args="-e __start -static -nostartfiles"
