@@ -494,7 +494,7 @@ panic = "abort" # disable stack unwinding on panic
 panic = "abort" # disable stack unwinding on panic
 ```
 
-Для компиляции этого бинарного файла, мы должны компиляровать для голой системы, такой как `thumbv7em-none-eabihf`:
+Чтобы собрать этот исполняемый файл, его надо скомпилировать для голого железа, например, `thumbv7em-none-eabihf`:
 
 ```
 cargo build --target thumbv7em-none-eabihf
