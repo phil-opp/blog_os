@@ -231,7 +231,7 @@ pub extern "C" fn _start() -> ! {
 
 [`exit` system call]: https://en.wikipedia.org/wiki/Exit_(system_call)
 
-Если мы выполним `cargo build` сейчас, мы получаем ошибку компоновщика (_linker_ error).
+Если мы выполним `cargo build` сейчас, мы получим ошибку компоновщика (_linker_ error).
 
 ## Ошибки компоновщика
 
