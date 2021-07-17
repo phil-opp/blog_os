@@ -266,7 +266,7 @@ error[E0463]: can't find crate for `core`
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust]: #установка-rust-nightly
 
-Чтобы использовать эту функцию, нам нужно создать файл [конфигураций cargo][cargo configuration] по адресу `.cargo/config.toml` со следующим содержимым:
+Чтобы использовать эту функцию, нам нужно создать файл [конфигурации cargo][cargo configuration] по пути `.cargo/config.toml` со следующим содержимым:
 
 [cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
 
