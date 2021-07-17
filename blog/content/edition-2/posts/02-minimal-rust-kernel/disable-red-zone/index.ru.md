@@ -5,7 +5,7 @@ path = "ru/red-zone"
 template = "edition-2/extra.html"
 +++
 
-[Красная зона][red zone] - это оптимизация [System V ABI], которая позволяет функциям временно использовать 128 байт ниже своего стекового кадра без корректировки указателя стека:
+[Красная зона][red zone] &mdash; это оптимизация [System V ABI], которая позволяет функциям временно использовать 128 байт ниже своего стекового кадра без корректировки указателя стека:
 
 [red zone]: https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
 [System V ABI]: https://wiki.osdev.org/System_V_ABI
