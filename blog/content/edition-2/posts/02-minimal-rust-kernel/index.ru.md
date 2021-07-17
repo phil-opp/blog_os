@@ -319,7 +319,7 @@ build-std = ["core", "compiler_builtins"]
 
 (Поддержка функции `compiler-builtins-mem` была [добавлена совсем недавно](https://github.com/rust-lang/rust/pull/77284), поэтому для нее вам нужен как минимум Rust nightly `2020-09-30`).
 
-За кулисами этот флаг включает функцию [`mem`][`mem` feature] модуля `compiler_builtins`. Это приводит к тому, что атрибут `#[no_mangle]` применяется к [`memcpy` и т.п. реализациям][`memcpy` etc. implementations] этого ядра, что делает их доступными для компоновщика.
+За кулисами этот флаг включает функцию [`mem`][`mem` feature] крейта `compiler_builtins`. Это приводит к тому, что атрибут `#[no_mangle]` применяется к [реализациям `memcpy` и т.п.][`memcpy` etc. implementations] из этого крейта, что делает их доступными для компоновщика.
 
 [`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L54-L55
 [`memcpy` etc. implementations]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
