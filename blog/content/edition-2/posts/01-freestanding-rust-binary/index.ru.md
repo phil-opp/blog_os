@@ -257,7 +257,7 @@ release: 1.35.0-nightly
 LLVM version: 8.0
 ```
 
-Приведенный выше результат получен от системы `x86_64` Linux. Мы видим, что тройка `host` - это `x86_64-unknown-linux-gnu`, которая включает архитектуру процессора (`x86_64`), производителя (`unknown`), операционную систему (`linux`) и [ABI] (`gnu`).
+Приведенный выше результат получен от системы `x86_64` Linux. Мы видим, что тройка `host` &mdash; это `x86_64-unknown-linux-gnu`, которая включает архитектуру процессора (`x86_64`), производителя (`unknown`), операционную систему (`linux`) и [ABI] (`gnu`).
 
 [ABI]: https://en.wikipedia.org/wiki/Application_binary_interface
 
