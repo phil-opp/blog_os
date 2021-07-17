@@ -253,7 +253,7 @@ pub extern "C" fn _start() -> ! {
 error[E0463]: can't find crate for `core`
 ```
 
-Не получается! Ошибка сообщает нам, что компилятор Rust больше не находит [библиотеку `core`][`core` library]. Эта библиотека содержит основные типы Rust, такие как `Result`, `Option` и итераторы, и неявно связана со всеми модулями `no_std`.
+Не получается! Ошибка сообщает нам, что компилятор Rust больше не может найти [библиотеку `core`][`core` library]. Эта библиотека содержит основные типы Rust, такие как `Result`, `Option` и итераторы, и неявно связана со всеми `no_std` модулями.
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
