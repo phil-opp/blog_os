@@ -141,7 +141,7 @@ fn panic(_info: &PanicInfo) -> ! {
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-## Языковой предмет `eh_personality`
+## Элемент языка `eh_personality`
 
 Элементы языка &mdash; это специальные функции и типы, которые необходимы компилятору. Например, трейт [`Copy`] указывает компилятору, у каких типов есть [_семантика копирования_][`Copy`]. Если мы посмотрим на [реализацию][copy code] этого трейта, то увидим специальный атрибут `#[lang = "copy"]`, который говорит, что этот трейт является элементом языка.
 
