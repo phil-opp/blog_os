@@ -140,8 +140,8 @@ fn panic(_info: &PanicInfo) -> ! {
 Параметр [`PanicInfo`][PanicInfo] содержит название файла и строку, где произошла паника, и дополнительное сообщение с пояснением. Эта функция никогда не должна возвратиться, и такая функция называется [расходящейся][diverging functions] и она возращает [пустой тип]["never" type] `!`. Пока что мы ничего не можем сделать в этой функции, поэтому мы просто войдем в бесконечный цикл.
 
 [PanicInfo]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
-[diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
-[“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
+[diverging functions]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
+["never" type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
 ## Элемент языка `eh_personality`
 
