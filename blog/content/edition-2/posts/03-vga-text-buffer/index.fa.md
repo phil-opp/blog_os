@@ -488,7 +488,7 @@ error[E0017]: references in statics may only refer to immutable values
 
 مسئله در مورد `ColorCode::new` با استفاده از توابع [`const` functions] قابل حل است ، اما مشکل اساسی اینجاست که Rust's const evaluator قادر به تبدیل اشاره‌گر‌های خام به رفرنس در زمان کامپایل نیست. شاید روزی جواب دهد ، اما تا آن زمان ، ما باید راه حل دیگری پیدا کنیم.
 
-[`const` functions]: https://doc.rust-lang.org/unstable-book/language-features/const-fn.html
+[`const` functions]: https://doc.rust-lang.org/reference/const_eval.html#const-functions
 
 ### استاتیک‌های تنبل (Lazy Statics)
 یکبار مقداردهی اولیه استاتیک‌ها با توابع غیر ثابت یک مشکل رایج در راست است. خوشبختانه ، در حال حاضر راه حل خوبی در کرتی به نام [lazy_static] وجود دارد. این کرت ماکرو `lazy_static!` را فراهم می کند که یک `استاتیک` را با تنبلی مقدار‌دهی اولیه می کند. به جای محاسبه مقدار آن در زمان کامپایل ، `استاتیک` به تنبلی هنگام اولین دسترسی به آن، خود را مقداردهی اولیه می‌کند. بنابراین ، مقداردهی اولیه در زمان اجرا اتفاق می افتد تا کد مقدار دهی اولیه  پیچیده و دلخواه امکان پذیر باشد.

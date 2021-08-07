@@ -449,7 +449,7 @@ error[E0017]: references in statics may only refer to immutable values
 
 为了明白现在发生了什么，我们需要知道一点：一般的变量在运行时初始化，而静态变量在编译时初始化。Rust编译器规定了一个称为**常量求值器**（[const evaluator](https://rustc-dev-guide.rust-lang.org/const-eval.html)）的组件，它应该在编译时处理这样的初始化工作。虽然它目前的功能较为有限，但对它的扩展工作进展活跃，比如允许在常量中 panic 的[一篇 RFC 文档](https://github.com/rust-lang/rfcs/pull/2345)。
 
-关于 `ColorCode::new` 的问题应该能使用**常函数**（[`const` functions](https://doc.rust-lang.org/unstable-book/language-features/const-fn.html)）解决，但常量求值器还存在不完善之处，它还不能在编译时直接转换裸指针到变量的引用——也许未来这段代码能够工作，但在那之前，我们需要寻找另外的解决方案。
+关于 `ColorCode::new` 的问题应该能使用**常函数**（[`const` functions](https://doc.rust-lang.org/reference/const_eval.html#const-functions)）解决，但常量求值器还存在不完善之处，它还不能在编译时直接转换裸指针到变量的引用——也许未来这段代码能够工作，但在那之前，我们需要寻找另外的解决方案。
 
 ### 延迟初始化
 

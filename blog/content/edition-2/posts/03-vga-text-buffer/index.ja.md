@@ -495,7 +495,7 @@ error[E0017]: references in statics may only refer to immutable values
 
 `ColorCode::new`に関する問題は[`const`関数][`const` functions]を使って解決できるかもしれませんが、ここでの根本的な問題は、Rustのconst evaluatorがコンパイル時に生ポインタを参照へと変えることができないということです。いつかうまく行くようになるのかもしれませんが、その時までは、別の方法を行わなければなりません。
 
-[`const` functions]: https://doc.rust-lang.org/unstable-book/language-features/const-fn.html
+[`const` functions]: https://doc.rust-lang.org/reference/const_eval.html#const-functions
 
 ### <ruby>怠けた<rp> (</rp><rt>Lazy</rt><rp>) </rp></ruby>静的変数
 定数でない関数で一度だけ静的変数を初期化したい、というのはRustにおいてよくある問題です。嬉しいことに、[lazy_static]というクレートにすでに良い解決方法が存在します。このクレートは、初期化が後回しにされる`static`を定義する`lazy_static!`マクロを提供します。その値をコンパイル時に計算する代わりに、この`static`は最初にアクセスされたときに初めて初期化します。したがって、初期化は実行時に起こるので、どんなに複雑な初期化プログラムも可能ということです。
