@@ -240,8 +240,8 @@ pub struct PageTable {
 
 `x86_64`クレートが[ページテーブル][page tables]とその[エントリ][entries]のための型を提供してくれているので、これらの構造体を私達自身で作る必要はありません。
 
-[page tables]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/page_table/struct.PageTable.html
-[entries]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
+[page tables]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTable.html
+[entries]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
 ### トランスレーション・ルックアサイド・バッファ
 
@@ -256,7 +256,7 @@ pub struct PageTable {
 </div>
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
-[`tlb` module]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/tlb/index.html
+[`tlb` module]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tlb/index.html
 
 ページテーブルを修正したときは毎回TLBをflushしないといけないということはしっかりと覚えておいてください。これを行わないと、CPUは古い変換を使いつづけるかもしれず、これはデバッグの非常に難しい、予測不能なバグに繋がるかもしれないためです。
 
@@ -295,7 +295,7 @@ use x86_64::structures::idt::PageFaultErrorCode;
 use crate::hlt_loop;
 
 extern "x86-interrupt" fn page_fault_handler(
-    stack_frame: &mut InterruptStackFrame,
+    stack_frame: InterruptStackFrame,
     error_code: PageFaultErrorCode,
 ) {
     use x86_64::registers::control::Cr2;
@@ -311,8 +311,8 @@ extern "x86-interrupt" fn page_fault_handler(
 [`CR2`]レジスタは、ページフォルト時にCPUによって自動的に設定されており、その値はアクセスされページフォルトを引き起こした仮想アドレスになっています。`x86_64`クレートの[`Cr2::read`]関数を使ってこれを読み込み出力します。[`PageFaultErrorCode`]型は、ページフォルトを引き起こしたメモリアクセスの種類についてより詳しい情報を提供します（例えば、読み込みと書き込みのどちらによるものなのか、など）。そのため、これも出力します。ページフォルトを解決しない限り実行を継続することはできないので、最後は[`hlt_loop`]に入ります。
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
-[`Cr2::read`]: https://docs.rs/x86_64/0.13.2/x86_64/registers/control/struct.Cr2.html#method.read
-[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
+[`Cr2::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr2.html#method.read
+[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
 [`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.md#the-hlt-instruction
 
@@ -346,7 +346,7 @@ pub extern "C" fn _start() -> ! {
 
 `CR2`レジスタは確かに私達がアクセスしようとしていたアドレスである`0xdeadbeaf`を格納しています。エラーコードが[`CAUSED_BY_WRITE`]なので、この<ruby>障害<rp> (</rp><rt>フォルト</rt><rp>) </rp></ruby>は<ruby>write<rp> (</rp><rt>書き込み</rt><rp>) </rp></ruby>操作の実行中に発生したのだと分かります。更に、[1にセットされていないビット][`PageFaultErrorCode`]からも情報を得ることができます。例えば、`PROTECTION_VIOLATION`フラグが1にセットされていないことから、ページフォルトは対象のページが存在しなかったために発生したのだと分かります。
 
-[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
+[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
 
 ページフォルトを起こした時点での命令ポインタは`0x2031b2`であるので、このアドレスはコードページを指しているとわかります。コードページはブートローダによって読み込み専用に指定されているので、このアドレスからの読み込みは大丈夫ですが、このページへの書き込みはページフォルトを起こします。`0xdeadbeaf`へのポインタを`0x2031b2`に変更して、これを試してみましょう。
 
@@ -370,7 +370,7 @@ println!("write worked");
 
 "read worked"というメッセージが表示されますが、これは読み込み操作が何のエラーも発生させなかったことを示しています。しかし、"write worked"のメッセージではなく、ページフォルトが発生してしまいました。今回は[`CAUSED_BY_WRITE`]フラグに加えて[`PROTECTION_VIOLATION`]フラグがセットされています。これは、ページは存在していたものの、それに対する今回の操作が許可されていなかったということを示します。今回の場合、ページへの書き込みは、コードページが読み込み専用に指定されているため許可されていませんでした。
 
-[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
+[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
 ### ページテーブルへのアクセス
 
@@ -396,9 +396,9 @@ pub extern "C" fn _start() -> ! {
 
 `x86_64`クレートの[`Cr3::read`]関数は、現在有効なレベル4ページテーブルを`CR3`レジスタから読みとって返します。この関数は[`PhysFrame`]型と[`Cr3Flags`]型のタプルを返します。私達はフレームにしか興味がないので、タプルの2つ目の要素は無視しました。
 
-[`Cr3::read`]: https://docs.rs/x86_64/0.13.2/x86_64/registers/control/struct.Cr3.html#method.read
-[`PhysFrame`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/paging/frame/struct.PhysFrame.html
-[`Cr3Flags`]: https://docs.rs/x86_64/0.13.2/x86_64/registers/control/struct.Cr3Flags.html
+[`Cr3::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3.html#method.read
+[`PhysFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/frame/struct.PhysFrame.html
+[`Cr3Flags`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3Flags.html
 
 これを実行すると、以下の出力を得ます：
 
@@ -408,7 +408,7 @@ Level 4 page table at: PhysAddr(0x1000)
 
 というわけで、現在有効なレベル4ページテーブルは、[`PhysAddr`]ラッパ型が示すように、 **物理** メモリのアドレス`0x1000`に格納されています。ここで疑問が生まれます：このテーブルに私達のカーネルからアクセスするにはどうすればいいのでしょう？
 
-[`PhysAddr`]: https://docs.rs/x86_64/0.13.2/x86_64/addr/struct.PhysAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.PhysAddr.html
 
 ページングが有効なとき、物理メモリに直接アクセスすることはできません。もしそれができたとしたら、プログラムは容易くメモリ保護を回避して他のプログラムのメモリにアクセスできてしまうだろうからです。ですので、テーブルにアクセスする唯一の方法は、アドレス`0x1000`の物理フレームに対応づけられているような仮想ページにアクセスすることです。ページテーブルの存在するフレームへの対応づけは（実用上も必要になる）一般的な問題です。なぜなら、例えば新しいスレッドのためにスタックを割り当てるときなど、カーネルは日常的にページテーブルにアクセスする必要があるためです。
 

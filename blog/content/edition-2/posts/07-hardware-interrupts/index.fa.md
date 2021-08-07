@@ -80,29 +80,29 @@ Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
 
 پیکربندی پیش فرض PIC ها قابل استفاده نیست، زیرا اعداد بردار وقفه را در محدوده 15-0 به پردازنده می فرستد. این اعداد در حال حاضر توسط استثناهای پردازنده اشغال شده‌اند ، به عنوان مثال شماره 8 مربوط به یک خطای دوگانه است. برای رفع این مشکل همپوشانی، باید وقفه های PIC را به اعداد دیگری تغییر دهیم. دامنه واقعی مهم نیست به شرطی که با استثناها همپوشانی نداشته باشد ، اما معمولاً محدوده 47-32 انتخاب می شود، زیرا اینها اولین شماره های آزاد پس از 32 اسلات استثنا هستند.
 
-پیکربندی با نوشتن مقادیر ویژه در پورت های فرمان و داده PIC ها اتفاق می افتد. خوشبختانه قبلا کرت‌ای به نام [`pic8259_simple`] وجود دارد، بنابراین نیازی نیست که توالی راه اندازی اولیه را خودمان بنویسیم. در صورت علاقه‌مند بودن به چگونگی عملکرد آن، [کد منبع آن][pic crate source] را بررسی کنید، نسبتاً کوچک و دارای مستند خوبی است.
+پیکربندی با نوشتن مقادیر ویژه در پورت های فرمان و داده PIC ها اتفاق می افتد. خوشبختانه قبلا کرت‌ای به نام [`pic8259`] وجود دارد، بنابراین نیازی نیست که توالی راه اندازی اولیه را خودمان بنویسیم. در صورت علاقه‌مند بودن به چگونگی عملکرد آن، [کد منبع آن][pic crate source] را بررسی کنید، نسبتاً کوچک و دارای مستند خوبی است.
 
-[pic crate source]: https://docs.rs/crate/pic8259_simple/0.2.0/source/src/lib.rs
+[pic crate source]: https://docs.rs/crate/pic8259/0.10.1/source/src/lib.rs
 
 برای افزودن کرت به عنوان وابستگی ، موارد زیر را به پروژه خود اضافه می کنیم:
 
-[`pic8259_simple`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/
+[`pic8259`]: https://docs.rs/pic8259/0.10.1/pic8259/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pic8259_simple = "0.2.0"
+pic8259 = "0.10.1"
 ```
 
 انتزاع اصلی ارائه شده توسط کرت، ساختمان [`ChainedPics`] است که نمایانگر طرح اولیه/ثانویه PIC است که در بالا دیدیم. برای استفاده به روش زیر طراحی شده است:
 
-[`ChainedPics`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/struct.ChainedPics.html
+[`ChainedPics`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html
 
 ```rust
 // in src/interrupts.rs
 
-use pic8259_simple::ChainedPics;
+use pic8259::ChainedPics;
 use spin;
 
 pub const PIC_1_OFFSET: u8 = 32;
@@ -130,7 +130,7 @@ pub fn init() {
 
 ما از تابع [`initialize`] برای انجام مقداردهی اولیه PIC استفاده می کنیم. مانند تابع `ChainedPics::new`، این تابع نیز ایمن نیست زیرا در صورت عدم پیکربندی صحیح PIC می تواند باعث رفتار نامشخص شود.
 
-[`initialize`]: https://docs.rs/pic8259_simple/0.2.0/pic8259_simple/struct.ChainedPics.html#method.initialize
+[`initialize`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html#method.initialize
 
 اگر همه چیز خوب پیش برود ، باید هنگام اجرای `cargo run` پیام "It did not crash" را ببینیم.
 
@@ -205,7 +205,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     print!(".");
 }
@@ -213,7 +213,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 `timer_interrupt_handler` ما دارای امضای مشابه کنترل کننده های استثنای ما است ، زیرا پردازنده به طور یکسان به استثناها و وقفه های خارجی واکنش نشان می دهد (تنها تفاوت این است که برخی از استثناها کد خطا را در پشته ذخیره می‌کنند). ساختمان [`InterruptDescriptorTable`] تریت [`IndexMut`] را پیاده سازی می کند، بنابراین می توانیم از طریق سینتکس ایندکس‌دهی آرایه، به ایتم های جداگانه دسترسی پیدا کنیم.
 
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.13.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
 در کنترل کننده وقفه تایمر، یک نقطه را روی صفحه چاپ می کنیم. همانطور که وقفه تایمر به صورت دوره ای اتفاق می افتد ، انتظار داریم که در هر تیک تایمر یک نقطه ظاهر شود. با این حال، هنگامی که آن را اجرا می کنیم می بینیم که فقط یک نقطه چاپ می شود:
@@ -230,7 +230,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     print!(".");
 
@@ -338,7 +338,7 @@ pub fn _print(args: fmt::Arguments) {
 
 تابع [`without_interrupts`] یک [کلوژر] را گرفته و آن را در یک محیط بدون وقفه اجرا می کند. ما از آن استفاده می کنیم تا اطمینان حاصل کنیم که تا زمانی که `Mutex` قفل شده است ، هیچ وقفه ای رخ نمی دهد. اکنون هنگامی که هسته را اجرا می کنیم ، می بینیم که آن بدون هنگ کردن به کار خود ادامه می دهد. (ما هنوز هیچ نقطه ای را مشاهده نمی کنیم ، اما این به این دلیل است که سرعت حرکت آنها بسیار سریع است. سعی کنید سرعت چاپ را کم کنید، مثلاً با قرار دادن `for _ in 0..10000 {}` در داخل حلقه.)
 
-[`without_interrupts`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.without_interrupts.html
+[`without_interrupts`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.without_interrupts.html
 [کلوژر]: https://doc.rust-lang.org/book/second-edition/ch13-01-closures.html
 
 ما می توانیم همین تغییر را در تابع چاپ سریال نیز اعمال کنیم تا اطمینان حاصل کنیم که هیچ بن‌بستی در آن رخ نمی دهد:
@@ -543,7 +543,7 @@ lazy_static! {
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     print!("k");
 
@@ -568,7 +568,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
 
@@ -585,7 +585,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 ما برای خواندن یک بایت از پورت داده صفحه کلید از نوع [`Port`] کرت `x86_64` استفاده می‌کنیم. این بایت [_اسکن کد_] نامیده می شود و عددی است که کلید فشرده شده / رها شده را نشان می دهد. ما هنوز کاری با اسکن کد انجام نمی دهیم ، فقط آن را روی صفحه چاپ می کنیم:
 
-[`Port`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
 [_اسکن کد_]: https://en.wikipedia.org/wiki/Scancode
 
 ![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)
@@ -609,7 +609,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     use x86_64::instructions::port::Port;
 
@@ -668,7 +668,7 @@ pc-keyboard = "0.5.0"
 // in/src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
+    _stack_frame: InterruptStackFrame)
 {
     use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
     use spin::Mutex;

@@ -84,7 +84,7 @@ lazy_static! {
 
 // new
 extern "x86-interrupt" fn double_fault_handler(
-    stack_frame: &mut InterruptStackFrame, _error_code: u64) -> !
+    stack_frame: InterruptStackFrame, _error_code: u64) -> !
 {
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
@@ -232,7 +232,7 @@ I/Oマップベースアドレス | `u16`
 ### TSSをつくる
 割り込みスタックテーブルにダブルフォルト用のスタックを含めた新しいTSSをつくってみましょう。そのためにはTSS構造体が必要です。幸いにも、すでに`x86_64`クレートに[`TaskStateSegment`構造体]が含まれているので、これを使っていきます。
 
-[`TaskStateSegment`構造体]: https://docs.rs/x86_64/0.12.1/x86_64/structures/tss/struct.TaskStateSegment.html
+[`TaskStateSegment`構造体]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
 
 新しい`gdt`モジュール内でTSSをつくります（名前の意味は後でわかるでしょう）：
 
@@ -378,8 +378,8 @@ pub fn init() {
 
 [`set_cs`]を使ってコードセグメントレジスタを再読み込みして、[`load_tss`]を使ってTSSを読み込んでいます。これらの関数は`unsafe`とマークされているので、呼び出すには`unsafe`ブロックが必要です。`unsafe`なのは、不正なセレクタを読み込むことでメモリ安全性を壊す可能性があるからです。
 
-[`set_cs`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/segmentation/fn.set_cs.html
-[`load_tss`]: https://docs.rs/x86_64/0.12.1/x86_64/instructions/tables/fn.load_tss.html
+[`set_cs`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/segmentation/fn.set_cs.html
+[`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
 
 これで正常なTSSと割り込みスタックテーブルを読み込みこんだので、私達はIDT内のダブルフォルトハンドラにスタックインデックスをセットすることができます：
 
@@ -488,7 +488,7 @@ fn stack_overflow() {
 
 しかし、ここではスタックオーバーフローを起こしたいので、コンパイラに削除されない、ダミーのvolatile読み込み文を関数の末尾に追加します。その結果、関数は**末尾再帰**ではなくなり、ループへの変換は防がれます。更に関数が無限に再帰することに対するコンパイラの警告をなくすために`allow(unconditional_recursion)`属性を追加します。
 
-### IDTのテスト 
+### IDTのテスト
 
 上で述べたように、テストはカスタムしたダブルフォルトハンドラを含む専用のIDTが必要です。実装はこのようになります：
 
@@ -529,7 +529,7 @@ use blog_os::{exit_qemu, QemuExitCode, serial_println};
 use x86_64::structures::idt::InterruptStackFrame;
 
 extern "x86-interrupt" fn test_double_fault_handler(
-    _stack_frame: &mut InterruptStackFrame,
+    _stack_frame: InterruptStackFrame,
     _error_code: u64,
 ) -> ! {
     serial_println!("[ok]");
