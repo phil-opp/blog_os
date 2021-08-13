@@ -32,8 +32,6 @@ translators = ["woodyZootopia"]
 
 [end of previous post]: @/edition-2/posts/08-paging-introduction/index.md#accessing-the-page-tables
 
-To implement the approach, we will need support from the bootloader, so we'll configure it first. Afterward, we will implement a function that traverses the page table hierarchy in order to translate virtual to physical addresses. Finally, we learn how to create new mappings in the page tables and how to find unused memory frames for creating new page tables.
-
 この方法を実装するには、ブートローダーからの補助が必要になるので、まずこれに設定を加えます。その後で、ページテーブルの階層構造を移動して、仮想アドレスを物理アドレスに変換する関数を実装します。最後に、ページテーブルに新しい対応関係を作る方法と、それを作るための未使用メモリを見つける方法を学びます。
 
 ## ページテーブルにアクセスする
@@ -42,7 +40,7 @@ To implement the approach, we will need support from the bootloader, so we'll co
 
 ![An example 4-level page hierarchy with each page table shown in physical memory](../paging-introduction/x86_64-page-table-translation.svg)
 
-ここで需要なのは、それぞれのページテーブルのエントリは次のテーブルの**物理**アドレスであるということです。これにより、それらのアドレスに対しても変換することを避けられます。もしこの変換が行われたとしたら、性能的にも良くないですし、容易に変換の無限ループに陥りかねません。
+ここで重要なのは、それぞれのページテーブルのエントリは次のテーブルの**物理**アドレスであるということです。これにより、それらのアドレスに対しても変換することを避けられます。もしこの変換が行われたとしたら、性能的にも良くないですし、容易に変換の無限ループに陥りかねません。
 
 問題は、私達のカーネル自体も仮想アドレスの上で動いているため、カーネルから直接物理アドレスにアクセスすることができないということです。例えば、アドレス`4KiB`にアクセスしたとき、私達は**仮想**アドレス`4KiB`にアクセスしているのであって、レベル4ページテーブルが格納されている**物理**アドレス`4KiB`にアクセスしているのではありません。物理アドレス`4KiB`にアクセスしたいなら、それに対応づけられている何らかの仮想アドレスを通じてのみ可能です。
 
@@ -56,23 +54,20 @@ To implement the approach, we will need support from the bootloader, so we'll co
 
 この例では、いくつかの恒等対応したページテーブルのフレームが見てとれます。こうすることで、ページテーブルの物理アドレスは仮想アドレスとしても正当になり、よってCR3レジスタから始めることで全てのレベルのページテーブルに簡単にアクセスできます。
 
-しかし、この方法では仮想アドレス空間が散らかってしまい、より大きいサイズの連続したメモリを見つけることが難しくなります。例えば、上の図において、[ファイルをメモリにマップする][memory-mapping a file]ために1000KiBの大きさの仮想メモリ領域を作りたいとします。`28KiB`を始点として領域を作ろうとすると、`1004KiB`のところで既存のページと衝突してしまうのでうまくいきません。そのため、`1008KiB`のような、十分な広さで対応付けのない領域が見つかるまで更に探さないといけません。これは[セグメンテーション][segmentation]の時にみた断片化の問題に似ています。
+しかし、この方法では仮想アドレス空間が散らかってしまい、より大きいサイズの連続したメモリを見つけることが難しくなります。例えば、上の図において、[ファイルをメモリにマップする][memory-mapping a file]ために1000KiBの大きさの仮想メモリ領域を作りたいとします。`28KiB`を始点として領域を作ろうとすると、`1004KiB`のところで既存のページと衝突してしまうのでうまくいきません。そのため、`1008KiB`のような、十分な広さで対応付けのない領域が見つかるまで更に探さないといけません。これは[セグメンテーション][segmentation]の時に見た断片化の問題に似ています。
 
 [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
 [segmentation]: @/edition-2/posts/08-paging-introduction/index.md#fragmentation
 
-Equally, it makes it much more difficult to create new page tables, because we need to find physical frames whose corresponding pages aren't already in use. For example, let's assume that we reserved the _virtual_ 1000 KiB memory region starting at `1008 KiB` for our memory-mapped file. Now we can't use any frame with a _physical_ address between `1000 KiB` and `2008 KiB` anymore, because we can't identity map it.
 同様に、新しいページテーブルを作ることもずっと難しくなります。なぜなら、対応するページがまだ使われていない物理フレームを見つけないといけないからです。例えば、メモリ<ruby>マップト<rp> (</rp><rt>に対応づけられた</rt><rp>) </rp></ruby>ファイルのために`1008KiB`から1000KiBにわたって仮想メモリを占有したとしましょう。すると、すると、物理アドレス`1000KiB`から`2008KiB`までのフレームは、もう恒等対応を作ることができないので、使用することができません。
 
-### 固定オフセットの対応
+### 固定オフセットの対応づけ
 
-To avoid the problem of cluttering the virtual address space, we can **use a separate memory region for page table mappings**. So instead of identity mapping page table frames, we map them at a fixed offset in the virtual address space. For example, the offset could be 10 TiB:
 仮想アドレス空間を散らかしてしまうという問題を回避するために、**ページテーブルの対応づけのために別のメモリ領域を使う**ことができます。ページテーブルを恒等対応させる代わりに、仮想アドレス空間で一定のオフセットをおいて対応づけてみましょう。例えば、オフセットを10TiBにしてみましょう：
 
 ![The same figure as for the identity mapping, but each mapped virtual page is offset by 10 TiB.](page-tables-mapped-at-offset.svg)
 
-By using the virtual memory in the range `10TiB..(10TiB + physical memory size)` exclusively for page table mappings, we avoid the collision problems of the identity mapping. Reserving such a large region of the virtual address space is only possible if the virtual address space is much larger than the physical memory size. This isn't a problem on x86_64 since the 48-bit address space is 256 TiB large.
-`10TiB`から`10TiB+物理メモリ全体の大きさ`の範囲の仮想メモリをページテーブルの対応付け専用に使うことで、恒等対応のときに存在していた衝突問題を回避しています。このように巨大な領域を仮想アドレス空間内に用意するのは、仮想アドレス空間が物理メモリの大きさより遥かに大きい場合にのみ可能です。x86_64については、（x86_64で用いられている）48bit（仮想）アドレス空間は256TiBもの大きさがあるので、これは問題ではありません。
+`10TiB`から`10TiB+物理メモリ全体の大きさ`の範囲の仮想メモリをページテーブルの対応付け専用に使うことで、恒等対応のときに存在していた衝突問題を回避しています。このように巨大な領域を仮想アドレス空間内に用意するのは、仮想アドレス空間が物理メモリの大きさより遥かに大きい場合にのみ可能です。x86_64で用いられている48bit（仮想）アドレス空間は256TiBもの大きさがあるので、これは問題ではありません。
 
 この方法では、新しいページテーブルを作るたびに新しい対応付けを作る必要があるという欠点があります。また、他のアドレス空間のページテーブルにアクセスすることができると、新しいプロセスを作るときに便利なのですがこれも不可能です。
 
@@ -96,61 +91,60 @@ By using the virtual memory in the range `10TiB..(10TiB + physical memory size)`
 
 ![A virtual and a physical address space with an identity mapped level 1 table, which maps its 0th entry to the level 2 table frame, thereby mapping that frame to page with address 0](temporarily-mapped-page-tables.svg)
 
-The level 1 table in this graphic controls the first 2 MiB of the virtual address space. This is because it is reachable by starting at the CR3 register and following the 0th entry in the level 4, level 3, and level 2 page tables. The entry with index `8` maps the virtual page at address `32 KiB` to the physical frame at address `32 KiB`, thereby identity mapping the level 1 table itself. The graphic shows this identity-mapping by the horizontal arrow at `32 KiB`.
-この図におけるレベル1テーブルは仮想アドレス空間の最初の2MiBを制御しています。なぜなら、CR3レジスタから始めて、レベル4、3、2のページテーブルの0番目のエントリを辿ることで到達できるからです。
+この図におけるレベル1テーブルは仮想アドレス空間の最初の2MiBを制御しています。なぜなら、このテーブルにはCR3レジスタから始めて、レベル4、3、2のページテーブルの0番目のエントリを辿ることで到達できるからです。8番目のエントリは、アドレス`32 KiB`の仮想アドレスページをアドレス`32 KiB`の物理アドレスページに対応付けるので、レベル1テーブル自体を恒等対応させています。この図ではその恒等対応を`32 KiB`のところの横向きの（茶色の）矢印で表しています。
 
-By writing to the identity-mapped level 1 table, our kernel can create up to 511 temporary mappings (512 minus the entry required for the identity mapping). In the above example, the kernel created two temporary mappings:
+恒等対応させたレベル1テーブルに書き込むことによって、カーネルは最大511個の一時的な対応を作ることができます（512から、恒等対応に必要な1つを除く）。上の例では、カーネルは2つの一時的な対応を作りました：
 
-- By mapping the 0th entry of the level 1 table to the frame with address `24 KiB`, it created a temporary mapping of the virtual page at `0 KiB` to the physical frame of the level 2 page table, indicated by the dashed arrow.
-- By mapping the 9th entry of the level 1 table to the frame with address `4 KiB`, it created a temporary mapping of the virtual page at `36 KiB` to the physical frame of the level 4 page table, indicated by the dashed arrow.
+- レベル1テーブルの0番目のエントリをアドレス`24 KiB`のフレームに対応付けることで、破線の矢印で示されているように`0 KiB`の仮想ページからレベル2ページテーブルの物理フレームへの一時的対応付けを行いました。
+- レベル1テーブルの9番目のエントリをアドレス`4 KiB`のフレームに対応付けることで、破線の矢印で示されているように`36 KiB`の仮想ページからレベル4ページテーブルの物理フレームへの一時的対応付を行いました。
 
-Now the kernel can access the level 2 page table by writing to page `0 KiB` and the level 4 page table by writing to page `36 KiB`.
+これで、カーネルは`0 KiB`に書き込むことによってレベル2ページテーブルに、`36 KiB`に書き込むことによってレベル4ページテーブルにアクセスできるようになりました。
 
-The process for accessing an arbitrary page table frame with temporary mappings would be:
+任意のページテーブルに一時的対応付けを用いてアクセスする手続きは以下のようになるでしょう：
 
-- Search for a free entry in the identity-mapped level 1 table.
-- Map that entry to the physical frame of the page table that we want to access.
-- Access the target frame through the virtual page that maps to the entry.
-- Set the entry back to unused thereby removing the temporary mapping again.
+- 恒等対応しているレベル1テーブルのうち、使われていないエントリを探す。
+- そのエントリを私達のアクセスしたいページテーブルの物理フレームに対応付ける。
+- そのエントリに対応付けられている仮想ページを通じて、対象のフレームにアクセスする。
+- エントリを未使用に戻すことで、一時的対応付けを削除する。
 
-This approach reuses the same 512 virtual pages for creating the mappings and thus requires only 4KiB of physical memory. The drawback is that it is a bit cumbersome, especially since a new mapping might require modifications of multiple table levels, which means that we would need to repeat the above process multiple times.
+この方法では、同じ512個の下層ページを対応付けを作成するために再利用するため、物理メモリは4KiBしか必要としません。欠点としては、やや面倒であるということが言えるでしょう。特に、新しい対応付けを作る際に複数のページテーブルの変更が必要になるかもしれず、上の手続きを複数回繰り返さなくてはならないかもしれません。
 
-### Recursive Page Tables
+### 再帰的ページテーブル
 
-Another interesting approach, that requires no additional page tables at all, is to **map the page table recursively**. The idea behind this approach is to map some entry of the level 4 page table to the level 4 table itself. By doing this, we effectively reserve a part of the virtual address space and map all current and future page table frames to that space.
+他に興味深いアプローチとして、**再帰的にページテーブルを対応付ける**方法があり、この方法では追加のページテーブルは一切不要です。発想としては、レベル4ページテーブルのエントリのどれかをレベル4ページテーブル自体に対応付けるのです。こうすることにより、仮想アドレス空間の一部を予約しておき、現在及び将来のあらゆるページテーブルフレームをその空間に対応付けているのと同じことになります。
 
-Let's go through an example to understand how this all works:
+これがうまく行く理由を説明するために、例を見てみましょう：
 
 ![An example 4-level page hierarchy with each page table shown in physical memory. Entry 511 of the level 4 page is mapped to frame 4KiB, the frame of the level 4 table itself.](recursive-page-table.png)
 
-The only difference to the [example at the beginning of this post] is the additional entry at index `511` in the level 4 table, which is mapped to physical frame `4 KiB`, the frame of the level 4 table itself.
+[この記事の最初での例][example at the beginning of this post]との唯一の違いは、レベル4テーブルの511番目に、物理フレーム`4 KiB`すなわちレベル4テーブル自体のフレームに対応付けられたエントリが追加されていることです。
 
-[example at the beginning of this post]: #accessing-page-tables
+[example at the beginning of this post]: #peziteburuniakusesusuru
 
-By letting the CPU follow this entry on a translation, it doesn't reach a level 3 table, but the same level 4 table again. This is similar to a recursive function that calls itself, therefore this table is called a _recursive page table_. The important thing is that the CPU assumes that every entry in the level 4 table points to a level 3 table, so it now treats the level 4 table as a level 3 table. This works because tables of all levels have the exact same layout on x86_64.
+CPUにこのエントリを辿らせるようにすると、レベル3テーブルではなく、そのレベル4テーブルに再び到達します。これは再帰的関数（自らを呼び出す関数）に似ているので、**再帰的ページテーブル**と呼ばれます。レベル4テーブルのすべてのエントリはレベル3テーブルを指しているとCPUは思っているので、CPUはいまレベル4テーブルをレベル3テーブルとして扱っているということに注目してください。これがうまく行くのは、x86_64においてはすべてのレベルのテーブルが全く同じレイアウトを持っているためです。
 
-By following the recursive entry one or multiple times before we start the actual translation, we can effectively shorten the number of levels that the CPU traverses. For example, if we follow the recursive entry once and then proceed to the level 3 table, the CPU thinks that the level 3 table is a level 2 table. Going further, it treats the level 2 table as a level 1 table and the level 1 table as the mapped frame. This means that we can now read and write the level 1 page table because the CPU thinks that it is the mapped frame. The graphic below illustrates the 5 translation steps:
+実際に変換を始める前に、この再帰エントリを1回以上たどることで、CPUのたどる階層の数を短くできます。例えば、一度再帰的エントリを辿ったあとでレベル3テーブルに進むと、CPUはレベル3テーブルをレベル2テーブルだと思い込みます。同様に、レベル2テーブルをレベル1テーブルだと、レベル1テーブルを対応付けられた（物理）フレームだと思います。CPUがこれを物理フレームだと思っているということは、レベル1ページテーブルを読み書きできるということを意味します。下の図はこの5回の変換ステップを示しています：
 
 ![The above example 4-level page hierarchy with 5 arrows: "Step 0" from CR4 to level 4 table, "Step 1" from level 4 table to level 4 table, "Step 2" from level 4 table to level 3 table, "Step 3" from level 3 table to level 2 table, and "Step 4" from level 2 table to level 1 table.](recursive-page-table-access-level-1.png)
 
-Similarly, we can follow the recursive entry twice before starting the translation to reduce the number of traversed levels to two:
+同様に、変換の前に再帰エントリを2回たどることで、階層移動の回数を2回に減らせます：
 
 ![The same 4-level page hierarchy with the following 4 arrows: "Step 0" from CR4 to level 4 table, "Steps 1&2" from level 4 table to level 4 table, "Step 3" from level 4 table to level 3 table, and "Step 4" from level 3 table to level 2 table.](recursive-page-table-access-level-2.png)
 
-Let's go through it step by step: First, the CPU follows the recursive entry on the level 4 table and thinks that it reaches a level 3 table. Then it follows the recursive entry again and thinks that it reaches a level 2 table. But in reality, it is still on the level 4 table. When the CPU now follows a different entry, it lands on a level 3 table but thinks it is already on a level 1 table. So while the next entry points at a level 2 table, the CPU thinks that it points to the mapped frame, which allows us to read and write the level 2 table.
+ステップごとにこれを見てみましょう：まず、CPUはレベル4テーブルの再帰エントリをたどり、レベル3テーブルに着いたと思い込みます。同じ再帰エントリを再びたどり、レベル2テーブルに着いたと考えます。しかし実際にはまだレベル4テーブルから動いていません。CPUが異なるエントリをたどると、レベル3テーブルに到着するのですが、CPUはレベル1にすでにいるのだと思っています。そのため、次のエントリはレベル2テーブルを指しているのですが、CPUは対応付けられた物理フレームを指していると思うので、私達はレベル2テーブルを読み書きできるというわけです。
 
-Accessing the tables of levels 3 and 4 works in the same way. For accessing the level 3 table, we follow the recursive entry three times, tricking the CPU into thinking it is already on a level 1 table. Then we follow another entry and reach a level 3 table, which the CPU treats as a mapped frame. For accessing the level 4 table itself, we just follow the recursive entry four times until the CPU treats the level 4 table itself as the mapped frame (in blue in the graphic below).
+レベル3や4のテーブルにアクセスするのも同じやり方でできます。レベル3テーブルにアクセスするためには、再帰エントリを3回たどることでCPUを騙し、すでにレベル1テーブルにいると思い込ませます。そこで別のエントリをたどりレベル3テーブルに着くと、CPUはそれを対応付けられたフレームとして扱います。レベル4テーブル自体にアクセスするには、再帰エントリを4回辿ればCPUはそのレベル4テーブル自体を対応付けられたフレームとして扱ってくれるというわけです（下の青紫の矢印）。
 
 ![The same 4-level page hierarchy with the following 3 arrows: "Step 0" from CR4 to level 4 table, "Steps 1,2,3" from level 4 table to level 4 table, and "Step 4" from level 4 table to level 3 table. In blue the alternative "Steps 1,2,3,4" arrow from level 4 table to level 4 table.](recursive-page-table-access-level-3.png)
 
-It might take some time to wrap your head around the concept, but it works quite well in practice.
+この概念を理解するのは難しいかもしれませんが、実際これは非常にうまく行くのです。
 
-In the section below we explain how to construct virtual addresses for following the recursive entry one or multiple times. We will not use recursive paging for our implementation, so you don't need to read it to continue with the post. If it interests you, just click on _"Address Calculation"_ to expand it.
+下のセクションでは、再帰エントリをたどるための仮想アドレスを構成する方法について説明します。私達の（カーネルの）実装には再帰的ページングは使わないので、これを読まずに記事の続きを読み進めても構いません。もし興味がおありでしたら、下の「アドレス計算」をクリックして展開してください。
 
 ---
 
 <details>
-<summary><h4>Address Calculation</h4></summary>
+<summary><h4>アドレス計算</h4></summary>
 
 We saw that we can access tables of all levels by following the recursive entry once or multiple times before the actual translation. Since the indexes into the tables of the four levels are derived directly from the virtual address, we need to construct special virtual addresses for this technique. Remember, the page table indexes are derived from the address in the following way:
 
