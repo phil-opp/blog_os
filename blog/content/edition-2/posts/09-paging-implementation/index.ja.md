@@ -24,15 +24,13 @@ translators = ["woodyZootopia"]
 
 ## 導入
 
-## 記事へのリンクを日本語のものに直す
-
 [1つ前の記事][previous post]ではページングの概念を説明しました。セグメンテーションと比較することによってページングのメリットを示し、ページングとページテーブルの仕組みを説明し、そして`x86_64`における4層ページテーブルの設計を導入しました。ブートローダはすでにページテーブルの階層構造を設定してしまっているので、私達のカーネルは既に仮想アドレス上で動いているということを学びました。これにより、不正なメモリアクセスは、任意の物理メモリを書き換えてしまう代わりにページフォルト例外を発生させるので、安全性が向上しています。
 
 [previous post]: @/edition-2/posts/08-paging-introduction/index.ja.md
 
 記事の最後で、[ページテーブルにカーネルからアクセスできない][end of previous post]という問題が起きていました。この問題は、ページテーブルは物理メモリ内に格納されている一方、私達のカーネルは既に仮想アドレス上で実行されているために発生します。この記事ではその続きとして、私達のカーネルからページテーブルのフレームにアクセスするための様々な方法を探ります。それぞれの方法の利点と欠点を議論し、カーネルに採用する手法を決めます。
 
-[end of previous post]: @/edition-2/posts/08-paging-introduction/index.md#accessing-the-page-tables
+[end of previous post]: @/edition-2/posts/08-paging-introduction/index.ja.md#peziteburuhenoakusesu
 
 この方法を実装するには、ブートローダーからの補助が必要になるので、まずこれに設定を加えます。その後で、ページテーブルの階層構造を移動して、仮想アドレスを物理アドレスに変換する関数を実装します。最後に、ページテーブルに新しい対応関係を作る方法と、それを作るための未使用メモリを見つける方法を学びます。
 
@@ -59,7 +57,7 @@ translators = ["woodyZootopia"]
 しかし、この方法では仮想アドレス空間が散らかってしまい、大きいサイズの連続したメモリを見つけることが難しくなります。例えば、上の図において、[ファイルをメモリにマップする][memory-mapping a file]ために1000KiBの大きさの仮想メモリ領域を作りたいとします。`28KiB`を始点として領域を作ろうとすると、`1004KiB`のところで既存のページと衝突してしまうのでうまくいきません。そのため、`1008KiB`のような、十分な広さで対応付けのない領域が見つかるまで更に探さないといけません。これは[セグメンテーション][segmentation]の時に見た断片化の問題に似ています。
 
 [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
-[segmentation]: @/edition-2/posts/08-paging-introduction/index.md#fragmentation
+[segmentation]: @/edition-2/posts/08-paging-introduction/index.ja.md#duan-pian-hua-fragmentation
 
 同様に、新しいページテーブルを作ることもずっと難しくなります。なぜなら、対応するページがまだ使われていない物理フレームを見つけないといけないからです。例えば、メモリ<ruby>マップト<rp> (</rp><rt>に対応づけられた</rt><rp>) </rp></ruby>ファイルのために`1008KiB`から1000KiBにわたって仮想メモリを占有したとしましょう。すると、すると、物理アドレス`1000KiB`から`2008KiB`までのフレームは、もう恒等対応を作ることができないので使用することができません。
 
@@ -187,7 +185,7 @@ We can now calculate virtual addresses for the page tables of all four levels. W
 
 `SSSSS`は符号拡張ビットです、すなわち47番目のビットのコピーです。これはx86_64におけるアドレスの特殊な要求の一つです。これは[前回の記事][sign extension]で説明しました。
 
-[sign extension]: @/edition-2/posts/08-paging-introduction/index.md#paging-on-x86-64
+[sign extension]: @/edition-2/posts/08-paging-introduction/index.ja.md#x86-64niokerupezingu
 
 [8進][octal]数を用いたのは、8進数の1文字が3ビットを表すため、9ビットからなるそれぞれのページテーブルをきれいに分けることができるためです。4ビットからなる16進ではこうはいきません。
 
@@ -376,9 +374,9 @@ pub mod memory;
 
 ### ページテーブルにアクセスする
 
-[前の記事の最後]で、私達のカーネルの実行しているページテーブルを見てみようとしましたが、`CR3`レジスタの指す物理フレームにアクセスすることができなかったためそれはできませんでした。前回の続きとして、`active_level_4_table`という、現在<ruby>有効<rp> (</rp><rt>アクティブ</rt><rp>) </rp></ruby>なレベル4ページテーブルへの参照を返す関数を定義するところから始めましょう：
+[前の記事の最後][end of the previous post]で、私達のカーネルの実行しているページテーブルを見てみようとしましたが、`CR3`レジスタの指す物理フレームにアクセスすることができなかったためそれはできませんでした。前回の続きとして、`active_level_4_table`という、現在<ruby>有効<rp> (</rp><rt>アクティブ</rt><rp>) </rp></ruby>なレベル4ページテーブルへの参照を返す関数を定義するところから始めましょう：
 
-[end of the previous post]: @/edition-2/posts/08-paging-introduction/index.md#accessing-the-page-tables
+[end of the previous post]: @/edition-2/posts/08-paging-introduction/index.ja.md#peziteburuhenoakusesu
 
 ```rust
 // in src/memory.rs
@@ -604,7 +602,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 期待したとおり、恒等対応しているアドレス`0xb8000`は同じ物理アドレスに変換されました。コードページとスタックページは物理アドレスのどこかしかに変換されていますが、その場所はブートローダが私達のカーネルのために最初に作った対応づけに依存します。また、下から12ビットは変換のあとも常に同じであるということも注目に値します：この部分は[ページオフセット][_page offset_]であり、変換には関わらないためです。
 
-[_page offset_]: @/edition-2/posts/08-paging-introduction/index.md#paging-on-x86-64
+[_page offset_]: @/edition-2/posts/08-paging-introduction/index.ja.md#x86-64niokerupezingu
 
 それぞれの物理アドレスは`physical_memory_offset`を足すことでアクセスできるわけですから、`physical_memory_offset`自体を（仮想アドレスとして）変換すると物理アドレス`0`を指すはずです。しかし、効率よく対応付けを行うためにここではhuge pageが使われており、これはまだサポートしていないので変換には失敗しています。
 
@@ -754,7 +752,7 @@ pub fn create_example_mapping(
 
 `map_to`関数が`page`と`unused_frame`に加えてフラグの集合と`frame_allocator`への参照を取りますが、これについてはすぐに説明します。フラグについては、`PRESENT`フラグという有効なエントリ全てに必須のフラグと、`WRITABLE`フラグという対応するページを書き込み可能にするフラグをセットしています。フラグの一覧については、前記事の[ページテーブルの形式][_Page Table Format_]を参照してください。
 
-[_Page Table Format_]: @/edition-2/posts/08-paging-introduction/index.md#page-table-format
+[_Page Table Format_]: @/edition-2/posts/08-paging-introduction/index.ja.md#peziteburunoxing-shi
 
 [`map_to`]関数は失敗しうるので、[`Result`]を返します。これは失敗しても構わない単なるテストコードなので、エラーが起きたときは[`expect`]を使ってパニックしてしまうことにします。この関数は成功したとき[`MapperFlush`]型を返します。この型の[`flush`]メソッドを使うと、新しく対応させたページをトランスレーション・ルックアサイド・バッファ (TLB) から簡単にflushすることができます。この型は`Result`と同じく[`#[must_use]`][must_use]属性を使っており、使用し忘れると警告を出します。
 
@@ -798,7 +796,7 @@ unsafe impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
 
 この図の仮想アドレス空間には、2つの候補となるページを黄色で示しています。ページのうち一つはアドレス`0x803fe00000`で、これは（青で示された）対応付けられたページの3つ前です。レベル4と3のテーブルのインデクスは青いページと同じですが、レベル2と1のインデクスは違います（[前の記事][page-table-indices]を参照）。レベル2テーブルのインデクスが違うということは、異なるレベル1テーブルが使われることを意味します。そんなレベル1テーブルは存在しないので、もしこちらを使っていたら、使われていない物理フレームを追加（でアロケート）する必要が出てきます。対して、2つ目のアドレス`0x803fe02000`にある候補のページは、青のページと同じレベル1ページテーブルを使うのでこの問題は発生しません。よって、必要となるすべてのページテーブルはすでに存在しています。
 
-[page-table-indices]: @/edition-2/posts/08-paging-introduction/index.md#paging-on-x86-64
+[page-table-indices]: @/edition-2/posts/08-paging-introduction/index.ja.md#x86-64niokerupezingu
 
 まとめると、新しい対応を作るときの難易度は、対応付けようとしている仮想ページに依存するということです。作ろうとしているページのレベル1ページテーブルがすでに存在すると最も簡単で、エントリを一つ書き込むだけです。ページがレベル3のテーブルすら存在しない領域にある場合が最も難しく、その場合まずレベル3，2，1のページテーブルを新しく作る必要があります。
 
@@ -837,7 +835,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 次にページを生ポインタに変更して、オフセット`400`に値を書き込みます。このページの最初に書き込むとVGAバッファの一番上の行になり、次のprintlnで即座に画面外に流れていってしまうのでそれはしません。値`0x_f021_f077_f065_f04e`は、白背景の"New!"という文字列を表します。[VGAテキストモードの記事][in the _“VGA Text Mode”_ post]で学んだように、VGAバッファへの書き込みはvolatileでなければならないので、[`write_volatile`]メソッドを使っています。
 
-[in the _“VGA Text Mode”_ post]: @/edition-2/posts/03-vga-text-buffer/index.md#volatile
+[in the _“VGA Text Mode”_ post]: @/edition-2/posts/03-vga-text-buffer/index.ja.md#volatile
 [`write_volatile`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write_volatile
 
 QEMUで実行すると、以下の出力を得ます：
