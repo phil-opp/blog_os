@@ -106,7 +106,7 @@ Nightly версия компилятора позволяет нам подкл
 
 ### Спецификация целевой платформы
 
-Cargo поддерживает различные целевые системы через параметр `--target`. Цель описывается так называемой тройкой _[target triple]_, которая описывает архитектуру процессора, производителя, операционную систему и [ABI]. Например, тройка целей `x86_64-unknown-linux-gnu` описывает систему с процессором `x86_64`, неизвестным поставщиком и операционной системой Linux с GNU ABI. Rust поддерживает [множество различных целевых троек][many different target triples] [поддержка платформы][platform-support], включая `arm-linux-androideabi` для Android или [`wasm32-unknown-unknown` для WebAssembly] (https://www.hellorust.com/setup/wasm-target/).
+Cargo поддерживает различные целевые системы через параметр `--target`. Цель описывается так называемой тройкой _[target triple]_, которая описывает архитектуру процессора, производителя, операционную систему и [ABI]. Например, тройка целей `x86_64-unknown-linux-gnu` описывает систему с процессором `x86_64`, неизвестным поставщиком и операционной системой Linux с GNU ABI. Rust поддерживает [множество различных целевых троек][platform-support], включая `arm-linux-androideabi` для Android или [`wasm32-unknown-unknown` для WebAssembly](https://www.hellorust.com/setup/wasm-target/).
 
 [target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [ABI]: https://stackoverflow.com/a/2456882
