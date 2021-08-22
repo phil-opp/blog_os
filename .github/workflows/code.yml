@@ -78,14 +78,10 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: 1
           HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: 1
           HOMEBREW_NO_INSTALL_CLEANUP: 1
-      - name: Install Scoop (Windows)
-        run: |
-          Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')
-          echo "$HOME\scoop\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        if: runner.os == 'Windows'
-        shell: pwsh
       - name: Install QEMU (Windows)
-        run: scoop install qemu
+        run: |
+          choco install qemu --version 2021.5.5
+          echo "$Env:Programfiles\qemu" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         if: runner.os == 'Windows'
         shell: pwsh
       - name: "Print QEMU Version"
