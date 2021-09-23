@@ -42,7 +42,7 @@ Cet article décrit les étapes nécessaires pour créer un exécutable Rust aut
 
 ## Désactiver la Bibliothèque Standard
 
-Par défaut, toutes les crates Rust relient la [bibliothèque standard], qui dépend du système d'exploitation pour les fonctionnalités telles que les fils d'exécution, les fichiers ou le réseau. Elle dépend aussi de la bibliothèque standard de C `libc`, qui intéragit de près avec les services de l'OS. Comme notre plan est d'écrire un système d'exploitation, nous ne pouvons pas utiliser des bibliothèques dépendant de l'OS. Nous devons donc désactiver l'inclusion automatique de la bibliothèque standard en utilisant l'[attribut `no std`]
+Par défaut, toutes les crates Rust relient la [bibliothèque standard], qui dépend du système d'exploitation pour les fonctionnalités telles que les fils d'exécution, les fichiers ou le réseau. Elle dépend aussi de la bibliothèque standard de C `libc`, qui intéragit de près avec les services de l'OS. Comme notre plan est d'écrire un système d'exploitation, nous ne pouvons pas utiliser des bibliothèques dépendant de l'OS. Nous devons donc désactiver l'inclusion automatique de la bibliothèque standard en utilisant l'[attribut `no std`].
 
 [bibliothèque standard]: https://doc.rust-lang.org/std/
 [attribut `no std`]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
@@ -68,9 +68,9 @@ Le fichier `Cargo.toml` contient la configuration de la crate, par exemple le no
 
 [versionnage sémantique]: https://semver.org/
 
-### The `no_std` Attribute
+### L'Attribut `no_std`
 
-Right now our crate implicitly links the standard library. Let's try to disable this by adding the [`no_std` attribute]:
+Pour l'instant, notre crate relie la bilbiothèque standard implicitement. Désactivons cela en ajoutant l'[attribut `no std`] : 
 
 ```rust
 // main.rs
@@ -82,7 +82,7 @@ fn main() {
 }
 ```
 
-When we try to build it now (by running `cargo build`), the following error occurs:
+Quand nous essayons maintenant de compiler (avec `cargo build)`, l'erreur suivante se produit :
 
 ```
 error: cannot find macro `println!` in this scope
@@ -92,12 +92,12 @@ error: cannot find macro `println!` in this scope
   |     ^^^^^^^
 ```
 
-The reason for this error is that the [`println` macro] is part of the standard library, which we no longer include. So we can no longer print things. This makes sense, since `println` writes to [standard output], which is a special file descriptor provided by the operating system.
+La raison est que la [macro `println`] fait partie de la bibliothèque standard, que nous ne pouvons plus utiliser. Nous ne pouvons donc plus afficher des choses. Cela est logique, car `println` écrit dans la [sortie standard], qui est un descripteur de fichier spécial fourni par le système d'eploitation.
 
-[`println` macro]: https://doc.rust-lang.org/std/macro.println.html
-[standard output]: https://en.wikipedia.org/wiki/Standard_streams#Standard_output_.28stdout.29
+[macro `println`]: https://doc.rust-lang.org/std/macro.println.html
+[sortie standard]: https://fr.wikipedia.org/wiki/Flux_standard#Sortie_standard
 
-So let's remove the printing and try again with an empty main function:
+Supprimons l'affichage et essayons à nouveau avec une fonction main vide :
 
 ```rust
 // main.rs
@@ -113,51 +113,51 @@ error: `#[panic_handler]` function required, but not found
 error: language item required, but not found: `eh_personality`
 ```
 
-Now the compiler is missing a `#[panic_handler]` function and a _language item_.
+Maintenant le compilateur a besoin d'une fonction `#[panic_handler]` et d'un _objet de langage_.
 
-## Panic Implementation
+## Implémentation de Panic
 
-The `panic_handler` attribute defines the function that the compiler should invoke when a [panic] occurs. The standard library provides its own panic handler function, but in a `no_std` environment we need to define it ourselves:
+L'attribut `panic_handler` définit la fonction que le compilateur doit appeler lorsqu'un [panic] arrive. La bibliothèque standard fournit sa propre fonction de gestion de panic mais dans un environnement `no_std`, nous avons besoin de le définir nous-mêmes : 
 
 [panic]: https://doc.rust-lang.org/stable/book/ch09-01-unrecoverable-errors-with-panic.html
 
 ```rust
-// in main.rs
+// dans main.rs
 
 use core::panic::PanicInfo;
 
-/// This function is called on panic.
+/// Cette fonction est appelée à chaque panic.
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 ```
 
-The [`PanicInfo` parameter][PanicInfo] contains the file and line where the panic happened and the optional panic message. The function should never return, so it is marked as a [diverging function] by returning the [“never” type] `!`. There is not much we can do in this function for now, so we just loop indefinitely.
+Le [paramètre `PanicInfo`][PanicInfo] contient le fichier et la ligne où le panic a eu lieu et le message optionnel de panic. La fonction ne devrait jamais retourner quoi que ce soit, elle est donc marquée comme [fonction divergente] en retournant le [type “never”] `!`. Nous ne pouvons pas faire grand chose dans cette fonction pour le moment, nous bouclons donc indéfiniment.
 
 [PanicInfo]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
-[diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
-[“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
+[fonction divergente]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
+[type “never”]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-## The `eh_personality` Language Item
+## L'Objet de Langage `eh_personality`
 
-Language items are special functions and types that are required internally by the compiler. For example, the [`Copy`] trait is a language item that tells the compiler which types have [_copy semantics_][`Copy`]. When we look at the [implementation][copy code], we see it has the special `#[lang = "copy"]` attribute that defines it as a language item.
+Les objets de langage sont des fonctions et des types spéciaux qui sont requis par le compilateur de manière interne. Par example, le trait [`Copy`] est un objet de langage qui indique au compilateur quels types possèdent la [sémantique copy][`Copy`]. Quand nous regardons l'[implémantation][copy code] du code, nous pouvons voir qu'il possède l'attribut spécial `#[lang = copy]` qui le définit comme étant un objet de langage.
 
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
 
-While providing custom implementations of language items is possible, it should only be done as a last resort. The reason is that language items are highly unstable implementation details and not even type checked (so the compiler doesn't even check if a function has the right argument types). Fortunately, there is a more stable way to fix the above language item error.
+Bien qu'il soit possible de fourning des implémentations personnalisées des objets de langage, cela ne devrait être fait qu'en dernier recours. La raison est que les objets de langages sont des détails d'implémentation très instables et qui ne sont même pas vérifiés au niveau de leur type (donc le compilateur ne vérifie même pas qu'une fonction possède les bons types d'arguments). Heureusement, il y a une manière plus stable de corriger l'erreur d'object de langage ci-dessus.
 
-The [`eh_personality` language item] marks a function that is used for implementing [stack unwinding]. By default, Rust uses unwinding to run the destructors of all live stack variables in case of a [panic]. This ensures that all used memory is freed and allows the parent thread to catch the panic and continue execution. Unwinding, however, is a complicated process and requires some OS specific libraries (e.g. [libunwind] on Linux or [structured exception handling] on Windows), so we don't want to use it for our operating system.
+L'[objet de langage `eh_personality`] marque une fonction qui est utilisée pour l'implémentation du [déroulement de pile]. Par défaut, Rust utilise le déroulement de pule pour exécuter les destructeurs de chaque variables vivante sur le stack en cas de [panic]. Cela assure que toute la mémoire utilisée est libérée et permet au fil dexécution parent d'attraper le panix et de continuer l'exécution. Le déroulement toutefois est un processus compliqué et nécessite des bibliothèques spécifiques à l'OS ([libunwind] pour Linux ou [gestion structurée des erreurs] pour Windows), nous ne voulons donc pas l'utiliser pour notre sustème d'exploitation.
 
-[`eh_personality` language item]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
-[stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
+[objet de langage `eh_personality`]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
+[déroulement de pile]: https://docs.microsoft.com/fr-fr/cpp/cpp/exceptions-and-stack-unwinding-in-cpp?view=msvc-160
 [libunwind]: https://www.nongnu.org/libunwind/
-[structured exception handling]: https://docs.microsoft.com/en-us/windows/win32/debug/structured-exception-handling
+[gestion structurée des erreurs]: https://docs.microsoft.com/fr-fr/windows/win32/debug/structured-exception-handling
 
-### Disabling Unwinding
+### Désactiver le Déroulement
 
-There are other use cases as well for which unwinding is undesirable, so Rust provides an option to [abort on panic] instead. This disables the generation of unwinding symbol information and thus considerably reduces binary size. There are multiple places where we can disable unwinding. The easiest way is to add the following lines to our `Cargo.toml`:
+Il y a d'autres cas d'utilisation pour lesquels le déroulement n'est pas souhaité. Rust offre donc une option pour [interrompre après un panic]. Cela désactive la génération de symboles de déroulement et ainsi reduit considérablement la taille de l'exécutable. Il y a de multiples endroit où nous pouvons désactiver le déroulement. Le plus simple est d'ajouter les lignes suivantes dans notre `Cargo.toml` :
 
 ```toml
 [profile.dev]
@@ -167,33 +167,34 @@ panic = "abort"
 panic = "abort"
 ```
 
-This sets the panic strategy to `abort` for both the `dev` profile (used for `cargo build`) and the `release` profile (used for `cargo build --release`). Now the `eh_personality` language item should no longer be required.
+Cela configure la stratégie de panic à `abort` pour le profile `dev` (utilisé pour `cargo build`) et le profil `release` (utilisé pour `cargo build --release`). Maintenant l'objet de langage `eh_personality` ne devrait plus être rquis. 
 
-[abort on panic]: https://github.com/rust-lang/rust/pull/32900
+[interrompre après un panic]: https://github.com/rust-lang/rust/pull/32900
 
-Now we fixed both of the above errors. However, if we try to compile it now, another error occurs:
+Nous avons dorénavant corrigé les deux erreurs ci-dessus. Toutefois, si nous essayons de compiler, une autre erreur apparaît :
 
 ```
 > cargo build
 error: requires `start` lang_item
 ```
 
-Our program is missing the `start` language item, which defines the entry point.
+L'objet de langage `start` manque à notre programme. Il définit le point d'entrée.
 
-## The `start` attribute
+## L'attribut `start`
 
-One might think that the `main` function is the first function called when you run a program. However, most languages have a [runtime system], which is responsible for things such as garbage collection (e.g. in Java) or software threads (e.g. goroutines in Go). This runtime needs to be called before `main`, since it needs to initialize itself.
+On pourrait penser que la fonction `main` est la première fonction appelée lorsqu'un programme est exécuté. Toutefois, la plupart des langage a un [environnement d'exécution] qui est responsables des tâches telles que le ramassage des miettes (ex: dans Java) ou les fils d'exécution logiciel (ex: les goroutines dans Go). Cet environnement doit être appelé avant `main` puisqu'il a besoin de s'initialiser.
 
-[runtime system]: https://en.wikipedia.org/wiki/Runtime_system
+[environnement d'exécution]: https://fr.wikipedia.org/wiki/Environnement_d%27ex%C3%A9cution
 
-In a typical Rust binary that links the standard library, execution starts in a C runtime library called `crt0` (“C runtime zero”), which sets up the environment for a C application. This includes creating a stack and placing the arguments in the right registers. The C runtime then invokes the [entry point of the Rust runtime][rt::lang_start], which is marked by the `start` language item. Rust only has a very minimal runtime, which takes care of some small things such as setting up stack overflow guards or printing a backtrace on panic. The runtime then finally calls the `main` function.
+Dans un exécutable Rust classique qui relie la bibliothèque standard, l'exécution commence dans une bibliothèque d'environnement d'exécution C appelé `crt0` (“C runtime zero”). Elle configure l'environnement pour une application C. Cela comprend la création d'une pile et le placement des arguments dans les bons registres. L'environnement d'exécution C appelle ensuite [le point d'entrée de l'environnement d'exécution de Rust][rt::lang_start], qui est marqué par l'objet de langage `start`. Rust possède un environnement d'exécution très minime, qui se charge de petites tâches telles que la configuration des guardes de dépassement de pile ou l'affichage de la trace d'appels lors d'un panic. L'environnement d'exécution finit par appeler la fonction `main`.
 
 [rt::lang_start]: https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73
 
-Our freestanding executable does not have access to the Rust runtime and `crt0`, so we need to define our own entry point. Implementing the `start` language item wouldn't help, since it would still require `crt0`. Instead, we need to overwrite the `crt0` entry point directly.
+Notre exécutable autoporté n'a pas accès à l'environnement d'exécution de Rust ni à `crt0`. Nous avons donc besion de définir notre propre point d'entrée. Implémenter l'objet de langage `start` n'aiderait pas car nous aurions toujours besoin de `crt0`. Nous avons plutôt besoin de réécrire le point d'entrée de `crt0` directement.
 
-### Overwriting the Entry Point
-To tell the Rust compiler that we don't want to use the normal entry point chain, we add the `#![no_main]` attribute.
+### Réécrire le Point d'Entrée
+
+Pour indiquer au compilateur que nous ne voulons pas utiliser la chaîne de point d'entrée normale, nous ajoutons l'attribut `#![no_main]`. 
 
 ```rust
 #![no_std]
@@ -201,14 +202,14 @@ To tell the Rust compiler that we don't want to use the normal entry point chain
 
 use core::panic::PanicInfo;
 
-/// This function is called on panic.
+/// Cette fonction est appelée à chaque panic.
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 ```
 
-You might notice that we removed the `main` function. The reason is that a `main` doesn't make sense without an underlying runtime that calls it. Instead, we are now overwriting the operating system entry point with our own `_start` function:
+Vous remarquerez peut-être que nous avons retiré la fonction `main`. La raison est que la présence de cette fonction n'a pas de sens sans un environnement d'exécution sous-jacent qui l'appelle. À la place, nous réécrivons le point d'entrée du système d'exploitation avec notre propre fonction `_start` :
 
 ```rust
 #[no_mangle]
@@ -217,18 +218,18 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-By using the `#[no_mangle]` attribute we disable the [name mangling] to ensure that the Rust compiler really outputs a function with the name `_start`. Without the attribute, the compiler would generate some cryptic `_ZN3blog_os4_start7hb173fedf945531caE` symbol to give every function an unique name. The attribute is required because we need to tell the name of the entry point function to the linker in the next step.
+En utilisant l'attribut `#[no_mangle]`, nous désactivons la [décoration de nom] pour assurer que le compilateur Rust crée une fonction avec le nom `_start`. Sans cet attribut, le compilateur génèrerait un symbol obscure `_ZN3blog_os4_start7hb173fedf945531caE` pour donner un nom unique à chaque fonction. L'attribut est nécessaire car nous avons besoin d'indiquer le nom de la fonction de point d'entrée à l'éditeur de lien dans l'étape suivante.
 
-We also have to mark the function as `extern "C"` to tell the compiler that it should use the [C calling convention] for this function (instead of the unspecified Rust calling convention). The reason for naming the function `_start` is that this is the default entry point name for most systems.
+Nous devons aussi marquer la fonction avec `extern C` pour indiquer au compilateur qu'il devrait utiliser la [convention de nommage] de C pour cette fonction (au lieu de la convention de nommage de Rust non-spécifiée). Cette fonction se nomme `_start` car c'est le nom par défaut des points d'entrée pour la plupart des systèmes.
 
-[name mangling]: https://en.wikipedia.org/wiki/Name_mangling
-[C calling convention]: https://en.wikipedia.org/wiki/Calling_convention
+[décoration de nom]: https://fr.wikipedia.org/wiki/D%C3%A9coration_de_nom
+[convention de nommage]: https://fr.wikipedia.org/wiki/Convention_de_nommage
 
-The `!` return type means that the function is diverging, i.e. not allowed to ever return. This is required because the entry point is not called by any function, but invoked directly by the operating system or bootloader. So instead of returning, the entry point should e.g. invoke the [`exit` system call] of the operating system. In our case, shutting down the machine could be a reasonable action, since there's nothing left to do if a freestanding binary returns. For now, we fulfill the requirement by looping endlessly.
+Le type de retour `!` signifie que la fonction est divergente, c-à-d qu'elle n'a pas le droit de retourner quoi que ce soit. Cela est nécessaire car le point d'entrée n'est pas appelé par une fonction, mais invoqué directement par le système d'exploitation ou par le chargeur d'amorçage. Donc au lieu de retourner une valeur, le point d'entrée doit invoquer l'[appel système `exit`] du système d'exploitation. Dans notre cas, arrêter la machine pourrait être une action convenable, puisqu'il ne reste rien d'autre à faire si un exécutable autoporté s'arrête. Pour l'instant, nous remplissons le condition en bouclant indéfiniement.
 
-[`exit` system call]: https://en.wikipedia.org/wiki/Exit_(system_call)
+[appel système `exit`]: https://en.wikipedia.org/wiki/Exit_(system_call)
 
-When we run `cargo build` now, we get an ugly _linker_ error.
+Quand nous lançons `cargo build`, nous obtenons une erreur de l'_éditeur de liens_.
 
 ## Linker Errors
 
