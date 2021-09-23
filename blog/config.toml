@@ -13,6 +13,7 @@ languages = [
     { code = "ja" }, # Japanese
     { code = "fa" }, # Persian
     { code = "ru" }, # Russian
+    { code = "fr" }, # French
 ]
 
 ignored_content = ["*/README.md"]
@@ -100,7 +101,6 @@ translated_content_notice = "این یک ترجمه از جامعه کاربرا
 translated_by = "ترجمه توسط"
 word_separator = "و"
 
-
 [translations.ru]
 lang_name = "Russian"
 toc = "Содержание"
@@ -113,3 +113,16 @@ translated_content = "Переведенное содержание:"
 translated_content_notice = "Это перевод сообщества поста <strong><a href=\"_original.permalink_\">_original.title_</a></strong>. Он может быть неполным, устаревшим или содержать ошибки. Пожалуйста, сообщайте о любых проблемах!"
 translated_by = "Перевод сделан"
 word_separator = "и"
+
+[translations.en]
+lang_name = "French"
+toc = "Table des matières"
+all_posts = "« Tous les posts"
+comments = "Commentaires"
+comments_notice = "Veuillez commenter en Anglais si possible."
+readmore = "Voir&nbsp;plus&nbsp;»"
+not_translated = "(Ce post n'est pas encore traduit.)"
+translated_content = "Contenu traduit :"
+translated_content_notice = "Ceci est une traduction communautaire du post <strong><a href=\"_original.permalink_\">_original.title_</a></strong>. Il peut être incomplet, obsolète ou contenir des erreurs. Veuillez signaler les quelconques problèmes !"
+translated_by = "Traduction :"
+word_separator = "et"
