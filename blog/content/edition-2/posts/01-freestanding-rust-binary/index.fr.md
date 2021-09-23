@@ -40,21 +40,22 @@ Cela signifie que nous ne pouvons pas utiliser la majeure partie de la [biblioth
 Pour créer un noyau d'OS en Rust, nous devons créer un exécutable qui peut tourner sans système d'exploitation sous-jacent. Un tel exécutable est appelé “freestanding” (autoporté) ou “bare-metal”.
 Cet article décrit les étapes nécessaires pour créer un exécutable Rust autoporté et explique pourquoi ces étapes sont importantes. Si vous n'êtes intéressé que par un example minimal, vous pouvez **[aller au résumé](#summary)**.
 
-## Disabling the Standard Library
-By default, all Rust crates link the [standard library], which depends on the operating system for features such as threads, files, or networking. It also depends on the C standard library `libc`, which closely interacts with OS services. Since our plan is to write an operating system, we can not use any OS-dependent libraries. So we have to disable the automatic inclusion of the standard library through the [`no_std` attribute].
+## Désactiver la Bibliothèque Standard
 
-[standard library]: https://doc.rust-lang.org/std/
-[`no_std` attribute]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
+Par défaut, toutes les crates Rust relient la [bibliothèque standard], qui dépend du système d'exploitation pour les fonctionnalités telles que les fils d'exécution, les fichiers ou le réseau. Elle dépend aussi de la bibliothèque standard de C `libc`, qui intéragit de près avec les services de l'OS. Comme notre plan est d'écrire un système d'exploitation, nous ne pouvons pas utiliser des bibliothèques dépendant de l'OS. Nous devons donc désactiver l'inclusion automatique de la bibliothèque standard en utilisant l'[attribut `no std`]
 
-We start by creating a new cargo application project. The easiest way to do this is through the command line:
+[bibliothèque standard]: https://doc.rust-lang.org/std/
+[attribut `no std`]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
+
+Nous commencons par créer un nouveau projet d'application cargo. La manière la plus simple de faire est avec la ligne de commande : 
 
 ```
 cargo new blog_os --bin --edition 2018
 ```
 
-I named the project `blog_os`, but of course you can choose your own name. The `--bin` flag specifies that we want to create an executable binary (in contrast to a library) and the `--edition 2018` flag specifies that we want to use the [2018 edition] of Rust for our crate. When we run the command, cargo creates the following directory structure for us:
+J'ai nommé le projet `blog_os`, mais vous pouvez bien-sûr choisir le nom qu'il vous convient. Le flag `--bin` indique que nous voulons créer un exécutable (contrairement à une bibliothèque) et le flag `--edition 2018` indique que nous voulons utiliser l'[édition 2018] de Rust pour notre crate. Quand nous lançons la commande, cargo crée la structure de répertoire suivante pour nous :
 
-[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
+[édition 2018]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
 
 ```
 blog_os
@@ -63,9 +64,9 @@ blog_os
     └── main.rs
 ```
 
-The `Cargo.toml` contains the crate configuration, for example the crate name, the author, the [semantic version] number, and dependencies. The `src/main.rs` file contains the root module of our crate and our `main` function. You can compile your crate through `cargo build` and then run the compiled `blog_os` binary in the `target/debug` subfolder.
+Le fichier `Cargo.toml` contient la configuration de la crate, par exemple le nom de la crate, l'auteur, le numéro de [versionnage sémantique] et les dépendances. Le fichier `src/main.rs` contient le module racine de notre crate et notre fonction `main`. Vous pouvez compiler votre crate avec `cargo build` et ensuite exécuter l'exécutable compilé `blog_os` dans le sous-dossier `target/debug`.
 
-[semantic version]: https://semver.org/
+[versionnage sémantique]: https://semver.org/
 
 ### The `no_std` Attribute
 
