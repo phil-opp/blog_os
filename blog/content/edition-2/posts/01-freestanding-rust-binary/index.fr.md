@@ -8,7 +8,7 @@ date = 2018-02-10
 chapter = "Bare Bones"
 +++
 
-La première étape pour créer notre propre noyeau de système d'exploitation est de créer un exécutable Rust qui ne relie pas la bibliothèque standard. Cela rend possible l'exécution du code Rust sur la [machine nue] sans système d'exploitation sous-jacent.
+La première étape pour créer notre propre noyeau de système d'exploitation est de créer un exécutable Rust qui ne relie pas la bibliothèque standard. Cela rend possible l'exécution du code Rust sur la ["bare machine"][machine nue] sans système d'exploitation sous-jacent.
 
 [machine nue]: https://en.wikipedia.org/wiki/Bare_machine
 
@@ -38,7 +38,7 @@ Cela signifie que nous ne pouvons pas utiliser la majeure partie de la [biblioth
 [sécurité de la mémoire]: https://tonyarcieri.com/it-s-time-for-a-memory-safety-intervention
 
 Pour créer un noyau d'OS en Rust, nous devons créer un exécutable qui peut tourner sans système d'exploitation sous-jacent. Un tel exécutable est appelé “freestanding” (autoporté) ou “bare-metal”.
-Cet article décrit les étapes nécessaires pour créer un exécutable Rust autoporté et explique pourquoi ces étapes sont importantes. Si vous n'êtes intéressé que par un example minimal, vous pouvez **[aller au résumé](#summary)**.
+Cet article décrit les étapes nécessaires pour créer un exécutable Rust autoporté et explique pourquoi ces étapes sont importantes. Si vous n'êtes intéressé que par un example minimal, vous pouvez **[aller au résumé](#résumé)**.
 
 ## Désactiver la Bibliothèque Standard
 
@@ -218,7 +218,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-En utilisant l'attribut `#[no_mangle]`, nous désactivons la [décoration de nom] pour assurer que le compilateur Rust crée une fonction avec le nom `_start`. Sans cet attribut, le compilateur génèrerait un symbol obscure `_ZN3blog_os4_start7hb173fedf945531caE` pour donner un nom unique à chaque fonction. L'attribut est nécessaire car nous avons besoin d'indiquer le nom de la fonction de point d'entrée à l'éditeur de lien dans l'étape suivante.
+En utilisant l'attribut `#[no_mangle]`, nous désactivons la [décoration de nom] pour assurer que le compilateur Rust crée une fonction avec le nom `_start`. Sans cet attribut, le compilateur génèrerait un symbol obscure `_ZN3blog_os4_start7hb173fedf945531caE` pour donner un nom unique à chaque fonction. L'attribut est nécessaire car nous avons besoin d'indiquer le nom de la fonction de point d'entrée à l'éditeur de lien (*linker*) dans l'étape suivante.
 
 Nous devons aussi marquer la fonction avec `extern C` pour indiquer au compilateur qu'il devrait utiliser la [convention de nommage] de C pour cette fonction (au lieu de la convention de nommage de Rust non-spécifiée). Cette fonction se nomme `_start` car c'est le nom par défaut des points d'entrée pour la plupart des systèmes.
 
@@ -227,23 +227,23 @@ Nous devons aussi marquer la fonction avec `extern C` pour indiquer au compilate
 
 Le type de retour `!` signifie que la fonction est divergente, c-à-d qu'elle n'a pas le droit de retourner quoi que ce soit. Cela est nécessaire car le point d'entrée n'est pas appelé par une fonction, mais invoqué directement par le système d'exploitation ou par le chargeur d'amorçage. Donc au lieu de retourner une valeur, le point d'entrée doit invoquer l'[appel système `exit`] du système d'exploitation. Dans notre cas, arrêter la machine pourrait être une action convenable, puisqu'il ne reste rien d'autre à faire si un exécutable autoporté s'arrête. Pour l'instant, nous remplissons le condition en bouclant indéfiniement.
 
-[appel système `exit`]: https://en.wikipedia.org/wiki/Exit_(system_call)
+[appel système `exit`]: https://fr.wikipedia.org/wiki/Appel_syst%C3%A8me
 
-Quand nous lançons `cargo build`, nous obtenons une erreur de l'_éditeur de liens_.
+Quand nous lançons `cargo build`, nous obtenons une erreur de _linker_.
 
-## Linker Errors
+## Erreurs de Linker
 
-The linker is a program that combines the generated code into an executable. Since the executable format differs between Linux, Windows, and macOS, each system has its own linker that throws a different error. The fundamental cause of the errors is the same: the default configuration of the linker assumes that our program depends on the C runtime, which it does not.
+Le linker est un programme qui va transformer le code généré en exécutable. Comme le format de l'exécutable differt entre Linux, Windows et macOS, chaque system possède son propre linker qui lève une erreur différente. La cause fondamentale de cette erreur est la même : la configuration par défaut du linker part du principe que notre programme dépend de l'environnement d'exécution de C, ce qui n'est pas le cas.
 
-To solve the errors, we need to tell the linker that it should not include the C runtime. We can do this either by passing a certain set of arguments to the linker or by building for a bare metal target.
+Pour résoudre les erreurs, nous devons indiquer au linker qu'il ne doit pas include l'environnement d'exécution de C. Nous pouvons faire cela soit en passant un ensemble précis d'arguments, soit en compilant pour une cible bare metal.
 
-### Building for a Bare Metal Target
+### Compiler pour une Cible Bare Metal
 
-By default Rust tries to build an executable that is able to run in your current system environment. For example, if you're using Windows on `x86_64`, Rust tries to build a `.exe` Windows executable that uses `x86_64` instructions. This environment is called your "host" system.
+Par défault Rust essaie de compiler un exécutable qui est compatible avec l'environnment du système actuel. Par exemple, si vous utilisez Windows avec `x86_64`, Rust essaie de compiler un exécutable Windows `.exe` qui utilises des instructions `x86_64`. Cet environnement est appelé système "hôte".
 
-To describe different environments, Rust uses a string called [_target triple_]. You can see the target triple for your host system by running `rustc --version --verbose`:
+Pour décrire plusieurs environnements, Rust utilise un chaîne de caractères appelée [_triplé cible_]. Vous pouvez voir le triplé cible de votre système hôte en lançant la commande `rustc --version --verbose` :
 
-[_target triple_]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[_triplé cible_]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 
 ```
 rustc 1.35.0-nightly (474e7a648 2019-04-07)
@@ -255,48 +255,49 @@ release: 1.35.0-nightly
 LLVM version: 8.0
 ```
 
-The above output is from a `x86_64` Linux system. We see that the `host` triple is `x86_64-unknown-linux-gnu`, which includes the CPU architecture (`x86_64`), the vendor (`unknown`), the operating system (`linux`), and the [ABI] (`gnu`).
+La sortie ci-dessus provient d'un système Linux `x86_64`. Nous povons voir que le triplé `host` est `x86_64-unknown-linux-gnu`, qui inclut l'architecture du CPU (`x86_64`), le vendeur (`unknown`), le système d'exploitation (`linux`) et l'[ABI] (`gnu`).
 
-[ABI]: https://en.wikipedia.org/wiki/Application_binary_interface
+[ABI]: https://fr.wikipedia.org/wiki/Application_binary_interface
 
-By compiling for our host triple, the Rust compiler and the linker assume that there is an underlying operating system such as Linux or Windows that use the C runtime by default, which causes the linker errors. So to avoid the linker errors, we can compile for a different environment with no underlying operating system.
+En compilant pour notre triplé hôte, le compileur Rust ainsi que le linker supposent qu'il y a un système d'exploitation sous-jacent comme Linux ou Windows qui utilise l'environnement d'exécution C par défaut, ce qui cause les erreurs de linker. Donc pour éviter ces erreurs, nous pouvons compiler pour un environnement différent sans système d'exploitation sous-jacent.
 
-An example for such a bare metal environment is the `thumbv7em-none-eabihf` target triple, which describes an [embedded] [ARM] system. The details are not important, all that matters is that the target triple has no underlying operating system, which is indicated by the `none` in the target triple. To be able to compile for this target, we need to add it in rustup:
+Un exemple d'un tel envrironnement est le triplé cible `thumbv7em-none-eabihf`, qui décrit un système [ARM] [embarqué]. Les détails ne sont pas importants, tout ce qui compte est que le triplé cible n'a pas de système d'exploitation sous-jacent, ce qui est indiqué par le `none` dans le triplé cible. Pour pouvoir compilé pour cette cible, nous avons besoin de l'ajouter dans rustup :
 
-[embedded]: https://en.wikipedia.org/wiki/Embedded_system
-[ARM]: https://en.wikipedia.org/wiki/ARM_architecture
+[embarqué]: https://fr.wikipedia.org/wiki/Syst%C3%A8me_embarqu%C3%A9
+[ARM]: https://fr.wikipedia.org/wiki/Architecture_ARM
 
 ```
 rustup target add thumbv7em-none-eabihf
 ```
 
-This downloads a copy of the standard (and core) library for the system. Now we can build our freestanding executable for this target:
+Cela télécharge une copy de la bibliothèque standard (et core) pour le système. Maintenant nous pouvons compiler notre exécutable autoporté pour cette cible :
 
 ```
 cargo build --target thumbv7em-none-eabihf
 ```
 
-By passing a `--target` argument we [cross compile] our executable for a bare metal target system. Since the target system has no operating system, the linker does not try to link the C runtime and our build succeeds without any linker errors.
+En donnant un argument `--target`, nous effectuons une [compilation croisée][cross_compile] de notre exécutable pour un système bare metal. Comme le système cible n'a pas de système d'exploitation, le linker n'essaie pas de lier l'environnement d'exécution C et notre compilation réussit dans erreur de linker.
 
 [cross compile]: https://en.wikipedia.org/wiki/Cross_compiler
 
 This is the approach that we will use for building our OS kernel. Instead of `thumbv7em-none-eabihf`, we will use a [custom target] that describes a `x86_64` bare metal environment. The details will be explained in the next post.
+C'est l'approche que nous allons utiliser pour construire notre noyau d'OS. Plutôt que `thumbv7em-none-eabihf`, nous allons utiliser une [cible personnalisée][custom target] qui décrit un environnement bare metal `x86_64`. Les détails seront expliqués dans le prochain article.
 
 [custom target]: https://doc.rust-lang.org/rustc/targets/custom.html
 
-### Linker Arguments
+### Arguments du Linker
 
-Instead of compiling for a bare metal system, it is also possible to resolve the linker errors by passing a certain set of arguments to the linker. This isn't the approach that we will use for our kernel, therefore this section is optional and only provided for completeness. Click on _"Linker Arguments"_ below to show the optional content.
+Au lieu de compiler pour un système bare metal, il est aussi possible de résoudre les erreurs de linker en passant un ensemble précis d'arguments au linker. Ce n'est pas l'approche que nous allons utiliser pour notre noyau. Cette section est donc optionnelle et fournis uniquement à titre de complétude. Cliquez sur _"Arguments du Linker"_ ci-dessous pour montrer le contenu optionel.
 
 <details>
 
-<summary>Linker Arguments</summary>
+<summary>Arguments du Linker</summary>
 
-In this section we discuss the linker errors that occur on Linux, Windows, and macOS, and explain how to solve them by passing additional arguments to the linker. Note that the executable format and the linker differ between operating systems, so that a different set of arguments is required for each system.
+Dans cette section nous allons parler des erreurs de linker qui se produisent sur Linux, Windows et macOS. Nous allors aussi apprendre à résoudre ces erreurs en passant des arguments complémentaires au linker. À noter que le format de l'exécutable et le linker diffèrent entre les systèmes d'exploitation. Il faut donc un ensemble d'arguments différent pour chaque système.
 
 #### Linux
 
-On Linux the following linker error occurs (shortened):
+Sur Linux, voici l'erreur de linker qui se produit (raccourcie) :
 
 ```
 error: linking with `cc` failed: exit code: 1
@@ -311,21 +312,21 @@ error: linking with `cc` failed: exit code: 1
           collect2: error: ld returned 1 exit status
 ```
 
-The problem is that the linker includes the startup routine of the C runtime by default, which is also called `_start`. It requires some symbols of the C standard library `libc` that we don't include due to the `no_std` attribute, therefore the linker can't resolve these references. To solve this, we can tell the linker that it should not link the C startup routine by passing the `-nostartfiles` flag.
+Le problème est que le linker inclut par défaut la routine de démarrage de l'environnement d'exécution de C, qui est aussi appelée `_start`. Elle requiert des symboles de la bibliothèque standard de C `libc` que nous n'incluons pas à cause de l'attribut `no_std`. Le linker ne peut donc pas résoudre ces références. Pour résoudre cela, nous pouvons indiquer au linker qu'il ne devrait pas lier la routine de démarrage de C en passant l'argument `-nostartfiles`.
 
-One way to pass linker attributes via cargo is the `cargo rustc` command. The command behaves exactly like `cargo build`, but allows to pass options to `rustc`, the underlying Rust compiler. `rustc` has the `-C link-arg` flag, which passes an argument to the linker. Combined, our new build command looks like this:
-
+Une façon de passer des attributs au linker via cargo est la commande `cargo rustc`. Cette commande se comporte exactement comme `cargo build`, mais permet aussi de donner des options à `rustc`, le compilateur Rust sous-jacent. `rustc` possède le flag `-C link-arg`, qui donne un argument au linker. Combinés, notre nouvelle commande ressemble à ceci :
+    
 ```
 cargo rustc -- -C link-arg=-nostartfiles
 ```
 
-Now our crate builds as a freestanding executable on Linux!
+Dorénavant notre crate compile en tant qu'exécutable Linux autoporté !
 
-We didn't need to specify the name of our entry point function explicitly since the linker looks for a function with the name `_start` by default.
-
+Nous n'avions pas besoin de spécifier le nom de notre point d'entrée de façon explicite car le linker cherche par défaut une fonction nomée `_start`. 
+    
 #### Windows
 
-On Windows, a different linker error occurs (shortened):
+Sur Windows, une erreur de linker différente se produit (raccourcie) :
 
 ```
 error: linking with `link.exe` failed: exit code: 1561
@@ -334,18 +335,18 @@ error: linking with `link.exe` failed: exit code: 1561
   = note: LINK : fatal error LNK1561: entry point must be defined
 ```
 
-The "entry point must be defined" error means that the linker can't find the entry point. On Windows, the default entry point name [depends on the used subsystem][windows-subsystems]. For the `CONSOLE` subsystem the linker looks for a function named `mainCRTStartup` and for the `WINDOWS` subsystem it looks for a function named `WinMainCRTStartup`. To override the default and tell the linker to look for our `_start` function instead, we can pass an `/ENTRY` argument to the linker:
+Cette erreur signifie que le linker ne peut pas trouver le point d'entrer. Sur Windows, le nom par défaut du point d'entrée [dépend du sous-système utilisé][windows-subsystems]. Pour le sous-système `CONSOLE`, le linker cherche une fonction nomée `mainCRTStartup` et pour le sous-système `WINDOWS`, il cherche une fonction nomée `WinMainCRTStartup`. Pour réécrire la valeur par défaut et indiquer au linker de chercher notre fonction `_start` à la place, nous pouvons donner l'argument `/ENTRY` au linker :
 
-[windows-subsystems]: https://docs.microsoft.com/en-us/cpp/build/reference/entry-entry-point-symbol
+[windows-subsystems]: https://docs.microsoft.com/fr-fr/cpp/build/reference/entry-entry-point-symbol?view=msvc-160
 
 ```
 cargo rustc -- -C link-arg=/ENTRY:_start
 ```
 
-From the different argument format we clearly see that the Windows linker is a completely different program than the Linux linker.
+Vu le format d'argument différent nous pouvons clairement voir que le linker Windows est un programme totalement différent du linker Linux.
 
-Now a different linker error occurs:
-
+Maintenant une erreur de linker différente se produit :
+    
 ```
 error: linking with `link.exe` failed: exit code: 1221
   |
@@ -354,19 +355,19 @@ error: linking with `link.exe` failed: exit code: 1221
           defined
 ```
 
-This error occurs because Windows executables can use different [subsystems][windows-subsystems]. For normal programs they are inferred depending on the entry point name: If the entry point is named `main`, the `CONSOLE` subsystem is used, and if the entry point is named `WinMain`, the `WINDOWS` subsystem is used. Since our `_start` function has a different name, we need to specify the subsystem explicitly:
-
+Cette erreur se produit car les exécutables Windows peuvent utiliser différents [sous-systèmes][windows-subsystems]. Pour les programmes normaux, ils sont inférés en fonction du nom du point d'entrée : s'il est nommé `main`, le sous-système `CONSOLE` est utilisé. Si le point d'entrée est nommé `WinMain`, alors le sous-sytème `WINDOWS` est utilisé.  Comme notre fonction `_start` possède un nom différent, nous devons préciser le sous-système explicitement :
+    
 ```
 cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
 ```
 
-We use the `CONSOLE` subsystem here, but the `WINDOWS` subsystem would work too. Instead of passing `-C link-arg` multiple times, we use `-C link-args` which takes a space separated list of arguments.
-
-With this command, our executable should build successfully on Windows.
-
+Ici nous utilisons le sous-système `CONSOLE`, mais le sous-système `WINDOWS` pourrait fonctionner aussi. Au lieu de donner `-C link-arg` plusieurs fois, nous utilisons `-C link-args` qui utilise des arguments séparés par des espaces.
+    
+Avec cette commande, notre exécutable devrait compiler avec succès sous Windows.
+    
 #### macOS
 
-On macOS, the following linker error occurs (shortened):
+Sur macOS, voici l'erreur de linker qui se produit (raccourcie) :
 
 ```
 error: linking with `cc` failed: exit code: 1
@@ -376,15 +377,15 @@ error: linking with `cc` failed: exit code: 1
           clang: error: linker command failed with exit code 1 […]
 ```
 
-This error message tells us that the linker can't find an entry point function with the default name `main` (for some reason all functions are prefixed with a `_` on macOS). To set the entry point to our `_start` function, we pass the `-e` linker argument:
+Cette erreur nous indique que le linker ne peut pas trouver une fonction de point d'entrée avec le nom par défaut `main` (pour une quelconque raison, toutes les fonctions sur macOS sont précédées de `_`). Pour configurer le point d'entrée sur notre fonction `_start`, nous donnons l'argument `-e` au linker :
 
 ```
 cargo rustc -- -C link-args="-e __start"
 ```
 
-The `-e` flag specifies the name of the entry point function. Since all functions have an additional `_` prefix on macOS, we need to set the entry point to `__start` instead of `_start`.
-
-Now the following linker error occurs:
+L'argument `-e` spécifie le nom de la fonction de point d'entrée. Comme toutes les fonctions ont un préfixe supplémentaire `_` sur macOS, nous devons configurer le point d'entrer comme étant `__start` au lieu de `_start`.
+    
+Maintenant l'erreur de linker suivante se produit :
 
 ```
 error: linking with `cc` failed: exit code: 1
@@ -395,15 +396,15 @@ error: linking with `cc` failed: exit code: 1
           clang: error: linker command failed with exit code 1 […]
 ```
 
-macOS [does not officially support statically linked binaries] and requires programs to link the `libSystem` library by default. To override this and link a static binary, we pass the `-static` flag to the linker:
+macOS [ne supporte pas officiellement les bibliothèques liées de façon statique] et necéessite que les programmes lient la bibliothèque `libSystem` par défaut. Pour réécrire ceci et lier une bibliothèque statique, nous donnons l'argument `-static` au linker :
 
-[does not officially support statically linked binaries]: https://developer.apple.com/library/archive/qa/qa1118/_index.html
+[ne supporte pas officiellement les bibliothèques liées de façon statique]: https://developer.apple.com/library/archive/qa/qa1118/_index.html
 
 ```
 cargo rustc -- -C link-args="-e __start -static"
 ```
 
-This still does not suffice, as a third linker error occurs:
+Cela ne suffit toujours pas, une troisième erreur de linker se produit :
 
 ```
 error: linking with `cc` failed: exit code: 1
@@ -413,20 +414,20 @@ error: linking with `cc` failed: exit code: 1
           clang: error: linker command failed with exit code 1 […]
 ```
 
-This error occurs because programs on macOS link to `crt0` (“C runtime zero”) by default. This is similar to the error we had on Linux and can be also solved by adding the `-nostartfiles` linker argument:
+Cette erreur se produit car les programmes sous macOS lient `crt0` (“C runtime zero”) par défaut. Ceci est similaire à l'erreur que nous avions eu sous Linux et peut aussi être résolue en ajoutant l'argument `-nostartfiles` au linker :
 
 ```
 cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
-Now our program should build successfully on macOS.
+Maintenant notre program compile avec succès sous macOS.
+    
+#### Unifier les Commandes de Compilation
 
-#### Unifying the Build Commands
-
-Right now we have different build commands depending on the host platform, which is not ideal. To avoid this, we can create a file named `.cargo/config.toml` that contains the platform specific arguments:
+À cet instant nous avons différentes commandes de compilation en fonction de la plateforme hôte, ce qui n'est pas idéal. Pour éviter cela, nous pouvons créer un ficher nommé `.cargo/config.toml` qui contient les arguments spécifiques aux plateformes :
 
 ```toml
-# in .cargo/config.toml
+# dans .cargo/config.toml
 
 [target.'cfg(target_os = "linux")']
 rustflags = ["-C", "link-arg=-nostartfiles"]
@@ -438,38 +439,38 @@ rustflags = ["-C", "link-args=/ENTRY:_start /SUBSYSTEM:console"]
 rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 ```
 
-The `rustflags` key contains arguments that are automatically added to every invocation of `rustc`. For more information on the `.cargo/config.toml` file check out the [official documentation](https://doc.rust-lang.org/cargo/reference/config.html).
+La clé `rustflags` contient des arguments qui sont automatiquement ajoutés à chaque appel de `rustc`. Pour plus d'informations sur le fichier `.cargo/config.toml`, allez voir la [documentation officielle](https://doc.rust-lang.org/cargo/reference/config.html)
+    
+Maintenant notre programme devrait être compilable sur les trois plateformes avec un simple `cargo build`.
+    
+#### Devriez-vous Faire Ça ?
 
-Now our program should be buildable on all three platforms with a simple `cargo build`.
+Bien qu'il soit possible de compiler un exécutable autoporté pour Linux, Windows et macOS, ce n'est probablement pas une bonne idée. La raison est que notre exécutable s'attend toujours à trouver certaines choses, par exemple une pile initialisée lorsque la fonction `_start` est appelée. Sans l'environnement d'exécution C, certains de ces conditions peuvent ne pas être remplies, ce qui pourrait faire planter notre programme, avec par exemple une erreur de segmentation.
 
-#### Should You Do This?
-
-While it's possible to build a freestanding executable for Linux, Windows, and macOS, it's probably not a good idea. The reason is that our executable still expects various things, for example that a stack is initialized when the `_start` function is called. Without the C runtime, some of these requirements might not be fulfilled, which might cause our program to fail, e.g. through a segmentation fault.
-
-If you want to create a minimal binary that runs on top of an existing operating system, including `libc` and setting the `#[start]` attribute as described [here](https://doc.rust-lang.org/1.16.0/book/no-stdlib.html) is probably a better idea.
-
+Si vous voulez créer un exécutable minimal qui tourne sur un système d'exploitation existant, include `libc` et mettre l'attribut `#[start]` come décrit [ici](https://doc.rust-lang.org/1.16.0/book/no-stdlib.html) semble être une meilleure idée.
+    
 </details>
 
-## Summary
+## Résumé
 
-A minimal freestanding Rust binary looks like this:
+Un exécutable Rust autoporté minimal ressemble à ceci :
 
 `src/main.rs`:
 
 ```rust
-#![no_std] // don't link the Rust standard library
-#![no_main] // disable all Rust-level entry points
+#![no_std] // ne pas lier la bibliothèque standard Rust
+#![no_main] // désactiver tous les points d'entrée au niveau de Rust
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // don't mangle the name of this function
+#[no_mangle] // ne pas décorer le nom de cette fonction
 pub extern "C" fn _start() -> ! {
-    // this function is the entry point, since the linker looks for a function
-    // named `_start` by default
+    // cette fonction est le point d'entrée, comme le linker cherche une fonction
+    // nomée `_start` par défaut
     loop {}
 }
 
-/// This function is called on panic.
+/// Cette fonction est appelée à chaque panic.
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
@@ -484,22 +485,22 @@ name = "crate_name"
 version = "0.1.0"
 authors = ["Author Name <author@example.com>"]
 
-# the profile used for `cargo build`
+# le profile utilisé pour `cargo build`
 [profile.dev]
-panic = "abort" # disable stack unwinding on panic
+panic = "abort" # désactive le déroulement de la pile lors d'un panic
 
-# the profile used for `cargo build --release`
+# le profile utilisé pour `cargo build --release`
 [profile.release]
-panic = "abort" # disable stack unwinding on panic
+panic = "abort" # désactive le déroulement de la pile lors d'un panic
 ```
 
-To build this binary, we need to compile for a bare metal target such as `thumbv7em-none-eabihf`:
+Pour compiler cet exécutable, nous devons compiler pour une cible bare metal telle que `thumbv7em-none-eabihf` :
 
 ```
 cargo build --target thumbv7em-none-eabihf
 ```
 
-Alternatively, we can compile it for the host system by passing additional linker arguments:
+Sinon, nous pouvons aussi compiler pour le système hôte en donnant des arguments supplémentaires pour le linker :
 
 ```bash
 # Linux
@@ -510,10 +511,10 @@ cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
 cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
-Note that this is just a minimal example of a freestanding Rust binary. This binary expects various things, for example that a stack is initialized when the `_start` function is called. **So for any real use of such a binary, more steps are required**.
+À noter que ceci est juste un exemple minimal d'un exécutable Rust autoporté. Cet exécutable s'attend à de nombreuses choses, comme par exemple le fait qu'une pile soit initialisée lorsque la fonction `_start` est appelée. **Donc pour une réelle utilisation d'un tel exécutable, davantages d'étapes sont requises.**
 
-## What's next?
+## Et ensuite ?
 
-The [next post] explains the steps needed for turning our freestanding binary into a minimal operating system kernel. This includes creating a custom target, combining our executable with a bootloader, and learning how to print something to the screen.
+Le [poste suivant][next post] explique les étapes nécessaires pour transformer notre exécutable autoporté minimal en noyau de système d'opération. Cela comprend la création d'une cible personnalisée, l'intégration de notre exécutable avec un chargeur d'amorçage et l'apprentissage de comment imprimer quelque chose sur l'écran.
 
 [next post]: @/edition-2/posts/02-minimal-rust-kernel/index.md
