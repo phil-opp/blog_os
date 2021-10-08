@@ -285,7 +285,6 @@ En donnant un argument `--target`, nous effectuons une [compilation croisée][cr
 
 [cross compile]: https://en.wikipedia.org/wiki/Cross_compiler
 
-This is the approach that we will use for building our OS kernel. Instead of `thumbv7em-none-eabihf`, we will use a [custom target] that describes a `x86_64` bare metal environment. The details will be explained in the next post.
 C'est l'approche que nous allons utiliser pour construire notre noyau d'OS. Plutôt que `thumbv7em-none-eabihf`, nous allons utiliser une [cible personnalisée][custom target] qui décrit un environnement bare metal `x86_64`. Les détails seront expliqués dans le prochain article.
 
 [custom target]: https://doc.rust-lang.org/rustc/targets/custom.html
