@@ -13,7 +13,7 @@ translators = ["Alekzus"]
 +++
 +++
 
-La première étape pour créer notre propre noyeau de système d'exploitation est de créer un exécutable Rust qui ne relie pas la bibliothèque standard. Cela rend possible l'exécution du code Rust sur la ["bare machine"][machine nue] sans système d'exploitation sous-jacent.
+La première étape pour créer notre propre noyau de système d'exploitation est de créer un exécutable Rust qui ne relie pas la bibliothèque standard. Cela rend possible l'exécution du code Rust sur la ["bare machine"][machine nue] sans système d'exploitation sous-jacent.
 
 [machine nue]: https://en.wikipedia.org/wiki/Bare_machine
 
@@ -151,9 +151,9 @@ Les objets de langage sont des fonctions et des types spéciaux qui sont requis 
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
 
-Bien qu'il soit possible de fourning des implémentations personnalisées des objets de langage, cela ne devrait être fait qu'en dernier recours. La raison est que les objets de langages sont des détails d'implémentation très instables et qui ne sont même pas vérifiés au niveau de leur type (donc le compilateur ne vérifie même pas qu'une fonction possède les bons types d'arguments). Heureusement, il y a une manière plus stable de corriger l'erreur d'object de langage ci-dessus.
+Bien qu'il soit possible de fournir des implémentations personnalisées des objets de langage, cela ne devrait être fait qu'en dernier recours. La raison est que les objets de langages sont des détails d'implémentation très instables et qui ne sont même pas vérifiés au niveau de leur type (donc le compilateur ne vérifie même pas qu'une fonction possède les bons types d'arguments). Heureusement, il y a une manière plus stable de corriger l'erreur d'object de langage ci-dessus.
 
-L'[objet de langage `eh_personality`] marque une fonction qui est utilisée pour l'implémentation du [déroulement de pile]. Par défaut, Rust utilise le déroulement de pule pour exécuter les destructeurs de chaque variables vivante sur le stack en cas de [panic]. Cela assure que toute la mémoire utilisée est libérée et permet au fil dexécution parent d'attraper le panix et de continuer l'exécution. Le déroulement toutefois est un processus compliqué et nécessite des bibliothèques spécifiques à l'OS ([libunwind] pour Linux ou [gestion structurée des erreurs] pour Windows), nous ne voulons donc pas l'utiliser pour notre sustème d'exploitation.
+L'[objet de langage `eh_personality`] marque une fonction qui est utilisée pour l'implémentation du [déroulement de pile]. Par défaut, Rust utilise le déroulement de pile pour exécuter les destructeurs de chaque variable vivante sur la pile en cas de [panic]. Cela assure que toute la mémoire utilisée est libérée et permet au fil d'exécution parent d'attraper le panic et de continuer l'exécution. Le déroulement toutefois est un processus compliqué et nécessite des bibliothèques spécifiques à l'OS ([libunwind] pour Linux ou [gestion structurée des erreurs] pour Windows), nous ne voulons donc pas l'utiliser pour notre système d'exploitation.
 
 [objet de langage `eh_personality`]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
 [déroulement de pile]: https://docs.microsoft.com/fr-fr/cpp/cpp/exceptions-and-stack-unwinding-in-cpp?view=msvc-160
@@ -162,7 +162,7 @@ L'[objet de langage `eh_personality`] marque une fonction qui est utilisée pour
 
 ### Désactiver le Déroulement
 
-Il y a d'autres cas d'utilisation pour lesquels le déroulement n'est pas souhaité. Rust offre donc une option pour [interrompre après un panic]. Cela désactive la génération de symboles de déroulement et ainsi reduit considérablement la taille de l'exécutable. Il y a de multiples endroit où nous pouvons désactiver le déroulement. Le plus simple est d'ajouter les lignes suivantes dans notre `Cargo.toml` :
+Il y a d'autres cas d'utilisation pour lesquels le déroulement n'est pas souhaité. Rust offre donc une option pour [interrompre après un panic]. Cela désactive la génération de symboles de déroulement et ainsi réduit considérablement la taille de l'exécutable. Il y a de multiples endroit où nous pouvons désactiver le déroulement. Le plus simple est d'ajouter les lignes suivantes dans notre `Cargo.toml` :
 
 ```toml
 [profile.dev]
@@ -172,7 +172,7 @@ panic = "abort"
 panic = "abort"
 ```
 
-Cela configure la stratégie de panic à `abort` pour le profile `dev` (utilisé pour `cargo build`) et le profil `release` (utilisé pour `cargo build --release`). Maintenant l'objet de langage `eh_personality` ne devrait plus être rquis. 
+Cela configure la stratégie de panic à `abort` pour le profil `dev` (utilisé pour `cargo build`) et le profil `release` (utilisé pour `cargo build --release`). Maintenant l'objet de langage `eh_personality` ne devrait plus être requis. 
 
 [interrompre après un panic]: https://github.com/rust-lang/rust/pull/32900
 
@@ -187,7 +187,7 @@ L'objet de langage `start` manque à notre programme. Il définit le point d'ent
 
 ## L'attribut `start`
 
-On pourrait penser que la fonction `main` est la première fonction appelée lorsqu'un programme est exécuté. Toutefois, la plupart des langage a un [environnement d'exécution] qui est responsables des tâches telles que le ramassage des miettes (ex: dans Java) ou les fils d'exécution logiciel (ex: les goroutines dans Go). Cet environnement doit être appelé avant `main` puisqu'il a besoin de s'initialiser.
+On pourrait penser que la fonction `main` est la première fonction appelée lorsqu'un programme est exécuté. Toutefois, la plupart des langages ont un [environnement d'exécution] qui est responsable des tâches telles que le ramassage des miettes (ex: dans Java) ou les fils d'exécution logiciel (ex: les goroutines dans Go). Cet environnement doit être appelé avant `main` puisqu'il a besoin de s'initialiser.
 
 [environnement d'exécution]: https://fr.wikipedia.org/wiki/Environnement_d%27ex%C3%A9cution
 
@@ -230,7 +230,7 @@ Nous devons aussi marquer la fonction avec `extern C` pour indiquer au compilate
 [décoration de nom]: https://fr.wikipedia.org/wiki/D%C3%A9coration_de_nom
 [convention de nommage]: https://fr.wikipedia.org/wiki/Convention_de_nommage
 
-Le type de retour `!` signifie que la fonction est divergente, c-à-d qu'elle n'a pas le droit de retourner quoi que ce soit. Cela est nécessaire car le point d'entrée n'est pas appelé par une fonction, mais invoqué directement par le système d'exploitation ou par le chargeur d'amorçage. Donc au lieu de retourner une valeur, le point d'entrée doit invoquer l'[appel système `exit`] du système d'exploitation. Dans notre cas, arrêter la machine pourrait être une action convenable, puisqu'il ne reste rien d'autre à faire si un exécutable autoporté s'arrête. Pour l'instant, nous remplissons le condition en bouclant indéfiniement.
+Le type de retour `!` signifie que la fonction est divergente, c-à-d qu'elle n'a pas le droit de retourner quoi que ce soit. Cela est nécessaire car le point d'entrée n'est pas appelé par une fonction, mais invoqué directement par le système d'exploitation ou par le chargeur d'amorçage. Donc au lieu de retourner une valeur, le point d'entrée doit invoquer l'[appel système `exit`] du système d'exploitation. Dans notre cas, arrêter la machine pourrait être une action convenable, puisqu'il ne reste rien d'autre à faire si un exécutable autoporté s'arrête. Pour l'instant, nous remplissons la condition en bouclant indéfiniement.
 
 [appel système `exit`]: https://fr.wikipedia.org/wiki/Appel_syst%C3%A8me
 
@@ -238,15 +238,15 @@ Quand nous lançons `cargo build`, nous obtenons une erreur de _linker_.
 
 ## Erreurs de Linker
 
-Le linker est un programme qui va transformer le code généré en exécutable. Comme le format de l'exécutable differt entre Linux, Windows et macOS, chaque system possède son propre linker qui lève une erreur différente. La cause fondamentale de cette erreur est la même : la configuration par défaut du linker part du principe que notre programme dépend de l'environnement d'exécution de C, ce qui n'est pas le cas.
+Le linker est un programme qui va transformer le code généré en exécutable. Comme le format de l'exécutable differt entre Linux, Windows et macOS, chaque système possède son propre linker qui lève une erreur différente. La cause fondamentale de cette erreur est la même : la configuration par défaut du linker part du principe que notre programme dépend de l'environnement d'exécution de C, ce qui n'est pas le cas.
 
-Pour résoudre les erreurs, nous devons indiquer au linker qu'il ne doit pas include l'environnement d'exécution de C. Nous pouvons faire cela soit en passant un ensemble précis d'arguments, soit en compilant pour une cible bare metal.
+Pour résoudre les erreurs, nous devons indiquer au linker qu'il ne doit pas inclure l'environnement d'exécution de C. Nous pouvons faire cela soit en passant un ensemble précis d'arguments, soit en compilant pour une cible bare metal.
 
 ### Compiler pour une Cible Bare Metal
 
-Par défault Rust essaie de compiler un exécutable qui est compatible avec l'environnment du système actuel. Par exemple, si vous utilisez Windows avec `x86_64`, Rust essaie de compiler un exécutable Windows `.exe` qui utilises des instructions `x86_64`. Cet environnement est appelé système "hôte".
+Par défaut Rust essaie de compiler un exécutable qui est compatible avec l'environnment du système actuel. Par exemple, si vous utilisez Windows avec `x86_64`, Rust essaie de compiler un exécutable Windows `.exe` qui utilises des instructions `x86_64`. Cet environnement est appelé système "hôte".
 
-Pour décrire plusieurs environnements, Rust utilise un chaîne de caractères appelée [_triplé cible_]. Vous pouvez voir le triplé cible de votre système hôte en lançant la commande `rustc --version --verbose` :
+Pour décrire plusieurs environnements, Rust utilise une chaîne de caractères appelée [_triplé cible_]. Vous pouvez voir le triplé cible de votre système hôte en lançant la commande `rustc --version --verbose` :
 
 [_triplé cible_]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 
@@ -260,11 +260,11 @@ release: 1.35.0-nightly
 LLVM version: 8.0
 ```
 
-La sortie ci-dessus provient d'un système Linux `x86_64`. Nous povons voir que le triplé `host` est `x86_64-unknown-linux-gnu`, qui inclut l'architecture du CPU (`x86_64`), le vendeur (`unknown`), le système d'exploitation (`linux`) et l'[ABI] (`gnu`).
+La sortie ci-dessus provient d'un système Linux `x86_64`. Nous pouvons voir que le triplé `host` est `x86_64-unknown-linux-gnu`, qui inclut l'architecture du CPU (`x86_64`), le vendeur (`unknown`), le système d'exploitation (`linux`) et l'[ABI] (`gnu`).
 
 [ABI]: https://fr.wikipedia.org/wiki/Application_binary_interface
 
-En compilant pour notre triplé hôte, le compileur Rust ainsi que le linker supposent qu'il y a un système d'exploitation sous-jacent comme Linux ou Windows qui utilise l'environnement d'exécution C par défaut, ce qui cause les erreurs de linker. Donc pour éviter ces erreurs, nous pouvons compiler pour un environnement différent sans système d'exploitation sous-jacent.
+En compilant pour notre triplé hôte, le compilateur Rust ainsi que le linker supposent qu'il y a un système d'exploitation sous-jacent comme Linux ou Windows qui utilise l'environnement d'exécution C par défaut, ce qui cause les erreurs de linker. Donc pour éviter ces erreurs, nous pouvons compiler pour un environnement différent sans système d'exploitation sous-jacent.
 
 Un exemple d'un tel envrironnement est le triplé cible `thumbv7em-none-eabihf`, qui décrit un système [ARM] [embarqué]. Les détails ne sont pas importants, tout ce qui compte est que le triplé cible n'a pas de système d'exploitation sous-jacent, ce qui est indiqué par le `none` dans le triplé cible. Pour pouvoir compilé pour cette cible, nous avons besoin de l'ajouter dans rustup :
 
@@ -275,13 +275,13 @@ Un exemple d'un tel envrironnement est le triplé cible `thumbv7em-none-eabihf`,
 rustup target add thumbv7em-none-eabihf
 ```
 
-Cela télécharge une copy de la bibliothèque standard (et core) pour le système. Maintenant nous pouvons compiler notre exécutable autoporté pour cette cible :
+Cela télécharge une copie de la bibliothèque standard (et core) pour le système. Maintenant nous pouvons compiler notre exécutable autoporté pour cette cible :
 
 ```
 cargo build --target thumbv7em-none-eabihf
 ```
 
-En donnant un argument `--target`, nous effectuons une [compilation croisée][cross_compile] de notre exécutable pour un système bare metal. Comme le système cible n'a pas de système d'exploitation, le linker n'essaie pas de lier l'environnement d'exécution C et notre compilation réussit dans erreur de linker.
+En donnant un argument `--target`, nous effectuons une [compilation croisée][cross_compile] de notre exécutable pour un système bare metal. Comme le système cible n'a pas de système d'exploitation, le linker n'essaie pas de lier l'environnement d'exécution C et notre compilation réussit sans erreur de linker.
 
 [cross compile]: https://en.wikipedia.org/wiki/Cross_compiler
 
@@ -298,7 +298,7 @@ Au lieu de compiler pour un système bare metal, il est aussi possible de résou
 
 <summary>Arguments du Linker</summary>
 
-Dans cette section nous allons parler des erreurs de linker qui se produisent sur Linux, Windows et macOS. Nous allors aussi apprendre à résoudre ces erreurs en passant des arguments complémentaires au linker. À noter que le format de l'exécutable et le linker diffèrent entre les systèmes d'exploitation. Il faut donc un ensemble d'arguments différent pour chaque système.
+Dans cette section nous allons parler des erreurs de linker qui se produisent sur Linux, Windows et macOS. Nous allons aussi apprendre à résoudre ces erreurs en passant des arguments complémentaires au linker. À noter que le format de l'exécutable et le linker diffèrent entre les systèmes d'exploitation. Il faut donc un ensemble d'arguments différent pour chaque système.
 
 #### Linux
 
@@ -327,7 +327,7 @@ cargo rustc -- -C link-arg=-nostartfiles
 
 Dorénavant notre crate compile en tant qu'exécutable Linux autoporté !
 
-Nous n'avions pas besoin de spécifier le nom de notre point d'entrée de façon explicite car le linker cherche par défaut une fonction nomée `_start`. 
+Nous n'avions pas besoin de spécifier le nom de notre point d'entrée de façon explicite car le linker cherche par défaut une fonction nommée `_start`. 
     
 #### Windows
 
@@ -340,7 +340,7 @@ error: linking with `link.exe` failed: exit code: 1561
   = note: LINK : fatal error LNK1561: entry point must be defined
 ```
 
-Cette erreur signifie que le linker ne peut pas trouver le point d'entrer. Sur Windows, le nom par défaut du point d'entrée [dépend du sous-système utilisé][windows-subsystems]. Pour le sous-système `CONSOLE`, le linker cherche une fonction nomée `mainCRTStartup` et pour le sous-système `WINDOWS`, il cherche une fonction nomée `WinMainCRTStartup`. Pour réécrire la valeur par défaut et indiquer au linker de chercher notre fonction `_start` à la place, nous pouvons donner l'argument `/ENTRY` au linker :
+Cette erreur signifie que le linker ne peut pas trouver le point d'entrée. Sur Windows, le nom par défaut du point d'entrée [dépend du sous-système utilisé][windows-subsystems]. Pour le sous-système `CONSOLE`, le linker cherche une fonction nommée `mainCRTStartup` et pour le sous-système `WINDOWS`, il cherche une fonction nomée `WinMainCRTStartup`. Pour réécrire la valeur par défaut et indiquer au linker de chercher notre fonction `_start` à la place, nous pouvons donner l'argument `/ENTRY` au linker :
 
 [windows-subsystems]: https://docs.microsoft.com/fr-fr/cpp/build/reference/entry-entry-point-symbol?view=msvc-160
 
@@ -388,7 +388,7 @@ Cette erreur nous indique que le linker ne peut pas trouver une fonction de poin
 cargo rustc -- -C link-args="-e __start"
 ```
 
-L'argument `-e` spécifie le nom de la fonction de point d'entrée. Comme toutes les fonctions ont un préfixe supplémentaire `_` sur macOS, nous devons configurer le point d'entrer comme étant `__start` au lieu de `_start`.
+L'argument `-e` spécifie le nom de la fonction de point d'entrée. Comme toutes les fonctions ont un préfixe supplémentaire `_` sur macOS, nous devons configurer le point d'entrée comme étant `__start` au lieu de `_start`.
     
 Maintenant l'erreur de linker suivante se produit :
 
@@ -425,7 +425,7 @@ Cette erreur se produit car les programmes sous macOS lient `crt0` (“C runtime
 cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
-Maintenant notre program compile avec succès sous macOS.
+Maintenant notre programme compile avec succès sous macOS.
     
 #### Unifier les Commandes de Compilation
 
