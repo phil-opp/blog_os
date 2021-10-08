@@ -1,7 +1,7 @@
 +++
 title = "A Freestanding Rust Binary"
 weight = 1
-path = "freestanding-rust-binary"
+path = "fr/freestanding-rust-binary"
 date = 2018-02-10
 
 [extra]
