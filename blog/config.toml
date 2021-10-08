@@ -114,7 +114,7 @@ translated_content_notice = "Это перевод сообщества пост
 translated_by = "Перевод сделан"
 word_separator = "и"
 
-[translations.en]
+[translations.fr]
 lang_name = "French"
 toc = "Table des matières"
 all_posts = "« Tous les articles"
