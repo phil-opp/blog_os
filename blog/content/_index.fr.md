@@ -6,7 +6,7 @@ template = "edition-2/index.html"
 
 <div class="front-page-introduction">
   
-L'objectif de ce blog est de créer un petit système d'exploitation avec le [langage de programmation Rust](https://www.rust-lang.org/). Chaque article est un petit tutoriel et comprends tout le code nécessaire, vous pouvez donc essayer en même temps si vous le souhaitez. Le code source est aussi disponible dans le [dépôt GitHub](https://github.com/phil-opp/blog_os) correspondant.
+L'objectif de ce blog est de créer un petit système d'exploitation avec le [langage de programmation Rust](https://www.rust-lang.org/). Chaque article est un petit tutoriel et comprend tout le code nécessaire, vous pouvez donc essayer en même temps si vous le souhaitez. Le code source est aussi disponible dans le [dépôt GitHub](https://github.com/phil-opp/blog_os) correspondant.
   
 Dernier article : <!-- latest-post -->
 

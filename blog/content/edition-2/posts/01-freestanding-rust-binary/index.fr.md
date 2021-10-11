@@ -29,7 +29,7 @@ Ce blog est développé sur [GitHub]. Si vous avez un problème ou une question,
 
 ## Introduction
 Pour écrire un noyau de système d'exploitation, nous avons besoin d'un code qui ne dépend pas de fonctionnalités de système d'exploitation. Cela signifie que nous ne pouvons pas utiliser les fils d'exécution, les fichiers, la mémoire sur le tas, le réseau, les nombres aléatoires, la sortie standard ou tout autre fonctionnalité nécessitant une abstraction du système d'exploitation ou un matériel spécifique. Cela a du sens, étant donné que nous essayons d'écrire notre propre OS et nos propres pilotes.
-Cela signifie que nous ne pouvons pas utiliser la majeure partie de la [bibliothèque standard de Rust]. Il y a néanmoins beaucoup de fonctionnalités de Rust que nous _pouvons_ utiliser. Par exemple, nous pouvons utiliser les [iterators], les [closures], le [pattern matching], l'[option] et le [result], le [string formatting], et bien-sûr l'[ownership system]. Ces fonctionnalités permettent l'écriture d'un noyeau d'une façon expressive et haut-niveau sans se soucier du [comportement non-défini] ou de la [sécurité de la mémoire].
+Cela signifie que nous ne pouvons pas utiliser la majeure partie de la [bibliothèque standard de Rust]. Il y a néanmoins beaucoup de fonctionnalités de Rust que nous _pouvons_ utiliser. Par exemple, nous pouvons utiliser les [iterators], les [closures], le [pattern matching], l'[option] et le [result], le [string formatting], et bien-sûr l'[ownership system]. Ces fonctionnalités permettent l'écriture d'un noyeau d'une façon expressive et haut-niveau sans se soucier des [comportements indéfinis] ou de la [sécurité de la mémoire].
 
 [option]: https://doc.rust-lang.org/core/option/
 [result]:https://doc.rust-lang.org/core/result/
@@ -43,11 +43,11 @@ Cela signifie que nous ne pouvons pas utiliser la majeure partie de la [biblioth
 [sécurité de la mémoire]: https://tonyarcieri.com/it-s-time-for-a-memory-safety-intervention
 
 Pour créer un noyau d'OS en Rust, nous devons créer un exécutable qui peut tourner sans système d'exploitation sous-jacent. Un tel exécutable est appelé “freestanding” (autoporté) ou “bare-metal”.
-Cet article décrit les étapes nécessaires pour créer un exécutable Rust autoporté et explique pourquoi ces étapes sont importantes. Si vous n'êtes intéressé que par un example minimal, vous pouvez **[aller au résumé](#résumé)**.
+Cet article décrit les étapes nécessaires pour créer un exécutable Rust autoporté et explique pourquoi ces étapes sont importantes. Si vous n'êtes intéressé que par un exemple minimal, vous pouvez **[aller au résumé](#résumé)**.
 
 ## Désactiver la Bibliothèque Standard
 
-Par défaut, toutes les crates Rust relient la [bibliothèque standard], qui dépend du système d'exploitation pour les fonctionnalités telles que les fils d'exécution, les fichiers ou le réseau. Elle dépend aussi de la bibliothèque standard de C `libc`, qui intéragit de près avec les services de l'OS. Comme notre plan est d'écrire un système d'exploitation, nous ne pouvons pas utiliser des bibliothèques dépendant de l'OS. Nous devons donc désactiver l'inclusion automatique de la bibliothèque standard en utilisant l'[attribut `no std`].
+Par défaut, tous les crates Rust relient la [bibliothèque standard], qui dépend du système d'exploitation pour les fonctionnalités telles que les fils d'exécution, les fichiers ou le réseau. Elle dépend aussi de la bibliothèque standard de C `libc`, qui intéragit de près avec les services de l'OS. Comme notre plan est d'écrire un système d'exploitation, nous ne pouvons pas utiliser des bibliothèques dépendant de l'OS. Nous devons donc désactiver l'inclusion automatique de la bibliothèque standard en utilisant l'[attribut `no std`].
 
 [bibliothèque standard]: https://doc.rust-lang.org/std/
 [attribut `no std`]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
@@ -97,7 +97,7 @@ error: cannot find macro `println!` in this scope
   |     ^^^^^^^
 ```
 
-La raison est que la [macro `println`] fait partie de la bibliothèque standard, que nous ne pouvons plus utiliser. Nous ne pouvons donc plus afficher des choses. Cela est logique, car `println` écrit dans la [sortie standard], qui est un descripteur de fichier spécial fourni par le système d'eploitation.
+La raison est que la [macro `println`] fait partie de la bibliothèque standard, que nous ne pouvons plus utiliser. Nous ne pouvons donc plus afficher de texte avec. Cela est logique, car `println` écrit dans la [sortie standard], qui est un descripteur de fichier spécial fourni par le système d'eploitation.
 
 [macro `println`]: https://doc.rust-lang.org/std/macro.println.html
 [sortie standard]: https://fr.wikipedia.org/wiki/Flux_standard#Sortie_standard
@@ -146,14 +146,14 @@ Le [paramètre `PanicInfo`][PanicInfo] contient le fichier et la ligne où le pa
 
 ## L'Objet de Langage `eh_personality`
 
-Les objets de langage sont des fonctions et des types spéciaux qui sont requis par le compilateur de manière interne. Par example, le trait [`Copy`] est un objet de langage qui indique au compilateur quels types possèdent la [sémantique copy][`Copy`]. Quand nous regardons l'[implémantation][copy code] du code, nous pouvons voir qu'il possède l'attribut spécial `#[lang = copy]` qui le définit comme étant un objet de langage.
+Les objets de langage sont des fonctions et des types spéciaux qui sont requis par le compilateur de manière interne. Par exemple, le trait [`Copy`] est un objet de langage qui indique au compilateur quels types possèdent la [sémantique copy][`Copy`]. Quand nous regardons l'[implémentation][copy code] du code, nous pouvons voir qu'il possède l'attribut spécial `#[lang = copy]` qui le définit comme étant un objet de langage.
 
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
 
-Bien qu'il soit possible de fournir des implémentations personnalisées des objets de langage, cela ne devrait être fait qu'en dernier recours. La raison est que les objets de langages sont des détails d'implémentation très instables et qui ne sont même pas vérifiés au niveau de leur type (donc le compilateur ne vérifie même pas qu'une fonction possède les bons types d'arguments). Heureusement, il y a une manière plus stable de corriger l'erreur d'object de langage ci-dessus.
+Bien qu'il soit possible de fournir des implémentations personnalisées des objets de langage, cela ne devrait être fait qu'en dernier recours. La raison est que les objets de langages sont des détails d'implémentation très instables et qui ne sont même pas vérifiés au niveau de leur type (donc le compilateur ne vérifie même pas qu'une fonction possède les bons types d'arguments). Heureusement, il y a une manière plus robuste de corriger l'erreur d'objet de langage ci-dessus.
 
-L'[objet de langage `eh_personality`] marque une fonction qui est utilisée pour l'implémentation du [déroulement de pile]. Par défaut, Rust utilise le déroulement de pile pour exécuter les destructeurs de chaque variable vivante sur la pile en cas de [panic]. Cela assure que toute la mémoire utilisée est libérée et permet au fil d'exécution parent d'attraper le panic et de continuer l'exécution. Le déroulement toutefois est un processus compliqué et nécessite des bibliothèques spécifiques à l'OS ([libunwind] pour Linux ou [gestion structurée des erreurs] pour Windows), nous ne voulons donc pas l'utiliser pour notre système d'exploitation.
+L'[objet de langage `eh_personality`] marque une fonction qui est utilisée pour l'implémentation du [déroulement de pile]. Par défaut, Rust utilise le déroulement de pile pour exécuter les destructeurs de chaque variable vivante sur la pile en cas de [panic]. Cela assure que toute la mémoire utilisée est libérée et permet au fil d'exécution parent d'attraper la panic et de continuer l'exécution. Le déroulement toutefois est un processus compliqué et nécessite des bibliothèques spécifiques à l'OS ([libunwind] pour Linux ou [gestion structurée des erreurs] pour Windows), nous ne voulons donc pas l'utiliser pour notre système d'exploitation.
 
 [objet de langage `eh_personality`]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
 [déroulement de pile]: https://docs.microsoft.com/fr-fr/cpp/cpp/exceptions-and-stack-unwinding-in-cpp?view=msvc-160
