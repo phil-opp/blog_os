@@ -10,6 +10,7 @@
  *
  * Fonts
  * Body resets
+ * Dark/Light Mode
  * Custom type
  * Messages
  * Container
@@ -53,19 +54,77 @@ html {
     line-height: 1.5;
 }
 
+/* Dark/Light Mode */
+
+@mixin set-colors-light {
+    --background-color: #fff;
+    --text-color: #515151;
+    --heading-color: #313131;
+    --heading-code-color: #a0565c;
+    --link-color: #268bd2;
+    --hr-color-top: #eee;
+    --hr-color-bottom: #fff;
+    --code-text-color: #bf616a;
+    --code-background-color: #f9f9f9;
+    --masthead-title-color: #505050;
+    --strong-color: #303030;
+    --masthead-subtitle: #c0c0c0;
+    --post-title-color: #228;
+}
+
+@mixin set-colors-dark {
+    --background-color: #121212;
+    --text-color: #f5f5f5;
+    --heading-color: #eee;
+    --heading-code-color: #eee;
+    --link-color: #c59ff3;
+    --hr-color-top: #333;
+    --hr-color-bottom: #000;
+    --code-text-color: #eeeeee;
+    --code-background-color: #222222;
+    --masthead-title-color: #a0a0a0;
+    --strong-color: #c0c0c0;
+    --masthead-subtitle: #6f6f6f;
+    --post-title-color: #c8c8ff;
+}
+
 body {
-    color: #515151;
-    background-color: #fff;
+    @include set-colors-light();
+}
+
+body.dark {
+    @include set-colors-dark();
+}
+
+/* Styles for users who prefer dark mode at the OS level */
+
+@media (prefers-color-scheme: dark) {
+    /* defaults to dark theme */
+    body {
+        @include set-colors-dark();
+    }
+    /* Override dark mode with light mode styles if the user decides to swap */
+    body.light {
+        @include set-colors-light();
+    }
+}
+
+body {
+    color: var(--text-color);
+    background-color: var(--background-color);
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
 }
 
 /* No `:visited` state is required by default (browsers will use `a`) */
+
 a {
-    color: #268bd2;
+    color: var(--link-color);
     text-decoration: none;
 }
+
 /* `:focus` is linked to `:hover` for basic accessibility */
+
 a:hover,
 a:focus {
     text-decoration: underline;
@@ -81,7 +140,7 @@ h6 {
     margin-bottom: 0.5rem;
     font-weight: bold;
     line-height: 1.25;
-    color: #313131;
+    color: var(--heading-color);
     text-rendering: optimizeLegibility;
 }
 h1 {
@@ -109,7 +168,7 @@ p {
 }
 
 strong {
-    color: #303030;
+    color: var(--strong-color);
 }
 
 /* Lists */
@@ -145,8 +204,8 @@ hr {
     position: relative;
     margin: 1.5rem 0;
     border: 0;
-    border-top: 1px solid #eee;
-    border-bottom: 1px solid #fff;
+    border-top: 1px solid var(--hr-color-top);
+    border-bottom: 1px solid var(--hr-color-bottom);
 }
 
 abbr {
@@ -168,8 +227,8 @@ pre {
 code {
     padding: 0.25em 0.5em;
     font-size: 85%;
-    color: #bf616a;
-    background-color: #f9f9f9;
+    color: var(--code-text-color);
+    background-color: var(--code-background-color);
     border-radius: 3px;
 }
 pre {
@@ -182,7 +241,7 @@ pre {
     white-space: pre;
     overflow: auto;
     word-wrap: normal;
-    background-color: #f9f9f9;
+    background-color: var(--code-background-color);
 }
 pre code {
     padding: 0;
@@ -238,7 +297,7 @@ th {
 }
 tbody tr:nth-child(odd) td,
 tbody tr:nth-child(odd) th {
-    background-color: #f9f9f9;
+    background-color: var(--code-background-color);
 }
 
 /*
@@ -263,7 +322,7 @@ tbody tr:nth-child(odd) th {
     margin-bottom: 1rem;
     padding: 1rem;
     color: #717171;
-    background-color: #f9f9f9;
+    background-color: var(--code-background-color);
 }
 
 /*
@@ -294,15 +353,15 @@ tbody tr:nth-child(odd) th {
 .masthead-title {
     margin-top: 0;
     margin-bottom: 0;
-    color: #505050;
+    color: var(--masthead-title-color);
 }
 .masthead-title a {
-    color: #505050;
+    color: var(--masthead-title-color);
 }
 .masthead small {
     font-size: 75%;
     font-weight: 400;
-    color: #c0c0c0;
+    color: var(--masthead-subtitle);
     letter-spacing: 0;
 }
 
@@ -321,7 +380,7 @@ tbody tr:nth-child(odd) th {
 .page-title,
 .post-title,
 .post-title a {
-    color: #303030;
+    color: var(--post-title-color);
 }
 .page-title,
 .post-title {
@@ -419,7 +478,7 @@ h4 code,
 h5 code,
 h6 code {
     padding: 0;
-    color: #a0565c;
+    color: var(--heading-code-color);
     font-size: 90%;
     background-color: inherit;
 }
@@ -716,7 +775,7 @@ aside.page-aside-right time {
 }
 
 a code {
-    color: #268bd2;
+    color: var(--link-color);
 }
 
 a.zola-anchor {
