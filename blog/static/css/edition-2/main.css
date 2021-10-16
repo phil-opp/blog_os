@@ -463,10 +463,6 @@ a strong {
   margin-bottom: .5rem;
 }
 
-#comments {
-  visibility: hidden;
-}
-
-.comment-directly-on-github {
-  margin-top: 1rem;
+.giscus {
+  margin-top: 1.5rem;
 }

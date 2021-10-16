@@ -11,6 +11,16 @@
 {% endmacro support %}
 
 {% macro giscus(search_term) %}
+    {% if search_term is number %}
+        {% set discussion_url = "https://github.com/phil-opp/blog_os/discussions/" ~ search_term %}
+    {% else %}
+        {% set discussion_url = `https://github.com/phil-opp/blog_os/discussions/categories/post-comments?discussions_q="` ~ search_term ~ `"` %}
+    {% endif %}
+
+    <p class="comment-note">
+        Do you have a problem, want to share feedback, or discuss further ideas? Feel free to leave a comment here! Please stick to English and follow Rust's <a href="https://www.rust-lang.org/policies/code-of-conduct">code of conduct</a>. This comment thread directly maps to a <a href="{{ discussion_url }}"><em>discussion on GitHub</em></a>, so you can also comment there if you prefer.
+    </p>
+
     <div class="giscus"></div>
 
     <script src="https://giscus.app/client.js"
@@ -25,12 +35,13 @@
     {% endif %}
         data-term="{{ search_term }}"
         data-reactions-enabled="1"
+        data-emit-metadata="1"
         data-theme="preferred_color_scheme"
         crossorigin="anonymous"
         async>
     </script>
 
     <p class="comment-directly-on-github">
-        Instead of authenticating the <a href="https://giscus.app">giscus</a> application, you can also comment directly on the <span class="discussion_link">on GitHub. Just click the <i>"X comments"</i> link at the <a href="#comments">top</a> — or the date of any comment — to go to the GitHub discussion.</span>
+        Instead of authenticating the <a href="https://giscus.app">giscus</a> application, you can also comment directly <a href="{{ discussion_url }}"><em>on GitHub</em></a>.
     </p>
 {% endmacro giscus %}
