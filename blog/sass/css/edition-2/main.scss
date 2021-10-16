@@ -73,7 +73,7 @@ html {
 }
 
 @mixin set-colors-dark {
-    --background-color: #121212;
+    --background-color: #252525;
     --text-color: #f5f5f5;
     --heading-color: #eee;
     --heading-code-color: #eee;
@@ -82,9 +82,9 @@ html {
     --hr-color-bottom: #000;
     --code-text-color: #eeeeee;
     --code-background-color: #222222;
-    --masthead-title-color: #a0a0a0;
+    --masthead-title-color: #b6b6b6;
     --strong-color: #c0c0c0;
-    --masthead-subtitle: #6f6f6f;
+    --masthead-subtitle: #8f8f8f;
     --post-title-color: #c8c8ff;
 }
 
@@ -97,7 +97,6 @@ body.dark {
 }
 
 /* Styles for users who prefer dark mode at the OS level */
-
 @media (prefers-color-scheme: dark) {
     /* defaults to dark theme */
     body {
