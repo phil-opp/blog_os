@@ -6,13 +6,13 @@
     <meta charset="UTF-8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
     <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
     <meta name="author" content="{{ config.extra.author.name }}">
 
     {% if current_url %}
         <link rel="canonical" href="{{ current_url | safe }}" />
     {% endif %}
-    <link href="/css/edition-2/poole.css" rel="stylesheet">
     <link href="/css/edition-2/main.css" rel="stylesheet">
 
     <link rel="alternate" type="application/rss+xml" title="RSS feed for os.phil-opp.com" href="{{ config.base_url | safe }}/rss.xml" />

@@ -45,3 +45,12 @@
         Instead of authenticating the <a href="https://giscus.app">giscus</a> application, you can also comment directly <a href="{{ discussion_url }}"><em>on GitHub</em></a>.
     </p>
 {% endmacro giscus %}
+
+{% macro dark_mode_note() %}
+<div class="dark-mode-note warning">
+    <h2>Dark Mode is Experimental</h2>
+    <p>
+        We're still working on adjusting text colors, fixing images, and removing inconsistencies. If you have any problems, please <a href="https://github.com/phil-opp/blog_os/issues">file an issue</a>.
+    </p>
+</aside>
+{% endmacro dark_mode_note %}
