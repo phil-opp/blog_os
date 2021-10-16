@@ -1,0 +1,875 @@
+/*
+ * CSS file for the second edition of os.phil-opp.com.  
+ *
+ * Based on `poole`which was designed, built, and released under MIT license by @mdo. See
+ * https://github.com/poole/poole.
+ */
+
+
+/*
+ * Contents
+ *
+ * Body resets
+ * Custom type
+ * Messages
+ * Container
+ * Masthead
+ * Posts and pages
+ * Pagination
+ * Reverse layout
+ * Themes
+ */
+
+ @font-face {
+    font-family: "Iosevka";
+    src: url("/fonts/iosevka-regular.woff2") format("woff2"), url("/fonts/iosevka-regular.woff") format("woff");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+  
+  /*
+   * Body resets
+   *
+   * Update the foundational and global aspects of the page.
+   */
+  
+  * {
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+  }
+  
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  html {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  
+  body {
+    color: #515151;
+    background-color: #fff;
+    -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+  }
+  
+  /* No `:visited` state is required by default (browsers will use `a`) */
+  a {
+    color: #268bd2;
+    text-decoration: none;
+  }
+  /* `:focus` is linked to `:hover` for basic accessibility */
+  a:hover,
+  a:focus {
+    text-decoration: underline;
+  }
+  
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    margin-bottom: .5rem;
+    font-weight: bold;
+    line-height: 1.25;
+    color: #313131;
+    text-rendering: optimizeLegibility;
+  }
+  h1 {
+    font-size: 2rem;
+  }
+  h2 {
+    margin-top: 1rem;
+    font-size: 1.5rem;
+  }
+  h3 {
+    margin-top: 1.5rem;
+    font-size: 1.25rem;
+  }
+  h4, h5, h6 {
+    margin-top: 1rem;
+    font-size: 1rem;
+  }
+  
+  /* Body text */
+  p {
+    margin-top: 0;
+    margin-bottom: 1rem;
+  }
+  
+  strong {
+    color: #303030;
+  }
+  
+  
+  /* Lists */
+  ul, ol, dl {
+    margin-top: 0;
+    margin-bottom: 1rem;
+  }
+  
+  /* Nested lists */
+  li ul, li ol, li dl {
+    margin-bottom: 0;
+  }
+  
+  li ul + p, li ol + p, li dl + p {
+    margin-top: 1rem;
+  }
+  
+  dt {
+    font-weight: bold;
+  }
+  dd {
+    margin-bottom: .5rem;
+  }
+  
+  /* Misc */
+  hr {
+    position: relative;
+    margin: 1.5rem 0;
+    border: 0;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #fff;
+  }
+  
+  abbr {
+    font-size: 90%;
+    font-weight: bold;
+    color: #555;
+    text-transform: uppercase;
+  }
+  abbr[title] {
+    cursor: help;
+    border-bottom: 1px dotted #e5e5e5;
+  }
+  
+  /* Code */
+  code,
+  pre {
+    font-family: "Iosevka", monospace;
+  }
+  code {
+    padding: .25em .5em;
+    font-size: 85%;
+    color: #bf616a;
+    background-color: #f9f9f9;
+    border-radius: 3px;
+  }
+  pre {
+    display: block;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    padding: .5rem;
+    font-size: .95rem;
+    line-height: 1.4;
+    white-space: pre;
+    overflow: auto;
+    word-wrap: normal;
+    background-color: #f9f9f9;
+  }
+  pre code {
+    padding: 0;
+    font-size: 100%;
+    color: inherit;
+    background-color: transparent;
+  }
+  .highlight {
+    margin-bottom: 1rem;
+    border-radius: 4px;
+  }
+  .highlight pre {
+    margin-bottom: 0;
+  }
+  
+  /* Quotes */
+  blockquote {
+    padding: .5rem 1rem;
+    margin: .8rem 0;
+    color: #7a7a7a;
+    border-left: .25rem solid #e5e5e5;
+  }
+  blockquote p:last-child {
+    margin-bottom: 0;
+  }
+  @media (min-width: 30rem) {
+    blockquote {
+      padding-right: 5rem;
+      padding-left: 1.25rem;
+    }
+  }
+  
+  img {
+    display: block;
+    margin: 0 0 1rem;
+    border-radius: 5px;
+    max-width: 100%;
+    color: grey;
+    font-style: italic;
+  }
+  
+  /* Tables */
+  table {
+    margin-bottom: 1rem;
+    width: 100%;
+    border: 1px solid #e5e5e5;
+    border-collapse: collapse;
+  }
+  td,
+  th {
+    padding: .25rem .5rem;
+    border: 1px solid #e5e5e5;
+  }
+  tbody tr:nth-child(odd) td,
+  tbody tr:nth-child(odd) th {
+    background-color: #f9f9f9;
+  }
+  
+  
+  /*
+   * Custom type
+   *
+   * Extend paragraphs with `.lead` for larger introductory text.
+   */
+  
+  .lead {
+    font-size: 1.25rem;
+    font-weight: 300;
+  }
+  
+  
+  /*
+   * Messages
+   *
+   * Show alert messages to users. You may add it to single elements like a `<p>`,
+   * or to a parent if there are multiple elements to show.
+   */
+  
+  .message {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    color: #717171;
+    background-color: #f9f9f9;
+  }
+  
+  
+  /*
+   * Container
+   *
+   * Center the page content.
+   */
+  
+  .container {
+    max-width: 45rem;
+    padding-left:  1rem;
+    padding-right: 1rem;
+    margin-left:  auto;
+    margin-right: auto;
+  }
+  
+  
+  /*
+   * Masthead
+   *
+   * Super small header above the content for site name and short description.
+   */
+  
+  .masthead {
+    padding-top:    1rem;
+    padding-bottom: 1rem;
+    margin-bottom:  1rem;
+  }
+  .masthead-title {
+    margin-top: 0;
+    margin-bottom: 0;
+    color: #505050;
+  }
+  .masthead-title a {
+    color: #505050;
+  }
+  .masthead small {
+    font-size: 75%;
+    font-weight: 400;
+    color: #c0c0c0;
+    letter-spacing: 0;
+  }
+  
+  
+  /*
+   * Posts and pages
+   *
+   * Each post is wrapped in `.post` and is used on default and post layouts. Each
+   * page is wrapped in `.page` and is only used on the page layout.
+   */
+  
+  .page {
+    margin-bottom: 4em;
+  }
+  
+  /* Blog post or page title */
+  .page-title,
+  .post-title,
+  .post-title a {
+    color: #303030;
+  }
+  .page-title,
+  .post-title {
+    margin-top: 0;
+  }
+  
+  /* Meta data line below post title */
+  .post-date {
+    display: block;
+    margin-top: -.5rem;
+    margin-bottom: 1rem;
+    color: #9a9a9a;
+  }
+  
+  /* Related posts */
+  .related {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    border-top: 1px solid #eee;
+  }
+  .related-posts {
+    padding-left: 0;
+    list-style: none;
+  }
+  .related-posts h3 {
+    margin-top: 0;
+  }
+  .related-posts li small {
+    font-size: 75%;
+    color: #999;
+  }
+  .related-posts li a:hover {
+    color: #268bd2;
+    text-decoration: none;
+  }
+  .related-posts li a:hover small {
+    color: inherit;
+  }
+  
+  
+  /*
+   * Pagination
+   *
+   * Super lightweight (HTML-wise) blog pagination. `span`s are provide for when
+   * there are no more previous or next posts to show.
+   */
+  
+  .pagination {
+    overflow: hidden; /* clearfix */
+    margin-left: -1rem;
+    margin-right: -1rem;
+    font-family: "PT Sans", Helvetica, Arial, sans-serif;
+    color: #ccc;
+    text-align: center;
+  }
+  
+  /* Pagination items can be `span`s or `a`s */
+  .pagination-item {
+    display: block;
+    padding: 1rem;
+    border: 1px solid #eee;
+  }
+  .pagination-item:first-child {
+    margin-bottom: -1px;
+  }
+  
+  /* Only provide a hover state for linked pagination items */
+  a.pagination-item:hover {
+    background-color: #f5f5f5;
+  }
+  
+  @media (min-width: 30rem) {
+    .pagination {
+      margin: 3rem 0;
+    }
+    .pagination-item {
+      float: left;
+      width: 50%;
+    }
+    .pagination-item:first-child {
+      margin-bottom: 0;
+      border-top-left-radius:    4px;
+      border-bottom-left-radius: 4px;
+    }
+    .pagination-item:last-child {
+      margin-left: -1px;
+      border-top-right-radius:    4px;
+      border-bottom-right-radius: 4px;
+    }
+  }
+  
+  h1 code, h2 code, h3 code, h4 code, h5 code, h6 code {
+    padding: 0;
+    color: #a0565c;
+    font-size: 90%;
+    background-color: inherit;
+  }
+  
+  .masthead-title {
+    font-size: 1.25rem;
+    display: inline;
+  }
+  
+  .masthead p {
+    font-size: 1.25rem;
+    display: inline;
+    margin: 0;
+    margin-left: 1rem;
+    padding: 0;
+    line-height: 1;
+  }
+  
+  .front-page-introduction {
+    margin-bottom: 2rem;
+  }
+  
+  .navigation {
+    float: right;
+  }
+  
+  .navigation img {
+    height: 1em;
+    vertical-align: baseline;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+  }
+  
+  main img {
+    max-width: 100%;
+    margin: auto;
+  }
+  
+  .post {
+    margin-bottom: 2em;
+  }
+  
+  .post:last-child {
+    margin-bottom: 0em;
+  }
+  
+  .frontpage-section {
+    margin-bottom: 2rem;
+  }
+  
+  .posts {
+    padding: 1.5rem 1rem 0.5rem 1rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+  }
+  
+  .posts.neutral {
+    border: 2px solid #999;
+  }
+  
+  .posts.subscribe {
+    border: 2px solid #aaa;
+  }
+  
+  .posts.edition-1 {
+    border: 2px solid #aaa;
+    background-color: #99ff0022;
+  }
+  
+  .posts.bare-bones {
+    border: 2px solid #66f;
+  }
+  
+  .posts.memory-management {
+    border: 2px solid #fc0
+  }
+  
+  .posts.interrupts {
+    border: 2px solid #f66;
+  }
+  
+  .posts.multitasking {
+    border: 2px solid #556b2f;
+  }
+  
+  .posts hr {
+    margin: 2rem 0;
+  }
+  
+  .post-summary {
+    margin-bottom: 1rem;
+  }
+  
+  .post-summary p {
+    display: inline;
+  }
+  
+  .read-more {
+    margin-left: 5px;
+  }
+  
+  .no-translation {
+    margin-top: .3rem;
+    color: #999999;
+  }
+  
+  .post-category {
+    margin-right: 0.5rem;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    text-align: right;
+  }
+  
+  .post-category.bare-bones {
+    color: #55d;
+  }
+  
+  .post-category.memory-management {
+    color: #990;
+  }
+  
+  .post-category.interrupts {
+    color: #f33;
+  }
+  
+  .post-category.multitasking {
+    color: #556b2f;
+  }
+  
+  .post-footer-support {
+    margin-top: 2rem;
+  }
+  
+  .PageNavigation {
+    font-size: 0.9em;
+    display: table;
+    width: 100%;
+    overflow: hidden;
+  }
+  
+  .PageNavigation a {
+    display: table-cell;
+  }
+  
+  .PageNavigation .previous {
+    text-align: left;
+  }
+  
+  .PageNavigation .next {
+    text-align: right;
+  }
+  
+  footer.footer {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .footnotes {
+    font-size: 85%;
+  }
+  
+  .footnotes li {
+    margin-bottom: 1rem;
+  }
+  
+  sup, sub {
+    line-height: 0;
+  }
+  
+  a.anchorjs-link:hover {
+      text-decoration: none;
+  }
+  
+  #toc-aside {
+    display: none;
+  }
+  
+  #toc-inline summary {
+    margin-bottom: .2rem;
+  }
+  
+  aside#all-posts-link {
+    font-size: 90%;
+    margin-top: 0.5rem;
+  }
+  
+  @media (min-width: 80rem) {
+    #toc-inline {
+      display: none;
+    }
+  
+    #toc-aside {
+      display: block;
+      width: 12rem;
+      position: sticky;
+      float: left;
+      top: 3.5rem;
+      margin-top: -4rem;
+      margin-left: -15rem;
+      font-size: 90%;
+      line-height: 1.2;
+    }
+  
+    #toc-aside li > a, #toc-aside h2 {
+      opacity: .5;
+      transition: opacity .5s;
+    }
+  
+    #toc-aside:hover li > a, #toc-aside:hover h2 {
+      opacity: 1;
+    }
+  
+    #toc-aside li.active > a {
+      font-weight: bold;
+    }
+  
+    #toc-aside h2 {
+      font-size: 110%;
+      margin-bottom: .2rem;
+    }
+  
+    #toc-aside ol {
+      margin: 0 0 .2rem 0;
+      padding: 0 0 0 1rem;
+      list-style:none;
+    }
+  
+    #toc-aside ol li a:before {
+      content: "";
+      border-color: transparent #008eef;
+      border-style: solid;
+      border-width: 0.35em 0 0.35em 0.45em;
+      display: block;
+      height: 0;
+      width: 0;
+      left: -1em;
+      top: 0.9em;
+      position: relative;
+    }
+  
+    #toc-aside.coarse li ol {
+      display: none;
+    }
+  
+    aside.page-aside-right {
+      position: absolute;
+      min-width: 11rem;
+      max-width: 17rem;
+      top: 4rem;
+      margin-left: 45rem;
+      margin-right: 2rem;
+      font-size: 90%;
+    }
+  
+    aside.page-aside-right .block {
+      margin-bottom: 1.5rem;
+    }
+  
+    aside.page-aside-right h2 {
+      font-size: 110%;
+      margin-bottom: .2rem;
+    }
+  
+    aside.page-aside-right ul {
+      margin: 0 0 .2rem 0;
+      padding: 0 0 0 1rem;
+    }
+  
+    aside.page-aside-right ul li {
+      margin-top: .5rem;
+    }
+  
+    #language-selector li {
+      margin-top: 0;
+    }
+  
+    aside#all-posts-link {
+      position: fixed;
+      top: 1.25rem;
+      margin-top: 0;
+      margin-left: -15rem;
+    }
+  }
+  
+  aside.page-aside-right time {
+    color: #9a9a9a;
+  }
+  
+  a code {
+    color: #268bd2;
+  }
+  
+  a.zola-anchor {
+    opacity: 0;
+    position: absolute;
+    margin-left: -1.5em;
+    padding-right: 1em;
+    font-size: 0.6em;
+    vertical-align: baseline;
+    line-height: 2em;
+  }
+  
+  :hover>a.zola-anchor {
+    opacity: 1;
+    text-decoration: none;
+  }
+  
+  a.zola-anchor:hover {
+    text-decoration: none;
+  }
+  
+  div.note {
+    padding: .7rem 1rem;
+    margin: 1rem .2rem;
+    border: 2px solid #6ad46a;
+    border-radius: 5px;
+    background-color: #99ff991f;
+  }
+  
+  div.note p:last-child {
+    margin-bottom: 0;
+  }
+  
+  div.warning {
+    padding: .7rem 1rem;
+    margin: 1rem .2rem;
+    border: 2px solid orange;
+    border-radius: 5px;
+    background-color: #ffa50022;
+  }
+  
+  div.warning p:last-child {
+    margin-bottom: 0;
+  }
+  
+  form.subscribe {
+    margin: 1rem;
+  }
+  
+  div.subscribe-fields {
+    display: flex;
+  }
+  
+  form.subscribe input {
+    padding: .5rem;
+    border: 1px solid #e5e5e5;
+  }
+  
+  form.subscribe input[type=email] {
+    flex: 1;
+  }
+  
+  form.subscribe input[type=submit] {
+    padding: .25rem .5rem;
+    cursor: pointer;
+  }
+  
+  /* Asides */
+  aside.post_aside {
+    font-style: italic;
+    padding: 0rem 1rem 0rem;
+    margin: .8rem 0;
+    border-left: .1rem solid #e5e5e5;
+    border-right: .1rem solid #e5e5e5;
+  }
+  
+  details summary {
+    cursor: pointer;
+  }
+  
+  details summary h3, details summary h4, details summary h5, details summary h6 {
+    display: inline;
+  }
+  
+  .gh-repo-box {
+    border: 1px solid #d1d5da;
+    border-radius: 3px;
+    padding: 16px;
+    margin-top: 0.5rem;
+    color: #586069;
+    font-size: 80%;
+  }
+  
+  .gh-repo-box .repo-link {
+    color: #0366d6;
+    font-weight: 600;
+    font-size: 120%;
+  }
+  
+  .gh-repo-box .subtitle {
+    margin-bottom: 16px;
+  }
+  
+  .gh-repo-box .stars-forks {
+    margin-bottom: 0;
+  }
+  
+  .gh-repo-box .stars-forks a {
+    color: #586069;
+  }
+  
+  .gh-repo-box .stars-forks a:hover {
+    color: #0366d6;
+    text-decoration: none;
+  }
+  
+  .gh-repo-box .stars-forks svg {
+    vertical-align: text-bottom;
+    fill: currentColor;
+  }
+  
+  .gh-repo-box .stars {
+    display: inline-block;
+  }
+  
+  .gh-repo-box .forks {
+    display: inline-block;
+    margin-left: 16px;
+  }
+  
+  .gh-repo-box .sponsor {
+    display: inline-block;
+    margin-left: 16px;
+  }
+  
+  .hidden {
+    display: none;
+  }
+  
+  .toc-comments-link {
+    margin-top: .5rem;
+  }
+  
+  h5 {
+    font-style: italic;
+    font-size: 0.9rem;
+  }
+  .gray {
+    color: gray;
+  }
+  
+  a strong {
+    color: #268bd2;
+  }
+  
+  .right-to-left {
+      direction: rtl;
+      font-family: Vazir;
+  }
+  
+  .left-to-right, .right-to-left pre, .right-to-left table, .right-to-left[id="toc-aside"] {
+      direction: ltr;
+  }
+  
+  .status-update-list li {
+    margin-bottom: .5rem;
+  }
+  
+  .giscus {
+    margin-top: 1.5rem;
+  }
+  
