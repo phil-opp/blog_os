@@ -2,7 +2,7 @@
 
 This repository contains the source code for the _Writing an OS in Rust_ series at [os.phil-opp.com](https://os.phil-opp.com).
 
-If you have questions, open an issue or chat with us [on Gitter](https://gitter.im/phil-opp/blog_os).
+If you have questions related this repository, open an issue or chat with us [on Gitter](https://gitter.im/phil-opp/blog_os).
 
 ## Where is the code?
 
