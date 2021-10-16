@@ -820,6 +820,10 @@ div.warning p:last-child {
     margin-bottom: 0;
 }
 
+div.warning h2 {
+    margin-top: 0rem;
+}
+
 form.subscribe {
     margin: 1rem;
 }
@@ -955,4 +959,22 @@ a strong {
 
 img {
     background-color: white;
+}
+
+
+.dark-mode-note {
+    display: none;
+}
+body.dark .dark-mode-note {
+    display: block;
+}
+@media (prefers-color-scheme: dark) {
+    /* defaults to dark theme */
+    .dark-mode-note {
+        display: block;
+    }
+    /* Override dark mode with light mode styles if the user decides to swap */
+    body.light .dark-mode-note {
+        display: none;
+    }
 }
