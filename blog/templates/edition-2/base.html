@@ -41,6 +41,11 @@
             </div>
         </header>
 
+        <div class="theme-switch">
+            <div class="light-switch" onclick="toggle_lights()" title="Switch between light and dark theme"></div>
+            <div class="light-switch-reset" onclick="clear_theme_override()" title="Clear the theme override and go back to the system theme"></div>
+        </div>
+
         <div>
             {% block toc_aside %}{% endblock toc_aside %}
             <main>{% block main %}{% endblock main %}</main>
@@ -56,9 +61,6 @@
             </small>
         </footer>
     </div>
-
-    <div class="light-switch" onclick="toggle_lights()" title="Switch between light and dark theme"></div>
-    <div class="light-switch-reset" onclick="clear_theme_override()" title="Clear the theme override and go back to the system theme"></div>
 
     <script data-goatcounter="https://phil-opp.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
