@@ -246,7 +246,7 @@ When we now execute `cargo run` we see dots periodically appearing on the screen
 
 ### Configuring the Timer
 
-The hardware timer that we use is called the _Progammable Interval Timer_ or PIT for short. Like the name says, it is possible to configure the interval between two interrupts. We won't go into details here because we will switch to the [APIC timer] soon, but the OSDev wiki has an extensive article about the [configuring the PIT].
+The hardware timer that we use is called the _Programmable Interval Timer_ or PIT for short. Like the name says, it is possible to configure the interval between two interrupts. We won't go into details here because we will switch to the [APIC timer] soon, but the OSDev wiki has an extensive article about the [configuring the PIT].
 
 [APIC timer]: https://wiki.osdev.org/APIC_timer
 [configuring the PIT]: https://wiki.osdev.org/Programmable_Interval_Timer

@@ -415,7 +415,7 @@ pub fn init(boot_info: &BootInformation) {
 We've just moved the code to a new function. However, we've sneaked some improvements in:
 
 - An additional `.filter(|s| s.is_allocated())` in the calculation of `kernel_start` and `kernel_end`. This ignores all sections that aren't loaded to memory (such as debug sections). Thus, the kernel end address is no longer artificially increased by such sections.
-- We use the `start_address()` and `end_address()` methods of `boot_info` instead of calculating the adresses manually.
+- We use the `start_address()` and `end_address()` methods of `boot_info` instead of calculating the addresses manually.
 - We use the alternate `{:#x}` form when printing kernel/multiboot addresses. Before, we used `0x{:x}`, which leads to the same result. For a complete list of these “alternate” formatting forms, check out the [std::fmt documentation].
 
 [std::fmt documentation]: https://doc.rust-lang.org/nightly/std/fmt/index.html#sign0
