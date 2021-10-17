@@ -1,9 +1,4 @@
 window.onload = function () {
-  let theme = localStorage.getItem("theme");
-  if (theme != null) {
-    set_theme(theme)
-  }
-
   let container = document.querySelector('#toc-aside');
   if (container != null) {
     resize_toc(container);
@@ -96,3 +91,9 @@ function set_giscus_theme(theme) {
   }
 }
 
+function giscus_loaded() {
+  let theme = localStorage.getItem("theme");
+  if (theme != null) {
+    set_giscus_theme(theme)
+  }
+}
