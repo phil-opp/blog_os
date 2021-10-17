@@ -1,0 +1,13 @@
+[files]
+extend-exclude = [
+    "*.svg",
+    "*.zh-CN.md",
+    "*.ja.md",
+]
+
+[default.extend-words]
+IST = "IST" # Interrupt Stack Table
+
+[default.extend-identifiers]
+TheBegining = "TheBegining" # GitHub user mentioned in status reports
+h015bf61815bb8afe = "h015bf61815bb8afe" # mangled name used in code example

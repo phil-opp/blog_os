@@ -1,4 +1,4 @@
-name: Build Site
+name: Blog
 
 on:
   push:
@@ -59,10 +59,10 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - run: curl -L https://git.io/misspell | bash
-      name: "Install misspell"
-    - run: bin/misspell -error blog/content
-      name: "Check for common typos"
+    - name: Typo Check
+      uses: crate-ci/typos@v1.1.9
+      with:
+        files: blog
 
   deploy_site:
     name: "Deploy Generated Site"
