@@ -11,7 +11,6 @@ translation_based_on_commit = "3e87916b6c2ed792d1bdb8c0947906aef9013ac1"
 # GitHub usernames of the people that translated this post
 translators = ["Alekzus"]
 +++
-+++
 
 La première étape pour créer notre propre noyau de système d'exploitation est de créer un exécutable Rust qui ne relie pas la bibliothèque standard. Cela rend possible l'exécution du code Rust sur la ["bare machine"][machine nue] sans système d'exploitation sous-jacent.
 
