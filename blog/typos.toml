@@ -1,0 +1,12 @@
+[files]
+extend-exclude = [
+    "*.svg",
+]
+
+[default.extend-words]
+IST = "IST" # Interrupt Stack Table
+SEH = "SEH" # structured exception handling
+
+[default.extend-identifiers]
+TheBegining = "TheBegining" # GitHub user mentioned in status reports
+h015bf61815bb8afe = "h015bf61815bb8afe" # mangled name used in code example
