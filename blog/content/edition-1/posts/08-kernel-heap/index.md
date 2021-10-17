@@ -675,7 +675,7 @@ I created the [linked_list_allocator] crate to handle all of these cases. It con
 
 We need to add the extern crate to our `Cargo.toml` and our `lib.rs`:
 
-``` shell
+``` bash
 > cargo add linked_list_allocator
 ```
 

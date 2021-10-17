@@ -1,23 +1,16 @@
-title = "Writing an OS in Rust"
 base_url = "https://os.phil-opp.com"
-description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 
-highlight_code = true
-highlight_theme = "visual-studio-dark"
 generate_feed = true
 feed_filename = "rss.xml"
 compile_sass = true
-
-languages = [
-    { code = "zh-CN" }, # Chinese (simplified)
-    { code = "zh-TW" }, # Chinese (traditional)
-    { code = "ja" }, # Japanese
-    { code = "fa" }, # Persian
-    { code = "ru" }, # Russian
-    { code = "fr" }, # French
-]
+minify_html = true
 
 ignored_content = ["*/README.md"]
+
+[markdown]
+highlight_code = true
+highlight_theme = "visual-studio-dark"
+smart_punctuation = true
 
 [link_checker]
 skip_prefixes = [
@@ -36,9 +29,14 @@ skip_anchor_prefixes = [
 [extra]
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }
+default_language = "en"
+languages = ["en", "zh-CN", "zh-TW", "fr", "ja", "fa", "ru"]
 
-[translations.en]
-lang_name = "English"
+[languages.en]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.en.translations]
+lang_name = "English (original)"
 toc = "Table of Contents"
 all_posts = "« All Posts"
 comments = "Comments"
@@ -50,7 +48,11 @@ translated_content_notice = "This is a community translation of the <strong><a h
 translated_by = "Translation by"
 word_separator = "and"
 
-[translations.zh-CN]
+# Chinese (simplified)
+[languages.zh-CN]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.zh-CN.translations]
 lang_name = "Chinese (simplified)"
 toc = "目录"
 all_posts = "« 所有文章"
@@ -63,7 +65,11 @@ translated_content_notice = "这是对原文章 <strong><a href=\"_original.perm
 translated_by = "翻译者："
 word_separator = "和"
 
-[translations.zh-TW]
+# Chinese (traditional)
+[languages.zh-TW]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.zh-TW.translations]
 lang_name = "Chinese (traditional)"
 toc = "目錄"
 all_posts = "« 所有文章"
@@ -76,7 +82,11 @@ translated_content_notice = "這是對原文章 <strong><a href=\"_original.perm
 translated_by = "翻譯者："
 word_separator = "和"
 
-[translations.ja]
+# Japanese
+[languages.ja]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.ja.translations]
 lang_name = "Japanese"
 toc = "目次"
 all_posts = "« すべての記事へ"
@@ -89,7 +99,11 @@ translated_content_notice = "この記事は<strong><a href=\"_original.permalin
 translated_by = "翻訳者："
 word_separator = "及び"
 
-[translations.fa]
+# Persian
+[languages.fa]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.fa.translations]
 lang_name = "Persian"
 toc = "فهرست مطالب"
 all_posts = "« همه پست‌ها"
@@ -102,7 +116,11 @@ translated_content_notice = "این یک ترجمه از جامعه کاربرا
 translated_by = "ترجمه توسط"
 word_separator = "و"
 
-[translations.ru]
+# Russian
+[languages.ru]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.ru.translations]
 lang_name = "Russian"
 toc = "Содержание"
 all_posts = "« Все посты"
@@ -115,7 +133,11 @@ translated_content_notice = "Это перевод сообщества пост
 translated_by = "Перевод сделан"
 word_separator = "и"
 
-[translations.fr]
+# French
+[languages.fr]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.fr.translations]
 lang_name = "French"
 toc = "Table des matières"
 all_posts = "« Tous les articles"

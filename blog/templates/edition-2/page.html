@@ -119,15 +119,15 @@
         {% if page.translations -%}
         <div class="block" id="language-selector">
             <h2>Other Languages</h2>
-            <ul>{%- for translation in page.translations | sort(attribute="lang") %}
-                <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">
-                    {%- if translation.lang == "en" -%}
-                        English (original)
-                    {%- else -%}
+            {% set translations = page.translations | group_by(attribute="lang") %}
+            <ul>{%- for lang_code in config.extra.languages -%}{%- if translations[lang_code] -%}
+                {%- set translation = translations[lang_code] | first -%}
+                {%- if translation and lang_code != lang -%}
+                    <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">
                         {{ trans(key="lang_name", lang = translation.lang) }}
-                    {%- endif -%}
-                </a></li>
-            {% endfor %}</ul>
+                    </a></li>
+                {%- endif -%}
+            {%- endif -%}{% endfor %}</ul>
         </div>
         {%- endif %}
 

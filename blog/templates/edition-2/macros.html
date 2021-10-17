@@ -17,7 +17,7 @@
             {{ post.summary | safe }}
             <a class="read-more" href="{{ post.path | safe }}"><em>{{ trans(key="readmore", lang=lang) | safe }}</em></a>
 
-            {%- if lang and not_translated and lang != config.default_language -%}
+            {%- if lang and not_translated and lang != config.extra.default_language -%}
             <aside class="no-translation">
                 {{ trans(key="not_translated", lang=lang) }}
             </aside>

@@ -144,7 +144,7 @@ EXCEPTION: BREAKPOINT at 0x110970
 
 So let's disassemble the instruction at `0x110970` and its predecessor:
 
-```shell
+```bash
 > objdump -d build/kernel-x86_64.bin | grep -B1 "110970:"
 11096f:	cc                   	int3
 110970:	48 c7 01 2a 00 00 00 	movq   $0x2a,(%rcx)
