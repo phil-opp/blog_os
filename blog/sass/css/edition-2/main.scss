@@ -92,7 +92,7 @@ body {
     @include set-colors-light();
 }
 
-body.dark {
+[data-theme="dark"] body {
     @include set-colors-dark();
 }
 
@@ -103,7 +103,7 @@ body.dark {
         @include set-colors-dark();
     }
     /* Override dark mode with light mode styles if the user decides to swap */
-    body.light {
+    [data-theme="light"] body {
         @include set-colors-light();
     }
 }
@@ -966,7 +966,7 @@ img {
 .dark-mode-note {
     display: none;
 }
-body.dark .dark-mode-note {
+[data-theme="dark"] .dark-mode-note {
     display: block;
 }
 @media (prefers-color-scheme: dark) {
@@ -975,7 +975,7 @@ body.dark .dark-mode-note {
         display: block;
     }
     /* Override dark mode with light mode styles if the user decides to swap */
-    body.light .dark-mode-note {
+    [data-theme="light"] .dark-mode-note {
         display: none;
     }
 }
@@ -994,7 +994,7 @@ body.dark .dark-mode-note {
     @include light-switch-light();
 }
 
-body.dark .light-switch {
+[data-theme="dark"] .light-switch {
     @include light-switch-dark();
 }
 
@@ -1003,7 +1003,7 @@ body.dark .light-switch {
         @include light-switch-dark();
     }
 
-    body.light .light-switch {
+    [data-theme="light"] .light-switch {
         @include light-switch-light();
     }
 }

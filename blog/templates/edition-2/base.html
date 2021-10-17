@@ -17,6 +17,13 @@
 
     <link rel="alternate" type="application/rss+xml" title="RSS feed for os.phil-opp.com" href="{{ config.base_url | safe }}/rss.xml" />
 
+    <script>
+        let theme = localStorage.getItem("theme");
+        if (theme != null) {
+            document.documentElement.setAttribute("data-theme", theme);
+        }
+    </script>
+
     <script async src="/js/edition-2/main.js"></script>
 
     <title>{% block title %}{% endblock title %}</title>
