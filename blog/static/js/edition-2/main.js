@@ -3,7 +3,7 @@ window.onload = function () {
   if (theme != null) {
     set_theme(theme)
   }
-  
+
   let container = document.querySelector('#toc-aside');
   if (container != null) {
     resize_toc(container);
@@ -74,12 +74,23 @@ function toggle_lights() {
 }
 
 function set_theme(theme) {
-  let comment_form = document.querySelector("iframe.giscus-frame");
-    document.documentElement.setAttribute("data-theme", theme);
-    if (comment_form != null) {
-      comment_form.contentWindow.postMessage({
-        giscus: { setConfig: { theme: theme } }
-      }, "https://giscus.app")
-    }
-    localStorage.setItem("theme", theme);
+  document.documentElement.setAttribute("data-theme", theme)
+  set_giscus_theme(theme)
+  localStorage.setItem("theme", theme)
 }
+
+function clear_theme_override() {
+  document.documentElement.removeAttribute("data-theme");
+  set_giscus_theme("preferred_color_scheme")
+  localStorage.removeItem("theme")
+}
+
+function set_giscus_theme(theme) {
+  let comment_form = document.querySelector("iframe.giscus-frame");
+  if (comment_form != null) {
+    comment_form.contentWindow.postMessage({
+      giscus: { setConfig: { theme: theme } }
+    }, "https://giscus.app")
+  }
+}
+

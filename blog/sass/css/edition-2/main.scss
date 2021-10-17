@@ -983,10 +983,12 @@ img {
 /* Manual switch between dark and light mode */
 
 @mixin light-switch-light {
+    // icon: https://icons.getbootstrap.com/icons/moon-fill/ (MIT licensed)
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23004' class='bi bi-moon' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M14.53 10.53a7 7 0 0 1-9.058-9.058A7.003 7.003 0 0 0 8 15a7.002 7.002 0 0 0 6.53-4.47z'/%3E%3C/svg%3E");
 }
 
 @mixin light-switch-dark {
+    // icon: https://icons.getbootstrap.com/icons/brightness-high-fill/ (MIT licensed)
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ff9' class='bi bi-brightness-high-fill' viewBox='0 0 16 16'%3E%3Cpath d='M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z'/%3E%3C/svg%3E");
 }
 
@@ -1021,6 +1023,62 @@ img {
 
 .light-switch:hover {
     transform: scale(1.3);
+    transition: 200ms ease-out;
+    opacity: 1;
+}
+
+/* Clear theme override and go back to system theme */
+
+@mixin light-switch-reset-light {
+    // icon: https://icons.getbootstrap.com/icons/x-circle-fill/ (MIT licensed)
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23666' class='bi bi-x-circle' viewBox='0 0 16 16'%3E%3Cpath d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/%3E%3Cpath d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+}
+
+@mixin light-switch-reset-dark {
+    // icon: https://icons.getbootstrap.com/icons/x-circle-fill/ (MIT licensed)
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' class='bi bi-x-circle' viewBox='0 0 16 16'%3E%3Cpath d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/%3E%3Cpath d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+}
+
+.light-switch-reset {
+    @include light-switch-reset-light();
+}
+
+.light-switch-reset {
+    display: none;
+}
+
+[data-theme="light"] .light-switch-reset {
+    display: block;
+}
+
+[data-theme="dark"] .light-switch-reset {
+    @include light-switch-reset-dark();
+    display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+    .light-switch-reset {
+        @include light-switch-reset-dark();
+    }
+
+    [data-theme="light"] .light-switch-reset {
+        @include light-switch-reset-light();
+    }
+}
+
+.light-switch-reset {
+    position: fixed;
+    left: 5rem;
+    bottom: 1.5rem;
+    background-repeat: no-repeat;
+    width: 2rem;
+    height: 2rem;
+    cursor: pointer;
+    opacity: 0.6;
+}
+
+.light-switch-reset:hover {
+    transform: scale(1.1);
     transition: 200ms ease-out;
     opacity: 1;
 }
