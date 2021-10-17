@@ -68,8 +68,10 @@ function toc_scroll_position(container) {
 function toggle_lights() {
   if (document.documentElement.getAttribute("data-theme") === "dark") {
     set_theme("light")
-  } else {
+  } else if (document.documentElement.getAttribute("data-theme") === "light") {
     set_theme("dark")
+  } else {
+    set_theme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark")
   }
 }
 
