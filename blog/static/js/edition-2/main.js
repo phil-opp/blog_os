@@ -1,14 +1,16 @@
 window.onload = function () {
-  let theme = localStorage.getItem("theme");
-  if (theme != null) {
-    set_theme(theme)
-  }
-
   let container = document.querySelector('#toc-aside');
   if (container != null) {
     resize_toc(container);
     toc_scroll_position(container);
     window.onscroll = function () { toc_scroll_position(container) };
+  }
+
+  let theme = localStorage.getItem("theme");
+  if (theme != null) {
+    setTimeout(() => {
+      set_giscus_theme(theme)
+    }, 500);
   }
 }
 
