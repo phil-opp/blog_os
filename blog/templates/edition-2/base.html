@@ -6,16 +6,23 @@
     <meta charset="UTF-8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
     <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
     <meta name="author" content="{{ config.extra.author.name }}">
 
     {% if current_url %}
         <link rel="canonical" href="{{ current_url | safe }}" />
     {% endif %}
-    <link href="/css/edition-2/poole.css" rel="stylesheet">
     <link href="/css/edition-2/main.css" rel="stylesheet">
 
     <link rel="alternate" type="application/rss+xml" title="RSS feed for os.phil-opp.com" href="{{ config.base_url | safe }}/rss.xml" />
+
+    <script>
+        let theme = localStorage.getItem("theme");
+        if (theme != null) {
+            document.documentElement.setAttribute("data-theme", theme);
+        }
+    </script>
 
     <script async src="/js/edition-2/main.js"></script>
 
@@ -33,6 +40,11 @@
                 {% block header %}{% endblock header %}
             </div>
         </header>
+
+        <div class="theme-switch">
+            <div class="light-switch" onclick="toggle_lights()" title="Switch between light and dark theme"></div>
+            <div class="light-switch-reset" onclick="clear_theme_override()" title="Clear the theme override and go back to the system theme"></div>
+        </div>
 
         <div>
             {% block toc_aside %}{% endblock toc_aside %}

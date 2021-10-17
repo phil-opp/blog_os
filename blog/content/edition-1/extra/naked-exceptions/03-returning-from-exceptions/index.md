@@ -426,7 +426,7 @@ The page fault is gone and we see the _“It did not crash”_ message again!
 So the page fault occurred because our exception handler didn't preserve the scratch register `rax`. Our new `handler!` macro fixes this problem by saving all scratch registers (including `rax`) before calling exception handlers. Thus, `rax` still contains the valid memory address when `rust-main` continues execution.
 
 ## Multimedia Registers
-When we discussed calling conventions above, we assummed that a x86_64 CPU only has the following 16 registers: `rax`, `rbx`, `rcx`, `rdx`, `rsi`, `rdi`, `rsp`, `rbp`, `r8`, `r9`, `r10`, `r11`.`r12`, `r13`, `r14`, and `r15`. These registers are called _general purpose registers_ since each of them can be used for arithmetic and load/store instructions.
+When we discussed calling conventions above, we assumed that a x86_64 CPU only has the following 16 registers: `rax`, `rbx`, `rcx`, `rdx`, `rsi`, `rdi`, `rsp`, `rbp`, `r8`, `r9`, `r10`, `r11`.`r12`, `r13`, `r14`, and `r15`. These registers are called _general purpose registers_ since each of them can be used for arithmetic and load/store instructions.
 
 However, modern CPUs also have a set of _special purpose registers_, which can be used to improve performance in several use cases. On x86_64, the most important set of special purpose registers are the _multimedia registers_. These registers are larger than the general purpose registers and can be used to speed up audio/video processing or matrix calculations. For example, we could use them to add two 4-dimensional vectors _in a single CPU instruction_:
 
