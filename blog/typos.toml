@@ -1,6 +1,7 @@
 [files]
 extend-exclude = [
     "*.svg",
+    "*.fr.md",
 ]
 
 [default.extend-words]
