@@ -17,6 +17,13 @@
 
     <link rel="alternate" type="application/rss+xml" title="RSS feed for os.phil-opp.com" href="{{ config.base_url | safe }}/rss.xml" />
 
+    <script>
+        let theme = localStorage.getItem("theme");
+        if (theme != null) {
+            document.documentElement.setAttribute("data-theme", theme);
+        }
+    </script>
+
     <script async src="/js/edition-2/main.js"></script>
 
     <title>{% block title %}{% endblock title %}</title>
@@ -34,6 +41,11 @@
             </div>
         </header>
 
+        <div class="theme-switch">
+            <div class="light-switch" onclick="toggle_lights()" title="Switch between light and dark theme"></div>
+            <div class="light-switch-reset" onclick="clear_theme_override()" title="Clear the theme override and go back to the system theme"></div>
+        </div>
+
         <div>
             {% block toc_aside %}{% endblock toc_aside %}
             <main>{% block main %}{% endblock main %}</main>
@@ -49,8 +61,6 @@
             </small>
         </footer>
     </div>
-
-    <div class="light-switch" onclick="toggle_lights()" title="Switch between light and dark theme"></div>
 
     <script data-goatcounter="https://phil-opp.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
