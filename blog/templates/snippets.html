@@ -14,7 +14,7 @@
     {% if search_term is number %}
         {% set discussion_url = "https://github.com/phil-opp/blog_os/discussions/" ~ search_term %}
     {% else %}
-        {% set discussion_url = `https://github.com/phil-opp/blog_os/discussions/categories/post-comments?discussions_q="` ~ search_term ~ `"` %}
+        {% set discussion_url = `https://github.com/phil-opp/blog_os/discussions/categories/post-comments?discussions_q=%22` ~ search_term ~ `%22` %}
     {% endif %}
 
     <p class="comment-note">
