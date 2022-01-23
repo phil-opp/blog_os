@@ -21,6 +21,7 @@ translators = ["wusyong"]
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-01
 
 <!-- toc -->
@@ -43,7 +44,7 @@ translators = ["wusyong"]
 
 為了在 Rust 中建立 OS 核心，我們需要建立一個無須底層作業系統即可運行的執行檔，這類的執行檔通常稱為「獨立式（freestanding）」或「裸機（bare-metal）」的執行檔。
 
-這篇文章描述了建立一個獨立的 Rust 執行檔的必要步驟，並解釋為什麼需要這些步驟。如果您只對簡單的範例感興趣，可以直接跳到 **[總結](#總結)**。
+這篇文章描述了建立一個獨立的 Rust 執行檔的必要步驟，並解釋為什麼需要這些步驟。如果您只對簡單的範例感興趣，可以直接跳到 **[總結](#summary)**。
 
 ## 停用標準函式庫
 
@@ -450,7 +451,7 @@ rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 
 </details>
 
-## 總結
+## 總結 {#summary}
 
 一個最小的 Rust 獨立執行檔會看起來像這樣：
 

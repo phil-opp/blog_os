@@ -22,6 +22,7 @@ Ce blog est développé sur [GitHub]. Si vous avez un problème ou une question,
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [en bas de page]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-01
 
 <!-- toc -->
@@ -42,7 +43,7 @@ Cela signifie que nous ne pouvons pas utiliser la majeure partie de la [biblioth
 [sécurité de la mémoire]: https://tonyarcieri.com/it-s-time-for-a-memory-safety-intervention
 
 Pour créer un noyau d'OS en Rust, nous devons créer un exécutable qui peut tourner sans système d'exploitation sous-jacent. Un tel exécutable est appelé “freestanding” (autoporté) ou “bare-metal”.
-Cet article décrit les étapes nécessaires pour créer un exécutable Rust autoporté et explique pourquoi ces étapes sont importantes. Si vous n'êtes intéressé que par un exemple minimal, vous pouvez **[aller au résumé](#résumé)**.
+Cet article décrit les étapes nécessaires pour créer un exécutable Rust autoporté et explique pourquoi ces étapes sont importantes. Si vous n'êtes intéressé que par un exemple minimal, vous pouvez **[aller au résumé](#resume)**.
 
 ## Désactiver la Bibliothèque Standard
 

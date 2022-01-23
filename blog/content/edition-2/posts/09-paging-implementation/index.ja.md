@@ -18,6 +18,7 @@ translators = ["woodyZootopia", "garasubo"]
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-09
 
 <!-- toc -->
@@ -71,7 +72,7 @@ translators = ["woodyZootopia", "garasubo"]
 
 この方法では、新しいページテーブルを作るたびに新しいマッピングを作る必要があるという欠点があります。また、他のアドレス空間のページテーブルにアクセスすることができると新しいプロセスを作るときに便利なのですが、これも不可能です。
 
-### 物理メモリ全体をマップする
+### 物理メモリ全体をマップする {#map-the-complete-physical-memory}
 
 これらの問題はページテーブルのフレームだけと言わず**物理メモリ全体をマップして**しまえば解決します：
 
@@ -272,7 +273,7 @@ frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
 
 [cargo features]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 
-- `map_physical_memory` featureを使うと、全物理メモリを仮想アドレス空間のどこかにマッピングします。そのため、カーネルはすべての物理メモリにアクセスでき、[上で述べた方法に従って物理メモリ全体をマップする](#wu-li-memoriquan-ti-wodui-ying-fu-keru)ことができます。
+- `map_physical_memory` featureを使うと、全物理メモリを仮想アドレス空間のどこかにマッピングします。そのため、カーネルはすべての物理メモリにアクセスでき、[上で述べた方法に従って物理メモリ全体をマップする](#map-the-complete-physical-memory)ことができます。
 - `recursive_page_table` featureでは、ブートローダはレベル4ページテーブルのエントリを再帰的にマッピングします。これによりカーネルは[再帰的ページテーブル](#zai-gui-de-peziteburu)で述べた方法に従ってページテーブルにアクセスすることができます。
 
 私達のカーネルには、シンプルでプラットフォーム非依存かつ（ページテーブルのフレームでないメモリにもアクセスできるので）より強力である1つ目の方法を採ることにします。必要なブートローダの<ruby>機能<rp> (</rp><rt>feature</rt><rp>) </rp></ruby>を有効化するために、`map_physical_memory` featureを`bootloader`のdependencyに追加します。

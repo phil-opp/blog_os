@@ -22,6 +22,7 @@ translators = ["JohnTitor"]
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [comments]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-01
 
 <!-- toc -->
@@ -45,7 +46,7 @@ OS カーネルを書くためには、いかなる OS の機能にも依存し�
 
 Rust で OS カーネルを書くには、基盤となる OS なしで動く実行環境をつくる必要があります。そのような実行環境はフリースタンディング環境やベアメタルのように呼ばれます。
 
-この記事では、フリースタンディングな Rust のバイナリをつくるために必要なステップを紹介し、なぜそれが必要なのかを説明します。もし最小限の説明だけを読みたいのであれば **[概要](#概要)** まで飛ばしてください。
+この記事では、フリースタンディングな Rust のバイナリをつくるために必要なステップを紹介し、なぜそれが必要なのかを説明します。もし最小限の説明だけを読みたいのであれば **[概要](#summary)** まで飛ばしてください。
 
 ## 標準ライブラリの無効化
 
@@ -462,7 +463,7 @@ rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 
 </details>
 
-## 概要
+## 概要 {#summary}
 
 最小限の独立した Rust バイナリは次のようになります:
 

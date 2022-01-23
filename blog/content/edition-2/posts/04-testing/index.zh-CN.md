@@ -19,6 +19,7 @@ translators = ["luojia65", "Rustin-Liu"]
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-04
 
 <!-- toc -->

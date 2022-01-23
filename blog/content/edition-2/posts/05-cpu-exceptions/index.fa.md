@@ -23,6 +23,7 @@ rtl = true
 
 [گیت‌هاب]: https://github.com/phil-opp/blog_os
 [در زیر]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-05
 
 <!-- toc -->
