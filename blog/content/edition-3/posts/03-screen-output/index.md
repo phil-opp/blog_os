@@ -20,3 +20,6 @@ Molestiae quidem ipsa nihil laboriosam sapiente laudantium quia. Praesentium et 
 
 <!-- toc -->
 Molestiae quidem ipsa nihil laboriosam sapiente laudantium quia. Praesentium et repudiandae minima voluptas et. Repellendus voluptatem distinctio enim et alias distinctio recusandae quos. Dolores ex eum culpa quo sunt sint voluptate voluptates. Facere unde sequi quo ea vel nihil. Rem deleniti repellat rem molestias
+
+
+<!-- TODO: update relative link in 02-booting/uefi/index.md when this post is finished -->

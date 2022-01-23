@@ -19,9 +19,12 @@ icon = '''
 '''
 +++
 
-This post is an addendum to our main [**Booting**] post. It explains how to create a basic UEFI application from scratch that can be directly booted on modern x86_64 systems. This includes creating a minimal application suitable for the UEFI environment, turning it into a bootable disk image, and interacting with the hardware through the UEFI system tables and the `uefi` crate.
-
+<!-- TODO uncomment as soon as Booting post is ready
+This post is an addendum to our main [**Booting**] post.
 [**Booting**]: @/edition-3/posts/02-booting/index.md
+-->
+
+This post explains how to create a basic UEFI application from scratch that can be directly booted on modern x86_64 systems. This includes creating a minimal application suitable for the UEFI environment, turning it into a bootable disk image, and interacting with the hardware through the UEFI system tables and the `uefi` crate.
 
 <!-- more -->
 
@@ -35,7 +38,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 ## Minimal UEFI App
 
-We start by creating a new `cargo` project with a `Cargo.toml` and a `src/main.rs`:
+We start by creating a new `cargo` project with a `Cargo.toml` and a `src/main.rs`. You can run `cargo new uefi_app` for that or create the files manually:
 
 ```toml
 # in Cargo.toml
@@ -49,13 +52,19 @@ edition = "2018"
 [dependencies]
 ```
 
-This `uefi_app` project is independent of the OS kernel created in the [_Booting_], so we use a separate directory.
+<!-- TODO uncomment as soon as Booting post is ready
+This `uefi_app` project is independent of the OS kernel created in the [_Booting_] post, so we use a separate directory.
 
 [_Booting_]: @/edition-3/posts/02-booting/index.md
 
 In the `src/main.rs`, we create a minimal `no_std` executable as shown in the [_Minimal Kernel_] post:
 
 [_Minimal Kernel_]: @/edition-3/posts/01-minimal-kernel/index.md
+-->
+
+In the `src/main.rs`, we create a minimal `no_std` executable as shown in the [_Freestanding Rust Binary_] post:
+
+[_Freestanding Rust Binary_]: @/edition-2/posts/01-freestanding-rust-binary/index.md
 
 ```rust
 // in src/main.rs
@@ -71,7 +80,7 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 ```
 
-The `#![no_std]` attribute disables the linking of the Rust standard library, which is not available on bare metal. The `#![no_main]` attribute, we disable the normal entry point function that based on the C runtime. The `#[panic_handler]` attribute specifies which function should be called when a panic occurs.
+The `#![no_std]` attribute disables the linking of the Rust standard library, which is not available on bare metal. Through the `#![no_main]` attribute, we disable the normal entry point function that based on the C runtime. The `#[panic_handler]` attribute specifies which function should be called when a panic occurs.
 
 Next, we create an entry point function named `efi_main`:
 
@@ -91,10 +100,12 @@ pub extern "efiapi" fn efi_main(
 }
 ```
 
-This function signature is standardized by the UEFI specification, which is available [in PDF form][uefi-pdf] on [uefi.org]. You can find the signature of the entry point function in section 4.1. Since UEFI also defines a specific [calling convention] (in section 2.3), we set the [`efiapi` calling convention] for our function. Since support for this calling function is still unstable in Rust, we need to add `#![feature(abi_efiapi)]` at the very top of our file.
+This function signature is standardized by the UEFI specification, which is available [in PDF form][uefi-pdf] on [_uefi.org_]. You can find the signature of the entry point function in section 4.1. The function name `efi_main` is not required by the standard, but it is the common convention for UEFI applications and the Rust compiler will look for a function with that name by default.
+
+Since UEFI also defines a specific [calling convention] (in section 2.3), we set the [`efiapi` calling convention] for our function. Support for this calling function is still unstable in Rust, so we need to add `#![feature(abi_efiapi)]` at the very top of our file.
 
 [uefi-pdf]: https://uefi.org/sites/default/files/resources/UEFI%20Spec%202.8B%20May%202020.pdf
-[uefi.org]: https://uefi.org/specifications
+[_uefi.org_]: https://uefi.org/specifications
 [calling convention]: https://en.wikipedia.org/wiki/Calling_convention
 [`efiapi` calling convention]: https://github.com/rust-lang/rust/issues/65815
 
@@ -102,12 +113,9 @@ The function takes two arguments: an _image handle_ and a _system table_. The im
 
 ### UEFI Target
 
-For our minimal kernel, we needed to create a [custom target] because none of the [officially supported targets] was suitable. For our UEFI application we are more lucky: Rust has built-in support for a **`x86_64-unknown-uefi`** target, which we can use without problems.
+Rust has built-in support for UEFI application through its **`x86_64-unknown-uefi`** target, which makes cross-compiling very easy.
 
-[custom target]: @/edition-3/posts/01-minimal-kernel/index.md#kernel-target
-[officially supported targets]: https://doc.rust-lang.org/rustc/platform-support.html
-
- If you're curious, you can query the JSON specification of the target with the following command:
+If you're curious, you can query the JSON specification of the target with the following command:
 
 ```bash
 rustc +nightly --print target-spec-json -Z unstable-options --target x86_64-unknown-uefi
@@ -164,14 +172,17 @@ This outputs looks something like the following:
 From the output we can derive multiple properties of the target:
 
 - The `exe-suffix` is `.efi`, which means that all executables compiled for this target have the suffix `.efi`.
-- As for our [kernel target][custom target], both the redzone and SSE are disabled.
+- As it's typical for [kernel targets][custom target], both the redzone and SSE are disabled.
 - The `is-like-windows` is an indicator that the target uses the conventions of Windows world, e.g. [PE] instead of [ELF] executables.
-- The LLD linker is used, which means that we don't have to install any additional linker even when compiling on non-Windows systems.
-- Like for all (most?) bare-metal targets, the `panic-strategy` is set to `abort` to disable unwinding.
+- The [LLD linker] is used, which ships with Rust. The linker has native support for cross-linking, which means that we can link Windows executables on non-Windows systems without any problems.
+- Like for most bare-metal targets, the `panic-strategy` is set to `abort` to disable unwinding.
 - Various linker arguments are specified. For example, the `/entry` argument sets the name of the entry point function. This is the reason that we named our entry point function `efi_main` and applied the `#[no_mangle]` attribute above.
 
 [PE]: https://en.wikipedia.org/wiki/Portable_Executable
 [ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+[LLD linker]: https://lld.llvm.org/
+
+[custom target]: @/edition-2/posts/02-minimal-rust-kernel/index.md#target-specification
 
 If you're interested in understanding all these fields, check out the docs for Rust's internal [`Target`] and [`TargetOptions`] types. These are the types that the above JSON is converted to.
 
@@ -180,18 +191,22 @@ If you're interested in understanding all these fields, check out the docs for R
 
 ### Building
 
-Even though the `x86_64-unknown-uefi` target is built-in, there are no precompiled versions of the `core` library available for it. This means that we need to use cargo's [`build-std` feature] as described in the [_Minimal Kernel_][minimal-kernel-build-std] post.
+Even though the `x86_64-unknown-uefi` target is a built-in of Rust, there are no precompiled versions of the `core` library available for it. This means that we need to use cargo's [`build-std` feature] as described in the [_Minimal Kernel_][minimal-kernel-build-std] post.
 
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
-[minimal-kernel-build-std]: @/edition-3/posts/01-minimal-kernel/index.md#the-build-std-option
 
-A nightly Rust compiler is required for building, so we need to set up a [rustup override] for the directory. We can do this either by running a [`rustup ovrride` command] or by adding a [`rust-toolchain` file].
+<!-- TODO uncomment as soon as 3rd edition Minimal Kernel post is ready
+[minimal-kernel-build-std]: @/edition-3/posts/01-minimal-kernel/index.md#the-build-std-option
+-->
+[minimal-kernel-build-std]: @/edition-2/posts/02-minimal-rust-kernel/index.md#the-build-std-option
+
+A nightly Rust compiler is required for building, so we need to set up a [rustup override] for the directory. We can do this either by running a [`rustup override` command] or by adding a [`rust-toolchain.toml` file].
 
 [rustup override]: https://rust-lang.github.io/rustup/overrides.html
 [`rustup override` command]: https://rust-lang.github.io/rustup/overrides.html#directory-overrides
-[`rust-toolchain` file]: https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
+[`rust-toolchain.toml` file]: https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
 
-The full build command looks like this:
+After doing that, we can finally build our UEFI app. The full build command looks like this:
 
 ```bash
 cargo build --target x86_64-unknown-uefi -Z build-std=core \
@@ -202,11 +217,16 @@ This results in a `uefi_app.efi` file in our `x86_64-unknown-uefi/debug` folder.
 
 ## Bootable Disk Image
 
-To make our minimal UEFI app bootable, we need to create a new [GPT] disk image with a [EFI system partition]. On that partition, we need to put our `.efi` file under `efi\boot\bootx64.efi`. Then the UEFI firmware should automatically detect and load it when we boot from the corresponding disk. See the section about the [UEFI boot process][uefi-boot-process] in the _Booting_ post for more details.
+To make our minimal UEFI app bootable, we need to create a new [GPT] disk image with a [EFI system partition]. On that partition, we need to put our `.efi` file under `efi\boot\bootx64.efi`. Then the UEFI firmware should automatically detect and load it when we boot from the corresponding disk.
+
 
 [GPT]: https://en.wikipedia.org/wiki/GUID_Partition_Table
 [EFI system partition]: https://en.wikipedia.org/wiki/EFI_system_partition
+
+<!--TODO uncomment as soon as Booting post is ready
+See the section about the [UEFI boot process][uefi-boot-process] in the _Booting_ post for more details.
 [uefi-boot-process]:  @/edition-3/posts/02-booting/index.md#boot-process-1
+-->
 
 To create this disk image, we create a new `disk_image` executable:
 
@@ -251,8 +271,9 @@ use std::{fs, io, path::Path};
 fn create_fat_filesystem(fat_path: &Path, efi_file: &Path) {
     // retrieve size of `.efi` file and round it up
     let efi_size = fs::metadata(&efi_file).unwrap().len();
-    let mb = 1024 * 1024; // size of a megabyte
-                          // round it to next megabyte
+    // size of a megabyte
+    let mb = 1024 * 1024;
+    // round it to next megabyte
     let efi_size_rounded = ((efi_size - 1) / mb + 1) * mb;
 
     // create new filesystem image file at the given path and set its length
@@ -280,7 +301,10 @@ fn create_fat_filesystem(fat_path: &Path, efi_file: &Path) {
 }
 ```
 
-We first use [`fs::metadata`] to query the size of our `.efi` file and then round it up to the next megabyte. We then use this rounded size to create a new FAT filesystem image file. I'm not sure if the rounding is really necessary, but I had some problems with the `fatfs` crate when trying to use the unaligned size.
+We first use [`fs::metadata`] to query the size of our `.efi` file and then round it up to the next megabyte. We then use this rounded size to create a new FAT filesystem image file.
+<span class="gray">
+(I'm not sure if the rounding is really necessary, but I had some problems with the `fatfs` crate when trying to use the unaligned size.)
+</span>
 
 [`fs::metadata`]: https://doc.rust-lang.org/std/fs/fn.metadata.html
 
@@ -290,7 +314,7 @@ After creating the file that should hold the FAT filesystem image, we use the [`
 [`FileSystem::new`]: https://docs.rs/fatfs/0.3.5/fatfs/struct.FileSystem.html#method.new
 [`io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
 
-Note that we're not doing any error handling here to keep the code short. This is not that problematic because the `disk_image` crate is only part of our build process, but you still might to use at least [`expect`] instead of `unwrap()` or an error handling crate such as [`anyhow`].
+Note that we're not doing any error handling here to keep the code short. This is not that problematic because the `disk_image` crate is only part of our build process, but you still might want to use at least [`expect`] instead of `unwrap()` or an error handling crate such as [`anyhow`].
 
 [`expect`]: https://doc.rust-lang.org/std/result/enum.Result.html#method.expect
 [`anyhow`]: https://docs.rs/anyhow/1.0.38/anyhow/
@@ -405,14 +429,14 @@ fn main() {
         .expect("path to `.efi` files must be given as argument"));
 
     let fat_path = efi_path.with_extension("fat");
-    let disk_path = fat_path.with_extension("img");
+    let disk_path = fat_path.with_extension("gdt");
 
     create_fat_filesystem(&fat_path, &efi_path);
     create_gpt_disk(&disk_path, &fat_path);
 }
 ```
 
-To be flexible, we take the path to the `.efi` file as command line argument. For retrieving the arguments we use the [`env::args`] function. The first argument is always set to the path of the executable itself by the operating system, even if the executable is invoked without arguments. We don't need it, so we prefix the variable name with an underscore to silence the "unused variable" warning.
+To be flexible, we take the path to the `.efi` file as command line argument. For retrieving the arguments we use the [`env::args`] function. The first argument is always set to the path of the `disk_image` executable itself by the operating system, even if the executable is invoked without arguments. We don't need it, so we prefix the variable name with an underscore to silence the "unused variable" warning.
 
 [`env::args`]: https://doc.rust-lang.org/std/env/fn.args.html
 
@@ -434,9 +458,43 @@ cargo run --package disk_image -- target/x86_64-unknown-uefi/debug/uefi_app.efi
 
 Note the additional `--` argument. The `cargo run` uses this special argument to separate `cargo run` arguments from the arguments that should be passed to the compiled executable. The path of course depends on your working directory, i.e. whether you run it from the project root or from the `disk_image` subdirectory. It also depends on whether you compiled the `uefi_app` in debug or `--release` mode.
 
-The result of this command is a `.fat` and a `.img` file next to the given `.efi` executable. These files can be launched in QEMU and on real hardware [as described][run-instructions] in the main _Booting_ post. The result should look something like this:
+<!-- TODO uncomment as soon as Booting post is ready
+The result of this command is a `.fat` and a `.gdt` file next to the given `.efi` executable. These files can be launched in QEMU and on real hardware [as described][run-instructions] in the main _Booting_ post. The result should look something like this:
 
 [run-instructions]: @/edition-3/posts/02-booting/index.md#running-our-kernel
+-->
+
+The result of this command is a `.fat` and a `.gdt` file next to the given `.efi` executable. These files can be booted on real hardware, but it's easier and safer to start them in a virtual machine first. In this post, we're using the [**QEMU**](https://www.qemu.org/) emulator.
+
+### Running in QEMU
+
+First, you need to install QEMU on your machine as described on the [QEMU download page].
+
+[QEMU download page]: https://www.qemu.org/download/
+
+After installing QEMU, you can run `qemu-system-x86_64 --version` in a terminal to verify that it is installed.
+
+Since QEMU does not support emulating an UEFI firmware natively, we need to download some additional files to emulate an UEFI firmware. The files that we need for that are provided by the [Open Virtual Machine Firmware (OVMF)][OVMF] project, which is a sub-project of [TianoCore] and implements UEFI support for virtual machines. Unfortunately, the project is only [sparsely documented][ovmf-whitepaper] and does not even have a clear homepage.
+
+[OVMF]: https://github.com/tianocore/tianocore.github.io/wiki/OVMF
+[TianoCore]: https://www.tianocore.org/
+[ovmf-whitepaper]: https://www.linux-kvm.org/downloads/lersek/ovmf-whitepaper-c770f8c.txt
+
+The easiest way to work with OVMF is to download pre-built images of the code. We provide such images in the [`rust-osdev/ovmf-prebuilt`] repository, which is updated daily from [Gerd Hoffman's RPM builds](https://www.kraxel.org/repos/). The compiled OVMF are provided as [GitHub releases][ovmf-prebuilt-releases].
+
+[`rust-osdev/ovmf-prebuilt`]: https://github.com/rust-osdev/ovmf-prebuilt/
+[ovmf-prebuilt-releases]: https://github.com/rust-osdev/ovmf-prebuilt/releases/latest
+
+To run our UEFI disk image in QEMU, we need the **`OVMF_pure-efi.fd`** file (other files might work as well). After downloading it, we can then run our UEFI disk image using the following command:
+
+```
+qemu-system-x86_64 -drive \
+    format=raw,file=target/x86_64-unknown-uefi/debug/uefi_app.gdt \
+    -bios /path/to/OVMF_pure-efi.fd
+```
+
+The result should look something like this:
+
 
 ![QEMU screenshot showing some UEFI firmware output](minimal-uefi-qemu.png)
 
@@ -543,8 +601,9 @@ After recompiling and creating a new disk image, we can now see out "Hello World
 > cargo build --target x86_64-unknown-uefi -Z build-std=core \
     -Z build-std-features=compiler-builtins-mem
 > cargo run --package disk_image -- target/x86_64-unknown-uefi/debug/uefi_app.efi
-> qemu-system-x86_64 -drive format=raw,file=target/x86_64-unknown-uefi/debug/uefi_app.fat \
-    -bios # [...] TODO
+> qemu-system-x86_64 \
+    -drive format=raw,file=target/x86_64-unknown-uefi/debug/uefi_app.fat \
+    -bios /path/to/OVMF_pure-efi.fd
 ```
 
 ![QEMU window with "Hello World!" output](hello-world-qemu.png)
@@ -562,7 +621,7 @@ All of these functions are directly provided by the UEFI firmware, the `uefi` cr
 
 ### Boot Services
 
-If we take a closer look at the documentation of the [`SystemTable`] type, we see that it has a generic `View` parameter. The documentation provides a good explanation why this parameter is needed:
+When we take a closer look at the documentation of the [`SystemTable`] type, we see that it has a generic `View` parameter. The documentation provides a good explanation why this parameter is needed:
 
 > [...] Not all UEFI services will remain accessible forever. Some services, called "boot services", may only be called during a bootstrap stage where the UEFI firmware still has control of the hardware, and will become unavailable once the firmware hands over control of the hardware to an operating system loader. Others, called "runtime services", may still be used after that point [...]
 >
@@ -645,7 +704,7 @@ fn alloc_error(_layout: Layout) -> ! {
 
 To compile it, we need a slight modification to our build command since the `alloc` crate needs to be cross-compiled for our UEFI target as well:
 
-```shell
+```bash
 cargo build --target x86_64-unknown-uefi -Z build-std=core,alloc \
      -Z build-std-features=compiler-builtins-mem
 ```
@@ -715,9 +774,11 @@ The [`GraphicsOutput`] type provides a wide range of functionality for configuri
 [`FrameBuffer::as_mut_ptr`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.FrameBuffer.html#method.as_mut_ptr
 [`FrameBuffer::size`]: https://docs.rs/uefi/0.8.0/uefi/proto/console/gop/struct.FrameBuffer.html#method.size
 
-As already mentioned, the GOP framebuffer stays available even after exiting boot services. Thus we can simply pass the framebuffer pointer, its mode info, and its size to the kernel, which can then easily write to screen, as we show in our [_Screen Output_] post.
+As already mentioned, the GOP framebuffer stays available even after exiting boot services. Thus we can simply pass the framebuffer pointer, its mode info, and its size to the kernel, which can then easily write to screen, as we show in our upcoming _Screen Output_ post.
 
+<!-- TODO: uncomment when post is ready
 [_Screen Output_]: @/edition-3/posts/03-screen-output/index.md
+-->
 
 ### Physical Memory Map
 
@@ -758,7 +819,7 @@ Note that we also need to call `uefi::alloc::exit_boot_services()` before exitin
 
 ## Creating a Bootloader
 
-Now that we know how to set up a framebuffer and query relevant system information, we're only missing one crucial function to turn our UEFI application into a bootloader: loading the kernel. This includes loading a kernel executable into memory, setting up an execution environment, and passing control to the kernel's entry point function. Unfortunately, this process can be quite complex so that we cannot cover it here. However, we will give some high-level instructions in the following.
+Now that we know how to set up a framebuffer and query relevant system information, we're only missing one crucial function to turn our UEFI application into a bootloader: loading a kernel. This includes loading a kernel executable into memory, setting up an execution environment, and passing control to the kernel's entry point function. Unfortunately, this process can be quite complex so that we cannot cover it here. However, we will give some high-level instructions in the following.
 
 ### Loading the Kernel from Disk
 
