@@ -20,6 +20,7 @@ translators = ["kahirokunn", "garasubo", "sozysozbot", "woodyZootopia"]
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> --> 
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-12
 
 <!-- toc -->
@@ -232,7 +233,7 @@ Futureコンビネータの大きな利点は、操作を非同期に保つこ�
 
 [_Zero-cost futures in Rust_]: https://aturon.github.io/blog/2016/08/11/futures/
 
-##### 欠点
+##### 欠点 {#drawbacks}
 
 Futureコンビネータを使うと、非常に効率的なコードを書くことができますが、型システムやクロージャベースのインターフェイスのため、状況によっては使いにくいことがあります。例えば、次のようなコードを考えてみましょう:
 

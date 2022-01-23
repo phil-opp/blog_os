@@ -23,6 +23,7 @@ rtl = true
 
 [گیت‌هاب]: https://github.com/phil-opp/blog_os
 [در زیر]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-01
 
 <!-- toc -->
@@ -457,7 +458,7 @@ rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 
 </details>
 
-## خلاصه
+## خلاصه {#summary}
 
 یک باینری مستقل مینیمال راست مانند این است:
 

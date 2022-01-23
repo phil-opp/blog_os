@@ -22,11 +22,12 @@ translators = ["woodyZootopia", "JohnTitor"]
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-02
 
 <!-- toc -->
 
-## <ruby>起動<rp> (</rp><rt>Boot</rt><rp>) </rp></ruby>のプロセス
+## <ruby>起動<rp> (</rp><rt>Boot</rt><rp>) </rp></ruby>のプロセス {#the-boot-process}
 コンピュータを起動すると、マザーボードの [ROM] に保存されたファームウェアのコードを実行し始めます。このコードは、[<ruby>起動時の自己テスト<rp> (</rp><rt>power-on self test</rt><rp>) </rp></ruby>][power-on self-test]を実行し、使用可能なRAMを検出し、CPUとハードウェアを<ruby>事前初期化<rp> (</rp><rt>pre-initialize</rt><rp>) </rp></ruby>します。その後、<ruby>ブータブル<rp> (</rp><rt>bootable</rt><rp>) </rp></ruby>ディスクを探し、オペレーティングシステムのカーネルを<ruby>起動<rp> (</rp><rt>boot</rt><rp>) </rp></ruby>します。
 
 [ROM]: https://ja.wikipedia.org/wiki/Read_only_memory
@@ -91,7 +92,7 @@ x86には2つのファームウェアの標準規格があります："Basic Inp
 
 覚えていますか、この独立したバイナリは`cargo`を使ってビルドしましたが、オペレーティングシステムに依って異なるエントリポイント名とコンパイルフラグが必要なのでした。これは`cargo`は標準では **ホストシステム**（あなたの使っているシステム）向けにビルドするためです。例えばWindows上で走るカーネルというのはあまり意味がなく、私達の望む動作ではありません。代わりに、明確に定義された **ターゲットシステム** 向けにコンパイルできると理想的です。
 
-### RustのNightly版をインストールする
+### RustのNightly版をインストールする {#installing-rust-nightly}
 Rustには**stable**、**beta**、**nightly**の3つのリリースチャンネルがあります。Rust Bookはこれらの3つのチャンネルの違いをとても良く説明しているので、一度[確認してみてください](https://doc.rust-jp.rs/book-ja/appendix-07-nightly-rust.html)。オペレーティングシステムをビルドするには、nightlyチャンネルでしか利用できないいくつかの実験的機能を使う必要があるので、Rustのnightly版をインストールすることになります。
 
 Rustの実行環境を管理するのには、[rustup]を強くおすすめします。nightly、beta、stable版のコンパイラをそれぞれインストールすることができますし、アップデートするのも簡単です。現在のディレクトリにnightlyコンパイラを使うようにするには、`rustup override set nightly`と実行してください。もしくは、`rust-toolchain`というファイルに`nightly`と記入してプロジェクトのルートディレクトリに置くことでも指定できます。Nightly版を使っていることは、`rustc --version`と実行することで確かめられます。表示されるバージョン名の末尾に`-nightly`とあるはずです。
