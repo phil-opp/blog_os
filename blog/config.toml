@@ -3,7 +3,7 @@ base_url = "https://os.phil-opp.com"
 generate_feed = true
 feed_filename = "rss.xml"
 compile_sass = true
-minify_html = true
+minify_html = false
 
 ignored_content = ["*/README.md", "LICENSE-CC-BY-NC"]
 
