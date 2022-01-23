@@ -3,6 +3,7 @@ title = "Simple Shell"
 weight = 5
 path = "simple-shell"
 date = 0000-01-01
+draft = true
 
 [extra]
 chapter = "Basic I/O"

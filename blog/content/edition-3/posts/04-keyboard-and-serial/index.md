@@ -3,6 +3,7 @@ title = "Keyboard & Serial"
 weight = 4
 path = "keyboard-and-serial"
 date = 0000-01-01
+draft = true
 
 [extra]
 chapter = "Basic I/O"

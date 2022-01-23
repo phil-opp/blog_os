@@ -3,6 +3,7 @@ title = "UEFI Booting"
 path = "booting/uefi"
 date = 0000-01-01
 template = "edition-3/page.html"
+draft = true
 
 [extra]
 hide_next_prev = true

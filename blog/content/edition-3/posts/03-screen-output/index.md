@@ -3,6 +3,7 @@ title = "Screen Output"
 weight = 3
 path = "screen-output"
 date = 0000-01-01
+draft = true
 
 [extra]
 chapter = "Basic I/O"

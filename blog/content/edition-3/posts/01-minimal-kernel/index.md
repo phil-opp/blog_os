@@ -3,6 +3,7 @@ title = "Minimal Kernel"
 weight = 1
 path = "minimal-kernel"
 date = 0000-01-01
+draft = true
 
 [extra]
 chapter = "Bare Bones"

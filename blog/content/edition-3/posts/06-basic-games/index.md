@@ -3,6 +3,7 @@ title = "Basic Games"
 weight = 6
 path = "basic-games"
 date = 0000-01-01
+draft = true
 
 [extra]
 chapter = "Basic I/O"
