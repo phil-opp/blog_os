@@ -5,7 +5,7 @@ feed_filename = "rss.xml"
 compile_sass = true
 minify_html = true
 
-ignored_content = ["*/README.md"]
+ignored_content = ["*/README.md", "LICENSE-CC-BY-NC"]
 
 [markdown]
 highlight_code = true
