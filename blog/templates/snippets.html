@@ -14,11 +14,12 @@
     {% if search_term is number %}
         {% set discussion_url = "https://github.com/phil-opp/blog_os/discussions/" ~ search_term %}
     {% else %}
-        {% set discussion_url = `https://github.com/phil-opp/blog_os/discussions/categories/post-comments?discussions_q=%22` ~ search_term ~ `%22` %}
+        {% set search_term_encoded = `"` ~ search_term ~ `"` | urlencode %}
+        {% set discussion_url = `https://github.com/phil-opp/blog_os/discussions/categories/post-comments?discussions_q=` ~ search_term_encoded %}
     {% endif %}
 
     <p class="comment-note">
-        Do you have a problem, want to share feedback, or discuss further ideas? Feel free to leave a comment here! Please stick to English and follow Rust's <a href="https://www.rust-lang.org/policies/code-of-conduct">code of conduct</a>. This comment thread directly maps to a <a href="{{ discussion_url }}"><em>discussion on GitHub</em></a>, so you can also comment there if you prefer.
+        Do you have a problem, want to share feedback, or discuss further ideas? Feel free to leave a comment here! Please stick to English and follow Rust's <a href="https://www.rust-lang.org/policies/code-of-conduct">code of conduct</a>. This comment thread directly maps to a <a href="{{ discussion_url | safe }}"><em>discussion on GitHub</em></a>, so you can also comment there if you prefer.
     </p>
 
     <div class="giscus"></div>
@@ -42,6 +43,6 @@
     </script>
 
     <p class="comment-directly-on-github">
-        Instead of authenticating the <a href="https://giscus.app">giscus</a> application, you can also comment directly <a href="{{ discussion_url }}"><em>on GitHub</em></a>.
+        Instead of authenticating the <a href="https://giscus.app">giscus</a> application, you can also comment directly <a href="{{ discussion_url | safe }}"><em>on GitHub</em></a>.
     </p>
 {% endmacro giscus %}
