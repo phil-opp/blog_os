@@ -146,12 +146,6 @@ The [`PanicInfo` parameter][PanicInfo] contains the file and line where the pani
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-<div class = "note">
-
-A side note about `loop {}`: There is currently a bug in LLVM (the code generator used by Rust) that [incorrectly optimizes away loops](https://github.com/rust-lang/rust/issues/28728) in some cases. Fortunately, this [no longer applies to empty loops](https://github.com/rust-lang/rust/pull/77972) and should also be [fixed in general](https://github.com/rust-lang/rust/issues/28728#issuecomment-766128831) soon.
-
-</div>
-
 After defining a panic handler, only the `eh_personality` language item error remains:
 
 ```
