@@ -23,6 +23,7 @@ rtl = true
 
 [گیت‌هاب]: https://github.com/phil-opp/blog_os
 [در زیر]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-02
 
 <!-- toc -->
@@ -95,7 +96,7 @@ rtl = true
 
 همانطور که ممکن است به یاد داشته باشید، باینری مستقل را از طریق `cargo` ایجاد کردیم، اما با توجه به سیستم عامل، به نام‌های ورودی و پرچم‌های کامپایل مختلف نیاز داشتیم. به این دلیل که `cargo` به طور پیش فرض برای سیستم میزبان بیلد می‌کند، بطور مثال سیستمی که از آن برای نوشتن هسته استفاده می‌کنید. این چیزی نیست که ما برای هسته خود بخواهیم‌، زیرا منطقی نیست که هسته سیستم عامل‌مان را روی یک سیستم عامل دیگر اجرا کنیم. در عوض، ما می‌خواهیم هسته را برای یک _سیستم هدف_ کاملاً مشخص کامپایل کنیم.
 
-### نصب Rust Nightly
+### نصب Rust Nightly {#installing-rust-nightly}
 
 راست دارای سه کانال انتشار است: _stable_, _beta_, and _nightly_ (ترجمه از چپ به راست: پایدار، بتا و شبانه). کتاب Rust تفاوت بین این کانال‌ها را به خوبی توضیح می‌دهد، بنابراین یک دقیقه وقت بگذارید و [آن را بررسی کنید](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). برای ساخت یک سیستم عامل به برخی از ویژگی‌های آزمایشی نیاز داریم که فقط در کانال شبانه موجود است‌، بنابراین باید نسخه شبانه Rust را نصب کنیم.
 
@@ -202,19 +203,19 @@ For more information, see our post on [disabling SIMD](@/edition-2/posts/02-mini
 
 ```json
 {
-  "llvm-target": "x86_64-unknown-none",
-  "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
-  "arch": "x86_64",
-  "target-endian": "little",
-  "target-pointer-width": "64",
-  "target-c-int-width": "32",
-  "os": "none",
-  "executables": true,
-  "linker-flavor": "ld.lld",
-  "linker": "rust-lld",
-  "panic-strategy": "abort",
-  "disable-redzone": true,
-  "features": "-mmx,-sse,+soft-float"
+    "llvm-target": "x86_64-unknown-none",
+    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+    "arch": "x86_64",
+    "target-endian": "little",
+    "target-pointer-width": "64",
+    "target-c-int-width": "32",
+    "os": "none",
+    "executables": true,
+    "linker-flavor": "ld.lld",
+    "linker": "rust-lld",
+    "panic-strategy": "abort",
+    "disable-redzone": true,
+    "features": "-mmx,-sse,+soft-float"
 }
 ```
 

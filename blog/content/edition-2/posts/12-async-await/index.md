@@ -16,6 +16,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-12
 
 <!-- toc -->
@@ -91,7 +92,7 @@ However, the strong performance and memory benefits of cooperative multitasking 
 
 ## Async/Await in Rust
 
-The Rust language provides first-class support for cooperative multitasking in form of async/await. Before we can explore what async/await is and how it works, we need to understand how _futures_ and asynchronous programming work in Rust.
+The Rust language provides first-class support for cooperative multitasking in the form of async/await. Before we can explore what async/await is and how it works, we need to understand how _futures_ and asynchronous programming work in Rust.
 
 ### Futures
 
@@ -420,7 +421,7 @@ ExampleStateMachine::WaitingOnFooTxt(state) => {
                 };
                 *self = ExampleStateMachine::WaitingOnBarTxt(state);
             } else {
-                *self = ExampleStateMachine::End(EndState));
+                *self = ExampleStateMachine::End(EndState);
                 return Poll::Ready(content);
             }
         }
@@ -441,7 +442,7 @@ ExampleStateMachine::WaitingOnBarTxt(state) => {
     match state.bar_txt_future.poll(cx) {
         Poll::Pending => return Poll::Pending,
         Poll::Ready(bar_txt) => {
-            *self = ExampleStateMachine::End(EndState));
+            *self = ExampleStateMachine::End(EndState);
             // from body of `example`
             return Poll::Ready(state.content + &bar_txt);
         }
@@ -687,7 +688,7 @@ For further reading, check out the documentation of the [`pin` module] and the [
 
 #### Pinning and Futures
 
-As we already saw in this post, the [`Future::poll`] method uses pinning in form of a `Pin<&mut Self>` parameter:
+As we already saw in this post, the [`Future::poll`] method uses pinning in the form of a `Pin<&mut Self>` parameter:
 
 [`Future::poll`]: https://doc.rust-lang.org/nightly/core/future/trait.Future.html#tymethod.poll
 
@@ -1025,7 +1026,7 @@ We already have some kind of asynchronicity in our system that we can use for th
 
 [_Interrupts_]: @/edition-2/posts/07-hardware-interrupts/index.md
 
-In the following, we will create an asynchronous task based on the keyboard interrupt. The keyboard interrupt is a good candidate for this because it is both non-deterministic and latency-critical. Non-deteministic means that there is no way to predict when the next key press will occur because it is entirely dependent on the user. Latency-critical means that we want to handle the keyboard input in a timely manner, otherwise the user will feel a lag. To support such a task in an efficient way, it will be essential that the executor has proper support for `Waker` notifications.
+In the following, we will create an asynchronous task based on the keyboard interrupt. The keyboard interrupt is a good candidate for this because it is both non-deterministic and latency-critical. Non-deterministic means that there is no way to predict when the next key press will occur because it is entirely dependent on the user. Latency-critical means that we want to handle the keyboard input in a timely manner, otherwise the user will feel a lag. To support such a task in an efficient way, it will be essential that the executor has proper support for `Waker` notifications.
 
 #### Scancode Queue
 
@@ -1136,7 +1137,7 @@ To call the `add_scancode` function on keyboard interrupts, we update our `keybo
 // in src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame
+    _stack_frame: InterruptStackFrame
 ) {
     use x86_64::instructions::port::Port;
 
@@ -1418,7 +1419,7 @@ The `TaskId` struct is a simple wrapper type around `u64`. We derive a number of
 
 [`BTreeMap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
 
-To create a new unique ID, we create a `TaskID::new` function:
+To create a new unique ID, we create a `TaskId::new` function:
 
 ```rust
 use core::sync::atomic::{AtomicU64, Ordering};
@@ -1643,7 +1644,7 @@ impl Wake for TaskWaker {
 }
 ```
 
-The trait is still unstable, so we have to add **`#![feature(wake_trait)]`** to the top of our `lib.rs` to use it. Since wakers are commonly shared between the executor and the asynchronous tasks, the trait methods require that the `Self` instance is wrapped in the [`Arc`] type, which implements reference-counted ownership. This means that we have to move our `TaskWaker` to an `Arc` in order to call them.
+Since wakers are commonly shared between the executor and the asynchronous tasks, the trait methods require that the `Self` instance is wrapped in the [`Arc`] type, which implements reference-counted ownership. This means that we have to move our `TaskWaker` to an `Arc` in order to call them.
 
 The difference between the `wake` and `wake_by_ref` methods is that the latter only requires a reference to the `Arc`, while the former takes ownership of the `Arc` and thus often requires an increase of the reference count. Not all types support waking by reference, so implementing the `wake_by_ref` method is optional, however it can lead to better performance because it avoids unnecessary reference count modifications. In our case, we can simply forward both trait methods to our `wake_task` function, which requires only a shared `&self` reference.
 
@@ -1744,8 +1745,8 @@ impl Executor {
 
 Since we call `sleep_if_idle` directly after `run_ready_tasks`, which loops until the `task_queue` becomes empty, checking the queue again might seem unnecessary. However, a hardware interrupt might occur directly after `run_ready_tasks` returns, so there might be a new task in the queue at the time the `sleep_if_idle` function is called. Only if the queue is still empty, we put the CPU to sleep by executing the `hlt` instruction through the [`instructions::hlt`] wrapper function provided by the [`x86_64`] crate.
 
-[`instructions::hlt`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/fn.hlt.html
-[`x86_64`]: https://docs.rs/x86_64/0.13.2/x86_64/index.html
+[`instructions::hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/fn.hlt.html
+[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/index.html
 
 Unfortunately, there is still a subtle race condition in this implementation. Since interrupts are asynchronous and can happen at any time, it is possible that an interrupt happens right between the `is_empty` check and the call to `hlt`:
 
@@ -1758,9 +1759,9 @@ if self.task_queue.is_empty() {
 
 In case this interrupt pushes to the `task_queue`, we put the CPU to sleep even though there is now a ready task. In the worst case, this could delay the handling of a keyboard interrupt until the next keypress or the next timer interrupt. So how do we prevent it?
 
-The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`interrupts::enable_and_hlt`][`enable_and_hlt`] function provided by the [`x86_64`] crate. This function is only available since version 0.9.6, so you might need to update your `x86_64` dependency to use it.
+The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`interrupts::enable_and_hlt`][`enable_and_hlt`] function provided by the [`x86_64`] crate.
 
-[`enable_and_hlt`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
+[`enable_and_hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
 The updated implementation of our `sleep_if_idle` function looks like this:
 
@@ -1789,7 +1790,7 @@ Now our executor properly puts the CPU to sleep when there is nothing to do. We 
 
 Our executor is now able to run tasks in an efficient way. It utilizes waker notifications to avoid polling waiting tasks and puts the CPU to sleep when there is currently no work to do. However, our executor is still quite basic and there are many possible ways to extend its functionality:
 
-- **Scheduling:** We currently use the [`VecDeque`] type to implement a _first in first out_ (FIFO) strategy for our `task_queue`, which is often also called _round robin_ scheduling. This strategy might not be the most efficient for all workloads. For example, it might make sense to prioritize latency-critical tasks or tasks that do a lot of I/O. See the [scheduling chapter] of the [_Operating Systems: Three Easy Pieces_] book or the [Wikipedia article on scheduling][scheduling-wiki] for more information.
+- **Scheduling**: We currently use the [`VecDeque`] type to implement a _first in first out_ (FIFO) strategy for our `task_queue`, which is often also called _round robin_ scheduling. This strategy might not be the most efficient for all workloads. For example, it might make sense to prioritize latency-critical tasks or tasks that do a lot of I/O. See the [scheduling chapter] of the [_Operating Systems: Three Easy Pieces_] book or the [Wikipedia article on scheduling][scheduling-wiki] for more information.
 - **Task Spawning**: Our `Executor::spawn` method currently requires a `&mut self` reference and is thus no longer available after starting the `run` method. To fix this, we could create an additional `Spawner` type that shares some kind of queue with the executor and allows task creation from within tasks themselves. The queue could be for example the `task_queue` directly or a separate queue that the executor checks in its run loop.
 - **Utilizing Threads**: We don't have support for threads yet, but we will add it in the next post. This will make it possible to launch multiple instances of the executor in different threads. The advantage of this approach is that the delay imposed by long running tasks can be reduced because other tasks can run concurrently. This approach also allows it to utilize multiple CPU cores.
 - **Load Balancing**: When adding threading support, it becomes important how to distribute the tasks between the executors to ensure that all CPU cores are utilized. A common technique for this is [_work stealing_].

@@ -379,7 +379,7 @@ Note how this solution requires no `unsafe` blocks or `unwrap` calls.
 
 > ##### Aside: How does the `lazy_static!` macro work?
 >
-> The macro generates a `static` of type `Once<Idt>`. The [`Once`][spin::Once] type is provided by the `spin` crate and allows deferred one-time initialization. It is implemented using an [`AtomicUsize`] for synchronization and an [`UnsafeCell`] for storing the (possibly unitialized) value. So this solution also uses `unsafe` behind the scenes, but it is abstracted away in a safe interface.
+> The macro generates a `static` of type `Once<Idt>`. The [`Once`][spin::Once] type is provided by the `spin` crate and allows deferred one-time initialization. It is implemented using an [`AtomicUsize`] for synchronization and an [`UnsafeCell`] for storing the (possibly uninitialized) value. So this solution also uses `unsafe` behind the scenes, but it is abstracted away in a safe interface.
 
 [spin::Once]: https://docs.rs/spin/0.4.5/spin/struct.Once.html
 [`AtomicUsize`]: https://doc.rust-lang.org/nightly/core/sync/atomic/struct.AtomicUsize.html

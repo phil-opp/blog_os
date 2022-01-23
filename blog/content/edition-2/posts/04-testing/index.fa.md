@@ -21,6 +21,7 @@ rtl = true
 
 [گیت‌هاب]: https://github.com/phil-opp/blog_os
 [در زیر]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-04
 
 <!-- toc -->
@@ -179,18 +180,18 @@ test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 
 به جای فراخوانی دستی دستورالعمل های اسمبلی `in` و `out`، ما از انتزاعات ارائه شده توسط کریت [`x86_64`] استفاده می‌کنیم. برای افزودن یک وابستگی به آن کریت، آن را به بخش `dependencies` در `Cargo.toml` اضافه می‌کنیم:
 
-[`x86_64`]: https://docs.rs/x86_64/0.13.2/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.13.2"
+x86_64 = "0.14.2"
 ```
 
 اکنون می‌توانیم از نوع [`Port`] ارائه شده توسط کریت برای ایجاد عملکرد `exit_qemu` استفاده کنیم:
 
-[`Port`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
 
 ```rust
 // in src/main.rs

@@ -6,16 +6,23 @@
     <meta charset="UTF-8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
     <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
     <meta name="author" content="{{ config.extra.author.name }}">
 
     {% if current_url %}
         <link rel="canonical" href="{{ current_url | safe }}" />
     {% endif %}
-    <link href="/css/edition-2/poole.css" rel="stylesheet">
     <link href="/css/edition-2/main.css" rel="stylesheet">
 
     <link rel="alternate" type="application/rss+xml" title="RSS feed for os.phil-opp.com" href="{{ config.base_url | safe }}/rss.xml" />
+
+    <script>
+        let theme = localStorage.getItem("theme");
+        if (theme != null) {
+            document.documentElement.setAttribute("data-theme", theme);
+        }
+    </script>
 
     <script async src="/js/edition-2/main.js"></script>
 
@@ -34,6 +41,11 @@
             </div>
         </header>
 
+        <div class="theme-switch">
+            <div class="light-switch" onclick="toggle_lights()" title="Switch between light and dark theme"></div>
+            <div class="light-switch-reset" onclick="clear_theme_override()" title="Clear the theme override and go back to the system theme"></div>
+        </div>
+
         <div>
             {% block toc_aside %}{% endblock toc_aside %}
             <main>{% block main %}{% endblock main %}</main>
@@ -44,27 +56,14 @@
         <footer class="footer">
             <hr>
             <small>
-                &copy; <time datetime="2020">2020</time>. All rights reserved.
-                <a href="{{ get_url(path="@/pages/contact.md") | safe }}">Contact</a>
+                &copy; <time datetime="2022">2022</time>. All rights reserved.
+                <a class="spaced" href="https://github.com/phil-opp/blog_os#license">License</a>
+                <a class="spaced" href="{{ get_url(path="@/pages/contact.md") | safe }}">Contact</a>
             </small>
         </footer>
     </div>
 
-    <!-- Fathom - simple website analytics - https://github.com/usefathom/fathom -->
-    <script>
-        (function(f, a, t, h, o, m){
-            a[h]=a[h]||function(){
-                (a[h].q=a[h].q||[]).push(arguments)
-            };
-            o=f.createElement('script'),
-            m=f.getElementsByTagName('script')[0];
-            o.async=1; o.src=t; o.id='fathom-script';
-            m.parentNode.insertBefore(o,m)
-        })(document, window, '//fathom.phil-opp.com/tracker.js', 'fathom');
-        fathom('set', 'siteId', 'MUXWM');
-        fathom('trackPageview');
-    </script>
-    <!-- / Fathom -->
+    <script data-goatcounter="https://phil-opp.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 
 </html>

@@ -6,6 +6,7 @@ date = 2019-04-27
 
 [extra]
 chapter = "Bare Bones"
+comments_search_term = 1009
 +++
 
 This post explores unit and integration testing in `no_std` executables. We will use Rust's support for custom test frameworks to execute test functions inside our kernel. To report the results out of QEMU, we will use different features of QEMU and the `bootimage` tool.
@@ -16,6 +17,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-04
 
 <!-- toc -->
@@ -174,18 +176,18 @@ The functionality of the `isa-debug-exit` device is very simple. When a `value` 
 
 Instead of manually invoking the `in` and `out` assembly instructions, we use the abstractions provided by the [`x86_64`] crate. To add a dependency on that crate, we add it to the `dependencies` section in our `Cargo.toml`:
 
-[`x86_64`]: https://docs.rs/x86_64/0.13.2/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.13.2"
+x86_64 = "0.14.2"
 ```
 
 Now we can use the [`Port`] type provided by the crate to create an `exit_qemu` function:
 
-[`Port`]: https://docs.rs/x86_64/0.13.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
 
 ```rust
 // in src/main.rs

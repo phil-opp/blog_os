@@ -16,7 +16,7 @@
 {% block after_main %}
     <hr>
     <section>
-        <h2>Comments</h2>
-        {{ macros::utterances() }}
+        <h2 id="comments">Comments</h2>
+        {{ snippets::giscus(search_term=page.title ~ " (Extra Post)") }}
     </section>
 {% endblock after_main %}

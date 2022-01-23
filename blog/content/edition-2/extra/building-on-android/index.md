@@ -13,7 +13,7 @@ I finally managed to get `blog_os` building on my Android phone using [termux](h
 
 ### Install Termux and Nightly Rust
 
-First, install [termux](https://termux.com/) from the [Google Play Store](https://play.google.com/store/apps/details?id=com.termux) or from [F-Droid](https://f-droid.org/packages/com.termux/). After installing, open it and perform the following steps:
+First, install [termux](https://termux.com/) from the [Google Play Store](https://play.google.com/store/apps/details?id=com.termux) or from F-Droid. After installing, open it and perform the following steps:
 
 - Install fish shell, set as default shell, and launch it:
     ```

@@ -27,5 +27,6 @@
             <a class="next" href="{{ page.later.path | safe }}">{{ page.later.title }} &raquo;</a>
         {% endif %}
     </div>
+        {{ snippets::giscus(search_term=page.title) }}
 
 {% endblock after_main %}

@@ -22,6 +22,7 @@ translators = ["JohnTitor"]
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [comments]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-01
 
 <!-- toc -->
@@ -45,7 +46,7 @@ OS カーネルを書くためには、いかなる OS の機能にも依存し�
 
 Rust で OS カーネルを書くには、基盤となる OS なしで動く実行環境をつくる必要があります。そのような実行環境はフリースタンディング環境やベアメタルのように呼ばれます。
 
-この記事では、フリースタンディングな Rust のバイナリをつくるために必要なステップを紹介し、なぜそれが必要なのかを説明します。もし最小限の説明だけを読みたいのであれば **[概要](#概要)** まで飛ばしてください。
+この記事では、フリースタンディングな Rust のバイナリをつくるために必要なステップを紹介し、なぜそれが必要なのかを説明します。もし最小限の説明だけを読みたいのであれば **[概要](#summary)** まで飛ばしてください。
 
 ## 標準ライブラリの無効化
 
@@ -160,7 +161,7 @@ language item はコンパイラによって内部的に必要とされる特別
 [`eh_personality` language item]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
 [libunwind]: https://www.nongnu.org/libunwind/
-[structured exception handling]:  https://docs.microsoft.com/de-de/windows/win32/debug/structured-exception-handling
+[structured exception handling]:  https://docs.microsoft.com/en-us/windows/win32/debug/structured-exception-handling
 
 ### アンワインドの無効化
 
@@ -462,7 +463,7 @@ rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 
 </details>
 
-## 概要
+## 概要 {#summary}
 
 最小限の独立した Rust バイナリは次のようになります:
 
@@ -528,4 +529,4 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 
 [次の記事][next post]では、この独立したバイナリを最小限の OS カーネルにするために必要なステップを説明しています。カスタムターゲットの作成、実行可能ファイルとブートローダの組み合わせ、画面に何か文字を表示する方法について説明しています。
 
-[next post]: @/edition-2/posts/02-minimal-rust-kernel/index.md
+[next post]: @/edition-2/posts/02-minimal-rust-kernel/index.ja.md

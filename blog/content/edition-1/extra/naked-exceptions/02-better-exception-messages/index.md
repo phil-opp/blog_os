@@ -628,7 +628,7 @@ bitflags! {
 
 - When the `PROTECTION_VIOLATION` flag is set, the page fault was caused e.g. by a write to a read-only page. If it's not set, it was caused by accessing a non-present page.
 - The `CAUSED_BY_WRITE` flag specifies if the fault was caused by a write (if set) or a read (if not set).
-- The `USER_MODE` flag is set when the fault occurred in non-priviledged mode.
+- The `USER_MODE` flag is set when the fault occurred in non-privileged mode.
 - The `MALFORMED_TABLE` flag is set when the page table entry has a 1 in a reserved field.
 - When the `INSTRUCTION_FETCH` flag is set, the page fault occurred while fetching the next instruction.
 

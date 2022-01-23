@@ -1,21 +1,17 @@
-title = "Writing an OS in Rust"
-base_url = "https://os.phil-opp.com"
-description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 
-highlight_code = true
-highlight_theme = "visual-studio-dark"
+base_url = "https://os.phil-opp.com"
+
 generate_feed = true
 feed_filename = "rss.xml"
 compile_sass = true
+minify_html = false
 
-languages = [
-    { code = "zh-CN" }, # Chinese (simplified)
-    { code = "zh-TW" }, # Chinese (traditional)
-    { code = "ja" }, # Japanese
-    { code = "fa" }, # Persian
-]
+ignored_content = ["*/README.md", "LICENSE-CC-BY-NC"]
 
-ignored_content = ["*/README.md"]
+[markdown]
+highlight_code = true
+highlight_theme = "visual-studio-dark"
+smart_punctuation = true
 
 [link_checker]
 skip_prefixes = [
@@ -28,14 +24,20 @@ skip_prefixes = [
 skip_anchor_prefixes = [
      "https://github.com/", # see https://github.com/getzola/zola/issues/805
      "https://docs.rs/x86_64/0.1.2/src/", # source code highlight
+     "https://doc.rust-jp.rs/book-ja/", # seems like Zola has problems with Japanese anchor names
 ]
 
 [extra]
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }
+default_language = "en"
+languages = ["en", "zh-CN", "zh-TW", "fr", "ja", "fa", "ru"]
 
-[translations.en]
-lang_name = "English"
+[languages.en]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.en.translations]
+lang_name = "English (original)"
 toc = "Table of Contents"
 all_posts = "« All Posts"
 comments = "Comments"
@@ -47,33 +49,45 @@ translated_content_notice = "This is a community translation of the <strong><a h
 translated_by = "Translation by"
 word_separator = "and"
 
-[translations.zh-CN]
+# Chinese (simplified)
+[languages.zh-CN]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.zh-CN.translations]
 lang_name = "Chinese (simplified)"
-toc = "Table of Contents"
-all_posts = "« All Posts"
-comments = "Comments"
-comments_notice = "Please leave your comments in English if possible."
-readmore = "read&nbsp;more&nbsp;»"
-not_translated = "(This post is not translated yet.)"
-translated_content = "Translated Content:"
-translated_content_notice = "This is a community translation of the <strong><a href=\"_original.permalink_\">_original.title_</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!"
-translated_by = "Translation by"
-word_separator = "and"
+toc = "目录"
+all_posts = "« 所有文章"
+comments = "评论"
+comments_notice = "请尽可能使用英语评论。"
+readmore = "更多 »"
+not_translated = "（该文章还没有被翻译。）"
+translated_content = "翻译内容："
+translated_content_notice = "这是对原文章 <strong><a href=\"_original.permalink_\">_original.title_</a></strong> 的社区中文翻译。它可能不完整，过时或者包含错误。可以在 <a href=\"https://github.com/phil-opp/blog_os/issues/961\">这个 Issue</a> 上评论和提问！"
+translated_by = "翻译者："
+word_separator = "和"
 
-[translations.zh-TW]
+# Chinese (traditional)
+[languages.zh-TW]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.zh-TW.translations]
 lang_name = "Chinese (traditional)"
-toc = "Table of Contents"
-all_posts = "« All Posts"
-comments = "Comments"
-comments_notice = "Please leave your comments in English if possible."
-readmore = "read&nbsp;more&nbsp;»"
-not_translated = "(This post is not translated yet.)"
-translated_content = "Translated Content:"
-translated_content_notice = "This is a community translation of the <strong><a href=\"_original.permalink_\">_original.title_</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!"
-translated_by = "Translation by"
-word_separator = "and"
+toc = "目錄"
+all_posts = "« 所有文章"
+comments = "評論"
+comments_notice = "請儘可能使用英語評論。"
+readmore = "更多 »"
+not_translated = "（該文章還沒有被翻譯。）"
+translated_content = "翻譯內容："
+translated_content_notice = "這是對原文章 <strong><a href=\"_original.permalink_\">_original.title_</a></strong> 的社區中文翻譯。它可能不完整，過時或者包含錯誤。可以在 <a href=\"https://github.com/phil-opp/blog_os/issues/961\">這個 Issue</a> 上評論和提問！"
+translated_by = "翻譯者："
+word_separator = "和"
 
-[translations.ja]
+# Japanese
+[languages.ja]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.ja.translations]
 lang_name = "Japanese"
 toc = "目次"
 all_posts = "« すべての記事へ"
@@ -86,7 +100,11 @@ translated_content_notice = "この記事は<strong><a href=\"_original.permalin
 translated_by = "翻訳者："
 word_separator = "及び"
 
-[translations.fa]
+# Persian
+[languages.fa]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.fa.translations]
 lang_name = "Persian"
 toc = "فهرست مطالب"
 all_posts = "« همه پست‌ها"
@@ -98,3 +116,37 @@ translated_content = "محتوای ترجمه شده:"
 translated_content_notice = "این یک ترجمه از جامعه کاربران برای پست <strong><a href=\"_original.permalink_\">_original.title_</a></strong> است. ممکن است ناقص، منسوخ شده یا دارای خطا باشد. لطفا هر گونه مشکل را در <a href=\"https://github.com/phil-opp/blog_os/issues/908\">این ایشو</a> گزارش دهید!"
 translated_by = "ترجمه توسط"
 word_separator = "و"
+
+# Russian
+[languages.ru]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.ru.translations]
+lang_name = "Russian"
+toc = "Содержание"
+all_posts = "« Все посты"
+comments = "Комментарии"
+comments_notice = "Пожалуйста, оставляйте комментарии на английском по возможности."
+readmore = "читать&nbsp;дальше&nbsp;»"
+not_translated = "(Этот пост еще не переведен.)"
+translated_content = "Переведенное содержание:"
+translated_content_notice = "Это перевод сообщества поста <strong><a href=\"_original.permalink_\">_original.title_</a></strong>. Он может быть неполным, устаревшим или содержать ошибки. Пожалуйста, сообщайте о любых проблемах!"
+translated_by = "Перевод сделан"
+word_separator = "и"
+
+# French
+[languages.fr]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.fr.translations]
+lang_name = "French"
+toc = "Table des matières"
+all_posts = "« Tous les articles"
+comments = "Commentaires"
+comments_notice = "Veuillez commenter en Anglais si possible."
+readmore = "Voir&nbsp;plus&nbsp;»"
+not_translated = "(Cet article n'est pas encore traduit.)"
+translated_content = "Contenu traduit : "
+translated_content_notice = "Ceci est une traduction communautaire de l'article <strong><a href=\"_original.permalink_\">_original.title_</a></strong>. Il peut être incomplet, obsolète ou contenir des erreurs. Veuillez signaler les quelconques problèmes !"
+translated_by = "Traduit par : "
+word_separator = "et"
