@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% import "snippets.html" as snippets %}
+
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 
 {% block main %}
@@ -27,6 +29,10 @@
             <a class="next" href="{{ page.later.path | safe }}">{{ page.later.title }} &raquo;</a>
         {% endif %}
     </div>
+    <hr>
+    <section>
+        <h2 id="comments">Comments</h2>
         {{ snippets::giscus(search_term=page.title) }}
+    </section>
 
 {% endblock after_main %}
