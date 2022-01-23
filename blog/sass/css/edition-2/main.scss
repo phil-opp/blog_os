@@ -960,25 +960,6 @@ img {
     background-color: white;
 }
 
-/* Note that dark mode is experimental */
-
-.dark-mode-note {
-    display: none;
-}
-[data-theme="dark"] .dark-mode-note {
-    display: block;
-}
-@media (prefers-color-scheme: dark) {
-    /* defaults to dark theme */
-    .dark-mode-note {
-        display: block;
-    }
-    /* Override dark mode with light mode styles if the user decides to swap */
-    [data-theme="light"] .dark-mode-note {
-        display: none;
-    }
-}
-
 /* Manual switch between dark and light mode */
 
 .theme-switch {
