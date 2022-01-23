@@ -65,7 +65,7 @@ while True:
     month_str = datetime.date(1900, month, 1).strftime('%B')
 
     link = '<a href="' + url + '">This Month in Rust OSDev (' + month_str + " " + str(year) + ")</a> "
-    lines.append(u"  <li>" + link + "</li>\n")
+    lines.append(u"  <li><b>" + link + "</b></li>\n")
 
     month = month + 1
     if month > 12:
@@ -78,7 +78,7 @@ with io.open("templates/auto/status-updates.html", 'w', encoding='utf8') as stat
     status_updates.truncate()
 
     for line in lines:
-        status_updates.write("<b>" + line + "</b>")
+        status_updates.write(line)
 
 with io.open("templates/auto/status-updates-truncated.html", 'w', encoding='utf8') as status_updates:
     status_updates.truncate()
@@ -86,4 +86,4 @@ with io.open("templates/auto/status-updates-truncated.html", 'w', encoding='utf8
     for index, line in enumerate(lines):
         if index == 5:
             break
-        status_updates.write("<b>" + line + "</b>")
+        status_updates.write(line)
