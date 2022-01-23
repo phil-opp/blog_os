@@ -1,71 +1,89 @@
 {% macro latest_post(posts) %}
-    {% set post = posts|last %}
-    <strong><a href="{{ post.path | safe }}">{{ post.title }}</a></strong>
+{% set post = posts|last %}
+{% if post %}
+<strong><a href="{{ post.path | safe }}">{{ post.title }}</a></strong>
+{% else %}
+<em>none yet, stay tuned!</em>
+{% endif %}
 {% endmacro latest_post %}
 
 {% macro post_link(page) %}
-    <div>
-        {% set translations = page.translations | filter(attribute="lang", value=lang) -%}
-        {%- if translations -%}
-            {%- set post = get_page(path = translations.0.path) -%}
-        {%- else -%}
-            {%- set post = page -%}
-            {%- set not_translated = true -%}
+<div>
+    {% set translations = page.translations | filter(attribute="lang", value=lang) -%}
+    {%- if translations -%}
+    {%- set post = get_page(path = translations.0.path) -%}
+    {%- else -%}
+    {%- set post = page -%}
+    {%- set not_translated = true -%}
+    {%- endif -%}
+    <h3 class="post-list-title"><a href="{{ post.path | safe }}">{{ post.title }}</a></h3>
+    <span class="post-list-icon">
+        {%- if post.extra.icon -%}{{post.extra.icon | safe}}{%- endif -%}
+    </span>
+    <div class="post-summary">
+        {{ post.summary | safe }}
+        <a class="read-more" href="{{ post.path | safe }}"><em>read&nbsp;more&nbsp;»</em></a>
+
+        {% if page.extra.extra_content %}
+        <aside class="post-extra-content">
+            <h4>Extra Content:</h4>
+            {% for name in page.extra.extra_content %}
+            {% set path = page.relative_path | split(pat="/") | slice(end=-1) | concat(with=name) | join(sep="/") %}
+
+            {% set extra_page = get_page(path = path) %}
+
+            <span class="post-list-extra-post-icon">
+                {%- if extra_page.extra.icon -%}{{extra_page.extra.icon | safe}}{%- endif -%}
+            </span>
+            <a href="{{ extra_page.path | safe }}">{{ extra_page.title }}</a>{% if not loop.last %},{% endif %}
+            {% endfor %}
+        </aside>
+        {% endif %}
+
+        {%- if lang and not_translated and lang != config.default_language -%}
+        <aside class="no-translation">
+            (This post is not translated yet.)
+        </aside>
         {%- endif -%}
-        <h3 class="post-list-title"><a href="{{ post.path | safe }}">{{ post.title }}</a></h3>
-        <span class="post-list-icon">
-            {%- if post.extra.icon -%}{{post.extra.icon | safe}}{%- endif -%}
-        </span>
-        <div class="post-summary">
-            {{ post.summary | safe }}
-            <a class="read-more" href="{{ post.path | safe }}"><em>read&nbsp;more&nbsp;»</em></a>
-
-            {% if page.extra.extra_content %}
-            <aside class="post-extra-content">
-                <h4>Extra Content:</h4>
-                {% for name in page.extra.extra_content %}
-                    {% set path = page.relative_path | split(pat="/") | slice(end=-1) | concat(with=name) | join(sep="/") %}
-
-                    {% set extra_page = get_page(path = path) %}
-
-                    <a href = "{{ extra_page.path | safe }}">{{ extra_page.title }}</a>{% if not loop.last %},{% endif %}
-                {% endfor %}
-            </aside>
-            {% endif %}
-
-            {%- if lang and not_translated and lang != config.default_language -%}
-            <aside class="no-translation">
-                (This post is not translated yet.)
-            </aside>
-            {%- endif -%}
-        </div>
     </div>
+</div>
 {% endmacro post_link %}
 
 {% macro toc(toc) %}
-    <details id = "toc-inline">
-        <summary><b>Table of Contents</b></summary>
-        <ul>
-            {% for h2 in toc %}<li>
-                <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
-                {% if h2.children %}<ul>
-                    {% for h3 in h2.children %}<li>
-                        <a href="#{{h3.id | safe}}">{{ h3.title | safe }}</a>
-                    </li>{% endfor %}
-                </ul>{% endif %}
-            </li>{% endfor %}
-            <li class="toc-comments-link"><a href="#comments">Comments</a></li>
-        </ul>
-    </details>
+<details id="toc-inline">
+    <summary><b>Table of Contents</b></summary>
+    <ul>
+        {% for h2 in toc %}<li>
+            <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
+            {% if h2.children %}<ul>
+                {% for h3 in h2.children %}<li>
+                    <a href="#{{h3.id | safe}}">{{ h3.title | safe }}</a>
+                </li>{% endfor %}
+            </ul>{% endif %}
+        </li>{% endfor %}
+        <li class="toc-comments-link"><a href="#comments">Comments</a></li>
+    </ul>
+</details>
+
+<div class="theme-switch-inline">
+    Switch between light and dark mode:
+    <span class="switches">
+        <span class="light-switch" onclick="toggle_lights()" title="Switch between light and dark theme"></span>
+        <span class="light-switch-reset" onclick="clear_theme_override()"
+            title="Clear the theme override and go back to the system theme"></span>
+    </span>
+</div>
 {% endmacro toc %}
 
-{% macro utterances() %}
-    <script src="https://utteranc.es/client.js"
-        data-repo="phil-opp/blog_os"
-        data-issue-term="url"
-        data-label="comments"
-        crossorigin="anonymous"
-        theme="preferred-color-scheme"
-        async>
-    </script>
-{% endmacro utterances %}
+{% macro alpha_warning() %}
+<div class="warning">
+    <p>
+        This is an <strong>early preview</strong> of the upcoming <em>third edition</em> of this guide. The edition is
+        still in alpha state, so things might be still in progress, not work, or change without warning!
+    </p>
+    <p>
+        For a more stable experience, check out the current <a href="{{ get_url(path = " @/edition-2/_index.md") | safe
+            }}"><strong>Second Edition</strong></a>.
+    </p>
+</div>
+{% endmacro alpha_warning %}

@@ -6,34 +6,20 @@
 {% block title %}{{ config.title }}{% endblock title %}
 
 {% block main %}
+
 {% set posts_section = get_section(path = "edition-3/posts/_index.md") %}
 {% set posts = posts_section.pages %}
 
-<h1>Writing an OS in Rust</h1>
-<p>{{ config.extra.subtitle | replace(from=" ", to="&nbsp;") | safe }} <em class="gray">— Third Edition (Alpha Release)</em></p>
-
-<div class="front-page-introduction">
-    <p>
-        This blog series creates a small operating system in the
-        <a href="https://www.rust-lang.org/">Rust programming language</a>. Each post is a small tutorial and includes all
-        needed code, so you can follow along if you like. The source code is also available in the corresponding
-        <a href="https://github.com/phil-opp/blog_os">Github repository</a>.
-    </p>
-
-    <p>Latest post:
-        {% set latest_post = posts|last %}
-        <strong><a href="{{ latest_post.path | safe }}">{{ latest_post.title }}</a></strong>
-    </p>
-</div>
-
-<!--
-<p>In the following posts, we explain how to create an operating system for the <code>x86_64</code> architecture step for step. Starting from scratch, we create a bootable OS kernel, implement basic input/output support, show how to test and debug our kernel, explain virtual memory management, and add support for multitasking and userspace programs.</p>
--->
+{{ section.content
+    | replace(from="<!-- latest-post -->", to=macros::latest_post(posts=posts))
+    | replace(from="<!-- alpha-warning -->", to=macros::alpha_warning())
+    | safe
+}}
 
 {%- set chapter = "none" -%}
 {%- for post in posts -%}
     {%- if post.extra["chapter"] != chapter -%}
-        {%- if chapter != "none" -%}
+        {%- if not loop.first -%}
             </ul></div>
         {%- endif -%}
 
@@ -52,8 +38,11 @@
     {%- endif -%}
 
     <li>{{ macros::post_link(page=post) }}</li>
+
+    {% if loop.last %}
+        </ul></div>
+    {% endif %}
 {%- endfor -%}
-</ul></div>
 
 <hr>
 
@@ -83,10 +72,10 @@
     <p>You are currently viewing the third edition of “Writing an OS in Rust”. In case you are interested in the older editions, you can still find them here:</p>
         <ul>
             <li>
-                <strong><a href="{{ get_url(path="@/edition-2/_index.md")}}">Second Edition:</a></strong> The second edition is based on older version of the <code>bootloader</code> crate, which uses the hardware-provided VGA text buffer instead of a pixel-based framebuffer for screen output. Instead of the APIC, the legacy PIC is used for implementing hardware interrupts. The second edition only works on BIOS-based systems, not on the newer UEFI standard. <a class="read-more" href="{{ get_url(path = "edition-2") | safe }}"><em>read&nbsp;the&nbsp;second edition&nbsp;»</em></a></p>
+                <p><strong><a href="{{ get_url(path="@/edition-2/_index.md")}}">Second Edition:</a></strong> The second edition is based on older version of the <code>bootloader</code> crate, which uses the hardware-provided VGA text buffer instead of a pixel-based framebuffer for screen output. Instead of the APIC, the legacy PIC is used for implementing hardware interrupts. The second edition only works on BIOS-based systems, not on the newer UEFI standard. <a class="read-more" href="{{ get_url(path = "edition-2") | safe }}"><em>read&nbsp;the&nbsp;second edition&nbsp;»</em></a></p>
             </li>
             <li>
-                <strong><a href="{{ get_url(path="@/edition-1/_index.md")}}">First Edition:</a></strong> The first edition was already started in 2015. It is very different in many aspects, for example it builds upon the GRUB bootloader instead of using the `bootloader` crate. This means that it requires you to manually write some assembly code and do an elaborate remap of the kernel's virtual pages in order to improve safety.<a class="read-more" href="{{ get_url(path = "edition-1") | safe }}"><em>read&nbsp;the&nbsp;first edition&nbsp;»</em></a></p>
+                <p><strong><a href="{{ get_url(path="@/edition-1/_index.md")}}">First Edition:</a></strong> The first edition was already started in 2015. It is very different in many aspects, for example it builds upon the GRUB bootloader instead of using the `bootloader` crate. This means that it requires you to manually write some assembly code and do an elaborate remap of the kernel's virtual pages in order to improve safety.<a class="read-more" href="{{ get_url(path = "edition-1") | safe }}"><em>read&nbsp;the&nbsp;first edition&nbsp;»</em></a></p>
             </li>
         </ul>
     <p><em>Note that the older editions are no longer updated and might no longer work or contain outdated information.</em></p>
@@ -100,22 +89,20 @@
 
 {% block after_main %}
 <aside class="page-aside-right">
+    {% if section.translations | length > 1 %}
     <div class="block" id="language-selector">
-        {% if section.translations -%}
-        <div class="block" id="language-selector">
-            <h2>Other Languages</h2>
-            <ul>{%- for translation in section.translations | sort(attribute="lang") %}
+        <h2>Other Languages</h2>
+        {% set translations = section.translations | group_by(attribute="lang") %}
+        <ul>{%- for lang_code in config.extra.languages -%}
+            {%- if translations[lang_code] and lang_code != lang -%}
+                {%- set translation = translations[lang_code].0 -%}
                 <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">
-                    {%- if translation.lang == "en" -%}
-                        English (original)
-                    {%- else -%}
-                        {{ trans(key="lang_name", lang = translation.lang) }}
-                    {%- endif -%}
+                    {{ trans(key="lang_name", lang = translation.lang) }}
                 </a></li>
-            {% endfor %}</ul>
-        </div>
-        {%- endif %}
+            {%- endif -%}
+        {% endfor %}</ul>
     </div>
+    {% endif %}
     <div class="block">
         <h2>Recent Updates</h2>
         {% include "auto/recent-updates.html" %}
