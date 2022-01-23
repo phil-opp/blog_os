@@ -1,25 +1,16 @@
 /*
- *                        ___
- *                       /\_ \
- *  _____     ___     ___\//\ \      __
- * /\ '__`\  / __`\  / __`\\ \ \   /'__`\
- * \ \ \_\ \/\ \_\ \/\ \_\ \\_\ \_/\  __/
- *  \ \ ,__/\ \____/\ \____//\____\ \____\
- *   \ \ \/  \/___/  \/___/ \/____/\/____/
- *    \ \_\
- *     \/_/
+ * CSS file for the second edition of os.phil-opp.com.
  *
- * Designed, built, and released under MIT license by @mdo. Learn more at
+ * Based on `poole`which was designed, built, and released under MIT license by @mdo. See
  * https://github.com/poole/poole.
- *
- *
- * Adjusted by @phil-opp.
  */
 
 /*
  * Contents
  *
+ * Fonts
  * Body resets
+ * Dark/Light Mode
  * Custom type
  * Messages
  * Container
@@ -30,6 +21,8 @@
  * Themes
  */
 
+/* Fonts */
+
 @font-face {
     font-family: "Iosevka";
     src: url("/fonts/iosevka-regular.woff2") format("woff2"), url("/fonts/iosevka-regular.woff") format("woff");
@@ -39,10 +32,10 @@
 }
 
 /*
- * Body resets
- *
- * Update the foundational and global aspects of the page.
- */
+   * Body resets
+   *
+   * Update the foundational and global aspects of the page.
+   */
 
 * {
     -webkit-box-sizing: border-box;
@@ -50,7 +43,8 @@
     box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
     margin: 0;
     padding: 0;
 }
@@ -59,6 +53,8 @@ html {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     line-height: 1.5;
 }
+
+/* Dark/Light Mode */
 
 @mixin set-colors-light {
     --background-color: #fff;
@@ -86,7 +82,7 @@ html {
 }
 
 @mixin set-colors-dark {
-    --background-color: #121212;
+    --background-color: #252525;
     --text-color: #f5f5f5;
     --heading-color: #eee;
     --heading-code-color: #eee;
@@ -95,9 +91,9 @@ html {
     --hr-color-bottom: #000;
     --code-text-color: #eeeeee;
     --code-background-color: #222222;
-    --masthead-title-color: #a0a0a0;
+    --masthead-title-color: #b6b6b6;
     --strong-color: #c0c0c0;
-    --masthead-subtitle: #6f6f6f;
+    --masthead-subtitle: #8f8f8f;
     --post-title-color: #c8c8ff;
     --gh-repo-box-border-color: #555;
     --background-color-section-bare-bones: #114;
@@ -118,36 +114,19 @@ body {
     @include set-colors-light();
 }
 
-body.dark {
+[data-theme="dark"] body {
     @include set-colors-dark();
 }
 
-.light-switch {
-    @include light-switch-light();
-}
-
-body.dark .light-switch {
-    @include light-switch-dark();
-}
-
 /* Styles for users who prefer dark mode at the OS level */
-
 @media (prefers-color-scheme: dark) {
     /* defaults to dark theme */
     body {
         @include set-colors-dark();
     }
     /* Override dark mode with light mode styles if the user decides to swap */
-    body.light {
+    [data-theme="light"] body {
         @include set-colors-light();
-    }
-
-    .light-switch {
-        @include light-switch-dark();
-    }
-
-    body.light .light-switch {
-        @include light-switch-light();
     }
 }
 
@@ -167,41 +146,43 @@ a {
 
 /* `:focus` is linked to `:hover` for basic accessibility */
 
-a:hover, a:focus {
+a:hover,
+a:focus {
     text-decoration: underline;
 }
 
 /* Headings */
-
-h1, h2, h3, h4, h5, h6 {
-    margin-bottom: .5rem;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin-bottom: 0.5rem;
     font-weight: bold;
     line-height: 1.25;
     color: var(--heading-color);
     text-rendering: optimizeLegibility;
 }
-
 h1 {
     font-size: 2rem;
 }
-
 h2 {
     margin-top: 1rem;
     font-size: 1.5rem;
 }
-
 h3 {
     margin-top: 1.5rem;
     font-size: 1.25rem;
 }
-
-h4, h5, h6 {
+h4,
+h5,
+h6 {
     margin-top: 1rem;
     font-size: 1rem;
 }
 
 /* Body text */
-
 p {
     margin-top: 0;
     margin-bottom: 1rem;
@@ -212,32 +193,34 @@ strong {
 }
 
 /* Lists */
-
-ul, ol, dl {
+ul,
+ol,
+dl {
     margin-top: 0;
     margin-bottom: 1rem;
 }
 
 /* Nested lists */
-
-li ul, li ol, li dl {
+li ul,
+li ol,
+li dl {
     margin-bottom: 0;
 }
 
-li ul+p, li ol+p, li dl+p {
+li ul + p,
+li ol + p,
+li dl + p {
     margin-top: 1rem;
 }
 
 dt {
     font-weight: bold;
 }
-
 dd {
-    margin-bottom: .5rem;
+    margin-bottom: 0.5rem;
 }
 
 /* Misc */
-
 hr {
     position: relative;
     margin: 1.5rem 0;
@@ -252,68 +235,59 @@ abbr {
     color: #555;
     text-transform: uppercase;
 }
-
 abbr[title] {
     cursor: help;
     border-bottom: 1px dotted #e5e5e5;
 }
 
 /* Code */
-
-code, pre {
+code,
+pre {
     font-family: "Iosevka", monospace;
 }
-
 code {
-    padding: .25em .5em;
+    padding: 0.25em 0.5em;
     font-size: 85%;
     color: var(--code-text-color);
     background-color: var(--code-background-color);
     border-radius: 3px;
 }
-
 pre {
     display: block;
     margin-top: 0;
     margin-bottom: 1rem;
-    padding: .5rem;
-    font-size: .9rem;
+    padding: 0.5rem;
+    font-size: 0.95rem;
     line-height: 1.4;
     white-space: pre;
     overflow: auto;
     word-wrap: normal;
     background-color: var(--code-background-color);
 }
-
 pre code {
     padding: 0;
     font-size: 100%;
     color: inherit;
     background-color: transparent;
 }
-
 .highlight {
     margin-bottom: 1rem;
     border-radius: 4px;
 }
-
 .highlight pre {
     margin-bottom: 0;
 }
 
 /* Quotes */
-
 blockquote {
-    padding: .5rem 1rem;
-    margin: .8rem 0;
+    padding: 0.5rem 1rem;
+    margin: 0.8rem 0;
     color: #7a7a7a;
-    border-left: .25rem solid #e5e5e5;
+    border-left: 0.25rem solid #e5e5e5;
 }
-
 blockquote p:last-child {
     margin-bottom: 0;
 }
-
 @media (min-width: 30rem) {
     blockquote {
         padding-right: 5rem;
@@ -331,20 +305,19 @@ img {
 }
 
 /* Tables */
-
 table {
     margin-bottom: 1rem;
     width: 100%;
     border: 1px solid #e5e5e5;
     border-collapse: collapse;
 }
-
-td, th {
-    padding: .25rem .5rem;
+td,
+th {
+    padding: 0.25rem 0.5rem;
     border: 1px solid #e5e5e5;
 }
-
-tbody tr:nth-child(odd) td, tbody tr:nth-child(odd) th {
+tbody tr:nth-child(odd) td,
+tbody tr:nth-child(odd) th {
     background-color: var(--code-background-color);
 }
 
@@ -398,17 +371,14 @@ tbody tr:nth-child(odd) td, tbody tr:nth-child(odd) th {
     padding-bottom: 1rem;
     margin-bottom: 1rem;
 }
-
 .masthead-title {
     margin-top: 0;
     margin-bottom: 0;
     color: var(--masthead-title-color);
 }
-
 .masthead-title a {
     color: var(--masthead-title-color);
 }
-
 .masthead small {
     font-size: 75%;
     font-weight: 400;
@@ -429,11 +399,14 @@ tbody tr:nth-child(odd) td, tbody tr:nth-child(odd) th {
 
 /* Blog post or page title */
 
-.page-title, .post-list-title, .post-list-title a {
+.page-title,
+.post-list-title,
+.post-list-title a {
     color: var(--post-title-color);
 }
 
-.page-title, .post-list-title {
+.page-title,
+.post-list-title {
     margin-top: 0;
 }
 
@@ -442,6 +415,13 @@ tbody tr:nth-child(odd) td, tbody tr:nth-child(odd) th {
     margin-top: -2.1rem;
     margin-left: -3rem;
     width: 2rem;
+}
+
+.post-list-extra-post-icon {
+    display: inline-block;
+    width: 1em;
+    vertical-align: top;
+    margin-right: 0.1rem;
 }
 
 .post-title {
@@ -463,41 +443,34 @@ tbody tr:nth-child(odd) td, tbody tr:nth-child(odd) th {
 }
 
 /* Meta data line below post title */
-
 .post-date {
     display: block;
-    margin-top: -.5rem;
+    margin-top: -0.5rem;
     margin-bottom: 1rem;
     color: #9a9a9a;
 }
 
 /* Related posts */
-
 .related {
     padding-top: 2rem;
     padding-bottom: 2rem;
     border-top: 1px solid #eee;
 }
-
 .related-posts {
     padding-left: 0;
     list-style: none;
 }
-
 .related-posts h3 {
     margin-top: 0;
 }
-
 .related-posts li small {
     font-size: 75%;
     color: #999;
 }
-
 .related-posts li a:hover {
     color: #268bd2;
     text-decoration: none;
 }
-
 .related-posts li a:hover small {
     color: inherit;
 }
@@ -510,8 +483,7 @@ tbody tr:nth-child(odd) td, tbody tr:nth-child(odd) th {
    */
 
 .pagination {
-    overflow: hidden;
-    /* clearfix */
+    overflow: hidden; /* clearfix */
     margin-left: -1rem;
     margin-right: -1rem;
     font-family: "PT Sans", Helvetica, Arial, sans-serif;
@@ -520,19 +492,16 @@ tbody tr:nth-child(odd) td, tbody tr:nth-child(odd) th {
 }
 
 /* Pagination items can be `span`s or `a`s */
-
 .pagination-item {
     display: block;
     padding: 1rem;
     border: 1px solid #eee;
 }
-
 .pagination-item:first-child {
     margin-bottom: -1px;
 }
 
 /* Only provide a hover state for linked pagination items */
-
 a.pagination-item:hover {
     background-color: #f5f5f5;
 }
@@ -557,10 +526,15 @@ a.pagination-item:hover {
     }
 }
 
-h1 code, h2 code, h3 code, h4 code, h5 code, h6 code {
+h1 code,
+h2 code,
+h3 code,
+h4 code,
+h5 code,
+h6 code {
     padding: 0;
     color: var(--heading-code-color);
-    font-size: 95%;
+    font-size: 90%;
     background-color: inherit;
 }
 
@@ -647,7 +621,7 @@ main img {
 }
 
 .posts.memory-management {
-    border: 2px solid #fc0
+    border: 2px solid #fc0;
 }
 
 .posts.interrupts {
@@ -675,7 +649,7 @@ main img {
 }
 
 .no-translation {
-    margin-top: .3rem;
+    margin-top: 0.3rem;
     color: #999999;
 }
 
@@ -728,6 +702,10 @@ main img {
 footer.footer {
     margin-top: 1rem;
     margin-bottom: 1rem;
+
+    .spaced {
+        margin-left: 0.5rem;
+    }
 }
 
 .footnotes {
@@ -738,7 +716,8 @@ footer.footer {
     margin-bottom: 1rem;
 }
 
-sup, sub {
+sup,
+sub {
     line-height: 0;
 }
 
@@ -751,7 +730,7 @@ a.anchorjs-link:hover {
 }
 
 #toc-inline summary {
-    margin-bottom: .2rem;
+    margin-bottom: 0.2rem;
 }
 
 aside#all-posts-link {
@@ -763,6 +742,7 @@ aside#all-posts-link {
     #toc-inline {
         display: none;
     }
+
     #toc-aside {
         display: block;
         width: 12rem;
@@ -774,25 +754,33 @@ aside#all-posts-link {
         font-size: 90%;
         line-height: 1.2;
     }
-    #toc-aside li>a, #toc-aside h2 {
-        opacity: .5;
-        transition: opacity .5s;
+
+    #toc-aside li > a,
+    #toc-aside h2 {
+        opacity: 0.5;
+        transition: opacity 0.5s;
     }
-    #toc-aside:hover li>a, #toc-aside:hover h2 {
+
+    #toc-aside:hover li > a,
+    #toc-aside:hover h2 {
         opacity: 1;
     }
-    #toc-aside li.active>a {
+
+    #toc-aside li.active > a {
         font-weight: bold;
     }
+
     #toc-aside h2 {
         font-size: 110%;
-        margin-bottom: .2rem;
+        margin-bottom: 0.2rem;
     }
+
     #toc-aside ol {
-        margin: 0 0 .2rem 0;
+        margin: 0 0 0.2rem 0;
         padding: 0 0 0 1rem;
         list-style: none;
     }
+
     #toc-aside ol li a:before {
         content: "";
         border-color: transparent #008eef;
@@ -805,35 +793,43 @@ aside#all-posts-link {
         top: 0.9em;
         position: relative;
     }
+
     #toc-aside.coarse li ol {
         display: none;
     }
+
     aside.page-aside-right {
         position: absolute;
         min-width: 11rem;
         max-width: 17rem;
         top: 4rem;
-        margin-left: 47rem;
+        margin-left: 45rem;
         margin-right: 2rem;
         font-size: 90%;
     }
+
     aside.page-aside-right .block {
         margin-bottom: 1.5rem;
     }
+
     aside.page-aside-right h2 {
         font-size: 110%;
-        margin-bottom: .2rem;
+        margin-bottom: 0.2rem;
     }
+
     aside.page-aside-right ul {
-        margin: 0 0 .2rem 0;
+        margin: 0 0 0.2rem 0;
         padding: 0 0 0 1rem;
     }
+
     aside.page-aside-right ul li {
-        margin-top: .5rem;
+        margin-top: 0.5rem;
     }
+
     #language-selector li {
         margin-top: 0;
     }
+
     aside#all-posts-link {
         position: fixed;
         top: 1.25rem;
@@ -860,7 +856,7 @@ a.zola-anchor {
     line-height: 2em;
 }
 
-:hover>a.zola-anchor {
+:hover > a.zola-anchor {
     opacity: 1;
     text-decoration: none;
 }
@@ -870,8 +866,8 @@ a.zola-anchor:hover {
 }
 
 .note {
-    padding: .7rem 1rem;
-    margin: 1rem .2rem;
+    padding: 0.7rem 1rem;
+    margin: 1rem 0.2rem;
     border: 2px solid var(--border-color-note);
     border-radius: 3px;
     background-color: var(--background-color-note);
@@ -886,8 +882,8 @@ a.zola-anchor:hover {
 }
 
 div.warning {
-    padding: .7rem 1rem;
-    margin: 1rem .2rem;
+    padding: 0.7rem 1rem;
+    margin: 1rem 0.2rem;
     border: 2px solid orange;
     border-radius: 5px;
     background-color: #ffa50022;
@@ -895,6 +891,10 @@ div.warning {
 
 div.warning p:last-child {
     margin-bottom: 0;
+}
+
+div.warning h2 {
+    margin-top: 0rem;
 }
 
 form.subscribe {
@@ -906,38 +906,40 @@ div.subscribe-fields {
 }
 
 form.subscribe input {
-    padding: .5rem;
+    padding: 0.5rem;
     border: 1px solid #e5e5e5;
 }
 
-form.subscribe input[type=email] {
+form.subscribe input[type="email"] {
     flex: 1;
 }
 
-form.subscribe input[type=submit] {
-    padding: .25rem .5rem;
+form.subscribe input[type="submit"] {
+    padding: 0.25rem 0.5rem;
     cursor: pointer;
 }
 
 /* Asides */
-
 aside.post_aside {
     font-style: italic;
     padding: 0rem 1rem 0rem;
-    margin: .8rem 0;
-    border-left: .1rem solid #e5e5e5;
-    border-right: .1rem solid #e5e5e5;
+    margin: 0.8rem 0;
+    border-left: 0.1rem solid #e5e5e5;
+    border-right: 0.1rem solid #e5e5e5;
 }
 
 details summary {
     cursor: pointer;
 }
 
-details summary h3, details summary h4, details summary h5, details summary h6 {
+details summary h3,
+details summary h4,
+details summary h5,
+details summary h6 {
     display: inline;
 }
 
-details :hover>a.zola-anchor {
+details :hover > a.zola-anchor {
     opacity: 0;
 }
 
@@ -972,7 +974,7 @@ details :hover>a.zola-anchor {
 .gh-repo-box .stars-forks a:hover {
     color: var(--link-color);
     text-decoration: none;
-    opacity: 1.0;
+    opacity: 1;
 }
 
 .gh-repo-box svg {
@@ -999,14 +1001,13 @@ details :hover>a.zola-anchor {
 }
 
 .toc-comments-link {
-    margin-top: .5rem;
+    margin-top: 0.5rem;
 }
 
 h5 {
     font-style: italic;
     font-size: 0.9rem;
 }
-
 .gray {
     color: gray;
 }
@@ -1017,38 +1018,134 @@ a strong {
 
 .right-to-left {
     direction: rtl;
+    font-family: Vazir;
 }
 
-.left-to-right, .right-to-left pre {
+.left-to-right,
+.right-to-left pre,
+.right-to-left table,
+.right-to-left[id="toc-aside"] {
     direction: ltr;
 }
 
+.status-update-list li {
+    margin-bottom: 0.5rem;
+}
+
+.giscus {
+    margin-top: 1.5rem;
+}
+
+img {
+    background-color: white;
+}
+
+/* Manual switch between dark and light mode */
+
+.theme-switch {
+    margin-bottom: 1rem;
+
+    @media (min-width: 58rem) {
+        position: fixed;
+        left: 2rem;
+        bottom: 2rem;
+        margin-bottom: 0rem;
+    }
+}
+
+.theme-switch-inline {
+    @media (min-width: 58rem) {
+        display: none;
+    }
+
+    font-style: italic;
+
+    .switches {
+        vertical-align: top;
+        margin-left: 1rem;
+    }
+}
+
 .light-switch {
-    position: fixed;
-    left: 1rem;
-    bottom: 1rem;
+    @mixin light-switch-light {
+        // icon: https://icons.getbootstrap.com/icons/moon-fill/ (MIT licensed)
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23004' class='bi bi-moon' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M14.53 10.53a7 7 0 0 1-9.058-9.058A7.003 7.003 0 0 0 8 15a7.002 7.002 0 0 0 6.53-4.47z'/%3E%3C/svg%3E");
+    }
+
+    @mixin light-switch-dark {
+        // icon: https://icons.getbootstrap.com/icons/brightness-high-fill/ (MIT licensed)
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ff9' class='bi bi-brightness-high-fill' viewBox='0 0 16 16'%3E%3Cpath d='M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z'/%3E%3C/svg%3E");
+    }
+
+    display: inline-block;
+    @include light-switch-light();
+
     background-repeat: no-repeat;
     width: 2rem;
     height: 2rem;
     cursor: pointer;
     opacity: 0.6;
+
+    &:hover {
+        transform: scale(1.3);
+        transition: 200ms ease-out;
+        opacity: 1;
+    }
+
+    [data-theme="dark"] & {
+        @include light-switch-dark();
+    }
+
+    @media (prefers-color-scheme: dark) {
+        @include light-switch-dark();
+
+        [data-theme="light"] & {
+            @include light-switch-light();
+        }
+    }
 }
 
-.light-switch:hover {
-    transform: scale(1.3);
-    transition: 200ms ease-out;
-    opacity: 1;
-}
+/* Clear theme override and go back to system theme */
 
-.chapter-introduction {
-    margin-bottom: 1.5rem;
-}
+.light-switch-reset {
+    @mixin light-switch-reset-light {
+        // icon: https://icons.getbootstrap.com/icons/x-circle-fill/ (MIT licensed)
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23666' class='bi bi-x-circle' viewBox='0 0 16 16'%3E%3Cpath d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/%3E%3Cpath d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    }
 
-.post-extra-content {
-    margin-top: 1rem;
-    font-style: italic;
-}
+    @mixin light-switch-reset-dark {
+        // icon: https://icons.getbootstrap.com/icons/x-circle-fill/ (MIT licensed)
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' class='bi bi-x-circle' viewBox='0 0 16 16'%3E%3Cpath d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/%3E%3Cpath d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    }
 
-.post-extra-content h4 {
-    display: inline;
+    @include light-switch-reset-light();
+    vertical-align: bottom;
+    margin-left: 0.5rem;
+    background-repeat: no-repeat;
+    width: 2rem;
+    height: 2rem;
+    cursor: pointer;
+    opacity: 0.6;
+
+    visibility: hidden;
+    display: inline-block;
+    [data-theme="light"] & {
+        visibility: visible;
+    }
+    [data-theme="dark"] & {
+        @include light-switch-reset-dark();
+        visibility: visible;
+    }
+
+    @media (min-width: 80rem) {
+        position: fixed;
+        left: 4.5rem;
+        bottom: 2rem;
+    }
+
+    &:hover {
+        transform: scale(1.1);
+        transition: 200ms ease-out;
+        opacity: 1;
+    }
 }
