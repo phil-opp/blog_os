@@ -29,6 +29,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 
 <!-- toc -->
 
