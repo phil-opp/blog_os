@@ -575,9 +575,11 @@ Even though most systems support a framebuffer, some might not. The [`BootInfo`]
 [`Option`]: https://doc.rust-lang.org/std/option/enum.Option.html
 [`if let`]: https://doc.rust-lang.org/reference/expressions/if-expr.html#if-let-expressions
 
-The [`FrameBuffer`] type provides two methods: The [`info`] method returns a [`FrameBufferInfo`] instance with all kinds of information about the framebuffer format, including the pixel type and the screen resolution. The [`buffer`] method returns the actual framebuffer content in form of a mutable byte [slice].
+The [`FrameBuffer`] type provides two methods: The `info` method returns a [`FrameBufferInfo`] instance with all kinds of information about the framebuffer format, including the pixel type and the screen resolution. The `buffer` method returns the actual framebuffer content in form of a mutable byte [slice].
 
 [`FrameBuffer`]: https://docs.rs/bootloader/0.10.1/bootloader/boot_info/struct.FrameBuffer.html
+[`FrameBufferInfo`]: https://docs.rs/bootloader/0.10.1/bootloader/boot_info/struct.FrameBufferInfo.html
+[slice]: https://doc.rust-lang.org/std/primitive.slice.html
 
 We will look into programming the framebuffer in detail in the next post. For now, let's just try setting the whole screen to some color. For this, we just set every pixel in the byte slice to some fixed value:
 
@@ -599,7 +601,7 @@ While it depends on the pixel color format how these values are interpreted, the
 
 After running `cargo kbuild` and then our `boot` script again, we can boot the new version in QEMU. We see that our guess that the whole screen would turn gray was right:
 
-TODO: QEMU screenshot
+![QEMU showing a gray screen](qemu-gray.png)
 
 We finally see some output from our own little kernel!
 
@@ -626,6 +628,19 @@ TODO
 
 
 ### Booting on Real Hardware
+
+To boot on real hardware, you first need to write either the `bootimage-uefi-blog_os.img` or the `bootimage-bios-blog_os.img` disk image to an USB stick. This deletes everything on the stick, so be careful. The actual steps to do this depend on your operating system. 
+
+#### Linux
+
+#### Windows
+
+On Windows, you can use the [Rufus] tool, which is developed as an open-source project [on GitHub][rufus-github]. After downloading it you can directly run it, there's no installation necessary. In the interface, you select the USB stick you want to write to
+
+[Rufus]: https://rufus.ie/
+[rufus-github]: https://github.com/pbatard/rufus
+
+#### macOS
 
 TODO
 
