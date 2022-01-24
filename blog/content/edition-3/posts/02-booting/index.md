@@ -635,7 +635,7 @@ To boot on real hardware, you first need to write either the `bootimage-uefi-blo
 
 #### Unix-like
 
-On any Unix-like host OS (including both Linux and macOS), you can use the `dd` command to write the disk image directly to a USB drive. First run either `sudo fdisk -l` (on Linux) or `diskutil list` on a Mac to get info about where in `/dev` the file representing your device is located. After that, open a terminal window and run either of the following commands:
+On any Unix-like host OS (including both Linux and macOS), you can use the `dd` command to write the disk image directly to a USB drive. First run either `sudo fdisk -l` (on Linux) or `diskutil list` (on a Mac) to get info about where in `/dev` the file representing your device is located. After that, open a terminal window and run either of the following commands:
 
 ```
 # Linux
