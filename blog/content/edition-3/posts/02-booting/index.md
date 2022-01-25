@@ -639,14 +639,14 @@ On any Unix-like host OS (including both Linux and macOS), you can use the `dd` 
 
 ##### Linux
 ```
-# replace /dev/sdb with device filename as revealed by "sudo fdisk -l"
-$ sudo dd if=boot-uefi-blog_os.img of=/dev/sdb
+# replace /dev/sdX with device filename as revealed by "sudo fdisk -l"
+$ sudo dd if=boot-uefi-blog_os.img of=/dev/sdX
 ```
 
 ##### macOS
 ```
-# replace /dev/disk4 with device filename as revealed by "diskutil list"
-$ sudo dd if=boot-uefi-blog_os.img of=/dev/disk4
+# replace /dev/diskX with device filename as revealed by "diskutil list"
+$ sudo dd if=boot-uefi-blog_os.img of=/dev/diskX
 ```
 
 **WARNING**: Be very careful when running this command. If you specify the wrong device as the `of=` parameter, you could end up wiping your system clean, so make sure the device you run it on is a removable one.
