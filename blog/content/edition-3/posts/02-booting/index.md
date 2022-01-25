@@ -626,7 +626,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
 We use the [`wrapping_add`] method here because Rust panics on implicit integer overflow (at least in debug mode). By adding a prime number, we try to add some variety. The result looks as follows:
 
-![PatternExample](https://user-images.githubusercontent.com/3030773/150902614-1897d348-6f6d-4b3b-9fdc-e38fba11acdc.png)
+![QEMU showing an increasing value on each loop iteration](qemu-wrapping-add.png)
 
 ### Booting on Real Hardware
 
