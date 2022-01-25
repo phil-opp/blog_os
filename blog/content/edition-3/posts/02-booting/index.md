@@ -637,11 +637,16 @@ To boot on real hardware, you first need to write either the `bootimage-uefi-blo
 
 On any Unix-like host OS (including both Linux and macOS), you can use the `dd` command to write the disk image directly to a USB drive. First run either `sudo fdisk -l` (on Linux) or `diskutil list` (on a Mac) to get info about where in `/dev` the file representing your device is located. After that, open a terminal window and run either of the following commands:
 
+##### Linux
 ```
-# Linux
-$ sudo dd if=boot-uefi-blog_os.img of=/dev/sdb #replace with device filename as revealed by "sudo fdisk -l"
-# macOS
-$ sudo dd if=boot-uefi-blog_os.img of=/dev/disk4 #replace with device filename as revealed by "diskutil list"
+# replace /dev/sdb with device filename as revealed by "sudo fdisk -l"
+$ sudo dd if=boot-uefi-blog_os.img of=/dev/sdb
+```
+
+##### macOS
+```
+# replace /dev/disk4 with device filename as revealed by "diskutil list"
+$ sudo dd if=boot-uefi-blog_os.img of=/dev/disk4
 ```
 
 **WARNING**: Be very careful when running this command. If you specify the wrong device as the `of=` parameter, you could end up wiping your system clean, so make sure the device you run it on is a removable one.
