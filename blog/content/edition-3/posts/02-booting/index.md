@@ -633,7 +633,23 @@ TODO
 
 To boot on real hardware, you first need to write either the `bootimage-uefi-blog_os.img` or the `bootimage-bios-blog_os.img` disk image to an USB stick. This deletes everything on the stick, so be careful. The actual steps to do this depend on your operating system. 
 
-#### Linux
+#### Unix-like
+
+On any Unix-like host OS (including both Linux and macOS), you can use the `dd` command to write the disk image directly to a USB drive. First run either `sudo fdisk -l` (on Linux) or `diskutil list` (on a Mac) to get info about where in `/dev` the file representing your device is located. After that, open a terminal window and run either of the following commands:
+
+##### Linux
+```
+# replace /dev/sdX with device filename as revealed by "sudo fdisk -l"
+$ sudo dd if=boot-uefi-blog_os.img of=/dev/sdX
+```
+
+##### macOS
+```
+# replace /dev/diskX with device filename as revealed by "diskutil list"
+$ sudo dd if=boot-uefi-blog_os.img of=/dev/diskX
+```
+
+**WARNING**: Be very careful when running this command. If you specify the wrong device as the `of=` parameter, you could end up wiping your system clean, so make sure the device you run it on is a removable one.
 
 #### Windows
 
@@ -641,10 +657,6 @@ On Windows, you can use the [Rufus] tool, which is developed as an open-source p
 
 [Rufus]: https://rufus.ie/
 [rufus-github]: https://github.com/pbatard/rufus
-
-#### macOS
-
-TODO
 
 ## Support for `cargo run`
 
