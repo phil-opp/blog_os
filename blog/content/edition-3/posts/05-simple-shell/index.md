@@ -13,11 +13,15 @@ icon = '''<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi 
 </svg>'''
 +++
 
-Dolores qui incidunt sit fugiat amet consequatur. Qui ab vel et molestias ex nemo corporis consequatur. Quia consequuntur itaque sequi quia autem. Maxime vel quis maxime at. Tenetur eveniet velit dolor quidem temporibus tenetur.
+# TODO
+1. Lesson on switching to user mode
+2. Use file system crates like [fatfs](crates.io/crates/fatfs) and/or [btrfs-no-std](https://crates.io/crates/btrfs-no-std) to read/write from disk
+3. Develop shell commands using the above
 
 <!-- more -->
 
-Molestiae quidem ipsa nihil laboriosam sapiente laudantium quia. Praesentium et repudiandae minima voluptas et. Repellendus voluptatem distinctio enim et alias distinctio recusandae quos. Dolores ex eum culpa quo sunt sint voluptate voluptates. Facere unde sequi quo ea vel nihil. Rem deleniti repellat rem molestias
+# TODO: More
 
 <!-- toc -->
-Molestiae quidem ipsa nihil laboriosam sapiente laudantium quia. Praesentium et repudiandae minima voluptas et. Repellendus voluptatem distinctio enim et alias distinctio recusandae quos. Dolores ex eum culpa quo sunt sint voluptate voluptates. Facere unde sequi quo ea vel nihil. Rem deleniti repellat rem molestias
+
+# TODO: TOC
