@@ -13,11 +13,11 @@ icon = '''<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi 
 </svg>'''
 +++
 
-Dolores qui incidunt sit fugiat amet consequatur. Qui ab vel et molestias ex nemo corporis consequatur. Quia consequuntur itaque sequi quia autem. Maxime vel quis maxime at. Tenetur eveniet velit dolor quidem temporibus tenetur.
+# TODO: provide lesson on using the [x2apic](https://crates.io/crates/x2apic) crate to handle interrupts (including keystrokes)
 
 <!-- more -->
 
-Molestiae quidem ipsa nihil laboriosam sapiente laudantium quia. Praesentium et repudiandae minima voluptas et. Repellendus voluptatem distinctio enim et alias distinctio recusandae quos. Dolores ex eum culpa quo sunt sint voluptate voluptates. Facere unde sequi quo ea vel nihil. Rem deleniti repellat rem molestias
+# TODO: more
 
 <!-- toc -->
-Molestiae quidem ipsa nihil laboriosam sapiente laudantium quia. Praesentium et repudiandae minima voluptas et. Repellendus voluptatem distinctio enim et alias distinctio recusandae quos. Dolores ex eum culpa quo sunt sint voluptate voluptates. Facere unde sequi quo ea vel nihil. Rem deleniti repellat rem molestias
+# TODO: TOC
