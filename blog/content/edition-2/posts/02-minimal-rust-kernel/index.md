@@ -277,7 +277,7 @@ This tells cargo that it should recompile the `core` and `compiler_builtins` lib
 
 </div>
 
-After setting the `unstable.build-std` configuration key and installing the `rust-src` component, we can rerun the our build command:
+After setting the `unstable.build-std` configuration key and installing the `rust-src` component, we can rerun our build command:
 
 ```
 > cargo build --target x86_64-blog_os.json
