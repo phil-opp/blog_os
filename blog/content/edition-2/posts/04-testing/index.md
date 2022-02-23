@@ -73,7 +73,7 @@ To implement a custom test framework for our kernel, we add the following to our
 #![test_runner(crate::test_runner)]
 
 #[cfg(test)]
-fn test_runner(tests: &[&dyn Fn()]) {
+pub fn test_runner(tests: &[&dyn Fn()]) {
     println!("Running {} tests", tests.len());
     for test in tests {
         test();
