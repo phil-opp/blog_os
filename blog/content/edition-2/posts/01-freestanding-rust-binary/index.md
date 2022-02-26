@@ -281,7 +281,7 @@ By passing a `--target` argument we [cross compile] our executable for a bare me
 
 [cross compile]: https://en.wikipedia.org/wiki/Cross_compiler
 
-This is the approach that we will use for building our OS kernel. Instead of `thumbv7em-none-eabihf`, we will use a [custom target] that describes a `x86_64` bare metal environment. The details will be explained in the next post.
+This is not the approach that we will use for building our OS kernel. Instead of `thumbv7em-none-eabihf`, we will use a [custom target] that describes a `x86_64` bare metal environment. The details will be explained in the next post.
 
 [custom target]: https://doc.rust-lang.org/rustc/targets/custom.html
 
