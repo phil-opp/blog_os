@@ -30,7 +30,7 @@ skip_anchor_prefixes = [
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }
 default_language = "en"
-languages = ["en", "zh-CN", "zh-TW", "fr", "ja", "fa", "ru"]
+languages = ["en", "zh-CN", "zh-TW", "fr", "ja", "fa", "ru", "ko"]
 
 [languages.en]
 title = "Writing an OS in Rust"
@@ -149,3 +149,20 @@ translated_content = "Contenu traduit : "
 translated_content_notice = "Ceci est une traduction communautaire de l'article <strong><a href=\"_original.permalink_\">_original.title_</a></strong>. Il peut être incomplet, obsolète ou contenir des erreurs. Veuillez signaler les quelconques problèmes !"
 translated_by = "Traduit par : "
 word_separator = "et"
+
+# Korean
+[languages.ko]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.ko.translations]
+lang_name = "Korean"
+toc = "목차"
+all_posts = "« 모든 게시글"
+comments = "댓글"
+comments_notice = "댓글은 가능하면 영어로 작성해주세요."
+readmore = "더&nbsp;읽기&nbsp;»"
+not_translated = "(아직 번역이 완료되지 않은 게시글입니다)"
+translated_content = "번역된 내용 : "
+translated_content_notice = "이것은 커뮤니티 멤버가 <strong><a href=\"_original.permalink_\">_original.title_</a></strong> 포스트를 번역한 글입니다. 부족한 설명이나 오류, 혹은 시간이 지나 더 이상 유효하지 않은 정보를 발견하시면 제보해주세요!"
+translated_by = "번역한 사람 : "
+word_separator = "와"
