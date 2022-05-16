@@ -432,7 +432,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-Remember, this `_start` function is used when running `cargo test --lib`, since Rust's tests the `lib.rs` completely independent of the `main.rs`. We need to call `init` here to set up an IDT before running the tests.
+Remember, this `_start` function is used when running `cargo test --lib`, since Rust tests the `lib.rs` completely independently of the `main.rs`. We need to call `init` here to set up an IDT before running the tests.
 
 Now we can create a `test_breakpoint_exception` test:
 
