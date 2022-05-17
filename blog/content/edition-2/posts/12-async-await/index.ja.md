@@ -425,7 +425,7 @@ ExampleStateMachine::WaitingOnFooTxt(state) => {
                 };
                 *self = ExampleStateMachine::WaitingOnBarTxt(state);
             } else {
-                *self = ExampleStateMachine::End(EndState));
+                *self = ExampleStateMachine::End(EndState);
                 return Poll::Ready(content);
             }
         }
@@ -446,7 +446,7 @@ ExampleStateMachine::WaitingOnBarTxt(state) => {
     match state.bar_txt_future.poll(cx) {
         Poll::Pending => return Poll::Pending,
         Poll::Ready(bar_txt) => {
-            *self = ExampleStateMachine::End(EndState));
+            *self = ExampleStateMachine::End(EndState);
             // from body of `example`
             return Poll::Ready(state.content + &bar_txt);
         }
