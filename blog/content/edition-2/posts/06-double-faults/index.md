@@ -374,9 +374,9 @@ pub fn init() {
 }
 ```
 
-We reload the code segment register using [`set_cs`] and load the TSS using [`load_tss`]. The functions are marked as `unsafe`, so we need an `unsafe` block to invoke them. The reason is that it might be possible to break memory safety by loading invalid selectors.
+We reload the code segment register using [`set_reg`] and load the TSS using [`load_tss`]. The functions are marked as `unsafe`, so we need an `unsafe` block to invoke them. The reason is that it might be possible to break memory safety by loading invalid selectors.
 
-[`set_cs`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/segmentation/fn.set_cs.html
+[`set_reg`]: https://docs.rs/x86_64/latest/x86_64/registers/segmentation/trait.Segment.html#tymethod.set_reg
 [`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
 
 Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
