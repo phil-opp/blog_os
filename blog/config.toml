@@ -46,6 +46,7 @@ not_translated = "(This post is not translated yet.)"
 translated_content = "Translated Content:"
 translated_content_notice = "This is a community translation of the <strong><a href=\"_original.permalink_\">_original.title_</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!"
 translated_by = "Translation by"
+translation_contributors = "With contributions from"
 word_separator = "and"
 
 # Chinese (simplified)
@@ -63,6 +64,7 @@ not_translated = "（该文章还没有被翻译。）"
 translated_content = "翻译内容："
 translated_content_notice = "这是对原文章 <strong><a href=\"_original.permalink_\">_original.title_</a></strong> 的社区中文翻译。它可能不完整，过时或者包含错误。可以在 <a href=\"https://github.com/phil-opp/blog_os/issues/961\">这个 Issue</a> 上评论和提问！"
 translated_by = "翻译者："
+translation_contributors = "With contributions from"
 word_separator = "和"
 
 # Chinese (traditional)
@@ -80,6 +82,7 @@ not_translated = "（該文章還沒有被翻譯。）"
 translated_content = "翻譯內容："
 translated_content_notice = "這是對原文章 <strong><a href=\"_original.permalink_\">_original.title_</a></strong> 的社區中文翻譯。它可能不完整，過時或者包含錯誤。可以在 <a href=\"https://github.com/phil-opp/blog_os/issues/961\">這個 Issue</a> 上評論和提問！"
 translated_by = "翻譯者："
+translation_contributors = "With contributions from"
 word_separator = "和"
 
 # Japanese
@@ -97,6 +100,7 @@ not_translated = "（この記事はまだ翻訳されていません。）"
 translated_content = "この記事は翻訳されたものです："
 translated_content_notice = "この記事は<strong><a href=\"_original.permalink_\">_original.title_</a></strong>をコミュニティの手により翻訳したものです。そのため、翻訳が完全・最新でなかったり、原文にない誤りを含んでいる可能性があります。問題があれば<a href=\"https://github.com/phil-opp/blog_os/issues/906\">このissue</a>上で報告してください！"
 translated_by = "翻訳者："
+translation_contributors = "With contributions from"
 word_separator = "及び"
 
 # Persian
@@ -114,6 +118,7 @@ not_translated = "(.این پست هنوز ترجمه نشده است)"
 translated_content = "محتوای ترجمه شده:"
 translated_content_notice = "این یک ترجمه از جامعه کاربران برای پست <strong><a href=\"_original.permalink_\">_original.title_</a></strong> است. ممکن است ناقص، منسوخ شده یا دارای خطا باشد. لطفا هر گونه مشکل را در <a href=\"https://github.com/phil-opp/blog_os/issues/908\">این ایشو</a> گزارش دهید!"
 translated_by = "ترجمه توسط"
+translation_contributors = "With contributions from"
 word_separator = "و"
 
 # Russian
@@ -131,6 +136,7 @@ not_translated = "(Этот пост еще не переведен.)"
 translated_content = "Переведенное содержание:"
 translated_content_notice = "Это перевод сообщества поста <strong><a href=\"_original.permalink_\">_original.title_</a></strong>. Он может быть неполным, устаревшим или содержать ошибки. Пожалуйста, сообщайте о любых проблемах!"
 translated_by = "Перевод сделан"
+translation_contributors = "With contributions from"
 word_separator = "и"
 
 # French
@@ -148,6 +154,7 @@ not_translated = "(Cet article n'est pas encore traduit.)"
 translated_content = "Contenu traduit : "
 translated_content_notice = "Ceci est une traduction communautaire de l'article <strong><a href=\"_original.permalink_\">_original.title_</a></strong>. Il peut être incomplet, obsolète ou contenir des erreurs. Veuillez signaler les quelconques problèmes !"
 translated_by = "Traduit par : "
+translation_contributors = "With contributions from"
 word_separator = "et"
 
 # Korean
@@ -165,4 +172,5 @@ not_translated = "(아직 번역이 완료되지 않은 게시글입니다)"
 translated_content = "번역된 내용 : "
 translated_content_notice = "이것은 커뮤니티 멤버가 <strong><a href=\"_original.permalink_\">_original.title_</a></strong> 포스트를 번역한 글입니다. 부족한 설명이나 오류, 혹은 시간이 지나 더 이상 유효하지 않은 정보를 발견하시면 제보해주세요!"
 translated_by = "번역한 사람 : "
+translation_contributors = "With contributions from"
 word_separator = "와"
