@@ -69,6 +69,18 @@
                     {%- endif -%}
                     <a href="https://github.com/{{user}}">@{{user}}</a>
                 {%- endfor %}.
+
+                {%- if page.extra.translation_contributors %}
+                <span class="translation_contributors">
+                    {{ trans(key="translation_contributors", lang=lang) }} {% for user in page.extra.translation_contributors -%}
+                    {%- if not loop.first -%}
+                    {%- if loop.last %} {{ trans(key="word_separator", lang=lang) }} {% else %}, {% endif -%}
+                    {%- endif -%}
+                    <a href="https://github.com/{{user}}">@{{user}}</a>
+                    {%- endfor %}.
+                </span>
+                {% endif -%}
+
             </p>
             {% endif -%}
         </div>
