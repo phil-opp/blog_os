@@ -664,7 +664,7 @@ pub fn _print(args: fmt::Arguments) {
 
 マクロは`_print`をモジュールの外側から呼び出せる必要があるので、この関数は<ruby>公開<rp> (</rp><rt>public</rt><rp>) </rp></ruby>されていなければなりません。しかし、これは<ruby>非公開<rp> (</rp><rt>private</rt><rp>) </rp></ruby>の実装の詳細であると考え、[`doc(hidden)`属性][`doc(hidden)` attribute]をつけることで、生成されたドキュメントから隠すようにします。
 
-[`doc(hidden)` attribute]: https://doc.rust-lang.org/nightly/rustdoc/the-doc-attribute.html#dochidden
+[`doc(hidden)` attribute]: https://doc.rust-lang.org/nightly/rustdoc/write-documentation/the-doc-attribute.html#hidden
 
 ### `println`を使ってHello World
 こうすることで、`_start`関数で`println`を使えるようになります：

@@ -651,7 +651,7 @@ pub fn _print(args: fmt::Arguments) {
 
 از آنجا که ماکروها باید بتوانند از خارج از ماژول، `_print` را فراخوانی کنند، تابع باید عمومی (public) باشد. با این حال ، از آنجا که این جزئیات پیاده سازی را خصوصی (private) در نظر می گیریم، [ویژگی `doc(hidden)`] را اضافه می کنیم تا از مستندات تولید شده پنهان شود.
 
-[ویژگی `doc(hidden)`]: https://doc.rust-lang.org/nightly/rustdoc/the-doc-attribute.html#dochidden
+[ویژگی `doc(hidden)`]: https://doc.rust-lang.org/nightly/rustdoc/write-documentation/the-doc-attribute.html#hidden
 
 ### Hello World توسط `println`
 اکنون می توانیم از `println` در تابع `_start` استفاده کنیم:

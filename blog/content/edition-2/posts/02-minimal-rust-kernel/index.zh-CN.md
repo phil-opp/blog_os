@@ -73,7 +73,7 @@ Rust 语言有三个**发行频道**（release channel），分别是 stable、b
 
 Nightly 版本的编译器允许我们在源码的开头插入**特性标签**（feature flag），来自由选择并使用大量实验性的功能。举个例子，要使用实验性的[内联汇编（asm!宏）][asm feature]，我们可以在 `main.rs` 的顶部添加 `#![feature(asm)]`。要注意的是，这样的实验性功能**不稳定**（unstable），意味着未来的 Rust 版本可能会修改或移除这些功能，而不会有预先的警告过渡。因此我们只有在绝对必要的时候，才应该使用这些特性。
 
-[asm feature]: https://doc.rust-lang.org/unstable-book/library-features/asm.html
+[asm feature]: https://doc.rust-lang.org/stable/reference/inline-assembly.html
 
 ### 目标配置清单
 
