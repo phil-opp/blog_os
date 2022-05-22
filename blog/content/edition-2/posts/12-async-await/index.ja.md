@@ -8,8 +8,10 @@ date = 2020-03-27
 chapter = "Multitasking"
 # Please update this when updating the translation
 translation_based_on_commit = "bf4f88107966c7ab1327c3cdc0ebfbd76bad5c5f"
-# GitHub usernames of the people that translated this post
-translators = ["kahirokunn", "garasubo", "sozysozbot", "woodyZootopia", "asami-kawasaki"]
+# GitHub usernames of the authors of this translation
+translators = ["kahirokunn", "garasubo", "sozysozbot", "woodyZootopia"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["asami-kawasaki", "Foo-x"]
 +++
 
 この記事では、Rustの**協調的マルチタスク**と**async/await**機能について説明します。Rustのasync/await機能については、`Future` trait の設計、ステートマシンの変換、 **pinning** などを含めて詳しく説明します。そして、非同期キーボードタスクと基本的なexecutorを作成することで、カーネルにasync/awaitの基本的なサポートを追加します。
