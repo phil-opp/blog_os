@@ -101,7 +101,7 @@ Rustの実行環境を管理するのには、[rustup]を強くおすすめし�
 
 nightlyコンパイラでは、いわゆる**feature flag**をファイルの先頭につけることで、いろいろな実験的機能を使うことを選択できます。例えば、`#![feature(asm)]`を`main.rs`の先頭につけることで、インラインアセンブリのための実験的な[`asm!`マクロ][`asm!` macro]を有効化することができます。ただし、これらの実験的機能は全くもって<ruby>不安定<rp> (</rp><rt>unstable</rt><rp>) </rp></ruby>であり、将来のRustバージョンにおいては事前の警告なく変更されたり取り除かれたりする可能性があることに注意してください。このため、絶対に必要なときにのみこれらを使うことにします。
 
-[`asm!` macro]: https://doc.rust-lang.org/unstable-book/library-features/asm.html
+[`asm!` macro]: https://doc.rust-lang.org/stable/reference/inline-assembly.html
 
 ### ターゲットの仕様
 Cargoは`--target`パラメータを使ってさまざまなターゲットをサポートします。ターゲットはいわゆる[target <ruby>triple<rp> (</rp><rt>3つ組</rt><rp>) </rp></ruby>][target triple]によって表されます。これはCPUアーキテクチャ、製造元、オペレーティングシステム、そして[ABI]を表します。例えば、`x86_64-unknown-linux-gnu`というtarget tripleは、`x86_64`のCPU、製造元不明、GNU ABIのLinuxオペレーティングシステム向けのシステムを表します。Rustは[多くのtarget triple][platform-support]をサポートしており、その中にはAndroidのための`arm-linux-androideabi`や[WebAssemblyのための`wasm32-unknown-unknown`](https://www.hellorust.com/setup/wasm-target/)などがあります。

@@ -647,7 +647,7 @@ The `_print` function locks our static `WRITER` and calls the `write_fmt` method
 
 Since the macros need to be able to call `_print` from outside of the module, the function needs to be public. However, since we consider this a private implementation detail, we add the [`doc(hidden)` attribute] to hide it from the generated documentation.
 
-[`doc(hidden)` attribute]: https://doc.rust-lang.org/nightly/rustdoc/the-doc-attribute.html#dochidden
+[`doc(hidden)` attribute]: https://doc.rust-lang.org/nightly/rustdoc/write-documentation/the-doc-attribute.html#hidden
 
 ### Hello World using `println`
 Now we can use `println` in our `_start` function:

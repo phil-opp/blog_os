@@ -109,7 +109,7 @@ Rust는 _stable_, _beta_ 그리고 _nightly_ 이렇게 세 가지의 채널을 �
 nightly 컴파일러는 _feature 플래그_ 를 소스코드의 맨 위에 추가함으로써 여러 실험적인 기능들을 선별해 이용할 수 있게 해줍니다. 예를 들어, `#![feature(asm)]` 를 `main.rs`의 맨 위에 추가하면 [`asm!` 매크로][`asm!` macro]를 사용할 수 있습니다. `asm!` 매크로는 인라인 어셈블리 코드를 작성할 때 사용합니다.
 이런 실험적인 기능들은 말 그대로 "실험적인" 기능들이기에 미래의 Rust 버전들에서는 예고 없이 변경되거나 삭제될 수도 있습니다. 그렇기에 우리는 이 실험적인 기능들을 최소한으로만 사용할 것입니다.
 
-[`asm!` macro]: https://doc.rust-lang.org/unstable-book/library-features/asm.html
+[`asm!` macro]: https://doc.rust-lang.org/stable/reference/inline-assembly.html
 
 ### 컴파일 대상 정의하기
 Cargo는 `--target` 인자를 통해 여러 컴파일 대상 시스템들을 지원합니다. 컴파일 대상은 소위 _[target triple]_ 을 통해 표현되는데, CPU 아키텍쳐와 CPU 공급 업체, 운영체제, 그리고 [ABI]를 파악할 수 있습니다. 예를 들어 `x86_64-unknown-linux-gnu`는 `x86_64` CPU, 임의의 CPU 공급 업체, Linux 운영체제, 그리고 GNU ABI를 갖춘 시스템을 나타냅니다. Rust는 Android를 위한 `arm-linux-androideabi`와 [WebAssembly를 위한 `wasm32-unknown-unknown`](https://www.hellorust.com/setup/wasm-target/)를 비롯해 [다양한 target triple들][platform-support]을 지원합니다.

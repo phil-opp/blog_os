@@ -592,7 +592,7 @@ pub fn _print(args: fmt::Arguments) {
 
 另外，`_print` 函数将占有静态变量 `WRITER` 的锁，并调用它的 `write_fmt` 方法。这个方法是从名为 `Write` 的 trait 中获得的，所以我们需要导入这个 trait。额外的 `unwrap()` 函数将在打印不成功的时候 panic；但既然我们的 `write_str` 总是返回 `Ok`，这种情况不应该发生。
 
-如果这个宏将能在模块外访问，它们也应当能访问 `_print` 函数，因此这个函数必须是公有的（public）。然而，考虑到这是一个私有的实现细节，我们添加一个 [`doc(hidden)` 属性](https://doc.rust-lang.org/nightly/rustdoc/the-doc-attribute.html#dochidden)，防止它在生成的文档中出现。
+如果这个宏将能在模块外访问，它们也应当能访问 `_print` 函数，因此这个函数必须是公有的（public）。然而，考虑到这是一个私有的实现细节，我们添加一个 [`doc(hidden)` 属性](https://doc.rust-lang.org/nightly/rustdoc/write-documentation/the-doc-attribute.html#hidden)，防止它在生成的文档中出现。
 
 ### 使用 `println!` 的 Hello World
 
