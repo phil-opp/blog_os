@@ -8,8 +8,10 @@ date = 2020-03-27
 chapter = "Multitasking"
 # Please update this when updating the translation
 translation_based_on_commit = "bf4f88107966c7ab1327c3cdc0ebfbd76bad5c5f"
-# GitHub usernames of the people that translated this post
+# GitHub usernames of the authors of this translation
 translators = ["kahirokunn", "garasubo", "sozysozbot", "woodyZootopia"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["asami-kawasaki", "Foo-x"]
 +++
 
 この記事では、Rustの**協調的マルチタスク**と**async/await**機能について説明します。Rustのasync/await機能については、`Future` trait の設計、ステートマシンの変換、 **pinning** などを含めて詳しく説明します。そして、非同期キーボードタスクと基本的なexecutorを作成することで、カーネルにasync/awaitの基本的なサポートを追加します。
@@ -701,7 +703,7 @@ unsafe {
 fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 ```
 
-このメソッドが通常の`&mut self`ではなく`self: Pin<&mut Self>`を取る理由は、[上][self-ref-async-await]で見たように、async/awaitから生成されるfutureのインスタンスはしばしば自己参照しているためです。`Self` を `Pin` にラップして、async/await から生成された自己参照のfutureに対して、コンパイラに `Unpin` を選択させることで、`poll` 呼び出しの間にfutureがメモリ内で移動しないことが保証されます。これにより、すべての内部参照が有効であることが保証されます。
+このメソッドが通常の`&mut self`ではなく`self: Pin<&mut Self>`を取る理由は、[上][self-ref-async-await]で見たように、async/awaitから生成されるfutureのインスタンスはしばしば自己参照しているためです。`Self` を `Pin` にラップして、async/await から生成された自己参照のfutureに対して、コンパイラに `Unpin` をオプトアウトさせることで、`poll` 呼び出しの間にfutureがメモリ内で移動しないことが保証されます。これにより、すべての内部参照が有効であることが保証されます。
 
 [self-ref-async-await]: @/edition-2/posts/12-async-await/index.md#self-referential-structs
 
