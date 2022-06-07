@@ -12,11 +12,11 @@
 
 {% macro giscus(search_term, translated) %}
     {% if translated %}
-        {% set category = "Post Comments" %}
-        {% set category_path = "post-comments" %}
-    {% else %}
         {% set category = "Post Comments (translated)" %}
         {% set category_path = "post-comments-translated" %}
+    {% else %}
+        {% set category = "Post Comments" %}
+        {% set category_path = "post-comments" %}
     {% endif %}
 
     {% if search_term is number %}
