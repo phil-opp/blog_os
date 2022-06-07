@@ -32,7 +32,7 @@
     <hr>
     <section>
         <h2 id="comments">Comments</h2>
-        {{ snippets::giscus(search_term=page.title) }}
+        {{ snippets::giscus(search_term=page.title, translated=false) }}
     </section>
 
 {% endblock after_main %}

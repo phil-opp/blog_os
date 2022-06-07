@@ -118,7 +118,12 @@
         {% else %}
             {% set search_term=page.title %}
         {% endif %}
-        {{ snippets::giscus(search_term=search_term) }}
+        {% if page.lang != "en" %}
+            {% set translated = true %}
+        {% else %}
+            {% set translated = false %}
+        {% endif %}
+        {{ snippets::giscus(search_term=search_term, translated=translated) }}
 
         {%- if page.lang != "en" %}
         <p class="{% if page.extra.rtl %}right-to-left{% endif %}">
