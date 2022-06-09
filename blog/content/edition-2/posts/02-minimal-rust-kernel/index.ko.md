@@ -9,7 +9,7 @@ chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "c1af4e31b14e562826029999b9ab1dce86396b93"
 # GitHub usernames of the people that translated this post
-translators = ["JOE1994"]
+translators = ["JOE1994", "Quqqu"]
 +++
 
 이번 포스트에서는 x86 아키텍처에서 최소한의 기능으로 동작하는 64비트 Rust 커널을 함께 만들 것입니다. 지난 포스트 [Rust로 'Freestanding 실행파일' 만들기][freestanding Rust binary] 에서 작업한 것을 토대로 부팅 가능한 디스크 이미지를 만들고 화면에 데이터를 출력해볼 것입니다.

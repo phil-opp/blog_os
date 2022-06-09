@@ -9,7 +9,7 @@ chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "c1af4e31b14e562826029999b9ab1dce86396b93"
 # GitHub usernames of the people that translated this post
-translators = ["JOE1994"]
+translators = ["JOE1994", "Quqqu"]
 +++
 
 운영체제 커널을 만드는 첫 단계는 표준 라이브러리(standard library)를 링크하지 않는 Rust 실행파일을 만드는 것입니다.
