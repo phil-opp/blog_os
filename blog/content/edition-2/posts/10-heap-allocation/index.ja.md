@@ -6,7 +6,7 @@ date = 2019-06-26
 
 [extra]
 chapter = "Memory Management"
-translation_based_on_commit = ""
+translation_based_on_commit = "afeed7477bb19a29d94a96b8b0620fd241b0d55f"
 translators = ["woodyZootopia"]
 +++
 
@@ -23,7 +23,6 @@ translators = ["woodyZootopia"]
 
 <!-- toc -->
 
-# TODO:translation_based_on_commitを埋める
 # TODO:リンクを日本語記事の物に変更する
 
 ## <ruby>ローカル<rp> (</rp><rt>局所</rt><rp>) </rp></ruby>変数と<ruby>スタティック<rp> (</rp><rt>静的</rt><rp>) </rp></ruby>変数
