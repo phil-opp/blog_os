@@ -23,8 +23,6 @@ translators = ["woodyZootopia"]
 
 <!-- toc -->
 
-# TODO:リンクを日本語記事の物に変更する
-
 ## <ruby>ローカル<rp> (</rp><rt>局所</rt><rp>) </rp></ruby>変数と<ruby>スタティック<rp> (</rp><rt>静的</rt><rp>) </rp></ruby>変数
 
 私たちのカーネルでは現在二種類の変数が使用されています：ローカル変数と`static`変数です。ローカル変数は[コールスタック][call stack]に格納されており、変数の定義された関数がリターンするまでの間のみ有効です。スタティック変数はメモリ上の固定された場所に格納されており、プログラムのライフタイム全体で常に生存しています。
@@ -33,8 +31,8 @@ translators = ["woodyZootopia"]
 
 ローカル変数は[コールスタック][call stack]に格納されています。これは`プッシュ`と`ポップ`という命令をサポートする[スタックというデータ構造][stack data structure]です。関数に入るたびに、パラメータ、リターンアドレス、呼び出された関数のローカル変数がコンパイラによってプッシュされます：
 
-[call stack]: https://en.wikipedia.org/wiki/Call_stack
-[stack data structure]: https://en.wikipedia.org/wiki/Stack_(abstract_data_type)
+[call stack]: https://ja.wikipedia.org/wiki/%E3%82%B3%E3%83%BC%E3%83%AB%E3%82%B9%E3%82%BF%E3%83%83%E3%82%AF
+[stack data structure]: https://ja.wikipedia.org/wiki/%E3%82%B9%E3%82%BF%E3%83%83%E3%82%AF
 
 ![An outer() and an inner(i: usize) function. Both have some local variables. Outer calls inner(1). The call stack contains the following slots: the local variables of outer, then the argument `i = 1`, then the return address, then the local variables of inner.](call-stack.svg)
 
@@ -69,14 +67,14 @@ fn inner(i: usize) -> &'static u32 {
 
 `'static`ライフタイムの他にもスタティック変数には利点があります：位置がコンパイル時に分かるため、アクセスするために参照が必要ないのです。この特性を私たちの`println`マクロを作る際に利用しました：[スタティックな`Writer`][static `Writer`]をその内部で使うことで、マクロを呼び出す際に`&mut Writer`参照が必要でなくなります。これは他の変数にアクセスできない[例外処理関数][exception handlers]においてとても有用です。
 
-[static `Writer`]: @/edition-2/posts/03-vga-text-buffer/index.md#a-global-interface
-[exception handlers]: @/edition-2/posts/05-cpu-exceptions/index.md#implementation
+[static `Writer`]: @/edition-2/posts/03-vga-text-buffer/index.ja.md#da-yu-de-global-naintahuesu
+[exception handlers]: @/edition-2/posts/05-cpu-exceptions/index.ja.md#shi-zhuang
 
 しかし、スタティック変数のこの特性には重大な欠点がついてきます：デフォルトでは読み込み専用なのです。Rustがこのルールを強制するのは、例えば二つのスレッドがあるスタティック変数を同時に変更した場合[データ競合][data race]が発生するためです。スタティック変数を変更する唯一の方法は、それを[`Mutex`]型にカプセル化し、あらゆる時刻において`&mut`参照が一つしか存在しないことを保証することです。`Mutex`はすでに[VGAバッファへのスタティックな`Writer`][vga mutex]を作ったときに使いました。
 
-[data race]: https://doc.rust-lang.org/nomicon/races.html
+[data race]: https://doc.rust-jp.rs/rust-nomicon-ja/races.html
 [`Mutex`]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html
-[vga mutex]: @/edition-2/posts/03-vga-text-buffer/index.md#spinlocks
+[vga mutex]: @/edition-2/posts/03-vga-text-buffer/index.ja.md#supinrotuku
 
 ## <ruby>動的<rp> (</rp><rt>ダイナミック</rt><rp>) </rp></ruby>メモリ
 
@@ -97,7 +95,7 @@ fn inner(i: usize) -> &'static u32 {
 
 ここで`inner`関数は`z`を格納するためにスタティック変数ではなくヒープメモリを使っています。まず要求されたサイズのメモリブロックを割り当て、`*mut u32`の[生ポインタ][raw pointer]を受け取ります。その後で[`ptr::write`]メソッドを使ってこれに配列`[1,2,3]`を書き込みます。最後のステップとして、[`offset`]関数を使って`i`番目の要素へのポインタを計算しそれを返します（簡単のため、必要なキャストやunsafeブロックをいくつか省略しました）。
 
-[raw pointer]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[raw pointer]: https://doc.rust-jp.rs/book-ja/ch19-01-unsafe-rust.html#%E7%94%9F%E3%83%9D%E3%82%A4%E3%83%B3%E3%82%BF%E3%82%92%E5%8F%82%E7%85%A7%E5%A4%96%E3%81%97%E3%81%99%E3%82%8B
 [`ptr::write`]: https://doc.rust-lang.org/core/ptr/fn.write.html
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
@@ -120,11 +118,11 @@ fn inner(i: usize) -> &'static u32 {
 
 これらの問題を回避するため、JavaやPythonといった多くの言語では[**ガベージコレクション**][_garbage collection_]という技術を使って自動的に動的メモリを管理しています。発想としては、プログラマが絶対に自分の手で`deallocate`を呼び出すことがないようにするというものです。代わりに、プログラムが定期的に一時停止されてスキャンされ、未使用のヒープ変数が見つかったら自動的にdeallocateされるのです。従って、上のような脆弱性は絶対に発生し得ません。欠点としては，定期的にスキャンすることによる性能のオーバーヘッドが発生することと、一時停止の時間が長くなりがちであることが挙げられます。
 
-[_garbage collection_]: https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)
+[_garbage collection_]: https://ja.wikipedia.org/wiki/%E3%82%AC%E3%83%99%E3%83%BC%E3%82%B8%E3%82%B3%E3%83%AC%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3
 
 Rustはこの問題に対して別のアプローチを取ります：[**所有権**][_ownership_]と呼ばれる概念を使って、動的メモリの操作の正確性をコンパイル時にチェックするのです。従って前述の脆弱性を回避するためのガベージコレクションの必要がなく、性能のオーバーヘッドが存在しません。このアプローチのもう一つの利点として、CやC++と同様、プログラマが動的メモリの使用に関して精緻な制御を行うことができるということが挙げられます。
 
-[_ownership_]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
+[_ownership_]: https://doc.rust-jp.rs/book-ja/ch04-01-what-is-ownership.html
 
 ### Rustにおける割り当て
 
@@ -132,7 +130,7 @@ Rustはこの問題に対して別のアプローチを取ります：[**所有�
 
 [**`Box`**]: https://doc.rust-lang.org/std/boxed/index.html
 [`Box::new`]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html#method.new
-[`Drop` trait]: https://doc.rust-lang.org/book/ch15-03-drop.html
+[`Drop` trait]: https://doc.rust-jp.rs/book-ja/ch15-03-drop.html
 
 ```rust
 {
@@ -141,9 +139,9 @@ Rustはこの問題に対して別のアプローチを取ります：[**所有�
 } // zがスコープから出たので`deallocate`が呼ばれる
 ```
 
-このようなパターンは[リソース取得は初期化である][_resource acquisition is initialization_]（resource acquisition is initialization、略してRAII）という奇妙な名前を持っています。C++で[`std::unique_ptr`]という同じような抽象型を実装するのに使われたのが始まりです。
+このような記法のパターンは[リソース取得は初期化である][_resource acquisition is initialization_]（resource acquisition is initialization、略してRAII）という奇妙な名前を持っています。C++で[`std::unique_ptr`]という同じような抽象型を実装するのに使われたのが始まりです。
 
-[_resource acquisition is initialization_]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
+[_resource acquisition is initialization_]: https://ja.wikipedia.org/wiki/RAII
 [`std::unique_ptr`]: https://en.cppreference.com/w/cpp/memory/unique_ptr
 
 このような型自体ではすべてのuse-after-freeバグを防ぐのに十分ではありません。なぜなら、プログラマは、`Box`がスコープ外に出て対応するヒープメモリスロットがdeallocateされた後でも参照を利用し続けることができてしまうからです：
@@ -158,7 +156,7 @@ println!("{}", x);
 
 ここでRustの所有権の出番です。所有権システムは、参照が有効なスコープを表す抽象[ライフタイム][lifetime]をそれぞれの参照に指定します。上の例では、参照`x`は配列`z`から取られているので、`z`がスコープ外に出ると無効になります。[上の例をplaygroundで実行する][playground-2]と、確かにRustコンパイラがエラーを投げるのが分かります：
 
-[lifetime]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html
+[lifetime]: https://doc.rust-jp.rs/book-ja/ch10-03-lifetime-syntax.html
 [playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=28180d8de7b62c6b4a681a7b1f745a48
 
 ```
@@ -178,8 +176,8 @@ error[E0597]: `z[_]` does not live long enough
 
 Rustの所有権システムはさらに突き詰められており、use-after-freeバグを防ぐだけでなく、JavaやPythonのようなガベージコレクション型言語と同じ完全な[メモリ<ruby>安全性<rp> (</rp><rt>セーフティ</rt><rp>) </rp></ruby>][_memory safety_]を提供しています。さらに[スレッド<ruby>安全性<rp> (</rp><rt>セーフティ</rt><rp>) </rp></ruby>][_thread safety_]も保証されており、マルチスレッドのプログラムにおいてはこれらの言語よりもさらに安全です。さらに最も重要なことに、これらのチェックは全てコンパイル時に行われるため、C言語で手書きされたメモリ管理と比べても実行時のオーバーヘッドはありません。
 
-[_memory safety_]: https://en.wikipedia.org/wiki/Memory_safety
-[_thread safety_]: https://en.wikipedia.org/wiki/Thread_safety
+[_memory safety_]: https://ja.wikipedia.org/wiki/%E3%83%A1%E3%83%A2%E3%83%AA%E5%AE%89%E5%85%A8%E6%80%A7
+[_thread safety_]: https://ja.wikipedia.org/wiki/%E3%82%B9%E3%83%AC%E3%83%83%E3%83%89%E3%82%BB%E3%83%BC%E3%83%95
 
 ### 使用例
 
@@ -325,7 +323,7 @@ unsafe impl GlobalAlloc for Dummy {
 
 この構造体はフィールドを必要としないので、[サイズがゼロの型][zero sized type]として作成します。上で述べたように、`alloc`は常に割り当てエラーに相当するヌルポインタを返すようにします。アロケータがメモリを返すことは絶対に起きないのだから、`dealloc`の呼び出しも絶対に起きないはずです。このため`dealloc`メソッドでは単にpanicすることにします。`alloc_zeroed`と`realloc`メソッドにはデフォルト実装があるので、これらを実装する必要はありません。
 
-[zero sized type]: https://doc.rust-lang.org/nomicon/exotic-sizes.html#zero-sized-types-zsts
+[zero sized type]: https://doc.rust-jp.rs/rust-nomicon-ja/exotic-sizes.html#%E3%82%B5%E3%82%A4%E3%82%BA%E3%81%8C-0-%E3%81%AE%E5%9E%8Bzst-zero-sized-type
 
 こうして単純なアロケータを手に入れたわけですが、さらにRustコンパイラにこのアロケータを使うよう指示しないといけません。ここで`#[global_allocator]`属性の出番です。
 
@@ -403,7 +401,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 適切なアロケータを作りたいですが、その前にまず、そのアロケータがメモリを割り当てるためのヒープメモリ領域を作らないといけません。このために、ヒープ領域のための仮想メモリ範囲を定義し、その領域を物理フレームに対応付ける必要があります。仮想メモリとページテーブルの概要については、[ページング入門][_"Introduction To Paging"_]の記事を読んでください。
 
-[_"Introduction To Paging"_]: @/edition-2/posts/08-paging-introduction/index.md
+[_"Introduction To Paging"_]: @/edition-2/posts/08-paging-introduction/index.ja.md
 
 最初のステップはヒープのための仮想メモリ領域を定義することです。他のメモリ領域に使われていない限り、どんな仮想アドレス範囲でも構いません。ここでは、あとからそこがヒープポインタだと簡単に分かるよう、`0x_4444_4444_0000`から始まるメモリとしましょう。
 
@@ -418,8 +416,8 @@ pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 
 今このヒープ領域を使おうとすると、仮想メモリ領域が物理メモリにまだ対応付けられていないためページフォルトが発生します。これを解決するために、[ページング入門][_"Paging Implementation"_]の記事で導入した[`Mapper` API]を使ってヒープページを対応付ける関数`init_heap`を作ります：
 
-[`Mapper` API]: @/edition-2/posts/09-paging-implementation/index.md#using-offsetpagetable
-[_"Paging Implementation"_]: @/edition-2/posts/09-paging-implementation/index.md
+[`Mapper` API]: @/edition-2/posts/09-paging-implementation/index.ja.md#offsetpagetablewoshi-u
+[_"Paging Implementation"_]: @/edition-2/posts/09-paging-implementation/index.ja.md
 
 ```rust
 // in src/allocator.rs
@@ -486,9 +484,9 @@ pub fn init_heap(
 [`None`]: https://doc.rust-lang.org/core/option/enum.Option.html#variant.None
 [`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
 [`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
-[question mark operator]: https://doc.rust-lang.org/edition-guide/rust-2018/error-handling-and-panics/the-question-mark-operator-for-easier-error-handling.html
+[question mark operator]: https://doc.rust-jp.rs/book-ja/ch09-02-recoverable-errors-with-result.html#%E3%82%A8%E3%83%A9%E3%83%BC%E5%A7%94%E8%AD%B2%E3%81%AE%E3%82%B7%E3%83%A7%E3%83%BC%E3%83%88%E3%82%AB%E3%83%83%E3%83%88-%E6%BC%94%E7%AE%97%E5%AD%90
 [`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[_translation lookaside buffer_]: @/edition-2/posts/08-paging-introduction/index.md#the-translation-lookaside-buffer
+[_translation lookaside buffer_]: @/edition-2/posts/08-paging-introduction/index.ja.md#toransuresiyonrutukuasaidobatuhua
 [`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 
 最後のステップは、この関数を`kernel_main`から呼び出すことです：
@@ -697,7 +695,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 `lib.rs`の`test_runner`関数と`test_panic_handler`関数を再利用します。私たちはアロケーションをテストしたいので、`extern crate alloc`宣言を使って`alloc`クレートを有効化します。テストに共通する定型部については[テスト][_Testing_]の記事を読んでください。
 
-[_Testing_]: @/edition-2/posts/04-testing/index.md
+[_Testing_]: @/edition-2/posts/04-testing/index.ja.md
 
 `main`関数の実装は以下のようになります：
 
@@ -762,7 +760,7 @@ fn large_vec() {
 
 このベクタの和を[n次部分和][n-th partial sum]の公式と比較することで検証しています。これにより、割り当てられた値はすべて正しいことをある程度保証できます。
 
-[n-th partial sum]: https://en.wikipedia.org/wiki/1_%2B_2_%2B_3_%2B_4_%2B_%E2%8B%AF#Partial_sums
+[n-th partial sum]: https://ja.wikipedia.org/wiki/1%2B2%2B3%2B4%2B%E2%80%A6
 
 3つ目のテストとして、10000回次々にアロケーションを行います：
 
