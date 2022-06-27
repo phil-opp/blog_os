@@ -9,7 +9,7 @@ chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "1c9b5edd6a5a667e282ca56d6103d3ff1fd7cfcb"
 # GitHub usernames of the people that translated this post
-translators = ["JOE1994"]
+translators = ["JOE1994", "Quqqu"]
 +++
 
 [VGA 텍스트 모드][VGA text mode]를 통해 쉽게 화면에 텍스트를 출력할 수 있습니다. 이 포스트에서는 안전하지 않은 작업들을 분리된 모듈에 격리하여 쉽고 안전하게 VGA 텍스트 모드를 이용할 수 있는 인터페이스를 구현할 것입니다. 또한 Rust의 [서식 정렬 매크로 (formatting macro)][formatting macros]를 지원하도록 구현을 추가할 것입니다.
