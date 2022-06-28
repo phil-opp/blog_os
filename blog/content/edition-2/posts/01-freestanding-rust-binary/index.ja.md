@@ -140,8 +140,7 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 ```
-
-[`PanicInfo` パラメータ]には、パニックが発生したファイルと行、およびオプションでパニックメッセージが含まれます。この関数は戻り値を取るべきではないので、]"never" 型(`!`)][“never” type]を返すことで[発散する関数][diverging function]となります。今のところこの関数でできることは多くないので、無限にループするだけです。
+[`PanicInfo` パラメータ]には、パニックが発生したファイルと行、およびオプションでパニックメッセージが含まれます。この関数は戻り値を取るべきではないので、["never" 型(`!`)][“never” type]を返すことで[発散する関数][diverging function]となります。今のところこの関数でできることは多くないので、無限にループするだけです。
 
 [`PanicInfo` パラメータ]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
