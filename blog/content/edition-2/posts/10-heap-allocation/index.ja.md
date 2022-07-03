@@ -65,7 +65,7 @@ fn inner(i: usize) -> &'static u32 {
 
 上の例で`inner`関数がリターンするとき、それに対応するコールスタックは破棄されます。（しかし）静的変数は絶対に破棄されない別のメモリ領域にあるため、参照`&Z[1]`はリターン後も有効です。
 
-`'static`ライフタイムの他にも静的変数には利点があります：位置がコンパイル時に分かるため、アクセスするために参照が必要ないのです。この特性を私たちの`println`マクロを作る際に利用しました：[静的な`Writer`][static `Writer`]をその内部で使うことで、マクロを呼び出す際に`&mut Writer`参照が必要でなくなります。これは他の変数にアクセスできない[例外処理関数][exception handlers]においてとても有用です。
+`'static`ライフタイムの他にも静的変数には利点があります。それらは位置がコンパイル時に分かるため、アクセスするために参照が必要ないのです。この特性を私たちの`println`マクロを作る際に利用しました：[静的な`Writer`][static `Writer`]をその内部で使うことで、マクロを呼び出す際に`&mut Writer`参照が必要でなくなります。これは他の変数にアクセスできない[例外処理関数][exception handlers]においてとても有用です。
 
 [static `Writer`]: @/edition-2/posts/03-vga-text-buffer/index.ja.md#da-yu-de-global-naintahuesu
 [exception handlers]: @/edition-2/posts/05-cpu-exceptions/index.ja.md#shi-zhuang
