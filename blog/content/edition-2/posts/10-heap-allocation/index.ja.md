@@ -6,8 +6,10 @@ date = 2019-06-26
 
 [extra]
 chapter = "Memory Management"
+# Please update this when updating the translation
 translation_based_on_commit = "afeed7477bb19a29d94a96b8b0620fd241b0d55f"
-translators = ["woodyZootopia"]
+# GitHub usernames of the people that translated this post
+translators = ["woodyZootopia", "garasubo"]
 +++
 
 この記事では、私たちのカーネルにヒープ<ruby>割り当て<rp> (</rp><rt>アロケーション</rt><rp>) </rp></ruby>の機能を追加します。まず動的メモリの基礎を説明し、どのようにして借用チェッカがありがちなアロケーションエラーを防いでくれるのかを示します。その後Rustの基本的なアロケーションインターフェースを実装し、ヒープメモリ領域を作成し、アロケータクレートを設定します。この記事を終える頃には、Rustに組み込みの`alloc`クレートのすべてのアロケーション・コレクション型が私たちのカーネルで利用可能になっているでしょう。
