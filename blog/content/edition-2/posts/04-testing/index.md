@@ -38,7 +38,7 @@ Rust has a [built-in test framework] that is capable of running unit tests witho
 
 [built-in test framework]: https://doc.rust-lang.org/book/ch11-00-testing.html
 
-Unfortunately it's a bit more complicated for `no_std` applications such as our kernel. The problem is that Rust's test framework implicitly uses the built-in [`test`] library, which depends on the standard library. This means that we can't use the default test framework for our `#[no_std]` kernel.
+Unfortunately, it's a bit more complicated for `no_std` applications such as our kernel. The problem is that Rust's test framework implicitly uses the built-in [`test`] library, which depends on the standard library. This means that we can't use the default test framework for our `#[no_std]` kernel.
 
 [`test`]: https://doc.rust-lang.org/test/index.html
 
@@ -50,17 +50,17 @@ We can see this when we try to run `cargo test` in our project:
 error[E0463]: can't find crate for `test`
 ```
 
-Since the `test` crate depends on the standard library, it is not available for our bare metal target. While porting the `test` crate to a `#[no_std]` context [is possible][utest], it is highly unstable and requires some hacks such as redefining the `panic` macro.
+Since the `test` crate depends on the standard library, it is not available for our bare metal target. While porting the `test` crate to a `#[no_std]` context [is possible][utest], it is highly unstable and requires some hacks, such as redefining the `panic` macro.
 
 [utest]: https://github.com/japaric/utest
 
 ### Custom Test Frameworks
 
-Fortunately, Rust supports replacing the default test framework through the unstable [`custom_test_frameworks`] feature. This feature requires no external libraries and thus also works in `#[no_std]` environments. It works by collecting all functions annotated with a `#[test_case]` attribute and then invoking a user-specified runner function with the list of tests as argument. Thus it gives the implementation maximal control over the test process.
+Fortunately, Rust supports replacing the default test framework through the unstable [`custom_test_frameworks`] feature. This feature requires no external libraries and thus also works in `#[no_std]` environments. It works by collecting all functions annotated with a `#[test_case]` attribute and then invoking a user-specified runner function with the list of tests as an argument. Thus, it gives the implementation maximal control over the test process.
 
 [`custom_test_frameworks`]: https://doc.rust-lang.org/unstable-book/language-features/custom-test-frameworks.html
 
-The disadvantage compared to the default test framework is that many advanced features such as [`should_panic` tests] are not available. Instead, it is up to the implementation to provide such features itself if needed. This is ideal for us since we have a very special execution environment where the default implementations of such advanced features probably wouldn't work anyway. For example, the `#[should_panic]` attribute relies on stack unwinding to catch the panics, which we disabled for our kernel.
+The disadvantage compared to the default test framework is that many advanced features, such as [`should_panic` tests], are not available. Instead, it is up to the implementation to provide such features itself if needed. This is ideal for us since we have a very special execution environment where the default implementations of such advanced features probably wouldn't work anyway. For example, the `#[should_panic]` attribute relies on stack unwinding to catch the panics, which we disabled for our kernel.
 
 [`should_panic` tests]: https://doc.rust-lang.org/book/ch11-01-writing-tests.html#checking-for-panics-with-should_panic
 
@@ -132,13 +132,13 @@ When we run `cargo test` now, we see the following output:
 
 ![QEMU printing "Hello World!", "Running 1 tests", and "trivial assertion... [ok]"](qemu-test-runner-output.png)
 
-The `tests` slice passed to our `test_runner` function now contains a reference to the `trivial_assertion` function. From the `trivial assertion... [ok]` output on the screen we see that the test was called and that it succeeded.
+The `tests` slice passed to our `test_runner` function now contains a reference to the `trivial_assertion` function. From the `trivial assertion... [ok]` output on the screen, we see that the test was called and that it succeeded.
 
 After executing the tests, our `test_runner` returns to the `test_main` function, which in turn returns to our `_start` entry point function. At the end of `_start`, we enter an endless loop because the entry point function is not allowed to return. This is a problem, because we want `cargo test` to exit after running all tests.
 
 ## Exiting QEMU
 
-Right now we have an endless loop at the end of our `_start` function and need to close QEMU manually on each execution of `cargo test`. This is unfortunate because we also want to run `cargo test` in scripts without user interaction. The clean solution to this would be to implement a proper way to shutdown our OS. Unfortunately this is relatively complex, because it requires implementing support for either the [APM] or [ACPI] power management standard.
+Right now, we have an endless loop at the end of our `_start` function and need to close QEMU manually on each execution of `cargo test`. This is unfortunate because we also want to run `cargo test` in scripts without user interaction. The clean solution to this would be to implement a proper way to shutdown our OS. Unfortunately, this is relatively complex because it requires implementing support for either the [APM] or [ACPI] power management standard.
 
 [APM]: https://wiki.osdev.org/APM
 [ACPI]: https://wiki.osdev.org/ACPI
@@ -158,19 +158,19 @@ Together with the device name (`isa-debug-exit`), we pass the two parameters `io
 
 ### I/O Ports
 
-There are two different approaches for communicating between the CPU and peripheral hardware on x86, **memory-mapped I/O** and **port-mapped I/O**. We already used memory-mapped I/O for accessing the [VGA text buffer] through the memory address `0xb8000`. This address is not mapped to RAM, but to some memory on the VGA device.
+There are two different approaches for communicating between the CPU and peripheral hardware on x86, **memory-mapped I/O** and **port-mapped I/O**. We already used memory-mapped I/O for accessing the [VGA text buffer] through the memory address `0xb8000`. This address is not mapped to RAM but to some memory on the VGA device.
 
 [VGA text buffer]: @/edition-2/posts/03-vga-text-buffer/index.md
 
-In contrast, port-mapped I/O uses a separate I/O bus for communication. Each connected peripheral has one or more port numbers. To communicate with such an I/O port there are special CPU instructions called `in` and `out`, which take a port number and a data byte (there are also variations of these commands that allow sending an `u16` or `u32`).
+In contrast, port-mapped I/O uses a separate I/O bus for communication. Each connected peripheral has one or more port numbers. To communicate with such an I/O port, there are special CPU instructions called `in` and `out`, which take a port number and a data byte (there are also variations of these commands that allow sending a `u16` or `u32`).
 
-The `isa-debug-exit` devices uses port-mapped I/O. The `iobase` parameter specifies on which port address the device should live (`0xf4` is a [generally unused][list of x86 I/O ports] port on the x86's IO bus) and the `iosize` specifies the port size (`0x04` means four bytes).
+The `isa-debug-exit` device uses port-mapped I/O. The `iobase` parameter specifies on which port address the device should live (`0xf4` is a [generally unused][list of x86 I/O ports] port on the x86's IO bus) and the `iosize` specifies the port size (`0x04` means four bytes).
 
 [list of x86 I/O ports]: https://wiki.osdev.org/I/O_Ports#The_list
 
 ### Using the Exit Device
 
-The functionality of the `isa-debug-exit` device is very simple. When a `value` is written to the I/O port specified by `iobase`, it causes QEMU to exit with [exit status] `(value << 1) | 1`. So when we write `0` to the port QEMU will exit with exit status `(0 << 1) | 1 = 1` and when we write `1` to the port it will exit with exit status `(1 << 1) | 1 = 3`.
+The functionality of the `isa-debug-exit` device is very simple. When a `value` is written to the I/O port specified by `iobase`, it causes QEMU to exit with [exit status] `(value << 1) | 1`. So when we write `0` to the port, QEMU will exit with exit status `(0 << 1) | 1 = 1`, and when we write `1` to the port, it will exit with exit status `(1 << 1) | 1 = 3`.
 
 [exit status]: https://en.wikipedia.org/wiki/Exit_status
 
@@ -209,11 +209,11 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 }
 ```
 
-The function creates a new [`Port`] at `0xf4`, which is the `iobase` of the `isa-debug-exit` device. Then it writes the passed exit code to the port. We use `u32` because we specified the `iosize` of the `isa-debug-exit` device as 4 bytes. Both operations are unsafe, because writing to an I/O port can generally result in arbitrary behavior.
+The function creates a new [`Port`] at `0xf4`, which is the `iobase` of the `isa-debug-exit` device. Then it writes the passed exit code to the port. We use `u32` because we specified the `iosize` of the `isa-debug-exit` device as 4 bytes. Both operations are unsafe because writing to an I/O port can generally result in arbitrary behavior.
 
-For specifying the exit status, we create a `QemuExitCode` enum. The idea is to exit with the success exit code if all tests succeeded and with the failure exit code otherwise. The enum is marked as `#[repr(u32)]` to represent each variant by an `u32` integer. We use exit code `0x10` for success and `0x11` for failure. The actual exit codes do not matter much, as long as they don't clash with the default exit codes of QEMU. For example, using exit code `0` for success is not a good idea because it becomes `(0 << 1) | 1 = 1` after the transformation, which is the default exit code when QEMU failed to run. So we could not differentiate a QEMU error from a successful test run.
+To specify the exit status, we create a `QemuExitCode` enum. The idea is to exit with the success exit code if all tests succeeded and with the failure exit code otherwise. The enum is marked as `#[repr(u32)]` to represent each variant by a `u32` integer. We use the exit code `0x10` for success and `0x11` for failure. The actual exit codes don't matter much, as long as they don't clash with the default exit codes of QEMU. For example, using exit code `0` for success is not a good idea because it becomes `(0 << 1) | 1 = 1` after the transformation, which is the default exit code when QEMU fails to run. So we could not differentiate a QEMU error from a successful test run.
 
-We can now update our `test_runner` to exit QEMU after all tests ran:
+We can now update our `test_runner` to exit QEMU after all tests have run:
 
 ```rust
 // in src/main.rs
@@ -259,11 +259,11 @@ test-success-exit-code = 33         # (0x10 << 1) | 1
 
 With this configuration, `bootimage` maps our success exit code to exit code 0, so that `cargo test` correctly recognizes the success case and does not count the test as failed.
 
-Our test runner now automatically closes QEMU and correctly reports the test results out. We still see the QEMU window open for a very short time, but it does not suffice to read the results. It would be nice if we could print the test results to the console instead, so that we can still see them after QEMU exited.
+Our test runner now automatically closes QEMU and correctly reports the test results. We still see the QEMU window open for a very short time, but it does not suffice to read the results. It would be nice if we could print the test results to the console instead, so we can still see them after QEMU exits.
 
 ## Printing to the Console
 
-To see the test output on the console, we need to send the data from our kernel to the host system somehow. There are various ways to achieve this, for example by sending the data over a TCP network interface. However, setting up a networking stack is a quite complex task, so we will choose a simpler solution instead.
+To see the test output on the console, we need to send the data from our kernel to the host system somehow. There are various ways to achieve this, for example, by sending the data over a TCP network interface. However, setting up a networking stack is quite a complex task, so we will choose a simpler solution instead.
 
 ### Serial Port
 
@@ -271,7 +271,7 @@ A simple way to send the data is to use the [serial port], an old interface stan
 
 [serial port]: https://en.wikipedia.org/wiki/Serial_port
 
-The chips implementing a serial interface are called [UARTs]. There are [lots of UART models] on x86, but fortunately the only differences between them are some advanced features we don't need. The common UARTs today are all compatible to the [16550 UART], so we will use that model for our testing framework.
+The chips implementing a serial interface are called [UARTs]. There are [lots of UART models] on x86, but fortunately the only differences between them are some advanced features we don't need. The common UARTs today are all compatible with the [16550 UART], so we will use that model for our testing framework.
 
 [UARTs]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
 [lots of UART models]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
@@ -288,7 +288,7 @@ We will use the [`uart_16550`] crate to initialize the UART and send data over t
 uart_16550 = "0.2.0"
 ```
 
-The `uart_16550` crate contains a `SerialPort` struct that represents the UART registers, but we still need to construct an instance of it ourselves. For that we create a new `serial` module with the following content:
+The `uart_16550` crate contains a `SerialPort` struct that represents the UART registers, but we still need to construct an instance of it ourselves. For that, we create a new `serial` module with the following content:
 
 ```rust
 // in src/main.rs
@@ -314,7 +314,7 @@ lazy_static! {
 
 Like with the [VGA text buffer][vga lazy-static], we use `lazy_static` and a spinlock to create a `static` writer instance. By using `lazy_static` we can ensure that the `init` method is called exactly once on its first use.
 
-Like the `isa-debug-exit` device, the UART is programmed using port I/O. Since the UART is more complex, it uses multiple I/O ports for programming different device registers. The unsafe `SerialPort::new` function expects the address of the first I/O port of the UART as argument, from which it can calculate the addresses of all needed ports. We're passing the port address `0x3F8`, which is the standard port number for the first serial interface.
+Like the `isa-debug-exit` device, the UART is programmed using port I/O. Since the UART is more complex, it uses multiple I/O ports for programming different device registers. The unsafe `SerialPort::new` function expects the address of the first I/O port of the UART as an argument, from which it can calculate the addresses of all needed ports. We're passing the port address `0x3F8`, which is the standard port number for the first serial interface.
 
 [vga lazy-static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
@@ -374,7 +374,7 @@ Note that the `serial_println` macro lives directly under the root namespace bec
 
 ### QEMU Arguments
 
-To see the serial output from QEMU, we need use the `-serial` argument to redirect the output to stdout:
+To see the serial output from QEMU, we need to use the `-serial` argument to redirect the output to stdout:
 
 ```toml
 # in Cargo.toml
@@ -400,7 +400,7 @@ Running 1 tests
 trivial assertion... [ok]
 ```
 
-However, when a test fails we still see the output inside QEMU because our panic handler still uses `println`. To simulate this, we can change the assertion in our `trivial_assertion` test to `assert_eq!(0, 1)`:
+However, when a test fails, we still see the output inside QEMU because our panic handler still uses `println`. To simulate this, we can change the assertion in our `trivial_assertion` test to `assert_eq!(0, 1)`:
 
 ![QEMU printing "Hello World!" and "panicked at 'assertion failed: `(left == right)`
     left: `0`, right: `1`', src/main.rs:55:5](qemu-failed-test.png)
@@ -472,20 +472,20 @@ test-args = [
 ]
 ```
 
-Now QEMU runs completely in the background and no window is opened anymore. This is not only less annoying, but also allows our test framework to run in environments without a graphical user interface, such as CI services or [SSH] connections.
+Now QEMU runs completely in the background and no window gets opened anymore. This is not only less annoying, but also allows our test framework to run in environments without a graphical user interface, such as CI services or [SSH] connections.
 
 [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
 
 ### Timeouts
 
-Since `cargo test` waits until the test runner exits, a test that never returns can block the test runner forever. That's unfortunate, but not a big problem in practice since it's normally easy to avoid endless loops. In our case, however, endless loops can occur in various situations:
+Since `cargo test` waits until the test runner exits, a test that never returns can block the test runner forever. That's unfortunate, but not a big problem in practice since it's usually easy to avoid endless loops. In our case, however, endless loops can occur in various situations:
 
 - The bootloader fails to load our kernel, which causes the system to reboot endlessly.
 - The BIOS/UEFI firmware fails to load the bootloader, which causes the same endless rebooting.
 - The CPU enters a `loop {}` statement at the end of some of our functions, for example because the QEMU exit device doesn't work properly.
 - The hardware causes a system reset, for example when a CPU exception is not caught (explained in a future post).
 
-Since endless loops can occur in so many situations, the `bootimage` tool sets a timeout of 5 minutes for each test executable by default. If the test does not finish in this time, it is marked as failed and a "Timed Out" error is printed to the console. This feature ensures that tests that are stuck in an endless loop don't block `cargo test` forever.
+Since endless loops can occur in so many situations, the `bootimage` tool sets a timeout of 5 minutes for each test executable by default. If the test does not finish within this time, it is marked as failed and a "Timed Out" error is printed to the console. This feature ensures that tests that are stuck in an endless loop don't block `cargo test` forever.
 
 You can try it yourself by adding a `loop {}` statement in the `trivial_assertion` test. When you run `cargo test`, you see that the test is marked as timed out after 5 minutes. The timeout duration is [configurable][bootimage config] through a `test-timeout` key in the Cargo.toml:
 
@@ -547,7 +547,7 @@ We implement the `run` function by first printing the function name using the [`
 [`any::type_name`]: https://doc.rust-lang.org/stable/core/any/fn.type_name.html
 [tab character]: https://en.wikipedia.org/wiki/Tab_key#Tab_characters
 
-After printing the function name, we invoke the test function through `self()`. This only works because we require that `self` implements the `Fn()` trait. After the test function returned, we print `[ok]` to indicate that the function did not panic.
+After printing the function name, we invoke the test function through `self()`. This only works because we require that `self` implements the `Fn()` trait. After the test function returns, we print `[ok]` to indicate that the function did not panic.
 
 The last step is to update our `test_runner` to use the new `Testable` trait:
 
@@ -564,7 +564,7 @@ pub fn test_runner(tests: &[&dyn Testable]) {
 }
 ```
 
-The only two changes are the type of the `tests` argument from `&[&dyn Fn()]` to `&[&dyn Testable]` and that we now call `test.run()` instead of `test()`.
+The only two changes are the type of the `tests` argument from `&[&dyn Fn()]` to `&[&dyn Testable]` and the fact that we now call `test.run()` instead of `test()`.
 
 We can now remove the print statements from our `trivial_assertion` test since they're now printed automatically:
 
@@ -584,7 +584,7 @@ Running 1 tests
 blog_os::trivial_assertion...	[ok]
 ```
 
-The function name now includes the full path to the function, which is useful when test functions in different modules have the same name. Otherwise the output looks the same as before, but we no longer need to manually add print statements to our tests.
+The function name now includes the full path to the function, which is useful when test functions in different modules have the same name. Otherwise, the output looks the same as before, but we no longer need to add print statements to our tests manually.
 
 ## Testing the VGA Buffer
 
@@ -630,19 +630,19 @@ fn test_println_output() {
 }
 ```
 
-The function defines a test string, prints it using `println`, and then iterates over the screen characters of the static `WRITER`, which represents the vga text buffer. Since `println` prints to the last screen line and then immediately appends a newline, the string should appear on line `BUFFER_HEIGHT - 2`.
+The function defines a test string, prints it using `println`, and then iterates over the screen characters of the static `WRITER`, which represents the VGA text buffer. Since `println` prints to the last screen line and then immediately appends a newline, the string should appear on line `BUFFER_HEIGHT - 2`.
 
-By using [`enumerate`], we count the number of iterations in the variable `i`, which we then use for loading the screen character corresponding to `c`. By comparing the `ascii_character` of the screen character with `c`, we ensure that each character of the string really appears in the vga text buffer.
+By using [`enumerate`], we count the number of iterations in the variable `i`, which we then use for loading the screen character corresponding to `c`. By comparing the `ascii_character` of the screen character with `c`, we ensure that each character of the string really appears in the VGA text buffer.
 
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
-As you can imagine, we could create many more test functions, for example a function that tests that no panic occurs when printing very long lines and that they're wrapped correctly. Or a function for testing that newlines, non-printable characters, and non-unicode characters are handled correctly.
+As you can imagine, we could create many more test functions. For example, a function that tests that no panic occurs when printing very long lines and that they're wrapped correctly, or a function for testing that newlines, non-printable characters, and non-unicode characters are handled correctly.
 
 For the rest of this post, however, we will explain how to create _integration tests_ to test the interaction of different components together.
 
 ## Integration Tests
 
-The convention for [integration tests] in Rust is to put them into a `tests` directory in the project root (i.e. next to the `src` directory). Both the default test framework and custom test frameworks will automatically pick up and execute all tests in that directory.
+The convention for [integration tests] in Rust is to put them into a `tests` directory in the project root (i.e., next to the `src` directory). Both the default test framework and custom test frameworks will automatically pick up and execute all tests in that directory.
 
 [integration tests]: https://doc.rust-lang.org/book/ch11-03-test-organization.html#integration-tests
 
@@ -678,11 +678,11 @@ fn panic(info: &PanicInfo) -> ! {
 
 Since integration tests are separate executables, we need to provide all the crate attributes (`no_std`, `no_main`, `test_runner`, etc.) again. We also need to create a new entry point function `_start`, which calls the test entry point function `test_main`. We don't need any `cfg(test)` attributes because integration test executables are never built in non-test mode.
 
-We use the [`unimplemented`] macro that always panics as a placeholder for the `test_runner` function and just `loop` in the `panic` handler for now. Ideally, we want to implement these functions exactly as we did in our `main.rs` using the `serial_println` macro and the `exit_qemu` function. The problem is that we don't have access to these functions since tests are built completely separately of our `main.rs` executable.
+We use the [`unimplemented`] macro that always panics as a placeholder for the `test_runner` function and just `loop` in the `panic` handler for now. Ideally, we want to implement these functions exactly as we did in our `main.rs` using the `serial_println` macro and the `exit_qemu` function. The problem is that we don't have access to these functions since tests are built completely separately from our `main.rs` executable.
 
 [`unimplemented`]: https://doc.rust-lang.org/core/macro.unimplemented.html
 
-If you run `cargo test` at this stage, you will get an endless loop because the panic handler loops endlessly. You need to use the `Ctrl+c` keyboard shortcut for exiting QEMU.
+If you run `cargo test` at this stage, you will get an endless loop because the panic handler loops endlessly. You need to use the `ctrl+c` keyboard shortcut for exiting QEMU.
 
 ### Create a Library
 
@@ -754,7 +754,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-To make our `test_runner` available to executables and integration tests, we don't apply the `cfg(test)` attribute to it and make it public. We also factor out the implementation of our panic handler into a public `test_panic_handler` function, so that it is available for executables too.
+To make our `test_runner` available to executables and integration tests, we make it public and don't apply the `cfg(test)` attribute to it. We also factor out the implementation of our panic handler into a public `test_panic_handler` function, so that it is available for executables too.
 
 Since our `lib.rs` is tested independently of our `main.rs`, we need to add a `_start` entry point and a panic handler when the library is compiled in test mode. By using the [`cfg_attr`] crate attribute, we conditionally enable the `no_main` attribute in this case.
 
@@ -791,7 +791,7 @@ pub mod serial;
 pub mod vga_buffer;
 ```
 
-We make the modules public to make them usable from outside of our library. This is also required for making our `println` and `serial_println` macros usable, since they use the `_print` functions of the modules.
+We make the modules public to make them usable outside of our library. This is also required for making our `println` and `serial_println` macros usable since they use the `_print` functions of the modules.
 
 Now we can update our `main.rs` to use the library:
 
@@ -832,7 +832,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-The library is usable like a normal external crate. It is called like our crate, which is `blog_os` in our case. The above code uses the `blog_os::test_runner` function in the `test_runner` attribute and the `blog_os::test_panic_handler` function in our `cfg(test)` panic handler. It also imports the `println` macro to make it available to our `_start` and `panic` functions.
+The library is usable like a normal external crate. It is called `blog_os`, like our crate. The above code uses the `blog_os::test_runner` function in the `test_runner` attribute and the `blog_os::test_panic_handler` function in our `cfg(test)` panic handler. It also imports the `println` macro to make it available to our `_start` and `panic` functions.
 
 At this point, `cargo run` and `cargo test` should work again. Of course, `cargo test` still loops endlessly (you can exit with `ctrl+c`). Let's fix this by using the required library functions in our integration test.
 
@@ -853,9 +853,9 @@ fn panic(info: &PanicInfo) -> ! {
 
 Instead of reimplementing the test runner, we use the `test_runner` function from our library by changing the `#![test_runner(crate::test_runner)]` attribute to `#![test_runner(blog_os::test_runner)]`. We then don't need the `test_runner` stub function in `basic_boot.rs` anymore, so we can remove it. For our `panic` handler, we call the `blog_os::test_panic_handler` function like we did in our `main.rs`.
 
-Now `cargo test` exits normally again. When you run it, you see that it builds and runs the tests for our `lib.rs`, `main.rs`, and `basic_boot.rs` separately after each other. For the `main.rs` and the `basic_boot` integration test, it reports "Running 0 tests" since these files don't have any functions annotated with `#[test_case]`.
+Now `cargo test` exits normally again. When you run it, you will see that it builds and runs the tests for our `lib.rs`, `main.rs`, and `basic_boot.rs` separately after each other. For the `main.rs` and the `basic_boot` integration tests, it reports "Running 0 tests" since these files don't have any functions annotated with `#[test_case]`.
 
-We can now add tests to our `basic_boot.rs`. For example, we can test that `println` works without panicking, like we did in the vga buffer tests:
+We can now add tests to our `basic_boot.rs`. For example, we can test that `println` works without panicking, like we did in the VGA buffer tests:
 
 ```rust
 // in tests/basic_boot.rs
@@ -870,25 +870,25 @@ fn test_println() {
 
 When we run `cargo test` now, we see that it finds and executes the test function.
 
-The test might seem a bit useless right now since it's almost identical to one of the VGA buffer tests. However, in the future the `_start` functions of our `main.rs` and `lib.rs` might grow and call various initialization routines before running the `test_main` function, so that the two tests are executed in very different environments.
+The test might seem a bit useless right now since it's almost identical to one of the VGA buffer tests. However, in the future, the `_start` functions of our `main.rs` and `lib.rs` might grow and call various initialization routines before running the `test_main` function, so that the two tests are executed in very different environments.
 
-By testing `println` in a `basic_boot` environment without calling any initialization routines in `_start`, we can ensure that `println` works right after booting. This is important because we rely on it e.g. for printing panic messages.
+By testing `println` in a `basic_boot` environment without calling any initialization routines in `_start`, we can ensure that `println` works right after booting. This is important because we rely on it, e.g., for printing panic messages.
 
 ### Future Tests
 
 The power of integration tests is that they're treated as completely separate executables. This gives them complete control over the environment, which makes it possible to test that the code interacts correctly with the CPU or hardware devices.
 
-Our `basic_boot` test is a very simple example for an integration test. In the future, our kernel will become much more featureful and interact with the hardware in various ways. By adding integration tests, we can ensure that these interactions work (and keep working) as expected. Some ideas for possible future tests are:
+Our `basic_boot` test is a very simple example of an integration test. In the future, our kernel will become much more featureful and interact with the hardware in various ways. By adding integration tests, we can ensure that these interactions work (and keep working) as expected. Some ideas for possible future tests are:
 
-- **CPU Exceptions**: When the code performs invalid operations (e.g. divides by zero), the CPU throws an exception. The kernel can register handler functions for such exceptions. An integration test could verify that the correct exception handler is called when a CPU exception occurs or that the execution continues correctly after resolvable exceptions.
-- **Page Tables**: Page tables define which memory regions are valid and accessible. By modifying the page tables, it is possible to allocate new memory regions, for example when launching programs. An integration test could perform some modifications of the page tables in the `_start` function and then verify that the modifications have the desired effects in `#[test_case]` functions.
+- **CPU Exceptions**: When the code performs invalid operations (e.g., divides by zero), the CPU throws an exception. The kernel can register handler functions for such exceptions. An integration test could verify that the correct exception handler is called when a CPU exception occurs or that the execution continues correctly after a resolvable exception.
+- **Page Tables**: Page tables define which memory regions are valid and accessible. By modifying the page tables, it is possible to allocate new memory regions, for example when launching programs. An integration test could modify the page tables in the `_start` function and verify that the modifications have the desired effects in `#[test_case]` functions.
 - **Userspace Programs**: Userspace programs are programs with limited access to the system's resources. For example, they don't have access to kernel data structures or to the memory of other programs. An integration test could launch userspace programs that perform forbidden operations and verify that the kernel prevents them all.
 
 As you can imagine, many more tests are possible. By adding such tests, we can ensure that we don't break them accidentally when we add new features to our kernel or refactor our code. This is especially important when our kernel becomes larger and more complex.
 
 ### Tests that Should Panic
 
-The test framework of the standard library supports a [`#[should_panic]` attribute][should_panic] that allows to construct tests that should fail. This is useful for example to verify that a function fails when an invalid argument is passed. Unfortunately this attribute isn't supported in `#[no_std]` crates since it requires support from the standard library.
+The test framework of the standard library supports a [`#[should_panic]` attribute][should_panic] that allows constructing tests that should fail. This is useful, for example, to verify that a function fails when an invalid argument is passed. Unfortunately, this attribute isn't supported in `#[no_std]` crates since it requires support from the standard library.
 
 [should_panic]: https://doc.rust-lang.org/rust-by-example/testing/unit_testing.html#testing-panics
 
@@ -954,7 +954,7 @@ fn should_fail() {
 }
 ```
 
-The test uses the `assert_eq` to assert that `0` and `1` are equal. This of course fails, so that our test panics as desired. Note that we need to manually print the function name using `serial_print!` here because we don't use the `Testable` trait.
+The test uses `assert_eq` to assert that `0` and `1` are equal. Of course, this fails, so our test panics as desired. Note that we need to manually print the function name using `serial_print!` here because we don't use the `Testable` trait.
 
 When we run the test through `cargo test --test should_panic` we see that it is successful because the test panicked as expected. When we comment out the assertion and run the test again, we see that it indeed fails with the _"test did not panic"_ message.
 
@@ -964,7 +964,7 @@ A significant drawback of this approach is that it only works for a single test 
 
 For integration tests that only have a single test function (like our `should_panic` test), the test runner isn't really needed. For cases like this, we can disable the test runner completely and run our test directly in the `_start` function.
 
-The key to this is disable the `harness` flag for the test in the `Cargo.toml`, which defines whether a test runner is used for an integration test. When it's set to `false`, both the default test runner and the custom test runner feature are disabled, so that the test is treated like a normal executable.
+The key to this is to disable the `harness` flag for the test in the `Cargo.toml`, which defines whether a test runner is used for an integration test. When it's set to `false`, both the default test runner and the custom test runner feature are disabled, so that the test is treated like a normal executable.
 
 Let's disable the `harness` flag for our `should_panic` test:
 
@@ -976,7 +976,7 @@ name = "should_panic"
 harness = false
 ```
 
-Now we vastly simplify our `should_panic` test by removing the test runner related code. The result looks like this:
+Now we vastly simplify our `should_panic` test by removing the `test_runner`-related code. The result looks like this:
 
 ```rust
 // in tests/should_panic.rs
@@ -1010,13 +1010,13 @@ fn panic(_info: &PanicInfo) -> ! {
 
 We now call the `should_fail` function directly from our `_start` function and exit with a failure exit code if it returns. When we run `cargo test --test should_panic` now, we see that the test behaves exactly as before.
 
-Apart from creating `should_panic` tests, disabling the `harness` attribute can also be useful for complex integration tests, for example when the individual test functions have side effects and need to be run in a specified order.
+Apart from creating `should_panic` tests, disabling the `harness` attribute can also be useful for complex integration tests, for example, when the individual test functions have side effects and need to be run in a specified order.
 
 ## Summary
 
-Testing is a very useful technique to ensure that certain components have a desired behavior. Even if they cannot show the absence of bugs, they're still a useful tool for finding them and especially for avoiding regressions.
+Testing is a very useful technique to ensure that certain components have the desired behavior. Even if they cannot show the absence of bugs, they're still a useful tool for finding them and especially for avoiding regressions.
 
-This post explained how to set up a test framework for our Rust kernel. We used the custom test frameworks feature of Rust to implement support for a simple `#[test_case]` attribute in our bare-metal environment. By using the `isa-debug-exit` device of QEMU, our test runner can exit QEMU after running the tests and report the test status out. To print error messages to the console instead of the VGA buffer, we created a basic driver for the serial port.
+This post explained how to set up a test framework for our Rust kernel. We used Rust's custom test frameworks feature to implement support for a simple `#[test_case]` attribute in our bare-metal environment. Using the `isa-debug-exit` device of QEMU, our test runner can exit QEMU after running the tests and report the test status. To print error messages to the console instead of the VGA buffer, we created a basic driver for the serial port.
 
 After creating some tests for our `println` macro, we explored integration tests in the second half of the post. We learned that they live in the `tests` directory and are treated as completely separate executables. To give them access to the `exit_qemu` function and the `serial_println` macro, we moved most of our code into a library that can be imported by all executables and integration tests. Since integration tests run in their own separate environment, they make it possible to test interactions with the hardware or to create tests that should panic.
 
