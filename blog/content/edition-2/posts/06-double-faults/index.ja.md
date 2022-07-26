@@ -382,7 +382,7 @@ pub fn init() {
 [`set_cs`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/segmentation/fn.set_cs.html
 [`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
 
-これで正常なTSSと割り込みスタックテーブルを読み込みこんだので、私達はIDT内のダブルフォルトハンドラにスタックインデックスをセットすることができます：
+これで正常なTSSと割り込みスタックテーブルを読み込んだので、私達はIDT内のダブルフォルトハンドラにスタックインデックスをセットすることができます：
 
 ```rust
 // in src/interrupts.rs
