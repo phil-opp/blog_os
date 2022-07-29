@@ -844,7 +844,7 @@ impl Task {
 }
 ```
 
-Since the [`poll`] method of the `Future` trait expects to be called on a `Pin<&mut T>` type, we use the [`Pin::as_mut`] method to convert the `self.future` field of type `Pin<Box<T>>` first. Then we call `poll` on the converted `self.future` field and return the result. Since the `Task::poll` method should be only called by the executor that we create in a moment, we keep the function private to the `task` module.
+Since the [`poll`] method of the `Future` trait expects to be called on a `Pin<&mut T>` type, we use the [`Pin::as_mut`] method to convert the `self.future` field of type `Pin<Box<T>>` first. Then we call `poll` on the converted `self.future` field and return the result. Since the `Task::poll` method should be only called by the executor that we'll create in a moment, we keep the function private to the `task` module.
 
 ### Simple Executor
 
