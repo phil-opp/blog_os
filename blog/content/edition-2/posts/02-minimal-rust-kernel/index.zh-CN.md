@@ -215,15 +215,15 @@ pub extern "C" fn _start() -> ! {
 error[E0463]: can't find crate for `core` 
 ```
 
-毫不意外的编译失败了，错误信息告诉我们编译器没有找到 [`core`][`core` library] 这个库，而这个库包含了Rust语言中的部分基础类型，如 `Result`、`Option`、迭代器等等，并且它还会隐式链接到 `no_std` 特性里面。
+毫不意外的编译失败了，错误信息告诉我们编译器没有找到 [`core`][`core` library] 这个crate，它包含了Rust语言中的部分基础类型，如 `Result`、`Option`、迭代器等等，并且它还会隐式链接到 `no_std` 特性里面。
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
-通常状况下，`core` 库以**预编译库**（precompiled library）的形式与 Rust 编译器一同发布——这时，`core` 库只对支持的宿主系统有效，而我们自定义的目标系统无效。如果我们想为其它系统编译代码，我们需要为这些系统重新编译整个 `core` 库。
+通常状况下，`core` crate以**预编译库**（precompiled library）的形式与 Rust 编译器一同发布——这时，`core` crate只对支持的宿主系统有效，而我们自定义的目标系统无效。如果我们想为其它系统编译代码，我们需要为这些系统重新编译整个 `core` crate。
 
 #### `build-std` 选项
 
-此时就到了cargo中 [`build-std` 特性][`build-std` feature] 登场的时刻，该特性允许你按照自己的需要重编译 `core` 等标准库，而不需要使用Rust安装程序内置的预编译版本。 但是该特性是全新的功能，到目前为止尚未完全完成，所以它被标记为 "unstable" 且仅被允许在 [nightly Rust 编译器][nightly Rust compilers] 环境下调用。
+此时就到了cargo中 [`build-std` 特性][`build-std` feature] 登场的时刻，该特性允许你按照自己的需要重编译 `core` 等标准crate，而不需要使用Rust安装程序内置的预编译版本。 但是该特性是全新的功能，到目前为止尚未完全完成，所以它被标记为 "unstable" 且仅被允许在 [nightly Rust 编译器][nightly Rust compilers] 环境下调用。
 
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust compilers]: #installing-rust-nightly
@@ -237,7 +237,7 @@ error[E0463]: can't find crate for `core`
 build-std = ["core", "compiler_builtins"]
 ```
 
-该配置会告知cargo需要重新编译 `core` 和 `compiler_builtins` 这两个库，其中 `compiler_builtins` 是 `core` 的必要依赖。 另外重编译需要提供库的源码，我们可以使用 `rustup component add rust-src` 命令来下载它们。
+该配置会告知cargo需要重新编译 `core` 和 `compiler_builtins` 这两个crate，其中 `compiler_builtins` 是 `core` 的必要依赖。 另外重编译需要提供源码，我们可以使用 `rustup component add rust-src` 命令来下载它们。
 
 <div class="note">
 
@@ -256,12 +256,12 @@ build-std = ["core", "compiler_builtins"]
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-如你所见，在执行 `cargo build` 之后， `core`、`rustc-std-workspace-core` （`compiler_builtins` 的依赖）和 `compiler_builtins` 库被重新编译了。
+如你所见，在执行 `cargo build` 之后， `core`、`rustc-std-workspace-core` （`compiler_builtins` 的依赖）和 `compiler_builtins` crate被重新编译了。
 
 #### 内存相关函数
 
 目前来说，Rust编译器假定所有内置函数（`built-in functions`）在所有系统内都是存在且可用的。事实上这个前提只对了一半，
-绝大多数内置函数都可以被 `compiler_builtins` 提供，而这个库刚刚已经被我们重编译过了，然而部分内存相关函数是需要操作系统相关的标准C库提供的。
+绝大多数内置函数都可以被 `compiler_builtins` 提供，而这个crate刚刚已经被我们重编译过了，然而部分内存相关函数是需要操作系统相关的标准C库提供的。
 比如，`memset`（该函数可以为一个内存块内的所有比特进行赋值）、`memcpy`（将一个内存块里的数据拷贝到另一个内存块）以及`memcmp`（比较两个内存块的数据）。
 好在我们的内核暂时还不需要用到这些函数，但是不要高兴的太早，当我们编写更丰富的功能（比如拷贝数据结构）时就会用到了。
 

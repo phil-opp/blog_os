@@ -15,7 +15,7 @@ translators = ["luojia65", "Rustin-Liu"]
 
 <!-- more -->
 
-这个系列的blog在[GitHub]上开放开发，如果你有任何问题，请在这里开一个issue来讨论。当然你也可以在[底部]留言。你可以在[这里][post branch]找到这篇文章的完整源码。
+这个系列的blog在[GitHub]上开放开发，如果你有任何问题，请在这里开一个issue来讨论。当然你也可以在[底部]留言。你可以在[`post-04`][post branch]找到这篇文章的完整源码。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -26,13 +26,13 @@ translators = ["luojia65", "Rustin-Liu"]
 
 ## 阅读要求
 
-这篇文章替换了此前的(现在已经过时了) [_单元测试(Unit Testing)_] 和 [_集成测试(Integration Tests)_] 两篇文章。这里我将假定你是在2019-04-27日后阅读的[_最小Rust内核_]一文。总而言之，本文要求你已经有一个[设置默认目标]的 `.cargo/config` 文件且[定义了一个runner可执行文件]。
+这篇文章替换了此前的(现在已经过时了) [_单元测试(Unit Testing)_][_Unit Testing_] 和 [_集成测试(Integration Tests)_][_Integration Tests_] 两篇文章。这里我将假定你是在2019-04-27日后阅读的[_最小Rust内核_][_A Minimal Rust Kernel_]一文。总而言之，本文要求你已经有一个[设置默认目标][sets a default target]的 `.cargo/config` 文件且[定义了一个runner可执行文件][defines a runner executable]。
 
-[_单元测试(Unit Testing)_]: @/edition-2/posts/deprecated/04-unit-testing/index.md
-[_集成测试(Integration Tests)_]: @/edition-2/posts/deprecated/05-integration-tests/index.md
-[_最小Rust内核_]: @/edition-2/posts/02-minimal-rust-kernel/index.md
-[设置默认目标]: @/edition-2/posts/02-minimal-rust-kernel/index.md#set-a-default-target
-[定义了一个runner可执行文件]: @/edition-2/posts/02-minimal-rust-kernel/index.md#using-cargo-run
+[_Unit Testing_]: @/edition-2/posts/deprecated/04-unit-testing/index.md
+[_Integration Tests_]: @/edition-2/posts/deprecated/05-integration-tests/index.md
+[_A Minimal Rust Kernel_]: @/edition-2/posts/02-minimal-rust-kernel/index.md
+[sets a default target]: @/edition-2/posts/02-minimal-rust-kernel/index.md#set-a-default-target
+[defines a runner executable]: @/edition-2/posts/02-minimal-rust-kernel/index.md#using-cargo-run
 
 ## Rust中的测试
 
@@ -40,19 +40,19 @@ Rust有一个**内置的测试框架**（[built-in test framework]）：无需�
 
 [built-in test framework]: https://doc.rust-lang.org/book/second-edition/ch11-00-testing.html
 
-不幸的是，对于一个`no_std`的应用，比如我们的内核，这有点点复杂。现在的问题是，Rust的测试框架会隐式的调用内置的[`test`]库，但是这个库依赖于标准库。这也就是说我们的 `#[no_std]`内核无法使用默认的测试框架。
+不幸的是，对于一个`no_std`的应用，比如我们的内核，这就有点复杂了。现在的问题是，Rust的测试框架会隐式的调用内置的[`test`]库，但是这个库依赖于标准库。这也就是说我们的 `#[no_std]`内核无法使用默认的测试框架。
 
 [`test`]: https://doc.rust-lang.org/test/index.html
 
-当我们试图在我们的项目中执行`cargo xtest`时，我们可以看到如下信息:
+当我们试图在我们的项目中执行`cargo test`时，我们可以看到如下信息:
 
 ```
-> cargo xtest
+> cargo test
    Compiling blog_os v0.1.0 (/…/blog_os)
 error[E0463]: can't find crate for `test`
 ```
 
-由于`test`crate依赖于标准库，所以它在我们的裸机目标上并不可用。虽然将`test`crate移植到一个 `#[no_std]` 上下文环境中是[可能的][utest]，但是这样做是高度不稳定的并且还会需要一些特殊的hacks，例如重定义 `panic` 宏。 
+由于 `test` 库依赖于标准库，所以它在我们的裸机目标上并不可用。虽然将 `test` 库移植到一个 `#[no_std]` 上下文环境中是[可能的][utest]，但是这样做是高度不稳定的并且还会需要一些特殊的hacks，例如重定义 `panic` 宏。 
 
 [utest]: https://github.com/japaric/utest
 
@@ -62,11 +62,11 @@ error[E0463]: can't find crate for `test`
 
 [`custom_test_frameworks`]: https://doc.rust-lang.org/unstable-book/language-features/custom-test-frameworks.html
 
-与默认的测试框架相比，它的缺点是有一些高级功能诸如 [`should_panic` tests]都不可用了。相对的，如果需要这些功能，我们需要自己来实现。当然，这点对我们来说是好事，因为我们的环境非常特殊，在这个环境里，这些高级功能的默认实现无论如何都是无法工作的，举个例子， `#[should_panic]`属性依赖于堆栈展开来捕获内核panic，而我的内核早已将其禁用了。
+与默认的测试框架相比，它的缺点是有一些高级功能诸如 [`should_panic` tests] 都不可用了。相对的，如果需要这些功能，我们需要自己来实现。当然，这点对我们来说是好事，因为我们的环境非常特殊，在这个环境里，这些高级功能的默认实现无论如何都是无法工作的，举个例子， `#[should_panic]`属性依赖于堆栈展开来捕获内核panic，而我们的内核早已将其禁用了。
 
 [`should_panic` tests]: https://doc.rust-lang.org/book/ch11-01-writing-tests.html#checking-for-panics-with-should_panic
 
-要为我们的内核实现自定义测试框架，我们需要将如下代码添加到我们的`main.rs`中去:
+要为我们的内核实现自定义测试框架，我们需要将如下代码添加到我们的 `main.rs` 中去:
 
 ```rust
 // in src/main.rs
@@ -89,7 +89,13 @@ fn test_runner(tests: &[&dyn Fn()]) {
 [_trait object_]: https://doc.rust-lang.org/1.30.0/book/first-edition/trait-objects.html
 [_Fn()_]: https://doc.rust-lang.org/std/ops/trait.Fn.html
 
-现在当我们运行 `cargo xtest` ，我们可以发现运行成功了。然而，我们看到的仍然是"Hello World"而不是我们的 `test_runner`传递来的信息。这是由于我们的入口点仍然是 `_start` 函数——自定义测试框架会生成一个`main`函数来调用`test_runner`，但是由于我们使用了 `#[no_main]`并提供了我们自己的入口点，所以这个`main`函数就被忽略了。
+现在当我们运行 `cargo test` ，我们可以发现运行成功了。然而，我们看到的仍然是"Hello World"而不是我们的 `test_runner`传递来的信息。这是由于我们的入口点仍然是 `_start` 函数——自定义测试框架会生成一个`main`函数来调用`test_runner`，但是由于我们使用了 `#[no_main]`并提供了我们自己的入口点，所以这个`main`函数就被忽略了。
+
+<div class = "warning">
+
+**Note:** cargo目前有个bug，就是某些测试用例会在执行 `cargo test` 时抛出 `duplicate lang item` 错误。目前已知的复现条件是在你的 `Cargo.toml` 中配置 `panic = "abort"`，只要移除掉，`cargo test` 即可正常执行。如果你对这个bug感兴趣，可以关注一下这个 [cargo issue](https://github.com/rust-lang/cargo/issues/7359)。
+
+</div>
 
 为了修复这个问题，我们需要通过 `reexport_test_harness_main`属性来将生成的函数的名称更改为与`main`不同的名称。然后我们可以在我们的`_start`函数里调用这个重命名的函数:
 
@@ -113,7 +119,7 @@ pub extern "C" fn _start() -> ! {
 
 [ conditional compilation ]: https://doc.rust-lang.org/1.30.0/book/first-edition/conditional-compilation.html
 
-现在当我们执行 `cargo xtest`时，我们可以看到我们的`test_runner`将"Running 0 tests"信息显示在屏幕上了。我们可以创建第一个测试函数了:
+现在当我们执行 `cargo test`时，我们可以看到我们的`test_runner`将"Running 0 tests"信息显示在屏幕上了。我们可以创建第一个测试函数了:
 
 ```rust
 // in src/main.rs
@@ -126,7 +132,7 @@ fn trivial_assertion() {
 }
 ```
 
-现在，当我们运行 `cargo xtest`时，我们可以看到如下输出:
+现在，当我们运行 `cargo test`时，我们可以看到如下输出:
 
 ![QEMU printing "Hello World!", "Running 1 tests", and "trivial assertion... [ok]"](https://os.phil-opp.com/testing/qemu-test-runner-output.png)
 
@@ -136,7 +142,7 @@ fn trivial_assertion() {
 
 ## 退出QEMU
 
-现在我们在`_start`函数结束后进入了一个死循环，所以每次执行完`cargo xtest`后我们都需要手动去关闭QEMU；但是我们还想在没有用户交互的脚本环境下执行 `cargo xtest`。解决这个问题的最佳方式，是实现一个合适的方法来关闭我们的操作系统——不幸的是，这个方式实现起来相对有些复杂，因为这要求我们实现对[APM]或[ACPI]电源管理标准的支持。
+现在我们在`_start`函数结束后进入了一个死循环，所以每次执行完`cargo test`后我们都需要手动去关闭QEMU；但是我们还想在没有用户交互的脚本环境下执行 `cargo test`。解决这个问题的最佳方式，是实现一个合适的方法来关闭我们的操作系统——不幸的是，这个方式实现起来相对有些复杂，因为这要求我们实现对[APM]或[ACPI]电源管理标准的支持。
 
 [APM]: https://wiki.osdev.org/APM
 [ACPI]: https://wiki.osdev.org/ACPI
@@ -150,28 +156,28 @@ fn trivial_assertion() {
 test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 ```
 
- `bootimage runner` 会在QEMU的默认测试命令后添加`test-args` 参数。（对于`cargo xrun`命令，这个参数会被忽略。）
+ `bootimage runner` 会在QEMU的默认测试命令后添加`test-args` 参数。（对于`cargo run`命令，这个参数会被忽略。）
 
 在传递设备名 (`isa-debug-exit`)的同时，我们还传递了两个参数，`iobase` 和 `iosize` 。这两个参数指定了一个_I/O 端口_，我们的内核将通过它来访问设备。
 
 ### I/O 端口
-在x86平台上，CPU和外围硬件通信通常有两种方式，**内存映射I/O**和**端口映射I/O**。之前，我们已经使用内存映射的方式，通过内存地址`0xb8000`访问了[VGA文本缓冲区]。该地址并没有映射到RAM，而是映射到了VGA设备的一部分内存上。
+在x86平台上，CPU和外围硬件通信通常有两种方式，**内存映射I/O**和**端口映射I/O**。之前，我们已经使用内存映射的方式，通过内存地址 `0xb8000` 访问了[VGA文本缓冲区]。该地址并没有映射到RAM，而是映射到了VGA设备的一部分内存上。
 
 [VGA text buffer]: @/edition-2/posts/03-vga-text-buffer/index.md
 
-与内存映射不同，端口映射I/O使用独立的I/O总线来进行通信。每个外围设备都有一个或数个端口号。CPU采用了特殊的`in`和`out`指令来和端口通信，这些指令要求一个端口号和一个字节的数据作为参数（有些这种指令的变体也允许发送`u16`或是`u32`长度的数据）。
+与内存映射不同，端口映射I/O使用独立的I/O总线来进行通信。每个外围设备都有一个或数个端口号。CPU采用了特殊的`in`和`out`指令来和端口通信，这些指令要求一个端口号和一个字节的数据作为参数（有些这种指令的变体也允许发送 `u16` 或是 `u32` 长度的数据）。
 
-`isa-debug-exit`设备使用的就是端口映射I/O。其中， `iobase` 参数指定了设备对应的端口地址（在x86中，`0xf4`是一个[通常未被使用的端口][list of x86 I/O ports]），而`iosize`则指定了端口的大小（`0x04`代表4字节）。
+`isa-debug-exit`设备使用的就是端口映射I/O。其中， `iobase` 参数指定了设备对应的端口地址（在x86中，`0xf4` 是一个[通常未被使用的端口][list of x86 I/O ports]），而 `iosize` 则指定了端口的大小（`0x04` 代表4字节）。
 
 [list of x86 I/O ports]: https://wiki.osdev.org/I/O_Ports#The_list
 
 ### 使用退出(Exit)设备
 
- `isa-debug-exit`设备的功能非常简单。当一个 `value`写入`iobase`指定的端口时，它会导致QEMU以**退出状态**（[exit status]）`(value << 1) | 1`退出。也就是说，当我们向端口写入`0`时，QEMU将以退出状态`(0 << 1) | 1 = 1`退出，而当我们向端口写入`1`时，它将以退出状态`(1 << 1) | 1 = 3`退出。
+`isa-debug-exit` 设备的功能非常简单。当一个 `value` 写入 `iobase` 指定的端口时，它会导致QEMU以**退出状态**（[exit status]）`(value << 1) | 1` 退出。也就是说，当我们向端口写入 `0` 时，QEMU将以退出状态 `(0 << 1) | 1 = 1` 退出，而当我们向端口写入`1`时，它将以退出状态 `(1 << 1) | 1 = 3` 退出。
 
 [exit status]: https://en.wikipedia.org/wiki/Exit_status
 
-这里我们使用 [`x86_64`] crate提供的抽象，而不是手动调用`in`或`out`指令。为了添加对该crate的依赖，我们可以将其添加到我们的 `Cargo.toml`中的 `dependencies` 小节中去:
+这里我们使用 [`x86_64`] crate提供的抽象，而不是手动调用 `in` 或 `out` 指令。为了添加对该crate的依赖，我们可以将其添加到我们的 `Cargo.toml`中的 `dependencies` 小节中去:
 
 
 [`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
@@ -183,7 +189,7 @@ test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 x86_64 = "0.14.2"
 ```
 
-现在我们可以使用crate中提供的[`Port`] 类型来创建一个`exit_qemu` 函数了:
+现在我们可以使用crate中提供的[`Port`] 类型来创建一个 `exit_qemu` 函数了:
 
 [`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
 
