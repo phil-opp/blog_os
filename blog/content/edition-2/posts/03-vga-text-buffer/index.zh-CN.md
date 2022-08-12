@@ -18,7 +18,7 @@ translators = ["luojia65", "Rustin-Liu"]
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-03`][post branch] branch.
+此博客在 [GitHub] 上公开开发. 如果您有任何问题或疑问，请在此处打开一个 issue。 您也可以在[底部][at the bottom]发表评论. 这篇文章的完整源代码可以在 [`post-03`] [post branch] 分支中找到。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -38,7 +38,12 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 | 12-14 | Background color |
 | 15    | Blink |
 
-其中，**前景色**（foreground color）和**背景色**（background color）取值范围如下：
+第一个字节表示了应当输出的 [ASCII 编码][ASCII encoding]，更加准确的说，类似于 [437 字符编码表][_code page 437_] 中字符对应的编码，但又有细微的不同。 这里为了简化表达，我们在文章里将其简称为ASCII字符。
+
+[ASCII encoding]: https://en.wikipedia.org/wiki/ASCII
+[_code page 437_]: https://en.wikipedia.org/wiki/Code_page_437
+
+第二个字节则定义了字符的显示方式，前四个比特定义了前景色，中间三个比特定义了背景色，最后一个比特则定义了该字符是否应该闪烁，以下是可用的颜色列表：
 
 | Number  | Color  | Number + Bright Bit  | Bright Color |
 |-----|----------|------|--------|
@@ -51,7 +56,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 | 0x6  | Brown  | 0xe  | Yellow |
 | 0x7  | Light Gray  | 0xf  | White |
 
-每个颜色的第四位称为**加亮位**（bright bit）。
+每个颜色的第四位称为**加亮位**（bright bit），比如blue加亮后就变成了light blue，但对于背景色，这个比特会被用于标记是否闪烁。
 
 要修改 VGA 字符缓冲区，我们可以通过**存储器映射输入输出**（[memory-mapped I/O](https://en.wikipedia.org/wiki/Memory-mapped_I/O)）的方式，读取或写入地址 `0xb8000`；这意味着，我们可以像操作普通的内存区域一样操作这个地址。
 
@@ -66,13 +71,11 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 mod vga_buffer;
 ```
 
-这行代码定义了一个 Rust 模块，它的内容应当保存在 `src/vga_buffer.rs` 文件中。使用 **2018 版次**（2018 edition）的 Rust 时，我们可以把模块的**子模块**（submodule）文件直接保存到 `src/vga_buffer/` 文件夹下，与 `vga_buffer.rs` 文件共存，而无需创建一个 `mod.rs` 文件。
-
 我们的模块暂时不需要添加子模块，所以我们将它创建为 `src/vga_buffer.rs` 文件。除非另有说明，本文中的代码都保存到这个文件中。
 
 ### 颜色
 
-首先，我们使用 Rust 的**枚举**（enum）表示一种颜色：
+首先，我们使用 Rust 的**枚举**（enum）表示特定的颜色：
 
 ```rust
 // in src/vga_buffer.rs
@@ -495,7 +498,7 @@ lazy_static! {
 ```toml
 # in Cargo.toml
 [dependencies]
-spin = "0.4.9"
+spin = "0.5.2"
 ```
 
 现在，我们能够使用自旋的互斥锁，为我们的 `WRITER` 类实现安全的[内部可变性](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html)：
