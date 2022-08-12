@@ -290,9 +290,9 @@ error: linking with `link.exe` failed: exit code: 1561
   = note: LINK : fatal error LNK1561: entry point must be defined
 ```
 
-错误信息 “entry point must be defined” 意味着链接器没有找到程序入口点。在Windows环境下，默认入口点[取决于使用的子系统][windows子系统]。对于 `CONSOLE` 子系统，链接器会寻找 `mainCRTStartup` 函数作为入口，而对于 `WINDOWS` 子系统，入口函数名叫做 `WinMainCRTStartup`。要复写掉入口函数名的默认设定，使其使用我们已经定义的 `_start` 函数，可以将 `/ENTRY` 参数传递给链接器：
+错误信息 “entry point must be defined” 意味着链接器没有找到程序入口点。在Windows环境下，默认入口点[取决于使用的子系统][windows-subsystems]。对于 `CONSOLE` 子系统，链接器会寻找 `mainCRTStartup` 函数作为入口，而对于 `WINDOWS` 子系统，入口函数名叫做 `WinMainCRTStartup`。要复写掉入口函数名的默认设定，使其使用我们已经定义的 `_start` 函数，可以将 `/ENTRY` 参数传递给链接器：
 
-[windows子系统]: https://docs.microsoft.com/en-us/cpp/build/reference/entry-entry-point-symbol
+[windows-subsystems]: https://docs.microsoft.com/en-us/cpp/build/reference/entry-entry-point-symbol
 
 ```
 cargo rustc -- -C link-arg=/ENTRY:_start
@@ -310,7 +310,7 @@ error: linking with `link.exe` failed: exit code: 1221
           defined
 ```
 
-该错误的原因是Windows平台下的可执行文件可以使用不同的[子系统][windows子系统]。一般而言，操作系统会如此判断：如果入口函数名叫 `main` ，则会使用 `CONSOLE` 子系统；若名叫 `WinMain` ，则会使用 `WINDOWS` 子系统。然而此时我们使用的入口函数名叫 `_start` ，两者都不是，此时就需要显式指定子系统：
+该错误的原因是Windows平台下的可执行文件可以使用不同的[子系统][windows-subsystems]。一般而言，操作系统会如此判断：如果入口函数名叫 `main` ，则会使用 `CONSOLE` 子系统；若名叫 `WinMain` ，则会使用 `WINDOWS` 子系统。然而此时我们使用的入口函数名叫 `_start` ，两者都不是，此时就需要显式指定子系统：
 
 ```
 cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
@@ -351,9 +351,9 @@ error: linking with `cc` failed: exit code: 1
           clang: error: linker command failed with exit code 1 […]
 ```
 
-macOS [并未官方支持静态链接] ，并且在默认情况下程序会链接 `libSystem` 库。要复写这个设定并进行静态链接，我们可以传入链接器参数 `-static` ：
+macOS [并未官方支持静态链接][does not officially support statically linked binaries] ，并且在默认情况下程序会链接 `libSystem` 库。要复写这个设定并进行静态链接，我们可以传入链接器参数 `-static` ：
 
-[并未官方支持静态链接]: https://developer.apple.com/library/archive/qa/qa1118/_index.html
+[does not officially support statically linked binaries]: https://developer.apple.com/library/archive/qa/qa1118/_index.html
 
 ```
 cargo rustc -- -C link-args="-e __start -static"
