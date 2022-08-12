@@ -223,12 +223,12 @@ error[E0463]: can't find crate for `core`
 
 #### `build-std` 选项
 
-That's where the [`build-std` feature] of cargo comes in. It allows to recompile `core` and other standard library crates on demand, instead of using the precompiled versions shipped with the Rust installation. This feature is very new and still not finished, so it is marked as "unstable" and only available on [nightly Rust compilers].
+此时就到了cargo中 [`build-std` 特性][`build-std` feature] 登场的时刻，该特性允许你按照自己的需要重编译 `core` 等标准库，而不需要使用Rust安装程序内置的预编译版本。 但是该特性是全新的功能，到目前为止尚未完全完成，所以它被标记为 "unstable" 且仅被允许在 [nightly Rust 编译器][nightly Rust compilers] 环境下调用。
 
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust compilers]: #installing-rust-nightly
 
-To use the feature, we need to create a [cargo configuration] file at `.cargo/config.toml` with the following content:
+要启用该特性，你需要创建一个 [cargo 配置][cargo configuration] 文件，即 `.cargo/config.toml`，并写入以下语句：
 
 ```toml
 # in .cargo/config.toml
@@ -237,15 +237,15 @@ To use the feature, we need to create a [cargo configuration] file at `.cargo/co
 build-std = ["core", "compiler_builtins"]
 ```
 
-This tells cargo that it should recompile the `core` and `compiler_builtins` libraries. The latter is required because it is a dependency of `core`. In order to recompile these libraries, cargo needs access to the rust source code, which we can install with `rustup component add rust-src`.
+该配置会告知cargo需要重新编译 `core` 和 `compiler_builtins` 这两个库，其中 `compiler_builtins` 是 `core` 的必要依赖。 另外重编译需要提供库的源码，我们可以使用 `rustup component add rust-src` 命令来下载它们。
 
 <div class="note">
 
-**Note:** The `unstable.build-std` configuration key requires at least the Rust nightly from 2020-07-15.
+**Note:** 仅 `2020-07-15` 之后的Rust nightly版本支持 `unstable.build-std` 配置项。
 
 </div>
 
-After setting the `unstable.build-std` configuration key and installing the `rust-src` component, we can rerun our build command:
+在设定 `unstable.build-std` 配置项并安装 `rust-src` 组件之后，我们就可以开始编译了：
 
 ```
 > cargo build --target x86_64-blog_os.json
@@ -256,17 +256,20 @@ After setting the `unstable.build-std` configuration key and installing the `rus
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-We see that `cargo build` now recompiles the `core`, `rustc-std-workspace-core` (a dependency of `compiler_builtins`), and `compiler_builtins` libraries for our custom target.
+如你所见，在执行 `cargo build` 之后， `core`、`rustc-std-workspace-core` （`compiler_builtins` 的依赖）和 `compiler_builtins` 库被重新编译了。
 
-#### Memory-Related Intrinsics
+#### 内存相关函数
 
-The Rust compiler assumes that a certain set of built-in functions is available for all systems. Most of these functions are provided by the `compiler_builtins` crate that we just recompiled. However, there are some memory-related functions in that crate that are not enabled by default because they are normally provided by the C library on the system. These functions include `memset`, which sets all bytes in a memory block to a given value, `memcpy`, which copies one memory block to another, and `memcmp`, which compares two memory blocks. While we didn't need any of these functions to compile our kernel right now, they will be required as soon as we add some more code to it (e.g. when copying structs around).
+目前来说，Rust编译器假定所有内置函数（`built-in functions`）在所有系统内都是存在且可用的。事实上这个前提只对了一半，
+绝大多数内置函数都可以被 `compiler_builtins` 提供，而这个库刚刚已经被我们重编译过了，然而部分内存相关函数是需要操作系统相关的标准C库提供的。
+比如，`memset`（该函数可以为一个内存块内的所有比特进行赋值）、`memcpy`（将一个内存块里的数据拷贝到另一个内存块）以及`memcmp`（比较两个内存块的数据）。
+好在我们的内核暂时还不需要用到这些函数，但是不要高兴的太早，当我们编写更丰富的功能（比如拷贝数据结构）时就会用到了。
 
-Since we can't link to the C library of the operating system, we need an alternative way to provide these functions to the compiler. One possible approach for this could be to implement our own `memset` etc. functions and apply the `#[no_mangle]` attribute to them (to avoid the automatic renaming during compilation). However, this is dangerous since the slightest mistake in the implementation of these functions could lead to undefined behavior. For example, you might get an endless recursion when implementing `memcpy` using a `for` loop because `for` loops implicitly call the [`IntoIterator::into_iter`] trait method, which might call `memcpy` again. So it's a good idea to reuse existing well-tested implementations instead.
+现在我们当然无法提供操作系统相关的标准C库，所以我们需要使用其他办法提供这些东西。一个显而易见的途径就是自己实现 `memset` 这些函数，但不要忘记加入 `#[no_mangle]` 语句，以避免编译时被自动重命名。 当然，这样做很危险，底层函数中最细微的错误也会将程序导向不可预知的未来。比如，你可能在实现 `memcpy` 时使用了一个 `for` 循环，然而 `for` 循环本身又会调用 [`IntoIterator::into_iter`] 这个trait方法，这个方法又会再次调用 `memcpy`，此时一个无限递归就产生了，所以还是使用经过良好测试的既存实现更加可靠。
 
 [`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
 
-Fortunately, the `compiler_builtins` crate already contains implementations for all the needed functions, they are just disabled by default to not collide with the implementations from the C library. We can enable them by setting cargo's [`build-std-features`] flag to `["compiler-builtins-mem"]`. Like the `build-std` flag, this flag can be either passed on the command line as `-Z` flag or configured in the `unstable` table in the `.cargo/config.toml` file. Since we always want to build with this flag, the config file option makes more sense for us:
+幸运的是，`compiler_builtins` 事实上自带了所有相关函数的实现，只是在默认情况下，出于避免和标准C库发生冲突的考量被禁用掉了，此时我们需要将 [`build-std-features`] 配置项设置为 `["compiler-builtins-mem"]` 来启用这个特性。如同 `build-std` 配置项一样，该特性可以使用 `-Z` 参数启用，也可以在 `.cargo/config.toml` 中使用 `unstable` 配置集启用。现在我们的配置文件中的相关部分是这样子的：
 
 [`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
 
@@ -278,18 +281,18 @@ build-std-features = ["compiler-builtins-mem"]
 build-std = ["core", "compiler_builtins"]
 ```
 
-(Support for the `compiler-builtins-mem` feature was only [added very recently](https://github.com/rust-lang/rust/pull/77284), so you need at least Rust nightly `2020-09-30` for it.)
+（`compiler-builtins-mem` 特性是在 [这个PR](https://github.com/rust-lang/rust/pull/77284) 中被引入的，所以你的Rust nightly更新时间必须晚于 `2020-09-30`。）
 
-Behind the scenes, this flag enables the [`mem` feature] of the `compiler_builtins` crate. The effect of this is that the `#[no_mangle]` attribute is applied to the [`memcpy` etc. implementations] of the crate, which makes them available to the linker.
+该参数为 `compiler_builtins` 启用了 [`mem` 特性][`mem` feature]，至于具体效果，就是已经在内部通过 `#[no_mangle]` 向链接器提供了 [`memcpy` 等函数的实现][`memcpy` etc. implementations]。
 
 [`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L54-L55
 [`memcpy` etc. implementations]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
 
-With this change, our kernel has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
+经过这些修改，我们的内核已经完成了所有编译所必需的函数，那么让我们继续对代码进行完善。
 
-#### Set a Default Target
+#### 设置默认编译目标
 
-To avoid passing the `--target` parameter on every invocation of `cargo build`, we can override the default target. To do this, we add the following to our [cargo configuration] file at `.cargo/config.toml`:
+每次调用 `cargo build` 命令都需要传入 `--target` 参数很麻烦吧？其实我们可以复写掉默认值，从而省略这个参数，只需要在 `.cargo/config.toml` 中加入以下 [cargo 配置][cargo configuration]：
 
 [cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
 
@@ -300,9 +303,9 @@ To avoid passing the `--target` parameter on every invocation of `cargo build`, 
 target = "x86_64-blog_os.json"
 ```
 
-This tells `cargo` to use our `x86_64-blog_os.json` target when no explicit `--target` argument is passed. This means that we can now build our kernel with a simple `cargo build`. For more information on cargo configuration options, check out the [official documentation][cargo configuration].
+这个配置会告知 `cargo` 使用 `x86_64-blog_os.json` 这个文件作为默认的 `--target` 参数，此时只输入短短的一句 `cargo build` 就可以编译到指定平台了。如果你对其他配置项感兴趣，亦可以查阅 [官方文档][cargo configuration]。
 
-We are now able to build our kernel for a bare metal target with a simple `cargo build`. However, our `_start` entry point, which will be called by the boot loader, is still empty. It's time that we output something to screen from it.
+那么现在我们已经可以用 `cargo build` 完成程序编译了，然而被成功调用的 `_start` 函数的函数体依然是一个空空如也的循环，是时候往屏幕上输出一点什么了。
 
 ### 向屏幕打印字符
 
@@ -358,7 +361,7 @@ pub extern "C" fn _start() -> ! {
 # in Cargo.toml
 
 [dependencies]
-bootloader = "0.9.3"
+bootloader = "0.9.8"
 ```
 
 只添加引导程序为依赖项，并不足以创建一个可引导的磁盘映像；我们还需要内核编译完成之后，将内核和引导程序组合在一起。然而，截至目前，原生的 cargo 并不支持在编译完成后添加其它步骤（详见[这个 issue](https://github.com/rust-lang/cargo/issues/545)）。
@@ -377,7 +380,7 @@ cargo install bootimage
 > cargo bootimage
 ```
 
-可以看到的是，`bootimage` 工具开始使用 `cargo xbuild` 编译你的内核，所以它将增量编译我们修改后的源码。在这之后，它会编译内核的引导程序，这可能将花费一定的时间；但和所有其它依赖包相似的是，在首次编译后，产生的二进制文件将被缓存下来——这将显著地加速后续的编译过程。最终，`bootimage` 将把内核和引导程序组合为一个可引导的磁盘映像。
+可以看到的是，`bootimage` 工具开始使用 `cargo build` 编译你的内核，所以它将增量编译我们修改后的源码。在这之后，它会编译内核的引导程序，这可能将花费一定的时间；但和所有其它依赖包相似的是，在首次编译后，产生的二进制文件将被缓存下来——这将显著地加速后续的编译过程。最终，`bootimage` 将把内核和引导程序组合为一个可引导的磁盘映像。
 
 运行这行命令之后，我们应该能在 `target/x86_64-blog_os/debug` 目录内找到我们的映像文件 `bootimage-blog_os.bin`。我们可以在虚拟机内启动它，也可以刻录到 U 盘上以便在真机上启动。（需要注意的是，因为文件格式不同，这里的 bin 文件并不是一个光驱映像，所以将它刻录到光盘不会起作用。）
 
@@ -394,10 +397,13 @@ cargo install bootimage
 现在我们可以在虚拟机中启动内核了。为了在[ QEMU](https://www.qemu.org/) 中启动内核，我们使用下面的命令：
 
 ```bash
-> qemu-system-x86_64 -drive format=raw,file=bootimage-blog_os.bin
+> qemu-system-x86_64 -drive format=raw,file=target/x86_64-blog_os/debug/bootimage-blog_os.bin
+warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 ```
 
-![](https://os.phil-opp.com/minimal-rust-kernel/qemu.png)
+然后就会弹出一个独立窗口：
+
+![QEMU showing "Hello World!"](qemu.png)
 
 我们可以看到，屏幕窗口已经显示出 “Hello World!” 字符串。祝贺你！
 
@@ -428,7 +434,7 @@ runner = "bootimage runner"
 
 命令 `bootimage runner` 由 `bootimage` 包提供，参数格式经过特殊设计，可以用于 `runner` 命令。它将给定的可执行文件与项目的引导程序依赖项链接，然后在 QEMU 中启动它。`bootimage` 包的 [README文档](https://github.com/rust-osdev/bootimage) 提供了更多细节和可以传入的配置参数。
 
-现在我们可以使用 `cargo xrun` 来编译内核并在 QEMU 中启动了。和 `xbuild` 类似，`xrun` 子命令将在调用 cargo 命令前编译内核所需的包。这个子命令也由 `cargo-xbuild` 工具提供，所以你不需要安装额外的工具。
+现在我们可以使用 `cargo run` 来编译内核并在 QEMU 中启动了。
 
 ## 下篇预告
 
