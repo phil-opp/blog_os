@@ -6,18 +6,18 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "bd6fbcb1c36705b2c474d7fcee387bfea1210851"
+translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
 # GitHub usernames of the people that translated this post
 translators = ["luojia65", "Rustin-Liu"]
 +++
 
-在这篇文章中，我们将基于 **x86架构**（the x86 architecture），使用 Rust 语言，编写一个最小化的 64 位内核。我们将从上一章中构建的独立式可执行程序开始，构建自己的内核；它将向显示器打印字符串，并能被打包为一个能够引导启动的**磁盘映像**（disk image）。
+在这篇文章中，我们将基于 **x86架构**（the x86 architecture），使用 Rust 语言，编写一个最小化的 64 位内核。我们将从上一章中构建的[独立式可执行程序][freestanding-rust-binary]开始，构建自己的内核；它将向显示器打印字符串，并能被打包为一个能够引导启动的**磁盘映像**（disk image）。
 
 [freestanding Rust binary]: @/edition-2/posts/01-freestanding-rust-binary/index.md
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-02`][post branch] branch.
+此博客在 [GitHub] 上公开开发. 如果您有任何问题或疑问，请在此处打开一个 issue。 您也可以在[底部][at the bottom]发表评论. 这篇文章的完整源代码可以在 [`post-02`] [post branch] 分支中找到。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -32,7 +32,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 x86 架构支持两种固件标准： **BIOS**（[Basic Input/Output System](https://en.wikipedia.org/wiki/BIOS)）和 **UEFI**（[Unified Extensible Firmware Interface](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface)）。其中，BIOS 标准显得陈旧而过时，但实现简单，并为 1980 年代后的所有 x86 设备所支持；相反地，UEFI 更现代化，功能也更全面，但开发和构建更复杂（至少从我的角度看是如此）。
 
-在这篇文章中，我们暂时只提供 BIOS 固件的引导启动方式。
+在这篇文章中，我们暂时只提供 BIOS 固件的引导启动方式，但是UEFI支持也已经在计划中了。如果你希望帮助我们推进它，请查阅这份 [Github issue](https://github.com/phil-opp/blog_os/issues/349)。
 
 ### BIOS 启动
 
@@ -57,11 +57,17 @@ x86 架构支持两种固件标准： **BIOS**（[Basic Input/Output System](htt
 3. GRUB 和 Multiboot 标准并没有被详细地解释，阅读相关文档需要一定经验；
 4. 为了创建一个能够被引导的磁盘映像，我们在开发时必须安装 GRUB：这加大了基于 Windows 或 macOS 开发内核的难度。
 
-出于这些考虑，我们决定不使用 GRUB 或者 Multiboot 标准。然而，Multiboot 支持功能也在 bootimage 工具的开发计划之中，所以从原理上讲，如果选用 bootimage 工具，在未来使用 GRUB 引导你的系统内核是可能的。
+出于这些考虑，我们决定不使用 GRUB 或者 Multiboot 标准。然而，Multiboot 支持功能也在 bootimage 工具的开发计划之中，所以从原理上讲，如果选用 bootimage 工具，在未来使用 GRUB 引导你的系统内核是可能的。 如果你对编写一个支持 Mutiboot 标准的内核有兴趣，可以查阅 [初版文档][first edition]。
+
+[first edition]: @/edition-1/_index.md
+
+### UEFI
+
+（截至此时，我们并未提供UEFI相关教程，但我们确实有此意向。如果你愿意提供一些帮助，请在 [Github issue](https://github.com/phil-opp/blog_os/issues/349) 告知我们，不胜感谢。）
 
 ## 最小化内核
 
-现在我们已经明白电脑是如何启动的，那也是时候编写我们自己的内核了。我们的小目标是，创建一个内核的磁盘映像，它能够在启动时，向屏幕输出一行“Hello World!”；我们的工作将基于上一章构建的独立式可执行程序。
+现在我们已经明白电脑是如何启动的，那也是时候编写我们自己的内核了。我们的小目标是，创建一个内核的磁盘映像，它能够在启动时，向屏幕输出一行“Hello World!”；我们的工作将基于上一章构建的[独立式可执行程序][freestanding Rust binary]。
 
 如果读者还有印象的话，在上一章，我们使用 `cargo` 构建了一个独立的二进制程序；但这个程序依然基于特定的操作系统平台：因平台而异，我们需要定义不同名称的函数，且使用不同的编译指令。这是因为在默认情况下，`cargo` 会为特定的**宿主系统**（host system）构建源码，比如为你正在运行的系统构建源码。这并不是我们想要的，因为我们的内核不应该基于另一个操作系统——我们想要编写的，就是这个操作系统。确切地说，我们想要的是，编译为一个特定的**目标系统**（target system）。
 
@@ -135,7 +141,9 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
 "disable-redzone": true,
 ```
 
-我们正在编写一个内核，所以我们应该同时处理中断。要安全地实现这一点，我们必须禁用一个与**红区**（redzone）有关的栈指针优化：因为此时，这个优化可能会导致栈被破坏。我们撰写了一篇专门的短文，来更详细地解释红区及与其相关的优化。
+我们正在编写一个内核，所以我们应该同时处理中断。要安全地实现这一点，我们必须禁用一个与**红区**（redzone）有关的栈指针优化：因为此时，这个优化可能会导致栈被破坏。如果需要更详细的资料，请查阅我们的一篇关于 [禁用红区][disabling the red zone] 的短文。
+
+[disabling the red zone]: @/edition-2/posts/02-minimal-rust-kernel/disable-red-zone/index.md
 
 ```json
 "features": "-mmx,-sse,+soft-float",
@@ -147,7 +155,7 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
 
 禁用 SIMD 产生的一个问题是，`x86_64` 架构的浮点数指针运算默认依赖于 SIMD 寄存器。我们的解决方法是，启用 `soft-float` 特征，它将使用基于整数的软件功能，模拟浮点数指针运算。
 
-为了让读者的印象更清晰，我们撰写了一篇关于禁用 SIMD 的短文。
+为了让读者的印象更清晰，我们撰写了一篇关于 [禁用 SIMD][disabling SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md) 的短文。
 
 现在，我们将各个配置项整合在一起。我们的目标配置清单应该长这样：
 
@@ -171,7 +179,9 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
 
 ### 编译内核
 
-要编译我们的内核，我们将使用 Linux 系统的编写风格（这可能是 LLVM 的默认风格）。这意味着，我们需要把前一篇文章中编写的入口点重命名为 `_start`：
+要编译我们的内核，我们将使用 Linux 系统的编写风格（这可能是 LLVM 的默认风格）。这意味着，我们需要把[前一篇文章][previous post]中编写的入口点重命名为 `_start`：
+
+[previous post]: @/edition-2/posts/01-freestanding-rust-binary/index.md
 
 ```rust
 // src/main.rs
@@ -203,61 +213,96 @@ pub extern "C" fn _start() -> ! {
 > cargo build --target x86_64-blog_os.json
 
 error[E0463]: can't find crate for `core` 
-（或者是下面的错误）
-error[E0463]: can't find crate for `compiler_builtins`
 ```
 
-哇哦，编译失败了！输出的错误告诉我们，Rust 编译器找不到 `core` 或者 `compiler_builtins` 包；而所有 `no_std` 上下文都隐式地链接到这两个包。[`core` 包](https://doc.rust-lang.org/nightly/core/index.html)包含基础的 Rust 类型，如` Result`、`Option` 和迭代器等；[`compiler_builtins` 包](https://github.com/rust-lang-nursery/compiler-builtins)提供 LLVM 需要的许多底层操作，比如 `memcpy`。
+毫不意外的编译失败了，错误信息告诉我们编译器没有找到 [`core`][`core` library] 这个库，而这个库包含了Rust语言中的部分基础类型，如 `Result`、`Option`、迭代器等等，并且它还会隐式链接到 `no_std` 特性里面。
+
+[`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
 通常状况下，`core` 库以**预编译库**（precompiled library）的形式与 Rust 编译器一同发布——这时，`core` 库只对支持的宿主系统有效，而我们自定义的目标系统无效。如果我们想为其它系统编译代码，我们需要为这些系统重新编译整个 `core` 库。
 
-### Cargo xbuild
+#### `build-std` 选项
 
-这就是为什么我们需要 [cargo xbuild 工具](https://github.com/rust-osdev/cargo-xbuild)。这个工具封装了 `cargo build`；但不同的是，它将自动交叉编译 `core` 库和一些**编译器内建库**（compiler built-in libraries）。我们可以用下面的命令安装它：
+That's where the [`build-std` feature] of cargo comes in. It allows to recompile `core` and other standard library crates on demand, instead of using the precompiled versions shipped with the Rust installation. This feature is very new and still not finished, so it is marked as "unstable" and only available on [nightly Rust compilers].
 
-```bash
-cargo install cargo-xbuild
+[`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
+[nightly Rust compilers]: #installing-rust-nightly
+
+To use the feature, we need to create a [cargo configuration] file at `.cargo/config.toml` with the following content:
+
+```toml
+# in .cargo/config.toml
+
+[unstable]
+build-std = ["core", "compiler_builtins"]
 ```
 
-这个工具依赖于Rust的源代码；我们可以使用 `rustup component add rust-src` 来安装源代码。
+This tells cargo that it should recompile the `core` and `compiler_builtins` libraries. The latter is required because it is a dependency of `core`. In order to recompile these libraries, cargo needs access to the rust source code, which we can install with `rustup component add rust-src`.
 
-现在我们可以使用 `xbuild` 代替 `build` 重新编译：
+<div class="note">
 
-```bash
-> cargo xbuild --target x86_64-blog_os.json
+**Note:** The `unstable.build-std` configuration key requires at least the Rust nightly from 2020-07-15.
+
+</div>
+
+After setting the `unstable.build-std` configuration key and installing the `rust-src` component, we can rerun our build command:
+
+```
+> cargo build --target x86_64-blog_os.json
    Compiling core v0.0.0 (/…/rust/src/libcore)
-   Compiling compiler_builtins v0.1.5
-   Compiling rustc-std-workspace-core v1.0.0 (/…/rust/src/tools/rustc-std-workspace-core)
-   Compiling alloc v0.0.0 (/tmp/xargo.PB7fj9KZJhAI)
-    Finished release [optimized + debuginfo] target(s) in 45.18s
-   Compiling blog_os v0.1.0 (file:///…/blog_os)
+   Compiling rustc-std-workspace-core v1.99.0 (/…/rust/src/tools/rustc-std-workspace-core)
+   Compiling compiler_builtins v0.1.32
+   Compiling blog_os v0.1.0 (/…/blog_os)
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-我们能看到，`cargo xbuild` 为我们自定义的目标交叉编译了 `core`、`compiler_builtin` 和 `alloc` 三个部件。这些部件使用了大量的**不稳定特性**（unstable features），所以只能在[nightly 版本的 Rust 编译器][installing rust nightly]中工作。这之后，`cargo xbuild` 成功地编译了我们的 `blog_os` 包。
+We see that `cargo build` now recompiles the `core`, `rustc-std-workspace-core` (a dependency of `compiler_builtins`), and `compiler_builtins` libraries for our custom target.
 
-[installing rust nightly]: #an-zhuang-nightly-rust
+#### Memory-Related Intrinsics
 
-现在我们可以为裸机编译内核了；但是，我们提供给引导程序的入口点 `_start` 函数还是空的。我们可以添加一些东西进去，不过我们可以先做一些优化工作。
+The Rust compiler assumes that a certain set of built-in functions is available for all systems. Most of these functions are provided by the `compiler_builtins` crate that we just recompiled. However, there are some memory-related functions in that crate that are not enabled by default because they are normally provided by the C library on the system. These functions include `memset`, which sets all bytes in a memory block to a given value, `memcpy`, which copies one memory block to another, and `memcmp`, which compares two memory blocks. While we didn't need any of these functions to compile our kernel right now, they will be required as soon as we add some more code to it (e.g. when copying structs around).
 
-### 设置默认目标
+Since we can't link to the C library of the operating system, we need an alternative way to provide these functions to the compiler. One possible approach for this could be to implement our own `memset` etc. functions and apply the `#[no_mangle]` attribute to them (to avoid the automatic renaming during compilation). However, this is dangerous since the slightest mistake in the implementation of these functions could lead to undefined behavior. For example, you might get an endless recursion when implementing `memcpy` using a `for` loop because `for` loops implicitly call the [`IntoIterator::into_iter`] trait method, which might call `memcpy` again. So it's a good idea to reuse existing well-tested implementations instead.
 
-为了避免每次使用`cargo xbuild`时传递`--target`参数，我们可以覆写默认的编译目标。我们创建一个名为`.cargo/config`的[cargo配置文件](https://doc.rust-lang.org/cargo/reference/config.html)，添加下面的内容：
+[`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
+
+Fortunately, the `compiler_builtins` crate already contains implementations for all the needed functions, they are just disabled by default to not collide with the implementations from the C library. We can enable them by setting cargo's [`build-std-features`] flag to `["compiler-builtins-mem"]`. Like the `build-std` flag, this flag can be either passed on the command line as `-Z` flag or configured in the `unstable` table in the `.cargo/config.toml` file. Since we always want to build with this flag, the config file option makes more sense for us:
+
+[`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
 
 ```toml
-# in .cargo/config
+# in .cargo/config.toml
+
+[unstable]
+build-std-features = ["compiler-builtins-mem"]
+build-std = ["core", "compiler_builtins"]
+```
+
+(Support for the `compiler-builtins-mem` feature was only [added very recently](https://github.com/rust-lang/rust/pull/77284), so you need at least Rust nightly `2020-09-30` for it.)
+
+Behind the scenes, this flag enables the [`mem` feature] of the `compiler_builtins` crate. The effect of this is that the `#[no_mangle]` attribute is applied to the [`memcpy` etc. implementations] of the crate, which makes them available to the linker.
+
+[`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L54-L55
+[`memcpy` etc. implementations]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
+
+With this change, our kernel has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
+
+#### Set a Default Target
+
+To avoid passing the `--target` parameter on every invocation of `cargo build`, we can override the default target. To do this, we add the following to our [cargo configuration] file at `.cargo/config.toml`:
+
+[cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# in .cargo/config.toml
 
 [build]
 target = "x86_64-blog_os.json"
 ```
 
-这里的配置告诉 `cargo` 在没有显式声明目标的情况下，使用我们提供的 `x86_64-blog_os.json` 作为目标配置。这意味着保存后，我们可以直接使用：
+This tells `cargo` to use our `x86_64-blog_os.json` target when no explicit `--target` argument is passed. This means that we can now build our kernel with a simple `cargo build`. For more information on cargo configuration options, check out the [official documentation][cargo configuration].
 
-```
-cargo xbuild
-```
-
-来编译我们的内核。[官方提供的一份文档](https://doc.rust-lang.org/cargo/reference/config.html)中有对 cargo 配置文件更详细的说明。
+We are now able to build our kernel for a bare metal target with a simple `cargo build`. However, our `_start` entry point, which will be called by the boot loader, is still empty. It's time that we output something to screen from it.
 
 ### 向屏幕打印字符
 
