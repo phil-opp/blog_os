@@ -15,7 +15,7 @@ translators = ["luojia65", "Rustin-Liu"]
 
 <!-- more -->
 
-这个系列的blog在[GitHub]上开放开发，如果你有任何问题，请在这里开一个issue来讨论。当然你也可以在[底部]留言。你可以在[`post-04`][post branch]找到这篇文章的完整源码。
+这个系列的blog在[GitHub]上开放开发，如果你有任何问题，请在这里开一个issue来讨论。当然你也可以在[底部][at the bottom]留言。你可以在[`post-04`][post branch]找到这篇文章的完整源码。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
