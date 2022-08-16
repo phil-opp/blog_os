@@ -173,7 +173,7 @@ A more efficient approach could be to _block_ the current thread until the futur
 
 #### Future Combinators
 
-An alternative to waiting is to use future combinators. Future combinators are methods like `map` that allow chaining and combining futures together, similar to the methods in [`Iterator`]. Instead of waiting on the future, these combinators return a future themselves, which applies the mapping operation on `poll`.
+An alternative to waiting is to use future combinators. Future combinators are methods like `map` that allow chaining and combining futures together, similar to the methods of the [`Iterator`] trait. Instead of waiting on the future, these combinators return a future themselves, which applies the mapping operation on `poll`.
 
 [`Iterator`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html
 
@@ -599,7 +599,7 @@ The pinning API provides a solution to the `&mut T` problem in the form of the [
 [`Pin`]: https://doc.rust-lang.org/stable/core/pin/struct.Pin.html
 [`Unpin`]: https://doc.rust-lang.org/nightly/std/marker/trait.Unpin.html
 [pin-get-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.get_mut
-[pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#impl-DerefMut
+[pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.deref_mut
 [_auto trait_]: https://doc.rust-lang.org/reference/special-types-and-traits.html#auto-traits
 
 As an example, let's update the `SelfReferential` type from above to opt-out of `Unpin`:
@@ -844,7 +844,7 @@ impl Task {
 }
 ```
 
-Since the [`poll`] method of the `Future` trait expects to be called on a `Pin<&mut T>` type, we use the [`Pin::as_mut`] method to convert the `self.future` field of type `Pin<Box<T>>` first. Then we call `poll` on the converted `self.future` field and return the result. Since the `Task::poll` method should only be called by the executor that we create in a moment, we keep the function private to the `task` module.
+Since the [`poll`] method of the `Future` trait expects to be called on a `Pin<&mut T>` type, we use the [`Pin::as_mut`] method to convert the `self.future` field of type `Pin<Box<T>>` first. Then we call `poll` on the converted `self.future` field and return the result. Since the `Task::poll` method should only be called by the executor that we'll create in a moment, we keep the function private to the `task` module.
 
 ### Simple Executor
 

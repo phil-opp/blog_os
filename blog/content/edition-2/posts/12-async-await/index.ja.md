@@ -606,7 +606,7 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 [`Pin`]: https://doc.rust-lang.org/stable/core/pin/struct.Pin.html
 [`Unpin`]: https://doc.rust-lang.org/nightly/std/marker/trait.Unpin.html
 [pin-get-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.get_mut
-[pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#impl-DerefMut
+[pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.deref_mut
 [_auto trait_]: https://doc.rust-lang.org/reference/special-types-and-traits.html#auto-traits
 
 例として、上記の `SelfReferential` 型を更新して、`Unpin` を使用しないようにしてみましょう:

@@ -729,6 +729,6 @@ Now we are able to interact with our kernel and have some fundamental building b
 
 ## What's next?
 
-Timer interrupts are essential for an operating system because they provide a way to periodically interrupt the running process and regain control of the kernel. The kernel can then switch to a different process and create the illusion of multiple processes running in parallel.
+Timer interrupts are essential for an operating system because they provide a way to periodically interrupt the running process and let the kernel regain control. The kernel can then switch to a different process and create the illusion of multiple processes running in parallel.
 
 But before we can create processes or threads, we need a way to allocate memory for them. The next posts will explore memory management to provide this fundamental building block.

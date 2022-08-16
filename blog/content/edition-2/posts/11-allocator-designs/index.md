@@ -330,8 +330,9 @@ fn align_up(addr: usize, align: usize) -> usize {
 }
 ```
 
-This method utilizes the `GlobalAlloc` trait to guarantee that `align` is always a power of two. This makes it possible to create a [bitmask] to align the address in a very efficient way. To understand how it works, let's go through it step by step, starting on the right side:
+This method requires `align` to be a power of two, which can be guaranteed by utilizing the `GlobalAlloc` trait (and its [`Layout`] parameter). This makes it possible to create a [bitmask] to align the address in a very efficient way. To understand how it works, let's go through it step by step, starting on the right side:
 
+[`Layout`]: https://doc.rust-lang.org/alloc/alloc/struct.Layout.html
 [bitmask]: https://en.wikipedia.org/wiki/Mask_(computing)
 
 - Since `align` is a power of two, its [binary representation] has only a single bit set (e.g. `0b000100000`). This means that `align - 1` has all the lower bits set (e.g. `0b00011111`).
@@ -1230,7 +1231,7 @@ There are many more allocator designs with different tradeoffs. [Slab allocation
 
 ## What's next?
 
-With this post, we conclude our memory management implementation for now. Next, we will start exploring [_multitasking_], starting with cooperative multitasking in the form of [_async/await_]. In subsequent posts, we will then explore [_threads_],[_multiprocessing_], and [_processes_].
+With this post, we conclude our memory management implementation for now. Next, we will start exploring [_multitasking_], starting with cooperative multitasking in the form of [_async/await_]. In subsequent posts, we will then explore [_threads_], [_multiprocessing_], and [_processes_].
 
 [_multitasking_]: https://en.wikipedia.org/wiki/Computer_multitasking
 [_threads_]: https://en.wikipedia.org/wiki/Thread_(computing)

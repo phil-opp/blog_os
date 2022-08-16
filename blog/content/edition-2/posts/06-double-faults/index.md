@@ -484,7 +484,7 @@ The `stack_overflow` function is almost identical to the function in our `main.r
 [`Volatile`]: https://docs.rs/volatile/0.2.6/volatile/struct.Volatile.html
 [_tail call elimination_]: https://en.wikipedia.org/wiki/Tail_call
 
-In our case, however, we want the stack overflow to happen, so we add a dummy volatile read statement at the end of the function, which the compiler cannot remove. Thus, the function is no longer _tail recursive_, and the transformation into a loop is prevented. We also add the `allow(unconditional_recursion)` attribute to silence the compiler warning that the function recurses endlessly.
+In our case, however, we want the stack overflow to happen, so we add a dummy volatile read statement at the end of the function, which the compiler is not allowed to remove. Thus, the function is no longer _tail recursive_, and the transformation into a loop is prevented. We also add the `allow(unconditional_recursion)` attribute to silence the compiler warning that the function recurses endlessly.
 
 ### The Test IDT
 

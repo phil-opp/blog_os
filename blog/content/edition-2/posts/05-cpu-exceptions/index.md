@@ -180,9 +180,10 @@ On a normal function call (using the `call` instruction), the CPU pushes the ret
 
 For exception and interrupt handlers, however, pushing a return address would not suffice, since interrupt handlers often run in a different context (stack pointer, CPU flags, etc.). Instead, the CPU performs the following steps when an interrupt occurs:
 
+0. **Saving the old stack pointer**: The CPU reads the stack pointer (`rsp`) and stack segment (`ss`) register values and remembers them in an internal buffer.
 1. **Aligning the stack pointer**: An interrupt can occur at any instruction, so the stack pointer can have any value, too. However, some CPU instructions (e.g., some SSE instructions) require that the stack pointer be aligned on a 16-byte boundary, so the CPU performs such an alignment right after the interrupt.
 2. **Switching stacks** (in some cases): A stack switch occurs when the CPU privilege level changes, for example, when a CPU exception occurs in a user-mode program. It is also possible to configure stack switches for specific interrupts using the so-called _Interrupt Stack Table_ (described in the next post).
-3. **Pushing the old stack pointer**: When the interrupt occurs (before the alignment), the CPU pushes the values of the stack pointer (`rsp`) and stack segment (`ss`) registers. This makes it possible to restore the original stack pointer when returning from an interrupt handler.
+3. **Pushing the old stack pointer**: The CPU pushes the `rsp` and `ss` values from step 0 to the stack. This makes it possible to restore the original stack pointer when returning from an interrupt handler.
 4. **Pushing and updating the `RFLAGS` register**: The [`RFLAGS`] register contains various control and status bits. On interrupt entry, the CPU changes some bits and pushes the old value.
 5. **Pushing the instruction pointer**: Before jumping to the interrupt handler function, the CPU pushes the instruction pointer (`rip`) and the code segment (`cs`). This is comparable to the return address push of a normal function call.
 6. **Pushing an error code** (for some exceptions): For some specific exceptions, such as page faults, the CPU pushes an error code, which describes the cause of the exception.
