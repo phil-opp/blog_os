@@ -8,7 +8,7 @@ date  = 2018-06-18
 chapter = "Interrupts"
 +++
 
-This post explores the double fault exception in detail, which occurs when the CPU fails to invoke an exception handler. By handling this exception we avoid fatal _triple faults_ that cause a system reset. To prevent triple faults in all cases we also set up an _Interrupt Stack Table_ to catch double faults on a separate kernel stack.
+This post explores the double fault exception in detail, which occurs when the CPU fails to invoke an exception handler. By handling this exception, we avoid fatal _triple faults_ that cause a system reset. To prevent triple faults in all cases, we also set up an _Interrupt Stack Table_ to catch double faults on a separate kernel stack.
 
 <!-- more -->
 
@@ -22,14 +22,14 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 <!-- toc -->
 
 ## What is a Double Fault?
-In simplified terms, a double fault is a special exception that occurs when the CPU fails to invoke an exception handler. For example, it occurs when a page fault is triggered but there is no page fault handler registered in the [Interrupt Descriptor Table][IDT] (IDT). So it's kind of similar to catch-all blocks in programming languages with exceptions, e.g. `catch(...)` in C++ or `catch(Exception e)` in Java or C#.
+In simplified terms, a double fault is a special exception that occurs when the CPU fails to invoke an exception handler. For example, it occurs when a page fault is triggered but there is no page fault handler registered in the [Interrupt Descriptor Table][IDT] (IDT). So it's kind of similar to catch-all blocks in programming languages with exceptions, e.g., `catch(...)` in C++ or `catch(Exception e)` in Java or C#.
 
 [IDT]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
-A double fault behaves like a normal exception. It has the vector number `8` and we can define a normal handler function for it in the IDT. It is really important to provide a double fault handler, because if a double fault is unhandled a fatal _triple fault_ occurs. Triple faults can't be caught and most hardware reacts with a system reset.
+A double fault behaves like a normal exception. It has the vector number `8` and we can define a normal handler function for it in the IDT. It is really important to provide a double fault handler, because if a double fault is unhandled, a fatal _triple fault_ occurs. Triple faults can't be caught, and most hardware reacts with a system reset.
 
 ### Triggering a Double Fault
-Let's provoke a double fault by triggering an exception for that we didn't define a handler function:
+Let's provoke a double fault by triggering an exception for which we didn't define a handler function:
 
 ```rust
 // in src/main.rs
@@ -96,7 +96,7 @@ When we start our kernel now, we should see that the double fault handler is inv
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` and the exception stack frame](qemu-catch-double-fault.png)
 
-It worked! Here is what happens this time:
+It worked! Here is what happened this time:
 
 1. The CPU tries to write to `0xdeadbeef`, which causes a page fault.
 2. Like before, the CPU looks at the corresponding entry in the IDT and sees that no handler function is defined. Thus, a double fault occurs.
@@ -139,7 +139,7 @@ First Exception | Second Exception
 
 [AMD64 manual]: https://www.amd.com/system/files/TechDocs/24593.pdf
 
-So for example a divide-by-zero fault followed by a page fault is fine (the page fault handler is invoked), but a divide-by-zero fault followed by a general-protection fault leads to a double fault.
+So, for example, a divide-by-zero fault followed by a page fault is fine (the page fault handler is invoked), but a divide-by-zero fault followed by a general-protection fault leads to a double fault.
 
 With the help of this table, we can answer the first three of the above questions:
 
@@ -156,11 +156,11 @@ Let's look at the fourth question:
 
 A guard page is a special memory page at the bottom of a stack that makes it possible to detect stack overflows. The page is not mapped to any physical frame, so accessing it causes a page fault instead of silently corrupting other memory. The bootloader sets up a guard page for our kernel stack, so a stack overflow causes a _page fault_.
 
-When a page fault occurs the CPU looks up the page fault handler in the IDT and tries to push the [interrupt stack frame] onto the stack. However, the current stack pointer still points to the non-present guard page. Thus, a second page fault occurs, which causes a double fault (according to the above table).
+When a page fault occurs, the CPU looks up the page fault handler in the IDT and tries to push the [interrupt stack frame] onto the stack. However, the current stack pointer still points to the non-present guard page. Thus, a second page fault occurs, which causes a double fault (according to the above table).
 
 [interrupt stack frame]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-stack-frame
 
-So the CPU tries to call the _double fault handler_ now. However, on a double fault the CPU tries to push the exception stack frame, too. The stack pointer still points to the guard page, so a _third_ page fault occurs, which causes a _triple fault_ and a system reboot. So our current double fault handler can't avoid a triple fault in this case.
+So the CPU tries to call the _double fault handler_ now. However, on a double fault, the CPU tries to push the exception stack frame, too. The stack pointer still points to the guard page, so a _third_ page fault occurs, which causes a _triple fault_ and a system reboot. So our current double fault handler can't avoid a triple fault in this case.
 
 Let's try it ourselves! We can easily provoke a kernel stack overflow by calling a function that recurses endlessly:
 
@@ -184,14 +184,14 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-When we try this code in QEMU, we see that the system enters a boot-loop again.
+When we try this code in QEMU, we see that the system enters a bootloop again.
 
 So how can we avoid this problem? We can't omit the pushing of the exception stack frame, since the CPU itself does it. So we need to ensure somehow that the stack is always valid when a double fault exception occurs. Fortunately, the x86_64 architecture has a solution to this problem.
 
 ## Switching Stacks
 The x86_64 architecture is able to switch to a predefined, known-good stack when an exception occurs. This switch happens at hardware level, so it can be performed before the CPU pushes the exception stack frame.
 
-The switching mechanism is implemented as an _Interrupt Stack Table_ (IST). The IST is a table of 7 pointers to known-good stacks. In Rust-like pseudo code:
+The switching mechanism is implemented as an _Interrupt Stack Table_ (IST). The IST is a table of 7 pointers to known-good stacks. In Rust-like pseudocode:
 
 ```rust
 struct InterruptStackTable {
@@ -199,17 +199,17 @@ struct InterruptStackTable {
 }
 ```
 
-For each exception handler, we can choose a stack from the IST through the `stack_pointers` field in the corresponding [IDT entry]. For example, we could use the first stack in the IST for our double fault handler. Then the CPU would automatically switch to this stack whenever a double fault occurs. This switch would happen before anything is pushed, so it would prevent the triple fault.
+For each exception handler, we can choose a stack from the IST through the `stack_pointers` field in the corresponding [IDT entry]. For example, our double fault handler could use the first stack in the IST. Then the CPU automatically switches to this stack whenever a double fault occurs. This switch would happen before anything is pushed, preventing the triple fault.
 
 [IDT entry]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
 ### The IST and TSS
-The Interrupt Stack Table (IST) is part of an old legacy structure called _[Task State Segment]_ \(TSS). The TSS used to hold various information (e.g. processor register state) about a task in 32-bit mode and was for example used for [hardware context switching]. However, hardware context switching is no longer supported in 64-bit mode and the format of the TSS changed completely.
+The Interrupt Stack Table (IST) is part of an old legacy structure called _[Task State Segment]_ \(TSS). The TSS used to hold various pieces of information (e.g., processor register state) about a task in 32-bit mode and was, for example, used for [hardware context switching]. However, hardware context switching is no longer supported in 64-bit mode and the format of the TSS has changed completely.
 
 [Task State Segment]: https://en.wikipedia.org/wiki/Task_state_segment
 [hardware context switching]: https://wiki.osdev.org/Context_Switching#Hardware_Context_Switching
 
-On x86_64, the TSS no longer holds any task specific information at all. Instead, it holds two stack tables (the IST is one of them). The only common field between the 32-bit and 64-bit TSS is the pointer to the [I/O port permissions bitmap].
+On x86_64, the TSS no longer holds any task-specific information at all. Instead, it holds two stack tables (the IST is one of them). The only common field between the 32-bit and 64-bit TSS is the pointer to the [I/O port permissions bitmap].
 
 [I/O port permissions bitmap]: https://en.wikipedia.org/wiki/Task_state_segment#I.2FO_port_permissions
 
@@ -225,10 +225,10 @@ Interrupt Stack Table | `[u64; 7]`
 <span style="opacity: 0.5">(reserved)</span> | `u16`
 I/O Map Base Address | `u16`
 
-The _Privilege Stack Table_ is used by the CPU when the privilege level changes. For example, if an exception occurs while the CPU is in user mode (privilege level 3), the CPU normally switches to kernel mode (privilege level 0) before invoking the exception handler. In that case, the CPU would switch to the 0th stack in the Privilege Stack Table (since 0 is the target privilege level). We don't have any user mode programs yet, so we ignore this table for now.
+The _Privilege Stack Table_ is used by the CPU when the privilege level changes. For example, if an exception occurs while the CPU is in user mode (privilege level 3), the CPU normally switches to kernel mode (privilege level 0) before invoking the exception handler. In that case, the CPU would switch to the 0th stack in the Privilege Stack Table (since 0 is the target privilege level). We don't have any user-mode programs yet, so we will ignore this table for now.
 
 ### Creating a TSS
-Let's create a new TSS that contains a separate double fault stack in its interrupt stack table. For that we need a TSS struct. Fortunately, the `x86_64` crate already contains a [`TaskStateSegment` struct] that we can use.
+Let's create a new TSS that contains a separate double fault stack in its interrupt stack table. For that, we need a TSS struct. Fortunately, the `x86_64` crate already contains a [`TaskStateSegment` struct] that we can use.
 
 [`TaskStateSegment` struct]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
 
@@ -263,24 +263,24 @@ lazy_static! {
 }
 ```
 
-We use `lazy_static` because Rust's const evaluator is not yet powerful enough to do this initialization at compile time. We define that the 0th IST entry is the double fault stack (any other IST index would work too). Then we write the top address of a double fault stack to the 0th entry. We write the top address because stacks on x86 grow downwards, i.e. from high addresses to low addresses.
+We use `lazy_static` because Rust's const evaluator is not yet powerful enough to do this initialization at compile time. We define that the 0th IST entry is the double fault stack (any other IST index would work too). Then we write the top address of a double fault stack to the 0th entry. We write the top address because stacks on x86 grow downwards, i.e., from high addresses to low addresses.
 
-We haven't implemented memory management yet, so we don't have a proper way to allocate a new stack. Instead, we use a `static mut` array as stack storage for now. The `unsafe` is required because the compiler can't guarantee race freedom when mutable statics are accessed. It is important that it is a `static mut` and not an immutable `static`, because otherwise the bootloader will map it to a read-only page. We will replace this with a proper stack allocation in a later post, then the `unsafe` will be no longer needed at this place.
+We haven't implemented memory management yet, so we don't have a proper way to allocate a new stack. Instead, we use a `static mut` array as stack storage for now. The `unsafe` is required because the compiler can't guarantee race freedom when mutable statics are accessed. It is important that it is a `static mut` and not an immutable `static`, because otherwise the bootloader will map it to a read-only page. We will replace this with a proper stack allocation in a later post, then the `unsafe` will no longer be needed at this place.
 
-Note that this double fault stack has no guard page that protects against stack overflow. This means that we should not do anything stack intensive in our double fault handler because a stack overflow might corrupt the memory below the stack.
+Note that this double fault stack has no guard page that protects against stack overflow. This means that we should not do anything stack-intensive in our double fault handler because a stack overflow might corrupt the memory below the stack.
 
 #### Loading the TSS
-Now that we created a new TSS, we need a way to tell the CPU that it should use it. Unfortunately this is a bit cumbersome, since the TSS uses the segmentation system (for historical reasons). Instead of loading the table directly, we need to add a new segment descriptor to the [Global Descriptor Table] \(GDT). Then we can load our TSS invoking the [`ltr` instruction] with the respective GDT index. (This is the reason why we named our module `gdt`.)
+Now that we've created a new TSS, we need a way to tell the CPU that it should use it. Unfortunately, this is a bit cumbersome since the TSS uses the segmentation system (for historical reasons). Instead of loading the table directly, we need to add a new segment descriptor to the [Global Descriptor Table] \(GDT). Then we can load our TSS by invoking the [`ltr` instruction] with the respective GDT index. (This is the reason why we named our module `gdt`.)
 
 [Global Descriptor Table]: https://web.archive.org/web/20190217233448/https://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
 [`ltr` instruction]: https://www.felixcloutier.com/x86/ltr
 
 ### The Global Descriptor Table
-The Global Descriptor Table (GDT) is a relict that was used for [memory segmentation] before paging became the de facto standard. It is still needed in 64-bit mode for various things such as kernel/user mode configuration or TSS loading.
+The Global Descriptor Table (GDT) is a relic that was used for [memory segmentation] before paging became the de facto standard. However, it is still needed in 64-bit mode for various things, such as kernel/user mode configuration or TSS loading.
 
 [memory segmentation]: https://en.wikipedia.org/wiki/X86_memory_segmentation
 
-The GDT is a structure that contains the _segments_ of the program. It was used on older architectures to isolate programs from each other, before paging became the standard. For more information about segmentation check out the equally named chapter of the free [“Three Easy Pieces” book]. While segmentation is no longer supported in 64-bit mode, the GDT still exists. It is mostly used for two things: Switching between kernel space and user space, and loading a TSS structure.
+The GDT is a structure that contains the _segments_ of the program. It was used on older architectures to isolate programs from each other before paging became the standard. For more information about segmentation, check out the equally named chapter of the free [“Three Easy Pieces” book]. While segmentation is no longer supported in 64-bit mode, the GDT still exists. It is mostly used for two things: Switching between kernel space and user space, and loading a TSS structure.
 
 [“Three Easy Pieces” book]: http://pages.cs.wisc.edu/~remzi/OSTEP/
 
@@ -306,7 +306,7 @@ As before, we use `lazy_static` again. We create a new GDT with a code segment a
 
 #### Loading the GDT
 
-To load our GDT we create a new `gdt::init` function, that we call from our `init` function:
+To load our GDT, we create a new `gdt::init` function that we call from our `init` function:
 
 ```rust
 // in src/gdt.rs
@@ -325,14 +325,14 @@ pub fn init() {
 
 Now our GDT is loaded (since the `_start` function calls `init`), but we still see the boot loop on stack overflow.
 
-### The final Steps
+### The Final Steps
 
 The problem is that the GDT segments are not yet active because the segment and TSS registers still contain the values from the old GDT. We also need to modify the double fault IDT entry so that it uses the new stack.
 
 In summary, we need to do the following:
 
-1. **Reload code segment register**: We changed our GDT, so we should reload `cs`, the code segment register. This is required since the old segment selector could point to a different GDT descriptor now (e.g. a TSS descriptor).
-2. **Load the TSS** : We loaded a GDT that contains a TSS selector, but we still need to tell the CPU that it should use that TSS.
+1. **Reload code segment register**: We changed our GDT, so we should reload `cs`, the code segment register. This is required since the old segment selector could now point to a different GDT descriptor (e.g., a TSS descriptor).
+2. **Load the TSS**: We loaded a GDT that contains a TSS selector, but we still need to tell the CPU that it should use that TSS.
 3. **Update the IDT entry**: As soon as our TSS is loaded, the CPU has access to a valid interrupt stack table (IST). Then we can tell the CPU that it should use our new double fault stack by modifying our double fault IDT entry.
 
 For the first two steps, we need access to the `code_selector` and `tss_selector` variables in our `gdt::init` function. We can achieve this by making them part of the static through a new `Selectors` struct:
@@ -357,7 +357,7 @@ struct Selectors {
 }
 ```
 
-Now we can use the selectors to reload the `cs` segment register and load our `TSS`:
+Now we can use the selectors to reload the `cs` register and load our `TSS`:
 
 ```rust
 // in src/gdt.rs
@@ -379,7 +379,7 @@ We reload the code segment register using [`set_cs`] and load the TSS using [`lo
 [`set_cs`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/segmentation/fn.set_cs.html
 [`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
 
-Now that we loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
+Now that we have loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 
 ```rust
 // in src/interrupts.rs
@@ -400,17 +400,17 @@ lazy_static! {
 }
 ```
 
-The `set_stack_index` method is unsafe because the the caller must ensure that the used index is valid and not already used for another exception.
+The `set_stack_index` method is unsafe because the caller must ensure that the used index is valid and not already used for another exception.
 
 That's it! Now the CPU should switch to the double fault stack whenever a double fault occurs. Thus, we are able to catch _all_ double faults, including kernel stack overflows:
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` and a dump of the exception stack frame](qemu-double-fault-on-stack-overflow.png)
 
-From now on we should never see a triple fault again! To ensure that we don't accidentally break the above, we should add a test for this.
+From now on, we should never see a triple fault again! To ensure that we don't accidentally break the above, we should add a test for this.
 
 ## A Stack Overflow Test
 
-To test our new `gdt` module and ensure that the double fault handler is correctly called on a stack overflow, we can add an integration test. The idea is to do provoke a double fault in the test function and verify that the double fault handler is called.
+To test our new `gdt` module and ensure that the double fault handler is correctly called on a stack overflow, we can add an integration test. The idea is to provoke a double fault in the test function and verify that the double fault handler is called.
 
 Let's start with a minimal skeleton:
 
@@ -445,7 +445,7 @@ harness = false
 
 [without a test harness]: @/edition-2/posts/04-testing/index.md#no-harness-tests
 
-Now `cargo test --test stack_overflow` should compile successfully. The test fails of course, since the `unimplemented` macro panics.
+Now `cargo test --test stack_overflow` should compile successfully. The test fails, of course, since the `unimplemented` macro panics.
 
 ### Implementing `_start`
 
@@ -476,15 +476,15 @@ fn stack_overflow() {
 }
 ```
 
-We call our `gdt::init` function to initialize a new GDT. Instead of calling our `interrupts::init_idt` function, we call a `init_test_idt` function that will be explained in a moment. The reason is that we want to register a custom double fault handler that does a `exit_qemu(QemuExitCode::Success)` instead of panicking.
+We call our `gdt::init` function to initialize a new GDT. Instead of calling our `interrupts::init_idt` function, we call an `init_test_idt` function that will be explained in a moment. The reason is that we want to register a custom double fault handler that does an `exit_qemu(QemuExitCode::Success)` instead of panicking.
 
-The `stack_overflow` function is almost identical to the function in our `main.rs`. The only difference is that we do an additional [volatile] read at the end of the function using the [`Volatile`] type to prevent a compiler optimization called [_tail call elimination_]. Among other things, this optimization allows the compiler to transform a function whose last statement is a recursive function call into a normal loop. Thus, no additional stack frame is created for the function call, so that the stack usage does remain constant.
+The `stack_overflow` function is almost identical to the function in our `main.rs`. The only difference is that at the end of the function, we perform an additional [volatile] read using the [`Volatile`] type to prevent a compiler optimization called [_tail call elimination_]. Among other things, this optimization allows the compiler to transform a function whose last statement is a recursive function call into a normal loop. Thus, no additional stack frame is created for the function call, so the stack usage remains constant.
 
 [volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
 [`Volatile`]: https://docs.rs/volatile/0.2.6/volatile/struct.Volatile.html
 [_tail call elimination_]: https://en.wikipedia.org/wiki/Tail_call
 
-In our case, however, we want that the stack overflow happens, so we add a dummy volatile read statement at the end of the function, which the compiler is not allowed to remove. Thus, the function is no longer _tail recursive_ and the transformation into a loop is prevented. We also add the `allow(unconditional_recursion)` attribute to silence the compiler warning that the function recurses endlessly.
+In our case, however, we want the stack overflow to happen, so we add a dummy volatile read statement at the end of the function, which the compiler is not allowed to remove. Thus, the function is no longer _tail recursive_, and the transformation into a loop is prevented. We also add the `allow(unconditional_recursion)` attribute to silence the compiler warning that the function recurses endlessly.
 
 ### The Test IDT
 
@@ -514,7 +514,7 @@ pub fn init_test_idt() {
 }
 ```
 
-The implementation is very similar to our normal IDT in `interrupts.rs`. Like in the normal IDT, we set a stack index into the IST for the double fault handler in order to switch to a separate stack. The `init_test_idt` function loads the IDT on the CPU through the `load` method.
+The implementation is very similar to our normal IDT in `interrupts.rs`. Like in the normal IDT, we set a stack index in the IST for the double fault handler in order to switch to a separate stack. The `init_test_idt` function loads the IDT on the CPU through the `load` method.
 
 ### The Double Fault Handler
 
@@ -536,16 +536,16 @@ extern "x86-interrupt" fn test_double_fault_handler(
 }
 ```
 
-When the double fault handler is called, we exit QEMU with a success exit code, which marks the test as passed. Since integration tests are completely separate executables, we need to set `#![feature(abi_x86_interrupt)]` attribute again at the top of our test file.
+When the double fault handler is called, we exit QEMU with a success exit code, which marks the test as passed. Since integration tests are completely separate executables, we need to set the `#![feature(abi_x86_interrupt)]` attribute again at the top of our test file.
 
-Now we can run our test through `cargo test --test stack_overflow` (or `cargo test` to run all tests). As expected, we see the `stack_overflow... [ok]` output in the console. Try to comment out the `set_stack_index` line: it should cause the test to fail.
+Now we can run our test through `cargo test --test stack_overflow` (or `cargo test` to run all tests). As expected, we see the `stack_overflow... [ok]` output in the console. Try to comment out the `set_stack_index` line; it should cause the test to fail.
 
 ## Summary
-In this post we learned what a double fault is and under which conditions it occurs. We added a basic double fault handler that prints an error message and added an integration test for it.
+In this post, we learned what a double fault is and under which conditions it occurs. We added a basic double fault handler that prints an error message and added an integration test for it.
 
-We also enabled the hardware supported stack switching on double fault exceptions so that it also works on stack overflow. While implementing it, we learned about the task state segment (TSS), the contained interrupt stack table (IST), and the global descriptor table (GDT), which was used for segmentation on older architectures.
+We also enabled the hardware-supported stack switching on double fault exceptions so that it also works on stack overflow. While implementing it, we learned about the task state segment (TSS), the contained interrupt stack table (IST), and the global descriptor table (GDT), which was used for segmentation on older architectures.
 
 ## What's next?
-The next post explains how to handle interrupts from external devices such as timers, keyboards, or network controllers. These hardware interrupts are very similar to exceptions, e.g. they are also dispatched through the IDT. However, unlike exceptions, they don't arise directly on the CPU. Instead, an _interrupt controller_ aggregates these interrupts and forwards them to CPU depending on their priority. In the next post we will explore the [Intel 8259] \(“PIC”) interrupt controller and learn how to implement keyboard support.
+The next post explains how to handle interrupts from external devices such as timers, keyboards, or network controllers. These hardware interrupts are very similar to exceptions, e.g., they are also dispatched through the IDT. However, unlike exceptions, they don't arise directly on the CPU. Instead, an _interrupt controller_ aggregates these interrupts and forwards them to the CPU depending on their priority. In the next post, we will explore the [Intel 8259] \(“PIC”) interrupt controller and learn how to implement keyboard support.
 
 [Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259

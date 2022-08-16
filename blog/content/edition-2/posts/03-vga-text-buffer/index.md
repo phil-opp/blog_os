@@ -8,7 +8,7 @@ date  = 2018-02-26
 chapter = "Bare Bones"
 +++
 
-The [VGA text mode] is a simple way to print text to the screen. In this post, we create an interface that makes its usage safe and simple, by encapsulating all unsafety in a separate module. We also implement support for Rust's [formatting macros].
+The [VGA text mode] is a simple way to print text to the screen. In this post, we create an interface that makes its usage safe and simple by encapsulating all unsafety in a separate module. We also implement support for Rust's [formatting macros].
 
 [VGA text mode]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
 [formatting macros]: https://doc.rust-lang.org/std/fmt/#related-macros
@@ -34,7 +34,7 @@ Bit(s) | Value
 12-14  | Background color
 15     | Blink
 
-The first byte represents the character that should be printed in the [ASCII encoding]. To be exact, it isn't exactly ASCII, but a character set named [_code page 437_] with some additional characters and slight modifications. For simplicity, we proceed to call it an ASCII character in this post.
+The first byte represents the character that should be printed in the [ASCII encoding]. To be more specific, it isn't exactly ASCII, but a character set named [_code page 437_] with some additional characters and slight modifications. For simplicity, we will proceed to call it an ASCII character in this post.
 
 [ASCII encoding]: https://en.wikipedia.org/wiki/ASCII
 [_code page 437_]: https://en.wikipedia.org/wiki/Code_page_437
@@ -52,13 +52,13 @@ Number | Color      | Number + Bright Bit | Bright Color
 0x6    | Brown      | 0xe                 | Yellow
 0x7    | Light Gray | 0xf                 | White
 
-Bit 4 is the _bright bit_, which turns for example blue into light blue. For the background color, this bit is repurposed as the blink bit.
+Bit 4 is the _bright bit_, which turns, for example, blue into light blue. For the background color, this bit is repurposed as the blink bit.
 
-The VGA text buffer is accessible via [memory-mapped I/O] to the address `0xb8000`. This means that reads and writes to that address don't access the RAM, but directly the text buffer on the VGA hardware. This means that we can read and write it through normal memory operations to that address.
+The VGA text buffer is accessible via [memory-mapped I/O] to the address `0xb8000`. This means that reads and writes to that address don't access the RAM but directly access the text buffer on the VGA hardware. This means we can read and write it through normal memory operations to that address.
 
 [memory-mapped I/O]: https://en.wikipedia.org/wiki/Memory-mapped_I/O
 
-Note that memory-mapped hardware might not support all normal RAM operations. For example, a device could only support byte-wise reads and return junk when an `u64` is read. Fortunately, the text buffer [supports normal reads and writes], so that we don't have to treat it in special way.
+Note that memory-mapped hardware might not support all normal RAM operations. For example, a device could only support byte-wise reads and return junk when a `u64` is read. Fortunately, the text buffer [supports normal reads and writes], so we don't have to treat it in a special way.
 
 [supports normal reads and writes]: https://web.stanford.edu/class/cs140/projects/pintos/specs/freevga/vga/vgamem.htm#manip
 
@@ -70,7 +70,7 @@ Now that we know how the VGA buffer works, we can create a Rust module to handle
 mod vga_buffer;
 ```
 
-For the content of this module we create a new `src/vga_buffer.rs` file. All of the code below goes into our new module (unless specified otherwise).
+For the content of this module, we create a new `src/vga_buffer.rs` file. All of the code below goes into our new module (unless specified otherwise).
 
 ### Colors
 First, we represent the different colors using an enum:
@@ -100,11 +100,11 @@ pub enum Color {
     White = 15,
 }
 ```
-We use a [C-like enum] here to explicitly specify the number for each color. Because of the `repr(u8)` attribute each enum variant is stored as an `u8`. Actually 4 bits would be sufficient, but Rust doesn't have an `u4` type.
+We use a [C-like enum] here to explicitly specify the number for each color. Because of the `repr(u8)` attribute, each enum variant is stored as a `u8`. Actually 4 bits would be sufficient, but Rust doesn't have a `u4` type.
 
 [C-like enum]: https://doc.rust-lang.org/rust-by-example/custom_types/enum/c_like.html
 
-Normally the compiler would issue a warning for each unused variant. By using the `#[allow(dead_code)]` attribute we disable these warnings for the `Color` enum.
+Normally the compiler would issue a warning for each unused variant. By using the `#[allow(dead_code)]` attribute, we disable these warnings for the `Color` enum.
 
 By [deriving] the [`Copy`], [`Clone`], [`Debug`], [`PartialEq`], and [`Eq`] traits, we enable [copy semantics] for the type and make it printable and comparable.
 
@@ -133,7 +133,7 @@ impl ColorCode {
     }
 }
 ```
-The `ColorCode` struct contains the full color byte, containing foreground and background color. Like before, we derive the `Copy` and `Debug` traits for it. To ensure that the `ColorCode` has the exact same data layout as an `u8`, we use the [`repr(transparent)`] attribute.
+The `ColorCode` struct contains the full color byte, containing foreground and background color. Like before, we derive the `Copy` and `Debug` traits for it. To ensure that the `ColorCode` has the exact same data layout as a `u8`, we use the [`repr(transparent)`] attribute.
 
 [`repr(transparent)`]: https://doc.rust-lang.org/nomicon/other-reprs.html#reprtransparent
 
@@ -209,11 +209,11 @@ impl Writer {
     fn new_line(&mut self) {/* TODO */}
 }
 ```
-If the byte is the [newline] byte `\n`, the writer does not print anything. Instead it calls a `new_line` method, which we'll implement later. Other bytes get printed to the screen in the second match case.
+If the byte is the [newline] byte `\n`, the writer does not print anything. Instead, it calls a `new_line` method, which we'll implement later. Other bytes get printed to the screen in the second `match` case.
 
 [newline]: https://en.wikipedia.org/wiki/Newline
 
-When printing a byte, the writer checks if the current line is full. In that case, a `new_line` call is required before to wrap the line. Then it writes a new `ScreenChar` to the buffer at the current position. Finally, the current column position is advanced.
+When printing a byte, the writer checks if the current line is full. In that case, a `new_line` call is used to wrap the line. Then it writes a new `ScreenChar` to the buffer at the current position. Finally, the current column position is advanced.
 
 To print whole strings, we can convert them to bytes and print them one-by-one:
 
@@ -235,7 +235,7 @@ impl Writer {
 }
 ```
 
-The VGA text buffer only supports ASCII and the additional bytes of [code page 437]. Rust strings are [UTF-8] by default, so they might contain bytes that are not supported by the VGA text buffer. We use a match to differentiate printable ASCII bytes (a newline or anything in between a space character and a `~` character) and unprintable bytes. For unprintable bytes, we print a `■` character, which has the hex code `0xfe` on the VGA hardware.
+The VGA text buffer only supports ASCII and the additional bytes of [code page 437]. Rust strings are [UTF-8] by default, so they might contain bytes that are not supported by the VGA text buffer. We use a `match` to differentiate printable ASCII bytes (a newline or anything in between a space character and a `~` character) and unprintable bytes. For unprintable bytes, we print a `■` character, which has the hex code `0xfe` on the VGA hardware.
 
 [code page 437]: https://en.wikipedia.org/wiki/Code_page_437
 [UTF-8]: https://www.fileformat.info/info/unicode/utf8.htm
@@ -258,7 +258,7 @@ pub fn print_something() {
     writer.write_string("Wörld!");
 }
 ```
-It first creates a new Writer that points to the VGA buffer at `0xb8000`. The syntax for this might seem a bit strange: First, we cast the integer `0xb8000` as an mutable [raw pointer]. Then we convert it to a mutable reference by dereferencing it (through `*`) and immediately borrowing it again (through `&mut`). This conversion requires an [`unsafe` block], since the compiler can't guarantee that the raw pointer is valid.
+It first creates a new Writer that points to the VGA buffer at `0xb8000`. The syntax for this might seem a bit strange: First, we cast the integer `0xb8000` as a mutable [raw pointer]. Then we convert it to a mutable reference by dereferencing it (through `*`) and immediately borrowing it again (through `&mut`). This conversion requires an [`unsafe` block], since the compiler can't guarantee that the raw pointer is valid.
 
 [raw pointer]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`unsafe` block]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
@@ -307,7 +307,7 @@ volatile = "0.2.6"
 ```
 
 Make sure to specify `volatile` version `0.2.6`. Newer versions of the crate are not compatible with this post.
-The `0.2.6` is the [semantic] version number. For more information, see the [Specifying Dependencies] guide of the cargo documentation.
+`0.2.6` is the [semantic] version number. For more information, see the [Specifying Dependencies] guide of the cargo documentation.
 
 [semantic]: https://semver.org/
 [Specifying Dependencies]: https://doc.crates.io/specifying-dependencies.html
@@ -323,7 +323,7 @@ struct Buffer {
     chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 ```
-Instead of a `ScreenChar`, we're now using a `Volatile<ScreenChar>`. (The `Volatile` type is [generic] and can wrap (almost) any type). This ensures that we can't accidentally write to it through a “normal” write. Instead, we have to use the `write` method now.
+Instead of a `ScreenChar`, we're now using a `Volatile<ScreenChar>`. (The `Volatile` type is [generic] and can wrap (almost) any type). This ensures that we can't accidentally write to it “normally”. Instead, we have to use the `write` method now.
 
 [generic]: https://doc.rust-lang.org/book/ch10-01-syntax.html
 
@@ -351,10 +351,10 @@ impl Writer {
 }
 ```
 
-Instead of a normal assignment using `=`, we're now using the `write` method. This guarantees that the compiler will never optimize away this write.
+Instead of a typical assignment using `=`, we're now using the `write` method. Now we can guarantee that the compiler will never optimize away this write.
 
 ### Formatting Macros
-It would be nice to support Rust's formatting macros, too. That way, we can easily print different types like integers or floats. To support them, we need to implement the [`core::fmt::Write`] trait. The only required method of this trait is `write_str` that looks quite similar to our `write_string` method, just with a `fmt::Result` return type:
+It would be nice to support Rust's formatting macros, too. That way, we can easily print different types, like integers or floats. To support them, we need to implement the [`core::fmt::Write`] trait. The only required method of this trait is `write_str`, which looks quite similar to our `write_string` method, just with a `fmt::Result` return type:
 
 [`core::fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
@@ -396,7 +396,7 @@ Now you should see a `Hello! The numbers are 42 and 0.3333333333333333` at the b
 [`unwrap`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.unwrap
 
 ### Newlines
-Right now, we just ignore newlines and characters that don't fit into the line anymore. Instead we want to move every character one line up (the top line gets deleted) and start at the beginning of the last line again. To do this, we add an implementation for the `new_line` method of `Writer`:
+Right now, we just ignore newlines and characters that don't fit into the line anymore. Instead, we want to move every character one line up (the top line gets deleted) and start at the beginning of the last line again. To do this, we add an implementation for the `new_line` method of `Writer`:
 
 ```rust
 // in src/vga_buffer.rs
@@ -416,7 +416,7 @@ impl Writer {
     fn clear_row(&mut self, row: usize) {/* TODO */}
 }
 ```
-We iterate over all screen characters and move each character one row up. Note that the range notation (`..`) is exclusive the upper bound. We also omit the 0th row (the first range starts at `1`) because it's the row that is shifted off screen.
+We iterate over all the screen characters and move each character one row up. Note that the upper bound of the range notation (`..`) is exclusive. We also omit the 0th row (the first range starts at `1`) because it's the row that is shifted off screen.
 
 To finish the newline code, we add the `clear_row` method:
 
@@ -483,12 +483,12 @@ To understand what's happening here, we need to know that statics are initialize
 [const evaluator]: https://rustc-dev-guide.rust-lang.org/const-eval.html
 [Allow panicking in constants]: https://github.com/rust-lang/rfcs/pull/2345
 
-The issue about `ColorCode::new` would be solvable by using [`const` functions], but the fundamental problem here is that Rust's const evaluator is not able to convert raw pointers to references at compile time. Maybe it will work someday, but until then, we have to find another solution.
+The issue with `ColorCode::new` would be solvable by using [`const` functions], but the fundamental problem here is that Rust's const evaluator is not able to convert raw pointers to references at compile time. Maybe it will work someday, but until then, we have to find another solution.
 
 [`const` functions]: https://doc.rust-lang.org/reference/const_eval.html#const-functions
 
 ### Lazy Statics
-The one-time initialization of statics with non-const functions is a common problem in Rust. Fortunately, there already exists a good solution in a crate named [lazy_static]. This crate provides a `lazy_static!` macro that defines a lazily initialized `static`. Instead of computing its value at compile time, the `static` laziliy initializes itself when it's accessed the first time. Thus, the initialization happens at runtime so that arbitrarily complex initialization code is possible.
+The one-time initialization of statics with non-const functions is a common problem in Rust. Fortunately, there already exists a good solution in a crate named [lazy_static]. This crate provides a `lazy_static!` macro that defines a lazily initialized `static`. Instead of computing its value at compile time, the `static` lazily initializes itself when accessed for the first time. Thus, the initialization happens at runtime, so arbitrarily complex initialization code is possible.
 
 [lazy_static]: https://docs.rs/lazy_static/1.0.1/lazy_static/
 
@@ -520,7 +520,7 @@ lazy_static! {
 }
 ```
 
-However, this `WRITER` is pretty useless since it is immutable. This means that we can't write anything to it (since all the write methods take `&mut self`). One possible solution would be to use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged, there were even proposals to [remove it][remove static mut]. But what are the alternatives? We could try to use a immutable static with a cell type like [RefCell] or even [UnsafeCell] that provides [interior mutability]. But these types aren't [Sync] \(with good reason), so we can't use them in statics.
+However, this `WRITER` is pretty useless since it is immutable. This means that we can't write anything to it (since all the write methods take `&mut self`). One possible solution would be to use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged. There were even proposals to [remove it][remove static mut]. But what are the alternatives? We could try to use an immutable static with a cell type like [RefCell] or even [UnsafeCell] that provides [interior mutability]. But these types aren't [Sync] \(with good reason), so we can't use them in statics.
 
 [mutable static]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
@@ -530,7 +530,7 @@ However, this `WRITER` is pretty useless since it is immutable. This means that 
 [Sync]: https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html
 
 ### Spinlocks
-To get synchronized interior mutability, users of the standard library can use [Mutex]. It provides mutual exclusion by blocking threads when the resource is already locked. But our basic kernel does not have any blocking support or even a concept of threads, so we can't use it either. However there is a really basic kind of mutex in computer science that requires no operating system features: the [spinlock]. Instead of blocking, the threads simply try to lock it again and again in a tight loop and thus burn CPU time until the mutex is free again.
+To get synchronized interior mutability, users of the standard library can use [Mutex]. It provides mutual exclusion by blocking threads when the resource is already locked. But our basic kernel does not have any blocking support or even a concept of threads, so we can't use it either. However, there is a really basic kind of mutex in computer science that requires no operating system features: the [spinlock]. Instead of blocking, the threads simply try to lock it again and again in a tight loop, thus burning CPU time until the mutex is free again.
 
 [Mutex]: https://doc.rust-lang.org/nightly/std/sync/struct.Mutex.html
 [spinlock]: https://en.wikipedia.org/wiki/Spinlock
@@ -545,7 +545,7 @@ To use a spinning mutex, we can add the [spin crate] as a dependency:
 spin = "0.5.2"
 ```
 
-Then we can use the spinning Mutex to add safe [interior mutability] to our static `WRITER`:
+Then we can use the spinning mutex to add safe [interior mutability] to our static `WRITER`:
 
 ```rust
 // in src/vga_buffer.rs
@@ -579,7 +579,7 @@ We need to import the `fmt::Write` trait in order to be able to use its function
 Note that we only have a single unsafe block in our code, which is needed to create a `Buffer` reference pointing to `0xb8000`. Afterwards, all operations are safe. Rust uses bounds checking for array accesses by default, so we can't accidentally write outside the buffer. Thus, we encoded the required conditions in the type system and are able to provide a safe interface to the outside.
 
 ### A println Macro
-Now that we have a global writer, we can add a `println` macro that can be used from anywhere in the codebase. Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead we look at the source of the [`println!` macro] in the standard library:
+Now that we have a global writer, we can add a `println` macro that can be used from anywhere in the codebase. Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead, we look at the source of the [`println!` macro] in the standard library:
 
 [macro syntax]: https://doc.rust-lang.org/nightly/book/ch19-06-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
@@ -592,9 +592,9 @@ macro_rules! println {
 }
 ```
 
-Macros are defined through one or more rules, which are similar to `match` arms. The `println` macro has two rules: The first rule for is invocations without arguments (e.g `println!()`), which is expanded to `print!("\n")` and thus just prints a newline. the second rule is for invocations with parameters such as `println!("Hello")` or `println!("Number: {}", 4)`. It is also expanded to an invocation of the `print!` macro, passing all arguments and an additional newline `\n` at the end.
+Macros are defined through one or more rules, similar to `match` arms. The `println` macro has two rules: The first rule is for invocations without arguments, e.g., `println!()`, which is expanded to `print!("\n")` and thus just prints a newline. The second rule is for invocations with parameters such as `println!("Hello")` or `println!("Number: {}", 4)`. It is also expanded to an invocation of the `print!` macro, passing all arguments and an additional newline `\n` at the end.
 
-The `#[macro_export]` attribute makes the macro available to the whole crate (not just the module it is defined) and external crates. It also places the macro at the crate root, which means that we have to import the macro through `use std::println` instead of `std::macros::println`.
+The `#[macro_export]` attribute makes the macro available to the whole crate (not just the module it is defined in) and external crates. It also places the macro at the crate root, which means we have to import the macro through `use std::println` instead of `std::macros::println`.
 
 The [`print!` macro] is defined as:
 
@@ -639,11 +639,11 @@ pub fn _print(args: fmt::Arguments) {
 }
 ```
 
-One thing that we changed from the original `println` definition is that we prefixed the invocations of the `print!` macro with `$crate` too. This ensures that we don't need to have to import the `print!` macro too if we only want to use `println`.
+One thing that we changed from the original `println` definition is that we prefixed the invocations of the `print!` macro with `$crate` too. This ensures that we don't need to import the `print!` macro too if we only want to use `println`.
 
 Like in the standard library, we add the `#[macro_export]` attribute to both macros to make them available everywhere in our crate. Note that this places the macros in the root namespace of the crate, so importing them via `use crate::vga_buffer::println` does not work. Instead, we have to do `use crate::println`.
 
-The `_print` function locks our static `WRITER` and calls the `write_fmt` method on it. This method is from the `Write` trait, we need to import that trait. The additional `unwrap()` at the end panics if printing isn't successful. But since we always return `Ok` in `write_str`, that should not happen.
+The `_print` function locks our static `WRITER` and calls the `write_fmt` method on it. This method is from the `Write` trait, which we need to import. The additional `unwrap()` at the end panics if printing isn't successful. But since we always return `Ok` in `write_str`, that should not happen.
 
 Since the macros need to be able to call `_print` from outside of the module, the function needs to be public. However, since we consider this a private implementation detail, we add the [`doc(hidden)` attribute] to hide it from the generated documentation.
 
@@ -691,9 +691,9 @@ When we now insert `panic!("Some panic message");` in our `_start` function, we 
 So we know not only that a panic has occurred, but also the panic message and where in the code it happened.
 
 ## Summary
-In this post we learned about the structure of the VGA text buffer and how it can be written through the memory mapping at address `0xb8000`. We created a Rust module that encapsulates the unsafety of writing to this memory mapped buffer and presents a safe and convenient interface to the outside.
+In this post, we learned about the structure of the VGA text buffer and how it can be written through the memory mapping at address `0xb8000`. We created a Rust module that encapsulates the unsafety of writing to this memory-mapped buffer and presents a safe and convenient interface to the outside.
 
-We also saw how easy it is to add dependencies on third-party libraries, thanks to cargo. The two dependencies that we added, `lazy_static` and `spin`, are very useful in OS development and we will use them in more places in future posts.
+Thanks to cargo, we also saw how easy it is to add dependencies on third-party libraries. The two dependencies that we added, `lazy_static` and `spin`, are very useful in OS development and we will use them in more places in future posts.
 
 ## What's next?
-The next post explains how to set up Rust's built in unit test framework. We will then create some basic unit tests for the VGA buffer module from this post.
+The next post explains how to set up Rust's built-in unit test framework. We will then create some basic unit tests for the VGA buffer module from this post.

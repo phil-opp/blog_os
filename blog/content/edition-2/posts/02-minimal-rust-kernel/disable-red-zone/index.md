@@ -5,7 +5,7 @@ path = "red-zone"
 template = "edition-2/extra.html"
 +++
 
-The [red zone] is an optimization of the [System V ABI] that allows functions to temporarily use the 128 bytes below its stack frame without adjusting the stack pointer:
+The [red zone] is an optimization of the [System V ABI] that allows functions to temporarily use the 128 bytes below their stack frame without adjusting the stack pointer:
 
 [red zone]: https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
 [System V ABI]: https://wiki.osdev.org/System_V_ABI
@@ -22,7 +22,7 @@ However, this optimization leads to huge problems with exceptions or hardware in
 
 ![red zone overwritten by exception handler](red-zone-overwrite.svg)
 
-The CPU and the exception handler overwrite the data in red zone. But this data is still needed by the interrupted function. So the function won't work correctly anymore when we return from the exception handler. This might lead to strange bugs that [take weeks to debug].
+The CPU and the exception handler overwrite the data in the red zone. But this data is still needed by the interrupted function. So the function won't work correctly anymore when we return from the exception handler. This might lead to strange bugs that [take weeks to debug].
 
 [take weeks to debug]: https://forum.osdev.org/viewtopic.php?t=21720
 
