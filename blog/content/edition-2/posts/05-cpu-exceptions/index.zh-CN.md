@@ -63,30 +63,30 @@ Bits  | Name                              | Description
 ------|-----------------------------------|-----------------------------------
 0-2   | Interrupt Stack Table Index       | 0: 不要切换栈数据, 1-7: 当处理函数被调用时，切换到中断栈表的第n层栈。
 3-7   | Reserved              |
-8     | 0: Interrupt Gate, 1: Trap Gate   | If this bit is 0, interrupts are disabled when this handler is called.
+8     | 0: Interrupt Gate, 1: Trap Gate   | 如果该比特被置为0，当处理函数被调用时，中断会被禁用。
 9-11  | must be one                       |
 12    | must be zero                      |
-13‑14 | Descriptor Privilege Level (DPL)  | The minimal privilege level required for calling this handler.
+13‑14 | Descriptor Privilege Level (DPL)  | 执行处理函数所需的最小特权等级。
 15    | Present                           |
 
-Each exception has a predefined IDT index. For example the invalid opcode exception has table index 6 and the page fault exception has table index 14. Thus, the hardware can automatically load the corresponding IDT entry for each exception. The [Exception Table][exceptions] in the OSDev wiki shows the IDT indexes of all exceptions in the “Vector nr.” column.
+每个异常都具有一个预定义的IDT序号，比如 invalid opcode 异常对应6号，而 page fault 异常对应14号，因此硬件可以直接寻找到对应的IDT条目。 OSDev wiki中的 [异常对照表][exceptions] 可以查到所有异常的IDT序号（在Vector nr.列）。
 
-When an exception occurs, the CPU roughly does the following:
+通常而言，当异常发生时，CPU会执行如下步骤：
 
-1. Push some registers on the stack, including the instruction pointer and the [RFLAGS] register. (We will use these values later in this post.)
-2. Read the corresponding entry from the Interrupt Descriptor Table (IDT). For example, the CPU reads the 14-th entry when a page fault occurs.
-3. Check if the entry is present. Raise a double fault if not.
-4. Disable hardware interrupts if the entry is an interrupt gate (bit 40 not set).
-5. Load the specified [GDT] selector into the CS segment.
-6. Jump to the specified handler function.
+1. 将一些寄存器数据推入栈中，包括指令指针以及 [RFLAGS] 寄存器。（我们会在文章稍后些的地方用到这些数据。）
+2. 读取中断描述符表（IDT）的对应条目，比如当发生 page fault 异常时，调用14号条目。
+3. 判断该条目确实存在，如果不存在，则触发 double fault 异常。
+4. 如果该条目属于中断门（interrupt gate，bit 40 被设置为0），则禁用硬件中断。
+5. 将 [GDT] 选择器载入代码段寄存器（CS segment）。
+6. 跳转执行处理函数。
 
 [RFLAGS]: https://en.wikipedia.org/wiki/FLAGS_register
 [GDT]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
-Don't worry about steps 4 and 5 for now, we will learn about the global descriptor table and hardware interrupts in future posts.
+不过现在我们不必为4和5多加纠结，未来我们会单独讲解全局描述符表和硬件中断的。
 
-## An IDT Type
-Instead of creating our own IDT type, we will use the [`InterruptDescriptorTable` struct] of the `x86_64` crate, which looks like this:
+## IDT类型
+与其创建我们自己的IDT类型映射，不如直接使用 `x86_64` crate 内置的 [`InterruptDescriptorTable` struct]，其实现是这样的：
 
 [`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 
@@ -117,83 +117,83 @@ pub struct InterruptDescriptorTable {
 }
 ```
 
-The fields have the type [`idt::Entry<F>`], which is a struct that represents the fields of an IDT entry (see the table above). The type parameter `F` defines the expected handler function type. We see that some entries require a [`HandlerFunc`] and some entries require a [`HandlerFuncWithErrCode`]. The page fault even has its own special type: [`PageFaultHandlerFunc`].
+每一个字段都是 [`idt::Entry<F>`] 类型，这个类型包含了一条完整的IDT条目（定义参见上文）。 其泛型参数 `F` 定义了错误处理函数的类型，在有些字段中该参数为 [`HandlerFunc`]，而有些则是 [`HandlerFuncWithErrCode`]，而对于 page fault 这种特殊异常，则为 [`PageFaultHandlerFunc`]。
 
 [`idt::Entry<F>`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.Entry.html
 [`HandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFunc.html
 [`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
 [`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.PageFaultHandlerFunc.html
 
-Let's look at the `HandlerFunc` type first:
+首先让我们看一看 `HandlerFunc` 类型的定义：
 
 ```rust
 type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 ```
 
-It's a [type alias] for an `extern "x86-interrupt" fn` type. The `extern` keyword defines a function with a [foreign calling convention] and is often used to communicate with C code (`extern "C" fn`). But what is the `x86-interrupt` calling convention?
+这是一个针对 `extern "x86-interrupt" fn` 类型的 [类型别名][type alias]。`extern` 关键字使用 [外部调用约定][foreign calling convention] 定义了一个函数，这种定义方式多用于和C语言代码通信（`extern "C" fn`），那么这里的 `x86-interrupt` 又是在调用什么地方？
 
 [type alias]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
 [foreign calling convention]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
-## The Interrupt Calling Convention
-Exceptions are quite similar to function calls: The CPU jumps to the first instruction of the called function and executes it. Afterwards the CPU jumps to the return address and continues the execution of the parent function.
+## 中断调用约定
+异常触发十分类似于函数调用：CPU会直接跳转到处理函数的第一个指令处开始执行，执行结束后，CPU会跳转到返回地址，并继续执行之前的函数调用。
 
-However, there is a major difference between exceptions and function calls: A function call is invoked voluntarily by a compiler inserted `call` instruction, while an exception might occur at _any_ instruction. In order to understand the consequences of this difference, we need to examine function calls in more detail.
+尽管如此，两者还是有一些不同点的：函数调用是由编译器通过 `call` 指令主动发起的，而错误处理函数则可能会由 _任何_ 指令触发。要了解这两者所造成影响的不同，我们需要更深入的追踪函数调用。
 
-[Calling conventions] specify the details of a function call. For example, they specify where function parameters are placed (e.g. in registers or on the stack) and how results are returned. On x86_64 Linux, the following rules apply for C functions (specified in the [System V ABI]):
+[调用约定][Calling conventions] 指定了函数调用的详细信息，比如可以指定函数的参数存放在哪里（寄存器，或者栈，或者别的什么地方）以及返回值是什么样子的。在 x86_64 Linux 中，以下规则适用于C语言函数（参见 [System V ABI] 标准）：
 
 [Calling conventions]: https://en.wikipedia.org/wiki/Calling_convention
 [System V ABI]: https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf
 
-- the first six integer arguments are passed in registers `rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`
-- additional arguments are passed on the stack
-- results are returned in `rax` and `rdx`
+- 前六个整型参数从寄存器传入 `rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`
+- 其他参数从栈传入
+- 函数返回值存放在 `rax` 和 `rdx`
 
-Note that Rust does not follow the C ABI (in fact, [there isn't even a Rust ABI yet][rust abi]), so these rules apply only to functions declared as `extern "C" fn`.
+注意，Rust并不遵循C ABI，而是遵循自己的一套规则，即 [非正式的 Rust ABI 草案][rust abi]，所以这些规则仅在使用 `extern "C" fn` 对函数进行定义时才会使用。
 
 [rust abi]: https://github.com/rust-lang/rfcs/issues/600
 
-### Preserved and Scratch Registers
-The calling convention divides the registers in two parts: _preserved_ and _scratch_ registers.
+### 保留寄存器和临时寄存器
+调用约定将寄存器分为两部分：_保留寄存器_ 和 _临时寄存器_ 。
 
-The values of _preserved_ registers must remain unchanged across function calls. So a called function (the _“callee”_) is only allowed to overwrite these registers if it restores their original values before returning. Therefore these registers are called _“callee-saved”_. A common pattern is to save these registers to the stack at the function's beginning and restore them just before returning.
+_保留寄存器_ 的值应当在函数调用时保持不变，所以已执行的函数（_“callee”_）仅被允许在返回之前将这些寄存器的值恢复到初始值，因而这些寄存器又被称为 _“callee-saved”_。 在函数开始时将这类寄存器的值存入栈中，并在返回之前将之恢复到寄存器中是一种十分常见的做法。
 
-In contrast, a called function is allowed to overwrite _scratch_ registers without restrictions. If the caller wants to preserve the value of a scratch register across a function call, it needs to backup and restore it before the function call (e.g. by pushing it to the stack). So the scratch registers are _caller-saved_.
+而 _临时寄存器_ 则相反，被调用函数可以无限制的反复写入寄存器，若调用者希望此类寄存器在函数调用后保持数值不变，则需要自己来处理备份和恢复过程（例如将其数值保存在栈中），因而这类寄存器又被称为 _caller-saved_。
 
-On x86_64, the C calling convention specifies the following preserved and scratch registers:
+在 x86_64 架构下，C调用约定指定了这些寄存器分类：
 
-preserved registers | scratch registers
+保留寄存器 | 临时寄存器
 ---|---
 `rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11`
 _callee-saved_ | _caller-saved_
 
-The compiler knows these rules, so it generates the code accordingly. For example, most functions begin with a `push rbp`, which backups `rbp` on the stack (because it's a callee-saved register).
+编译器已经内置了这些规则，因而可以自动生成保证程序正常执行的指令。例如绝大多数函数的汇编指令都以 `push rbp` 开头，也就是将 `rbp` 的值备份到栈中（因为它是 `callee-saved` 型寄存器）。
 
-### Preserving all Registers
-In contrast to function calls, exceptions can occur on _any_ instruction. In most cases we don't even know at compile time if the generated code will cause an exception. For example, the compiler can't know if an instruction causes a stack overflow or a page fault.
+### 保存所有寄存器数据
+区别于函数调用，异常在执行 _任何_ 指令时都有可能发生。在大多数情况下，我们在编译期不可能知道程序跑起来会发生什么异常。比如编译器无法预知某条指令是否会触发 page fault 或者 stack overflow。
 
-Since we don't know when an exception occurs, we can't backup any registers before. This means that we can't use a calling convention that relies on caller-saved registers for exception handlers. Instead, we need a calling convention means that preserves _all registers_. The `x86-interrupt` calling convention is such a calling convention, so it guarantees that all register values are restored to their original values on function return.
+正因为我们无法预知异常发生的时刻，所以提前保存寄存器数据是不可能实现的。这也就意味着我们不能使用调用约定来自动化的处理错误处理函数 caller-saved 类型的寄存器上下文。所以此时我们需要一个调用约定来处理 _所有寄存器_ 的数据，巧了，`x86-interrupt` 就是这样的一个调用约定，它可以确保所有寄存器在函数返回之后恢复函数被调用之前的状态。
 
-Note that this does not mean that all registers are saved to the stack at function entry. Instead, the compiler only backs up the registers that are overwritten by the function. This way, very efficient code can be generated for short functions that only use a few registers.
+但是请注意，这并不意味着所有寄存器信息都会被存储到栈里，编译器仅仅会存储那些在函数中被写入的寄存器的信息。因此，仅使用极少量寄存器的简短函数在编译后会十分高效。
 
-### The Interrupt Stack Frame
-On a normal function call (using the `call` instruction), the CPU pushes the return address before jumping to the target function. On function return (using the `ret` instruction), the CPU pops this return address and jumps to it. So the stack frame of a normal function call looks like this:
+### 中断栈帧
+当一个常规函数调用发生时（使用 `call` 指令），CPU会在跳转目标函数之前，将返回地址推入栈中。当函数返回时（使用 `ret` 指令），CPU会在跳回目标函数之前弹出返回地址。所以常规函数调用的栈帧看起来是这样的：
 
 ![function stack frame](function-stack-frame.svg)
 
-For exception and interrupt handlers, however, pushing a return address would not suffice, since interrupt handlers often run in a different context (stack pointer, CPU flags, etc.). Instead, the CPU performs the following steps when an interrupt occurs:
+对于错误处理函数和中断处理函数，仅仅推入一个返回地址并不足够，因为中断处理函数通常会运行在一个不那么一样的上下文中（栈指针、CPU flags等等）。所以CPU在遇到中断发生时是这么处理的：
 
-1. **Aligning the stack pointer**: An interrupt can occur at any instructions, so the stack pointer can have any value, too. However, some CPU instructions (e.g. some SSE instructions) require that the stack pointer is aligned on a 16 byte boundary, therefore the CPU performs such an alignment right after the interrupt.
-2. **Switching stacks** (in some cases): A stack switch occurs when the CPU privilege level changes, for example when a CPU exception occurs in a user mode program. It is also possible to configure stack switches for specific interrupts using the so-called _Interrupt Stack Table_ (described in the next post).
-3. **Pushing the old stack pointer**: The CPU pushes the values of the stack pointer (`rsp`) and the stack segment (`ss`) registers at the time when the interrupt occurred (before the alignment). This makes it possible to restore the original stack pointer when returning from an interrupt handler.
-4. **Pushing and updating the `RFLAGS` register**: The [`RFLAGS`] register contains various control and status bits. On interrupt entry, the CPU changes some bits and pushes the old value.
-5. **Pushing the instruction pointer**: Before jumping to the interrupt handler function, the CPU pushes the instruction pointer (`rip`) and the code segment (`cs`). This is comparable to the return address push of a normal function call.
-6. **Pushing an error code** (for some exceptions): For some specific exceptions such as page faults, the CPU pushes an error code, which describes the cause of the exception.
-7. **Invoking the interrupt handler**: The CPU reads the address and the segment descriptor of the interrupt handler function from the corresponding field in the IDT. It then invokes this handler by loading the values into the `rip` and `cs` registers.
+1. **对其栈指针**: An interrupt can occur at any instructions, so the stack pointer can have any value, too. However, some CPU instructions (e.g. some SSE instructions) require that the stack pointer is aligned on a 16 byte boundary, therefore the CPU performs such an alignment right after the interrupt.
+2. **切换堆栈** (in some cases): A stack switch occurs when the CPU privilege level changes, for example when a CPU exception occurs in a user mode program. It is also possible to configure stack switches for specific interrupts using the so-called _Interrupt Stack Table_ (described in the next post).
+3. **推入旧的栈指针**: The CPU pushes the values of the stack pointer (`rsp`) and the stack segment (`ss`) registers at the time when the interrupt occurred (before the alignment). This makes it possible to restore the original stack pointer when returning from an interrupt handler.
+4. **推入并更新 `RFLAGS` 寄存器**: The [`RFLAGS`] register contains various control and status bits. On interrupt entry, the CPU changes some bits and pushes the old value.
+5. **推入指令指针**: Before jumping to the interrupt handler function, the CPU pushes the instruction pointer (`rip`) and the code segment (`cs`). This is comparable to the return address push of a normal function call.
+6. **推入错误码** (for some exceptions): For some specific exceptions such as page faults, the CPU pushes an error code, which describes the cause of the exception.
+7. **执行中断处理函数**: The CPU reads the address and the segment descriptor of the interrupt handler function from the corresponding field in the IDT. It then invokes this handler by loading the values into the `rip` and `cs` registers.
 
 [`RFLAGS`]: https://en.wikipedia.org/wiki/FLAGS_register
 
-So the _interrupt stack frame_ looks like this:
+所以 _中断栈帧_ 看起来是这样的：
 
 ![interrupt stack frame](exception-stack-frame.svg)
 
