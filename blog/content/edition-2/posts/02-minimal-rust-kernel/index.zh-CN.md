@@ -226,7 +226,7 @@ error[E0463]: can't find crate for `core`
 此时就到了cargo中 [`build-std` 特性][`build-std` feature] 登场的时刻，该特性允许你按照自己的需要重编译 `core` 等标准crate，而不需要使用Rust安装程序内置的预编译版本。 但是该特性是全新的功能，到目前为止尚未完全完成，所以它被标记为 "unstable" 且仅被允许在 [nightly Rust 编译器][nightly Rust compilers] 环境下调用。
 
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
-[nightly Rust compilers]: #installing-rust-nightly
+[nightly Rust compilers]: #安装 Nightly Rust
 
 要启用该特性，你需要创建一个 [cargo 配置][cargo configuration] 文件，即 `.cargo/config.toml`，并写入以下语句：
 
