@@ -212,7 +212,7 @@ _callee-saved_ | _caller-saved_
 如果你对更多细节有兴趣：我们还有关于使用 [裸函数][naked functions] 展开异常处理的一个系列章节，参见 [文末][too-much-magic]。
 
 [naked functions]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
-[too-much-magic]: #详细一些
+[too-much-magic]: #too-much-magic
 
 ## 实现
 那么理论知识暂且到此为止，该开始为我们的内核实现CPU异常处理了。首先我们在 `src/interrupts.rs` 创建一个模块，并加入函数 `init_idt` 用来创建一个新的 `InterruptDescriptorTable`：
@@ -457,8 +457,7 @@ fn test_breakpoint_exception() {
 blog_os::interrupts::test_breakpoint_exception...	[ok]
 ```
 
-## 详细一些
-
+## Too much Magic?
 相对来说，`x86-interrupt` 调用约定和 [`InterruptDescriptorTable`] 类型让错误处理变得直截了当，如果你真的那么在意错误处理过程中的细节，我们推荐读一下这些：[“使用裸函数处理错误”][“Handling Exceptions with Naked Functions”] 系列文章展示了如何在不使用 `x86-interrupt` 的前提下创建IDT。但是需要注意的是，这些文章都是在 `x86-interrupt` 调用约定和 `x86_64` crate 出现之前的产物，这些东西属于博客的 [第一版][first edition]，不排除信息已经过期了的可能。
 
 [“Handling Exceptions with Naked Functions”]: @/edition-1/extra/naked-exceptions/_index.md
@@ -466,7 +465,6 @@ blog_os::interrupts::test_breakpoint_exception...	[ok]
 [first edition]: @/edition-1/_index.md
 
 ## 接下来是？
-
 我们已经成功捕获了第一个异常，并从异常中成功恢复，下一步就是试着捕获所有异常，如果有未捕获的异常就会触发致命的[triple fault]，那就只能重启整个系统了。下一篇文章会展开说我们如何通过正确捕捉[double faults]来避免这种情况。
 
 [triple fault]: https://wiki.osdev.org/Triple_Fault
