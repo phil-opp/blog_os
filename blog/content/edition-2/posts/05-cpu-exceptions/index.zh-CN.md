@@ -212,7 +212,7 @@ _callee-saved_ | _caller-saved_
 如果你对更多细节有兴趣：我们还有关于使用 [裸函数][naked functions] 展开异常处理的一个系列章节，参见 [文末][too-much-magic]。
 
 [naked functions]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
-[too-much-magic]: #too-much-magic
+[too-much-magic]: #使用魔法的地方太多了？
 
 ## 实现
 那么理论知识暂且到此为止，该开始为我们的内核实现CPU异常处理了。首先我们在 `src/interrupts.rs` 创建一个模块，并加入函数 `init_idt` 用来创建一个新的 `InterruptDescriptorTable`：
