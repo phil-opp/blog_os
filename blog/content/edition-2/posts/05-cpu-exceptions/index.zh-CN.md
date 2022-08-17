@@ -27,7 +27,7 @@ CPU异常在很多情况下都有可能发生，比如访问无效的内存地�
 <!-- toc -->
 
 ## 简述
-异常信号会在当前指令触发错误时被触发，例如执行了除数为0的除法。当异常发生后，CPU会中断当前的工作，并立即根据异常类型调用错误处理函数。
+异常信号会在当前指令触发错误时被触发，例如执行了除数为0的除法。当异常发生后，CPU会中断当前的工作，并立即根据异常类型调用对应的错误处理函数。
 
 在x86架构中，存在20种不同的CPU异常类型，以下为最重要的几种：
 
@@ -61,7 +61,7 @@ Options字段的格式如下：
 
 Bits  | Name                              | Description
 ------|-----------------------------------|-----------------------------------
-0-2   | Interrupt Stack Table Index       | 0: 不要切换栈数据, 1-7: 当处理函数被调用时，切换到中断栈表的第n层栈。
+0-2   | Interrupt Stack Table Index       | 0: 不要切换堆栈数据, 1-7: 当处理函数被调用时，切换到中断堆栈符表的第n层。
 3-7   | Reserved              |
 8     | 0: Interrupt Gate, 1: Trap Gate   | 如果该比特被置为0，当处理函数被调用时，中断会被禁用。
 9-11  | must be one                       |
@@ -86,7 +86,7 @@ Bits  | Name                              | Description
 不过现在我们不必为4和5多加纠结，未来我们会单独讲解全局描述符表和硬件中断的。
 
 ## IDT类型
-与其创建我们自己的IDT类型映射，不如直接使用 `x86_64` crate 内置的 [`InterruptDescriptorTable` struct]，其实现是这样的：
+与其创建我们自己的IDT类型映射，不如直接使用 `x86_64` crate 内置的 [`InterruptDescriptorTable` 结构][`InterruptDescriptorTable` struct]，其实现是这样的：
 
 [`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 
@@ -117,7 +117,7 @@ pub struct InterruptDescriptorTable {
 }
 ```
 
-每一个字段都是 [`idt::Entry<F>`] 类型，这个类型包含了一条完整的IDT条目（定义参见上文）。 其泛型参数 `F` 定义了错误处理函数的类型，在有些字段中该参数为 [`HandlerFunc`]，而有些则是 [`HandlerFuncWithErrCode`]，而对于 page fault 这种特殊异常，则为 [`PageFaultHandlerFunc`]。
+每一个字段都是 [`idt::Entry<F>`] 类型，这个类型包含了一条完整的IDT条目（定义参见上文）。 其泛型参数 `F` 定义了中断处理函数的类型，在有些字段中该参数为 [`HandlerFunc`]，而有些则是 [`HandlerFuncWithErrCode`]，而对于 page fault 这种特殊异常，则为 [`PageFaultHandlerFunc`]。
 
 [`idt::Entry<F>`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.Entry.html
 [`HandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFunc.html
@@ -181,15 +181,15 @@ _callee-saved_ | _caller-saved_
 
 ![function stack frame](function-stack-frame.svg)
 
-对于错误处理函数和中断处理函数，仅仅推入一个返回地址并不足够，因为中断处理函数通常会运行在一个不那么一样的上下文中（栈指针、CPU flags等等）。所以CPU在遇到中断发生时是这么处理的：
+对于错误和中断处理函数，仅仅推入一个返回地址并不足够，因为中断处理函数通常会运行在一个不那么一样的上下文中（堆栈指针、CPU flags等等）。所以CPU在遇到中断发生时是这么处理的：
 
-1. **对其栈指针**: An interrupt can occur at any instructions, so the stack pointer can have any value, too. However, some CPU instructions (e.g. some SSE instructions) require that the stack pointer is aligned on a 16 byte boundary, therefore the CPU performs such an alignment right after the interrupt.
-2. **切换堆栈** (in some cases): A stack switch occurs when the CPU privilege level changes, for example when a CPU exception occurs in a user mode program. It is also possible to configure stack switches for specific interrupts using the so-called _Interrupt Stack Table_ (described in the next post).
-3. **推入旧的栈指针**: The CPU pushes the values of the stack pointer (`rsp`) and the stack segment (`ss`) registers at the time when the interrupt occurred (before the alignment). This makes it possible to restore the original stack pointer when returning from an interrupt handler.
-4. **推入并更新 `RFLAGS` 寄存器**: The [`RFLAGS`] register contains various control and status bits. On interrupt entry, the CPU changes some bits and pushes the old value.
-5. **推入指令指针**: Before jumping to the interrupt handler function, the CPU pushes the instruction pointer (`rip`) and the code segment (`cs`). This is comparable to the return address push of a normal function call.
-6. **推入错误码** (for some exceptions): For some specific exceptions such as page faults, the CPU pushes an error code, which describes the cause of the exception.
-7. **执行中断处理函数**: The CPU reads the address and the segment descriptor of the interrupt handler function from the corresponding field in the IDT. It then invokes this handler by loading the values into the `rip` and `cs` registers.
+1. **对齐堆栈指针**: 任何指令都有可能触发中断，所以堆栈指针可能是任何值，而部分CPU指令（比如部分SSE指令）需要堆栈指针16位对齐，因此CPU会在中断触发后立刻为其进行对齐。
+2. **切换堆栈** （部分情况下）: 当CPU特权等级改变时，会触发堆栈切换，例如当一个用户态程序触发CPU异常时。该行为也可能被所谓的 _中断堆栈符表_ 配置，在特定中断中触发，关于该符表，我们会在下一篇文章做出讲解。
+3. **推入旧的堆栈指针**: 当中断发生后，堆栈指针对齐之前，CPU会将栈指针寄存器（`rsp`）和堆栈段寄存器（`ss`）的数据入栈，由此可在中断处理函数返回后，恢复上一层的堆栈指针。
+4. **推入并更新 `RFLAGS` 寄存器**: [`RFLAGS`] 寄存器包含了各式各样的控制位和状态位，当中断发生时，CPU会改变其中的部分数值，并将旧值入栈。
+5. **推入指令指针**: 在跳转中断处理函数之前，CPU会将指令指针寄存器（`rip`）和代码段寄存器（`cs`）的数据入栈，此过程与常规函数调用中返回地址入栈类似。
+6. **推入错误码** （针对部分异常）: 对于部分特定的异常，比如 page faults ，CPU会推入一个错误码用于标记错误的成因。
+7. **执行中断处理函数**: CPU会读取对应IDT条目中描述的中断处理函数对应的地址和段描述符，将两者载入 `rip` 和 `cs` 以开始运行处理函数。
 
 [`RFLAGS`]: https://en.wikipedia.org/wiki/FLAGS_register
 
@@ -197,25 +197,25 @@ _callee-saved_ | _caller-saved_
 
 ![interrupt stack frame](exception-stack-frame.svg)
 
-In the `x86_64` crate, the interrupt stack frame is represented by the [`InterruptStackFrame`] struct. It is passed to interrupt handlers as `&mut` and can be used to retrieve additional information about the exception's cause. The struct contains no error code field, since only some few exceptions push an error code. These exceptions use the separate [`HandlerFuncWithErrCode`] function type, which has an additional `error_code` argument.
+在 `x86_64` crate 中，中断栈帧已经被 [`InterruptStackFrame`] 结构完整表达，该结构会以 `&mut` 的形式传入处理函数，并可以用于查询错误发生的更详细的原因。但该结构并不包含错误码字段，因为只有极少量的错误会传入错误码，所以对于这类需要传入 `error_code` 的错误，其函数类型变为了 [`HandlerFuncWithErrCode`]。
 
 [`InterruptStackFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptStackFrame.html
 
-### Behind the Scenes
-The `x86-interrupt` calling convention is a powerful abstraction that hides almost all of the messy details of the exception handling process. However, sometimes it's useful to know what's happening behind the curtain. Here is a short overview of the things that the `x86-interrupt` calling convention takes care of:
+### 幕后花絮
+`x86-interrupt` 调用约定是一个十分厉害的抽象，它几乎隐藏了所有错误处理函数中的凌乱细节，但尽管如此，了解一下水面下发生的事情还是有用的。我们来简单介绍一下被 `x86-interrupt` 隐藏起来的行为：
 
-- **Retrieving the arguments**: Most calling conventions expect that the arguments are passed in registers. This is not possible for exception handlers, since we must not overwrite any register values before backing them up on the stack. Instead, the `x86-interrupt` calling convention is aware that the arguments already lie on the stack at a specific offset.
-- **Returning using `iretq`**: Since the interrupt stack frame completely differs from stack frames of normal function calls, we can't return from handlers functions through the normal `ret` instruction. Instead, the `iretq` instruction must be used.
-- **Handling the error code**: The error code, which is pushed for some exceptions, makes things much more complex. It changes the stack alignment (see the next point) and needs to be popped off the stack before returning. The `x86-interrupt` calling convention handles all that complexity. However, it doesn't know which handler function is used for which exception, so it needs to deduce that information from the number of function arguments. That means that the programmer is still responsible to use the correct function type for each exception. Luckily, the `InterruptDescriptorTable` type defined by the `x86_64` crate ensures that the correct function types are used.
-- **Aligning the stack**: There are some instructions (especially SSE instructions) that require a 16-byte stack alignment. The CPU ensures this alignment whenever an exception occurs, but for some exceptions it destroys it again later when it pushes an error code. The `x86-interrupt` calling convention takes care of this by realigning the stack in this case.
+- **传递参数**: 绝大多数指定参数的调用约定都是期望通过寄存器传递参数的，但事实上这是无法实现的，因为我们不能在备份寄存器数据之前就将其复写。`x86-interrupt` 的解决方案时，将参数以指定的偏移量放到栈上。
+- **使用 `iretq` 返回**: 由于中断栈帧和普通函数调用的栈帧具备完全不同的数据结构，我们无法通过 `ret` 指令直接返回，所以此时必须使用 `iretq` 指令。
+- **接收错误码**: 部分异常传入的错误码会让错误处理更加复杂，它会造成堆栈指针对齐失效（见下一条），而且需要在返回之前从栈中弹出去。好在 `x86-interrupt` 为我们挡住了这些额外的复杂度。但是它无法判断哪个异常对应哪个处理函数，所以它需要从函数参数数量上推断一些信息，因此程序员需要为每个中断处理函数定义正确的类型。当然你已经不需要烦恼这些， `x86_64` crate 中的 `InterruptDescriptorTable` 已经帮助你完成了定义。
+- **对齐堆栈**: 对于一些指令（尤其是SSE指令）而言，它们需要提前进行16位对齐操作，通常而言CPU在异常发生之后就会自动完成这一步。但是部分异常会由于传入错误码而破坏掉本应完成的对齐操作，此时 `x86-interrupt` 会为我们重新完成对齐。
 
-If you are interested in more details: We also have a series of posts that explains exception handling using [naked functions] linked [at the end of this post][too-much-magic].
+如果你对更多细节有兴趣：我们还有关于使用 [裸函数][naked functions] 展开异常处理的一个系列章节，参见 [文末][too-much-magic]。
 
 [naked functions]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
 [too-much-magic]: #too-much-magic
 
-## Implementation
-Now that we've understood the theory, it's time to handle CPU exceptions in our kernel. We'll start by creating a new interrupts module in `src/interrupts.rs`, that first creates an `init_idt` function that creates a new `InterruptDescriptorTable`:
+## 实现
+那么理论知识暂且到此为止，该开始为我们的内核实现CPU异常处理了。首先我们在 `src/interrupts.rs` 创建一个模块，并加入函数 `init_idt` 用来创建一个新的 `InterruptDescriptorTable`：
 
 ``` rust
 // in src/lib.rs
@@ -231,15 +231,15 @@ pub fn init_idt() {
 }
 ```
 
-Now we can add handler functions. We start by adding a handler for the [breakpoint exception]. The breakpoint exception is the perfect exception to test exception handling. Its only purpose is to temporarily pause a program when the breakpoint instruction `int3` is executed.
+现在我们就可以添加处理函数了，首先给 [breakpoint exception] 添加。该异常是一个绝佳的测试途径，因为它唯一的目的就是在 `int3` 指令执行时暂停程序运行。
 
 [breakpoint exception]: https://wiki.osdev.org/Exceptions#Breakpoint
 
-The breakpoint exception is commonly used in debuggers: When the user sets a breakpoint, the debugger overwrites the corresponding instruction with the `int3` instruction so that the CPU throws the breakpoint exception when it reaches that line. When the user wants to continue the program, the debugger replaces the `int3` instruction with the original instruction again and continues the program. For more details, see the ["_How debuggers work_"] series.
+breakpoint exception 通常被用在调试器中：当程序员为程序打上断点，调试器会将对应的位置覆写为 `int3` 指令，CPU执行该指令后，就会抛出 breakpoint exception 异常。在调试完毕，需要程序继续运行时，调试器就会将原指令覆写回 `int3` 的位置。如果要了解更多细节，请查阅 ["_调试器是如何工作的_"]["_How debuggers work_"] 系列。
 
 ["_How debuggers work_"]: https://eli.thegreenplace.net/2011/01/27/how-debuggers-work-part-2-breakpoints
 
-For our use case, we don't need to overwrite any instructions. Instead, we just want to print a message when the breakpoint instruction is executed and then continue the program. So let's create a simple `breakpoint_handler` function and add it to our IDT:
+不过现在我们还不需要覆写指令，只需要打印一行日志，表明接收到了这个异常，然后让程序继续运行即可。那么我们就来创建一个简单的 `breakpoint_handler` 方法并加入IDT中：
 
 ```rust
 // in src/interrupts.rs
@@ -259,9 +259,9 @@ extern "x86-interrupt" fn breakpoint_handler(
 }
 ```
 
-Our handler just outputs a message and pretty-prints the interrupt stack frame.
+现在，我们的处理函数应当会输出一行信息以及完整的栈帧。
 
-When we try to compile it, the following error occurs:
+但当我们尝试编译的时候，报出了下面的错误：
 
 ```
 error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue #40180)
@@ -275,10 +275,10 @@ error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue
    = help: add #![feature(abi_x86_interrupt)] to the crate attributes to enable
 ```
 
-This error occurs because the `x86-interrupt` calling convention is still unstable. To use it anyway, we have to explicitly enable it by adding `#![feature(abi_x86_interrupt)]` on the top of our `lib.rs`.
+这是因为 `x86-interrupt` 并不是稳定特性，需要手动启用，只需要在我们的 `lib.rs` 中加入 `#![feature(abi_x86_interrupt)]` 开关即可。
 
-### Loading the IDT
-In order that the CPU uses our new interrupt descriptor table, we need to load it using the [`lidt`] instruction. The `InterruptDescriptorTable` struct of the `x86_64` provides a [`load`][InterruptDescriptorTable::load] method function for that. Let's try to use it:
+### 载入 IDT
+要让CPU使用新的中断描述符表，我们需要使用 [`lidt`] 指令来装载一下，`x86_64` 的 `InterruptDescriptorTable` 结构提供了 [`load`][InterruptDescriptorTable::load] 函数用来实现这个需求。让我们来试一下：
 
 [`lidt`]: https://www.felixcloutier.com/x86/lgdt:lidt
 [InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
@@ -293,7 +293,7 @@ pub fn init_idt() {
 }
 ```
 
-When we try to compile it now, the following error occurs:
+再次尝试编译，又出现了新的错误：
 
 ```
 error: `idt` does not live long enough
@@ -307,16 +307,16 @@ error: `idt` does not live long enough
    = note: borrowed value must be valid for the static lifetime...
 ```
 
-So the `load` methods expects a `&'static self`, that is a reference that is valid for the complete runtime of the program. The reason is that the CPU will access this table on every interrupt until we load a different IDT. So using a shorter lifetime than `'static` could lead to use-after-free bugs.
+原来 `load` 函数要求的生命周期为 `&'static self` ，也就是整个程序的生命周期，其原因就是CPU在接收到下一个IDT之前会一直使用这个符表。如果生命周期小于 `'static` ，很可能就会出现使用已释放对象的bug。
 
-In fact, this is exactly what happens here. Our `idt` is created on the stack, so it is only valid inside the `init` function. Afterwards the stack memory is reused for other functions, so the CPU would interpret random stack memory as IDT. Luckily, the `InterruptDescriptorTable::load` method encodes this lifetime requirement in its function definition, so that the Rust compiler is able to prevent this possible bug at compile time.
+问题至此已经很清晰了，我们的 `idt` 是创建在栈上的，它的生命周期仅限于 `init` 函数执行期间，之后这部分栈内存就会被其他函数调用，CPU再来访问IDT的话，只会读取到一段随机数据。好在 `InterruptDescriptorTable::load` 被严格定义了函数生命周期限制，这也是rust编译器的先天优势，可以在编译期就发现这些可能的bug。
 
-In order to fix this problem, we need to store our `idt` at a place where it has a `'static` lifetime. To achieve this we could allocate our IDT on the heap using [`Box`] and then convert it to a `'static` reference, but we are writing an OS kernel and thus don't have a heap (yet).
+要修复这些错误很简单，让 `idt` 具备 `'static` 类型的生命周期即可，我们可以使用 [`Box`] 在堆上申请一段内存，并转化为 `'static` 指针即可，但问题是我们正在写的东西是操作系统内核，（暂时）并没有堆这种东西。
 
 [`Box`]: https://doc.rust-lang.org/std/boxed/struct.Box.html
 
 
-As an alternative we could try to store the IDT as a `static`:
+作为替代，我们可以试着直接将IDT定义为 `'static` 变量：
 
 ```rust
 static IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();
@@ -327,7 +327,7 @@ pub fn init_idt() {
 }
 ```
 
-However, there is a problem: Statics are immutable, so we can't modify the breakpoint entry from our `init` function. We could solve this problem by using a [`static mut`]:
+然而这样就会引入一个新问题：静态变量是不可修改的，这样我们就无法在 `init` 函数中修改里面的数据了，所以需要把变量类型修改为 [`static mut`]：
 
 [`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
@@ -342,14 +342,14 @@ pub fn init_idt() {
 }
 ```
 
-This variant compiles without errors but it's far from idiomatic. `static mut`s are very prone to data races, so we need an [`unsafe` block] on each access.
+这样就不会有编译错误了，但是这依然十分不优雅，理论上说 `static mut` 类型的变量很容易形成数据竞争，任何调用都会被rust定义为不安全操作，所以只好用 [`unsafe` 代码块][`unsafe` block] 修饰调用语句。
 
 [`unsafe` block]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
-#### Lazy Statics to the Rescue
-Fortunately the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values.
+#### 懒加载拯救世界
+好在还有 `lazy_static` 宏可以用，区别于普通 `static` 变量在编译器求值，这个宏可以使代码块内的 `static` 变量在第一次取值时求值。所以，我们完全可以把初始化代码写在变量定义的代码块里，同时也不影响后续的取值。
 
-We already imported the `lazy_static` crate when we [created an abstraction for the VGA text buffer][vga text buffer lazy static]. So we can directly use the `lazy_static!` macro to create our static IDT:
+在 [创建VGA字符缓冲的单例][vga text buffer lazy static] 时我们已经引入了 `lazy_static` crate，所以我们可以直接使用 `lazy_static!` 来创建IDT：
 
 [vga text buffer lazy static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
@@ -371,11 +371,11 @@ pub fn init_idt() {
 }
 ```
 
-Note how this solution requires no `unsafe` blocks. The `lazy_static!` macro does use `unsafe` behind the scenes, but it is abstracted away in a safe interface.
+现在碍眼的 `unsafe` 代码块成功被去掉了，尽管 `lazy_static!` 的内部依然使用了 `unsafe` 代码块，但是至少它已经抽象为了一个安全接口。
 
-### Running it
+### 跑起来
 
-The last step for making exceptions work in our kernel is to call the `init_idt` function from our `main.rs`. Instead of calling it directly, we introduce a general `init` function in our `lib.rs`:
+最后一步就是在 `main.rs` 里执行 `init_idt` 函数以在我们的内核里装载IDT，但是不要直接调用，在 `lib.rs` 里封装一个 `init` 函数出来：
 
 ```rust
 // in src/lib.rs
@@ -385,9 +385,9 @@ pub fn init() {
 }
 ```
 
-With this function we now have a central place for initialization routines that can be shared between the different `_start` functions in our `main.rs`, `lib.rs`, and integration tests.
+这样我们就可以把所有初始化逻辑都集中在一个函数里，从而让 `main.rs` 、 `lib.rs` 以及单元测试中的 `_start` 共享初始化逻辑。
 
-Now we can update the `_start` function of our `main.rs` to call `init` and then trigger a breakpoint exception:
+现在我们更新一下 `main.rs` 中的 `_start` 函数，调用 `init` 并手动触发一次 breakpoint exception：
 
 ```rust
 // in src/main.rs
@@ -410,17 +410,17 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-When we run it in QEMU now (using `cargo run`), we see the following:
+当我们在QEMU中运行之后（`cargo run`），效果是这样的：
 
 ![QEMU printing `EXCEPTION: BREAKPOINT` and the interrupt stack frame](qemu-breakpoint-exception.png)
 
-It works! The CPU successfully invokes our breakpoint handler, which prints the message, and then returns back to the `_start` function, where the `It did not crash!` message is printed.
+成功了！CPU成功调用了中断处理函数并打印出了信息，然后返回 `_start` 函数打印出了 `It did not crash!`。
 
-We see that the interrupt stack frame tells us the instruction and stack pointers at the time when the exception occurred. This information is very useful when debugging unexpected exceptions.
+我们可以看到，中断栈帧告诉了我们当错误发生时指令和堆栈指针的具体数值，这些信息在我们调试意外错误的时候非常有用。
 
-### Adding a Test
+### 添加测试
 
-Let's create a test that ensures that the above continues to work. First, we update the `_start` function to also call `init`:
+那么让我们添加一个测试用例，用来确保以上工作成果可以顺利运行。首先需要在 `_start` 函数中调用 `init`：
 
 ```rust
 // in src/lib.rs
@@ -435,9 +435,9 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-Remember, this `_start` function is used when running `cargo test --lib`, since Rust tests the `lib.rs` completely independently of the `main.rs`. We need to call `init` here to set up an IDT before running the tests.
+注意，这里的 `_start` 会在 `cargo test --lib` 这条命令的上下文中运行，而 `lib.rs` 的执行环境完全独立于 `main.rs`，所以我们需要在运行测试之前调用 `init` 装载IDT。
 
-Now we can create a `test_breakpoint_exception` test:
+那么我们接着创建一个测试用例 `test_breakpoint_exception`：
 
 ```rust
 // in src/interrupts.rs
@@ -449,23 +449,23 @@ fn test_breakpoint_exception() {
 }
 ```
 
-The test invokes the `int3` function to trigger a breakpoint exception. By checking that the execution continues afterwards, we verify that our breakpoint handler is working correctly.
+该测试仅调用了 `int3` 函数以触发 breakpoint exception，通过查看这个函数是否能够继续运行下去，就可以确认我们对应的中断处理函数是否工作正常。
 
-You can try this new test by running `cargo test` (all tests) or `cargo test --lib` (only tests of `lib.rs` and its modules). You should see the following in the output:
+现在，你可以执行 `cargo test` 来运行所有测试，或者执行 `cargo test --lib` 来运行 `lib.rs` 及其子模块中包含的测试，最终输出如下：
 
 ```
 blog_os::interrupts::test_breakpoint_exception...	[ok]
 ```
 
-## Too much Magic?
-The `x86-interrupt` calling convention and the [`InterruptDescriptorTable`] type made the exception handling process relatively straightforward and painless. If this was too much magic for you and you like to learn all the gory details of exception handling, we got you covered: Our [“Handling Exceptions with Naked Functions”] series shows how to handle exceptions without the `x86-interrupt` calling convention and also creates its own IDT type. Historically, these posts were the main exception handling posts before the `x86-interrupt` calling convention and the `x86_64` crate existed. Note that these posts are based on the [first edition] of this blog and might be out of date.
+## 使用魔法的地方太多了？
+相对来说，`x86-interrupt` 调用约定和 [`InterruptDescriptorTable`] 类型让错误处理变得直截了当，如果你真的那么在意错误处理过程中的细节，我们推荐读一下这些：[“使用裸函数处理错误”][“Handling Exceptions with Naked Functions”] 系列文章展示了如何在不使用 `x86-interrupt` 的前提下创建IDT。但是需要注意的是，这些文章都是在 `x86-interrupt` 调用约定和 `x86_64` crate 出现之前的产物，这些东西属于博客的 [第一版][first edition]，不排除信息已经过期了的可能。
 
 [“Handling Exceptions with Naked Functions”]: @/edition-1/extra/naked-exceptions/_index.md
 [`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [first edition]: @/edition-1/_index.md
 
-## What's next?
-We've successfully caught our first exception and returned from it! The next step is to ensure that we catch all exceptions, because an uncaught exception causes a fatal [triple fault], which leads to a system reset. The next post explains how we can avoid this by correctly catching [double faults].
+## 接下来是？
+我们已经成功捕获了第一个异常，并从异常中成功恢复，下一步就是试着捕获所有异常，如果有未捕获的异常就会触发致命的[triple fault]，那就只能重启整个系统了。下一篇文章会展开说我们如何通过正确捕捉[double faults]来避免这种情况。
 
 [triple fault]: https://wiki.osdev.org/Triple_Fault
 [double faults]: https://wiki.osdev.org/Double_Fault#Double_Fault
