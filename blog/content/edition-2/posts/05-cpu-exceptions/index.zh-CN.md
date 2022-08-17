@@ -458,6 +458,7 @@ blog_os::interrupts::test_breakpoint_exception...	[ok]
 ```
 
 ## 详细一些
+
 相对来说，`x86-interrupt` 调用约定和 [`InterruptDescriptorTable`] 类型让错误处理变得直截了当，如果你真的那么在意错误处理过程中的细节，我们推荐读一下这些：[“使用裸函数处理错误”][“Handling Exceptions with Naked Functions”] 系列文章展示了如何在不使用 `x86-interrupt` 的前提下创建IDT。但是需要注意的是，这些文章都是在 `x86-interrupt` 调用约定和 `x86_64` crate 出现之前的产物，这些东西属于博客的 [第一版][first edition]，不排除信息已经过期了的可能。
 
 [“Handling Exceptions with Naked Functions”]: @/edition-1/extra/naked-exceptions/_index.md
@@ -465,6 +466,7 @@ blog_os::interrupts::test_breakpoint_exception...	[ok]
 [first edition]: @/edition-1/_index.md
 
 ## 接下来是？
+
 我们已经成功捕获了第一个异常，并从异常中成功恢复，下一步就是试着捕获所有异常，如果有未捕获的异常就会触发致命的[triple fault]，那就只能重启整个系统了。下一篇文章会展开说我们如何通过正确捕捉[double faults]来避免这种情况。
 
 [triple fault]: https://wiki.osdev.org/Triple_Fault
