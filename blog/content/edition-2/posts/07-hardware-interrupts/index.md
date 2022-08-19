@@ -8,7 +8,7 @@ date = 2018-10-22
 chapter = "Interrupts"
 +++
 
-In this post we set up the programmable interrupt controller to correctly forward hardware interrupts to the CPU. To handle these interrupts we add new entries to our interrupt descriptor table, just like we did for our exception handlers. We will learn how to get periodic timer interrupts and how to get input from the keyboard.
+In this post, we set up the programmable interrupt controller to correctly forward hardware interrupts to the CPU. To handle these interrupts, we add new entries to our interrupt descriptor table, just like we did for our exception handlers. We will learn how to get periodic timer interrupts and how to get input from the keyboard.
 
 <!-- more -->
 
@@ -23,7 +23,7 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 ## Overview
 
-Interrupts provide a way to notify the CPU from attached hardware devices. So instead of letting the kernel periodically check the keyboard for new characters (a process called [_polling_]), the keyboard can notify the kernel of each keypress. This is much more efficient because the kernel only needs to act when something happened. It also allows faster reaction times, since the kernel can react immediately and not only at the next poll.
+Interrupts provide a way to notify the CPU from attached hardware devices. So instead of letting the kernel periodically check the keyboard for new characters (a process called [_polling_]), the keyboard can notify the kernel of each keypress. This is much more efficient because the kernel only needs to act when something happened. It also allows faster reaction times since the kernel can react immediately and not only at the next poll.
 
 [_polling_]: https://en.wikipedia.org/wiki/Polling_(computer_science)
 
@@ -38,9 +38,9 @@ Connecting all hardware devices directly to the CPU is not possible. Instead, a 
 
 ```
 
-Most interrupt controllers are programmable, which means that they support different priority levels for interrupts. For example, this allows to give timer interrupts a higher priority than keyboard interrupts to ensure accurate timekeeping.
+Most interrupt controllers are programmable, which means they support different priority levels for interrupts. For example, this allows to give timer interrupts a higher priority than keyboard interrupts to ensure accurate timekeeping.
 
-Unlike exceptions, hardware interrupts occur _asynchronously_. This means that they are completely independent from the executed code and can occur at any time. Thus we suddenly have a form of concurrency in our kernel with all the potential concurrency-related bugs. Rust's strict ownership model helps us here because it forbids mutable global state. However, deadlocks are still possible, as we will see later in this post.
+Unlike exceptions, hardware interrupts occur _asynchronously_. This means they are completely independent from the executed code and can occur at any time. Thus, we suddenly have a form of concurrency in our kernel with all the potential concurrency-related bugs. Rust's strict ownership model helps us here because it forbids mutable global state. However, deadlocks are still possible, as we will see later in this post.
 
 ## The 8259 PIC
 
@@ -48,7 +48,7 @@ The [Intel 8259] is a programmable interrupt controller (PIC) introduced in 1976
 
 [APIC]: https://en.wikipedia.org/wiki/Intel_APIC_Architecture
 
-The 8259 has 8 interrupt lines and several lines for communicating with the CPU. The typical systems back then were equipped with two instances of the 8259 PIC, one primary and one secondary PIC connected to one of the interrupt lines of the primary:
+The 8259 has eight interrupt lines and several lines for communicating with the CPU. The typical systems back then were equipped with two instances of the 8259 PIC, one primary and one secondary PIC, connected to one of the interrupt lines of the primary:
 
 [Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259
 
@@ -65,22 +65,22 @@ Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
 
 ```
 
-This graphic shows the typical assignment of interrupt lines. We see that most of the 15 lines have a fixed mapping, e.g. line 4 of the secondary PIC is assigned to the mouse.
+This graphic shows the typical assignment of interrupt lines. We see that most of the 15 lines have a fixed mapping, e.g., line 4 of the secondary PIC is assigned to the mouse.
 
-Each controller can be configured through two [I/O ports], one “command” port and one “data” port. For the primary controller these ports are `0x20` (command) and `0x21` (data). For the secondary controller they are `0xa0` (command) and `0xa1` (data). For more information on how the PICs can be configured see the [article on osdev.org].
+Each controller can be configured through two [I/O ports], one “command” port and one “data” port. For the primary controller, these ports are `0x20` (command) and `0x21` (data). For the secondary controller, they are `0xa0` (command) and `0xa1` (data). For more information on how the PICs can be configured, see the [article on osdev.org].
 
 [I/O ports]: @/edition-2/posts/04-testing/index.md#i-o-ports
 [article on osdev.org]: https://wiki.osdev.org/8259_PIC
 
 ### Implementation
 
-The default configuration of the PICs is not usable, because it sends interrupt vector numbers in the range 0–15 to the CPU. These numbers are already occupied by CPU exceptions, for example number 8 corresponds to a double fault. To fix this overlapping issue, we need to remap the PIC interrupts to different numbers. The actual range doesn't matter as long as it does not overlap with the exceptions, but typically the range 32–47 is chosen, because these are the first free numbers after the 32 exception slots.
+The default configuration of the PICs is not usable because it sends interrupt vector numbers in the range of 0–15 to the CPU. These numbers are already occupied by CPU exceptions. For example, number 8 corresponds to a double fault. To fix this overlapping issue, we need to remap the PIC interrupts to different numbers. The actual range doesn't matter as long as it does not overlap with the exceptions, but typically the range of 32–47 is chosen, because these are the first free numbers after the 32 exception slots.
 
-The configuration happens by writing special values to the command and data ports of the PICs. Fortunately there is already a crate called [`pic8259`], so we don't need to write the initialization sequence ourselves. In case you are interested how it works, check out [its source code][pic crate source], it's fairly small and well documented.
+The configuration happens by writing special values to the command and data ports of the PICs. Fortunately, there is already a crate called [`pic8259`], so we don't need to write the initialization sequence ourselves. However, if you are interested in how it works, check out [its source code][pic crate source]. It's fairly small and well documented.
 
 [pic crate source]: https://docs.rs/crate/pic8259/0.10.1/source/src/lib.rs
 
-To add the crate as dependency, we add the following to our project:
+To add the crate as a dependency, we add the following to our project:
 
 [`pic8259`]: https://docs.rs/pic8259/0.10.1/pic8259/
 
@@ -108,7 +108,7 @@ pub static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 ```
 
-We're setting the offsets for the pics to the range 32–47 as we noted above. By wrapping the `ChainedPics` struct in a `Mutex` we are able to get safe mutable access (through the [`lock` method][spin mutex lock]), which we need in the next step. The `ChainedPics::new` function is unsafe because wrong offsets could cause undefined behavior.
+As noted above, we're setting the offsets for the PICs to the range 32–47. By wrapping the `ChainedPics` struct in a `Mutex`, we can get safe mutable access (through the [`lock` method][spin mutex lock]), which we need in the next step. The `ChainedPics::new` function is unsafe because wrong offsets could cause undefined behavior.
 
 [spin mutex lock]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html#method.lock
 
@@ -128,11 +128,11 @@ We use the [`initialize`] function to perform the PIC initialization. Like the `
 
 [`initialize`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html#method.initialize
 
-If all goes well we should continue to see the "It did not crash" message when executing `cargo run`.
+If all goes well, we should continue to see the "It did not crash" message when executing `cargo run`.
 
 ## Enabling Interrupts
 
-Until now nothing happened because interrupts are still disabled in the CPU configuration. This means that the CPU does not listen to the interrupt controller at all, so no interrupts can reach the CPU. Let's change that:
+Until now, nothing happened because interrupts are still disabled in the CPU configuration. This means that the CPU does not listen to the interrupt controller at all, so no interrupts can reach the CPU. Let's change that:
 
 ```rust
 // in src/lib.rs
@@ -149,7 +149,7 @@ The `interrupts::enable` function of the `x86_64` crate executes the special `st
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` because of hardware timer](qemu-hardware-timer-double-fault.png)
 
-The reason for this double fault is that the hardware timer (the [Intel 8253] to be exact) is enabled by default, so we start receiving timer interrupts as soon as we enable interrupts. Since we didn't define a handler function for it yet, our double fault handler is invoked.
+The reason for this double fault is that the hardware timer (the [Intel 8253], to be exact) is enabled by default, so we start receiving timer interrupts as soon as we enable interrupts. Since we didn't define a handler function for it yet, our double fault handler is invoked.
 
 [Intel 8253]: https://en.wikipedia.org/wiki/Intel_8253
 
@@ -177,7 +177,7 @@ impl InterruptIndex {
 }
 ```
 
-The enum is a [C-like enum] so that we can directly specify the index for each variant. The `repr(u8)` attribute specifies that each variant is represented as an `u8`. We will add more variants for other interrupts in the future.
+The enum is a [C-like enum] so that we can directly specify the index for each variant. The `repr(u8)` attribute specifies that each variant is represented as a `u8`. We will add more variants for other interrupts in the future.
 
 [C-like enum]: https://doc.rust-lang.org/reference/items/enumerations.html#custom-discriminant-values-for-fieldless-enumerations
 
@@ -212,7 +212,7 @@ Our `timer_interrupt_handler` has the same signature as our exception handlers, 
 [`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
-In our timer interrupt handler, we print a dot to the screen. As the timer interrupt happens periodically, we would expect to see a dot appearing on each timer tick. However, when we run it we see that only a single dot is printed:
+In our timer interrupt handler, we print a dot to the screen. As the timer interrupt happens periodically, we would expect to see a dot appearing on each timer tick. However, when we run it, we see that only a single dot is printed:
 
 ![QEMU printing only a single dot for hardware timer](qemu-single-dot-printed.png)
 
@@ -237,7 +237,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 }
 ```
 
-The `notify_end_of_interrupt` figures out whether the primary or secondary PIC sent the interrupt and then uses the `command` and `data` ports to send an EOI signal to respective controllers. If the secondary PIC sent the interrupt both PICs need to be notified because the secondary PIC is connected to an input line of the primary PIC.
+The `notify_end_of_interrupt` figures out whether the primary or secondary PIC sent the interrupt and then uses the `command` and `data` ports to send an EOI signal to the respective controllers. If the secondary PIC sent the interrupt, both PICs need to be notified because the secondary PIC is connected to an input line of the primary PIC.
 
 We need to be careful to use the correct interrupt vector number, otherwise we could accidentally delete an important unsent interrupt or cause our system to hang. This is the reason that the function is unsafe.
 
@@ -247,14 +247,14 @@ When we now execute `cargo run` we see dots periodically appearing on the screen
 
 ### Configuring the Timer
 
-The hardware timer that we use is called the _Programmable Interval Timer_ or PIT for short. Like the name says, it is possible to configure the interval between two interrupts. We won't go into details here because we will switch to the [APIC timer] soon, but the OSDev wiki has an extensive article about the [configuring the PIT].
+The hardware timer that we use is called the _Programmable Interval Timer_, or PIT, for short. Like the name says, it is possible to configure the interval between two interrupts. We won't go into details here because we will switch to the [APIC timer] soon, but the OSDev wiki has an extensive article about the [configuring the PIT].
 
 [APIC timer]: https://wiki.osdev.org/APIC_timer
 [configuring the PIT]: https://wiki.osdev.org/Programmable_Interval_Timer
 
 ## Deadlocks
 
-We now have a form of concurrency in our kernel: The timer interrupts occur asynchronously, so they can interrupt our `_start` function at any time. Fortunately Rust's ownership system prevents many types of concurrency related bugs at compile time. One notable exception are deadlocks. Deadlocks occur if a thread tries to acquire a lock that will never become free. Thus the thread hangs indefinitely.
+We now have a form of concurrency in our kernel: The timer interrupts occur asynchronously, so they can interrupt our `_start` function at any time. Fortunately, Rust's ownership system prevents many types of concurrency-related bugs at compile time. One notable exception is deadlocks. Deadlocks occur if a thread tries to acquire a lock that will never become free. Thus, the thread hangs indefinitely.
 
 We can already provoke a deadlock in our kernel. Remember, our `println` macro calls the `vga_buffer::_print` function, which [locks a global `WRITER`][vga spinlock] using a spinlock:
 
@@ -285,7 +285,7 @@ Timestep | _start | interrupt_handler
 … | | …
 _never_ | _unlock `WRITER`_ |
 
-The `WRITER` is locked, so the interrupt handler waits until it becomes free. But this never happens, because the `_start` function only continues to run after the interrupt handler returns. Thus the complete system hangs.
+The `WRITER` is locked, so the interrupt handler waits until it becomes free. But this never happens, because the `_start` function only continues to run after the interrupt handler returns. Thus, the entire system hangs.
 
 ### Provoking a Deadlock
 
@@ -304,13 +304,13 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-When we run it in QEMU we get output of the form:
+When we run it in QEMU, we get an output of the form:
 
 ![QEMU output with many rows of hyphens and no dots](./qemu-deadlock.png)
 
-We see that only a limited number of hyphens is printed, until the first timer interrupt occurs. Then the system hangs because the timer interrupt handler deadlocks when it tries to print a dot. This is the reason that we see no dots in the above output.
+We see that only a limited number of hyphens are printed until the first timer interrupt occurs. Then the system hangs because the timer interrupt handler deadlocks when it tries to print a dot. This is the reason that we see no dots in the above output.
 
-The actual number of hyphens varies between runs because the timer interrupt occurs asynchronously. This non-determinism is what makes concurrency related bugs so difficult to debug.
+The actual number of hyphens varies between runs because the timer interrupt occurs asynchronously. This non-determinism is what makes concurrency-related bugs so difficult to debug.
 
 ### Fixing the Deadlock
 
@@ -332,7 +332,7 @@ pub fn _print(args: fmt::Arguments) {
 }
 ```
 
-The [`without_interrupts`] function takes a [closure] and executes it in an interrupt-free environment. We use it to ensure that no interrupt can occur as long as the `Mutex` is locked. When we run our kernel now we see that it keeps running without hanging. (We still don't notice any dots, but this is because they're scrolling by too fast. Try to slow down the printing, e.g. by putting a `for _ in 0..10000 {}` inside the loop.)
+The [`without_interrupts`] function takes a [closure] and executes it in an interrupt-free environment. We use it to ensure that no interrupt can occur as long as the `Mutex` is locked. When we run our kernel now, we see that it keeps running without hanging. (We still don't notice any dots, but this is because they're scrolling by too fast. Try to slow down the printing, e.g., by putting a `for _ in 0..10000 {}` inside the loop.)
 
 [`without_interrupts`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
@@ -356,11 +356,11 @@ pub fn _print(args: ::core::fmt::Arguments) {
 }
 ```
 
-Note that disabling interrupts shouldn't be a general solution. The problem is that it increases the worst case interrupt latency, i.e. the time until the system reacts to an interrupt. Therefore interrupts should be only disabled for a very short time.
+Note that disabling interrupts shouldn't be a general solution. The problem is that it increases the worst-case interrupt latency, i.e., the time until the system reacts to an interrupt. Therefore, interrupts should only be disabled for a very short time.
 
 ## Fixing a Race Condition
 
-If you run `cargo test` you might see the `test_println_output` test failing:
+If you run `cargo test`, you might see the `test_println_output` test failing:
 
 ```
 > cargo test --lib
@@ -421,8 +421,8 @@ fn test_println_output() {
 We performed the following changes:
 
 - We keep the writer locked for the complete test by using the `lock()` method explicitly. Instead of `println`, we use the [`writeln`] macro that allows printing to an already locked writer.
-- To avoid another deadlock, we disable interrupts for the tests duration. Otherwise the test might get interrupted while the writer is still locked.
-- Since the timer interrupt handler can still run before the test, we print an additional newline `\n` before printing the string `s`. This way, we avoid test failure when the timer handler already printed some `.` characters to the current line.
+- To avoid another deadlock, we disable interrupts for the test's duration. Otherwise, the test might get interrupted while the writer is still locked.
+- Since the timer interrupt handler can still run before the test, we print an additional newline `\n` before printing the string `s`. This way, we avoid test failure when the timer handler has already printed some `.` characters to the current line.
 
 [`writeln`]: https://doc.rust-lang.org/core/macro.writeln.html
 
@@ -432,9 +432,9 @@ This was a very harmless race condition that only caused a test failure. As you 
 
 ## The `hlt` Instruction
 
-Until now we used a simple empty loop statement at the end of our `_start` and `panic` functions. This causes the CPU to spin endlessly and thus works as expected. But it is also very inefficient, because the CPU continues to run at full speed even though there's no work to do. You can see this problem in your task manager when you run your kernel: The QEMU process needs close to 100% CPU the whole time.
+Until now, we used a simple empty loop statement at the end of our `_start` and `panic` functions. This causes the CPU to spin endlessly, and thus works as expected. But it is also very inefficient, because the CPU continues to run at full speed even though there's no work to do. You can see this problem in your task manager when you run your kernel: The QEMU process needs close to 100% CPU the whole time.
 
-What we really want to do is to halt the CPU until the next interrupt arrives. This allows the CPU to enter a sleep state in which it consumes much less energy. The [`hlt` instruction] does exactly that. Let's use this instruction to create an energy efficient endless loop:
+What we really want to do is to halt the CPU until the next interrupt arrives. This allows the CPU to enter a sleep state in which it consumes much less energy. The [`hlt` instruction] does exactly that. Let's use this instruction to create an energy-efficient endless loop:
 
 [`hlt` instruction]: https://en.wikipedia.org/wiki/HLT_(x86_instruction)
 
@@ -501,19 +501,19 @@ When we run our kernel now in QEMU, we see a much lower CPU usage.
 
 ## Keyboard Input
 
-Now that we are able to handle interrupts from external devices we are finally able to add support for keyboard input. This will allow us to interact with our kernel for the first time.
+Now that we are able to handle interrupts from external devices, we are finally able to add support for keyboard input. This will allow us to interact with our kernel for the first time.
 
 <aside class="post_aside">
 
-Note that we only describe how to handle [PS/2] keyboards here, not USB keyboards. However the mainboard emulates USB keyboards as PS/2 devices to support older software, so we can safely ignore USB keyboards until we have USB support in our kernel.
+Note that we only describe how to handle [PS/2] keyboards here, not USB keyboards. However, the mainboard emulates USB keyboards as PS/2 devices to support older software, so we can safely ignore USB keyboards until we have USB support in our kernel.
 
 </aside>
 
 [PS/2]: https://en.wikipedia.org/wiki/PS/2_port
 
-Like the hardware timer, the keyboard controller is already enabled by default. So when you press a key the keyboard controller sends an interrupt to the PIC, which forwards it to the CPU. The CPU looks for a handler function in the IDT, but the corresponding entry is empty. Therefore a double fault occurs.
+Like the hardware timer, the keyboard controller is already enabled by default. So when you press a key, the keyboard controller sends an interrupt to the PIC, which forwards it to the CPU. The CPU looks for a handler function in the IDT, but the corresponding entry is empty. Therefore, a double fault occurs.
 
-So let's add a handler function for the keyboard interrupt. It's quite similar to how we defined the handler for the timer interrupt, it just uses a different interrupt number:
+So let's add a handler function for the keyboard interrupt. It's quite similar to how we defined the handler for the timer interrupt; it just uses a different interrupt number:
 
 ```rust
 // in src/interrupts.rs
@@ -552,11 +552,11 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 As we see from the graphic [above](#the-8259-pic), the keyboard uses line 1 of the primary PIC. This means that it arrives at the CPU as interrupt 33 (1 + offset 32). We add this index as a new `Keyboard` variant to the `InterruptIndex` enum. We don't need to specify the value explicitly, since it defaults to the previous value plus one, which is also 33. In the interrupt handler, we print a `k` and send the end of interrupt signal to the interrupt controller.
 
-We now see that a `k` appears on the screen when we press a key. However, this only works for the first key we press, even if we continue to press keys no more `k`s appear on the screen. This is because the keyboard controller won't send another interrupt until we have read the so-called _scancode_ of the pressed key.
+We now see that a `k` appears on the screen when we press a key. However, this only works for the first key we press. Even if we continue to press keys, no more `k`s appear on the screen. This is because the keyboard controller won't send another interrupt until we have read the so-called _scancode_ of the pressed key.
 
 ### Reading the Scancodes
 
-To find out _which_ key was pressed, we need to query the keyboard controller. We do this by reading from the data port of the PS/2 controller, which is the [I/O port] with number `0x60`:
+To find out _which_ key was pressed, we need to query the keyboard controller. We do this by reading from the data port of the PS/2 controller, which is the [I/O port] with the number `0x60`:
 
 [I/O port]: @/edition-2/posts/04-testing/index.md#i-o-ports
 
@@ -579,7 +579,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard's data port. This byte is called the [_scancode_] and is a number that represents the key press/release. We don't do anything with the scancode yet, we just print it to the screen:
+We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard's data port. This byte is called the [_scancode_] and it represents the key press/release. We don't do anything with the scancode yet, other than print it to the screen:
 
 [`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
@@ -589,7 +589,7 @@ We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard'
 The above image shows me slowly typing "123". We see that adjacent keys have adjacent scancodes and that pressing a key causes a different scancode than releasing it. But how do we translate the scancodes to the actual key actions exactly?
 
 ### Interpreting the Scancodes
-There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. All three go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. Later computers fortunately did not continue the trend of defining new scancode sets, but rather emulated the existing sets and extended them. Today most keyboards can be configured to emulate any of the three sets.
+There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. All three go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. Later computers fortunately did not continue the trend of defining new scancode sets, but rather emulated the existing sets and extended them. Today, most keyboards can be configured to emulate any of the three sets.
 
 [IBM XT]: https://en.wikipedia.org/wiki/IBM_Personal_Computer_XT
 [IBM 3270 PC]: https://en.wikipedia.org/wiki/IBM_3270_PC
@@ -599,7 +599,7 @@ By default, PS/2 keyboards emulate scancode set 1 ("XT"). In this set, the lower
 
 [scancode set 1]: https://wiki.osdev.org/Keyboard#Scan_Code_Set_1
 
-To translate the scancodes to keys, we can use a match statement:
+To translate the scancodes to keys, we can use a `match` statement:
 
 ```rust
 // in src/interrupts.rs
@@ -647,7 +647,7 @@ Now we can write numbers:
 
 ![QEMU printing numbers to the screen](qemu-printing-numbers.gif)
 
-Translating the other keys works in the same way. Fortunately there is a crate named [`pc-keyboard`] for translating scancodes of scancode sets 1 and 2, so we don't have to implement this ourselves. To use the crate, we add it to our `Cargo.toml` and import it in our `lib.rs`:
+Translating the other keys works in the same way. Fortunately, there is a crate named [`pc-keyboard`] for translating scancodes of scancode sets 1 and 2, so we don't have to implement this ourselves. To use the crate, we add it to our `Cargo.toml` and import it in our `lib.rs`:
 
 [`pc-keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/
 
@@ -697,27 +697,27 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-We use the `lazy_static` macro to create a static [`Keyboard`] object protected by a Mutex. We initialize the `Keyboard` with an US keyboard layout and the scancode set 1. The [`HandleControl`] parameter allows to map `ctrl+[a-z]` to the Unicode characters `U+0001` through `U+001A`. We don't want to do that, so we use the `Ignore` option to handle the `ctrl` like normal keys.
+We use the `lazy_static` macro to create a static [`Keyboard`] object protected by a Mutex. We initialize the `Keyboard` with a US keyboard layout and the scancode set 1. The [`HandleControl`] parameter allows to map `ctrl+[a-z]` to the Unicode characters `U+0001` through `U+001A`. We don't want to do that, so we use the `Ignore` option to handle the `ctrl` like normal keys.
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/enum.HandleControl.html
 
-On each interrupt, we lock the Mutex, read the scancode from the keyboard controller and pass it to the [`add_byte`] method, which translates the scancode into an `Option<KeyEvent>`. The [`KeyEvent`] contains which key caused the event and whether it was a press or release event.
+On each interrupt, we lock the Mutex, read the scancode from the keyboard controller, and pass it to the [`add_byte`] method, which translates the scancode into an `Option<KeyEvent>`. The [`KeyEvent`] contains the key which caused the event and whether it was a press or release event.
 
 [`Keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html
 [`add_byte`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.add_byte
 [`KeyEvent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.KeyEvent.html
 
-To interpret this key event, we pass it to the [`process_keyevent`] method, which translates the key event to a character if possible. For example, translates a press event of the `A` key to either a lowercase `a` character or an uppercase `A` character, depending on whether the shift key was pressed.
+To interpret this key event, we pass it to the [`process_keyevent`] method, which translates the key event to a character, if possible. For example, it translates a press event of the `A` key to either a lowercase `a` character or an uppercase `A` character, depending on whether the shift key was pressed.
 
 [`process_keyevent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
 
-With this modified interrupt handler we can now write text:
+With this modified interrupt handler, we can now write text:
 
 ![Typing "Hello World" in QEMU](qemu-typing.gif)
 
 ### Configuring the Keyboard
 
-It's possible to configure some aspects of a PS/2 keyboard, for example which scancode set it should use. We won't cover it here because this post is already long enough, but the OSDev Wiki has an overview of possible [configuration commands].
+It's possible to configure some aspects of a PS/2 keyboard, for example, which scancode set it should use. We won't cover it here because this post is already long enough, but the OSDev Wiki has an overview of possible [configuration commands].
 
 [configuration commands]: https://wiki.osdev.org/PS/2_Keyboard#Commands
 
@@ -729,6 +729,6 @@ Now we are able to interact with our kernel and have some fundamental building b
 
 ## What's next?
 
-Timer interrupts are essential for an operating system, because they provide a way to periodically interrupt the running process and regain control in the kernel. The kernel can then switch to a different process and create the illusion that multiple processes run in parallel.
+Timer interrupts are essential for an operating system because they provide a way to periodically interrupt the running process and let the kernel regain control. The kernel can then switch to a different process and create the illusion of multiple processes running in parallel.
 
 But before we can create processes or threads, we need a way to allocate memory for them. The next posts will explore memory management to provide this fundamental building block.
