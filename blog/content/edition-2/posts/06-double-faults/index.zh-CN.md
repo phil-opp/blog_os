@@ -442,7 +442,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-Like our `panic_handler` test, the test will run [without a test harness]. The reason is that we can't continue execution after a double fault, so more than one test doesn't make sense. To disable the test harness for the test, we add the following to our `Cargo.toml`:
+就如同 `panic_handler` 这个测试一样，该测试应该是一个 [无约束测试][without a test harness]，其原因就是我们无法在 double fault 被抛出后继续运行，所以连续进行多个测试其实是说不通的。要将测试修改为无约束模式，我们需要将这一段配置加入 `Cargo.toml`：
 
 ```toml
 # in Cargo.toml
@@ -454,11 +454,11 @@ harness = false
 
 [without a test harness]: @/edition-2/posts/04-testing/index.md#no-harness-tests
 
-Now `cargo test --test stack_overflow` should compile successfully. The test fails of course, since the `unimplemented` macro panics.
+现在 `cargo test --test stack_overflow` 命令应当可以通过编译了。但是毫无疑问的是还是会执行失败，因为 `unimplemented` 宏必然会导致程序报错。
 
-### Implementing `_start`
+### 实现 `_start`
 
-The implementation of the `_start` function looks like this:
+`_start` 函数实现后的样子是这样的:
 
 ```rust
 // in tests/stack_overflow.rs
@@ -485,19 +485,19 @@ fn stack_overflow() {
 }
 ```
 
-We call our `gdt::init` function to initialize a new GDT. Instead of calling our `interrupts::init_idt` function, we call a `init_test_idt` function that will be explained in a moment. The reason is that we want to register a custom double fault handler that does a `exit_qemu(QemuExitCode::Success)` instead of panicking.
+我们调用了 `gdt::init` 函数来初始化GDT，但我们并没有调用 `interrupts::init_idt` 函数，而是调用了一个全新的 `init_test_idt` 函数，我们稍后来实现它。原因就是，我们需要注册一个自定义的 double fault 处理函数，在被触发的时候调用 `exit_qemu(QemuExitCode::Success)` 函数，而非使用默认的逻辑。
 
-The `stack_overflow` function is almost identical to the function in our `main.rs`. The only difference is that we do an additional [volatile] read at the end of the function using the [`Volatile`] type to prevent a compiler optimization called [_tail call elimination_]. Among other things, this optimization allows the compiler to transform a function whose last statement is a recursive function call into a normal loop. Thus, no additional stack frame is created for the function call, so that the stack usage does remain constant.
+`stack_overflow` 函数和我们之前在 `main.rs` 中写的那个函数几乎一模一样，唯一的区别就是在函数的最后使用 [`Volatile`] 类型 加入了一个 [volatile] 读取操作，用来阻止编译器进行 [_尾调用优化_][_tail call elimination_]。除却其他乱七八糟的效果，这个优化最主要的影响就是会让编辑器将最后一行是递归语句的函数转化为普通的循环。由于没有通过递归创建新的栈帧，所以堆栈自然也不会出问题。
 
 [volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
 [`Volatile`]: https://docs.rs/volatile/0.2.6/volatile/struct.Volatile.html
 [_tail call elimination_]: https://en.wikipedia.org/wiki/Tail_call
 
-In our case, however, we want that the stack overflow happens, so we add a dummy volatile read statement at the end of the function, which the compiler is not allowed to remove. Thus, the function is no longer _tail recursive_ and the transformation into a loop is prevented. We also add the `allow(unconditional_recursion)` attribute to silence the compiler warning that the function recurses endlessly.
+在当前用例中，stack overflow 是必须要触发的，所以我们在函数尾部加入了一个无效的 volatile 读取操作来让编译器无法进行此类优化，递归也就无法被自动降级为循环了。当然，为了关闭编译器针对递归的安全警告，我们也需要为这个函数加上 `allow(unconditional_recursion)` 开关。
 
-### The Test IDT
+### 测试 IDT
 
-As noted above, the test needs its own IDT with a custom double fault handler. The implementation looks like this:
+作为上一小节的补充，我们说过要在测试专用的IDT中实现一个自定义的 double fault 异常处理函数，就像这样：
 
 ```rust
 // in tests/stack_overflow.rs
@@ -523,11 +523,11 @@ pub fn init_test_idt() {
 }
 ```
 
-The implementation is very similar to our normal IDT in `interrupts.rs`. Like in the normal IDT, we set a stack index into the IST for the double fault handler in order to switch to a separate stack. The `init_test_idt` function loads the IDT on the CPU through the `load` method.
+这和我们在 `interrupts.rs` 中实现的版本十分相似，如同正常的IDT一样，我们都为 double fault 使用IST序号设置了特殊的堆栈，而上文中提到的 `init_test_idt` 函数则通过 `load` 函数将配置成功装载到CPU。
 
-### The Double Fault Handler
+### Double Fault 处理函数
 
-The only missing piece is our double fault handler. It looks like this:
+那么现在就差处理函数本身了，它看起来是这样子的：
 
 ```rust
 // in tests/stack_overflow.rs
@@ -545,16 +545,16 @@ extern "x86-interrupt" fn test_double_fault_handler(
 }
 ```
 
-When the double fault handler is called, we exit QEMU with a success exit code, which marks the test as passed. Since integration tests are completely separate executables, we need to set `#![feature(abi_x86_interrupt)]` attribute again at the top of our test file.
+这个处理函数被调用后，我们会使用代表成功的返回值退出QEMU，以此即可标记测试完成，但由于集成测试处于完全独立的运行环境，也记得在测试入口文件的头部再次加入 `#![feature(abi_x86_interrupt)]` 开关。
 
-Now we can run our test through `cargo test --test stack_overflow` (or `cargo test` to run all tests). As expected, we see the `stack_overflow... [ok]` output in the console. Try to comment out the `set_stack_index` line: it should cause the test to fail.
+现在我们可以执行 `cargo test --test stack_overflow` 运行当前测试（或者执行 `cargo test` 运行所有测试），应当可以在控制台看到 `stack_overflow... [ok]` 这样的输出。另外，也可以试一下注释掉 `set_stack_index` 这一行的命令，可以观察到失败情况下的输出。
 
-## Summary
-In this post we learned what a double fault is and under which conditions it occurs. We added a basic double fault handler that prints an error message and added an integration test for it.
+## 总结
+在本文中，我们学到了 double fault 是什么，以及触发它的原因。我们为 double fault 写了相应的处理函数、将错误信息打印到控制台并为它添加了一个集成测试。
 
-We also enabled the hardware supported stack switching on double fault exceptions so that it also works on stack overflow. While implementing it, we learned about the task state segment (TSS), the contained interrupt stack table (IST), and the global descriptor table (GDT), which was used for segmentation on older architectures.
+同时，我们为 double fault 启用了堆栈指针切换功能，使其在堆栈溢出时也可以正常工作。在实现这个功能的同时，我们也学习了在旧架构中用于内存分段的任务状态段（TSS），而该结构又包含了中断堆栈符表（IST）和全局描述符表（GDT）。
 
-## What's next?
-The next post explains how to handle interrupts from external devices such as timers, keyboards, or network controllers. These hardware interrupts are very similar to exceptions, e.g. they are also dispatched through the IDT. However, unlike exceptions, they don't arise directly on the CPU. Instead, an _interrupt controller_ aggregates these interrupts and forwards them to CPU depending on their priority. In the next post we will explore the [Intel 8259] \(“PIC”) interrupt controller and learn how to implement keyboard support.
+## 下期预告
+在下一篇文章中，我们会展开来说外部设备（如定时器、键盘、网络控制器）中断的处理方式。这些硬件中断十分类似于上文所说的异常，都需要通过IDT进行处理，只是中断并不是由CPU抛出的。 _中断控制器_ 会代理这些中断事件，并根据中断的优先级将其转发给CPU处理。我们将会以 [Intel 8259] (PIC) 中断控制器为例对其进行探索，并实现对键盘的支持。
 
 [Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259
