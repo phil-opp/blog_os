@@ -47,11 +47,11 @@ translators = ["liuyuran"]
 
 ## The 8259 PIC
 
-The [Intel 8259] is a programmable interrupt controller (PIC) introduced in 1976. It has long been replaced by the newer [APIC], but its interface is still supported on current systems for backwards compatibility reasons. The 8259 PIC is significantly easier to set up than the APIC, so we will use it to introduce ourselves to interrupts before we switch to the APIC in a later post.
+[Intel 8259] 是一款于1976年发布的可编程中断控制器（PIC），事实上，它已经被更先进的 [APIC] 替代很久了，但其接口依然出于兼容问题被现有系统所支持。但是 8259 PIC 的设置方式比起APIC实在简单太多了，所以我们先以前者为例解说一下基本原理，在下一篇文章中再切换为APIC。
 
 [APIC]: https://en.wikipedia.org/wiki/Intel_APIC_Architecture
 
-The 8259 has 8 interrupt lines and several lines for communicating with the CPU. The typical systems back then were equipped with two instances of the 8259 PIC, one primary and one secondary PIC connected to one of the interrupt lines of the primary:
+8529具有8个中断管脚和一个和CPU通信的独立管脚，而当年的典型系统一般会安装两片 8259 PIC ，一个作为主芯片，另一个则作为副芯片，就像下面这样：
 
 [Intel 8259]: https://en.wikipedia.org/wiki/Intel_8259
 
@@ -68,22 +68,23 @@ Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
 
 ```
 
-This graphic shows the typical assignment of interrupt lines. We see that most of the 15 lines have a fixed mapping, e.g. line 4 of the secondary PIC is assigned to the mouse.
+上图展示了中断管脚的典型逻辑定义，我们可以看到，实际上可定义的管脚共有15个，例如副PIC的4号管脚被定义为了鼠标。
 
-Each controller can be configured through two [I/O ports], one “command” port and one “data” port. For the primary controller these ports are `0x20` (command) and `0x21` (data). For the secondary controller they are `0xa0` (command) and `0xa1` (data). For more information on how the PICs can be configured see the [article on osdev.org].
+每个控制器都可以通过两个 [I/O 端口][I/O ports] 进行配置，一个是“指令”端口，另一个是“数据”端口。对于主控制器，端口地址是 `0x20`（指令）和 `0x21`（数据），而对于副控制器，端口地址是 `0xa0`（指令）和 `0xa1`（数据）。要查看更多关于PIC配置的细节，请参见 [article on osdev.org]。
 
-[I/O ports]: @/edition-2/posts/04-testing/index.md#i-o-ports
+[I/O ports]: @/edition-2/posts/04-testing/index.zh-CN.md#I/O 端口
 [article on osdev.org]: https://wiki.osdev.org/8259_PIC
 
-### Implementation
+### 实现
 
-The default configuration of the PICs is not usable, because it sends interrupt vector numbers in the range 0–15 to the CPU. These numbers are already occupied by CPU exceptions, for example number 8 corresponds to a double fault. To fix this overlapping issue, we need to remap the PIC interrupts to different numbers. The actual range doesn't matter as long as it does not overlap with the exceptions, but typically the range 32–47 is chosen, because these are the first free numbers after the 32 exception slots.
+PIC默认的配置其实是无法使用的，因为它仅仅是将0-15之间的中断向量编号发送给了CPU，然而这些编号已经用在了CPU的异常编号中了，比如8号代指 double fault 异常。要修复这个错误，我们需要对PIC中断序号进行重映射，新的序号只需要避开已被定义的CPU异常即可，CPU定义的异常数量有32个，所以通常会使用32-47这个区段。
 
-The configuration happens by writing special values to the command and data ports of the PICs. Fortunately there is already a crate called [`pic8259`], so we don't need to write the initialization sequence ourselves. In case you are interested how it works, check out [its source code][pic crate source], it's fairly small and well documented.
+我们需要通过往指令和数据端口写入特定数据才能对配置进行编程，幸运的是已经有了一个名叫 [`pic8259`] 的crate封装了这些东西，我们无需自己去处理这些初始化方面的细节。
+如果你十分好奇其中的细节，这里是 [它的源码][pic crate source]，他的内部逻辑其实十分简洁，而且具备完善的文档。
 
 [pic crate source]: https://docs.rs/crate/pic8259/0.10.1/source/src/lib.rs
 
-To add the crate as dependency, we add the following to our project:
+我们可以这样将 crate 作为依赖加入工程中：
 
 [`pic8259`]: https://docs.rs/pic8259/0.10.1/pic8259/
 
@@ -94,7 +95,7 @@ To add the crate as dependency, we add the following to our project:
 pic8259 = "0.10.1"
 ```
 
-The main abstraction provided by the crate is the [`ChainedPics`] struct that represents the primary/secondary PIC layout we saw above. It is designed to be used in the following way:
+这个 crate 提供的主要抽象结构就是 [`ChainedPics`]，用于映射上文所说的主副PIC的映射布局，它可以这样使用：
 
 [`ChainedPics`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html
 
@@ -111,11 +112,11 @@ pub static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 ```
 
-We're setting the offsets for the pics to the range 32–47 as we noted above. By wrapping the `ChainedPics` struct in a `Mutex` we are able to get safe mutable access (through the [`lock` method][spin mutex lock]), which we need in the next step. The `ChainedPics::new` function is unsafe because wrong offsets could cause undefined behavior.
+我们成功将PIC的中断编号范围设定为了32–47。我们使用 `Mutex` 容器包裹了 `ChainedPics`，这样就可以拿到了被定义为安全的变量修改权限，通过（[`lock` 函数][spin mutex lock]），我们在下文会用到这个权限。至于 `ChainedPics::new` 处于unsafe块的原因，那是因为修改偏移量可能会导致一些意外的行为。
 
 [spin mutex lock]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html#method.lock
 
-We can now initialize the 8259 PIC in our `init` function:
+那么现在，我们就可以在 `init` 函数中初始化 8259 PIC 配置了：
 
 ```rust
 // in src/lib.rs
@@ -127,15 +128,15 @@ pub fn init() {
 }
 ```
 
-We use the [`initialize`] function to perform the PIC initialization. Like the `ChainedPics::new` function, this function is also unsafe because it can cause undefined behavior if the PIC is misconfigured.
+我们使用 [`initialize`] 函数进行PIC的初始化，至于 `ChainedPics::new` 函数被标记为不安全这件事，确实如此，因为里面的不安全逻辑可能会导致PIC配置失败，进而出现一些意外行为。
 
 [`initialize`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html#method.initialize
 
-If all goes well we should continue to see the "It did not crash" message when executing `cargo run`.
+如果一切顺利，我们在运行 `cargo run` 后应当能看到诸如 "It did not crash" 此类的输出信息。
 
-## Enabling Interrupts
+## 启用中断
 
-Until now nothing happened because interrupts are still disabled in the CPU configuration. This means that the CPU does not listen to the interrupt controller at all, so no interrupts can reach the CPU. Let's change that:
+不过现在什么都不会发生，因为CPU配置里面中断还是禁用状态呢，也就是说CPU现在根本不会监听来自中断控制器的信息，即任何中断都无法到达CPU。我们来启用它：
 
 ```rust
 // in src/lib.rs
@@ -148,17 +149,17 @@ pub fn init() {
 }
 ```
 
-The `interrupts::enable` function of the `x86_64` crate executes the special `sti` instruction (“set interrupts”) to enable external interrupts. When we try `cargo run` now, we see that a double fault occurs:
+`x86_64` crate 中的 `interrupts::enable` 会执行特殊的 `sti` (“set interrupts”) 指令来启用外部中断。当我们试着执行 `cargo run` 后，double fault 异常几乎是立刻就被抛出了：
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` because of hardware timer](qemu-hardware-timer-double-fault.png)
 
-The reason for this double fault is that the hardware timer (the [Intel 8253] to be exact) is enabled by default, so we start receiving timer interrupts as soon as we enable interrupts. Since we didn't define a handler function for it yet, our double fault handler is invoked.
+其原因就是硬件计时器（准确的说，是[Intel 8253]）默认是被启用的，所以在启用中断控制器之后，CPU开始接收到计时器中断信号，而我们又并未设定相对应的处理函数，所以就抛出了 double fault 异常。
 
 [Intel 8253]: https://en.wikipedia.org/wiki/Intel_8253
 
-## Handling Timer Interrupts
+## 处理计时器中断
 
-As we see from the graphic [above](#the-8259-pic), the timer uses line 0 of the primary PIC. This means that it arrives at the CPU as interrupt 32 (0 + offset 32). Instead of hardcoding index 32, we store it in an `InterruptIndex` enum:
+我们已经知道 [计时器组件](#the-8259-pic) 使用了主PIC的0号管脚，根据上文中我们定义的序号偏移量32，所以计时器对应的中断序号也是32。但是不要将32硬编码进去，我们将其存储到枚举类型 `InterruptIndex` 中：
 
 ```rust
 // in src/interrupts.rs
@@ -180,11 +181,11 @@ impl InterruptIndex {
 }
 ```
 
-The enum is a [C-like enum] so that we can directly specify the index for each variant. The `repr(u8)` attribute specifies that each variant is represented as an `u8`. We will add more variants for other interrupts in the future.
+这是一个 [C语言风格的枚举][C-like enum]，我们可以为每个枚举值指定其对应的数值，`repr(u8)` 开关使枚举值对应的数值以 `u8` 格式进行存储，这样未来我们可以在这里加入更多的中断枚举。
 
 [C-like enum]: https://doc.rust-lang.org/reference/items/enumerations.html#custom-discriminant-values-for-fieldless-enumerations
 
-Now we can add a handler function for the timer interrupt:
+那么开始为计时器中断添加一个处理函数：
 
 ```rust
 // in src/interrupts.rs
@@ -210,20 +211,20 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 }
 ```
 
-Our `timer_interrupt_handler` has the same signature as our exception handlers, because the CPU reacts identically to exceptions and external interrupts (the only difference is that some exceptions push an error code). The [`InterruptDescriptorTable`] struct implements the [`IndexMut`] trait, so we can access individual entries through array indexing syntax.
+`timer_interrupt_handler` 和错误处理函数具有相同的函数签名，这是因为CPU对异常和外部中断的处理方式是相同的（除了个别异常会传入错误码以外）。[`InterruptDescriptorTable`] 结构实现了 [`IndexMut`] trait，所以我们可以通过序号来单独修改某一个条目。
 
 [`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
-In our timer interrupt handler, we print a dot to the screen. As the timer interrupt happens periodically, we would expect to see a dot appearing on each timer tick. However, when we run it we see that only a single dot is printed:
+在我们刚刚写好的处理函数中，我们会往屏幕上输出一个点，随着计时器中断周期性触发，我们应该能看到每一个计时周期过后屏幕上都会多出一个点。然而事实却并不是如此，我们只能在屏幕上看到一个点：
 
 ![QEMU printing only a single dot for hardware timer](qemu-single-dot-printed.png)
 
-### End of Interrupt
+### 结束中断
 
-The reason is that the PIC expects an explicit “end of interrupt” (EOI) signal from our interrupt handler. This signal tells the controller that the interrupt was processed and that the system is ready to receive the next interrupt. So the PIC thinks we're still busy processing the first timer interrupt and waits patiently for the EOI signal before sending the next one.
+这是因为PIC还在等着我们的处理函数返回 “中断结束” (EOI) 信号。该信号会通知控制器终端已处理，系统已准备好接收下一个中断。所以如果始终不发送EOI信号，那么PIC就会认为我们还在一直处理第一个计时器中断，然后暂停了后续的中断信号发送，直到接收到EOI信号。
 
-To send the EOI, we use our static `PICS` struct again:
+要发送EOI信号，我们可以再使用一下 `PICS`：
 
 ```rust
 // in src/interrupts.rs
@@ -240,28 +241,28 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 }
 ```
 
-The `notify_end_of_interrupt` figures out whether the primary or secondary PIC sent the interrupt and then uses the `command` and `data` ports to send an EOI signal to respective controllers. If the secondary PIC sent the interrupt both PICs need to be notified because the secondary PIC is connected to an input line of the primary PIC.
+`notify_end_of_interrupt` 会自行判断中断信号发送的源头（主PIC或者副PIC），并使用指令和数据端口将信号发送到目标控制器。当然，如果是要发送到副PIC，那么结果上必然等同于同时发送到两个PIC，因为副PIC的输入管脚连在主PIC上面。
 
-We need to be careful to use the correct interrupt vector number, otherwise we could accidentally delete an important unsent interrupt or cause our system to hang. This is the reason that the function is unsafe.
+请注意，这里的中断编码一定不可以写错，不然可能会导致某个中断信号迟迟得不到回应导致系统整体挂起。这也是该函数被标记为不安全的原因。
 
-When we now execute `cargo run` we see dots periodically appearing on the screen:
+现在我们再次运行 `cargo run`，就可以看到屏幕上开始正常输出点号了：
 
 ![QEMU printing consecutive dots showing the hardware timer](qemu-hardware-timer-dots.gif)
 
-### Configuring the Timer
+### 配置计时器
 
-The hardware timer that we use is called the _Programmable Interval Timer_ or PIT for short. Like the name says, it is possible to configure the interval between two interrupts. We won't go into details here because we will switch to the [APIC timer] soon, but the OSDev wiki has an extensive article about the [configuring the PIT].
+我们所使用的硬件计时器叫做 _可编程周期计时器_ （PIT），就如同字面上的意思一样，其两次中断之间的间隔是可配置的。当然，不会在此展开说，因为我们很快就会使用 [APIC计时器][APIC timer] 来代替它，但是你可以在OSDev wiki中找到一些关于[配置PIT计时器][configuring the PIT]的拓展文章。
 
 [APIC timer]: https://wiki.osdev.org/APIC_timer
 [configuring the PIT]: https://wiki.osdev.org/Programmable_Interval_Timer
 
-## Deadlocks
+## 死锁
 
-We now have a form of concurrency in our kernel: The timer interrupts occur asynchronously, so they can interrupt our `_start` function at any time. Fortunately Rust's ownership system prevents many types of concurrency related bugs at compile time. One notable exception are deadlocks. Deadlocks occur if a thread tries to acquire a lock that will never become free. Thus the thread hangs indefinitely.
+现在，我们的内核里就出现了一种全新的异步逻辑：计时器中断是异步的，所以它可能会在任何时候中断 `_start` 函数的运行。幸运的是Rust的所有权体系为我们在编译期避免了相当比例的bug，其中最典型的就是死锁 —— 当一个线程试图使用一个永远不会被释放的锁时，这个线程就会被永久性挂起。
 
-We can already provoke a deadlock in our kernel. Remember, our `println` macro calls the `vga_buffer::_print` function, which [locks a global `WRITER`][vga spinlock] using a spinlock:
+我们可以在内核里主动引发一次死锁看看，请回忆一下，我们的 `println` 宏调用了 `vga_buffer::_print` 函数，而这个函数又使用了 [`WRITER`][vga spinlock] 变量，该变量被定义为带同步锁的变量：
 
-[vga spinlock]: @/edition-2/posts/03-vga-text-buffer/index.md#spinlocks
+[vga spinlock]: @/edition-2/posts/03-vga-text-buffer/index.zh-CN.md#自旋锁
 
 ```rust
 // in src/vga_buffer.rs
@@ -275,7 +276,7 @@ pub fn _print(args: fmt::Arguments) {
 }
 ```
 
-It locks the `WRITER`, calls `write_fmt` on it, and implicitly unlocks it at the end of the function. Now imagine that an interrupt occurs while the `WRITER` is locked and the interrupt handler tries to print something too:
+获取到 `WRITER` 变量的锁后，调用其内部的 `write_fmt` 函数，然后在结尾隐式解锁该变量。但是假如在函数执行一半的时候，中断处理函数触发，同样试图打印日志的话：
 
 Timestep | _start | interrupt_handler
 ---------|------|------------------
@@ -288,11 +289,11 @@ Timestep | _start | interrupt_handler
 … | | …
 _never_ | _unlock `WRITER`_ |
 
-The `WRITER` is locked, so the interrupt handler waits until it becomes free. But this never happens, because the `_start` function only continues to run after the interrupt handler returns. Thus the complete system hangs.
+`WRITER` 被锁定，所以中断处理函数就会一直等待到它被解锁为止，然而后续永远不会发生了，因为只有当中断处理函数返回，`_start` 函数才会继续运行，`WRITER` 才可能被解锁，所以整个系统就这么挂起了。
 
-### Provoking a Deadlock
+### 引发死锁
 
-We can easily provoke such a deadlock in our kernel by printing something in the loop at the end of our `_start` function:
+基于这个原理，我们可以通过在 `_start` 函数中构建一个输出循环来很轻易地触发死锁：
 
 ```rust
 // in src/main.rs
@@ -307,17 +308,17 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-When we run it in QEMU we get output of the form:
+在QEMU中运行后，输出是这样的：
 
 ![QEMU output with many rows of hyphens and no dots](./qemu-deadlock.png)
 
-We see that only a limited number of hyphens is printed, until the first timer interrupt occurs. Then the system hangs because the timer interrupt handler deadlocks when it tries to print a dot. This is the reason that we see no dots in the above output.
+我们可以看到，这段程序只输出了有限的中划线，在第一次计时器中断触发后就不再动弹了，这是因为计时器中断对应的处理函数触发了输出宏中潜在的死锁，这也是为什么我们没有在上面的输出中看到点号的原因。
 
-The actual number of hyphens varies between runs because the timer interrupt occurs asynchronously. This non-determinism is what makes concurrency related bugs so difficult to debug.
+由于计时器中断是完全异步的，所以每次运行能够输出的中划线数量都是不确定的，这种特性也导致和并发相关的bug非常难以调试。
 
-### Fixing the Deadlock
+### 修复死锁
 
-To avoid this deadlock, we can disable interrupts as long as the `Mutex` is locked:
+要避免死锁，我们可以在 `Mutex` 被锁定时禁用中断：
 
 ```rust
 // in src/vga_buffer.rs
@@ -335,12 +336,12 @@ pub fn _print(args: fmt::Arguments) {
 }
 ```
 
-The [`without_interrupts`] function takes a [closure] and executes it in an interrupt-free environment. We use it to ensure that no interrupt can occur as long as the `Mutex` is locked. When we run our kernel now we see that it keeps running without hanging. (We still don't notice any dots, but this is because they're scrolling by too fast. Try to slow down the printing, e.g. by putting a `for _ in 0..10000 {}` inside the loop.)
+[`without_interrupts`] 函数可以使一个 [闭包][closure] 代码块在无中断环境下执行，由此我们可以让 `Mutex` 变量在锁定期间的执行逻辑不会被中断信号打断。再次运行我们的内核，此时程序就不会被挂起了。（然而我们依然不会看到任何点号，因为输出速度实在是太快了，试着降低一下输出速度就可以了，比如在循环里插入一句 `for _ in 0..10000 {}`。）
 
 [`without_interrupts`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
 
-We can apply the same change to our serial printing function to ensure that no deadlocks occur with it either:
+我们也可以在串行输出函数里也加入同样的逻辑来避免死锁：
 
 ```rust
 // in src/serial.rs
@@ -359,11 +360,11 @@ pub fn _print(args: ::core::fmt::Arguments) {
 }
 ```
 
-Note that disabling interrupts shouldn't be a general solution. The problem is that it increases the worst case interrupt latency, i.e. the time until the system reacts to an interrupt. Therefore interrupts should be only disabled for a very short time.
+但请注意，禁用中断不应是被广泛使用的手段，它可能会造成中断的处理延迟增加，比如操作系统是依靠中断信号进行计时的。因此，中断仅应在极短的时间内被禁用。
 
-## Fixing a Race Condition
+## 修复竞态条件
 
-If you run `cargo test` you might see the `test_println_output` test failing:
+如果你运行 `cargo test` 命令，则会发现`test_println_output` 测试执行失败：
 
 ```
 > cargo test --lib
@@ -379,7 +380,7 @@ Error: panicked at 'assertion failed: `(left == right)`
  right: `'S'`', src/vga_buffer.rs:205:9
 ```
 
-The reason is a _race condition_ between the test and our timer handler. Remember, the test looks like this:
+其原因就是测试函数和计时器中断处理函数出现了 _竞态条件_，测试函数是这样的：
 
 ```rust
 // in src/vga_buffer.rs
@@ -395,11 +396,11 @@ fn test_println_output() {
 }
 ```
 
-The test prints a string to the VGA buffer and then checks the output by manually iterating over the `buffer_chars` array. The race condition occurs because the timer interrupt handler might run between the `println` and the reading of the screen characters. Note that this isn't a dangerous _data race_, which Rust completely prevents at compile time. See the [_Rustonomicon_][nomicon-races] for details.
+该测试将一串字符打印到VGA缓冲区，并通过一个循环检测 `buffer_chars` 数组的内容。竞态条件出现的原因就是在 `println` 和检测逻辑之间触发了计时器中断，其处理函数同样调用了输出语句。不过这并非危险的 _数据竞争_，该种竞争可以被Rust语言在编译期完全避免。如果你对此感兴趣，可以查阅一下 [_Rustonomicon_][nomicon-races]。
 
 [nomicon-races]: https://doc.rust-lang.org/nomicon/races.html
 
-To fix this, we need to keep the `WRITER` locked for the complete duration of the test, so that the timer handler can't write a `.` to the screen in between. The fixed test looks like this:
+要修复这个问题，我们需要让 `WRITER` 加锁的范围扩大到整个测试函数，使计时器中断处理函数无法输出 `.`，就像这样：
 
 ```rust
 // in src/vga_buffer.rs
@@ -421,23 +422,23 @@ fn test_println_output() {
 }
 ```
 
-We performed the following changes:
+我们进行了如下修改：
 
-- We keep the writer locked for the complete test by using the `lock()` method explicitly. Instead of `println`, we use the [`writeln`] macro that allows printing to an already locked writer.
-- To avoid another deadlock, we disable interrupts for the tests duration. Otherwise the test might get interrupted while the writer is still locked.
-- Since the timer interrupt handler can still run before the test, we print an additional newline `\n` before printing the string `s`. This way, we avoid test failure when the timer handler already printed some `.` characters to the current line.
+- 我们使用 `lock()` 函数显式加锁，然后将 `println` 改为 [`writeln`] 宏，以此绕开输出必须加锁的限制。
+- 为了避免死锁，我们同时在测试函数执行期间禁用中断，否则中断处理函数可能会意外被触发。
+- 为了防止在测试执行前计时器中断被触发所造成的干扰，我们先输出一句 `\n`，即可避免行首出现多余的 `.` 造成的干扰。
 
 [`writeln`]: https://doc.rust-lang.org/core/macro.writeln.html
 
-With the above changes, `cargo test` now deterministically succeeds again.
+经过以上修改，`cargo test` 就可以正确运行了。
 
-This was a very harmless race condition that only caused a test failure. As you can imagine, other race conditions can be much more difficult to debug due to their non-deterministic nature. Luckily, Rust prevents us from data races, which are the most serious class of race conditions since they can cause all kinds of undefined behavior, including system crashes and silent memory corruptions.
+好在这是一种十分无害的竞态条件，仅仅会导致测试失败，但如你所想，其它形式的竞态条件可能会更加难以调试。幸运的是，更加恶性的数据竞争已经被Rust从根本上避免了，大部分数据竞争都会造成无法预知的行为，比如系统崩溃，或者悄无声息的内存破坏。
 
-## The `hlt` Instruction
+## `hlt` 指令
 
-Until now we used a simple empty loop statement at the end of our `_start` and `panic` functions. This causes the CPU to spin endlessly and thus works as expected. But it is also very inefficient, because the CPU continues to run at full speed even though there's no work to do. You can see this problem in your task manager when you run your kernel: The QEMU process needs close to 100% CPU the whole time.
+目前我们在 `_start` 和 `panic` 函数的末尾都使用了一个空白的循环，这的确能让整体逻辑正常运行，但也会让CPU全速运转 —— 尽管此时并没有什么需要计算的工作。如果你在执行内核时打开任务管理器，便会发现QEMU的CPU占用率全程高达100%。
 
-What we really want to do is to halt the CPU until the next interrupt arrives. This allows the CPU to enter a sleep state in which it consumes much less energy. The [`hlt` instruction] does exactly that. Let's use this instruction to create an energy efficient endless loop:
+但是，我们可以让CPU在下一个中断触发之前休息一下，也就是进入休眠状态来节省一点点能源。[`hlt` instruction][`hlt` 指令] 可以让我们做到这一点，那就来用它写一个节能的无限循环：
 
 [`hlt` instruction]: https://en.wikipedia.org/wiki/HLT_(x86_instruction)
 
@@ -451,11 +452,11 @@ pub fn hlt_loop() -> ! {
 }
 ```
 
-The `instructions::hlt` function is just a [thin wrapper] around the assembly instruction. It is safe because there's no way it can compromise memory safety.
+`instructions::hlt` 只是对应汇编指令的 [薄包装][thin wrapper]，并且它是内存安全的，没有破坏内存的风险。
 
 [thin wrapper]: https://github.com/rust-osdev/x86_64/blob/5e8e218381c5205f5777cb50da3ecac5d7e3b1ab/src/instructions/mod.rs#L16-L22
 
-We can now use this `hlt_loop` instead of the endless loops in our `_start` and `panic` functions:
+现在我们来试着在 `_start` 和 `panic` 中使用 `hlt_loop`：
 
 ```rust
 // in src/main.rs
@@ -478,7 +479,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 ```
 
-Let's update our `lib.rs` as well:
+接下来再更新一下 `lib.rs` ：
 
 ```rust
 // in src/lib.rs
@@ -500,23 +501,23 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 }
 ```
 
-When we run our kernel now in QEMU, we see a much lower CPU usage.
+再次在QEMU中执行我们的内核，CPU使用率已经降低到了比较低的水平了。
 
-## Keyboard Input
+## 键盘输入
 
-Now that we are able to handle interrupts from external devices we are finally able to add support for keyboard input. This will allow us to interact with our kernel for the first time.
+现在，我们已经知道了如何接收外部设备的中断信号，我们可以进一步对键盘添加支持，由此我们可以与内核进行交互。
 
 <aside class="post_aside">
 
-Note that we only describe how to handle [PS/2] keyboards here, not USB keyboards. However the mainboard emulates USB keyboards as PS/2 devices to support older software, so we can safely ignore USB keyboards until we have USB support in our kernel.
+注意，我们仅仅会讲解 [PS/2] 键盘的兼容方式，而非USB键盘。不过好在主板往往会将USB键盘模拟为 PS/2 设备来支持旧时代的软件，所以我们暂时可以不考虑USB键盘这种情况。
 
 </aside>
 
 [PS/2]: https://en.wikipedia.org/wiki/PS/2_port
 
-Like the hardware timer, the keyboard controller is already enabled by default. So when you press a key the keyboard controller sends an interrupt to the PIC, which forwards it to the CPU. The CPU looks for a handler function in the IDT, but the corresponding entry is empty. Therefore a double fault occurs.
+就如同硬件计时器一样，键盘控制器也是默认启用的，所以当你敲击键盘上某个按键时，键盘控制器就会经由PIC向CPU发送中断信号。然而CPU此时是无法在IDT找到相关的中断处理函数的，所以 double fault 异常会被抛出。
 
-So let's add a handler function for the keyboard interrupt. It's quite similar to how we defined the handler for the timer interrupt, it just uses a different interrupt number:
+所以我们需要为键盘中断添加一个处理函数，它十分类似于计时器中断处理的实现，只不过需要对中断编号做出一点小小的修改：
 
 ```rust
 // in src/interrupts.rs
@@ -553,15 +554,15 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-As we see from the graphic [above](#the-8259-pic), the keyboard uses line 1 of the primary PIC. This means that it arrives at the CPU as interrupt 33 (1 + offset 32). We add this index as a new `Keyboard` variant to the `InterruptIndex` enum. We don't need to specify the value explicitly, since it defaults to the previous value plus one, which is also 33. In the interrupt handler, we print a `k` and send the end of interrupt signal to the interrupt controller.
+[上文](#the-8259-pic) 提到，键盘使用的是主PIC的1号管脚，在CPU的中断编号为33（1 + 偏移量32）。我们需要在 `InterruptIndex` 枚举类型里添加一个 `Keyboard`，但是无需显式指定对应值，因为在默认情况下，它的对应值是上一个枚举对应值加一也就是33。在处理函数中，我们先输出一个 `k`，并发送结束信号来结束中断。
 
-We now see that a `k` appears on the screen when we press a key. However, this only works for the first key we press, even if we continue to press keys no more `k`s appear on the screen. This is because the keyboard controller won't send another interrupt until we have read the so-called _scancode_ of the pressed key.
+现在当我们按下任意一个按键，就会在屏幕上输出一个 `k`，然而这只会生效一次，因为键盘控制器在我们调用 _scancode_ 获取按键码之前，是不会发送下一个中断的。
 
-### Reading the Scancodes
+### 读取Scancodes
 
-To find out _which_ key was pressed, we need to query the keyboard controller. We do this by reading from the data port of the PS/2 controller, which is the [I/O port] with number `0x60`:
+要找到哪个按键被按下，我们还需要询问一下键盘控制器，我们可以从 PS/2 控制器（即地址为 `0x60` 的 [I/O端口][I/O port]）的数据端口获取到该信息：
 
-[I/O port]: @/edition-2/posts/04-testing/index.md#i-o-ports
+[I/O port]: @/edition-2/posts/04-testing/index.zh-CN.md#I/O 端口
 
 ```rust
 // in src/interrupts.rs
@@ -582,17 +583,20 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard's data port. This byte is called the [_scancode_] and is a number that represents the key press/release. We don't do anything with the scancode yet, we just print it to the screen:
+我们使用了 `x86_64` crate 中的 [`Port`] 来从键盘数据端口中读取名为 [_scancode_] 的随着按键按下/释放而不断变化的数字。我们暂且不处理它，只是在屏幕上打印出来：
 
 [`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
 
 ![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)
 
-The above image shows me slowly typing "123". We see that adjacent keys have adjacent scancodes and that pressing a key causes a different scancode than releasing it. But how do we translate the scancodes to the actual key actions exactly?
+在上图中，演示的正是缓慢输入 `123` 的结果。我们可以看到，相邻的按键具备相邻的扫描码，而按下按键和松开按键也会出现不同的扫描码，那么问题来了，我们该如何对这些扫描码进行译码？
 
-### Interpreting the Scancodes
-There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. All three go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. Later computers fortunately did not continue the trend of defining new scancode sets, but rather emulated the existing sets and extended them. Today most keyboards can be configured to emulate any of the three sets.
+### 转义扫描码
+There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. 
+All three go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. 
+Later computers fortunately did not continue the trend of defining new scancode sets, but rather emulated the existing sets and extended them. 
+Today most keyboards can be configured to emulate any of the three sets.
 
 [IBM XT]: https://en.wikipedia.org/wiki/IBM_Personal_Computer_XT
 [IBM 3270 PC]: https://en.wikipedia.org/wiki/IBM_3270_PC
@@ -718,19 +722,19 @@ With this modified interrupt handler we can now write text:
 
 ![Typing "Hello World" in QEMU](qemu-typing.gif)
 
-### Configuring the Keyboard
+### 配置键盘
 
 It's possible to configure some aspects of a PS/2 keyboard, for example which scancode set it should use. We won't cover it here because this post is already long enough, but the OSDev Wiki has an overview of possible [configuration commands].
 
 [configuration commands]: https://wiki.osdev.org/PS/2_Keyboard#Commands
 
-## Summary
+## 小结
 
 This post explained how to enable and handle external interrupts. We learned about the 8259 PIC and its primary/secondary layout, the remapping of the interrupt numbers, and the "end of interrupt" signal. We implemented handlers for the hardware timer and the keyboard and learned about the `hlt` instruction, which halts the CPU until the next interrupt.
 
 Now we are able to interact with our kernel and have some fundamental building blocks for creating a small shell or simple games.
 
-## What's next?
+## 下文预告
 
 Timer interrupts are essential for an operating system, because they provide a way to periodically interrupt the running process and regain control in the kernel. The kernel can then switch to a different process and create the illusion that multiple processes run in parallel.
 
