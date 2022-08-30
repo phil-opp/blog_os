@@ -1,5 +1,5 @@
 +++
-title = "Hardware Interrupts"
+title = "硬件中断"
 weight = 7
 path = "zh-CN/hardware-interrupts"
 date = 2018-10-22

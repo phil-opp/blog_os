@@ -1,5 +1,5 @@
 +++
-title = "CPU Exceptions"
+title = "CPU异常处理"
 weight = 5
 path = "zh-CN/cpu-exceptions"
 date  = 2018-06-17
