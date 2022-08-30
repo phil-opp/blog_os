@@ -556,9 +556,9 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 [上文](#the-8259-pic) 提到，键盘使用的是主PIC的1号管脚，在CPU的中断编号为33（1 + 偏移量32）。我们需要在 `InterruptIndex` 枚举类型里添加一个 `Keyboard`，但是无需显式指定对应值，因为在默认情况下，它的对应值是上一个枚举对应值加一也就是33。在处理函数中，我们先输出一个 `k`，并发送结束信号来结束中断。
 
-现在当我们按下任意一个按键，就会在屏幕上输出一个 `k`，然而这只会生效一次，因为键盘控制器在我们调用 _scancode_ 获取按键码之前，是不会发送下一个中断的。
+现在当我们按下任意一个按键，就会在屏幕上输出一个 `k`，然而这只会生效一次，因为键盘控制器在我们 _获取扫描码_ 之前，是不会发送下一个中断的。
 
-### 读取Scancodes
+### 读取扫描码
 
 要找到哪个按键被按下，我们还需要询问一下键盘控制器，我们可以从 PS/2 控制器（即地址为 `0x60` 的 [I/O端口][I/O port]）的数据端口获取到该信息：
 
@@ -583,7 +583,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-我们使用了 `x86_64` crate 中的 [`Port`] 来从键盘数据端口中读取名为 [_scancode_] 的随着按键按下/释放而不断变化的数字。我们暂且不处理它，只是在屏幕上打印出来：
+我们使用了 `x86_64` crate 中的 [`Port`] 来从键盘数据端口中读取名为 [_扫描码_] 的随着按键按下/释放而不断变化的数字。我们暂且不处理它，只是在屏幕上打印出来：
 
 [`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
@@ -592,21 +592,18 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 在上图中，演示的正是缓慢输入 `123` 的结果。我们可以看到，相邻的按键具备相邻的扫描码，而按下按键和松开按键也会出现不同的扫描码，那么问题来了，我们该如何对这些扫描码进行译码？
 
-### 转义扫描码
-There are three different standards for the mapping between scancodes and keys, the so-called _scancode sets_. 
-All three go back to the keyboards of early IBM computers: the [IBM XT], the [IBM 3270 PC], and the [IBM AT]. 
-Later computers fortunately did not continue the trend of defining new scancode sets, but rather emulated the existing sets and extended them. 
-Today most keyboards can be configured to emulate any of the three sets.
+### 扫描码转义
+关于按键与键位码之间的映射关系，目前存在三种不同的标准（所谓的 _扫描码映射集_）。三种标准都可以追溯到早期的IBM电脑键盘：[IBM XT]、 [IBM 3270 PC]和[IBM AT]。好在之后的电脑并未另起炉灶定义新的扫描码映射集，但也对现有类型进行模拟并加以扩展，如今的绝大多数键盘都可以模拟成这三种类型之一。
 
 [IBM XT]: https://en.wikipedia.org/wiki/IBM_Personal_Computer_XT
 [IBM 3270 PC]: https://en.wikipedia.org/wiki/IBM_3270_PC
 [IBM AT]: https://en.wikipedia.org/wiki/IBM_Personal_Computer/AT
 
-By default, PS/2 keyboards emulate scancode set 1 ("XT"). In this set, the lower 7 bits of a scancode byte define the key, and the most significant bit defines whether it's a press ("0") or a release ("1"). Keys that were not present on the original [IBM XT] keyboard, such as the enter key on the keypad, generate two scancodes in succession: a `0xe0` escape byte and then a byte representing the key. For a list of all set 1 scancodes and their corresponding keys, check out the [OSDev Wiki][scancode set 1].
+默认情况下，PS/2 键盘会模拟Set-1（XT），在该布局下，扫描码的低7位表示按键，而其他的比特位则定义了是按下（0）还是释放（1）。不过这些按键并非都存在于原本的 [IBM XT] 键盘上，比如小键盘的回车键，此时就会连续生成两个扫描码：`0xe0` 以及一个自定义的代表该键位的数字。[OSDev Wiki][scancode set 1] 可以查阅到Set-1下的扫描码对照表。
 
 [scancode set 1]: https://wiki.osdev.org/Keyboard#Scan_Code_Set_1
 
-To translate the scancodes to keys, we can use a match statement:
+要将扫描码译码成按键，我们可以用一个match匹配语句：
 
 ```rust
 // in src/interrupts.rs
@@ -644,17 +641,17 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-The above code translates keypresses of the number keys 0-9 and ignores all other keys. It uses a [match] statement to assign a character or `None` to each scancode. It then uses [`if let`] to destructure the optional `key`. By using the same variable name `key` in the pattern, we [shadow] the previous declaration, which is a common pattern for destructuring `Option` types in Rust.
+以上代码可以对数字按键0-9进行转义，并忽略其他键位。具体到程序逻辑中，就是使用 [match] 匹配映射数字0-9，对于其他扫描码则返回 `None`，然后使用 [`if let`] 语句对 `key` 进行解构取值，在这个语法中，代码块中的 `key` 会 [遮蔽][shadow] 掉代码块外的同名 `Option` 型变量。
 
 [match]: https://doc.rust-lang.org/book/ch06-02-match.html
 [`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
 [shadow]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
 
-Now we can write numbers:
+现在我们就可以向控制台写入数字了：
 
 ![QEMU printing numbers to the screen](qemu-printing-numbers.gif)
 
-Translating the other keys works in the same way. Fortunately there is a crate named [`pc-keyboard`] for translating scancodes of scancode sets 1 and 2, so we don't have to implement this ourselves. To use the crate, we add it to our `Cargo.toml` and import it in our `lib.rs`:
+其他扫描码也可以通过同样的手段进行译码，不过真的很麻烦，好在 [`pc-keyboard`] crate 已经帮助我们实现了Set-1和Set-2的译码工作，所以无需自己去实现。所以我们只需要将下述内容添加到 `Cargo.toml`，并在 `lib.rs` 里进行引用：
 
 [`pc-keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/
 
@@ -665,7 +662,7 @@ Translating the other keys works in the same way. Fortunately there is a crate n
 pc-keyboard = "0.5.0"
 ```
 
-Now we can use this crate to rewrite our `keyboard_interrupt_handler`:
+现在我们可以使用新的crate对 `keyboard_interrupt_handler` 进行改写：
 
 ```rust
 // in/src/interrupts.rs
@@ -704,38 +701,38 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-We use the `lazy_static` macro to create a static [`Keyboard`] object protected by a Mutex. We initialize the `Keyboard` with an US keyboard layout and the scancode set 1. The [`HandleControl`] parameter allows to map `ctrl+[a-z]` to the Unicode characters `U+0001` through `U+001A`. We don't want to do that, so we use the `Ignore` option to handle the `ctrl` like normal keys.
+首先我们使用 `lazy_static` 宏创建一个受到Mutex同步锁保护的 [`Keyboard`] 对象，初始化参数为美式键盘布局以及Set-1。至于 [`HandleControl`]，它可以设定为将 `ctrl+[a-z]` 映射为Unicode字符 `U+0001` 至 `U+001A`，但我们不想这样，所以使用了 `Ignore` 选项让 `ctrl` 仅仅表现为一个正常键位。
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/enum.HandleControl.html
 
-On each interrupt, we lock the Mutex, read the scancode from the keyboard controller and pass it to the [`add_byte`] method, which translates the scancode into an `Option<KeyEvent>`. The [`KeyEvent`] contains which key caused the event and whether it was a press or release event.
+对于每一个中断，我们都会为 KEYBOARD 加锁，从键盘控制器获取扫描码并将其传入 [`add_byte`] 函数，并将其转化为 `Option<KeyEvent>` 结构。[`KeyEvent`] 包括了触发本次中断的按键信息，以及子动作是按下还是释放。
 
 [`Keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html
 [`add_byte`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.add_byte
 [`KeyEvent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.KeyEvent.html
 
-To interpret this key event, we pass it to the [`process_keyevent`] method, which translates the key event to a character if possible. For example, translates a press event of the `A` key to either a lowercase `a` character or an uppercase `A` character, depending on whether the shift key was pressed.
+要处理KeyEvent，我们还需要将其传入 [`process_keyevent`] 函数，将其转换为人类可读的字符，若果有必要，也会对字符进行一些处理。典型例子就是，要判断 `A` 键按下后输入的是小写 `a` 还是大写 `A`，这要取决于shift键是否同时被按下。
 
 [`process_keyevent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
 
-With this modified interrupt handler we can now write text:
+进行这些修改之后，我们就可以正常输入英文了：
 
 ![Typing "Hello World" in QEMU](qemu-typing.gif)
 
 ### 配置键盘
 
-It's possible to configure some aspects of a PS/2 keyboard, for example which scancode set it should use. We won't cover it here because this post is already long enough, but the OSDev Wiki has an overview of possible [configuration commands].
+PS/2 键盘可以配置的地方其实还有很多，比如设定它使用何种扫描码映射集，然而这篇文章已经够长了，就不在此展开说明，如果有兴趣，可以在OSDev wiki查看[更详细的资料][configuration commands]。
 
 [configuration commands]: https://wiki.osdev.org/PS/2_Keyboard#Commands
 
 ## 小结
 
-This post explained how to enable and handle external interrupts. We learned about the 8259 PIC and its primary/secondary layout, the remapping of the interrupt numbers, and the "end of interrupt" signal. We implemented handlers for the hardware timer and the keyboard and learned about the `hlt` instruction, which halts the CPU until the next interrupt.
+本文描述了如何启用并处理外部中断。我们学习了关于8259 PIC的主副布局、重映射中断编号以及结束中断信号的基础知识，实现了简单的硬件计时器和键盘的中断处理器，以及如何使用 `hlt` 指令让CPU休眠至下次接收到中断信号。
 
-Now we are able to interact with our kernel and have some fundamental building blocks for creating a small shell or simple games.
+现在我们已经可以和内核进行交互，满足了创建简易控制台或简易游戏的基础条件。
 
 ## 下文预告
 
-Timer interrupts are essential for an operating system, because they provide a way to periodically interrupt the running process and regain control in the kernel. The kernel can then switch to a different process and create the illusion that multiple processes run in parallel.
+计时器中断对操作系统而言至关重要，它可以使内核定期重新获得控制权，由此内核可以对线程进行调度，创造出多个线程并行执行的错觉。
 
-But before we can create processes or threads, we need a way to allocate memory for them. The next posts will explore memory management to provide this fundamental building block.
+然而在我们创建进程或线程之前，我们还需要解决内存分配问题。下一篇文章中，我们就会对内存管理进行阐述，以提供后续功能会使用到的基础设施。
