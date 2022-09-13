@@ -202,70 +202,75 @@ pub struct PageTable {
 }
 ```
 
-As indicated by the `repr` attribute, page tables need to be page aligned, i.e. aligned on a 4KiB boundary. This requirement guarantees that a page table always fills a complete page and allows an optimization that makes entries very compact.
+`repr` 属性定义了内存页的大小，这里将其设定为了4KiB，该设置确保了页表总是能填满一整个内存页，并允许编译器进行一些优化，使其存储方式更加紧凑。
 
-Each entry is 8 bytes (64 bits) large and has the following format:
+每个页表条目长度都是8字节（64比特），其内部结构如下：
 
-Bit(s) | Name | Meaning
------- | ---- | -------
-0 | present | the page is currently in memory
-1 | writable | it's allowed to write to this page
-2 | user accessible | if not set, only kernel mode code can access this page
-3 | write through caching | writes go directly to memory
-4 | disable cache | no cache is used for this page
-5 | accessed | the CPU sets this bit when this page is used
-6 | dirty | the CPU sets this bit when a write to this page occurs
-7 | huge page/null | must be 0 in P1 and P4, creates a 1GiB page in P3, creates a 2MiB page in P2
-8 | global | page isn't flushed from caches on address space switch (PGE bit of CR4 register must be set)
-9-11 | available | can be used freely by the OS
-12-51 | physical address | the page aligned 52bit physical address of the frame or the next page table
-52-62 | available | can be used freely by the OS
-63 | no execute | forbid executing code on this page (the NXE bit in the EFER register must be set)
+Bit(s) | 名字                    | 含义
+------ |-----------------------| -------
+0 | present               | 该页目前在内存中
+1 | writable              | 该页可写
+2 | user accessible       | 如果没有设定，仅内核代码可以访问该页
+3 | write through caching | 写操作直接应用到内存
+4 | disable cache         | 对该页禁用缓存
+5 | accessed              | 当该页正在被使用时，CPU设置该比特的值
+6 | dirty                 | 当该页正在被写入时，CPU设置该比特的值
+7 | huge page/null        | 在P1和P4状态时必须为0，在P3时创建一个1GiB的内存页，在P2时创建一个2MiB的内存页
+8 | global                | 当地址空间切换时，该页尚未应用更新（CR4寄存器中的PGE比特位必须一同被设置）
+9-11 | available             | 可被操作系统自由使用
+12-51 | physical address      | 经过52比特对齐过的页帧地址，或下一级的页表地址
+52-62 | available             | 可被操作系统自由使用
+63 | no execute            | 禁止在该页中运行代码（EFER寄存器中的NXE比特位必须一同被设置）
 
-We see that only bits 12–51 are used to store the physical frame address, the remaining bits are used as flags or can be freely used by the operating system. This is possible because we always point to a 4096-byte aligned address, either to a page-aligned page table or to the start of a mapped frame. This means that bits 0–11 are always zero, so there is no reason to store these bits because the hardware can just set them to zero before using the address. The same is true for bits 52–63, because the x86_64 architecture only supports 52-bit physical addresses (similar to how it only supports 48-bit virtual addresses).
+我们可以看到，仅12–51位会用于存储页帧地址或页表地址，其余比特都用于存储标志位，或由操作系统自由使用。 
+其原因就是，该地址总是指向一个4096比特对齐的地址、页表或者页帧的起始地址。
+这也就意味着0-11位始终为0，没有必要存储这些东西，硬件层面在使用该地址之前，也会将这12位比特设置为0，52-63位同理，因为x86_64平台仅支持52位物理地址（类似于上文中提到的仅支持48位虚拟地址的原因）。
 
-Let's take a closer look at the available flags:
+进一步说明一下可用的标志位：
 
-- The `present` flag differentiates mapped pages from unmapped ones. It can be used to temporarily swap out pages to disk when main memory becomes full. When the page is accessed subsequently, a special exception called _page fault_ occurs, to which the operating system can react by reloading the missing page from disk and then continuing the program.
-- The `writable` and `no execute` flags control whether the contents of the page are writable or contain executable instructions respectively.
-- The `accessed` and `dirty` flags are automatically set by the CPU when a read or write to the page occurs. This information can be leveraged by the operating system e.g. to decide which pages to swap out or whether the page contents were modified since the last save to disk.
-- The `write through caching` and `disable cache` flags allow to control the caches for every page individually.
-- The `user accessible` flag makes a page available to userspace code, otherwise it is only accessible when the CPU is in kernel mode. This feature can be used to make [system calls] faster by keeping the kernel mapped while an userspace program is running. However, the [Spectre] vulnerability can allow userspace programs to read these pages nonetheless.
-- The `global` flag signals to the hardware that a page is available in all address spaces and thus does not need to be removed from the translation cache (see the section about the TLB below) on address space switches. This flag is commonly used together with a cleared `user accessible` flag to map the kernel code to all address spaces.
-- The `huge page` flag allows to create pages of larger sizes by letting the entries of the level 2 or level 3 page tables directly point to a mapped frame. With this bit set, the page size increases by factor 512 to either 2MiB = 512 * 4KiB for level 2 entries or even 1GiB = 512 * 2MiB for level 3 entries. The advantage of using larger pages is that fewer lines of the translation cache and fewer page tables are needed.
+- `present` 标志位并非是指未映射的页，而是指其对应的内存页由于物理内存已满而被交换到硬盘中，如果该页在换出之后再度被访问，则会抛出 _page fault_ 异常，此时操作系统应该将此页重新载入物理内存以继续执行程序。
+- `writable` 和 `no execute` 标志位分别控制该页是否可写，以及是否包含可执行指令。
+- `accessed` 和 `dirty` 标志位由CPU在读写该页时自动设置，该状态信息可用于辅助操作系统的内存控制，如判断哪些页可以换出，以及换出到硬盘后页里的内容是否已被修改。
+- `write through caching` 和 `disable cache` 标志位可以单独控制每一个页对应的缓存。
+- `user accessible` 标志位决定了页中是否包含用户态的代码，否则它仅当CPU处于核心态时可访问。该特性可用于在用户态程序运行时保持内核代码映射以加速[系统调用][system calls]。然而，[Spectre] 漏洞会允许用户态程序读取到此类页的数据。
+- `global` 标志位决定了该页是否会在所有地址空间都存在，即使切换地址空间，也不会从地址转换缓存（参见下文中关于TLB的章节）中被移除。一般和 `user accessible` 标志位共同使用，在所有地址空间映射内核代码。
+- `huge page` 标志位允许2级页表或3级页表直接指向页帧来分配一块更大的内存空间，该标志位被启用后，页大小会增加512倍。就结果而言，对于2级页表的条目，其会直接指向一个 2MiB = 512 * 4KiB 大小的大型页帧，而对于3级页表的条目，就会直接指向一个 1GiB = 512 * 2MiB 大小的巨型页帧。通常而言，这个功能会用于节省地址转换缓存的空间，以及降低逐层查找页表的耗时。
 
 [system calls]: https://en.wikipedia.org/wiki/System_call
 [Spectre]: https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)
 
-The `x86_64` crate provides types for [page tables] and their [entries], so we don't need to create these structures ourselves.
+`x86_64` crate 为我们提供了 [page tables] 的结构封装，以及其内部条目 [entries]，所以我们无需自己实现具体的结构。
 
 [page tables]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTable.html
 [entries]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
-### 地址转换后备缓冲区
+### 地址转换后备缓冲区（TLB）
 
-A 4-level page table makes the translation of virtual addresses expensive, because each translation requires 4 memory accesses. To improve performance, the x86_64 architecture caches the last few translations in the so-called _translation lookaside buffer_ (TLB). This allows to skip the translation when the translation is still cached.
+显而易见，4级页表使地址转换过程变得有点慢，每次转换都需要进行4次内存访问。为了改善这个问题，x86_64平台将最后几次转换结果放在所谓的 _地址转换后备缓冲区_（TLB）中，这样对同样地址的连续重复转换就可以直接返回缓存中存储的结果。
 
-Unlike the other CPU caches, the TLB is not fully transparent and does not update or remove translations when the contents of page tables change. This means that the kernel must manually update the TLB whenever it modifies a page table. To do this, there is a special CPU instruction called [`invlpg`] (“invalidate page”) that removes the translation for the specified page from the TLB, so that it is loaded again from the page table on the next access. The TLB can also be flushed completely by reloading the `CR3` register, which simulates an address space switch. The `x86_64` crate provides Rust functions for both variants in the [`tlb` module].
+不同于CPU缓存，TLB并非是完全对外透明的，它在页表变化时并不会自动更新或删除被缓存的结果。这也就是说，内核需要在页表发生变化时，自己来处理TLB的更新。针对这个需要，CPU也提供了一个用于从TLB删除特定页的缓存的指令 [`invlpg`] （“invalidate page”），调用该指令之后，下次访问该页就会重新生成缓存。不过还有一个更彻底的办法，通过手动写入 `CR3` 寄存器可以制造出模拟地址空间切换的效果，TLB也会被完全刷新。`x86_64` crate 中的 [`tlb` module] 提供了上面的两种手段，并封装了对应的函数。
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
 [`tlb` module]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tlb/index.html
 
-It is important to remember flushing the TLB on each page table modification because otherwise the CPU might keep using the old translation, which can lead to non-deterministic bugs that are very hard to debug.
+请注意，在修改页表之后，同步修改TLB是十分十分重要的事情，不然CPU可能会返回一个错误的物理地址，因为这种原因造成的bug是非常难以追踪和调试的。
 
 ## 具体实现
 
-One thing that we did not mention yet: **Our kernel already runs on paging**. The bootloader that we added in the ["A minimal Rust Kernel"] post already set up a 4-level paging hierarchy that maps every page of our kernel to a physical frame. The bootloader does this because paging is mandatory in 64-bit mode on x86_64.
+有件事我们还没有提过：**我们的内核已经是在页上运行的**。在前文 ["最小化内核"]["A minimal Rust Kernel"] 中，我们添加的bootloader已经搭建了一个4级页表结构，并将内核中使用的每个页都映射到了物理页帧上，其原因就是因为在64位的 x86_64 平台下分页是被强制使用的。
 
 ["A minimal Rust kernel"]: @/edition-2/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
 
-This means that every memory address that we used in our kernel was a virtual address. Accessing the VGA buffer at address `0xb8000` only worked because the bootloader _identity mapped_ that memory page, which means that it mapped the virtual page `0xb8000` to the physical frame `0xb8000`.
+这也就是说，我们在内核中所使用的每一个内存地址其实都是虚拟地址，VGA缓冲区是唯一的例外，因为bootloader为这个地址使用了 _一致映射_，令其直接指向地址 `0xb8000`。所谓一致映射，就是能将虚拟页 `0xb8000` 直接映射到物理页帧 `0xb8000`。
 
-Paging makes our kernel already relatively safe, since every memory access that is out of bounds causes a page fault exception instead of writing to random physical memory. The bootloader even set the correct access permissions for each page, which means that only the pages containing code are executable and only data pages are writable.
+使用分页技术后，我们的内核已经具备了相对安全性。
+Paging makes our kernel already relatively safe, since every memory access that is out of bounds causes a page fault exception instead of writing to random physical memory. 
+The bootloader even set the correct access permissions for each page, which means that only the pages containing code are executable and only data pages are writable.
 
 ### Page Faults
 
-Let's try to cause a page fault by accessing some memory outside of our kernel. First, we create a page fault handler and register it in our IDT, so that we see a page fault exception instead of a generic [double fault] :
+Let's try to cause a page fault by accessing some memory outside of our kernel. 
+First, we create a page fault handler and register it in our IDT, so that we see a page fault exception instead of a generic [double fault] :
 
 [double fault]: @/edition-2/posts/06-double-faults/index.md
 
