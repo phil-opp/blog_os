@@ -259,7 +259,7 @@ Bit(s) | 名字                    | 含义
 
 有件事我们还没有提过：**我们的内核已经是在页上运行的**。在前文 ["最小化内核"]["A minimal Rust Kernel"] 中，我们添加的bootloader已经搭建了一个4级页表结构，并将内核中使用的每个页都映射到了物理页帧上，其原因就是因为在64位的 x86_64 平台下分页是被强制使用的。
 
-["A minimal Rust kernel"]: @/edition-2/posts/02-minimal-rust-kernel/index.zh-CN.md#creating-a-bootimage
+["A minimal Rust kernel"]: @/edition-2/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
 
 这也就是说，我们在内核中所使用的每一个内存地址其实都是虚拟地址，VGA缓冲区是唯一的例外，因为bootloader为这个地址使用了 _一致映射_，令其直接指向地址 `0xb8000`。所谓一致映射，就是能将虚拟页 `0xb8000` 直接映射到物理页帧 `0xb8000`。
 
@@ -269,7 +269,7 @@ Bit(s) | 名字                    | 含义
 
 那么我们来通过内存越界访问手动触发一次 page fault，首先我们先写一个错误处理函数并注册到IDT中，这样我们就可以正常接收到这个异常，而非 [double fault] 了：
 
-[double fault]: @/edition-2/posts/06-double-faults/index.zh-CN.md
+[double fault]: @/edition-2/posts/06-double-faults/index.md
 
 ```rust
 // in src/interrupts.rs
@@ -309,7 +309,7 @@ extern "x86-interrupt" fn page_fault_handler(
 [`Cr2::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr2.html#method.read
 [`PageFaultErrorCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
-[`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.zh-CN.md#the-hlt-instruction
+[`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.md#the-hlt-instruction
 
 那么可以开始触发内存越界访问了：
 

@@ -72,7 +72,7 @@ Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
 
 每个控制器都可以通过两个 [I/O 端口][I/O ports] 进行配置，一个是“指令”端口，另一个是“数据”端口。对于主控制器，端口地址是 `0x20`（指令）和 `0x21`（数据），而对于副控制器，端口地址是 `0xa0`（指令）和 `0xa1`（数据）。要查看更多关于PIC配置的细节，请参见 [article on osdev.org]。
 
-[I/O ports]: @/edition-2/posts/04-testing/index.zh-CN.md#I/O 端口
+[I/O ports]: @/edition-2/posts/04-testing/index.md#i-o-ports
 [article on osdev.org]: https://wiki.osdev.org/8259_PIC
 
 ### 实现
@@ -262,7 +262,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 我们可以在内核里主动引发一次死锁看看，请回忆一下，我们的 `println` 宏调用了 `vga_buffer::_print` 函数，而这个函数又使用了 [`WRITER`][vga spinlock] 变量，该变量被定义为带同步锁的变量：
 
-[vga spinlock]: @/edition-2/posts/03-vga-text-buffer/index.zh-CN.md#spinlock
+[vga spinlock]: @/edition-2/posts/03-vga-text-buffer/index.md#spinlock
 
 ```rust
 // in src/vga_buffer.rs
@@ -434,7 +434,7 @@ fn test_println_output() {
 
 好在这是一种十分无害的竞态条件，仅仅会导致测试失败，但如你所想，其它形式的竞态条件可能会更加难以调试。幸运的是，更加恶性的数据竞争已经被Rust从根本上避免了，大部分数据竞争都会造成无法预知的行为，比如系统崩溃，或者悄无声息的内存破坏。
 
-## The `hlt` Instruction
+## `hlt` 指令
 
 目前我们在 `_start` 和 `panic` 函数的末尾都使用了一个空白的循环，这的确能让整体逻辑正常运行，但也会让CPU全速运转 —— 尽管此时并没有什么需要计算的工作。如果你在执行内核时打开任务管理器，便会发现QEMU的CPU占用率全程高达100%。
 
@@ -562,7 +562,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 要找到哪个按键被按下，我们还需要询问一下键盘控制器，我们可以从 PS/2 控制器（即地址为 `0x60` 的 [I/O端口][I/O port]）的数据端口获取到该信息：
 
-[I/O port]: @/edition-2/posts/04-testing/index.zh-CN.md#I/O 端口
+[I/O port]: @/edition-2/posts/04-testing/index.md#i-o-ports
 
 ```rust
 // in src/interrupts.rs
