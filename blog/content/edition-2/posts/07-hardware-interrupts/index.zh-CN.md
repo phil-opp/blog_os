@@ -262,7 +262,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 我们可以在内核里主动引发一次死锁看看，请回忆一下，我们的 `println` 宏调用了 `vga_buffer::_print` 函数，而这个函数又使用了 [`WRITER`][vga spinlock] 变量，该变量被定义为带同步锁的变量：
 
-[vga spinlock]: @/edition-2/posts/03-vga-text-buffer/index.md#spinlock
+[vga spinlock]: @/edition-2/posts/03-vga-text-buffer/index.md#spinlocks
 
 ```rust
 // in src/vga_buffer.rs
