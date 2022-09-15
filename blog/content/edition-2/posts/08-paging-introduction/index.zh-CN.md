@@ -259,20 +259,17 @@ Bit(s) | 名字                    | 含义
 
 有件事我们还没有提过：**我们的内核已经是在页上运行的**。在前文 ["最小化内核"]["A minimal Rust Kernel"] 中，我们添加的bootloader已经搭建了一个4级页表结构，并将内核中使用的每个页都映射到了物理页帧上，其原因就是因为在64位的 x86_64 平台下分页是被强制使用的。
 
-["A minimal Rust kernel"]: @/edition-2/posts/02-minimal-rust-kernel/index.md#creating-a-bootimage
+["A minimal Rust kernel"]: @/edition-2/posts/02-minimal-rust-kernel/index.zh-CN.md#creating-a-bootimage
 
 这也就是说，我们在内核中所使用的每一个内存地址其实都是虚拟地址，VGA缓冲区是唯一的例外，因为bootloader为这个地址使用了 _一致映射_，令其直接指向地址 `0xb8000`。所谓一致映射，就是能将虚拟页 `0xb8000` 直接映射到物理页帧 `0xb8000`。
 
-使用分页技术后，我们的内核已经具备了相对安全性。
-Paging makes our kernel already relatively safe, since every memory access that is out of bounds causes a page fault exception instead of writing to random physical memory. 
-The bootloader even set the correct access permissions for each page, which means that only the pages containing code are executable and only data pages are writable.
+使用分页技术后，我们的内核在某种意义上已经十分安全了，因为越界的内存访问会导致 page fault 异常而不是访问到一个随机物理地址。bootloader已经为每一个页都设置了正确的权限，比如仅代码页具有执行权限、仅数据页具有写权限。
 
 ### Page Faults
 
-Let's try to cause a page fault by accessing some memory outside of our kernel. 
-First, we create a page fault handler and register it in our IDT, so that we see a page fault exception instead of a generic [double fault] :
+那么我们来通过内存越界访问手动触发一次 page fault，首先我们先写一个错误处理函数并注册到IDT中，这样我们就可以正常接收到这个异常，而非 [double fault] 了：
 
-[double fault]: @/edition-2/posts/06-double-faults/index.md
+[double fault]: @/edition-2/posts/06-double-faults/index.zh-CN.md
 
 ```rust
 // in src/interrupts.rs
@@ -306,15 +303,15 @@ extern "x86-interrupt" fn page_fault_handler(
 }
 ```
 
-The [`CR2`] register is automatically set by the CPU on a page fault and contains the accessed virtual address that caused the page fault. We use the [`Cr2::read`] function of the `x86_64` crate to read and print it. The [`PageFaultErrorCode`] type provides more information about the type of memory access that caused the page fault, for example whether it was caused by a read or write operation. For this reason we print it too. We can't continue execution without resolving the page fault, so we enter a [`hlt_loop`] at the end.
+[`CR2`] 寄存器会在 page fault 发生时，被CPU自动写入导致异常的虚拟地址，我们可以用 `x86_64` crate 提供的 [`Cr2::read`] 函数来读取并打印该寄存器。[`PageFaultErrorCode`] 类型为我们提供了内存访问型异常的具体信息，比如究竟是因为读取还是写入操作，我们同样将其打印出来。并且不要忘记，在显式结束异常处理前，程序是不会恢复运行的，所以要在最后调用 [`hlt_loop`] 函数。
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
 [`Cr2::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr2.html#method.read
 [`PageFaultErrorCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
-[`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.md#the-hlt-instruction
+[`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.zh-CN.md#the-hlt-instruction
 
-Now we can try to access some memory outside our kernel:
+那么可以开始触发内存越界访问了：
 
 ```rust
 // in src/main.rs
@@ -338,15 +335,15 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-When we run it, we see that our page fault handler is called:
+启动执行后，我们可以看到，page fault 的处理函数被触发了：
 
 ![EXCEPTION: Page Fault, Accessed Address: VirtAddr(0xdeadbeaf), Error Code: CAUSED_BY_WRITE, InterruptStackFrame: {…}](qemu-page-fault.png)
 
-The `CR2` register indeed contains `0xdeadbeaf`, the address that we tried to access. The error code tells us through the [`CAUSED_BY_WRITE`] that the fault occurred while trying to perform a write operation. It tells us even more through the [bits that are _not_ set][`PageFaultErrorCode`]. For example, the fact that the `PROTECTION_VIOLATION` flag is not set means that the page fault occurred because the target page wasn't present.
+`CR2` 确实保存了导致异常的虚拟地址 `0xdeadbeaf`，而错误码 [`CAUSED_BY_WRITE`] 也说明了导致异常的操作是写入。甚至于可以通过 [未设置的比特位][`PageFaultErrorCode`] 看出更多的信息，例如 `PROTECTION_VIOLATION` 未被设置说明目标页根本就不存在。
 
 [`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
 
-We see that the current instruction pointer is `0x2031b2`, so we know that this address points to a code page. Code pages are mapped read-only by the bootloader, so reading from this address works but writing causes a page fault. You can try this by changing the `0xdeadbeaf` pointer to `0x2031b2`:
+并且我们可以看到当前指令指针是 `0x2031b2`，根据上文的知识，我们知道它应该属于一个代码页。而代码页被bootloader设定为只读权限，所以读取是正常的，但写入就会触发 page fault 异常。比如你可以试着将上面代码中的 `0xdeadbeaf` 换成 `0x2031b2`：
 
 ```rust
 // Note: The actual address might be different for you. Use the address that
@@ -362,17 +359,17 @@ unsafe { *ptr = 42; }
 println!("write worked");
 ```
 
-By commenting out the last line, we see that the read access works, but the write access causes a page fault:
+执行后，我们可以看到读取操作成功了，但写入操作抛出了 page fault 异常：
 
 ![QEMU with output: "read worked, EXCEPTION: Page Fault, Accessed Address: VirtAddr(0x2031b2), Error Code: PROTECTION_VIOLATION | CAUSED_BY_WRITE, InterruptStackFrame: {…}"](qemu-page-fault-protection.png)
 
-We see that the _"read worked"_ message is printed, which indicates that the read operation did not cause any errors. However, instead of the _"write worked"_ message a page fault occurs. This time the [`PROTECTION_VIOLATION`] flag is set in addition to the [`CAUSED_BY_WRITE`] flag, which indicates that the page was present, but the operation was not allowed on it. In this case, writes to the page are not allowed since code pages are mapped as read-only.
+我们可以看到 _"read worked"_ 这条日志，说明读操作没有出问题，而 _"write worked"_ 这条日志则没有被打印，起而代之的是一个异常日志。这一次 [`PROTECTION_VIOLATION`] 标志位的 [`CAUSED_BY_WRITE`] 比特位被设置，说明异常正是被非法写入操作引发的，因为我们之前为该页设置了只读权限。
 
 [`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
 ### 访问页表
 
-Let's try to take a look at the page tables that define how our kernel is mapped:
+那么我们来看看内核中页表的存储方式：
 
 ```rust
 // in src/main.rs
@@ -391,35 +388,34 @@ pub extern "C" fn _start() -> ! {
     […] // test_main(), println(…), and hlt_loop()
 }
 ```
-
-The [`Cr3::read`] function of the `x86_64` returns the currently active level 4 page table from the `CR3` register. It returns a tuple of a [`PhysFrame`] and a [`Cr3Flags`] type. We are only interested in the frame, so we ignore the second element of the tuple.
+`x86_64` crate 中的 [`Cr3::read`] 函数可以返回 `CR3` 寄存器中的当前使用的4级页表，它返回的是 [`PhysFrame`] 和 [`Cr3Flags`] 两个类型组成的元组结构。不过此时我们只关心页帧信息，所以第二个元素暂且不管。
 
 [`Cr3::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3.html#method.read
 [`PhysFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/frame/struct.PhysFrame.html
 [`Cr3Flags`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3Flags.html
 
-When we run it, we see the following output:
+然后我们会看到如下输出：
 
 ```
 Level 4 page table at: PhysAddr(0x1000)
 ```
 
-So the currently active level 4 page table is stored at address `0x1000` in _physical_ memory, as indicated by the [`PhysAddr`] wrapper type. The question now is: how can we access this table from our kernel?
+所以当前的4级页表存储在 _物理地址_ `0x1000` 处，而且地址的外层数据结构是 [`PhysAddr`]，那么问题来了：我们如何在内核中直接访问这个页表？
 
 [`PhysAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.PhysAddr.html
 
-Accessing physical memory directly is not possible when paging is active, since programs could easily circumvent memory protection and access memory of other programs otherwise. So the only way to access the table is through some virtual page that is mapped to the physical frame at address `0x1000`. This problem of creating mappings for page table frames is a general problem, since the kernel needs to access the page tables regularly, for example when allocating a stack for a new thread.
+当分页功能启用时，直接访问物理内存是被禁止的，否则程序就可以很轻易的侵入其他程序的内存，所以唯一的途径就是通过某些手段构建一个指向 `0x1000` 的虚拟页。那么问题就变成了如何手动创建页映射，但其实该功能在很多地方都会用到，例如内核在创建新的线程时需要额外创建堆栈，同样需要用到该功能。
 
-Solutions to this problem are explained in detail in the next post.
+我们将在下一篇文章中对此问题进行展开。
 
 ## 小结
 
-This post introduced two memory protection techniques: segmentation and paging. While the former uses variable-sized memory regions and suffers from external fragmentation, the latter uses fixed-sized pages and allows much more fine-grained control over access permissions.
+本文介绍了两种内存保护技术：分段和分页。前者每次分配的内存区域大小是可变的，但会受到内存碎片的影响；而后者使用固定大小的页，并允许对访问权限进行精确控制。
 
-Paging stores the mapping information for pages in page tables with one or more levels. The x86_64 architecture uses 4-level page tables and a page size of 4KiB. The hardware automatically walks the page tables and caches the resulting translations in the translation lookaside buffer (TLB). This buffer is not updated transparently and needs to be flushed manually on page table changes.
+分页技术将映射信息存储在一级或多级页表中，x86_64 平台使用4级页表和4KiB的页大小，硬件会自动逐级寻址并将地址转换结果存储在地址转换后备缓冲区（TLB）中，然而此缓冲区并非完全对用户透明，需要在页表发生变化时进行手动干预。
 
-We learned that our kernel already runs on top of paging and that illegal memory accesses cause page fault exceptions. We tried to access the currently active page tables, but we weren't able to do it because the CR3 register stores a physical address that we can't access directly from our kernel.
+并且我们知道了内核已经被预定义了一个分页机制，内存越界访问会导致 page fault 异常。并且我们暂时无法访问当前正在使用的页表，因为 CR3 寄存器存储的地址无法在内核中直接访问。
 
 ## 下文预告
 
-The next post explains how to implement support for paging in our kernel. It presents different ways to access physical memory from our kernel, which makes it possible to access the page tables that our kernel runs on. At this point we are able to implement functions for translating virtual to physical addresses and for creating new mappings in the page tables.
+在下一篇文章中，我们会详细讲解如何在内核中实现对分页机制的支持，这会提供一种直接访问物理内存的特别手段，也就是说我们可以直接访问页表。由此，我们可以在程序中实现虚拟地址到物理地址的转换函数，也使得在页表中手动创建映射成为了可能。
