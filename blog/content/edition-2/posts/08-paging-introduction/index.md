@@ -130,7 +130,7 @@ Page 0 falls into the first `10_000` byte region, so it uses the first entry of 
 
 The pages `1_000_000`, `1_000_050`, and `1_000_100` all fall into the 100th `10_000` byte region, so they use the 100th entry of the level 2 page table. This entry points to a different level 1 page table T2, which maps the three pages to frames `100`, `150`, and `200`. Note that the page address in level 1 tables does not include the region offset. For example, the entry for page `1_000_050` is just `50`.
 
-We still have 100 empty entries in the level 2 table, but much fewer than the million empty entries before. The reason for this savings is that we don't need to create level 1 page tables for the unmapped memory regions between `10_000` and `1_000_000`.
+We still have 100 empty entries in the level 2 table, but much fewer than the million empty entries before. The reason for these savings is that we don't need to create level 1 page tables for the unmapped memory regions between `10_000` and `1_000_000`.
 
 The principle of two-level page tables can be extended to three, four, or more levels. Then the page table register points to the highest level table, which points to the next lower level table, which points to the next lower level, and so on. The level 1 page table then points to the mapped frame. The principle in general is called a _multilevel_ or _hierarchical_ page table.
 
@@ -197,7 +197,7 @@ pub struct PageTable {
 }
 ```
 
-As indicated by the `repr` attribute, page tables need to be page aligned, i.e., aligned on a 4&nbsp;KiB boundary. This requirement guarantees that a page table always fills a complete page and allows an optimization that makes entries very compact.
+As indicated by the `repr` attribute, page tables need to be page-aligned, i.e., aligned on a 4&nbsp;KiB boundary. This requirement guarantees that a page table always fills a complete page and allows an optimization that makes entries very compact.
 
 Each entry is 8 bytes (64 bits) large and has the following format:
 
@@ -206,7 +206,7 @@ Bit(s) | Name | Meaning
 0 | present | the page is currently in memory
 1 | writable | it's allowed to write to this page
 2 | user accessible | if not set, only kernel mode code can access this page
-3 | write through caching | writes go directly to memory
+3 | write-through caching | writes go directly to memory
 4 | disable cache | no cache is used for this page
 5 | accessed | the CPU sets this bit when this page is used
 6 | dirty | the CPU sets this bit when a write to this page occurs
@@ -224,10 +224,10 @@ Let's take a closer look at the available flags:
 - The `present` flag differentiates mapped pages from unmapped ones. It can be used to temporarily swap out pages to disk when the main memory becomes full. When the page is accessed subsequently, a special exception called _page fault_ occurs, to which the operating system can react by reloading the missing page from disk and then continuing the program.
 - The `writable` and `no execute` flags control whether the contents of the page are writable or contain executable instructions, respectively.
 - The `accessed` and `dirty` flags are automatically set by the CPU when a read or write to the page occurs. This information can be leveraged by the operating system, e.g., to decide which pages to swap out or whether the page contents have been modified since the last save to disk.
-- The `write through caching` and `disable cache` flags allow to control the caches for every page individually.
-- The `user accessible` flag makes a page available to userspace code, otherwise it is only accessible when the CPU is in kernel mode. This feature can be used to make [system calls] faster by keeping the kernel mapped while a userspace program is running. However, the [Spectre] vulnerability can allow userspace programs to read these pages nonetheless.
+- The `write-through caching` and `disable cache` flags allow the control of caches for every page individually.
+- The `user accessible` flag makes a page available to userspace code, otherwise, it is only accessible when the CPU is in kernel mode. This feature can be used to make [system calls] faster by keeping the kernel mapped while a userspace program is running. However, the [Spectre] vulnerability can allow userspace programs to read these pages nonetheless.
 - The `global` flag signals to the hardware that a page is available in all address spaces and thus does not need to be removed from the translation cache (see the section about the TLB below) on address space switches. This flag is commonly used together with a cleared `user accessible` flag to map the kernel code to all address spaces.
-- The `huge page` flag allows to create pages of larger sizes by letting the entries of the level 2 or level 3 page tables directly point to a mapped frame. With this bit set, the page size increases by factor 512 to either 2&nbsp;MiB = 512 * 4&nbsp;KiB for level 2 entries or even 1&nbsp;GiB = 512 * 2&nbsp;MiB for level 3 entries. The advantage of using larger pages is that fewer lines of the translation cache and fewer page tables are needed.
+- The `huge page` flag allows the creation of pages of larger sizes by letting the entries of the level 2 or level 3 page tables directly point to a mapped frame. With this bit set, the page size increases by factor 512 to either 2&nbsp;MiB = 512 * 4&nbsp;KiB for level 2 entries or even 1&nbsp;GiB = 512 * 2&nbsp;MiB for level 3 entries. The advantage of using larger pages is that fewer lines of the translation cache and fewer page tables are needed.
 
 [system calls]: https://en.wikipedia.org/wiki/System_call
 [Spectre]: https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)
@@ -239,14 +239,14 @@ The `x86_64` crate provides types for [page tables] and their [entries], so we d
 
 ### The Translation Lookaside Buffer
 
-A 4-level page table makes the translation of virtual addresses expensive because each translation requires four memory accesses. To improve performance, the x86_64 architecture caches the last few translations in the so-called _translation lookaside buffer_ (TLB). This allows to skip the translation when it is still cached.
+A 4-level page table makes the translation of virtual addresses expensive because each translation requires four memory accesses. To improve performance, the x86_64 architecture caches the last few translations in the so-called _translation lookaside buffer_ (TLB). This allows skipping the translation when it is still cached.
 
 Unlike the other CPU caches, the TLB is not fully transparent and does not update or remove translations when the contents of page tables change. This means that the kernel must manually update the TLB whenever it modifies a page table. To do this, there is a special CPU instruction called [`invlpg`] (“invalidate page”) that removes the translation for the specified page from the TLB, so that it is loaded again from the page table on the next access. The TLB can also be flushed completely by reloading the `CR3` register, which simulates an address space switch. The `x86_64` crate provides Rust functions for both variants in the [`tlb` module].
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
 [`tlb` module]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tlb/index.html
 
-It is important to remember to flush the TLB on each page table modification because otherwise the CPU might keep using the old translation, which can lead to non-deterministic bugs that are very hard to debug.
+It is important to remember to flush the TLB on each page table modification because otherwise, the CPU might keep using the old translation, which can lead to non-deterministic bugs that are very hard to debug.
 
 ## Implementation
 
