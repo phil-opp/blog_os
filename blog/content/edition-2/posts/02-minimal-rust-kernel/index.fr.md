@@ -432,17 +432,18 @@ We see that the tool recompiles our kernel using `cargo build`, so it will autom
 
 After executing the command, you should see a bootable disk image named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. You can boot it in a virtual machine or copy it to a USB drive to boot it on real hardware. (Note that this is not a CD image, which has a different format, so burning it to a CD doesn't work).
 
-#### How does it work?
-The `bootimage` tool performs the following steps behind the scenes:
+#### Comment cela fonctionne-t-il?
 
-- It compiles our kernel to an [ELF] file.
-- It compiles the bootloader dependency as a standalone executable.
-- It links the bytes of the kernel ELF file to the bootloader.
+L'outil `bootimage` effectue les étapes suivantes en arrière-plan:
+
+- Il compile notre noyau en un fichier [ELF].
+- Il compile notre dépendance bootloader en exécutable autonome.
+- Il lie les octets du fichier ELF noyau au bootloader.
 
 [ELF]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 [rust-osdev/bootloader]: https://github.com/rust-osdev/bootloader
 
-When booted, the bootloader reads and parses the appended ELF file. It then maps the program segments to virtual addresses in the page tables, zeroes the `.bss` section, and sets up a stack. Finally, it reads the entry point address (our `_start` function) and jumps to it.
+Lorsque lancé, le bootloader lit et analyse le fichier ELF ajouté. Il associe ensuite les segments du programme aux adresses virtuelles dans les tables de pages, réinitialise la section `.bss`, puis met en place une pile. Finalement, il lit le point d'entrée (notre fonction `_start`) et s'y rend.
 
 ### Amorçage dans QEMU
 
