@@ -1,7 +1,7 @@
 +++
-title = "A Minimal Rust Kernel"
+title = "Un noyau Rust minimal"
 weight = 2
-path = "minimal-rust-kernel"
+path = "fr/minimal-rust-kernel"
 date = 2018-02-10
 
 [extra]
@@ -12,36 +12,36 @@ translation_based_on_commit = "c689ecf810f8e93f6b2fb3c4e1e8b89b8a0998eb"
 translators = ["TheMimiCodes", "maximevaillancourt"]
 +++
 
-In this post, we create a minimal 64-bit Rust kernel for the x86 architecture. We build upon the [freestanding Rust binary] from the previous post to create a bootable disk image that prints something to the screen.
+Dans cet article, nous créons un noyau Rust minimal 64-bit pour l'architecture x86. Nous continuons le travail fait dans l'article précédent [freestanding Rust binary] pour créer une image de disque amorçable qui imprime quelque chose à l'écran. 
 
 [freestanding Rust binary]: @/edition-2/posts/01-freestanding-rust-binary/index.md
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-02`][post branch] branch.
+Cet article est développé ouvertement sur [GitHub]. Si vous avez des problèmes ou des questions, veuillez ouvrir une Issue sur GitHub. Vous pouvez aussi laisser un commentaire [au bas de la page]. Le code source complet pour cet article peut être trouvé dans la branche [`post-02`][post branch].
 
 [GitHub]: https://github.com/phil-opp/blog_os
-[at the bottom]: #comments
+[au bas de la page]: #comments
 <!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-02
 
 <!-- toc -->
 
 ## The Boot Process
-When you turn on a computer, it begins executing firmware code that is stored in motherboard [ROM]. This code performs a [power-on self-test], detects available RAM, and pre-initializes the CPU and hardware. Afterwards, it looks for a bootable disk and starts booting the operating system kernel.
+QUand vous ouvrez un ordinateur, il commence à exécuter le code du micrologiciel qui est enregistré dans la carte maîtresse[ROM]. Ce code performe un [power-on self-test], détecte la mémoire volatile disponible, et pré-initialise le CPU et le matériel. Par la suite, il recherche un disque amorçable et commence le processus d'amorçage du noyau du système d'exploitation. 
 
 [ROM]: https://en.wikipedia.org/wiki/Read-only_memory
 [power-on self-test]: https://en.wikipedia.org/wiki/Power-on_self-test
 
-On x86, there are two firmware standards: the “Basic Input/Output System“ (**[BIOS]**) and the newer “Unified Extensible Firmware Interface” (**[UEFI]**). The BIOS standard is old and outdated, but simple and well-supported on any x86 machine since the 1980s. UEFI, in contrast, is more modern and has much more features, but is more complex to set up (at least in my opinion).
+Sur x86, il y a deux standards pour les micrologiciels: le “Basic Input/Output System“ (**[BIOS]**) et le nouvel “Unified Extensible Firmware Interface” (**[UEFI]**). Le BIOS standard est vieux et dépassé, mais il est simple et bien suporté sur toutes les machines x86 depuis les années 1980. Au contraire, l'UEFI, est plutôt moderne et il offre davantage de fonctionnalités, cependant, il est plus complexe à installer (du moins, selon moi).
 
 [BIOS]: https://en.wikipedia.org/wiki/BIOS
 [UEFI]: https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
 
-Currently, we only provide BIOS support, but support for UEFI is planned, too. If you'd like to help us with this, check out the [Github issue](https://github.com/phil-opp/blog_os/issues/349).
+Actuellement, nous offrons seulement un support BIOS, mais nous planifions aussi du support pour l'UEFI. Si vous aimeriez nous aider avec cela, consultez [Github issue](https://github.com/phil-opp/blog_os/issues/349).
 
 ### BIOS Boot
-Almost all x86 systems have support for BIOS booting, including newer UEFI-based machines that use an emulated BIOS. This is great, because you can use the same boot logic across all machines from the last century. But this wide compatibility is at the same time the biggest disadvantage of BIOS booting, because it means that the CPU is put into a 16-bit compatibility mode called [real mode] before booting so that archaic bootloaders from the 1980s would still work.
+Presque tous les systèmes x86 ont des support pour amorcer le BIOS, incluant les récentes machine UEFI-based qui utilisent un BIOS émulé. C'est bien étant donné que vous pouvez utiliser la même logique d'armorçage sur toutes les machines du dernier siècle. De plus, cette grande compatibilité est à la fois le plus grand désavantage de l'amorçage BIOS. En effet, cela signifie que le CPU est mis dans un mode de compatibilité 16-bit appelé [real mode] avant l'amorçage afin que les bootloaders archaïques des années 1980 puissent encore fonctionner. 
 
 But let's start from the beginning:
 
