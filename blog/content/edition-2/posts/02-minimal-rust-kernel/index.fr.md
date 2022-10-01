@@ -444,9 +444,9 @@ The `bootimage` tool performs the following steps behind the scenes:
 
 When booted, the bootloader reads and parses the appended ELF file. It then maps the program segments to virtual addresses in the page tables, zeroes the `.bss` section, and sets up a stack. Finally, it reads the entry point address (our `_start` function) and jumps to it.
 
-### Booting it in QEMU
+### Amorçage dans QEMU
 
-We can now boot the disk image in a virtual machine. To boot it in [QEMU], execute the following command:
+Nous pouvons maintenant lancer l'image disque dans une machine virtuelle. Pour la démarrer dans [QEMU], exécutez la commande suivante :
 
 [QEMU]: https://www.qemu.org/
 
@@ -455,15 +455,15 @@ We can now boot the disk image in a virtual machine. To boot it in [QEMU], execu
 warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 ```
 
-This opens a separate window which should look similar to this:
+Ceci ouvre une fenêtre séparée qui devrait ressembler à cela:
 
 ![QEMU showing "Hello World!"](qemu.png)
 
-We see that our "Hello World!" is visible on the screen.
+Nous voyoons que notre "Hello World!" est visible à l'écran.
 
 ### Véritable ordinateur
 
-Il est aussi possible de l'écrire sur une clé USB et de le lancer sur un véritable ordinateur, **mais soyez prudent** et choisissez le bon nom de périphérique, parce que **tout sur ce périphérique sera écrasé**:
+Il est aussi possible d'écrire l'image disque sur une clé USB et de le lancer sur un véritable ordinateur, **mais soyez prudent** et choisissez le bon nom de périphérique, parce que **tout sur ce périphérique sera écrasé**:
 
 ```
 > dd if=target/x86_64-blog_os/debug/bootimage-blog_os.bin of=/dev/sdX && sync
