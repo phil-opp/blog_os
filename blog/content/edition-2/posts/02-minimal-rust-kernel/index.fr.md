@@ -43,22 +43,22 @@ Actuellement, nous offrons seulement un support BIOS, mais nous planifions aussi
 ### BIOS Boot
 Presque tous les systèmes x86 ont des support pour amorcer le BIOS, incluant les récentes machine UEFI-based qui utilisent un BIOS émulé. C'est bien étant donné que vous pouvez utiliser la même logique d'armorçage sur toutes les machines du dernier siècle. De plus, cette grande compatibilité est à la fois le plus grand désavantage de l'amorçage BIOS. En effet, cela signifie que le CPU est mis dans un mode de compatibilité 16-bit appelé [real mode] avant l'amorçage afin que les bootloaders archaïques des années 1980 puissent encore fonctionner. 
 
-But let's start from the beginning:
+Commençons par le commencement: 
 
-When you turn on a computer, it loads the BIOS from some special flash memory located on the motherboard. The BIOS runs self-test and initialization routines of the hardware, then it looks for bootable disks. If it finds one, control is transferred to its _bootloader_, which is a 512-byte portion of executable code stored at the disk's beginning. Most bootloaders are larger than 512 bytes, so bootloaders are commonly split into a small first stage, which fits into 512 bytes, and a second stage, which is subsequently loaded by the first stage.
+Quand vous ouvrez votre ordinateur, il charge le BIOS provenant d'un emplacement de mémoire flash spéciale localisée sur la carte maîtresse. Le BIOS exécute des tests d'auto-diagnostic et es routines d'initialisation du matériel, puis il cherche des disques amorçables. S'il en trouve un, le contrôle est transféré à its _bootloader_, qui est une portion 512-byte du code exécutable enregistré au début du disque. La pluplart des bootloaders sont plus gros que 512 bytes, alors les bootloaders sont communément séparés en deux étapes. La première étape, est de 512 bytes, et la seconde étape, est chargé subséquemment à la première étapge. 
 
-The bootloader has to determine the location of the kernel image on the disk and load it into memory. It also needs to switch the CPU from the 16-bit [real mode] first to the 32-bit [protected mode], and then to the 64-bit [long mode], where 64-bit registers and the complete main memory are available. Its third job is to query certain information (such as a memory map) from the BIOS and pass it to the OS kernel.
+Le bootloader doit déterminé la localisation de l'image de noyau sur le disque et de la télécharger dans sa mémoire. Il doit aussi transformer le CPU 16-bit [real mode] en un 32-bit [protected mode], puis en un 64-bit [long mode], où les registres 64-bit et la mémoire maîtresse complète sont disponibles. Sa troisième tâche est de récupérer certaines informations (telle que les associations mémoires) du BIOS et les passer au noyau du système d'exploitation. 
 
 [real mode]: https://en.wikipedia.org/wiki/Real_mode
 [protected mode]: https://en.wikipedia.org/wiki/Protected_mode
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
 [memory segmentation]: https://en.wikipedia.org/wiki/X86_memory_segmentation
 
-Writing a bootloader is a bit cumbersome as it requires assembly language and a lot of non insightful steps like “write this magic value to this processor register”. Therefore, we don't cover bootloader creation in this post and instead provide a tool named [bootimage] that automatically prepends a bootloader to your kernel.
+Implémenter un bootloader est délicat puisque cela requiert l'écriture de code assembleur et plusieurs autres étapes particulières comme “write this magic value to this processor register”. Par conséquent, nous ne couvrons pas la création d'un bootoader dans cet article et nous fournissons plutôt un outil appelé [bootimage] qui ajoute automatiquement un bootloader à votre noyau.
 
 [bootimage]: https://github.com/rust-osdev/bootimage
 
-If you are interested in building your own bootloader: Stay tuned, a set of posts on this topic is already planned! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
+Si vous êtes intéressé à créer votre propre booloader : Gardez l'oeil ouvert, plusieurs articles sur ce sujet sont déjà prévus! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
 
 #### The Multiboot Standard
 To avoid that every operating system implements its own bootloader, which is only compatible with a single OS, the [Free Software Foundation] created an open bootloader standard called [Multiboot] in 1995. The standard defines an interface between the bootloader and the operating system, so that any Multiboot-compliant bootloader can load any Multiboot-compliant operating system. The reference implementation is [GNU GRUB], which is the most popular bootloader for Linux systems.
