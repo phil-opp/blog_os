@@ -473,25 +473,25 @@ Where `sdX` is the device name of your USB stick.
 
 After writing the image to the USB stick, you can run it on real hardware by booting from it. You probably need to use a special boot menu or change the boot order in your BIOS configuration to boot from the USB stick. Note that it currently doesn't work for UEFI machines, since the `bootloader` crate has no UEFI support yet.
 
-### Using `cargo run`
+### Utilisation de `cargo run`
 
-To make it easier to run our kernel in QEMU, we can set the `runner` configuration key for cargo:
+Pour faciliter l'exécution de notre noyau dans QEMU, nous pouvons définir la clé de configuration `runner` pour cargo:
 
 ```toml
-# in .cargo/config.toml
+# dans .cargo/config.toml
 
 [target.'cfg(target_os = "none")']
 runner = "bootimage runner"
 ```
 
-The `target.'cfg(target_os = "none")'` table applies to all targets whose target configuration file's `"os"` field is set to `"none"`. This includes our `x86_64-blog_os.json` target. The `runner` key specifies the command that should be invoked for `cargo run`. The command is run after a successful build with the executable path passed as the first argument. See the [cargo documentation][cargo configuration] for more details.
+La table `target.'cfg(target_os = "none")'` s'applique à toutes les cibles dont le champ `"os"` dans le fichier de configuration est défini à `"none"`. Ceci inclut notre cible `x86_64-blog_os.json`. La clé `runner` key spécifie la commande qui doit être invoquée pour `cargo run`. La commande est exécutée après une construction réussie avec le chemin de l'exécutable comme premier argument. Voir la [configuration cargo][cargo configuration] pour plus de détails.
 
-The `bootimage runner` command is specifically designed to be usable as a `runner` executable. It links the given executable with the project's bootloader dependency and then launches QEMU. See the [Readme of `bootimage`] for more details and possible configuration options.
+La commande `bootimage runner` est spécifiquement conçue pour être utilisable comme un exécutable `runner`. Elle lie l'exécutable fourni  avec le bootloader duquel le projet dépend et lance ensuite QEMU. Voir le [Readme of `bootimage`][README de `bootimage`] pour plus de détails et les options de configuration possibles.
 
 [Readme of `bootimage`]: https://github.com/rust-osdev/bootimage
 
-Now we can use `cargo run` to compile our kernel and boot it in QEMU.
+Nous pouvons maintenant utiliser `cargo run` pour compiler notre noyau et le lancer dans QEMU.
 
-## What's next?
+## Et ensuite?
 
-In the next post, we will explore the VGA text buffer in more detail and write a safe interface for it. We will also add support for the `println` macro.
+Dans le prochain article, nous explorerons le tampon texte VGA plus en détails et nous écrirons une interface sécuritaire pour l'utiliser. Nous allons aussi mettre en place la macro `println`.
