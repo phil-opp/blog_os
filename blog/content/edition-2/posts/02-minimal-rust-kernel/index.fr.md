@@ -461,17 +461,17 @@ This opens a separate window which should look similar to this:
 
 We see that our "Hello World!" is visible on the screen.
 
-### Real Machine
+### Véritable ordinateur
 
-It is also possible to write it to a USB stick and boot it on a real machine, **but be careful** to choose the correct device name, because **everything on that device is overwritten**:
+Il est aussi possible de l'écrire sur une clé USB et de le lancer sur un véritable ordinateur, **mais soyez prudent** et choisissez le bon nom de périphérique, parce que **tout sur ce périphérique sera écrasé**:
 
 ```
 > dd if=target/x86_64-blog_os/debug/bootimage-blog_os.bin of=/dev/sdX && sync
 ```
 
-Where `sdX` is the device name of your USB stick. 
+Où `sdX` est le nom du périphérique de votre clé USB.
 
-After writing the image to the USB stick, you can run it on real hardware by booting from it. You probably need to use a special boot menu or change the boot order in your BIOS configuration to boot from the USB stick. Note that it currently doesn't work for UEFI machines, since the `bootloader` crate has no UEFI support yet.
+Après l'écriture de l'image sur votre clé USB, vous pouvez l'exécuter sur du véritable matériel en l'amorçant à partir de la clé USB. Vous devrez probablement utiliser un menu d'amorçage spécial ou changer l'ordre d'amorçage dans votre configuration BIOS pour amorcer à partir de la clé USB. Notez que cela ne fonctionne actuellement pas avec des ordinateurs UEFI, puisque la caisse `bootloader` ne supporte pas encore UEFI.
 
 ### Utilisation de `cargo run`
 
