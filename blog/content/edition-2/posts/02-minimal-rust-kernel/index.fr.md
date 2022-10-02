@@ -193,8 +193,8 @@ Un problème avec la désactivation de SIMD est que les opérations sur les nomb
 
 Pour plus d'informations, voir notre article sur la [désactivation de SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
 
-#### Putting it Together
-Our target specification file now looks like this:
+#### Assembler le tout
+Notre fichier de spécification de cible ressemble maintenant à ceci :
 
 ```json
 {
