@@ -393,44 +393,44 @@ So we want to minimize the use of `unsafe` as much as possible. Rust gives us th
 
 Now that we have an executable that does something perceptible, it is time to run it. First, we need to turn our compiled kernel into a bootable disk image by linking it with a bootloader. Then we can run the disk image in the [QEMU] virtual machine or boot it on real hardware using a USB stick.
 
-### Creating a Bootimage
+### Créer une image d'amorçage
 
-To turn our compiled kernel into a bootable disk image, we need to link it with a bootloader. As we learned in the [section about booting], the bootloader is responsible for initializing the CPU and loading our kernel.
+Pour transformer notre noyau compilé en image de disque amorçable, nous devons le lier avec un bootloader. Comme nous l'avons appris dans la [section about booting][section à propos du lancement], le bootloader est responsable de lancer le CPU et de charger notre noyau.
 
 [section about booting]: #the-boot-process
 
-Instead of writing our own bootloader, which is a project on its own, we use the [`bootloader`] crate. This crate implements a basic BIOS bootloader without any C dependencies, just Rust and inline assembly. To use it for booting our kernel, we need to add a dependency on it:
+Plutôt que d'écrire notre propre bootloader, ce qui est un projet en soi, nous utilisons la caisse [`bootloader`]. Cette caisse propose un bootloader BIOS de base sans dépendance C, seulement du code Rust et de l'assembleur intégré. Pour l'utiliser pour lancer notre noyau, nous devons ajouter une dépendance pour cette caisse:
 
 [`bootloader`]: https://crates.io/crates/bootloader
 
 ```toml
-# in Cargo.toml
+# dans Cargo.toml
 
 [dependencies]
 bootloader = "0.9.8"
 ```
 
-Adding the bootloader as a dependency is not enough to actually create a bootable disk image. The problem is that we need to link our kernel with the bootloader after compilation, but cargo has no support for [post-build scripts].
+Ajouter le bootloader comme dépendance n'est pas suffisant pour réellement créer une image de disque amorçable. Le problème est que nous devons lier notre noyau avec le bootloader après la compilation, mais cargo ne supporte pas les [post-build scripts][scripts post-build].
 
 [post-build scripts]: https://github.com/rust-lang/cargo/issues/545
 
-To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then links them together to create a bootable disk image. To install the tool, execute the following command in your terminal:
+Pour résoudre ce problème, nous avons créé un outil nommé `bootimage` qui compile d'abord le noyau et le bootloader, et les lie ensuite ensemble pour créer une image de disque amorçable. Pour installer cet outil, exécutez la commande suivante dans votre terminal:
 
 ```
 cargo install bootimage
 ```
 
-For running `bootimage` and building the bootloader, you need to have the `llvm-tools-preview` rustup component installed. You can do so by executing `rustup component add llvm-tools-preview`.
+Pour exécuter `bootimage` et construire le bootloader, vous devez avoir la composante rustup `llvm-tools-preview` installée. Vous pouvez l'installer en exécutant `rustup component add llvm-tools-preview`.
 
-After installing `bootimage` and adding the `llvm-tools-preview` component, we can create a bootable disk image by executing:
+Après avoir installé `bootimage` and ajouté la composante `llvm-tools-preview`, nous pouvons créer une image de disque amorçable en exécutant:
 
 ```
 > cargo bootimage
 ```
 
-We see that the tool recompiles our kernel using `cargo build`, so it will automatically pick up any changes you make. Afterwards, it compiles the bootloader, which might take a while. Like all crate dependencies, it is only built once and then cached, so subsequent builds will be much faster. Finally, `bootimage` combines the bootloader and your kernel into a bootable disk image.
+Nous voyons que l'outil recompile notre noyau en utilisant `cargo build`, alors il utilisera automatiquement tout changement que vous faites. Ensuite, il compile le bootloader, ce qui peut prendre un certain temps. Comme toutes les dépendances de caisses, il est seulement construit une fois puis il est mis en cache, donc les builds subséquentes seront beaucoup plus rapides. Enfin, `bootimage` combine le bootloader et le noyau en une image de disque amorçable.
 
-After executing the command, you should see a bootable disk image named `bootimage-blog_os.bin` in your `target/x86_64-blog_os/debug` directory. You can boot it in a virtual machine or copy it to a USB drive to boot it on real hardware. (Note that this is not a CD image, which has a different format, so burning it to a CD doesn't work).
+Après avoir exécuté la commande, vous devriez voir une image de disque amorçable nommée `bootimage-blog_os.bin` dans votre dossier `target/x86_64-blog_os/debug`. Vous pouvez la lancer dans une machine virtuelle ou la copier sur une clé USB pour la lancer sur du véritable matériel. (Notez que ceci n'est pas une image CD, qui est un format différent, donc la graver sur un CD ne fonctionne pas).
 
 #### Comment cela fonctionne-t-il?
 
@@ -485,7 +485,7 @@ Pour faciliter l'exécution de notre noyau dans QEMU, nous pouvons définir la c
 runner = "bootimage runner"
 ```
 
-La table `target.'cfg(target_os = "none")'` s'applique à toutes les cibles dont le champ `"os"` dans le fichier de configuration est défini à `"none"`. Ceci inclut notre cible `x86_64-blog_os.json`. La clé `runner` key spécifie la commande qui doit être invoquée pour `cargo run`. La commande est exécutée après une construction réussie avec le chemin de l'exécutable comme premier argument. Voir la [configuration cargo][cargo configuration] pour plus de détails.
+La table `target.'cfg(target_os = "none")'` s'applique à toutes les cibles dont le champ `"os"` dans le fichier de configuration est défini à `"none"`. Ceci inclut notre cible `x86_64-blog_os.json`. La clé `runner` key spécifie la commande qui doit être invoquée pour `cargo run`. La commande est exécutée après une build réussie avec le chemin de l'exécutable comme premier argument. Voir la [configuration cargo][cargo configuration] pour plus de détails.
 
 La commande `bootimage runner` est spécifiquement conçue pour être utilisable comme un exécutable `runner`. Elle lie l'exécutable fourni  avec le bootloader duquel le projet dépend et lance ensuite QEMU. Voir le [Readme of `bootimage`][README de `bootimage`] pour plus de détails et les options de configuration possibles.
 
