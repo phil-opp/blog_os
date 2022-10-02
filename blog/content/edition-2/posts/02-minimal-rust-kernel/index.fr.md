@@ -323,22 +323,22 @@ Behind the scenes, this flag enables the [`mem` feature] of the `compiler_builti
 
 With this change, our kernel has valid implementations for all compiler-required functions, so it will continue to compile even if our code gets more complex.
 
-#### Set a Default Target
+#### Définir une cible par défaut
 
-To avoid passing the `--target` parameter on every invocation of `cargo build`, we can override the default target. To do this, we add the following to our [cargo configuration] file at `.cargo/config.toml`:
+Pour ne pas avoir à fournir le paramètre `--target` à chaque invocation de `cargo build`, nous pouvons définir la cible par défaut. Pour ce faire, nous ajoutons le code suivant à notre fichier de [cargo configuration][configuration Cargo] dans `.cargo/config.toml`:
 
 [cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
 
 ```toml
-# in .cargo/config.toml
+# dans .cargo/config.toml
 
 [build]
 target = "x86_64-blog_os.json"
 ```
 
-This tells `cargo` to use our `x86_64-blog_os.json` target when no explicit `--target` argument is passed. This means that we can now build our kernel with a simple `cargo build`. For more information on cargo configuration options, check out the [official documentation][cargo configuration].
+Ceci indique à `cargo` d'utiliser notre cible `x86_64-blog_os.json` quand il n'y a pas d'argument de cible `--target` explicitement fourni. Ceci veut dire que nous pouvons maintenant construire notre noyau avec un simple `cargo build`. Pour plus d'informations sur les options de configuration cargo, jetez un coup d'oeil à la [official documentation][documentation officielle de cargo].
 
-We are now able to build our kernel for a bare metal target with a simple `cargo build`. However, our `_start` entry point, which will be called by the boot loader, is still empty. It's time that we output something to screen from it.
+Nous pouvons maintenant construire notre noyau pour une cible "bare metal" avec un simple `cargo build`. Toutefois, notre point d'entrée `_start`, qui sera appelé par le bootloader, est encore vide. Il est temps de lui faire imprimer quelque chose à l'écran.
 
 ### Imprimer à l'écran
 La façon la plus facile d'imprimer à l'écran à ce stade est grâce au tampon texte VGA. C'est un emplacement mémoire spécial associé au matériel VGA qui contient le contenu affiché à l'écran. Il consiste normalement en 25 lines qui contiennent chacune 80 cellules de caractère. Chaque cellule de caractère affiche un caractère ASCII avec des couleurs d'avant-plan et d'arrière-plan. Le résultat à l'écran ressemble à ceci:
