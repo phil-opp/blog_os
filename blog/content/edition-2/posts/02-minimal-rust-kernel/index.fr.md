@@ -79,18 +79,18 @@ Pour faire un noyau conforme à la spécification Multiboot, il faut seulement i
 [adjusted default page size]: https://wiki.osdev.org/Multiboot#Multiboot_2
 [boot information]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 
-Because of these drawbacks, nous avons décidé de ne pas utiliser GRUB ou le standard Multiboot. Cependant, nous avons planifié d'ajouter un support Multiboot à notre outil [bootimage], afin qu'il soit aussi possible de charger votre noyau sur un système  GRUB. Si vous êtes interessé à écrire un noyau Multiboot conforme, consultez la [first edition] de cette série d'articles. 
+En raison de ces désavantages, nous avons décidé de ne pas utiliser GRUB ou le standard Multiboot. Cependant, nous avons planifié d'ajouter un support Multiboot à notre outil [bootimage], afin qu'il soit aussi possible de charger votre noyau sur un système  GRUB. Si vous êtes interessé à écrire un noyau Multiboot conforme, consultez la [first edition] de cette série d'articles. 
 
 [first edition]: @/edition-1/_index.md
 
 ### UEFI
 
-(We don't provide UEFI support at the moment, but we would love to! If you'd like to help, please tell us in the [Github issue](https://github.com/phil-opp/blog_os/issues/349).)
+(Nous ne fournissons pas le support UEFI à l'heure actuelle, mais nous aimerions bien! Si vous êtes intéressé à aider, dites-le nous dans le [Github issue](https://github.com/phil-opp/blog_os/issues/349).)
 
 ## A Minimal Kernel
-Now that we roughly know how a computer boots, it's time to create our own minimal kernel. Our goal is to create a disk image that prints a “Hello World!” to the screen when booted. We do this by extending the previous post's [freestanding Rust binary].
+Maintenant que nous savons à peu près comment un ordinateur démarre, c'est le temps de créer notre propre noyau minimal. Notre objectif est de créé une image de disque qui imprime “Hello World!” à l'écran lorsqu'il démarre. Nous faisons ceci en améliorant le [freestanding Rust binary][binaire Rust autonome] du dernier article.
 
-As you may remember, we built the freestanding binary through `cargo`, but depending on the operating system, we needed different entry point names and compile flags. That's because `cargo` builds for the _host system_ by default, i.e., the system you're running on. This isn't something we want for our kernel, because a kernel that runs on top of, e.g., Windows, does not make much sense. Instead, we want to compile for a clearly defined _target system_.
+Comme vous vous en rappelez peut-être, nous avons bâti un binaire autonome grâce à `cargo`, mais selon le système d'opérations, nous avions besoin de différents points d'entrée et d'options de compilation.  Ceci est dû au fait que `cargo` construit pour le the _host system_ by default, i.e., le système que vous utilisez. Ce n'est pas quelque chose que nous voulons pour notre noyau, puisqu'un noyau exécute par dessus, e.g., Windows, ce qui ne fait pas de sens. À la placem nous vouons compiler pour un système cible bien défini defined _target system_.
 
 ### Installing Rust Nightly
 Rust has three release channels: _stable_, _beta_, and _nightly_. The Rust Book explains the difference between these channels really well, so take a minute and [check it out](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). For building an operating system, we will need some experimental features that are only available on the nightly channel, so we need to install a nightly version of Rust.
