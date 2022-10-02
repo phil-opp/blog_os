@@ -61,25 +61,25 @@ Implémenter un bootloader est délicat puisque cela requiert l'écriture de cod
 Si vous êtes intéressé à créer votre propre booloader : Gardez l'oeil ouvert, plusieurs articles sur ce sujet sont déjà prévus! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built. -->
 
 #### The Multiboot Standard
-To avoid that every operating system implements its own bootloader, which is only compatible with a single OS, the [Free Software Foundation] created an open bootloader standard called [Multiboot] in 1995. The standard defines an interface between the bootloader and the operating system, so that any Multiboot-compliant bootloader can load any Multiboot-compliant operating system. The reference implementation is [GNU GRUB], which is the most popular bootloader for Linux systems.
+Pour éviter que chaque système d'opération implémente son propre bootloader, qui est seulement compatible avec un seul système d'exploitation, le [Free Software Foundation] à créé un bootloader public standard appelé [Multiboot] en 1995. Le standard défini une interface entre le bootloader et le système d'opération afin que n'importe quel Multiboot-compliant bootloader puisse charger n'importe quel système d'opérations Multiboot-compliant. La référence d'implementation est [GNU GRUB], qui est le bootloader le plus populaire pour les systèmes Linux. 
 
 [Free Software Foundation]: https://en.wikipedia.org/wiki/Free_Software_Foundation
 [Multiboot]: https://wiki.osdev.org/Multiboot
 [GNU GRUB]: https://en.wikipedia.org/wiki/GNU_GRUB
 
-To make a kernel Multiboot compliant, one just needs to insert a so-called [Multiboot header] at the beginning of the kernel file. This makes it very easy to boot an OS from GRUB. However, GRUB and the Multiboot standard have some problems too:
+Pour faire un noyau conforme à la spécification Multiboot, il faut seulement inséré un [Multiboot header] au début du fichier du noyau. Cela fait en sorte que c'est très simple to boot un système d'exploitation depuis GRUB. Cependant, le GRUB et le Multiboot standard présentent aussi des problèmes : 
 
 [Multiboot header]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
 
-- They support only the 32-bit protected mode. This means that you still have to do the CPU configuration to switch to the 64-bit long mode.
-- They are designed to make the bootloader simple instead of the kernel. For example, the kernel needs to be linked with an [adjusted default page size], because GRUB can't find the Multiboot header otherwise. Another example is that the [boot information], which is passed to the kernel, contains lots of architecture-dependent structures instead of providing clean abstractions.
-- Both GRUB and the Multiboot standard are only sparsely documented.
-- GRUB needs to be installed on the host system to create a bootable disk image from the kernel file. This makes development on Windows or Mac more difficult.
+- Ils supportent seulement le mode de protection 32-bit. Cela signifie que si vous devez encore faire la configuration du CPU pour changer au 64-bit long mode.
+- Ils sont désignés pour faire le bootloader simple plutôt que le noyau. Par exemple, le noyau doit être lié avec un [adjusted default page size], étant donné que le GRUB ne peut pas trouver les entêtes Multiboot autrement. Un autre exemple est que le [boot information], qui est passé au noyau, contient plusieurs structures spécifiques à l'architecture plutôt que de fournir des abstractions pures. 
+- GRUB et le standard Multiboot sont peu documentés.
+- GRUB doit être installé sur un système hôte pour créer une image de disque amorçable depuis le fichier du noyau. Cela rend le développement sur Windows ou sur Mac plus difficile.
 
 [adjusted default page size]: https://wiki.osdev.org/Multiboot#Multiboot_2
 [boot information]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 
-Because of these drawbacks, we decided to not use GRUB or the Multiboot standard. However, we plan to add Multiboot support to our [bootimage] tool, so that it's possible to load your kernel on a GRUB system too. If you're interested in writing a Multiboot compliant kernel, check out the [first edition] of this blog series.
+Because of these drawbacks, nous avons décidé de ne pas utiliser GRUB ou le standard Multiboot. Cependant, nous avons planifié d'ajouter un support Multiboot à notre outil [bootimage], afin qu'il soit aussi possible de charger votre noyau sur un système  GRUB. Si vous êtes interessé à écrire un noyau Multiboot conforme, consultez la [first edition] de cette série d'articles. 
 
 [first edition]: @/edition-1/_index.md
 
