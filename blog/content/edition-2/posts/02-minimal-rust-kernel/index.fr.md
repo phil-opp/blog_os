@@ -340,16 +340,16 @@ This tells `cargo` to use our `x86_64-blog_os.json` target when no explicit `--t
 
 We are now able to build our kernel for a bare metal target with a simple `cargo build`. However, our `_start` entry point, which will be called by the boot loader, is still empty. It's time that we output something to screen from it.
 
-### Printing to Screen
-The easiest way to print text to the screen at this stage is the [VGA text buffer]. It is a special memory area mapped to the VGA hardware that contains the contents displayed on screen. It normally consists of 25 lines that each contain 80 character cells. Each character cell displays an ASCII character with some foreground and background colors. The screen output looks like this:
+### Imprimer à l'écran
+La façon la plus facile d'imprimer à l'écran à ce stade est grâce au tampon texte VGA. C'est un emplacement mémoire spécial associé au matériel VGA qui contient le contenu affiché à l'écran. Il consiste normalement en 25 lines qui contiennent chacune 80 cellules de caractère. Chaque cellule de caractère affiche un caractère ASCII avec des couleurs d'avant-plan et d'arrière-plan. Le résultat à l'écran ressemble à ceci:
 
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
 
-![screen output for common ASCII characters](https://upload.wikimedia.org/wikipedia/commons/f/f8/Codepage-437.png)
+![sortie à l'écran pour des caractères ASCII ordinaires](https://upload.wikimedia.org/wikipedia/commons/f/f8/Codepage-437.png)
 
-We will discuss the exact layout of the VGA buffer in the next post, where we write a first small driver for it. For printing “Hello World!”, we just need to know that the buffer is located at address `0xb8000` and that each character cell consists of an ASCII byte and a color byte.
+Nous discuterons de la disposition exacte du tampon VGA dans le prochain article, où nous lui écrirons un premier petit pilote. Pour afficher “Hello World!”, nous devons seulement savoir que le tampon est situé à l'adresse `0xb8000` et que chaque cellule de caractère consiste en un octet ASCII et un octet de couleur.
 
-The implementation looks like this:
+L'implémentation ressemble à ceci :
 
 ```rust
 static HELLO: &[u8] = b"Hello World!";
@@ -369,7 +369,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-First, we cast the integer `0xb8000` into a [raw pointer]. Then we [iterate] over the bytes of the [static] `HELLO` [byte string]. We use the [`enumerate`] method to additionally get a running variable `i`. In the body of the for loop, we use the [`offset`] method to write the string byte and the corresponding color byte (`0xb` is a light cyan).
+D'abord, nous transformons l'entier `0xb8000` en un [raw pointer][pointeur brut]. Puis nous [iterate][parcourons] les octets de la [byte string][chaîne d'octets] [static][statique] `HELLO`. Nous utilisons la méthode [`enumerate`] pour aussi obtenir une variable `i`. Dans le corps de la boucle `for`, nous utilisons la méthode [`offset`] pour écrire la chaîne d'octets et l'octet de couleur correspondant(`0xb` est un cyan pâle).
 
 [iterate]: https://doc.rust-lang.org/stable/book/ch13-02-iterators.html
 [static]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
@@ -378,14 +378,14 @@ First, we cast the integer `0xb8000` into a [raw pointer]. Then we [iterate] ove
 [raw pointer]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
-Note that there's an [`unsafe`] block around all memory writes. The reason is that the Rust compiler can't prove that the raw pointers we create are valid. They could point anywhere and lead to data corruption. By putting them into an `unsafe` block, we're basically telling the compiler that we are absolutely sure that the operations are valid. Note that an `unsafe` block does not turn off Rust's safety checks. It only allows you to do [five additional things].
+Noter qu'il y a un bloc [`unsafe`] qui enveloppe les écritures mémoire. La raison est que le compilateur Rust ne peut pas prouver que les pointeurs bruts que nous créons sont valides. Ils pourraient pointer n'importe où et mener à une corruption de données. En les mettant dans un bloc `unsafe`, nous disons fondamentalement au compilateur que nous sommes absolument certains que les opérations sont valides. Noter qu'un bloc `unsafe` ne désactive pas les contrôles de sécurité de Rust. Il permet seulement de faire [five additional things][cinq choses supplémentaires].
 
 [`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
 [five additional things]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers
 
-I want to emphasize that **this is not the way we want to do things in Rust!** It's very easy to mess up when working with raw pointers inside unsafe blocks. For example, we could easily write beyond the buffer's end if we're not careful.
+Je veux souligner que **ceci n'est pas la façon de faire les choses en Rust!** Il est très facile de faire un gâchis en travaillant avec des pointeurs bruts à l'intérieur de blocs `unsafe`. Par exemple, nous pourrions facilement écrire au-delà de la fin du tampon si nous ne sommes pas prudents.
 
-So we want to minimize the use of `unsafe` as much as possible. Rust gives us the ability to do this by creating safe abstractions. For example, we could create a VGA buffer type that encapsulates all unsafety and ensures that it is _impossible_ to do anything wrong from the outside. This way, we would only need minimal amounts of `unsafe` code and can be sure that we don't violate [memory safety]. We will create such a safe VGA buffer abstraction in the next post.
+Alors nous voulons minimiser l'utilisation de `unsafe` autant que possible. Rust nous offre la possibilité de faire cela en créant des abstractions sécuritaires. Par exemple, nous pourrions créer un type tampon VGA qui encapsule les risques et qui s'assure qu'il est impossible de faire quoi que ce soit d'incorrect à l'extérieur de ce type. Ainsi, nous aurions besoin de très peu de code `unsafe` and nous serions certains que nous ne violons pas la [memory safety][sécurité de mémoire]. Nous allons créer une telle abstraction de tampon VGA buffer dans le prochain article.
 
 [memory safety]: https://en.wikipedia.org/wiki/Memory_safety
 
