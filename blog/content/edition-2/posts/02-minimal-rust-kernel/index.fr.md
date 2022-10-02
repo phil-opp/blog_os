@@ -214,36 +214,36 @@ Our target specification file now looks like this:
 }
 ```
 
-### Building our Kernel
-Compiling for our new target will use Linux conventions (I'm not quite sure why; I assume it's just LLVM's default). This means that we need an entry point named `_start` as described in the [previous post]:
+### Construction de notre noyau
+Compiler pour notre nouvelle cible utilisera les conventions Linux (je ne suis pas trop certain pourquoi; j'assume que c'est simplement le comportement par défaut de LLVM). Cela signifie que nos avons besoin d'un point d'entrée nommé `_start` comme décrit dans le [previous post][dernier article]:
 
 [previous post]: @/edition-2/posts/01-freestanding-rust-binary/index.md
 
 ```rust
 // src/main.rs
 
-#![no_std] // don't link the Rust standard library
-#![no_main] // disable all Rust-level entry points
+#![no_std] // ne pas lier la bibliothèque standard Rust
+#![no_main] // désactiver tous les points d'entrée Rust
 
 use core::panic::PanicInfo;
 
-/// This function is called on panic.
+/// Cette fonction est invoquée lorsque le système panique
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[no_mangle] // don't mangle the name of this function
+#[no_mangle] // ne pas massacrer le nom de cette fonction
 pub extern "C" fn _start() -> ! {
-    // this function is the entry point, since the linker looks for a function
-    // named `_start` by default
+    // cette fonction est le point d'entrée, puisque le lieur cherche une fonction
+    // nommée `_start` par défaut
     loop {}
 }
 ```
 
-Note that the entry point needs to be called `_start` regardless of your host OS.
+Noter que le point d'entrée doit être appelé `_start` indépendamment du système d'exploitation hôte.
 
-We can now build the kernel for our new target by passing the name of the JSON file as `--target`:
+Nous pouvons maintenant construire le noyau pour notre nouvelle cible en fournissant le nom du fichier JSON comme `--target`:
 
 ```
 > cargo build --target x86_64-blog_os.json
@@ -251,11 +251,11 @@ We can now build the kernel for our new target by passing the name of the JSON f
 error[E0463]: can't find crate for `core`
 ```
 
-It fails! The error tells us that the Rust compiler no longer finds the [`core` library]. This library contains basic Rust types such as `Result`, `Option`, and iterators, and is implicitly linked to all `no_std` crates.
+Cela échoue! L'erreur nous dit que le compilateur ne trouve plus la [`core` library][bibliothèque `core`]. Cette bibliothèque contient les types de base Rust comme `Result`, `Option`, les itérateurs, et est implicitement liée à toutes les caisses `no_std`.
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
-The problem is that the core library is distributed together with the Rust compiler as a _precompiled_ library. So it is only valid for supported host triples (e.g., `x86_64-unknown-linux-gnu`) but not for our custom target. If we want to compile code for other targets, we need to recompile `core` for these targets first.
+Le problème est que la bibliothèque essentielle est distribuée avec le Rust compilateur comme biliothèque _precompilée_. Donc, elle est seulement valide pour les triplets d'hôtes supportés (par exemple, `x86_64-unknown-linux-gnu`) mais pas pour notre cible personnalisée. Si nous voulons compiler du code pour d'autres cibles, nous devons d'abord recompiler `core` pour ces cibles.
 
 #### The `build-std` Option
 
