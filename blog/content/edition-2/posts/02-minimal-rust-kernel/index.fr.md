@@ -257,31 +257,31 @@ Cela échoue! L'erreur nous dit que le compilateur ne trouve plus la [`core` lib
 
 Le problème est que la bibliothèque essentielle est distribuée avec le Rust compilateur comme biliothèque _precompilée_. Donc, elle est seulement valide pour les triplets d'hôtes supportés (par exemple, `x86_64-unknown-linux-gnu`) mais pas pour notre cible personnalisée. Si nous voulons compiler du code pour d'autres cibles, nous devons d'abord recompiler `core` pour ces cibles.
 
-#### The `build-std` Option
+#### L'option `build-std`
 
-That's where the [`build-std` feature] of cargo comes in. It allows to recompile `core` and other standard library crates on demand, instead of using the precompiled versions shipped with the Rust installation. This feature is very new and still not finished, so it is marked as "unstable" and only available on [nightly Rust compilers].
+C'est ici que la [`build-std` feature][fonctionnalité `build-std`] de cargo entre en jeu. Elle permet de recompiler `core` et d'autres caisses de la bibliothèque standard sur demande, plutôt que d'utiliser des versions précompilées incluses avec l'installation de Rust. Cette fonctionnalité est très récente et n'est pas encore complète, donc elle est définie comme instable et est seulement disponible avec les [nightly Rust compilers][versions nocturnes du compilateur Rust].
 
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust compilers]: #installing-rust-nightly
 
-To use the feature, we need to create a [cargo configuration] file at `.cargo/config.toml` with the following content:
+Pour utiliser cette fonctionnalité, nous devons créer un fichier de [cargo configuration][configuration cargo] dans `.cargo/config.toml` avec le contenu suivant:
 
 ```toml
-# in .cargo/config.toml
+# dans .cargo/config.toml
 
 [unstable]
 build-std = ["core", "compiler_builtins"]
 ```
 
-This tells cargo that it should recompile the `core` and `compiler_builtins` libraries. The latter is required because it is a dependency of `core`. In order to recompile these libraries, cargo needs access to the rust source code, which we can install with `rustup component add rust-src`.
+Ceci indique à cargo qu'il doit recompiler les bibliothèques `core` et `compiler_builtins`. Celle-ci est nécessaire pour qu'elle est une dépendance de `core`. Afin de recompiler ces bibliothèques, cargo doit avoir accès au code source de Rust, que nous pouvons installer avec `rustup component add rust-src`.
 
 <div class="note">
 
-**Note:** The `unstable.build-std` configuration key requires at least the Rust nightly from 2020-07-15.
+**Note:** La clé de configuration `unstable.build-std` nécessite une version nocturne de Rust plus récente que 2020-07-15.
 
 </div>
 
-After setting the `unstable.build-std` configuration key and installing the `rust-src` component, we can rerun our build command:
+Après avoir défini la clé de configuration `unstable.build-std` et installé la composante `rust-src`, nous pouvons exécuter notre commande de construction à nouveau:
 
 ```
 > cargo build --target x86_64-blog_os.json
@@ -292,7 +292,7 @@ After setting the `unstable.build-std` configuration key and installing the `rus
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-We see that `cargo build` now recompiles the `core`, `rustc-std-workspace-core` (a dependency of `compiler_builtins`), and `compiler_builtins` libraries for our custom target.
+Nous voyons que `cargo build` recompile maintenant les bibliothèques `core`, `rustc-std-workspace-core` (une dépendance de `compiler_builtins`), et `compiler_builtins` pour notre cible personnalisée.
 
 #### Détails reliés à la mémoire
 
