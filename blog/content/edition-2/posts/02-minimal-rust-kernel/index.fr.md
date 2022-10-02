@@ -389,9 +389,9 @@ So we want to minimize the use of `unsafe` as much as possible. Rust gives us th
 
 [memory safety]: https://en.wikipedia.org/wiki/Memory_safety
 
-## Running our Kernel
+## Exécuter notre noyau
 
-Now that we have an executable that does something perceptible, it is time to run it. First, we need to turn our compiled kernel into a bootable disk image by linking it with a bootloader. Then we can run the disk image in the [QEMU] virtual machine or boot it on real hardware using a USB stick.
+Maintenant que nous avons un exécutable qui fait quelque chose de perceptible, il est temps de l'exécuter. D'abord, nous devons transformer notre noyau compilé en une image de disque amorçable en le liant à un bootloader. Ensuite, nous pourrons exécuter l'image de disque dans une machine virtuelle [QEMU] ou l'amorcer sur du véritable matériel en utilisant une clé USB.
 
 ### Créer une image d'amorçage
 
