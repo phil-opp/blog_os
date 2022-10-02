@@ -103,15 +103,15 @@ La version nocturne du compilateur nous permet d'activer certaines fonctionnalit
 
 [`asm!` macro]: https://doc.rust-lang.org/stable/reference/inline-assembly.html
 
-### Target Specification
-Cargo supports different target systems through the `--target` parameter. The target is described by a so-called _[target triple]_, which describes the CPU architecture, the vendor, the operating system, and the [ABI]. For example, the `x86_64-unknown-linux-gnu` target triple describes a system with an `x86_64` CPU, no clear vendor, and a Linux operating system with the GNU ABI. Rust supports [many different target triples][platform-support], including `arm-linux-androideabi` for Android or [`wasm32-unknown-unknown` for WebAssembly](https://www.hellorust.com/setup/wasm-target/).
+### Spécification de cible
+Cargo supporte différent systèmes cibles avec le paramètre `--target`. La cible est définie par un soi-disant _[target triple][triplet de cible]_, qui décrit l'architecteur du processeur, le fabricant, le système d'exploitation, et l'interface binaire d'application ([ABI]). Par exemple, le triplet `x86_64-unknown-linux-gnu` décrit un système avec un processeur `x86_64`, pas de fabricant défini, et un système d'exploitation Linux avec l'interface binaire d'application GNU. Rust supporte [plusieurs différents triplets de cible][platform-support], incluant `arm-linux-androideabi` pour Android ou [`wasm32-unknown-unknown` pour WebAssembly](https://www.hellorust.com/setup/wasm-target/).
 
 [target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [ABI]: https://stackoverflow.com/a/2456882
 [platform-support]: https://forge.rust-lang.org/release/platform-support.html
 [custom-targets]: https://doc.rust-lang.org/nightly/rustc/targets/custom.html
 
-For our target system, however, we require some special configuration parameters (e.g. no underlying OS), so none of the [existing target triples][platform-support] fits. Fortunately, Rust allows us to define [our own target][custom-targets] through a JSON file. For example, a JSON file that describes the `x86_64-unknown-linux-gnu` target looks like this:
+Pour notre système cible toutefois, nous avons besoin de paramètres de configuration spéciaux (par exemple, pas de système d'explotation sous-jacent), donc aucun des [triplets de cible existants][platform-support] ne convient. Heureusement, Rust nous permet de définir [notre propre cible][custom-targets] par l'entremise d'un fichier JSON. Par exemple, un fichier JSON qui décrit une cible `x86_64-unknown-linux-gnu` ressemble à ceci:
 
 ```json
 {
@@ -129,12 +129,12 @@ For our target system, however, we require some special configuration parameters
 }
 ```
 
-Most fields are required by LLVM to generate code for that platform. For example, the [`data-layout`] field defines the size of various integer, floating point, and pointer types. Then there are fields that Rust uses for conditional compilation, such as `target-pointer-width`. The third kind of field defines how the crate should be built. For example, the `pre-link-args` field specifies arguments passed to the [linker].
+La plupart des champs sont requis par LLVM pour générer le code pour cette plateforme. Par exemple, le champ [`data-layout`] définit la taille de divers types d'entiers, de nombres à virgule flottante, et de pointeurs. Puis, il y a des champs que Rust utilise pour de la compilation conditionelle, comme `target-pointer-width`. Le troisième type de champ définit comme une caisse doit être construite. Par exemple, le champ `pre-link-args` spécifie les arguments fournis au [linker][lieur].
 
 [`data-layout`]: https://llvm.org/docs/LangRef.html#data-layout
 [linker]: https://en.wikipedia.org/wiki/Linker_(computing)
 
-We also target `x86_64` systems with our kernel, so our target specification will look very similar to the one above. Let's start by creating an `x86_64-blog_os.json` file (choose any name you like) with the common content:
+Nous pouvons aussi cibler les systèmes `x86_64` avec notre noyau, donc notre spécification de cible ressemblera beaucoup à celle plus haut. Commençons par créer un fichier `x86_64-blog_os.json` (utilisez le nom de votre choix) avec ce contenu commun:
 
 ```json
 {
@@ -149,9 +149,9 @@ We also target `x86_64` systems with our kernel, so our target specification wil
 }
 ```
 
-Note that we changed the OS in the `llvm-target` and the `os` field to `none`, because we will run on bare metal.
+Noter que nous avons changé le système d'exploitation dans le champs `llvm-target` et `os` pour `none`, puisque nous ferons l'exécution sur du "bare metal" (pas de système d'exploitation sous-jacent).
 
-We add the following build-related entries:
+Nous ajoutons ensuite les champs suivants reliés à la construction:
 
 
 ```json
@@ -159,7 +159,7 @@ We add the following build-related entries:
 "linker": "rust-lld",
 ```
 
-Instead of using the platform's default linker (which might not support Linux targets), we use the cross-platform [LLD] linker that is shipped with Rust for linking our kernel.
+Plutôt que d'utiliser le lieur par défaut de la plateforme (qui pourrait ne pas supporter les cibles Linux), nous utilisons le lieur multi-plateforme [LLD] qui est inclut avec Rust pour lier notre noyau.
 
 [LLD]: https://lld.llvm.org/
 
@@ -167,7 +167,7 @@ Instead of using the platform's default linker (which might not support Linux ta
 "panic-strategy": "abort",
 ```
 
-This setting specifies that the target doesn't support [stack unwinding] on panic, so instead the program should abort directly. This has the same effect as the `panic = "abort"` option in our Cargo.toml, so we can remove it from there. (Note that, in contrast to the Cargo.toml option, this target option also applies when we recompile the `core` library later in this post. So, even if you prefer to keep the Cargo.toml option, make sure to include this option.)
+Ce paramètre spécifie que la cible ne permet pas le [stack unwinding][déroulement de la pile] lorsque le noyau panique, alors le système devrait plutôt s'arrêter directement. Ceci mène au même résultat que l'option `panic = "abort"` dans notre Cargo.toml, alors nous pouvons la retirer de ce fichier. (Noter que, contrairement à l'option Cargo.toml, cette option de cible s'applique aussi quand nous recompilerons la bibliothèque `core` plus loin dans cet article. Ainsi, même si vous préférez garder l'option Cargo.toml, gardez cette option.)
 
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
 
@@ -175,7 +175,7 @@ This setting specifies that the target doesn't support [stack unwinding] on pani
 "disable-redzone": true,
 ```
 
-We're writing a kernel, so we'll need to handle interrupts at some point. To do that safely, we have to disable a certain stack pointer optimization called the _“red zone”_, because it would cause stack corruption otherwise. For more information, see our separate post about [disabling the red zone].
+Nous écrivons un noyau, donc nous devrons éventuellement gérer les interruptions. Pour ce faire en toute sécurité, nous devons désactiver une optimisation de pointeur de pile nommée la _“zone rouge", puisqu'elle causerait une corruption de la pile autrement. Pour plus d'informations, lire notre article séparé à propos de la [disabling the red zone][désactivation de la zone rouge].
 
 [disabling the red zone]: @/edition-2/posts/02-minimal-rust-kernel/disable-red-zone/index.md
 
@@ -183,15 +183,15 @@ We're writing a kernel, so we'll need to handle interrupts at some point. To do 
 "features": "-mmx,-sse,+soft-float",
 ```
 
-The `features` field enables/disables target features. We disable the `mmx` and `sse` features by prefixing them with a minus and enable the `soft-float` feature by prefixing it with a plus. Note that there must be no spaces between different flags, otherwise LLVM fails to interpret the features string.
+Le champ `features` active/désactive des fonctionalités de la cible. Nous désactivons les fonctionalités `mmx` et `sse` en les précédant d'un signe "moins" et activons la fonctionnalité `soft-float` en la précédant d'un signe "plus". Noter qu'il ne doit pas y avoir d'espace entre les différentes fonctionnalités, sinon LLVM n'arrive pas à analyser la chaîne de caractères des fonctionnalités.
 
-The `mmx` and `sse` features determine support for [Single Instruction Multiple Data (SIMD)] instructions, which can often speed up programs significantly. However, using the large SIMD registers in OS kernels leads to performance problems. The reason is that the kernel needs to restore all registers to their original state before continuing an interrupted program. This means that the kernel has to save the complete SIMD state to main memory on each system call or hardware interrupt. Since the SIMD state is very large (512–1600 bytes) and interrupts can occur very often, these additional save/restore operations considerably harm performance. To avoid this, we disable SIMD for our kernel (not for applications running on top!).
+Les fonctionnalités `mmx` et `sse` déterminent le support les instructions [Single Instruction Multiple Data (SIMD)], qui peuvent souvent significativement accélérer les programmes. Toutefois, utiliser les grands registres SIMD dans les noyaux des systèmes d'exploitation mène à des problèmes de performance. Ceci arrive puisque le noyau a besoin de restaurer tous les registres à leur état original avant de continuer un programme interrompu. Cela signifie que le noyau doit enregistrer l'état SIMD complet dans la mémoire principale à chaque appel système ou interruption matérielle. Puisque l'état SIMD est très grand (512–1600 octets) et que les interruptions peuvent survenir très fréquemment, ces opérations d'enregistrement/restauration additionnelles nuisent considérablement à la performance. Pour prévenir cela, nous désactivons SIMD pour notre noyau (pas pour les applications qui s'exécutent dessus!).
 
 [Single Instruction Multiple Data (SIMD)]: https://en.wikipedia.org/wiki/SIMD
 
-A problem with disabling SIMD is that floating point operations on `x86_64` require SIMD registers by default. To solve this problem, we add the `soft-float` feature, which emulates all floating point operations through software functions based on normal integers.
+Un problème avec la désactivation de SIMD est que les opérations sur les nombres à virgule flottante sur `x86_64` nécessitent les registres SIMD par défaut. Pour résoudre ce problème, nous ajoutons la fonctionnalité `soft-float`, qui émule toutes les opérations à virgule flottante avec des fonctions logicielles utilisant des entiers normaux.
 
-For more information, see our post on [disabling SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
+Pour plus d'informations, voir notre article sur la [désactivation de SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
 
 #### Putting it Together
 Our target specification file now looks like this:
