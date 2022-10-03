@@ -97,11 +97,11 @@
 
     <hr>
     <div class="PageNavigation">
-        {% if page.lighter %}
-            <a class="prev" href="{{ page.lighter.path | safe }}">&laquo; {{ page.lighter.title }}</a>
+        {% if page.lower %}
+            <a class="prev" href="{{ page.lower.path | safe }}">&laquo; {{ page.lower.title }}</a>
         {% endif %}
-        {% if page.heavier %}
-            <a class="next" href="{{ page.heavier.path | safe }}">{{ page.heavier.title }} &raquo;</a>
+        {% if page.higher %}
+            <a class="next" href="{{ page.higher.path | safe }}">{{ page.higher.title }} &raquo;</a>
         {% endif %}
     </div>
 
