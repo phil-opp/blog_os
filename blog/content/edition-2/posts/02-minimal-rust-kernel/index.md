@@ -448,7 +448,6 @@ We can now boot the disk image in a virtual machine. To boot it in [QEMU], execu
 
 ```
 > qemu-system-x86_64 -drive format=raw,file=target/x86_64-blog_os/debug/bootimage-blog_os.bin
-warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 ```
 
 This opens a separate window which should look similar to this:
