@@ -24,6 +24,7 @@ skip_anchor_prefixes = [
      "https://github.com/", # see https://github.com/getzola/zola/issues/805
      "https://docs.rs/x86_64/0.1.2/src/", # source code highlight
      "https://doc.rust-jp.rs/book-ja/", # seems like Zola has problems with Japanese anchor names
+     "https://doc.rust-jp.rs/edition-guide/rust-2018", # seems like Zola has problems with Japanese anchor names
 ]
 
 [extra]
