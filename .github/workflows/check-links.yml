@@ -13,7 +13,7 @@ on:
 
 jobs:
   zola_check:
-    name: "Zola Check"
+    name: "Zola Link Check"
     runs-on: ubuntu-latest
 
     steps:
