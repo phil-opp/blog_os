@@ -6,6 +6,6 @@ template = "plain.html"
 
 Philipp Oppermann
 
-<big>contact@phil-opp.com</big>
+<big>laveenapahuja6@gmail.com</big>
 
-<small>Gerwigstraße 17, 76131 Karlsruhe, Germany</small>
+<small>Lig-35,H.B. Colony, Bhopal, Madhya Pradesh, India</small>
