@@ -457,7 +457,7 @@ fn test_breakpoint_exception() {
 blog_os::interrupts::test_breakpoint_exception...	[ok]
 ```
 
-## 涉及的黑魔法有点多？
+## Too much Magic?
 相对来说，`x86-interrupt` 调用约定和 [`InterruptDescriptorTable`] 类型让错误处理变得直截了当，如果你真的那么在意错误处理过程中的细节，我们推荐读一下这些：[“使用裸函数处理错误”][“Handling Exceptions with Naked Functions”] 系列文章展示了如何在不使用 `x86-interrupt` 的前提下创建IDT。但是需要注意的是，这些文章都是在 `x86-interrupt` 调用约定和 `x86_64` crate 出现之前的产物，这些东西属于博客的 [第一版][first edition]，不排除信息已经过期了的可能。
 
 [“Handling Exceptions with Naked Functions”]: @/edition-1/extra/naked-exceptions/_index.md
