@@ -120,9 +120,9 @@ extern "x86-interrupt" fn double_fault_handler(
 
 比如以下情况出现时：
 
-1. 如果breakpoint 异常被触发，但其对应的处理函数已经被换出内存了？
-2. 如果page fault 异常被触发，但其对应的处理函数已经被换出内存了？
-3. 如果divide-by-zero 异常处理函数又触发了 breakpoint 异常，但 breakpoint 异常处理函数已经被换出内存了？
+1. 如果 breakpoint 异常被触发，但其对应的处理函数已经被换出内存了？
+2. 如果 page fault 异常被触发，但其对应的处理函数已经被换出内存了？
+3. 如果 divide-by-zero 异常处理函数又触发了 breakpoint 异常，但 breakpoint 异常处理函数已经被换出内存了？
 4. 如果我们的内核发生了堆栈溢出，意外访问到了 _guard page_ ？
 
 幸运的是，AMD64手册（[PDF][AMD64 manual]）给出了一个准确的定义（在8.2.9这个章节中）。
@@ -151,7 +151,7 @@ extern "x86-interrupt" fn double_fault_handler(
 
 1. 如果 breakpoint 异常被触发，但对应的处理函数被换出了内存，_page fault_ 异常就会被触发，并调用其对应的异常处理函数。
 2. 如果 page fault 异常被触发，但对应的处理函数被换出了内存，那么 _double fault_ 异常就会被触发，并调用其对应的处理函数。
-3. 如果divide-by-zero 异常处理函数又触发了 breakpoint 异常，但 breakpoint 异常处理函数已经被换出内存了，那么被触发的就是 _page fault_ 异常。
+3. 如果 divide-by-zero 异常处理函数又触发了 breakpoint 异常，但 breakpoint 异常处理函数已经被换出内存了，那么被触发的就是 _page fault_ 异常。
 
 实际上，因在IDT里找不到对应处理函数而抛出异常的内部机制是：当异常发生时，CPU会去试图读取对应的IDT条目，如果该条目不是一个有效的条目，即其值为0，就会触发 _general protection fault_ 异常。但我们同样没有为该异常注册处理函数，所以又一个 general protection fault 被触发了，随后 double fault 也被触发了。
 
@@ -197,7 +197,7 @@ pub extern "C" fn _start() -> ! {
 ## 切换堆栈
 x86_64 架构允许在异常发生时，将堆栈切换为一个预定义的完好堆栈，这个切换是执行在硬件层次的，所以完全可以在CPU将异常栈帧入栈之前执行。
 
-这个切换机制是由 _中断堆栈符表_ （IST）实现的，IST是一个由7个确认可用的完好堆栈的指针组成的，用Rust语言可以表述为：
+这个切换机制是由 _中断堆栈符表_ （IST）实现的，IST是一个由7个确认可用的完好堆栈的指针组成的，用 Rust 语言可以表述为：
 
 ```rust
 struct InterruptStackTable {

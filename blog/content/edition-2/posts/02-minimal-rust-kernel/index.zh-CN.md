@@ -1,5 +1,5 @@
 +++
-title = "最小化内核"
+title = "最小内核"
 weight = 2
 path = "zh-CN/minimal-rust-kernel"
 date = 2018-02-10
@@ -65,7 +65,7 @@ x86 架构支持两种固件标准： **BIOS**（[Basic Input/Output System](htt
 
 （截至此时，我们并未提供UEFI相关教程，但我们确实有此意向。如果你愿意提供一些帮助，请在 [Github issue](https://github.com/phil-opp/blog_os/issues/349) 告知我们，不胜感谢。）
 
-## 最小化内核
+## 最小内核
 
 现在我们已经明白电脑是如何启动的，那也是时候编写我们自己的内核了。我们的小目标是，创建一个内核的磁盘映像，它能够在启动时，向屏幕输出一行“Hello World!”；我们的工作将基于上一章构建的[独立式可执行程序][freestanding Rust binary]。
 
@@ -141,7 +141,7 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
 "disable-redzone": true,
 ```
 
-我们正在编写一个内核，所以我们应该同时处理中断。要安全地实现这一点，我们必须禁用一个与**红区**（redzone）有关的栈指针优化：因为此时，这个优化可能会导致栈被破坏。如果需要更详细的资料，请查阅我们的一篇关于 [禁用红区][disabling the red zone] 的短文。
+我们正在编写一个内核，所以我们迟早要处理中断。要安全地实现这一点，我们必须禁用一个与**红区**（redzone）有关的栈指针优化：因为此时，这个优化可能会导致栈被破坏。如果需要更详细的资料，请查阅我们的一篇关于 [禁用红区][disabling the red zone] 的短文。
 
 [disabling the red zone]: @/edition-2/posts/02-minimal-rust-kernel/disable-red-zone/index.zh-CN.md
 
@@ -219,7 +219,7 @@ error[E0463]: can't find crate for `core`
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
-通常状况下，`core` crate以**预编译库**（precompiled library）的形式与 Rust 编译器一同发布——这时，`core` crate只对支持的宿主系统有效，而我们自定义的目标系统无效。如果我们想为其它系统编译代码，我们需要为这些系统重新编译整个 `core` crate。
+通常状况下，`core` crate以**预编译库**（precompiled library）的形式与 Rust 编译器一同发布——这时，`core` crate只对支持的宿主系统有效，而对我们自定义的目标系统无效。如果我们想为其它系统编译代码，我们需要为这些系统重新编译整个 `core` crate。
 
 #### `build-std` 选项
 
