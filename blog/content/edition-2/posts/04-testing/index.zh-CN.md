@@ -316,7 +316,7 @@ lazy_static! {
 
 就像[VGA文本缓冲区][vga lazy-static]一样，我们使用 `lazy_static` 和一个自旋锁来创建一个 `static` writer实例。通过使用 `lazy_static` ，我们可以保证 `init` 方法只会在该示例第一次被使用使被调用。
 
-和 `isa-debug-exit` 设备一样，UART也是通过I/O端口进行编程的。由于UART相对来讲更加复杂，它使用多个I/O端口来对不同的设备寄存器进行编程。不安全的 `SerialPort::new` 函数需要UART的第一个I/O端口的地址作为参数，从该地址中可以计算出所有所需端口的地址。我们传递的端口地址为 `0x3F8` ，该地址是第一个串行接口的标准端口号。
+和 `isa-debug-exit` 设备一样，UART也是通过I/O端口进行编程的。由于UART相对来讲更加复杂，它使用多个I/O端口来对不同的设备寄存器进行编程。`unsafe` 的 `SerialPort::new` 函数需要UART的第一个I/O端口的地址作为参数，从该地址中可以计算出所有所需端口的地址。我们传递的端口地址为 `0x3F8` ，该地址是第一个串行接口的标准端口号。
 
 [vga lazy-static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
