@@ -11,7 +11,7 @@ translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
 translators = ["liuyuran"]
 +++
 
-在这篇文章中，我们会探索 double fault 异常的细节，它的触发条件是调用错误处理函数失败。通过捕获该异常，我们可以阻止致命的 _triple faults_ 异常导致系统重启。为了尽可能避免 triple faults ，我们会在一个独立的内核堆栈配置 _中断堆栈符表_ 来捕捉 double faults。
+在这篇文章中，我们会探索 double fault 异常的细节，它的触发条件是调用错误处理函数失败。通过捕获该异常，我们可以阻止致命的 _triple faults_ 异常导致系统重启。为了尽可能避免 triple faults ，我们会在一个独立的内核栈配置 _中断栈表_ 来捕捉 double faults。
 
 <!-- more -->
 
@@ -123,7 +123,7 @@ extern "x86-interrupt" fn double_fault_handler(
 1. 如果 breakpoint 异常被触发，但其对应的处理函数已经被换出内存了？
 2. 如果 page fault 异常被触发，但其对应的处理函数已经被换出内存了？
 3. 如果 divide-by-zero 异常处理函数又触发了 breakpoint 异常，但 breakpoint 异常处理函数已经被换出内存了？
-4. 如果我们的内核发生了堆栈溢出，意外访问到了 _guard page_ ？
+4. 如果我们的内核发生了栈溢出，意外访问到了 _guard page_ ？
 
 幸运的是，AMD64手册（[PDF][AMD64 manual]）给出了一个准确的定义（在8.2.9这个章节中）。
 根据里面的说法，“double fault” 异常 _会_ 在执行主要（一层）异常处理函数时触发二层异常时触发。
@@ -155,20 +155,20 @@ extern "x86-interrupt" fn double_fault_handler(
 
 实际上，因在IDT里找不到对应处理函数而抛出异常的内部机制是：当异常发生时，CPU会去试图读取对应的IDT条目，如果该条目不是一个有效的条目，即其值为0，就会触发 _general protection fault_ 异常。但我们同样没有为该异常注册处理函数，所以又一个 general protection fault 被触发了，随后 double fault 也被触发了。
 
-### 内核堆栈溢出
+### 内核栈溢出
 现在让我们看一下第四个假设：
 
-> 如果我们的内核发生了堆栈溢出，意外访问到了 _guard page_ ？
+> 如果我们的内核发生了栈溢出，意外访问到了 _guard page_ ？
 
-guard page 是一类位于栈底部的特殊内存页，所以如果发生了堆栈溢出，最典型的现象就是访问这里。这类内存页不会映射到物理内存中，所以访问这里只会造成 page fault 异常，而不会污染其他内存。bootloader 已经为我们的内核堆栈设置好了一个 guard page，所以堆栈溢出会导致 _page fault_ 异常。
+guard page 是一类位于栈底部的特殊内存页，所以如果发生了栈溢出，最典型的现象就是访问这里。这类内存页不会映射到物理内存中，所以访问这里只会造成 page fault 异常，而不会污染其他内存。bootloader 已经为我们的内核栈设置好了一个 guard page，所以栈溢出会导致 _page fault_ 异常。
 
-当 page fault 发生时，CPU会在IDT寻找对应的处理函数，并尝试将 [中断栈帧][interrupt stack frame] 入栈，但此时堆栈指针指向了一个实际上并不存在的 guard page，然后第二个 page fault 异常就被触发了，根据上面的表格，double fault 也随之被触发了。
+当 page fault 发生时，CPU会在IDT寻找对应的处理函数，并尝试将 [中断栈帧][interrupt stack frame] 入栈，但此时栈指针指向了一个实际上并不存在的 guard page，然后第二个 page fault 异常就被触发了，根据上面的表格，double fault 也随之被触发了。
 
 [interrupt stack frame]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-stack-frame
 
-这时，CPU会尝试调用 _double fault_ 对应的处理函数，然而CPU依然会试图将错误栈帧入栈，由于堆栈指针依然指向 guard page，于是 _第三次_ page fault 发生了，最终导致 _triple fault_ 异常的抛出，系统因此重启。所以仅仅是注册错误处理函数并不能在此种情况下阻止 triple fault 的发生。
+这时，CPU会尝试调用 _double fault_ 对应的处理函数，然而CPU依然会试图将错误栈帧入栈，由于栈指针依然指向 guard page，于是 _第三次_ page fault 发生了，最终导致 _triple fault_ 异常的抛出，系统因此重启。所以仅仅是注册错误处理函数并不能在此种情况下阻止 triple fault 的发生。
 
-让我们来尝试一下，写一个能造成堆栈溢出的递归函数非常简单：
+让我们来尝试一下，写一个能造成栈溢出的递归函数非常简单：
 
 ```rust
 // in src/main.rs
@@ -192,12 +192,12 @@ pub extern "C" fn _start() -> ! {
 
 我们在QEMU执行这段程序，然后系统就再次进入了重启循环。
 
-所以我们要如何避免这种情况？我们无法忽略异常栈帧入栈这一步，因为这个逻辑是内置在CPU里的。所以我们需要找个办法，让堆栈在 double fault 异常发生后始终有效。幸运的是，x86_64 架构对于这个问题已经给出了解决方案。
+所以我们要如何避免这种情况？我们无法忽略异常栈帧入栈这一步，因为这个逻辑是内置在CPU里的。所以我们需要找个办法，让栈在 double fault 异常发生后始终有效。幸运的是，x86_64 架构对于这个问题已经给出了解决方案。
 
-## 切换堆栈
-x86_64 架构允许在异常发生时，将堆栈切换为一个预定义的完好堆栈，这个切换是执行在硬件层次的，所以完全可以在CPU将异常栈帧入栈之前执行。
+## 切换栈
+x86_64 架构允许在异常发生时，将栈切换为一个预定义的完好栈，这个切换是执行在硬件层次的，所以完全可以在CPU将异常栈帧入栈之前执行。
 
-这个切换机制是由 _中断堆栈符表_ （IST）实现的，IST是一个由7个确认可用的完好堆栈的指针组成的，用 Rust 语言可以表述为：
+这个切换机制是由 _中断栈表_ （IST）实现的，IST是一个由7个确认可用的完好栈的指针组成的，用 Rust 语言可以表述为：
 
 ```rust
 struct InterruptStackTable {
@@ -205,18 +205,18 @@ struct InterruptStackTable {
 }
 ```
 
-对于每一个错误处理函数，我们都可以通过对应的[IDT条目][IDT entry]中的 `stack_pointers` 条目指定IST中的一个堆栈。比如我们可以让 double fault 对应的处理函数使用IST中的第一个堆栈指针，则CPU会在这个异常发生时，自动将堆栈切换为该堆栈。该切换行为会在所有入栈操作之前进行，由此可以避免进一步触发 triple fault 异常。
+对于每一个错误处理函数，我们都可以通过对应的[IDT条目][IDT entry]中的 `stack_pointers` 条目指定IST中的一个栈。比如我们可以让 double fault 对应的处理函数使用IST中的第一个栈指针，则CPU会在这个异常发生时，自动将栈切换为该栈。该切换行为会在所有入栈操作之前进行，由此可以避免进一步触发 triple fault 异常。
 
 [IDT entry]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
 ### IST和TSS
-中断堆栈符表（IST）其实是一个名叫 _[任务状态段][Task State Segment]（TSS）_ 的古老遗留结构的一部分。
+中断栈表（IST）其实是一个名叫 _[任务状态段][Task State Segment]（TSS）_ 的古老遗留结构的一部分。
 TSS是用来存储32位任务中的零碎信息，比如处理器寄存器的状态（此处存疑，processor register state的词法似乎具有歧义），一般用于 [硬件上下文切换][hardware context switching]。但是硬件上下文切换已经不再适用于64位模式，并且TSS的实际数据结构也已经发生了彻底的改变。
 
 [Task State Segment]: https://en.wikipedia.org/wiki/Task_state_segment
 [hardware context switching]: https://wiki.osdev.org/Context_Switching#Hardware_Context_Switching
 
-在 x86_64 架构中，TSS已经不再存储任何任务相关信息，取而代之的是两个堆栈符表（IST正是其中之一）。
+在 x86_64 架构中，TSS已经不再存储任何任务相关信息，取而代之的是两个栈表（IST正是其中之一）。
 32位TSS和64位TSS唯一的共有字段恐怕就是指向 [I/O端口权限位图][I/O port permissions bitmap] 的指针了。
 
 [I/O port permissions bitmap]: https://en.wikipedia.org/wiki/Task_state_segment#I.2FO_port_permissions
@@ -226,17 +226,17 @@ TSS是用来存储32位任务中的零碎信息，比如处理器寄存器的状
 字段  | 类型
 ------ | ----------------
 <span style="opacity: 0.5">(保留)</span> | `u32`
-特权堆栈符表 | `[u64; 3]`
+特权栈表 | `[u64; 3]`
 <span style="opacity: 0.5">(保留)</span> | `u64`
-中断堆栈符表 | `[u64; 7]`
+中断栈表 | `[u64; 7]`
 <span style="opacity: 0.5">(保留)</span> | `u64`
 <span style="opacity: 0.5">(保留)</span> | `u16`
 I/O映射基准地址 | `u16`
 
-_特权堆栈符表_ 用于CPU特权等级变更的时候，例如当CPU在用户态（特权等级3）中触发一个异常，一般情况下CPU会在执行错误处理函数前切换到内核态（特权等级0），在这种情况下，CPU会切换为特权堆栈符表的第0层（0层是目标特权等级）。但是目前我们还没有用户态的程序，所以暂且可以忽略这个符表。
+_特权栈表_ 用于CPU特权等级变更的时候，例如当CPU在用户态（特权等级3）中触发一个异常，一般情况下CPU会在执行错误处理函数前切换到内核态（特权等级0），在这种情况下，CPU会切换为特权栈表的第0层（0层是目标特权等级）。但是目前我们还没有用户态的程序，所以暂且可以忽略这个表。
 
 ### 创建一个TSS
-那么我们来创建一个新的包含单独的 double fault 专属堆栈以及中断堆栈符表的TSS。为此我们需要一个TSS结构体，幸运的是 `x86_64` crate 也已经自带了 [`TaskStateSegment` 结构][`TaskStateSegment` struct] 用来映射它。
+那么我们来创建一个新的包含单独的 double fault 专属栈以及中断栈表的TSS。为此我们需要一个TSS结构体，幸运的是 `x86_64` crate 也已经自带了 [`TaskStateSegment` 结构][`TaskStateSegment` struct] 用来映射它。
 
 [`TaskStateSegment` struct]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
 
@@ -271,11 +271,11 @@ lazy_static! {
 }
 ```
 
-这次依然是使用 `lazy_static`，Rust的静态变量求值器还没有强大到能够在编译器执行初始化代码。我们将IST的0号位定义为 double fault 的专属堆栈（其他IST序号也可以如此施为）。然后我们将堆栈的高地址指针写入0号位，之所以这样做，那是因为 x86 的栈内存分配是从高地址到低地址的。
+这次依然是使用 `lazy_static`，Rust的静态变量求值器还没有强大到能够在编译器执行初始化代码。我们将IST的0号位定义为 double fault 的专属栈（其他IST序号也可以如此施为）。然后我们将栈的高地址指针写入0号位，之所以这样做，那是因为 x86 的栈内存分配是从高地址到低地址的。
 
 由于我们还没有实现内存管理机制，所以目前无法直接申请新栈，但我们可以使用 `static mut` 形式的数组来在内存中模拟出栈存储区。`unsafe` 块也是必须的，因为编译器认为这种可以被竞争的变量是不安全的，而且这里必须是 `static mut` 而不是不可修改的 `static`，否则 bootloader 会将其分配到只读页中。当然，在后续的文章中，我们会将其修改为真正的栈分配，`unsafe` 块也一定会去掉的。
 
-但要注意，由于现在 double fault 获取的堆栈不再具有用于防止堆栈溢出的 guard page，所以我们不应该做任何堆栈密集型操作了，否则就有可能会污染到堆栈下方的内存区域。
+但要注意，由于现在 double fault 获取的栈不再具有用于防止栈溢出的 guard page，所以我们不应该做任何栈密集型操作了，否则就有可能会污染到栈下方的内存区域。
 
 #### 加载TSS
 我们已经创建了一个TSS，现在的问题就是怎么让CPU使用它。不幸的是这事是有点繁琐，因为TSS用到了分段系统（历史原因）。但我们可以不直接加载，而是在[全局描述符表][Global Descriptor Table]（GDT）中添加一个段描述符，然后我们就可以通过[`ltr` 指令][`ltr` instruction]加上GDT序号加载我们的TSS。（这也是为什么我们将模块取名为 `gdt`。）
@@ -331,17 +331,17 @@ pub fn init() {
 }
 ```
 
-现在GDT成功加载了进去（`_start` 会调用 `init` 函数），但我们依然会看到由于堆栈溢出引发的重启循环。
+现在GDT成功加载了进去（`_start` 会调用 `init` 函数），但我们依然会看到由于栈溢出引发的重启循环。
 
 ### 最终步骤
 
-现在的问题就变成了GDT并未被激活，代码段寄存器和TSS实际上依然引用着旧的GDT，并且我们也需要修改 double fault 对应的IDT条目，使其使用新的堆栈。
+现在的问题就变成了GDT并未被激活，代码段寄存器和TSS实际上依然引用着旧的GDT，并且我们也需要修改 double fault 对应的IDT条目，使其使用新的栈。
 
 总结一下，我们需要做这些事情：
 
 1. **重载代码段寄存器**: 我们修改了GDT，所以就需要重载代码段寄存器 `cs`，这一步对于修改GDT信息而言是必须的，比如覆写TSS。
 2. **加载TSS** : 我们已经加载了包含TSS信息的GDT，但我们还需要告诉CPU使用新的TSS。
-3. **更新IDT条目**: 当TSS加载完毕后，CPU就可以访问到新的中断堆栈符表（IST）了，下面我们需要通过修改IDT条目告诉CPU使用新的 double fault 专属堆栈。
+3. **更新IDT条目**: 当TSS加载完毕后，CPU就可以访问到新的中断栈表（IST）了，下面我们需要通过修改IDT条目告诉CPU使用新的 double fault 专属栈。
 
 通过前两步，我们可以在 `gdt::init` 函数中调用 `code_selector` 和 `tss_selector` 两个变量，我们可以将两者打包为一个 `Selectors` 结构便于使用：
 
@@ -388,7 +388,7 @@ pub fn init() {
 [`set_cs`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/segmentation/fn.set_cs.html
 [`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
 
-现在我们已经加载了有效的TSS和中断堆栈符表，我们可以在IDT中为 double fault 对应的处理函数设置堆栈序号：
+现在我们已经加载了有效的TSS和中断栈表，我们可以在IDT中为 double fault 对应的处理函数设置栈序号：
 
 ```rust
 // in src/interrupts.rs
@@ -409,17 +409,17 @@ lazy_static! {
 }
 ```
 
-`set_stack_index` 函数也是不安全的，因为堆栈序号的有效性和引用唯一性是需要调用者去确保的。
+`set_stack_index` 函数也是不安全的，因为栈序号的有效性和引用唯一性是需要调用者去确保的。
 
-搞定！现在CPU会在 double fault 异常被触发时自动切换到安全堆栈了，我们可以捕捉到 _所有_ 的 double fault，包括内核堆栈溢出：
+搞定！现在CPU会在 double fault 异常被触发时自动切换到安全栈了，我们可以捕捉到 _所有_ 的 double fault，包括内核栈溢出：
 
 ![QEMU printing `EXCEPTION: DOUBLE FAULT` and a dump of the exception stack frame](qemu-double-fault-on-stack-overflow.png)
 
 现在开始我们应该不会再看到 triple fault 了，但要确保这部分逻辑不被破坏，我们还需要为其添加一个测试。
 
-## 堆栈溢出测试
+## 栈溢出测试
 
-要测试我们的 `gdt` 模块，并确保在堆栈溢出时可以正确捕捉 double fault，我们可以添加一个集成测试。基本上就是在测试函数中主动触发一个 double fault 异常，确认异常处理函数是否正确运行了。
+要测试我们的 `gdt` 模块，并确保在栈溢出时可以正确捕捉 double fault，我们可以添加一个集成测试。基本上就是在测试函数中主动触发一个 double fault 异常，确认异常处理函数是否正确运行了。
 
 让我们建立一个最小化框架：
 
@@ -487,7 +487,7 @@ fn stack_overflow() {
 
 我们调用了 `gdt::init` 函数来初始化GDT，但我们并没有调用 `interrupts::init_idt` 函数，而是调用了一个全新的 `init_test_idt` 函数，我们稍后来实现它。原因就是，我们需要注册一个自定义的 double fault 处理函数，在被触发的时候调用 `exit_qemu(QemuExitCode::Success)` 函数，而非使用默认的逻辑。
 
-`stack_overflow` 函数和我们之前在 `main.rs` 中写的那个函数几乎一模一样，唯一的区别就是在函数的最后使用 [`Volatile`] 类型 加入了一个 [volatile] 读取操作，用来阻止编译器进行 [_尾调用优化_][_tail call elimination_]。除却其他乱七八糟的效果，这个优化最主要的影响就是会让编辑器将最后一行是递归语句的函数转化为普通的循环。由于没有通过递归创建新的栈帧，所以堆栈自然也不会出问题。
+`stack_overflow` 函数和我们之前在 `main.rs` 中写的那个函数几乎一模一样，唯一的区别就是在函数的最后使用 [`Volatile`] 类型 加入了一个 [volatile] 读取操作，用来阻止编译器进行 [_尾调用优化_][_tail call elimination_]。除却其他乱七八糟的效果，这个优化最主要的影响就是会让编辑器将最后一行是递归语句的函数转化为普通的循环。由于没有通过递归创建新的栈帧，所以栈自然也不会出问题。
 
 [volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
 [`Volatile`]: https://docs.rs/volatile/0.2.6/volatile/struct.Volatile.html
@@ -523,7 +523,7 @@ pub fn init_test_idt() {
 }
 ```
 
-这和我们在 `interrupts.rs` 中实现的版本十分相似，如同正常的IDT一样，我们都为 double fault 使用IST序号设置了特殊的堆栈，而上文中提到的 `init_test_idt` 函数则通过 `load` 函数将配置成功装载到CPU。
+这和我们在 `interrupts.rs` 中实现的版本十分相似，如同正常的IDT一样，我们都为 double fault 使用IST序号设置了特殊的栈，而上文中提到的 `init_test_idt` 函数则通过 `load` 函数将配置成功装载到CPU。
 
 ### Double Fault 处理函数
 
@@ -552,7 +552,7 @@ extern "x86-interrupt" fn test_double_fault_handler(
 ## 总结
 在本文中，我们学到了 double fault 是什么，以及触发它的原因。我们为 double fault 写了相应的处理函数、将错误信息打印到控制台并为它添加了一个集成测试。
 
-同时，我们为 double fault 启用了堆栈指针切换功能，使其在堆栈溢出时也可以正常工作。在实现这个功能的同时，我们也学习了在旧架构中用于内存分段的任务状态段（TSS），而该结构又包含了中断堆栈符表（IST）和全局描述符表（GDT）。
+同时，我们为 double fault 启用了栈指针切换功能，使其在栈溢出时也可以正常工作。在实现这个功能的同时，我们也学习了在旧架构中用于内存分段的任务状态段（TSS），而该结构又包含了中断栈表（IST）和全局描述符表（GDT）。
 
 ## 下期预告
 在下一篇文章中，我们会展开来说外部设备（如定时器、键盘、网络控制器）中断的处理方式。这些硬件中断十分类似于上文所说的异常，都需要通过IDT进行处理，只是中断并不是由CPU抛出的。 _中断控制器_ 会代理这些中断事件，并根据中断的优先级将其转发给CPU处理。我们将会以 [Intel 8259] (PIC) 中断控制器为例对其进行探索，并实现对键盘的支持。

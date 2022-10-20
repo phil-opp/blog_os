@@ -62,7 +62,7 @@ error[E0463]: can't find crate for `test`
 
 [`custom_test_frameworks`]: https://doc.rust-lang.org/unstable-book/language-features/custom-test-frameworks.html
 
-与默认的测试框架相比，它的缺点是有一些高级功能诸如 [`should_panic` tests] 都不可用了。相对的，如果需要这些功能，我们需要自己来实现。当然，这点对我们来说是好事，因为我们的环境非常特殊，在这个环境里，这些高级功能的默认实现无论如何都是无法工作的，举个例子， `#[should_panic]` 属性依赖于堆栈展开来捕获内核panic，而我们的内核早已将其禁用了。
+与默认的测试框架相比，它的缺点是有一些高级功能诸如 [`should_panic` tests] 都不可用了。相对的，如果需要这些功能，我们需要自己来实现。当然，这点对我们来说是好事，因为我们的环境非常特殊，在这个环境里，这些高级功能的默认实现无论如何都是无法工作的，举个例子， `#[should_panic]` 属性依赖于栈展开来捕获内核panic，而我们的内核早已将其禁用了。
 
 [`should_panic` tests]: https://doc.rust-lang.org/book/ch11-01-writing-tests.html#checking-for-panics-with-should_panic
 
