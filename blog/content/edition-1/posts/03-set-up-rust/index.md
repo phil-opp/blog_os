@@ -406,9 +406,7 @@ So the linker can't find a function named `_Unwind_Resume` that is referenced e.
 
 [iterator.rs:389]: https://github.com/rust-lang/rust/blob/c58c928e658d2e45f816fd05796a964aa83759da/src/libcore/iter/iterator.rs#L389
 
-By default, the destructors of all stack variables are run when a `panic` occurs. This is called _unwinding_ and allows parent threads to [recover from panics]. However, it requires a platform specific gcc library, which isn't available in our kernel.
-
-[recover from panics]: https://www.howtobuildsoftware.com/index.php/how-do/fFH/rust-recovering-from-panic-in-another-thread
+By default, the destructors of all stack variables are run when a `panic` occurs. This is called _unwinding_ and allows parent threads to recover from panics. However, it requires a platform specific gcc library, which isn't available in our kernel.
 
 Fortunately, Rust allows us to disable unwinding for our target. For that we add the following line to our `x86_64-blog_os.json` file:
 

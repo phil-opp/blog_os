@@ -5,7 +5,7 @@ feed_filename = "rss.xml"
 compile_sass = true
 minify_html = false
 
-ignored_content = ["*/README.md", "LICENSE-CC-BY-NC"]
+ignored_content = ["*/README.md", "*/LICENSE-CC-BY-NC"]
 
 [markdown]
 highlight_code = true
@@ -14,16 +14,18 @@ smart_punctuation = true
 
 [link_checker]
 skip_prefixes = [
-    "https://crates.io/crates", # see https://github.com/rust-lang/crates.io/issues/788
-    "https://www.amd.com/system/files/TechDocs/", # seems to have problems with PDFs
+    "https://crates.io/crates",                                          # see https://github.com/rust-lang/crates.io/issues/788
+    "https://www.amd.com/system/files/TechDocs/",                        # seems to have problems with PDFs
     "https://developer.apple.com/library/archive/qa/qa1118/_index.html", # results in a 401 (I don't know why)
-    "https://github.com", # rate limiting often leads to "Error 429 Too Many Requests"
-    "https://www.linkedin.com/", # seems to send invalid HTTP status codes
+    "https://github.com",                                                # rate limiting often leads to "Error 429 Too Many Requests"
+    "https://www.linkedin.com/",                                         # seems to send invalid HTTP status codes
 ]
 skip_anchor_prefixes = [
-     "https://github.com/", # see https://github.com/getzola/zola/issues/805
-     "https://docs.rs/x86_64/0.1.2/src/", # source code highlight
-     "https://doc.rust-jp.rs/book-ja/", # seems like Zola has problems with Japanese anchor names
+    "https://github.com/",                            # see https://github.com/getzola/zola/issues/805
+    "https://docs.rs/x86_64/0.1.2/src/",              # source code highlight
+    "https://doc.rust-jp.rs/book-ja/",                # seems like Zola has problems with Japanese anchor names
+    "https://doc.rust-jp.rs/edition-guide/rust-2018", # seems like Zola has problems with Japanese anchor names
+    "https://doc.rust-jp.rs/rust-nomicon-ja/",        # seems like Zola has problems with Japanese anchor names
 ]
 
 [extra]
