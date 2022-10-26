@@ -555,7 +555,7 @@ The last step is to update our `test_runner` to use the new `Testable` trait:
 // in src/main.rs
 
 #[cfg(test)]
-pub fn test_runner(tests: &[&dyn Testable]) {
+pub fn test_runner(tests: &[&dyn Testable]) { // new
     serial_println!("Running {} tests", tests.len());
     for test in tests {
         test.run(); // new
