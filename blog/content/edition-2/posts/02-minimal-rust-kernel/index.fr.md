@@ -12,13 +12,13 @@ translation_based_on_commit = "c689ecf810f8e93f6b2fb3c4e1e8b89b8a0998eb"
 translators = ["TheMimiCodes", "maximevaillancourt"]
 +++
 
-Dans cet article, nous créons un noyau Rust 64-bit minimal pour l'architecture x86. Nous continuons le travail fait dans l'article précédent ([freestanding Rust binary][binaire Rust autonome]) pour créer une image de disque amorçable qui imprime quelque chose à l'écran. 
+Dans cet article, nous créons un noyau Rust 64-bit minimal pour l'architecture x86. Nous continuons le travail fait dans l'article précédent ([freestanding Rust binary][binaire Rust autonome]) pour créer une image de disque amorçable qui affiche quelque chose à l'écran. 
 
-[freestanding Rust binary]: @/edition-2/posts/01-freestanding-rust-binary/index.md
+[freestanding Rust binary]: @/edition-2/posts/01-freestanding-rust-binary/index.fr.md
 
 <!-- more -->
 
-Cet article est développé ouvertement sur [GitHub]. Si vous avez des problèmes ou des questions, veuillez ouvrir une _Issue_ sur GitHub. Vous pouvez aussi laisser un commentaire [au bas de la page]. Le code source complet pour cet article se trouve dans la branche [`post-02`][post branch].
+Cet article est développé de manière ouverte sur [GitHub]. Si vous avez des problèmes ou des questions, veuillez ouvrir une _Issue_ sur GitHub. Vous pouvez aussi laisser un commentaire [au bas de la page]. Le code source complet pour cet article se trouve dans la branche [`post-02`][post branch].
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [au bas de la page]: #comments
@@ -28,83 +28,83 @@ Cet article est développé ouvertement sur [GitHub]. Si vous avez des problème
 <!-- toc -->
 
 ## Le processus d'amorçage
-Quand vous ouvrez un ordinateur, il commence à exécuter le code du micrologiciel qui est enregistré dans la carte maîtresse ([ROM]). Ce code performe un [power-on self-test][test d'auto-diagnostic de démarrage], détecte la mémoire volatile disponible, et pré-initialise le processeur et le matériel. Par la suite, il recherche un disque amorçable et commence le processus d'amorçage du noyau du système d'exploitation. 
+Quand vous allumez un ordinateur, il commence par exécuter le code du micrologiciel qui est enregistré dans la carte mère ([ROM]). Ce code performe un [power-on self-test][test d'auto-diagnostic de démarrage], détecte la mémoire volatile disponible, et pré-initialise le processeur et le matériel. Par la suite, il recherche un disque amorçable et commence le processus d'amorçage du noyau du système d'exploitation.
 
-[ROM]: https://en.wikipedia.org/wiki/Read-only_memory
-[power-on self-test]: https://en.wikipedia.org/wiki/Power-on_self-test
+[ROM]: https://fr.wikipedia.org/wiki/M%C3%A9moire_morte
+[power-on self-test]: https://fr.wikipedia.org/wiki/Power-on_self-test_(informatique)
 
 Sur x86, il existe deux standards pour les micrologiciels : le “Basic Input/Output System“ (**[BIOS]**) et le nouvel “Unified Extensible Firmware Interface” (**[UEFI]**). Le BIOS standard est vieux et dépassé, mais il est simple et bien supporté sur toutes les machines x86 depuis les années 1980. Au contraire, l'UEFI est moderne et offre davantage de fonctionnalités. Cependant, il est plus complexe à installer (du moins, selon moi).
 
-[BIOS]: https://en.wikipedia.org/wiki/BIOS
-[UEFI]: https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
+[BIOS]: https://fr.wikipedia.org/wiki/BIOS_(informatique)
+[UEFI]: https://fr.wikipedia.org/wiki/UEFI
 
 Actuellement, nous offrons seulement un support BIOS, mais nous planifions aussi du support pour l'UEFI. Si vous aimeriez nous aider avec cela, consultez l'[_issue_ sur GitHub](https://github.com/phil-opp/blog_os/issues/349).
 
 ### Amorçage BIOS
-Presque tous les systèmes x86 peuvent amorcer le BIOS, incluant les nouvelles machines UEFI qui utilisent un BIOS émulé. C'est bien étant donné que vous pouvez utiliser la même logique d'amorçage sur toutes les machines du dernier siècle. Or, cette grande compatibilité est à la fois le plus grand désavantage de l'amorçage BIOS. En effet, cela signifie que le CPU est mis dans un mode de compatibilité 16-bit appelé _[real mode]_ avant l'amorçage afin que les bootloaders archaïques des années 1980 puissent encore fonctionner. 
+Presque tous les systèmes x86 peuvent amorcer le BIOS, y compris les nouvelles machines UEFI qui utilisent un BIOS émulé. C'est une bonne chose car cela permet d'utiliser la même logique d'amorçage sur toutes les machines du dernier siècle. Cependant, cette grande compatibilité est aussi le plus grand inconvénient de l'amorçage BIOS, car cela signifie que le CPU est mis dans un mode de compatibilité 16-bit appelé _[real mode]_ avant l'amorçage afin que les bootloaders archaïques des années 1980 puissent encore fonctionner. 
 
-Commençons par le commencement :
+Mais commençons par le commencement :
 
-Quand vous ouvrez votre ordinateur, il charge le BIOS provenant d'un emplacement de mémoire flash spéciale localisée sur la carte maîtresse. Le BIOS exécute des tests d'auto-diagnostic et des routines d'initialisation du matériel, puis il cherche des disques amorçables. S'il en trouve un, le contrôle est transféré à son _bootloader_, qui est une portion de 512 octets de code exécutable enregistré au début du disque. La plupart des bootloaders sont plus gros que 512 octets, alors les bootloaders sont communément séparés en deux phases. La première phase est de 512 octets, et la seconde phase est chargée subséquemment à la première étapge. 
+Quand vous allumez votre ordinateur, il charge le BIOS provenant d'un emplacement de mémoire flash spéciale localisée sur la carte mère. Le BIOS exécute des tests d'auto-diagnostic et des routines d'initialisation du matériel, puis il cherche des disques amorçables. S'il en trouve un, le contrôle est transféré à son _bootloader_, qui est une portion de 512 octets de code exécutable enregistré au début du disque. Vu que la plupart des bootloaders dépassent 512 octets, ils sont généralement divisés en deux phases: la première, plus petite, tient dans ces 512 octets, tandis que la seconde phase est chargée subséquemment.
 
-Le bootloader doit déterminer la localisation de l'image de noyau sur le disque et la charger en mémoire. Il doit aussi passer le processeur de 16-bit ([real mode]) à 32-bit ([protected mode]), puis à 64-bit ([long mode]), où les registres 64-bit et la mémoire maîtresse complète sont disponibles. Sa troisième tâche est de récupérer certaines informations (telle que les associations mémoires) du BIOS et les passer au noyau du système d'exploitation. 
+Le bootloader doit déterminer l'emplacement de l'image de noyau sur le disque et la charger en mémoire. Il doit aussi passer le processeur de 16-bit ([real mode]) à 32-bit ([protected mode]), puis à 64-bit ([long mode]), dans lequel les registres 64-bit et la totalité de la mémoire principale sont disponibles. Sa troisième responsabilité est de récupérer certaines informations (telle que les associations mémoires) du BIOS et de les transférer au noyau du système d'exploitation. 
 
-[real mode]: https://en.wikipedia.org/wiki/Real_mode
-[protected mode]: https://en.wikipedia.org/wiki/Protected_mode
+[real mode]: https://fr.wikipedia.org/wiki/Mode_r%C3%A9el
+[protected mode]: https://fr.wikipedia.org/wiki/Mode_prot%C3%A9g%C3%A9
 [long mode]: https://en.wikipedia.org/wiki/Long_mode
-[memory segmentation]: https://en.wikipedia.org/wiki/X86_memory_segmentation
+[memory segmentation]: https://fr.wikipedia.org/wiki/Segmentation_(informatique)
 
-Implémenter un bootloader est délicat puisque cela requiert l'écriture de code assembleur et plusieurs autres étapes particulières comme “écrire une valeur magique dans un registre du processeur". Par conséquent, nous ne couvrons pas la création d'un bootloader dans cet article et nous fournissons plutôt un outil appelé [bootimage] qui ajoute automatiquement un bootloader au noyau.
+Implémenter un bootloader est fastidieux car cela requiert l'écriture en language assembleur ainsi que plusieurs autres étapes particulières comme “écrire une valeur magique dans un registre du processeur". Par conséquent, nous ne couvrons pas la création d'un bootloader dans cet article et fournissons plutôt un outil appelé [bootimage] qui ajoute automatiquement un bootloader au noyau.
 
 [bootimage]: https://github.com/rust-osdev/bootimage
 
-Si vous êtes intéressé à créer votre propre booloader : gardez l'oeil ouvert, plusieurs articles sur ce sujet sont déjà prévus! <!-- , jetez un coup d'oeil à nos articles “_[Writing a Bootloader]_”, où nous expliquons en détails comment écrire un bootloader. -->
+Si vous êtes intéressé par la création de votre propre booloader : restez dans le coin, plusieurs articles sur ce sujet sont déjà prévus à ce sujet! <!-- , jetez un coup d'oeil à nos articles “_[Writing a Bootloader]_”, où nous expliquons en détails comment écrire un bootloader. -->
 
 #### Le standard Multiboot
-Pour éviter que chaque système d'exploitation implémente son propre bootloader, qui est seulement compatible avec un seul système d'exploitation, la [Free Software Foundation] a créé en 1995 un bootloader standard public appelé [Multiboot]. Le standard définit une interface entre le bootloader et le système d'exploitation afin que n'importe quel bootloader comforme à Multiboot puisse charger n'importe quel système d'exploitation conforme à Multiboot. La référence d'implementation est [GNU GRUB], qui est le bootloader le plus populaire pour les systèmes Linux. 
+Pour éviter que chaque système d'exploitation implémente son propre bootloader, qui est seulement compatible avec un seul système d'exploitation, la [Free Software Foundation] a créé en 1995 un bootloader standard public appelé [Multiboot]. Le standard définit une interface entre le bootloader et le système d'exploitation afin que n'importe quel bootloader compatible Multiboot puisse charger n'importe quel système d'exploitation compatible Multiboot. L'implémentation de référence est [GNU GRUB], qui est le bootloader le plus populaire pour les systèmes Linux. 
 
-[Free Software Foundation]: https://en.wikipedia.org/wiki/Free_Software_Foundation
+[Free Software Foundation]: https://fr.wikipedia.org/wiki/Free_Software_Foundation
 [Multiboot]: https://wiki.osdev.org/Multiboot
-[GNU GRUB]: https://en.wikipedia.org/wiki/GNU_GRUB
+[GNU GRUB]: https://fr.wikipedia.org/wiki/GNU_GRUB
 
-Pour créer un noyau conforme à la spécification Multiboot, il faut seulement insérer une [Multiboot header][en-tête Multiboot] au début du fichier du noyau. Cela fait en sorte que c'est très simple d'amorcer un système d'exploitation depuis GRUB. Cependant, GRUB et le standard Multiboot présentent aussi des problèmes : 
+Pour créer un noyau compatible Multiboot, il suffit d'insérer une [Multiboot header][en-tête Multiboot] au début du fichier du noyau. Cela rend très simple l'amorçage d'un système d'exploitation depuis GRUB. Cependant, GRUB et le standard Multiboot présentent aussi quelques problèmes : 
 
 [Multiboot header]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
 
-- Ils supportent seulement le "protected mode" 32-bit. Cela signifie que vous devez encore faire la configuration du processeur pour changer au "long mode" 64-bit.
-- Ils sont désignés pour simplifier le bootloader plutôt que le noyau. Par exemple, le noyau doit être lié avec une [adjusted default page size][taille de page par défaut ajustée], étant donné que le GRUB ne peut pas trouver les entêtes Multiboot autrement. Un autre exemple est que l'[boot information][information de boot], qui est fournies au noyau, contient plusieurs structures spécifiques à l'architecture plutôt que de fournir des abstractions pures. 
+- Ils supportent seulement le "protected mode" 32-bit. Cela signifie que vous devez encore effectuer la configuration du processeur pour passer au "long mode" 64-bit.
+- Ils sont conçus pour simplifier le bootloader plutôt que le noyau. Par exemple, le noyau doit être lié avec une [adjusted default page size][taille de page prédéfinie], étant donné que GRUB ne peut pas trouver les entêtes Multiboot autrement. Un autre exemple est que l'[boot information][information de boot], qui est fournies au noyau, contient plusieurs structures spécifiques à l'architecture au lieu de fournir des abstractions pures. 
 - GRUB et le standard Multiboot sont peu documentés.
 - GRUB doit être installé sur un système hôte pour créer une image de disque amorçable depuis le fichier du noyau. Cela rend le développement sur Windows ou sur Mac plus difficile.
 
 [adjusted default page size]: https://wiki.osdev.org/Multiboot#Multiboot_2
 [boot information]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 
-En raison de ces désavantages, nous avons décidé de ne pas utiliser GRUB ou le standard Multiboot. Cependant, nous avons l'intention d'ajouter le support Multiboot à notre outil [bootimage], afin qu'il soit aussi possible de charger le noyau sur un système GRUB. Si vous êtes interessé à écrire un noyau Multiboot conforme, consultez la [first edition][première édition] de cette série d'articles. 
+En raison de ces désavantages, nous avons décidé de ne pas utiliser GRUB ou le standard Multiboot. Cependant, nous avons l'intention d'ajouter le support Multiboot à notre outil [bootimage], afin qu'il soit aussi possible de charger le noyau sur un système GRUB. Si vous êtes interessé par l'écriture d'un noyau Multiboot conforme, consultez la [first edition][première édition] de cette série d'articles. 
 
 [first edition]: @/edition-1/_index.md
 
 ### UEFI
 
-(Nous ne fournissons pas le support UEFI à l'heure actuelle, mais nous aimerions bien! Si vous êtes intéressé à aider, dites-le nous dans cette [_issue_ GitHub](https://github.com/phil-opp/blog_os/issues/349).)
+(Nous ne fournissons pas le support UEFI à l'heure actuelle, mais nous aimerions bien! Si vous voulez aider, dites-le nous dans cette [_issue_ GitHub](https://github.com/phil-opp/blog_os/issues/349).)
 
 ## Un noyau minimal
-Maintenant que nous savons à peu près comment un ordinateur démarre, il est temps de créer notre propre noyau minimal. Notre objectif est de créer une image de disque qui imprime “Hello World!” à l'écran lorsqu'il démarre. Nous faisons ceci en améliorant le [freestanding Rust binary][binaire Rust autonome] du dernier article.
+Maintenant que nous savons à peu près comment un ordinateur démarre, il est temps de créer notre propre noyau minimal. Notre objectif est de créer une image de disque qui affiche “Hello World!” à l'écran lorsqu'il démarre. Nous ferons ceci en améliorant le [freestanding Rust binary][binaire Rust autonome] du dernier article.
 
-Comme vous vous en rappelez peut-être, nous avons bâti un binaire autonome grâce à `cargo`, mais selon le système d'exploitation, nous avions besoin de différents points d'entrée et d'options de compilation. Ceci est dû au fait que `cargo` construit pour _système hôte_ par défaut, c'est-à-dire le système que vous utilisez. Ce n'est pas ce que nous voulons pour notre noyau, puisqu'un noyau qui s'exécute par dessus Windows par exemple ne fait pas de sens. Nous voulons plutôt compiler pour un _système cible_ bien défini.
+Comme vous vous en rappelez peut-être, nous avons créé un binaire autonome grâce à `cargo`, mais selon le système d'exploitation, nous avions besoin de différents points d'entrée et d'options de compilation. C'est dû au fait que `cargo` construit pour _système hôte_ par défaut, c'est-à-dire le système que vous utilisez. Ce n'est pas ce que nous voulons pour notre noyau, car un noyau qui s'exécute, par exemple, sur Windows n'a pas de sens. Nous voulons plutôt compiler pour un _système cible_ bien défini.
 
 ### Installer une version nocturne de Rust
-Rust a trois canaux de distribution : _stable_, _beta_, et _nightly_. Le Livre de Rust explique bien les différences entre ces canaux, alors prenez une minute et [jetez y un coup d'oeil](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). Pour construire un système d'exploitation, nous aurons besoin de fonctionalités expérimentales qui sont disponibles uniquement sur le canal de distribution nocturne, alors nous devons installer une version nocturne de Rust.
+Rust a trois canaux de distribution : _stable_, _beta_, et _nightly_. Le Livre de Rust explique bien les différences entre ces canaux, alors prenez une minute et [jetez y un coup d'oeil](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). Pour construire un système d'exploitation, nous aurons besoin de fonctionalités expérimentales qui sont disponibles uniquement sur le canal de distribution nocturne. Donc nous devons installer une version nocturne de Rust.
 
-Pour gérer l'installation de Rust, je recommande fortement [rustup]. Cela vous permet d'installer les versions nocturne, beta et stable du compilateur côte-à-côte et facilite leurs mises à jour. Avec rustup, vous pouvez utiliser un canal de distribution nocturne pour le dossier actuel en exécutant `rustup override set nightly`. Par ailleurs, vous pouvez ajouter un fichier appelé `rust-toolchain` avec le contenu `nightly` au dossier racine du projet. Vous pouvez vérifier que vous avez une version nocturne installée en exécutant `rustc --version`: Le numéro de la version devrait comprendre `-nightly` à la fin.
+Pour gérer l'installation de Rust, je recommande fortement [rustup]. Il vous permet d'installer les versions nocturne, beta et stable du compilateur côte-à-côte et facilite leurs mises à jour. Avec rustup, vous pouvez utiliser un canal de distribution nocturne pour le dossier actuel en exécutant `rustup override set nightly`. Par ailleurs, vous pouvez ajouter un fichier appelé `rust-toolchain` avec le contenu `nightly` au dossier racine du projet. Vous pouvez vérifier que vous avez une version nocturne installée en exécutant `rustc --version`: Le numéro de la version devrait comprendre `-nightly` à la fin.
 
 [rustup]: https://www.rustup.rs/
 
-La version nocturne du compilateur nous permet d'activer certaines fonctionnalités expérimentales en utilisant certains _drapeaux de fonctionalité_ dans le haut de notre fichier. Par exemple, nous pourrions activer [`asm!` macro][macro expérimentale `asm!`] pour écrire du code assembleur intégré en ajoutant `#![feature(asm)]` au haut de notre `main.rs`. Noter que ces fonctionnalités expérimentales sont tout à fait instables, ce qui veut dire que des versions futures de Rust pourraient les changer ou les retirer sans préavis. Pour cette raison, nous les utiliserons seulement lorsque strictement nécessaire.
+La version nocturne du compilateur nous permet d'activer certaines fonctionnalités expérimentales en utilisant certains _drapeaux de fonctionalité_ dans le haut de notre fichier. Par exemple, nous pourrions activer [`asm!` macro][macro expérimentale `asm!`] pour écrire du code assembleur intégré en ajoutant `#![feature(asm)]` au haut de notre `main.rs`. Notez que ces fonctionnalités expérimentales sont tout à fait instables, ce qui veut dire que des versions futures de Rust pourraient les changer ou les retirer sans préavis. Pour cette raison, nous les utiliserons seulement lorsque strictement nécessaire.
 
 [`asm!` macro]: https://doc.rust-lang.org/stable/reference/inline-assembly.html
 
-### Spécification de cible
-Cargo supporte différent systèmes cibles avec le paramètre `--target`. La cible est définie par un soi-disant _[target triple][triplet de cible]_, qui décrit l'architecteur du processeur, le fabricant, le système d'exploitation, et l'interface binaire d'application ([ABI]). Par exemple, le triplet `x86_64-unknown-linux-gnu` décrit un système avec un processeur `x86_64`, pas de fabricant défini, et un système d'exploitation Linux avec l'interface binaire d'application GNU. Rust supporte [plusieurs différents triplets de cible][platform-support], incluant `arm-linux-androideabi` pour Android ou [`wasm32-unknown-unknown` pour WebAssembly](https://www.hellorust.com/setup/wasm-target/).
+### Spécification de la cible
+Cargo supporte différent systèmes cibles avec le paramètre `--target`. La cible est définie par un soi-disant _[target triple][triplet de cible]_, qui décrit l'architecteur du processeur, le fabricant, le système d'exploitation, et l'interface binaire d'application ([ABI]). Par exemple, le triplet `x86_64-unknown-linux-gnu` décrit un système avec un processeur `x86_64`, sans fabricant défini, et un système d'exploitation Linux avec l'interface binaire d'application GNU. Rust supporte [plusieurs différents triplets de cible][platform-support], incluant `arm-linux-androideabi` pour Android ou [`wasm32-unknown-unknown` pour WebAssembly](https://www.hellorust.com/setup/wasm-target/).
 
 [target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 [ABI]: https://stackoverflow.com/a/2456882
@@ -129,7 +129,7 @@ Pour notre système cible toutefois, nous avons besoin de paramètres de configu
 }
 ```
 
-La plupart des champs sont requis par LLVM pour générer le code pour cette plateforme. Par exemple, le champ [`data-layout`] définit la taille de divers types d'entiers, de nombres à virgule flottante, et de pointeurs. Puis, il y a des champs que Rust utilise pour de la compilation conditionelle, comme `target-pointer-width`. Le troisième type de champ définit comme une caisse doit être construite. Par exemple, le champ `pre-link-args` spécifie les arguments fournis au [linker][lieur].
+La plupart des champs sont requis par LLVM pour générer le code pour cette plateforme. Par exemple, le champ [`data-layout`] définit la taille de divers types d'entiers, de nombres à virgule flottante, et de pointeurs. Puis, il y a des champs que Rust utilise pour de la compilation conditionelle, comme `target-pointer-width`. Le troisième type de champ définit comment la crate doit être construite. Par exemple, le champ `pre-link-args` spécifie les arguments fournis au [linker][lieur].
 
 [`data-layout`]: https://llvm.org/docs/LangRef.html#data-layout
 [linker]: https://en.wikipedia.org/wiki/Linker_(computing)
@@ -149,7 +149,7 @@ Nous pouvons aussi cibler les systèmes `x86_64` avec notre noyau, donc notre sp
 }
 ```
 
-Noter que nous avons changé le système d'exploitation dans le champs `llvm-target` et `os` pour `none`, puisque nous ferons l'exécution sur du "bare metal" (pas de système d'exploitation sous-jacent).
+Notez que nous avons changé le système d'exploitation dans le champs `llvm-target` et `os` en `none`, puisque nous ferons l'exécution sur du "bare metal" (donc, sans système d'exploitation sous-jacent).
 
 Nous ajoutons ensuite les champs suivants reliés à la construction:
 
@@ -167,7 +167,7 @@ Plutôt que d'utiliser le lieur par défaut de la plateforme (qui pourrait ne pa
 "panic-strategy": "abort",
 ```
 
-Ce paramètre spécifie que la cible ne permet pas le [stack unwinding][déroulement de la pile] lorsque le noyau panique, alors le système devrait plutôt s'arrêter directement. Ceci mène au même résultat que l'option `panic = "abort"` dans notre Cargo.toml, alors nous pouvons la retirer de ce fichier. (Noter que, contrairement à l'option Cargo.toml, cette option de cible s'applique aussi quand nous recompilerons la bibliothèque `core` plus loin dans cet article. Ainsi, même si vous préférez garder l'option Cargo.toml, gardez cette option.)
+Ce paramètre spécifie que la cible ne permet pas le [stack unwinding][déroulement de la pile] lorsque le noyau panique, alors le système devrait plutôt s'arrêter directement. Ceci mène au même résultat que l'option `panic = "abort"` dans notre Cargo.toml, alors nous pouvons la retirer de ce fichier. (Notez que, contrairement à l'option Cargo.toml, cette option de cible s'applique aussi quand nous recompilerons la bibliothèque `core` plus loin dans cet article. Ainsi, même si vous préférez garder l'option Cargo.toml, gardez cette option.)
 
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
 
@@ -175,7 +175,7 @@ Ce paramètre spécifie que la cible ne permet pas le [stack unwinding][déroule
 "disable-redzone": true,
 ```
 
-Nous écrivons un noyau, donc nous devrons éventuellement gérer les interruptions. Pour ce faire en toute sécurité, nous devons désactiver une optimisation de pointeur de pile nommée la _“zone rouge", puisqu'elle causerait une corruption de la pile autrement. Pour plus d'informations, lire notre article séparé à propos de la [disabling the red zone][désactivation de la zone rouge].
+Nous écrivons un noyau, donc nous devrons éventuellement gérer les interruptions. Pour ce faire en toute sécurité, nous devons désactiver une optimisation de pointeur de pile nommée la _“zone rouge"_, puisqu'elle causerait une corruption de la pile autrement. Pour plus d'informations, lire notre article séparé à propos de la [disabling the red zone][désactivation de la zone rouge].
 
 [disabling the red zone]: @/edition-2/posts/02-minimal-rust-kernel/disable-red-zone/index.md
 
@@ -183,11 +183,11 @@ Nous écrivons un noyau, donc nous devrons éventuellement gérer les interrupti
 "features": "-mmx,-sse,+soft-float",
 ```
 
-Le champ `features` active/désactive des fonctionalités de la cible. Nous désactivons les fonctionalités `mmx` et `sse` en les précédant d'un signe "moins" et activons la fonctionnalité `soft-float` en la précédant d'un signe "plus". Noter qu'il ne doit pas y avoir d'espace entre les différentes fonctionnalités, sinon LLVM n'arrive pas à analyser la chaîne de caractères des fonctionnalités.
+Le champ `features` active/désactive des fonctionalités de la cible. Nous désactivons les fonctionalités `mmx` et `sse` en les précédant d'un signe "moins" et activons la fonctionnalité `soft-float` en la précédant d'un signe "plus". Notez qu'il ne doit pas y avoir d'espace entre les différentes fonctionnalités, sinon LLVM n'arrive pas à analyser la chaîne de caractères des fonctionnalités.
 
-Les fonctionnalités `mmx` et `sse` déterminent le support les instructions [Single Instruction Multiple Data (SIMD)], qui peuvent souvent significativement accélérer les programmes. Toutefois, utiliser les grands registres SIMD dans les noyaux des systèmes d'exploitation mène à des problèmes de performance. Ceci arrive puisque le noyau a besoin de restaurer tous les registres à leur état original avant de continuer un programme interrompu. Cela signifie que le noyau doit enregistrer l'état SIMD complet dans la mémoire principale à chaque appel système ou interruption matérielle. Puisque l'état SIMD est très grand (512–1600 octets) et que les interruptions peuvent survenir très fréquemment, ces opérations d'enregistrement/restauration additionnelles nuisent considérablement à la performance. Pour prévenir cela, nous désactivons SIMD pour notre noyau (pas pour les applications qui s'exécutent dessus!).
+Les fonctionnalités `mmx` et `sse` déterminent le support les instructions [Single Instruction Multiple Data (SIMD)], qui peuvent souvent significativement accélérer les programmes. Toutefois, utiliser les grands registres SIMD dans les noyaux des systèmes d'exploitation mène à des problèmes de performance. Ceci parce que le noyau a besoin de restaurer tous les registres à leur état original avant de continuer un programme interrompu. Cela signifie que le noyau doit enregistrer l'état SIMD complet dans la mémoire principale à chaque appel système ou interruption matérielle. Puisque l'état SIMD est très grand (512–1600 octets) et que les interruptions peuvent survenir très fréquemment, ces opérations d'enregistrement/restauration additionnelles nuisent considérablement à la performance. Pour prévenir cela, nous désactivons SIMD pour notre noyau (pas pour les applications qui s'exécutent dessus!).
 
-[Single Instruction Multiple Data (SIMD)]: https://en.wikipedia.org/wiki/SIMD
+[Single Instruction Multiple Data (SIMD)]: https://fr.wikipedia.org/wiki/Single_instruction_multiple_data
 
 Un problème avec la désactivation de SIMD est que les opérations sur les nombres à virgule flottante sur `x86_64` nécessitent les registres SIMD par défaut. Pour résoudre ce problème, nous ajoutons la fonctionnalité `soft-float`, qui émule toutes les opérations à virgule flottante avec des fonctions logicielles utilisant des entiers normaux.
 
@@ -215,9 +215,9 @@ Notre fichier de spécification de cible ressemble maintenant à ceci :
 ```
 
 ### Construction de notre noyau
-Compiler pour notre nouvelle cible utilisera les conventions Linux (je ne suis pas trop certain pourquoi; j'assume que c'est simplement le comportement par défaut de LLVM). Cela signifie que nos avons besoin d'un point d'entrée nommé `_start` comme décrit dans le [previous post][dernier article]:
+Compiler pour notre nouvelle cible utilisera les conventions Linux (je ne suis pas trop certain pourquoi; j'assume que c'est simplement le comportement par défaut de LLVM). Cela signifie que nos avons besoin d'un point d'entrée nommé `_start` comme décrit dans [previous post][l'article précédent]:
 
-[previous post]: @/edition-2/posts/01-freestanding-rust-binary/index.md
+[previous post]: @/edition-2/posts/01-freestanding-rust-binary/index.fr.md
 
 ```rust
 // src/main.rs
@@ -241,7 +241,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-Noter que le point d'entrée doit être appelé `_start` indépendamment du système d'exploitation hôte.
+Notez que le point d'entrée doit être appelé `_start` indépendamment du système d'exploitation hôte.
 
 Nous pouvons maintenant construire le noyau pour notre nouvelle cible en fournissant le nom du fichier JSON comme `--target`:
 
@@ -251,15 +251,15 @@ Nous pouvons maintenant construire le noyau pour notre nouvelle cible en fournis
 error[E0463]: can't find crate for `core`
 ```
 
-Cela échoue! L'erreur nous dit que le compilateur ne trouve plus la [`core` library][bibliothèque `core`]. Cette bibliothèque contient les types de base Rust comme `Result`, `Option`, les itérateurs, et est implicitement liée à toutes les caisses `no_std`.
+Cela échoue! L'erreur nous dit que le compilateur ne trouve plus la [`core` library][bibliothèque `core`]. Cette bibliothèque contient les types de base Rust comme `Result`, `Option`, les itérateurs, et est implicitement liée à toutes les crates `no_std`.
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
-Le problème est que la bibliothèque essentielle est distribuée avec le Rust compilateur comme biliothèque _precompilée_. Donc, elle est seulement valide pour les triplets d'hôtes supportés (par exemple, `x86_64-unknown-linux-gnu`) mais pas pour notre cible personnalisée. Si nous voulons compiler du code pour d'autres cibles, nous devons d'abord recompiler `core` pour ces cibles.
+Le problème est que la bibliothèque `core` est distribuée avec le compilateur Rust comme biliothèque _precompilée_. Donc, elle est seulement valide pour les triplets d'hôtes supportés (par exemple, `x86_64-unknown-linux-gnu`) mais pas pour notre cible personnalisée. Si nous voulons compiler du code pour d'autres cibles, nous devons d'abord recompiler `core` pour ces cibles.
 
 #### L'option `build-std`
 
-C'est ici que la [`build-std` feature][fonctionnalité `build-std`] de cargo entre en jeu. Elle permet de recompiler `core` et d'autres caisses de la bibliothèque standard sur demande, plutôt que d'utiliser des versions précompilées incluses avec l'installation de Rust. Cette fonctionnalité est très récente et n'est pas encore complète, donc elle est définie comme instable et est seulement disponible avec les [nightly Rust compilers][versions nocturnes du compilateur Rust].
+C'est ici que la [`build-std` feature][fonctionnalité `build-std`] de cargo entre en jeu. Elle permet de recompiler `core` et d'autres crates de la bibliothèque standard sur demande, plutôt que d'utiliser des versions précompilées incluses avec l'installation de Rust. Cette fonctionnalité est très récente et n'est pas encore complète, donc elle est définie comme instable et est seulement disponible avec les [nightly Rust compilers][versions nocturnes du compilateur Rust].
 
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust compilers]: #installing-rust-nightly
@@ -273,7 +273,7 @@ Pour utiliser cette fonctionnalité, nous devons créer un fichier de [cargo con
 build-std = ["core", "compiler_builtins"]
 ```
 
-Ceci indique à cargo qu'il doit recompiler les bibliothèques `core` et `compiler_builtins`. Celle-ci est nécessaire pour qu'elle est une dépendance de `core`. Afin de recompiler ces bibliothèques, cargo doit avoir accès au code source de Rust, que nous pouvons installer avec `rustup component add rust-src`.
+Ceci indique à cargo qu'il doit recompiler les bibliothèques `core` et `compiler_builtins`. Celle-ci est nécessaire pour qu'elle ait une dépendance de `core`. Afin de recompiler ces bibliothèques, cargo doit avoir accès au code source de Rust, que nous pouvons installer avec `rustup component add rust-src`.
 
 <div class="note">
 
@@ -296,13 +296,13 @@ Nous voyons que `cargo build` recompile maintenant les bibliothèques `core`, `r
 
 #### Détails reliés à la mémoire
 
-Le compilateur Rust assume qu'un certain ensemble de fonctions intégrées sont disponibles pour tous les systèmes. La plupart de ces fonctions sont fournies par la caisse `compiler_builtins` que nous venons de recompiler. Toutefois, certaines fonctions liées à la mémoire dans cette caisse ne sont pas activées par défaut puisqu'elles sont normalement fournies par la bibliothèque C sur le système. Parmi ces fonctions, on retrouve `memset`, qui définit tous les octets dans un bloc mémoire à une certaine valeur, `memcpy`, qui copie un bloc mémoire vers un autre, et `memcmp`, qui compare deux blocs mémoire. Alors que nous n'avions pas besoin de ces fonctions pour compiler notre noyau maintenant, elles seront nécessaires aussitôt que nous lui ajouterons plus de code (par exemple, lorsque nous copierons des `struct`).
+Le compilateur Rust assume qu'un certain ensemble de fonctions intégrées sont disponibles pour tous les systèmes. La plupart de ces fonctions sont fournies par la crate `compiler_builtins` que nous venons de recompiler. Toutefois, certaines fonctions liées à la mémoire dans cette crate ne sont pas activées par défaut puisqu'elles sont normalement fournies par la bibliothèque C sur le système. Parmi ces fonctions, on retrouve `memset`, qui définit tous les octets dans un bloc mémoire à une certaine valeur, `memcpy`, qui copie un bloc mémoire vers un autre, et `memcmp`, qui compare deux blocs mémoire. Alors que nous n'avions pas besoin de ces fonctions pour compiler notre noyau maintenant, elles seront nécessaires aussitôt que nous lui ajouterons plus de code (par exemple, lorsque nous copierons des `struct`).
 
-Puisque nous ne pouvons pas lier avec la bibliothèque C du système d'exploitation, nous avons besoin d'une méthode alternative de fournir ces fonctions au compilateur. Une approche possible pour ce faire serait d'implémenter nos propre fonctions `memset`, etc. et de leur appliquer l'attribut `#[no_mangle]` (pour prévenir le changement de nom automatique pendant la compilation). Or, ceci est dangereux puisque toute erreur dans l'implémentation pourrait mener à un comportement indéterminé. Par exemple, implémenter `memcpy` avec une boucle `for` pourrait mener à une recursion infinie puisque les boucles `for` invoquent implicitement la méthode caractéristique [`IntoIterator::into_iter`], qui pourrait invoquer `memcpy` de nouveau. C'est donc une bonne idée de plutôt réutiliser des implémentations existantes et éprouvées.
+Puisque nous ne pouvons pas lier avec la bibliothèque C du système d'exploitation, nous avons besoin d'une méthode alternative de fournir ces fonctions au compilateur. Une approche possible pour ce faire serait d'implémenter nos propre fonctions `memset`, etc. et de leur appliquer l'attribut `#[no_mangle]` (pour prévenir le changement de nom automatique pendant la compilation). Or, ceci est dangereux puisque toute erreur dans l'implémentation pourrait mener à un comportement indéterminé. Par exemple, implémenter `memcpy` avec une boucle `for` pourrait mener à une recursion infinie puisque les boucles `for` invoquent implicitement la méthode _trait_ [`IntoIterator::into_iter`], qui pourrait invoquer `memcpy` de nouveau. C'est donc une bonne idée de plutôt réutiliser des implémentations existantes et éprouvées.
 
 [`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
 
-Heureusement, la caisse `compiler_builtins` contient déjà des implémentations pour toutes les fonctions nécessaires, elles sont seulement désactivées par défaut pour ne pas interférer avec les implémentations de la bibliothèque C. Nous pouvons les activer en définissant le drapeau [`build-std-features`] de cargo à `["compiler-builtins-mem"]`. Comme pour le drapeau `build-std`, ce drapeau peut être soit fourni en ligne de commande comme drapeau `-Z` ou configuré dans la table `unstable` du fichier `.cargo/config.toml`. Puisque nous voulons toujours construire avec ce drapeau, l'option du fichier de configuration fait plus de sens pour nous:
+Heureusement, la crate `compiler_builtins` contient déjà des implémentations pour toutes les fonctions nécessaires, elles sont seulement désactivées par défaut pour ne pas interférer avec les implémentations de la bibliothèque C. Nous pouvons les activer en définissant le drapeau [`build-std-features`] de cargo à `["compiler-builtins-mem"]`. Comme pour le drapeau `build-std`, ce drapeau peut être soit fourni en ligne de commande avec `-Z` ou configuré dans la table `unstable` du fichier `.cargo/config.toml`. Puisque nous voulons toujours construire avec ce drapeau, l'option du fichier de configuration fait plus de sens pour nous:
 
 [`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
 
@@ -338,10 +338,10 @@ target = "x86_64-blog_os.json"
 
 Ceci indique à `cargo` d'utiliser notre cible `x86_64-blog_os.json` quand il n'y a pas d'argument de cible `--target` explicitement fourni. Ceci veut dire que nous pouvons maintenant construire notre noyau avec un simple `cargo build`. Pour plus d'informations sur les options de configuration cargo, jetez un coup d'oeil à la [official documentation][documentation officielle de cargo].
 
-Nous pouvons maintenant construire notre noyau pour une cible "bare metal" avec un simple `cargo build`. Toutefois, notre point d'entrée `_start`, qui sera appelé par le bootloader, est encore vide. Il est temps de lui faire imprimer quelque chose à l'écran.
+Nous pouvons maintenant construire notre noyau pour une cible "bare metal" avec un simple `cargo build`. Toutefois, notre point d'entrée `_start`, qui sera appelé par le bootloader, est encore vide. Il est temps de lui faire afficher quelque chose à l'écran.
 
-### Imprimer à l'écran
-La façon la plus facile d'imprimer à l'écran à ce stade est grâce au tampon texte VGA. C'est un emplacement mémoire spécial associé au matériel VGA qui contient le contenu affiché à l'écran. Il consiste normalement en 25 lines qui contiennent chacune 80 cellules de caractère. Chaque cellule de caractère affiche un caractère ASCII avec des couleurs d'avant-plan et d'arrière-plan. Le résultat à l'écran ressemble à ceci:
+### Afficher à l'écran
+La façon la plus facile d'afficher à l'écran à ce stade est grâce au tampon texte VGA. C'est un emplacement mémoire spécial associé au matériel VGA qui contient le contenu affiché à l'écran. Il consiste normalement en 25 lines qui contiennent chacune 80 cellules de caractère. Chaque cellule de caractère affiche un caractère ASCII avec des couleurs d'avant-plan et d'arrière-plan. Le résultat à l'écran ressemble à ceci:
 
 [VGA text buffer]: https://en.wikipedia.org/wiki/VGA-compatible_text_mode
 
@@ -378,14 +378,14 @@ D'abord, nous transformons l'entier `0xb8000` en un [raw pointer][pointeur brut]
 [raw pointer]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
-Noter qu'il y a un bloc [`unsafe`] qui enveloppe les écritures mémoire. La raison est que le compilateur Rust ne peut pas prouver que les pointeurs bruts que nous créons sont valides. Ils pourraient pointer n'importe où et mener à une corruption de données. En les mettant dans un bloc `unsafe`, nous disons fondamentalement au compilateur que nous sommes absolument certains que les opérations sont valides. Noter qu'un bloc `unsafe` ne désactive pas les contrôles de sécurité de Rust. Il permet seulement de faire [five additional things][cinq choses supplémentaires].
+Notez qu'il y a un bloc [`unsafe`] qui enveloppe les écritures mémoire. La raison en est que le compilateur Rust ne peut pas prouver que les pointeurs bruts que nous créons sont valides. Ils pourraient pointer n'importe où et mener à une corruption de données. En les mettant dans un bloc `unsafe`, nous disons fondamentalement au compilateur que nous sommes absolument certains que les opérations sont valides. Notez qu'un bloc `unsafe` ne désactive pas les contrôles de sécurité de Rust. Il permet seulement de faire [five additional things][cinq choses supplémentaires].
 
 [`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
 [five additional things]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers
 
-Je veux souligner que **ceci n'est pas la façon de faire les choses en Rust!** Il est très facile de faire un gâchis en travaillant avec des pointeurs bruts à l'intérieur de blocs `unsafe`. Par exemple, nous pourrions facilement écrire au-delà de la fin du tampon si nous ne sommes pas prudents.
+Je veux souligner que **ce n'est pas comme cela que les choses se font en Rust!** Il est très facile de faire des erreurs en travaillant avec des pointeurs bruts à l'intérieur de blocs `unsafe`. Par exemple, nous pourrions facilement écrire au-delà de la fin du tampon si nous ne sommes pas prudents.
 
-Alors nous voulons minimiser l'utilisation de `unsafe` autant que possible. Rust nous offre la possibilité de faire cela en créant des abstractions sécuritaires. Par exemple, nous pourrions créer un type tampon VGA qui encapsule les risques et qui s'assure qu'il est impossible de faire quoi que ce soit d'incorrect à l'extérieur de ce type. Ainsi, nous aurions besoin de très peu de code `unsafe` and nous serions certains que nous ne violons pas la [memory safety][sécurité de mémoire]. Nous allons créer une telle abstraction de tampon VGA buffer dans le prochain article.
+Alors nous voulons minimiser l'utilisation de `unsafe` autant que possible. Rust nous offre la possibilité de le faire en créant des abstractions de sécurité. Par exemple, nous pourrions créer un type tampon VGA qui encapsule les risques et qui s'assure qu'il est impossible de faire quoi que ce soit d'incorrect à l'extérieur de ce type. Ainsi, nous aurions besoin de très peu de code `unsafe` et nous serions certains que nous ne violons pas la [memory safety][sécurité de mémoire]. Nous allons créer une telle abstraction de tampon VGA buffer dans le prochain article.
 
 [memory safety]: https://en.wikipedia.org/wiki/Memory_safety
 
@@ -395,11 +395,11 @@ Maintenant que nous avons un exécutable qui fait quelque chose de perceptible, 
 
 ### Créer une image d'amorçage
 
-Pour transformer notre noyau compilé en image de disque amorçable, nous devons le lier avec un bootloader. Comme nous l'avons appris dans la [section about booting][section à propos du lancement], le bootloader est responsable de lancer le processeur et de charger notre noyau.
+Pour transformer notre noyau compilé en image de disque amorçable, nous devons le lier avec un bootloader. Comme nous l'avons appris dans la [section about booting][section à propos du lancement], le bootloader est responsable de l'initialisation du processeur et du chargement de notre noyau.
 
 [section about booting]: #the-boot-process
 
-Plutôt que d'écrire notre propre bootloader, ce qui est un projet en soi, nous utilisons la caisse [`bootloader`]. Cette caisse propose un bootloader BIOS de base sans dépendance C, seulement du code Rust et de l'assembleur intégré. Pour l'utiliser pour lancer notre noyau, nous devons ajouter une dépendance pour cette caisse:
+Plutôt que d'écrire notre propre bootloader, ce qui est un projet en soi, nous utilisons la crate [`bootloader`]. Cette crate propose un bootloader BIOS de base sans dépendance C. Seulement du code Rust et de l'assembleur intégré. Pour l'utiliser afin de lancer notre noyau, nous devons ajouter une dépendance à cette crate:
 
 [`bootloader`]: https://crates.io/crates/bootloader
 
@@ -422,13 +422,13 @@ cargo install bootimage
 
 Pour exécuter `bootimage` et construire le bootloader, vous devez avoir la composante rustup `llvm-tools-preview` installée. Vous pouvez l'installer en exécutant `rustup component add llvm-tools-preview`.
 
-Après avoir installé `bootimage` and ajouté la composante `llvm-tools-preview`, nous pouvons créer une image de disque amorçable en exécutant:
+Après avoir installé `bootimage` et ajouté la composante `llvm-tools-preview`, nous pouvons créer une image de disque amorçable en exécutant:
 
 ```
 > cargo bootimage
 ```
 
-Nous voyons que l'outil recompile notre noyau en utilisant `cargo build`, alors il utilisera automatiquement tout changement que vous faites. Ensuite, il compile le bootloader, ce qui peut prendre un certain temps. Comme toutes les dépendances de caisses, il est seulement construit une fois puis il est mis en cache, donc les builds subséquentes seront beaucoup plus rapides. Enfin, `bootimage` combine le bootloader et le noyau en une image de disque amorçable.
+Nous voyons que l'outil recompile notre noyau en utilisant `cargo build`, donc il utilisera automatiquement tout changements que vous faites. Ensuite, il compile le bootloader, ce qui peut prendre un certain temps. Comme toutes les dépendances de crates, il est seulement construit une fois puis il est mis en cache, donc les builds subséquentes seront beaucoup plus rapides. Enfin, `bootimage` combine le bootloader et le noyau en une image de disque amorçable.
 
 Après avoir exécuté la commande, vous devriez voir une image de disque amorçable nommée `bootimage-blog_os.bin` dans votre dossier `target/x86_64-blog_os/debug`. Vous pouvez la lancer dans une machine virtuelle ou la copier sur une clé USB pour la lancer sur du véritable matériel. (Notez que ceci n'est pas une image CD, qui est un format différent, donc la graver sur un CD ne fonctionne pas).
 
@@ -487,7 +487,7 @@ runner = "bootimage runner"
 
 La table `target.'cfg(target_os = "none")'` s'applique à toutes les cibles dont le champ `"os"` dans le fichier de configuration est défini à `"none"`. Ceci inclut notre cible `x86_64-blog_os.json`. La clé `runner` key spécifie la commande qui doit être invoquée pour `cargo run`. La commande est exécutée après une build réussie avec le chemin de l'exécutable comme premier argument. Voir la [configuration cargo][cargo configuration] pour plus de détails.
 
-La commande `bootimage runner` est spécifiquement conçue pour être utilisable comme un exécutable `runner`. Elle lie l'exécutable fourni  avec le bootloader duquel dépend le projet et lance ensuite QEMU. Voir le [Readme of `bootimage`][README de `bootimage`] pour plus de détails et les options de configuration possibles.
+La commande `bootimage runner` est spécifiquement conçue pour être utilisable comme un exécutable `runner`. Elle lie l'exécutable fourni avec le bootloader duquel dépend le projet et lance ensuite QEMU. Voir le [Readme of `bootimage`][README de `bootimage`] pour plus de détails et les options de configuration possibles.
 
 [Readme of `bootimage`]: https://github.com/rust-osdev/bootimage
 
