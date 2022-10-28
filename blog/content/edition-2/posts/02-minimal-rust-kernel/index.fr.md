@@ -10,6 +10,8 @@ chapter = "Bare Bones"
 translation_based_on_commit = "c689ecf810f8e93f6b2fb3c4e1e8b89b8a0998eb"
 # GitHub usernames of the people that translated this post
 translators = ["TheMimiCodes", "maximevaillancourt"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["alaincao"]
 +++
 
 Dans cet article, nous créons un noyau Rust 64-bit minimal pour l'architecture x86. Nous continuons le travail fait dans l'article précédent ([freestanding Rust binary][binaire Rust autonome]) pour créer une image de disque amorçable qui affiche quelque chose à l'écran. 
