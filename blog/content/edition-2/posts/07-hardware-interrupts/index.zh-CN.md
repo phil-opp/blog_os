@@ -112,7 +112,7 @@ pub static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 ```
 
-我们成功将PIC的中断编号范围设定为了32–47。我们使用 `Mutex` 容器包裹了 `ChainedPics`，这样就可以拿到了被定义为安全的变量修改权限，通过（[`lock` 函数][spin mutex lock]），我们在下文会用到这个权限。至于 `ChainedPics::new` 处于unsafe块的原因，那是因为修改偏移量可能会导致一些意外的行为。
+我们成功将PIC的中断编号范围设定为了32–47。我们使用 `Mutex` 容器包裹了 `ChainedPics`，这样就可以通过（[`lock` 函数][spin mutex lock]）拿到被定义为安全的变量修改权限，我们在下文会用到这个权限。`ChainedPics::new` 处于unsafe块，因为错误的偏移量可能会导致一些未定义行为。
 
 [spin mutex lock]: https://docs.rs/spin/0.5.2/spin/struct.Mutex.html#method.lock
 
@@ -128,7 +128,7 @@ pub fn init() {
 }
 ```
 
-我们使用 [`initialize`] 函数进行PIC的初始化，至于 `ChainedPics::new` 函数被标记为不安全这件事，确实如此，因为里面的不安全逻辑可能会导致PIC配置失败，进而出现一些意外行为。
+我们使用 [`initialize`] 函数进行PIC的初始化。正如 `ChainedPics::new` ，这个函数也是 unsafe 的，因为里面的不安全逻辑可能会导致PIC配置失败，进而出现一些未定义行为。
 
 [`initialize`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html#method.initialize
 
