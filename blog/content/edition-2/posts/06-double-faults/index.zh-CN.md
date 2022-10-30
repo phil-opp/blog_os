@@ -57,7 +57,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-这里我们使用 `unsafe` 块直接操作了一个无效的内存地址 `0xdeadbeef`，由于该虚拟地址并未在页表映射到物理内存中，所以必然会抛出 page fault 异常。我们又并未在 [IDT] 中注册对应的处理器，所以 double fault 会紧接着被抛出。
+这里我们使用 `unsafe` 块直接操作了一个无效的内存地址 `0xdeadbeef`，由于该虚拟地址并未在页表中映射到物理内存，所以必然会抛出 page fault 异常。我们又并未在 [IDT] 中注册对应的处理器，所以 double fault 会紧接着被抛出。
 
 现在启动内核，我们可以看到它直接陷入了崩溃和重启的无限循环，其原因如下：
 
@@ -91,7 +91,7 @@ extern "x86-interrupt" fn double_fault_handler(
 }
 ```
 
-我们的处理函数打印了一行简短的信息，并将栈帧转写了出来，其中错误码一直是0，所以没有什么可以输出的原因。要说这和 breakpoint 处理函数有什么区别，那就是 double fault 的处理函数是 [发散的][_diverging_]，这是因为 `x86_64` 架构不允许从 double fault 异常中返回任何东西。
+我们的处理函数打印了一行简短的信息，并将栈帧转写了出来。其中错误码一直是0，所以没有必要把它打印出来。要说这和 breakpoint 处理函数有什么区别，那就是 double fault 的处理函数是 [发散的][_diverging_]，这是因为 `x86_64` 架构不允许从 double fault 异常中返回任何东西。
 
 [_diverging_]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
@@ -112,7 +112,7 @@ extern "x86-interrupt" fn double_fault_handler(
 ## Double Faults 的成因
 在解释这些部分情况之前，我们需要先明确一下 double faults 的成因，上文中我们使用了一个模糊的定义：
 
-> double fault 是一个由于CPU调用错误处理器失败而导致的特殊异常。 
+> double fault 就是当CPU执行错误处理函数失败时抛出的特殊异常。 
 
 但究竟什么叫 _“调用失败”_ ？没有提供处理函数？处理函数被[换出][swapped out]内存了？或者处理函数本身也出现了异常？
 
@@ -211,7 +211,7 @@ struct InterruptStackTable {
 
 ### IST和TSS
 中断栈表（IST）其实是一个名叫 _[任务状态段][Task State Segment]（TSS）_ 的古老遗留结构的一部分。
-TSS是用来存储32位任务中的零碎信息，比如处理器寄存器的状态（此处存疑，processor register state的词法似乎具有歧义），一般用于 [硬件上下文切换][hardware context switching]。但是硬件上下文切换已经不再适用于64位模式，并且TSS的实际数据结构也已经发生了彻底的改变。
+TSS是用来存储32位任务中的零碎信息，比如处理器寄存器的状态，一般用于 [硬件上下文切换][hardware context switching]。但是硬件上下文切换已经不再适用于64位模式，并且TSS的实际数据结构也已经发生了彻底的改变。
 
 [Task State Segment]: https://en.wikipedia.org/wiki/Task_state_segment
 [hardware context switching]: https://wiki.osdev.org/Context_Switching#Hardware_Context_Switching
@@ -233,7 +233,7 @@ TSS是用来存储32位任务中的零碎信息，比如处理器寄存器的状
 <span style="opacity: 0.5">(保留)</span> | `u16`
 I/O映射基准地址 | `u16`
 
-_特权栈表_ 用于CPU特权等级变更的时候，例如当CPU在用户态（特权等级3）中触发一个异常，一般情况下CPU会在执行错误处理函数前切换到内核态（特权等级0），在这种情况下，CPU会切换为特权栈表的第0层（0层是目标特权等级）。但是目前我们还没有用户态的程序，所以暂且可以忽略这个表。
+_特权栈表_ 在 CPU 特权等级变更的时候会被用到。例如当 CPU 在用户态（特权等级3）中触发一个异常时，一般情况下 CPU 会在执行错误处理函数前切换到内核态（特权等级0），在这种情况下，CPU 会切换为特权栈表的第0层（0层是目标特权等级）。但是目前我们还没有用户态的程序，所以暂且可以忽略这个表。
 
 ### 创建一个TSS
 那么我们来创建一个新的包含单独的 double fault 专属栈以及中断栈表的TSS。为此我们需要一个TSS结构体，幸运的是 `x86_64` crate 也已经自带了 [`TaskStateSegment` 结构][`TaskStateSegment` struct] 用来映射它。
@@ -278,7 +278,7 @@ lazy_static! {
 但要注意，由于现在 double fault 获取的栈不再具有用于防止栈溢出的 guard page，所以我们不应该做任何栈密集型操作了，否则就有可能会污染到栈下方的内存区域。
 
 #### 加载TSS
-我们已经创建了一个TSS，现在的问题就是怎么让CPU使用它。不幸的是这事是有点繁琐，因为TSS用到了分段系统（历史原因）。但我们可以不直接加载，而是在[全局描述符表][Global Descriptor Table]（GDT）中添加一个段描述符，然后我们就可以通过[`ltr` 指令][`ltr` instruction]加上GDT序号加载我们的TSS。（这也是为什么我们将模块取名为 `gdt`。）
+我们已经创建了一个TSS，现在的问题就是怎么让CPU使用它。不幸的是这事有点繁琐，因为TSS用到了分段系统（历史原因）。但我们可以不直接加载，而是在[全局描述符表][Global Descriptor Table]（GDT）中添加一个段描述符，然后我们就可以通过[`ltr` 指令][`ltr` instruction]加上GDT序号加载我们的TSS。（这也是为什么我们将模块取名为 `gdt`。）
 
 [Global Descriptor Table]: https://web.archive.org/web/20190217233448/https://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
 [`ltr` instruction]: https://www.felixcloutier.com/x86/ltr
