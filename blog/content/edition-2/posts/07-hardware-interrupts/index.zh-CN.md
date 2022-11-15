@@ -9,6 +9,8 @@ date = 2018-10-22
 translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
 # GitHub usernames of the people that translated this post
 translators = ["liuyuran"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["JiangengDong"]
 +++
 
 在本文中，我们会对可编程的中断控制器进行设置，以将硬件中断转发给CPU，而要处理这些中断，只需要像处理异常一样在中断描述符表中加入一个新条目即可，在这里我们会以获取周期计时器的中断和获取键盘输入为例进行讲解。

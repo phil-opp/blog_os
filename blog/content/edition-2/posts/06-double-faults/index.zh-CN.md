@@ -9,6 +9,8 @@ date  = 2018-06-18
 translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
 # GitHub usernames of the people that translated this post
 translators = ["liuyuran"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["JiangengDong"]
 +++
 
 在这篇文章中，我们会探索 double fault 异常的细节，它的触发条件是调用错误处理函数失败。通过捕获该异常，我们可以阻止致命的 _triple faults_ 异常导致系统重启。为了尽可能避免 triple faults ，我们会在一个独立的内核栈配置 _中断栈表_ 来捕捉 double faults。

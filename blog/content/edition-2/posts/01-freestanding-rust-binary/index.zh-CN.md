@@ -8,7 +8,9 @@ date = 2018-02-10
 # Please update this when updating the translation
 translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
 # GitHub usernames of the people that translated this post
-translators = ["luojia65", "Rustin-Liu", "TheBegining"]
+translators = ["luojia65", "Rustin-Liu", "TheBegining", "liuyuran"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["JiangengDong"]
 +++
 
 创建一个不链接标准库的 Rust 可执行文件，将是我们迈出的第一步。无需底层操作系统的支撑，这样才能在**裸机**（[bare metal]）上运行 Rust 代码。

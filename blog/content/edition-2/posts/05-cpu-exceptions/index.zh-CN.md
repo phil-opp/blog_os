@@ -9,6 +9,8 @@ date  = 2018-06-17
 translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
 # GitHub usernames of the people that translated this post
 translators = ["liuyuran"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["JiangengDong", "Byacrya"]
 +++
 
 CPU异常在很多情况下都有可能发生，比如访问无效的内存地址，或者在除法运算里除以0。为了处理这些错误，我们需要设置一个 _中断描述符表_ 来提供异常处理函数。在文章的最后，我们的内核将能够捕获 [断点异常][breakpoint exceptions] 并在处理后恢复正常执行。

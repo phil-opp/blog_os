@@ -9,6 +9,8 @@ date = 2019-01-14
 translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
 # GitHub usernames of the people that translated this post
 translators = ["liuyuran"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["JiangengDong"]
 +++
 
 本文主要讲解 _内存分页_ 机制，一种我们将会应用到操作系统里的十分常见的内存模型。同时，也会展开说明为何需要进行内存隔离、_分段机制_ 是如何运作的、_虚拟内存_ 是什么，以及内存分页是如何解决内存碎片问题的，同时也会对x86_64的多级页表布局进行探索。

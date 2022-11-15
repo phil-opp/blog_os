@@ -8,7 +8,9 @@ date = 2019-04-27
 # Please update this when updating the translation
 translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
 # GitHub usernames of the people that translated this post
-translators = ["luojia65", "Rustin-Liu"]
+translators = ["luojia65", "Rustin-Liu", "liuyuran"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["JiangengDong"]
 +++
 
 本文主要讲述了在`no_std`环境下进行单元测试和集成测试的方法。我们将通过Rust的自定义测试框架来在我们的内核中执行一些测试函数。为了将结果反馈到QEMU上，我们需要使用QEMU的一些其他的功能以及`bootimage`工具。

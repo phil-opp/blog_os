@@ -8,7 +8,9 @@ date = 2018-02-10
 # Please update this when updating the translation
 translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
 # GitHub usernames of the people that translated this post
-translators = ["luojia65", "Rustin-Liu"]
+translators = ["luojia65", "Rustin-Liu", "liuyuran"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["JiangengDong"]
 +++
 
 在这篇文章中，我们将基于 **x86架构**（the x86 architecture），使用 Rust 语言，编写一个最小化的 64 位内核。我们将从上一章中构建的[独立式可执行程序][freestanding-rust-binary]开始，构建自己的内核；它将向显示器打印字符串，并能被打包为一个能够引导启动的**磁盘映像**（disk image）。
