@@ -280,16 +280,16 @@ pub fn _print(args: fmt::Arguments) {
 
 获取到 `WRITER` 变量的锁后，调用其内部的 `write_fmt` 函数，然后在结尾隐式解锁该变量。但是假如在函数执行一半的时候，中断处理函数触发，同样试图打印日志的话：
 
-Timestep | _start | interrupt_handler
----------|------|------------------
-0 | calls `println!`      | &nbsp;
-1 | `print` locks `WRITER` | &nbsp;
-2 | | **interrupt occurs**, handler begins to run
-3 | | calls `println!` |
-4 | | `print` tries to lock `WRITER` (already locked)
-5 | | `print` tries to lock `WRITER` (already locked)
-… | | …
-_never_ | _unlock `WRITER`_ |
+| Timestep | _start                 | interrupt_handler                               |
+| -------- | ---------------------- | ----------------------------------------------- |
+| 0        | calls `println!`       | &nbsp;                                          |
+| 1        | `print` locks `WRITER` | &nbsp;                                          |
+| 2        |                        | **interrupt occurs**, handler begins to run     |
+| 3        |                        | calls `println!`                                |
+| 4        |                        | `print` tries to lock `WRITER` (already locked) |
+| 5        |                        | `print` tries to lock `WRITER` (already locked) |
+| …        |                        | …                                               |
+| _never_  | _unlock `WRITER`_      |
 
 `WRITER` 被锁定，所以中断处理函数就会一直等待到它被解锁为止，然而后续永远不会发生了，因为只有当中断处理函数返回，`_start` 函数才会继续运行，`WRITER` 才可能被解锁，所以整个系统就这么挂起了。
 

@@ -48,28 +48,28 @@ CPU异常在很多情况下都有可能发生，比如访问无效的内存地�
 ### 中断描述符表
 要捕捉CPU异常，我们需要设置一个 _中断描述符表_ (_Interrupt Descriptor Table_, IDT)，用来捕获每一个异常。由于硬件层面会不加验证的直接使用，所以我们需要根据预定义格式直接写入数据。符表的每一行都遵循如下的16字节结构。
 
-Type| Name                     | Description
-----|--------------------------|-----------------------------------
-u16 | Function Pointer [0:15]  | 处理函数地址的低位（最后16位）
-u16 | GDT selector             | [全局描述符表][global descriptor table]中的代码段标记。
-u16 | Options                  | （如下所述）
-u16 | Function Pointer [16:31] | 处理函数地址的中位（中间16位）
-u32 | Function Pointer [32:63] | 处理函数地址的高位（剩下的所有位）
-u32 | Reserved                 |
+| Type | Name                     | Description                                             |
+| ---- | ------------------------ | ------------------------------------------------------- |
+| u16  | Function Pointer [0:15]  | 处理函数地址的低位（最后16位）                          |
+| u16  | GDT selector             | [全局描述符表][global descriptor table]中的代码段标记。 |
+| u16  | Options                  | （如下所述）                                            |
+| u16  | Function Pointer [16:31] | 处理函数地址的中位（中间16位）                          |
+| u32  | Function Pointer [32:63] | 处理函数地址的高位（剩下的所有位）                      |
+| u32  | Reserved                 |
 
 [global descriptor table]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
 Options字段的格式如下：
 
-Bits  | Name                              | Description
-------|-----------------------------------|-----------------------------------
-0-2   | Interrupt Stack Table Index       | 0: 不要切换栈, 1-7: 当处理函数被调用时，切换到中断栈表的第n层。
-3-7   | Reserved              |
-8     | 0: Interrupt Gate, 1: Trap Gate   | 如果该比特被置为0，当处理函数被调用时，中断会被禁用。
-9-11  | must be one                       |
-12    | must be zero                      |
-13‑14 | Descriptor Privilege Level (DPL)  | 执行处理函数所需的最小特权等级。
-15    | Present                           |
+| Bits  | Name                             | Description                                                     |
+| ----- | -------------------------------- | --------------------------------------------------------------- |
+| 0-2   | Interrupt Stack Table Index      | 0: 不要切换栈, 1-7: 当处理函数被调用时，切换到中断栈表的第n层。 |
+| 3-7   | Reserved                         |
+| 8     | 0: Interrupt Gate, 1: Trap Gate  | 如果该比特被置为0，当处理函数被调用时，中断会被禁用。           |
+| 9-11  | must be one                      |
+| 12    | must be zero                     |
+| 13‑14 | Descriptor Privilege Level (DPL) | 执行处理函数所需的最小特权等级。                                |
+| 15    | Present                          |
 
 每个异常都具有一个预定义的IDT序号，比如 invalid opcode 异常对应6号，而 page fault 异常对应14号，因此硬件可以直接寻找到对应的IDT条目。 OSDev wiki中的 [异常对照表][exceptions] 可以查到所有异常的IDT序号（在Vector nr.列）。
 
@@ -164,10 +164,10 @@ _保留寄存器_ 的值应当在函数调用时保持不变，所以被调用�
 
 在 x86_64 架构下，C调用约定指定了这些寄存器分类：
 
-保留寄存器 | 临时寄存器
----|---
-`rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11`
-_callee-saved_ | _caller-saved_
+| 保留寄存器                                      | 临时寄存器                                                  |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| `rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11` |
+| _callee-saved_                                  | _caller-saved_                                              |
 
 编译器已经内置了这些规则，因而可以自动生成保证程序正常执行的指令。例如绝大多数函数的汇编指令都以 `push rbp` 开头，也就是将 `rbp` 的值备份到栈中（因为它是 `callee-saved` 型寄存器）。
 

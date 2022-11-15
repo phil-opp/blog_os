@@ -132,10 +132,10 @@ extern "x86-interrupt" fn double_fault_handler(
 这个“会”字十分重要：只有特定的两个异常组合会触发 double fault。
 这些异常组合如下：
 
-一层异常 | 二层异常
-----------------|-----------------
-[Divide-by-zero],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault] | [Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
-[Page Fault] | [Page Fault],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
+| 一层异常                                                                                                              | 二层异常                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [Divide-by-zero],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault] | [Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]                  |
+| [Page Fault]                                                                                                          | [Page Fault],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault] |
 
 [Divide-by-zero]: https://wiki.osdev.org/Exceptions#Divide-by-zero_Error
 [Invalid TSS]: https://wiki.osdev.org/Exceptions#Invalid_TSS
@@ -225,15 +225,15 @@ TSS是用来存储32位任务中的零碎信息，比如处理器寄存器的状
 
 64位TSS的格式如下：
 
-字段  | 类型
------- | ----------------
-<span style="opacity: 0.5">(保留)</span> | `u32`
-特权栈表 | `[u64; 3]`
-<span style="opacity: 0.5">(保留)</span> | `u64`
-中断栈表 | `[u64; 7]`
-<span style="opacity: 0.5">(保留)</span> | `u64`
-<span style="opacity: 0.5">(保留)</span> | `u16`
-I/O映射基准地址 | `u16`
+| 字段                                     | 类型       |
+| ---------------------------------------- | ---------- |
+| <span style="opacity: 0.5">(保留)</span> | `u32`      |
+| 特权栈表                                 | `[u64; 3]` |
+| <span style="opacity: 0.5">(保留)</span> | `u64`      |
+| 中断栈表                                 | `[u64; 7]` |
+| <span style="opacity: 0.5">(保留)</span> | `u64`      |
+| <span style="opacity: 0.5">(保留)</span> | `u16`      |
+| I/O映射基准地址                          | `u16`      |
 
 _特权栈表_ 在 CPU 特权等级变更的时候会被用到。例如当 CPU 在用户态（特权等级3）中触发一个异常时，一般情况下 CPU 会在执行错误处理函数前切换到内核态（特权等级0），在这种情况下，CPU 会切换为特权栈表的第0层（0层是目标特权等级）。但是目前我们还没有用户态的程序，所以暂且可以忽略这个表。
 
