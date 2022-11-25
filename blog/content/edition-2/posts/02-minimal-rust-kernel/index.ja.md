@@ -411,7 +411,7 @@ pub extern "C" fn _start() -> ! {
 # in Cargo.toml
 
 [dependencies]
-bootloader = "0.9.8"
+bootloader = "0.9.23"
 ```
 
 bootloaderを依存として加えることだけでブータブルディスクイメージが実際に作れるわけではなく、私達のカーネルをコンパイル後にブートローダーにリンクする必要があります。問題は、cargoが[<ruby>ビルド後<rp> (</rp><rt>post-build</rt><rp>) </rp></ruby>にスクリプトを走らせる機能][post-build scripts]を持っていないことです。
