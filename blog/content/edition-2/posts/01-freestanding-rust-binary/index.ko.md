@@ -12,8 +12,7 @@ translation_based_on_commit = "c1af4e31b14e562826029999b9ab1dce86396b93"
 translators = ["JOE1994", "Quqqu"]
 +++
 
-운영체제 커널을 만드는 첫 단계는 표준 라이브러리(standard library)를 링크하지 않는 Rust 실행파일을 만드는 것입니다.
-이러한 실행파일은 운영체제가 없는 [bare metal] 시스템에서 동작할 수 있습니다.
+운영체제 커널을 만드는 첫 단계는 표준 라이브러리(standard library)를 링크하지 않는 Rust 실행파일을 만드는 것입니다. 이 실행파일은 운영체제가 없는 [bare metal] 시스템에서 동작할 수 있습니다.
 
 [bare metal]: https://en.wikipedia.org/wiki/Bare_machine
 
