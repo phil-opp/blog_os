@@ -11,7 +11,7 @@ translation_based_on_commit = "a108367d712ef97c28e8e4c1a22da4697ba6e6cd"
 # GitHub usernames of the people that translated this post
 translators = ["JOE1994"]
 # GitHub usernames of the people that contributed to this translation
-translation_contributors = []
+translation_contributors = ["dalinaum"]
 +++
 
 이번 글에서는 CPU가 예외 처리 함수를 호출하는 데에 실패할 때 발생하는 더블 폴트 (double fault) 예외에 대해 자세히 다룹니다. 더블 폴트 예외를 처리함으로써 시스템 재부팅을 발생시키는 치명적인 _트리플 폴트 (triple fault)_ 예외를 피할 수 있습니다. 트리플 폴트가 발생할 수 있는 모든 경우에 대비하기 위해 _Interrupt Stack Table_ 을 만들고 별도의 커널 스택에서 더블 폴트를 처리할 것입니다.
@@ -147,7 +147,7 @@ _“예외 처리 함수를 호출하는 것에 실패했을 때”_ 라는 게 
 
 예를 들면 divide-by-zero 예외 뒤에 페이지 폴트가 발생하는 것은 괜찮지만 (페이지 폴트 처리 함수가 호출됨), divide-by-zero 예외 뒤에 general-protection fault 예외가 발생하면 더블 폴트가 발생합니다.
 
-위 테이블을 이용하면 위에서 했던 질문들 중 첫 3개에 대해 대답할 수 있습니다.
+위 테이블을 이용하면 위에서 했던 질문 중 첫 3개에 대해 대답할 수 있습니다.
 
 1. breakpoint 예외가 발생한 시점에 해당 예외 처리 함수가 스왑-아웃 되어 있는 경우, _페이지 폴트_ 가 발생하고 _페이지 폴트 처리 함수_ 가 호출됩니다.
 2. 페이지 폴트가 발생한 시점에 페이지 폴트 처리 함수가 스왑-아웃 되어 있는 경우, _더블 폴트_ 가 발생하고 _더블 폴트 처리 함수_ 가 호출됩니다.
@@ -160,7 +160,7 @@ _“예외 처리 함수를 호출하는 것에 실패했을 때”_ 라는 게 
 
 > 커널이 스택 오버 플로우를 일으켜 _보호 페이지 (guard page)_ 에 접근하는 경우, 무슨 일이 일어날까요?
 
-보호 페이지는 스택의 맨 아래에 위치하면서 스택 오버플로우를 감지하는 특별한 메모리 페이지입니다. 해당 페이지는 어떤 물리 프레임에도 매핑되지 않으며, CPU가 해당 페이지에 접근하면 물리 메모리에 접근하는 대신 페이지 폴트가 발생합니다. 부트로더가 커널 스택의 보호 페이지를 초기화 하며, 이후 커널 스택 오버플로우가 발생하면 _페이지 폴트_ 가 발생합니다.
+보호 페이지는 스택의 맨 아래에 위치하면서 스택 오버플로우를 감지하는 특별한 메모리 페이지입니다. 해당 페이지는 어떤 물리 프레임에도 매핑되지 않으며, CPU가 해당 페이지에 접근하면 물리 메모리에 접근하는 대신 페이지 폴트가 발생합니다. 부트로더가 커널 스택의 보호 페이지를 초기화하며, 이후 커널 스택 오버플로우가 발생하면 _페이지 폴트_ 가 발생합니다.
 
 페이지 폴트가 발생하면 CPU는 IDT에서 페이지 폴트 처리 함수를 찾고 스택에 [인터럽트 스택 프레임 (interrupt stack frame)][interrupt stack frame]을 push 하려고 합니다. 하지만 현재의 스택 포인터는 물리 프레임이 매핑되지 않은 보호 페이지를 가리키고 있습니다. 따라서 2번째 페이지 폴트가 발생하고, 그 결과 더블 폴트가 발생합니다 (위 테이블 참조).
 
@@ -205,7 +205,7 @@ struct InterruptStackTable {
 }
 ```
 
-각 예외 처리 함수는 [IDT 엔트리][IDT entry]의 `stack_pointers` 필드를 통해 IST의 스택들 중 하나를 사용하도록 선택할 수 있습니다. 예를 들어, 우리의 더블 폴트 처리 함수가 IST의 1번째 스택을 사용하도록 설정할 수 있습니다. 그 후에는 더블 폴트가 발생할 때마다 CPU가 스택을 IST의 1번째 스택으로 교체합니다. 스택에 새로운 데이터가 push 되기 전에 스택 교체가 이뤄지기 때문에 트리플 폴트를 피할 수 있습니다.
+각 예외 처리 함수는 [IDT 엔트리][IDT entry]의 `stack_pointers` 필드를 통해 IST의 스택 중 하나를 사용하도록 선택할 수 있습니다. 예를 들어, 우리의 더블 폴트 처리 함수가 IST의 1번째 스택을 사용하도록 설정할 수 있습니다. 그 후에는 더블 폴트가 발생할 때마다 CPU가 스택을 IST의 1번째 스택으로 교체합니다. 스택에 새로운 데이터가 push 되기 전에 스택 교체가 이뤄지기 때문에 트리플 폴트를 피할 수 있습니다.
 
 [IDT entry]: @/edition-2/posts/05-cpu-exceptions/index.md#the-interrupt-descriptor-table
 
@@ -215,7 +215,7 @@ struct InterruptStackTable {
 [Task State Segment]: https://en.wikipedia.org/wiki/Task_state_segment
 [hardware context switching]: https://wiki.osdev.org/Context_Switching#Hardware_Context_Switching
 
-x86_64 아키텍처에서 TSS는 특정 태스크 (task) 관련 정보를 보관하지 않습니다. 대신 TSS는 두 개의 스택 테이블을 보관합니다 (IST가 그 중 하나입니다). 32비트 시스템의 TSS와 64비트 시스템의 TSS의 유일한 공통 필드는 [I/O port permissions bitmap]에 대한 포인터 하나 뿐입니다.
+x86_64 아키텍처에서 TSS는 특정 태스크 (task) 관련 정보를 보관하지 않습니다. 대신 TSS는 두 개의 스택 테이블을 보관합니다 (IST가 그중 하나입니다). 32비트 시스템의 TSS와 64비트 시스템의 TSS의 유일한 공통 필드는 [I/O port permissions bitmap]에 대한 포인터 하나 뿐입니다.
 
 [I/O port permissions bitmap]: https://en.wikipedia.org/wiki/Task_state_segment#I.2FO_port_permissions
 
@@ -269,14 +269,14 @@ lazy_static! {
 }
 ```
 
-Rust의 const evaluator가 위와 같은 TSS의 초기화를 컴파일 중에 진행하지 못해서 `lazy_static`을 사용합니다. IST의 0번째 엔트리가 더블 폴트 스택이 되도록 정합니다 (꼭 0번째일 필요는 없음). 그 다음 더블 폴트 스택의 최상단 주소를 IST의 0번째 엔트리에 저장합니다. 스택의 최상단 주소를 저장하는 이유는 x86 시스템에서 스택은 높은 주소에서 출발해 낮은 주소 영역 쪽으로 성장하기 때문입니다.
+Rust의 const evaluator가 위와 같은 TSS의 초기화를 컴파일 중에 진행하지 못해서 `lazy_static`을 사용합니다. IST의 0번째 엔트리가 더블 폴트 스택이 되도록 정합니다 (꼭 0번째일 필요는 없음). 그다음 더블 폴트 스택의 최상단 주소를 IST의 0번째 엔트리에 저장합니다. 스택의 최상단 주소를 저장하는 이유는 x86 시스템에서 스택은 높은 주소에서 출발해 낮은 주소 영역 쪽으로 성장하기 때문입니다.
 
-우리가 아직 커널에 메모리 관리 (memory management) 기능을 구현하지 않아서 스택을 할당할 정규적인 방법이 없습니다. 임시 방편으로 `static mut` 배열을 스택 메모리인 것처럼 사용할 것입니다. 값 변경이 가능한 static 변수에 접근하는 경우 컴파일러가 데이터 경쟁 상태 (data race)의 부재를 보장하지 못해 `unsafe` 키워드가 필요합니다. 배열은 꼭 `static`이 아닌 `static mut`로 설정해야 하는데, 그 이유는 부트로더가 `static` 변수를 읽기 전용 메모리 페이지에 배치하기 때문입니다. 이후에 다른 글에서 이 임시적인 스택 메모리 구현을 정석적인 구현으로 수정할 계획이며, 그 후에는 스택 메모리 접근에 더 이상 `unsafe`가 필요하지 않을 것입니다.
+우리가 아직 커널에 메모리 관리 (memory management) 기능을 구현하지 않아서 스택을 할당할 정규적인 방법이 없습니다. 임시방편으로 `static mut` 배열을 스택 메모리인 것처럼 사용할 것입니다. 값 변경이 가능한 static 변수에 접근하는 경우 컴파일러가 데이터 경쟁 상태 (data race)의 부재를 보장하지 못해 `unsafe` 키워드가 필요합니다. 배열은 꼭 `static`이 아닌 `static mut`로 설정해야 하는데, 그 이유는 부트로더가 `static` 변수를 읽기 전용 메모리 페이지에 배치하기 때문입니다. 이후에 다른 글에서 이 임시적인 스택 메모리 구현을 정석적인 구현으로 수정할 계획이며, 그 후에는 스택 메모리 접근에 더 이상 `unsafe`가 필요하지 않을 것입니다.
 
 이 더블 폴트 스택에 스택 오버플로우를 감지하기 위한 보호 페이지가 없다는 것에 유의해야 합니다. 더블 폴트 스택에서 스택 오버플로우가 발생하면 스택 아래의 메모리 영역을 일부 덮어쓸 수 있기 때문에, 더블 폴트 처리 함수 안에서 스택 메모리를 과도하게 소모해서는 안됩니다.
 
 #### TSS 불러오기
-새로운 TSS도 만들었으니, 이제 CPU에게 이 TSS를 쓰도록 지시할 방법이 필요합니다. TSS가 역사적 이유로 인해 세그멘테이션 (segmentation) 시스템을 사용하는 탓에, CPU에게 TSS를 쓰도록 지시하는 과정이 꽤 번거롭습니다. TSS를 직접 불러오는 대신, [전역 서술자 테이블 (Global Descriptor Table; GDT)][Global Descriptor Table]을 가리키는 새로운 세그먼트 서술자 (segment descriptor)를 추가해야 합니다. 그 후 [`ltr` 명령어][`ltr` instruction]에 GDT 안에서의 TSS의 인덱스를 주고 호출하여 TSS를 불러올 수 있습니다. (이것이 모듈 이름을 `gdt`로 설정한 이유입니다.)
+새로운 TSS도 만들었으니, 이제 CPU에게 이 TSS를 쓰도록 지시할 방법이 필요합니다. TSS가 역사적 이유로 인해 세그멘테이션 (segmentation) 시스템을 사용하는 탓에, CPU에 TSS를 쓰도록 지시하는 과정이 꽤 번거롭습니다. TSS를 직접 불러오는 대신, [전역 서술자 테이블 (Global Descriptor Table; GDT)][Global Descriptor Table]을 가리키는 새로운 세그먼트 서술자 (segment descriptor)를 추가해야 합니다. 그 후 [`ltr` 명령어][`ltr` instruction]에 GDT 안에서의 TSS의 인덱스를 주고 호출하여 TSS를 불러올 수 있습니다. (이것이 모듈 이름을 `gdt`로 설정한 이유입니다.)
 
 [Global Descriptor Table]: https://web.archive.org/web/20190217233448/https://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
 [`ltr` instruction]: https://www.felixcloutier.com/x86/ltr
@@ -335,7 +335,7 @@ pub fn init() {
 
 세그먼트 레지스터 및 TSS 레지스터가 기존의 GDT로부터 읽어온 값들을 저장하고 있는 탓에, 우리가 만든 GDT의 세그먼트들이 활성화되지 않은 상황입니다. 또한 더블 폴트 처리 함수가 새로운 스택을 쓰도록 IDT에서 더블 폴트 처리 함수의 엔트리를 알맞게 수정해야 합니다.
 
-정리하자면 우리는 아래의 작업들을 순차적으로 진행해야 합니다.
+정리하자면 우리는 아래의 작업을 순차적으로 진행해야 합니다.
 
 1. **code segment 레지스터의 값 갱신하기**: GDT를 변경하였으니 코드 세그먼트 레지스터 `cs`의 값도 갱신해야 합니다. 기존의 세그먼트 선택자는 새 GDT 안에서 코드 세그먼트가 아닌 다른 세그먼트의 선택자와 동일할 수도 있습니다 (예: TSS 선택자).
 2. **TSS 불러오기**: GDT와 TSS 선택자를 불러오고, 그 후 CPU가 해당 TSS를 사용하도록 지시해야 합니다.
@@ -416,7 +416,7 @@ lazy_static! {
 
 ## 커널 스택 오버플로우 테스트
 
-`gdt` 모듈을 테스트 하고 커널 스택 오버플로우 발생 시 더블 폴트 처리 함수가 호출되는지 확인하는 용도의 통합 테스트를 추가할 것입니다. 테스트 함수에서 더블 폴트를 일으킨 후에 더블 폴트 처리 함수가 호출되었는지 확인하는 테스트를 작성하겠습니다.
+`gdt` 모듈을 테스트하고 커널 스택 오버플로우 발생 시 더블 폴트 처리 함수가 호출되는지 확인하는 용도의 통합 테스트를 추가할 것입니다. 테스트 함수에서 더블 폴트를 일으킨 후에 더블 폴트 처리 함수가 호출되었는지 확인하는 테스트를 작성하겠습니다.
 
 최소한의 뼈대 코드에서부터 테스트 작성을 시작해 봅시다.
 
@@ -482,9 +482,9 @@ fn stack_overflow() {
 }
 ```
 
-`gdt::init` 함수를 호출해 새 GDT를 초기화 합니다. `interrupts::init_idt` 함수 대신 `init_test_idt` 함수를 호출하는데, 그 이유는 패닉하지 않고 `exit_qemu(QemuExitCode::Success)`를 호출하는 새로운 더블 폴트 처리 함수를 등록해 사용할 것이기 때문입니다.
+`gdt::init` 함수를 호출해 새 GDT를 초기화합니다. `interrupts::init_idt` 함수 대신 `init_test_idt` 함수를 호출하는데, 그 이유는 패닉하지 않고 `exit_qemu(QemuExitCode::Success)`를 호출하는 새로운 더블 폴트 처리 함수를 등록해 사용할 것이기 때문입니다.
 
-`stack_overflow` 함수는 `main.rs`에서 작성했던 것과 거의 동일합니다. 유일한 차이점은 함수 마지막에 추가적으로 [`Volatile`] 타입을 이용한 [volatile] 읽기를 통해 [_tail call elimination_]을 방지한다는 것입니다. 주어진 함수의 맨 마지막 구문이 재귀 함수에 대한 호출인 경우, 컴파일러는 tail call elimination 기법을 통해 재귀 함수 호출을 평범한 반복문으로 변환할 수 있습니다. 그렇게 하면 재귀 함수 호출 시 새로운 스택 프레임이 생성되지 않고, 스택 메모리 사용량은 일정하게 유지됩니다.
+`stack_overflow` 함수는 `main.rs`에서 작성했던 것과 거의 동일합니다. 유일한 차이점은 함수 마지막에 추가로 [`Volatile`] 타입을 이용한 [volatile] 읽기를 통해 [_tail call elimination_]을 방지한다는 것입니다. 주어진 함수의 맨 마지막 구문이 재귀 함수에 대한 호출인 경우, 컴파일러는 tail call elimination 기법을 통해 재귀 함수 호출을 평범한 반복문으로 변환할 수 있습니다. 그렇게 하면 재귀 함수 호출 시 새로운 스택 프레임이 생성되지 않고, 스택 메모리 사용량은 일정하게 유지됩니다.
 
 [volatile]: https://en.wikipedia.org/wiki/Volatile_(computer_programming)
 [`Volatile`]: https://docs.rs/volatile/0.2.6/volatile/struct.Volatile.html
@@ -492,9 +492,9 @@ fn stack_overflow() {
 
 이 테스트에서 우리는 스택 오버플로우가 발생하기를 원하기 때문에, 함수의 맨 마지막에 컴파일러가 제거할 수 없는 volatile 읽기 작업을 삽입합니다. 따라서 `stack_overflow` 함수는 더 이상 _꼬리 재귀 (tail recursive)_ 함수가 아니게 되고, tail call elimination 기법을 통한 최적화 역시 할 수 없게 됩니다. 또 `allow(unconditional_recursion)` 속성을 함수에 추가해 "함수가 무한히 재귀한다"는 경고 메시지가 출력되지 않게 합니다.
 
-### 테스트 용 IDT
+### 테스트용 IDT
 
-위에서 언급했듯이, 살짝 변경된 새로운 더블 폴트 처리 함수가 등록된 테스트 용 IDT가 필요합니다. 테스트 용 IDT의 구현은 아래와 같습니다.
+위에서 언급했듯이, 살짝 변경된 새로운 더블 폴트 처리 함수가 등록된 테스트용 IDT가 필요합니다. 테스트 용 IDT의 구현은 아래와 같습니다.
 
 ```rust
 // in tests/stack_overflow.rs
@@ -542,7 +542,7 @@ extern "x86-interrupt" fn test_double_fault_handler(
 }
 ```
 
-더블 폴트 처리 함수가 호출되면 우리는 성공 종료 코드와 함께 QEMU를 종료시키고, 테스트는 성공한 것으로 처리됩니다. 통합 테스트는 완전히 독립적인 실행 파일로 간주되기 때문에, 다시 한 번 테스트 파일의 맨 위에 `#![feature(abi_x86_interrupt)]` 속성을 추가해야 합니다.
+더블 폴트 처리 함수가 호출되면 우리는 성공 종료 코드와 함께 QEMU를 종료시키고, 테스트는 성공한 것으로 처리됩니다. 통합 테스트는 완전히 독립적인 실행 파일로 간주하기 때문에, 다시 한번 테스트 파일의 맨 위에 `#![feature(abi_x86_interrupt)]` 속성을 추가해야 합니다.
 
 `cargo test --test stack_overflow`를 통해 새로 작성한 테스트를 실행할 수 있습니다 (또는 `cargo test`로 모든 테스트 실행). 예상대로 콘솔에 
 `stack_overflow... [ok]` 라는 메시지가 출력될 것입니다. 테스트 코드에서 `set_stack_index`를 호출하지 않게 주석 처리한 후 테스트를 실행하면 테스트가 실패하는 것 또한 확인할 수 있을 것입니다.
