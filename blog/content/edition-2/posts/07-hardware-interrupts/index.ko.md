@@ -10,6 +10,8 @@ chapter = "Interrupts"
 translation_based_on_commit = "a108367d712ef97c28e8e4c1a22da4697ba6e6cd"
 # GitHub usernames of the people that translated this post
 translators = ["JOE1994"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["dalinaum"]
 +++
 
 이 글에서는 프로그래밍 할 수 있는 인터럽트 컨트롤러가 인터럽트들을 CPU로 정확히 전달하도록 설정할 것입니다. 새로운 인터럽트들을 처리하기 위해 인터럽트 서술자 테이블 (interrupt descriptor table)에 새로운 엔트리들을 추가할 것입니다 (이전에 예외 처리 함수를 등록했듯이). 또한 일정 주기마다 타이머 인터럽트를 일으키는 방법 및 키보드 입력 받는 방법도 알아볼 것입니다.
