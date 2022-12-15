@@ -14,7 +14,7 @@ translators = ["JOE1994"]
 translation_contributors = ["KimWang906"]
 +++
 
-CPU 예외 (exception)는 유효하지 않은 메모리 주소에 접근하거나 분모가 0인 나누기 연산을 하는 등 허용되지 않은 작업이 실행 시 발생합니다. CPU 예외를 포착하고 처리할 수 있으려면 예외 처리 함수 정보를 제공하는 _인터럽트 서술자 테이블 (interrupt descriptor table; IDT)_ 을 설정해 두어야 합니다. 이 글에서는 커널이 [breakpoint 예외][breakpoint exceptions]를 처리한 후 정상 실행을 재개할 수 있게 구현하는 과정을 다룹니다.
+CPU 예외 (exception)는 유효하지 않은 메모리 주소에 접근하거나 분모가 0인 나누기 연산을 하는 등 허용되지 않은 작업 실행 시 발생합니다. CPU 예외를 처리할 수 있으려면 예외 처리 함수 정보를 제공하는 _인터럽트 서술자 테이블 (interrupt descriptor table; IDT)_ 을 설정해 두어야 합니다. 이 글에서는 커널이 [breakpoint 예외][breakpoint exceptions]를 처리한 후 정상 실행을 재개할 수 있도록 구현할 것입니다.
 
 [breakpoint exceptions]: https://wiki.osdev.org/Exceptions#Breakpoint
 
@@ -348,7 +348,7 @@ pub fn init_idt() {
 }
 ```
 
-이제 컴파일 오류가 발생하지는 않지만, Rust에서 `static mut`의 사용은 권장되지 않습니다. `static mut`는 데이터 경쟁 상태 (data race)를 일으키기 쉽기에, `static mut` 변수에 접근할 때마다 [`unsafe` 블록][`unsafe` block]을 반드시 사용해야 합니다.
+이제 컴파일 오류가 발생하지는 않지만, Rust에서 `static mut`의 사용은 권장되지 않습니다. `static mut`는 데이터 레이스 (data race)를 일으키기 쉽기에, `static mut` 변수에 접근할 때마다 [`unsafe` 블록][`unsafe` block]을 반드시 사용해야 합니다.
 
 [`unsafe` block]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
