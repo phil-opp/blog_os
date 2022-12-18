@@ -113,7 +113,7 @@
         {% else %}
             {% set search_term=page.title %}
         {% endif %}
-        {{ snippets::giscus(search_term=search_term) }}
+        {{ snippets::giscus(search_term=search_term, lang=page.lang) }}
 
         {%- if page.lang != "en" %}
         <p class="{% if page.extra.rtl %}right-to-left{% endif %}">
