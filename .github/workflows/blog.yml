@@ -104,3 +104,23 @@ jobs:
     - name: "Push Changes"
       run: "git push"
       working-directory: "blog_os_deploy"
+
+  drafts:
+    name: "Build Drafts"
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: 'Download Zola'
+      run: curl -sL https://github.com/getzola/zola/releases/download/v0.16.1/zola-v0.16.1-x86_64-unknown-linux-gnu.tar.gz | tar zxv
+    - name: 'Install Python Libraries'
+      run: python -m pip install --user -r requirements.txt
+      working-directory: "blog"
+
+    - name: "Run before_build.py script"
+      run: python before_build.py
+      working-directory: "blog"
+    - name: "Build Site with drafts"
+      run: ../zola build --drafts
+      working-directory: "blog"
