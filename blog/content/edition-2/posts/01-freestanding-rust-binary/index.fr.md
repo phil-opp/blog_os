@@ -1,5 +1,5 @@
 +++
-title = "A Freestanding Rust Binary"
+title = "Un binaire Rust autonome"
 weight = 1
 path = "fr/freestanding-rust-binary"
 date = 2018-02-10
@@ -9,7 +9,7 @@ chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "3e87916b6c2ed792d1bdb8c0947906aef9013ac1"
 # GitHub usernames of the people that translated this post
-translators = ["Alekzus"]
+translators = ["AlexandreMarcq", "alaincao"]
 +++
 
 La première étape pour créer notre propre noyau de système d'exploitation est de créer un exécutable Rust qui ne relie pas la bibliothèque standard. Cela rend possible l'exécution du code Rust sur la ["bare machine"][machine nue] sans système d'exploitation sous-jacent.
@@ -29,7 +29,7 @@ Ce blog est développé sur [GitHub]. Si vous avez un problème ou une question,
 
 ## Introduction
 Pour écrire un noyau de système d'exploitation, nous avons besoin d'un code qui ne dépend pas de fonctionnalités de système d'exploitation. Cela signifie que nous ne pouvons pas utiliser les fils d'exécution, les fichiers, la mémoire sur le tas, le réseau, les nombres aléatoires, la sortie standard ou tout autre fonctionnalité nécessitant une abstraction du système d'exploitation ou un matériel spécifique. Cela a du sens, étant donné que nous essayons d'écrire notre propre OS et nos propres pilotes.
-Cela signifie que nous ne pouvons pas utiliser la majeure partie de la [bibliothèque standard de Rust]. Il y a néanmoins beaucoup de fonctionnalités de Rust que nous _pouvons_ utiliser. Par exemple, nous pouvons utiliser les [iterators], les [closures], le [pattern matching], l'[option] et le [result], le [string formatting], et bien-sûr l'[ownership system]. Ces fonctionnalités permettent l'écriture d'un noyeau d'une façon expressive et haut-niveau sans se soucier des [comportements indéfinis] ou de la [sécurité de la mémoire].
+Cela signifie que nous ne pouvons pas utiliser la majeure partie de la [bibliothèque standard de Rust]. Il y a néanmoins beaucoup de fonctionnalités de Rust que nous _pouvons_ utiliser. Par exemple, nous pouvons utiliser les [iterators], les [closures], le [pattern matching], l'[option] et le [result], le [string formatting], et bien-sûr l'[ownership system]. Ces fonctionnalités permettent l'écriture d'un noyau d'une façon expressive et haut-niveau sans se soucier des [comportements indéfinis] ou de la [sécurité de la mémoire].
 
 [option]: https://doc.rust-lang.org/core/option/
 [result]:https://doc.rust-lang.org/core/result/
@@ -195,7 +195,7 @@ Dans un exécutable Rust classique qui relie la bibliothèque standard, l'exécu
 
 [rt::lang_start]: https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73
 
-Notre exécutable autoporté n'a pas accès à l'environnement d'exécution de Rust ni à `crt0`. Nous avons donc besion de définir notre propre point d'entrée. Implémenter l'objet de langage `start` n'aiderait pas car nous aurions toujours besoin de `crt0`. Nous avons plutôt besoin de réécrire le point d'entrée de `crt0` directement.
+Notre exécutable autoporté n'a pas accès à l'environnement d'exécution de Rust ni à `crt0`. Nous avons donc besoin de définir notre propre point d'entrée. Implémenter l'objet de langage `start` n'aiderait pas car nous aurions toujours besoin de `crt0`. Nous avons plutôt besoin de réécrire le point d'entrée de `crt0` directement.
 
 ### Réécrire le Point d'Entrée
 
@@ -266,7 +266,7 @@ La sortie ci-dessus provient d'un système Linux `x86_64`. Nous pouvons voir que
 
 En compilant pour notre triplé hôte, le compilateur Rust ainsi que le linker supposent qu'il y a un système d'exploitation sous-jacent comme Linux ou Windows qui utilise l'environnement d'exécution C par défaut, ce qui cause les erreurs de linker. Donc pour éviter ces erreurs, nous pouvons compiler pour un environnement différent sans système d'exploitation sous-jacent.
 
-Un exemple d'un tel envrironnement est le triplé cible `thumbv7em-none-eabihf`, qui décrit un système [ARM] [embarqué]. Les détails ne sont pas importants, tout ce qui compte est que le triplé cible n'a pas de système d'exploitation sous-jacent, ce qui est indiqué par le `none` dans le triplé cible. Pour pouvoir compilé pour cette cible, nous avons besoin de l'ajouter dans rustup :
+Un exemple d'un tel envrironnement est le triplé cible `thumbv7em-none-eabihf`, qui décrit un système [ARM] [embarqué]. Les détails ne sont pas importants, tout ce qui compte est que le triplé cible n'a pas de système d'exploitation sous-jacent, ce qui est indiqué par le `none` dans le triplé cible. Pour pouvoir compiler pour cette cible, nous avons besoin de l'ajouter dans rustup :
 
 [embarqué]: https://fr.wikipedia.org/wiki/Syst%C3%A8me_embarqu%C3%A9
 [ARM]: https://fr.wikipedia.org/wiki/Architecture_ARM
@@ -449,7 +449,7 @@ Maintenant notre programme devrait être compilable sur les trois plateformes av
     
 #### Devriez-vous Faire Ça ?
 
-Bien qu'il soit possible de compiler un exécutable autoporté pour Linux, Windows et macOS, ce n'est probablement pas une bonne idée. La raison est que notre exécutable s'attend toujours à trouver certaines choses, par exemple une pile initialisée lorsque la fonction `_start` est appelée. Sans l'environnement d'exécution C, certains de ces conditions peuvent ne pas être remplies, ce qui pourrait faire planter notre programme, avec par exemple une erreur de segmentation.
+Bien qu'il soit possible de compiler un exécutable autoporté pour Linux, Windows et macOS, ce n'est probablement pas une bonne idée. La raison est que notre exécutable s'attend toujours à trouver certaines choses, par exemple une pile initialisée lorsque la fonction `_start` est appelée. Sans l'environnement d'exécution C, certaines de ces conditions peuvent ne pas être remplies, ce qui pourrait faire planter notre programme, avec par exemple une erreur de segmentation.
 
 Si vous voulez créer un exécutable minimal qui tourne sur un système d'exploitation existant, include `libc` et mettre l'attribut `#[start]` come décrit [ici](https://doc.rust-lang.org/1.16.0/book/no-stdlib.html) semble être une meilleure idée.
     

@@ -7,12 +7,20 @@
 </p>
 {% endmacro support %}
 
-{% macro giscus(search_term) %}
+{% macro giscus(search_term, lang) %}
+    {% if lang != "en" %}
+        {% set category = "Post Comments (translated)" %}
+        {% set category_path = "post-comments-translated" %}
+    {% else %}
+        {% set category = "Post Comments" %}
+        {% set category_path = "post-comments" %}
+    {% endif %}
+
     {% if search_term is number %}
         {% set discussion_url = "https://github.com/phil-opp/blog_os/discussions/" ~ search_term %}
     {% else %}
         {% set search_term_encoded = `"` ~ search_term ~ `"` | urlencode %}
-        {% set discussion_url = `https://github.com/phil-opp/blog_os/discussions/categories/post-comments?discussions_q=` ~ search_term_encoded %}
+        {% set discussion_url = `https://github.com/phil-opp/blog_os/discussions/categories/` ~ category_path ~ `?discussions_q=` ~ search_term_encoded %}
     {% endif %}
 
     <p class="comment-note">
@@ -24,7 +32,7 @@
     <script src="https://giscus.app/client.js"
         data-repo="phil-opp/blog_os"
         data-repo-id="MDEwOlJlcG9zaXRvcnkzOTU3NTEwMQ=="
-        data-category="Post Comments"
+        data-category="{{ category }}"
         data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMzMDE4OTg1"
     {% if search_term is number %}
         data-mapping="number"
@@ -35,6 +43,7 @@
         data-reactions-enabled="1"
         data-emit-metadata="1"
         data-theme="preferred_color_scheme"
+        data-lang="{{ lang }}"
         crossorigin="anonymous"
         async>
     </script>

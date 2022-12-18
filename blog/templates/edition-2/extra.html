@@ -17,6 +17,6 @@
     <hr>
     <section>
         <h2 id="comments">Comments</h2>
-        {{ snippets::giscus(search_term=page.title ~ " (Extra Post)") }}
+        {{ snippets::giscus(search_term=page.title ~ " (Extra Post)", lang=page.lang) }}
     </section>
 {% endblock after_main %}

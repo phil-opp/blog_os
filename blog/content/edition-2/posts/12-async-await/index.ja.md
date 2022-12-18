@@ -8,8 +8,10 @@ date = 2020-03-27
 chapter = "Multitasking"
 # Please update this when updating the translation
 translation_based_on_commit = "bf4f88107966c7ab1327c3cdc0ebfbd76bad5c5f"
-# GitHub usernames of the people that translated this post
+# GitHub usernames of the authors of this translation
 translators = ["kahirokunn", "garasubo", "sozysozbot", "woodyZootopia"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["asami-kawasaki", "Foo-x"]
 +++
 
 この記事では、Rustの**協調的マルチタスク**と**async/await**機能について説明します。Rustのasync/await機能については、`Future` trait の設計、ステートマシンの変換、 **pinning** などを含めて詳しく説明します。そして、非同期キーボードタスクと基本的なexecutorを作成することで、カーネルにasync/awaitの基本的なサポートを追加します。
@@ -425,7 +427,7 @@ ExampleStateMachine::WaitingOnFooTxt(state) => {
                 };
                 *self = ExampleStateMachine::WaitingOnBarTxt(state);
             } else {
-                *self = ExampleStateMachine::End(EndState));
+                *self = ExampleStateMachine::End(EndState);
                 return Poll::Ready(content);
             }
         }
@@ -446,7 +448,7 @@ ExampleStateMachine::WaitingOnBarTxt(state) => {
     match state.bar_txt_future.poll(cx) {
         Poll::Pending => return Poll::Pending,
         Poll::Ready(bar_txt) => {
-            *self = ExampleStateMachine::End(EndState));
+            *self = ExampleStateMachine::End(EndState);
             // from body of `example`
             return Poll::Ready(state.content + &bar_txt);
         }
@@ -604,7 +606,7 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 [`Pin`]: https://doc.rust-lang.org/stable/core/pin/struct.Pin.html
 [`Unpin`]: https://doc.rust-lang.org/nightly/std/marker/trait.Unpin.html
 [pin-get-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.get_mut
-[pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#impl-DerefMut
+[pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.deref_mut
 [_auto trait_]: https://doc.rust-lang.org/reference/special-types-and-traits.html#auto-traits
 
 例として、上記の `SelfReferential` 型を更新して、`Unpin` を使用しないようにしてみましょう:
@@ -701,7 +703,7 @@ unsafe {
 fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 ```
 
-このメソッドが通常の`&mut self`ではなく`self: Pin<&mut Self>`を取る理由は、[上][self-ref-async-await]で見たように、async/awaitから生成されるfutureのインスタンスはしばしば自己参照しているためです。`Self` を `Pin` にラップして、async/await から生成された自己参照のfutureに対して、コンパイラに `Unpin` を選択させることで、`poll` 呼び出しの間にfutureがメモリ内で移動しないことが保証されます。これにより、すべての内部参照が有効であることが保証されます。
+このメソッドが通常の`&mut self`ではなく`self: Pin<&mut Self>`を取る理由は、[上][self-ref-async-await]で見たように、async/awaitから生成されるfutureのインスタンスはしばしば自己参照しているためです。`Self` を `Pin` にラップして、async/await から生成された自己参照のfutureに対して、コンパイラに `Unpin` をオプトアウトさせることで、`poll` 呼び出しの間にfutureがメモリ内で移動しないことが保証されます。これにより、すべての内部参照が有効であることが保証されます。
 
 [self-ref-async-await]: @/edition-2/posts/12-async-await/index.md#self-referential-structs
 

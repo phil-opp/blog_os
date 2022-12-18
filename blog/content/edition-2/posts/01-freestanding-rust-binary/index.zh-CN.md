@@ -6,9 +6,11 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "bd6fbcb1c36705b2c474d7fcee387bfea1210851"
+translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
 # GitHub usernames of the people that translated this post
-translators = ["luojia65", "Rustin-Liu", "TheBegining"]
+translators = ["luojia65", "Rustin-Liu", "TheBegining", "liuyuran"]
+# GitHub usernames of the people that contributed to this translation
+translation_contributors = ["JiangengDong"]
 +++
 
 创建一个不链接标准库的 Rust 可执行文件，将是我们迈出的第一步。无需底层操作系统的支撑，这样才能在**裸机**（[bare metal]）上运行 Rust 代码。
@@ -43,10 +45,10 @@ translators = ["luojia65", "Rustin-Liu", "TheBegining"]
 我们可以从创建一个新的 cargo 项目开始。最简单的办法是使用下面的命令：
 
 ```bash
-> cargo new blog_os
+cargo new blog_os --bin --edition 2018
 ```
 
-在这里我把项目命名为 `blog_os`，当然读者也可以选择自己的项目名称。这里，cargo 默认为我们添加了`--bin` 选项，说明我们将要创建一个可执行文件（而不是一个库）；cargo还为我们添加了`--edition 2018` 标签，指明项目的包要使用 Rust 的 **2018 版次**（[2018 edition]）。当我们执行这行指令的时候，cargo 为我们创建的目录结构如下：
+在这里我把项目命名为 `blog_os`，当然读者也可以选择自己的项目名称。默认情况下，即使不显式指定，cargo 也会为我们添加`--bin` 选项，说明我们将要创建一个可执行文件（而不是一个库）； 另外 `--edition 2018` 参数指明了项目的包要使用 Rust 的 **2018 版次**（[2018 edition]），但在默认情况下，该参数会指向本地安装的最新版本。当我们成功执行这行指令后，cargo 为我们创建的目录结构如下：
 
 [2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
 
@@ -158,7 +160,7 @@ error: requires `start` lang_item
 
 我们通常会认为，当运行一个程序时，首先被调用的是 `main` 函数。但是，大多数语言都拥有一个**运行时系统**（[runtime system](https://en.wikipedia.org/wiki/Runtime_system)），它通常为**垃圾回收**（garbage collection）或**绿色线程**（software threads，或 green threads）服务，如 Java 的 GC 或 Go 语言的协程（goroutine）；这个运行时系统需要在 main 函数前启动，因为它需要让程序初始化。
 
-在一个典型的使用标准库的 Rust 程序中，程序运行是从一个名为 `crt0` 的运行时库开始的。`crt0` 意为 C runtime zero，它能建立一个适合运行 C 语言程序的环境，这包含了栈的创建和可执行程序参数的传入。在这之后，这个运行时库会调用 [Rust 的运行时入口点](https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73)，这个入口点被称作 **start语言项**（"start" language item）。Rust 只拥有一个极小的运行时，它被设计为拥有较少的功能，如爆栈检测和打印**堆栈轨迹**（stack trace）。这之后，这个运行时将会调用 main 函数。
+在一个典型的使用标准库的 Rust 程序中，程序运行是从一个名为 `crt0` 的运行时库开始的。`crt0` 意为 C runtime zero，它能建立一个适合运行 C 语言程序的环境，这包含了栈的创建和可执行程序参数的传入。在这之后，这个运行时库会调用 [Rust 的运行时入口点](https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73)，这个入口点被称作 **start语言项**（"start" language item）。Rust 只拥有一个极小的运行时，它被设计为拥有较少的功能，如爆栈检测和打印**栈轨迹**（stack trace）。这之后，这个运行时将会调用 main 函数。
 
 我们的独立式可执行程序并不能访问 Rust 运行时或 `crt0` 库，所以我们需要定义自己的入口点。只实现一个 `start` 语言项并不能帮助我们，因为这之后程序依然要求 `crt0` 库。所以，我们要做的是，直接重写整个 `crt0` 库和它定义的入口点。
 
@@ -241,6 +243,172 @@ cargo build --target thumbv7em-none-eabihf
 ### 链接器参数
 
 我们也可以选择不编译到裸机系统，因为传递特定的参数也能解决链接器错误问题。虽然我们不会在后面使用到这个方法，为了教程的完整性，我们也撰写了专门的短文章，来提供这个途径的解决方案。
+如有需要，请点击下方的 _"链接器参数"_ 按钮来展开可选内容。
+
+<details>
+
+<summary>链接器参数</summary>
+
+在本章节中，我们讨论了Linux、Windows和macOS中遇到的链接错误，并阐述如何通过传递额外参数来解决这些错误。注意，由于不同操作系统的可执行文件内在格式不同，所以对于不同操作系统而言，所适用的额外参数也有所不同。
+
+#### Linux
+
+在Linux下，会触发以下链接错误（简化版）：
+
+```
+error: linking with `cc` failed: exit code: 1
+  |
+  = note: "cc" […]
+  = note: /usr/lib/gcc/../x86_64-linux-gnu/Scrt1.o: In function `_start':
+          (.text+0x12): undefined reference to `__libc_csu_fini'
+          /usr/lib/gcc/../x86_64-linux-gnu/Scrt1.o: In function `_start':
+          (.text+0x19): undefined reference to `__libc_csu_init'
+          /usr/lib/gcc/../x86_64-linux-gnu/Scrt1.o: In function `_start':
+          (.text+0x25): undefined reference to `__libc_start_main'
+          collect2: error: ld returned 1 exit status
+```
+
+这里的问题在于，链接器默认包含了C启动例程，即构建名为 `_start` 的入口函数的地方。但其依赖一些C标准库 `libc` 中的符号，而我们已经使用 `no_std` 开关排除掉了这些符号，所以链接器报告了这些错误。要解决这个问题，我们需要通过 `-nostartfiles` 参数来告诉链接器不要使用C启动例程功能。
+
+通过 `cargo rustc` 可以传递链接器参数，该命令和 `cargo build` 的效果完全一致，但是可以将参数传递给rust的底层编译器 `rustc`。`rustc` 支持 `-C link-arg` 参数，此参数可以传递参数给配套的链接器。那么以此推断，我们的编译语句可以这样写：
+
+```
+cargo rustc -- -C link-arg=-nostartfiles
+```
+
+现在我们编译出的程序就可以在Linux上独立运行了。
+
+我们并不需要显式指定入口函数名，链接器默认会查找 `_start` 函数作为入口点。
+
+#### Windows
+
+
+在Windows下，会触发以下链接错误（简化版）：
+
+```
+error: linking with `link.exe` failed: exit code: 1561
+  |
+  = note: "C:\\Program Files (x86)\\…\\link.exe" […]
+  = note: LINK : fatal error LNK1561: entry point must be defined
+```
+
+错误信息 “entry point must be defined” 意味着链接器没有找到程序入口点。在Windows环境下，默认入口点[取决于使用的子系统][windows-subsystems]。对于 `CONSOLE` 子系统，链接器会寻找 `mainCRTStartup` 函数作为入口，而对于 `WINDOWS` 子系统，入口函数名叫做 `WinMainCRTStartup`。要复写掉入口函数名的默认设定，使其使用我们已经定义的 `_start` 函数，可以将 `/ENTRY` 参数传递给链接器：
+
+[windows-subsystems]: https://docs.microsoft.com/en-us/cpp/build/reference/entry-entry-point-symbol
+
+```
+cargo rustc -- -C link-arg=/ENTRY:_start
+```
+
+显而易见，从链接参数上看，Windows平台使用的链接器和Linux平台是完全不同的。
+
+此时可能你还会遇到这个链接错误：
+
+```
+error: linking with `link.exe` failed: exit code: 1221
+  |
+  = note: "C:\\Program Files (x86)\\…\\link.exe" […]
+  = note: LINK : fatal error LNK1221: a subsystem can't be inferred and must be
+          defined
+```
+
+该错误的原因是Windows平台下的可执行文件可以使用不同的[子系统][windows-subsystems]。一般而言，操作系统会如此判断：如果入口函数名叫 `main` ，则会使用 `CONSOLE` 子系统；若名叫 `WinMain` ，则会使用 `WINDOWS` 子系统。然而此时我们使用的入口函数名叫 `_start` ，两者都不是，此时就需要显式指定子系统：
+
+```
+cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
+```
+
+这里我们使用了 `CONSOLE` 子系统，如果使用 `WINDOWS` 子系统其实也可以。但是多次使用 `-C link-arg` 参数大可不必，我们可以如上面一样，将一个引号包裹起来的以空格分隔的列表传递给 `-C link-arg` 参数。
+
+现在我们编译出的程序就可以在Windows平台成功运行了。
+
+#### macOS
+
+在macOS下，会触发以下链接错误（简化版）：
+
+```
+error: linking with `cc` failed: exit code: 1
+  |
+  = note: "cc" […]
+  = note: ld: entry point (_main) undefined. for architecture x86_64
+          clang: error: linker command failed with exit code 1 […]
+```
+
+该错误告诉我们链接器找不到入口函数 `main` （由于某些原因，macOS平台下，所有函数都会具有 `_` 前缀）。要重设入口函数名，我们可以传入链接器参数 `-e` ：
+
+```
+cargo rustc -- -C link-args="-e __start"
+```
+
+`-e` 参数可用于重设入口函数名。由于在macOS平台下，所有函数都具有 `_` 前缀，所以需要传入 `__start` ，而不是 `_start` 。
+
+接下来，会出现一个新的链接错误：
+
+```
+error: linking with `cc` failed: exit code: 1
+  |
+  = note: "cc" […]
+  = note: ld: dynamic main executables must link with libSystem.dylib
+          for architecture x86_64
+          clang: error: linker command failed with exit code 1 […]
+```
+
+macOS [并未官方支持静态链接][does not officially support statically linked binaries] ，并且在默认情况下程序会链接 `libSystem` 库。要复写这个设定并进行静态链接，我们可以传入链接器参数 `-static` ：
+
+[does not officially support statically linked binaries]: https://developer.apple.com/library/archive/qa/qa1118/_index.html
+
+```
+cargo rustc -- -C link-args="-e __start -static"
+```
+
+然而问题并没有解决，链接器再次抛出了一个错误：
+
+```
+error: linking with `cc` failed: exit code: 1
+  |
+  = note: "cc" […]
+  = note: ld: library not found for -lcrt0.o
+          clang: error: linker command failed with exit code 1 […]
+```
+
+该错误的原因是macOS平台下的程序会默认链接 `crt0` （即“C runtime zero”）。 这个错误实际上和Linux平台上的错误类似，可以添加链接器参数 `-nostartfiles` 解决：
+
+```
+cargo rustc -- -C link-args="-e __start -static -nostartfiles"
+```
+
+现在，我们的程序可以在macOS下编译成功了。
+
+#### 统一编译命令
+
+经过上面的章节，我们知道了在各个平台使用的编译命令是不同的，这十分不优雅。要解决这个问题，我们可以创建一个 `.cargo/config.toml` 文件，分别配置不同平台下所使用的参数：
+
+```toml
+# in .cargo/config.toml
+
+[target.'cfg(target_os = "linux")']
+rustflags = ["-C", "link-arg=-nostartfiles"]
+
+[target.'cfg(target_os = "windows")']
+rustflags = ["-C", "link-args=/ENTRY:_start /SUBSYSTEM:console"]
+
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
+```
+
+对应的 `rustflags` 配置项的值可以自动被填充到 `rustc` 的运行参数中。要寻找 `.cargo/config.toml` 更多的用法，可以看一下 [官方文档](https://doc.rust-lang.org/cargo/reference/config.html)。
+
+现在只需要运行 `cargo build` 即可在全部三个平台编译我们的程序了。
+
+#### 我们真的需要做这些？
+
+尽管我们可以在Linux、Windows和macOS编译出可执行程序，但这可能并非是个好主意。
+因为我们的程序少了不少本该存在的东西，比如 `_start` 执行时的栈初始化。
+失去了C运行时，部分基于它的依赖项很可能无法正确执行，这会造成程序出现各式各样的异常，比如segmentation fault（段错误）。
+
+如果你希望创建一个基于已存在的操作系统的最小类库，建议引用 `libc` ，阅读 [这里](https://doc.rust-lang.org/1.16.0/book/no-stdlib.html) 并恰当设定 `#[start]` 比较好。
+
+</details>
 
 ## 小结
 
@@ -291,7 +459,18 @@ panic = "abort" # 禁用 panic 时栈展开
 cargo build --target thumbv7em-none-eabihf
 ```
 
-要注意的是，现在我们的代码只是一个 Rust 编写的独立式可执行程序的一个例子。运行这个二进制程序还需要很多准备，比如在 `_start` 函数之前需要一个已经预加载完毕的栈。所以为了真正运行这样的程序，我们还有很多事情需要做。
+另外，我们也可以选择以本地操作系统为目标进行编译：
+
+```bash
+# Linux
+cargo rustc -- -C link-arg=-nostartfiles
+# Windows
+cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
+# macOS
+cargo rustc -- -C link-args="-e __start -static -nostartfiles"
+```
+
+要注意的是，现在我们的代码只是一个 Rust 编写的独立式可执行程序的一个例子。运行这个二进制程序还需要很多准备，比如在 `_start` 函数之前需要一个已经预加载完毕的栈。所以为了真正运行这样的程序，**我们还有很多事情需要做**。
 
 ## 下篇预览
 

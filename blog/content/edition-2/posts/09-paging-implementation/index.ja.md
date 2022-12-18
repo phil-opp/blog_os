@@ -281,7 +281,7 @@ frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
 
 ```toml
 [dependencies]
-bootloader = { version = "0.9.8", features = ["map_physical_memory"]}
+bootloader = { version = "0.9.23", features = ["map_physical_memory"]}
 ```
 
 この機能を有効化すると、ブートローダは物理メモリの全体を、ある未使用の仮想アドレス空間にマッピングします。この仮想アドレスの範囲をカーネルに伝えるために、ブートローダは**boot information**構造体を渡します。
