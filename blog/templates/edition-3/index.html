@@ -65,7 +65,7 @@
     <p>{{ status_updates.description }}</p>
     <ul>
         {% include "auto/status-updates-truncated.html" %}
-        <li><a href="{{ get_url(path=" @/status-update/_index.md") | safe }}"><em>view all »</em></a></li>
+        <li><a href="{{ get_url(path="@/status-update/_index.md") | safe }}"><em>view all »</em></a></li>
     </ul>
 </div>
 
@@ -75,7 +75,7 @@
         editions, you can still find them here:</p>
     <ul>
         <li>
-            <p><strong><a href="{{ get_url(path=" @/edition-2/_index.md")}}">Second Edition:</a></strong> The second
+            <p><strong><a href="{{ get_url(path="@/edition-2/_index.md")}}">Second Edition:</a></strong> The second
                 edition is based on older version of the <code>bootloader</code> crate, which uses the hardware-provided
                 VGA text buffer instead of a pixel-based framebuffer for screen output. Instead of the APIC, the legacy
                 PIC is used for implementing hardware interrupts. The second edition only works on BIOS-based systems,
@@ -83,7 +83,7 @@
                     }}"><em>read&nbsp;the&nbsp;second edition&nbsp;»</em></a></p>
         </li>
         <li>
-            <p><strong><a href="{{ get_url(path=" @/edition-1/_index.md")}}">First Edition:</a></strong> The first
+            <p><strong><a href="{{ get_url(path="@/edition-1/_index.md")}}">First Edition:</a></strong> The first
                 edition was already started in 2015. It is very different in many aspects, for example it builds upon
                 the GRUB bootloader instead of using the `bootloader` crate. This means that it requires you to manually
                 write some assembly code and do an elaborate remap of the kernel's virtual pages in order to improve

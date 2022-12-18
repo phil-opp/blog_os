@@ -6,10 +6,10 @@
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block header %}
 {% if lang != "en" -%}
-<aside id="all-posts-link"><a href="{{ get_url(path=" @/edition-3/_index.md") }}/{{ lang }}" title="All Posts">{{
+<aside id="all-posts-link"><a href="{{ get_url(path="@/edition-3/_index.md") }}/{{ lang }}" title="All Posts">{{
         trans(key="all_posts", lang=lang) }}</a></aside>
 {%- else -%}
-<aside id="all-posts-link"><a href="{{ get_url(path=" @/edition-3/_index.md") }}" title="All Posts">{{
+<aside id="all-posts-link"><a href="{{ get_url(path="@/edition-3/_index.md") }}" title="All Posts">{{
         trans(key="all_posts", lang=lang) }}</a></aside>
 {%- endif %}
 {% endblock header %}
