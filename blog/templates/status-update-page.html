@@ -5,34 +5,37 @@
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 
 {% block main %}
-    <h1>{{ page.title }}</h1>
-    <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
-        {{ page.date | date(format="%b %d, %Y") }}
-        {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
-    </time>
-    {{ page.content | safe }}
+<h1>{{ page.title }}</h1>
+<time datetime="{{ page.date | date(format=" %Y-%m-%d") }}" class="post-date">
+    {{ page.date | date(format="%b %d, %Y") }}
+    {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
+</time>
+{{ page.content | safe }}
 
-    <div>
-        <h2>Thank You!</h2>
-        <p>Thanks a lot to all the contributors this month!</p>
-        <p>I also want to thank all the people who support me on <a href="https://github.com/sponsors/phil-opp">GitHub</a>, <a href="https://www.patreon.com/phil_opp">Patreon</a>, and <a href="https://donorbox.org/phil-opp">Donorbox</a>. It means a lot to me!</p>
-    </div>
+<div>
+    <h2>Thank You!</h2>
+    <p>Thanks a lot to all the contributors this month!</p>
+    <p>I also want to thank all the people who support me on <a href="https://github.com/sponsors/phil-opp">GitHub</a>,
+        <a href="https://www.patreon.com/phil_opp">Patreon</a>, and <a
+            href="https://donorbox.org/phil-opp">Donorbox</a>. It means a lot to me!
+    </p>
+</div>
 {% endblock main %}
 
 {% block after_main %}
-    <hr>
-    <div class="PageNavigation">
-        {% if page.lower %}
-            <a class="prev" href="{{ page.lower.path | safe }}">&laquo; {{ page.lower.title }}</a>
-        {% endif %}
-        {% if page.higher %}
-            <a class="next" href="{{ page.higher.path | safe }}">{{ page.higher.title }} &raquo;</a>
-        {% endif %}
-    </div>
-    <hr>
-    <section>
-        <h2 id="comments">Comments</h2>
-        {{ snippets::giscus(search_term=page.title, lang=page.lang) }}
-    </section>
+<hr>
+<div class="PageNavigation">
+    {% if page.lower %}
+    <a class="prev" href="{{ page.lower.path | safe }}">&laquo; {{ page.lower.title }}</a>
+    {% endif %}
+    {% if page.higher %}
+    <a class="next" href="{{ page.higher.path | safe }}">{{ page.higher.title }} &raquo;</a>
+    {% endif %}
+</div>
+<hr>
+<section>
+    <h2 id="comments">Comments</h2>
+    {{ snippets::giscus(search_term=page.title, lang=page.lang) }}
+</section>
 
 {% endblock after_main %}

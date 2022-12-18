@@ -10,11 +10,13 @@
 <p>{{ section.description }}</p>
 {% endblock introduction %}
 
-<div class="status-update-list"><ul>
-    {% include "auto/status-updates.html" %}
-    {% for page in section.pages %}
+<div class="status-update-list">
+    <ul>
+        {% include "auto/status-updates.html" %}
+        {% for page in section.pages %}
         <li><b><a href="{{ page.path | safe }}">{{ page.title }}</a></b></li>
-    {% endfor %}
-</ul></div>
+        {% endfor %}
+    </ul>
+</div>
 
 {% endblock main %}

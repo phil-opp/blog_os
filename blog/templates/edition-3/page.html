@@ -5,11 +5,13 @@
 
 {% block title %}{{ page.title }} | {{ config.title }}{% endblock title %}
 {% block header %}
-    {% if lang != "en" -%}
-    <aside id="all-posts-link"><a href="{{ get_url(path="@/edition-3/_index.md") }}/{{ lang }}" title="All Posts">{{ trans(key="all_posts", lang=lang) }}</a></aside>
-    {%- else -%}
-    <aside id="all-posts-link"><a href="{{ get_url(path="@/edition-3/_index.md") }}" title="All Posts">{{ trans(key="all_posts", lang=lang) }}</a></aside>
-    {%- endif %}
+{% if lang != "en" -%}
+<aside id="all-posts-link"><a href="{{ get_url(path=" @/edition-3/_index.md") }}/{{ lang }}" title="All Posts">{{
+        trans(key="all_posts", lang=lang) }}</a></aside>
+{%- else -%}
+<aside id="all-posts-link"><a href="{{ get_url(path=" @/edition-3/_index.md") }}" title="All Posts">{{
+        trans(key="all_posts", lang=lang) }}</a></aside>
+{%- endif %}
 {% endblock header %}
 
 {% block description -%}
@@ -18,7 +20,7 @@
 
 {% block toc_aside %}
 <aside id="toc-aside" class="{% if page.extra.rtl %}right-to-left{% endif %}">
-        <h2>{{ trans(key="toc", lang=lang) }}</h2>
+    <h2>{{ trans(key="toc", lang=lang) }}</h2>
     <ol>
         {% for h2 in page.toc %}<li>
             <a href="#{{h2.id | safe}}">{{ h2.title | safe }}</a>
@@ -34,119 +36,122 @@
 {% endblock toc_aside %}
 
 {% block main %}
-    <div class="{% if page.extra.rtl %}right-to-left{% endif %}">
+<div class="{% if page.extra.rtl %}right-to-left{% endif %}">
     <div class="post-title">
         <h1>{{ page.title }}</h1><span class="post-icon">
             {%- if page.extra.icon -%}{{page.extra.icon | safe}}{%- endif -%}
         </span>
     </div>
-    <time datetime="{{ page.date | date(format="%Y-%m-%d") }}" class="post-date">
+    <time datetime="{{ page.date | date(format=" %Y-%m-%d") }}" class="post-date">
         {{ page.date | date(format="%b %d, %Y") }}
         {% if page.extra.updated %} (updated on {{ page.extra.updated | date(format="%b %d, %Y") }}) {% endif %}
     </time>
-    </div>
+</div>
 
-    {{ macros::alpha_warning() }}
+{{ macros::alpha_warning() }}
 
-    {% if page.extra.warning %}
-        <div class="warning">
-            {% if page.extra.warning_short %} <b>{{ page.extra.warning_short }}</b> {% endif %}
-            {{ page.extra.warning | markdown(inline=true) | safe }}
-        </div>
+{% if page.extra.warning %}
+<div class="warning">
+    {% if page.extra.warning_short %} <b>{{ page.extra.warning_short }}</b> {% endif %}
+    {{ page.extra.warning | markdown(inline=true) | safe }}
+</div>
+{% endif %}
+
+{%- if page.lang != "en" %}
+<div class="warning{% if page.extra.rtl %} right-to-left{% endif %}">
+    {% set translations = page.translations | filter(attribute="lang", value="en") %}
+    {% set original = translations.0 %}
+    <p>
+        <b>{{ trans(key="translated_content", lang=lang) }}</b>
+        {{ trans(key="translated_content_notice", lang=lang) |
+        replace(from="_original.permalink_", to=original.permalink) |
+        replace(from="_original.title_", to=original.title) | safe }}
+    </p>
+    {%- if page.extra.translators %}
+    <p>
+        {{ trans(key="translated_by", lang=lang) }} {% for user in page.extra.translators -%}
+        {%- if not loop.first -%}
+        {%- if loop.last %} {{ trans(key="word_separator", lang=lang) }} {% else %}, {% endif -%}
+        {%- endif -%}
+        <a href="https://github.com/{{user}}">@{{user}}</a>
+        {%- endfor %}.
+
+        {%- if page.extra.translation_contributors %}
+        <span class="translation_contributors">
+            {{ trans(key="translation_contributors", lang=lang) }} {% for user in page.extra.translation_contributors
+            -%}
+            {%- if not loop.first -%}
+            {%- if loop.last %} {{ trans(key="word_separator", lang=lang) }} {% else %}, {% endif -%}
+            {%- endif -%}
+            <a href="https://github.com/{{user}}">@{{user}}</a>
+            {%- endfor %}.
+        </span>
+        {% endif -%}
+    </p>
+    {% endif -%}
+</div>
+{% endif %}
+
+<div class="{% if page.extra.rtl %}right-to-left{% endif %}">
+    {{ page.content | replace(from="<!-- toc -->", to=macros::toc(toc=page.toc)) | safe }}
+</div>
+
+<div class="post-footer-support{% if page.extra.rtl %} right-to-left{% endif %}">
+    <h2>Support Me</h2>
+    {{ snippets::support() }}
+</div>
+
+{% if not page.extra.hide_next_prev %}
+<hr>
+<div class="PageNavigation">
+    {% if page.lower %}
+    <a class="prev" href="{{ page.lower.path | safe }}">&laquo; {{ page.lower.title }}</a>
     {% endif %}
+    {% if page.higher %}
+    <a class="next" href="{{ page.higher.path | safe }}">{{ page.higher.title }} &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<hr>
+<section>
+    <h2 id="comments" class="{% if page.extra.rtl %}right-to-left{% endif %}">{{ trans(key="comments", lang=lang) }}
+    </h2>
+
+    {% if page.extra.comments_search_term %}
+    {% set search_term=page.extra.comments_search_term %}
+    {% elif page.lang != "en" %}
+    {% set translations = page.translations | filter(attribute="lang", value="en") %}
+    {% set original = translations.0 %}
+    {% set search_term=original.title ~ " (" ~ page.lang ~ ")" %}
+    {% else %}
+    {% set search_term=page.title %}
+    {% endif %}
+    {{ snippets::giscus(search_term=search_term, lang=page.lang) }}
 
     {%- if page.lang != "en" %}
-        <div class="warning{% if page.extra.rtl %} right-to-left{% endif %}">
-            {% set translations = page.translations | filter(attribute="lang", value="en") %}
-            {% set original = translations.0 %}
-            <p>
-            <b>{{ trans(key="translated_content", lang=lang) }}</b>
-            {{ trans(key="translated_content_notice", lang=lang) |
-                replace(from="_original.permalink_", to=original.permalink) |
-                replace(from="_original.title_", to=original.title) | safe }}
-            </p>
-            {%- if page.extra.translators %}
-            <p>
-                {{ trans(key="translated_by", lang=lang) }} {% for user in page.extra.translators -%}
-                    {%- if not loop.first -%}
-                        {%- if loop.last %} {{ trans(key="word_separator", lang=lang) }} {% else %}, {% endif -%}
-                    {%- endif -%}
-                    <a href="https://github.com/{{user}}">@{{user}}</a>
-                {%- endfor %}.
-
-                {%- if page.extra.translation_contributors %}
-                <span class="translation_contributors">
-                    {{ trans(key="translation_contributors", lang=lang) }} {% for user in page.extra.translation_contributors -%}
-                    {%- if not loop.first -%}
-                    {%- if loop.last %} {{ trans(key="word_separator", lang=lang) }} {% else %}, {% endif -%}
-                    {%- endif -%}
-                    <a href="https://github.com/{{user}}">@{{user}}</a>
-                    {%- endfor %}.
-                </span>
-                {% endif -%}
-            </p>
-            {% endif -%}
-        </div>
+    <p class="{% if page.extra.rtl %}right-to-left{% endif %}">
+        {{ trans(key="comments_notice", lang=lang) }}
+    </p>
     {% endif %}
+</section>
 
-    <div class="{% if page.extra.rtl %}right-to-left{% endif %}">
-    {{ page.content | replace(from="<!-- toc -->", to=macros::toc(toc=page.toc))  | safe }}
+<aside class="page-aside-right">
+    {% if page.translations | length > 1-%}
+    <div class="block" id="language-selector">
+        <h2>Other Languages</h2>
+        {% set translations = page.translations | group_by(attribute="lang") %}
+        <ul>{%- for lang_code in config.extra.languages -%}{%- if translations[lang_code] -%}
+            {%- set translation = translations[lang_code] | first -%}
+            {%- if translation and lang_code != lang -%}
+            <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">
+                    {{ trans(key="lang_name", lang = translation.lang) }}
+                </a></li>
+            {%- endif -%}
+            {%- endif -%}{% endfor %}
+        </ul>
     </div>
-
-    <div class="post-footer-support{% if page.extra.rtl %} right-to-left{% endif %}">
-        <h2>Support Me</h2>
-        {{ snippets::support() }}
-    </div>
-
-    {% if not page.extra.hide_next_prev %}
-    <hr>
-    <div class="PageNavigation">
-        {% if page.lower %}
-        <a class="prev" href="{{ page.lower.path | safe }}">&laquo; {{ page.lower.title }}</a>
-        {% endif %}
-        {% if page.higher %}
-        <a class="next" href="{{ page.higher.path | safe }}">{{ page.higher.title }} &raquo;</a>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <hr>
-    <section>
-        <h2 id="comments" class="{% if page.extra.rtl %}right-to-left{% endif %}">{{ trans(key="comments", lang=lang) }}</h2>
-
-        {% if page.extra.comments_search_term %}
-            {% set search_term=page.extra.comments_search_term %}
-        {% elif page.lang != "en" %}
-            {% set translations = page.translations | filter(attribute="lang", value="en") %}
-            {% set original = translations.0 %}
-            {% set search_term=original.title ~ " (" ~ page.lang ~ ")" %}
-        {% else %}
-            {% set search_term=page.title %}
-        {% endif %}
-        {{ snippets::giscus(search_term=search_term, lang=page.lang) }}
-
-        {%- if page.lang != "en" %}
-        <p class="{% if page.extra.rtl %}right-to-left{% endif %}">
-            {{ trans(key="comments_notice", lang=lang) }}
-        </p>
-        {% endif %}
-    </section>
-
-    <aside class="page-aside-right">
-        {% if page.translations | length > 1-%}
-        <div class="block" id="language-selector">
-            <h2>Other Languages</h2>
-            {% set translations = page.translations | group_by(attribute="lang") %}
-            <ul>{%- for lang_code in config.extra.languages -%}{%- if translations[lang_code] -%}
-                {%- set translation = translations[lang_code] | first -%}
-                {%- if translation and lang_code != lang -%}
-                    <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">
-                        {{ trans(key="lang_name", lang = translation.lang) }}
-                    </a></li>
-                {%- endif -%}
-            {%- endif -%}{% endfor %}</ul>
-        </div>
-        {%- endif %}
-    </aside>
+    {%- endif %}
+</aside>
 
 {% endblock main %}

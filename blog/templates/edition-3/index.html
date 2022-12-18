@@ -11,37 +11,39 @@
 {% set posts = posts_section.pages %}
 
 {{ section.content
-    | replace(from="<!-- latest-post -->", to=macros::latest_post(posts=posts))
-    | replace(from="<!-- alpha-warning -->", to=macros::alpha_warning())
-    | safe
+| replace(from="<!-- latest-post -->", to=macros::latest_post(posts=posts))
+| replace(from="<!-- alpha-warning -->", to=macros::alpha_warning())
+| safe
 }}
 
 {%- set chapter = "none" -%}
 {%- for post in posts -%}
-    {%- if post.extra["chapter"] != chapter -%}
-        {%- if not loop.first -%}
-            </ul></div>
+{%- if post.extra["chapter"] != chapter -%}
+{%- if not loop.first -%}
+</ul>
+</div>
+{%- endif -%}
+
+{# Begin new chapter #}
+{%- set_global chapter = post.extra["chapter"] -%}
+
+{% set chapter_slug = chapter | slugify %}
+<div class="posts {{chapter_slug}}">
+    {% set chapter_section = get_section(path = "edition-3/chapters/" ~ chapter_slug ~ "/_index.md" ) %}
+    <h2>{{ chapter_section.title }}</h2>
+    <div class="chapter-introduction">
+        {{ chapter_section.content | safe }}
+    </div>
+
+    <ul>
         {%- endif -%}
 
-        {# Begin new chapter #}
-        {%- set_global chapter = post.extra["chapter"] -%}
+        <li>{{ macros::post_link(page=post) }}</li>
 
-        {% set chapter_slug = chapter | slugify %}
-        <div class="posts {{chapter_slug}}">
-        {% set chapter_section = get_section(path = "edition-3/chapters/" ~ chapter_slug ~ "/_index.md" ) %}
-        <h2>{{ chapter_section.title }}</h2>
-        <div class="chapter-introduction">
-            {{ chapter_section.content | safe }}
-        </div>
-
-        <ul>
-    {%- endif -%}
-
-    <li>{{ macros::post_link(page=post) }}</li>
-
-    {% if loop.last %}
-        </ul></div>
-    {% endif %}
+        {% if loop.last %}
+    </ul>
+</div>
+{% endif %}
 {%- endfor -%}
 
 <hr>
@@ -63,22 +65,34 @@
     <p>{{ status_updates.description }}</p>
     <ul>
         {% include "auto/status-updates-truncated.html" %}
-        <li><a href="{{ get_url(path="@/status-update/_index.md") | safe }}"><em>view all »</em></a></li>
+        <li><a href="{{ get_url(path=" @/status-update/_index.md") | safe }}"><em>view all »</em></a></li>
     </ul>
 </div>
 
 <div class="frontpage-section">
     <h2>Previous Editions</h2>
-    <p>You are currently viewing the third edition of “Writing an OS in Rust”. In case you are interested in the older editions, you can still find them here:</p>
-        <ul>
-            <li>
-                <p><strong><a href="{{ get_url(path="@/edition-2/_index.md")}}">Second Edition:</a></strong> The second edition is based on older version of the <code>bootloader</code> crate, which uses the hardware-provided VGA text buffer instead of a pixel-based framebuffer for screen output. Instead of the APIC, the legacy PIC is used for implementing hardware interrupts. The second edition only works on BIOS-based systems, not on the newer UEFI standard. <a class="read-more" href="{{ get_url(path = "edition-2") | safe }}"><em>read&nbsp;the&nbsp;second edition&nbsp;»</em></a></p>
-            </li>
-            <li>
-                <p><strong><a href="{{ get_url(path="@/edition-1/_index.md")}}">First Edition:</a></strong> The first edition was already started in 2015. It is very different in many aspects, for example it builds upon the GRUB bootloader instead of using the `bootloader` crate. This means that it requires you to manually write some assembly code and do an elaborate remap of the kernel's virtual pages in order to improve safety.<a class="read-more" href="{{ get_url(path = "edition-1") | safe }}"><em>read&nbsp;the&nbsp;first edition&nbsp;»</em></a></p>
-            </li>
-        </ul>
-    <p><em>Note that the older editions are no longer updated and might no longer work or contain outdated information.</em></p>
+    <p>You are currently viewing the third edition of “Writing an OS in Rust”. In case you are interested in the older
+        editions, you can still find them here:</p>
+    <ul>
+        <li>
+            <p><strong><a href="{{ get_url(path=" @/edition-2/_index.md")}}">Second Edition:</a></strong> The second
+                edition is based on older version of the <code>bootloader</code> crate, which uses the hardware-provided
+                VGA text buffer instead of a pixel-based framebuffer for screen output. Instead of the APIC, the legacy
+                PIC is used for implementing hardware interrupts. The second edition only works on BIOS-based systems,
+                not on the newer UEFI standard. <a class="read-more" href="{{ get_url(path = " edition-2") | safe
+                    }}"><em>read&nbsp;the&nbsp;second edition&nbsp;»</em></a></p>
+        </li>
+        <li>
+            <p><strong><a href="{{ get_url(path=" @/edition-1/_index.md")}}">First Edition:</a></strong> The first
+                edition was already started in 2015. It is very different in many aspects, for example it builds upon
+                the GRUB bootloader instead of using the `bootloader` crate. This means that it requires you to manually
+                write some assembly code and do an elaborate remap of the kernel's virtual pages in order to improve
+                safety.<a class="read-more" href="{{ get_url(path = " edition-1") | safe
+                    }}"><em>read&nbsp;the&nbsp;first edition&nbsp;»</em></a></p>
+        </li>
+    </ul>
+    <p><em>Note that the older editions are no longer updated and might no longer work or contain outdated
+            information.</em></p>
 </div>
 
 <div class="">
@@ -95,12 +109,13 @@
         {% set translations = section.translations | group_by(attribute="lang") %}
         <ul>{%- for lang_code in config.extra.languages -%}
             {%- if translations[lang_code] and lang_code != lang -%}
-                {%- set translation = translations[lang_code].0 -%}
-                <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">
+            {%- set translation = translations[lang_code].0 -%}
+            <li data-lang-switch-to="{{ translation.lang }}" class=""><a href="{{ translation.permalink | safe }}">
                     {{ trans(key="lang_name", lang = translation.lang) }}
                 </a></li>
             {%- endif -%}
-        {% endfor %}</ul>
+            {% endfor %}
+        </ul>
     </div>
     {% endif %}
     <div class="block">
@@ -112,7 +127,11 @@
         <h2>Repository</h2>
         <div class="gh-repo-box">
             <div>
-                <svg viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9H3V8h1v1zm0-3H3v1h1V6zm0-2H3v1h1V4zm0-2H3v1h1V2zm8-1v12c0 .55-.45 1-1 1H6v2l-1.5-1.5L3 16v-2H1c-.55 0-1-.45-1-1V1c0-.55.45-1 1-1h10c.55 0 1 .45 1 1zm-1 10H1v2h2v-1h3v1h5v-2zm0-10H2v9h9V1z"></path></svg>
+                <svg viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true">
+                    <path fill-rule="evenodd"
+                        d="M4 9H3V8h1v1zm0-3H3v1h1V6zm0-2H3v1h1V4zm0-2H3v1h1V2zm8-1v12c0 .55-.45 1-1 1H6v2l-1.5-1.5L3 16v-2H1c-.55 0-1-.45-1-1V1c0-.55.45-1 1-1h10c.55 0 1 .45 1 1zm-1 10H1v2h2v-1h3v1h5v-2zm0-10H2v9h9V1z">
+                    </path>
+                </svg>
                 <a href="https://github.com/phil-opp/blog_os" class="repo-link">
                     <span title="blog_os">phil-opp/blog_os</span>
                 </a>
@@ -124,16 +143,28 @@
 
             <p class="stars-forks">
                 <a href="https://github.com/phil-opp/blog_os/stargazers" class="stars">
-                    <svg aria-label="stars" viewBox="0 0 14 16" version="1.1" width="14" height="16" role="img"><path fill-rule="evenodd" d="M14 6l-4.9-.64L7 1 4.9 5.36 0 6l3.6 3.26L2.67 14 7 11.67 11.33 14l-.93-4.74L14 6z"></path></svg>
+                    <svg aria-label="stars" viewBox="0 0 14 16" version="1.1" width="14" height="16" role="img">
+                        <path fill-rule="evenodd"
+                            d="M14 6l-4.9-.64L7 1 4.9 5.36 0 6l3.6 3.26L2.67 14 7 11.67 11.33 14l-.93-4.74L14 6z">
+                        </path>
+                    </svg>
                     {% include "auto/stars.html" %}
                 </a>
                 <a href="https://github.com/phil-opp/blog_os/network/members" class="forks">
-                    <svg aria-label="forks" viewBox="0 0 10 16" version="1.1" width="10" height="16" role="img"><path fill-rule="evenodd" d="M8 1a1.993 1.993 0 0 0-1 3.72V6L5 8 3 6V4.72A1.993 1.993 0 0 0 2 1a1.993 1.993 0 0 0-1 3.72V6.5l3 3v1.78A1.993 1.993 0 0 0 5 15a1.993 1.993 0 0 0 1-3.72V9.5l3-3V4.72A1.993 1.993 0 0 0 8 1zM2 4.2C1.34 4.2.8 3.65.8 3c0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm3 10c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm3-10c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2z"></path></svg>
+                    <svg aria-label="forks" viewBox="0 0 10 16" version="1.1" width="10" height="16" role="img">
+                        <path fill-rule="evenodd"
+                            d="M8 1a1.993 1.993 0 0 0-1 3.72V6L5 8 3 6V4.72A1.993 1.993 0 0 0 2 1a1.993 1.993 0 0 0-1 3.72V6.5l3 3v1.78A1.993 1.993 0 0 0 5 15a1.993 1.993 0 0 0 1-3.72V9.5l3-3V4.72A1.993 1.993 0 0 0 8 1zM2 4.2C1.34 4.2.8 3.65.8 3c0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm3 10c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm3-10c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2z">
+                        </path>
+                    </svg>
                     {% include "auto/forks.html" %}
                 </a>
 
                 <a href="https://github.com/sponsors/phil-opp" class="sponsor">
-                    <svg viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M9 2c-.97 0-1.69.42-2.2 1-.51.58-.78.92-.8 1-.02-.08-.28-.42-.8-1-.52-.58-1.17-1-2.2-1-1.632.086-2.954 1.333-3 3 0 .52.09 1.52.67 2.67C1.25 8.82 3.01 10.61 6 13c2.98-2.39 4.77-4.17 5.34-5.33C11.91 6.51 12 5.5 12 5c-.047-1.69-1.342-2.913-3-3z"></path></svg>
+                    <svg viewBox="0 0 12 16" version="1.1" width="12" height="16" aria-hidden="true">
+                        <path fill-rule="evenodd"
+                            d="M9 2c-.97 0-1.69.42-2.2 1-.51.58-.78.92-.8 1-.02-.08-.28-.42-.8-1-.52-.58-1.17-1-2.2-1-1.632.086-2.954 1.333-3 3 0 .52.09 1.52.67 2.67C1.25 8.82 3.01 10.61 6 13c2.98-2.39 4.77-4.17 5.34-5.33C11.91 6.51 12 5.5 12 5c-.047-1.69-1.342-2.913-3-3z">
+                        </path>
+                    </svg>
                     Sponsor
                 </a>
             </p>

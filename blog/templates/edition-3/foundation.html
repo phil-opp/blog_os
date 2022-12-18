@@ -11,11 +11,12 @@
     <meta name="author" content="{{ config.extra.author.name }}">
 
     {% if current_url %}
-        <link rel="canonical" href="{{ current_url | safe }}" />
+    <link rel="canonical" href="{{ current_url | safe }}" />
     {% endif %}
     <link href="/css/edition-3/main.css" rel="stylesheet">
 
-    <link rel="alternate" type="application/rss+xml" title="RSS feed for os.phil-opp.com" href="{{ config.base_url | safe }}/rss.xml" />
+    <link rel="alternate" type="application/rss+xml" title="RSS feed for os.phil-opp.com"
+        href="{{ config.base_url | safe }}/rss.xml" />
 
     <script>
         let theme = localStorage.getItem("theme");
@@ -44,12 +45,13 @@
             <hr>
             <div class="theme-switch">
                 <div class="light-switch" onclick="toggle_lights()" title="Switch between light and dark theme"></div>
-                <div class="light-switch-reset" onclick="clear_theme_override()" title="Clear the theme override and go back to the system theme"></div>
+                <div class="light-switch-reset" onclick="clear_theme_override()"
+                    title="Clear the theme override and go back to the system theme"></div>
             </div>
             <small>
                 &copy; <time datetime="2022">2022</time>. All rights reserved.
                 <a class="spaced" href="https://github.com/phil-opp/blog_os#license">License</a>
-                <a class="spaced" href="{{ get_url(path="@/pages/contact.md") | safe }}">Contact</a>
+                <a class="spaced" href="{{ get_url(path=" @/pages/contact.md") | safe }}">Contact</a>
             </small>
         </footer>
     </div>
