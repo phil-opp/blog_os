@@ -718,16 +718,11 @@ impl LinkedListAllocator {
 
 First, the function calculates the start and end address of a potential allocation, using the `align_up` function we defined earlier and the [`checked_add`] method. If an overflow occurs or if the end address is behind the end address of the region, the allocation doesn't fit in the region and we return an error.
 
-The function performs a couple of less obvious checks on top of that.
-When we first perform `align_up` we may get an `alloc_start` that is not the same as `region.start_addr()`.
-In this case, there can still be some free memory we need to keep track of between `region.start_addr()` (inclusive) to this initially aligned `alloc_start` (exclusive).
-We need to ensure that this region is suitable for storing a `ListNode` by performing the alignment and size checks in `is_valid_region`.
+The function performs a couple of less obvious checks on top of that. When we first perform `align_up` we may get an `alloc_start` that is not the same as `region.start_addr()`. In this case, there can still be some free memory we need to keep track of between `region.start_addr()` (inclusive) to this initially aligned `alloc_start` (exclusive). We need to ensure that this region is suitable for storing a `ListNode` by performing the alignment and size checks in `is_valid_region`.
 
-As `region.start_addr()` is guaranteed to satisfy the alignment condition of `ListNode`, we technically only need to guarantee that the size is not too small.
-We try and realign after accounting for this space to store one `ListNode` instance after `region.start_addr()`. This may end up pushing our end address out of our region, in which case this region won't do.
+As `region.start_addr()` is guaranteed to satisfy the alignment condition of `ListNode`, we technically only need to guarantee that the size is not too small. We try and realign after accounting for this space to store one `ListNode` instance after `region.start_addr()`. This may end up pushing our end address out of our region, in which case this entire region we are checking will not be sufficient.
 
-This can occur in one edge case in the 64-bit architecture we are targeting, where `align` is set to 16 bytes and `region.start_addr()` happens to be some number `16*n + 8`.
-`alloc_start` would then be set to `16*(n+1)`, leaving us `head_excess_size` of just 8 bytes, which would be insufficient to store the 16 bytes required for a `ListNode`.
+It is interesting to note that this situation can occur in one edge case in the 64-bit architecture we are targeting, where `align` is set to 16 bytes and `region.start_addr()` happens to be some number `16*n + 8`. `alloc_start` would then be set to `16*(n+1)`, leaving us `head_excess_size` of just 8 bytes, which would be insufficient to store the 16 bytes required for a `ListNode`.
 
 We could also have some free memory between `alloc_end` (inclusive) to `region.end_addr()` (exclusive). Here `alloc_end` (in general) is not guaranteed to satisfy the alignment condition of `ListNode`, nor is there a guarantee that the remaining space is sufficient to store a `ListNode`. This check is necessary because most of the time an allocation does not fit a suitable region perfectly, so that a part of the region remains usable after the allocation. This part of the region must store its own `ListNode` after the allocation, so it must be large enough to do so, and it must satisfy the alignment condition, which is exactly what our `is_valid_region` method performs.
 
