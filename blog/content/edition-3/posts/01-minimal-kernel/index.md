@@ -76,7 +76,7 @@ cargo new kernel --bin --edition 2021
 ```
 
 We name the project `kernel` here, but of course you can choose your own name.
-The `--bin` flag specifies that we want to create an executable binary (in contrast to a library) and the `--edition 2018` flag specifies that we want to use the [2021 edition] of Rust for our crate.
+The `--bin` flag specifies that we want to create an executable binary (in contrast to a library) and the `--edition 2021` flag specifies that we want to use the [2021 edition] of Rust for our crate.
 When we run the command, cargo creates the following directory structure for us:
 
 [2021 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2021/index.html
