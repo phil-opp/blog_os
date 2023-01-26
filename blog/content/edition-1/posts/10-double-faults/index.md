@@ -128,7 +128,7 @@ First Exception | Second Exception
 [Divide-by-zero],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault] | [Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
 [Page Fault] | [Page Fault],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
 
-[Divide-by-zero]: https://wiki.osdev.org/Exceptions#Divide-by-zero_Error
+[Divide-by-zero]: https://wiki.osdev.org/Exceptions#Division_Error
 [Invalid TSS]: https://wiki.osdev.org/Exceptions#Invalid_TSS
 [Segment Not Present]: https://wiki.osdev.org/Exceptions#Segment_Not_Present
 [Stack-Segment Fault]: https://wiki.osdev.org/Exceptions#Stack-Segment_Fault
