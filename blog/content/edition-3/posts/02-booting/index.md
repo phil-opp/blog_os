@@ -481,7 +481,7 @@ Now that we've covered how to support BIOS, UEFI, or both, it's time to put ever
 # in boot/Cargo.toml
 
 [dependencies]
-bootloader = 0.11.0
+bootloader = "0.11.0"
 bootloader-x86_64-bios-boot-sector = "0.11.0"
 bootloader-x86_64-bios-common = "0.11.0"
 bootloader-x86_64-bios-stage-2 = "0.11.0"
