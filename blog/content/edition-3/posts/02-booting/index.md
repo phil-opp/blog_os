@@ -250,18 +250,18 @@ In this section, we will learn how to combine the [minimal kernel] we created in
 
 Since bootloaders quite complex on their own, we won't create our own bootloader here (but we are planning a separate series of posts on this).
 Instead, we will boot our kernel using the [`bootloader`] crate.
-This crate supports both BIOS and UEFI booting, provides all the necessary system information we need, and creates a reasonable default execution environment for our kernel.
+This crate is subdivided into multiple crates to support both BIOS (via the multitude of `bootloader-x86_64-bios-*` sub-crates) and UEFI (via the `bootloader-x86_64-uefi` sub-crate) booting, provide all the necessary system information we need (via the `bootloader_api` sub-crate), and creates a reasonable default execution environment for our kernel.
 This way, we can focus on the actual kernel design in the following posts instead of spending a lot of time on system initialization.
 
-[`bootloader`]: https://crates.io/crates/bootloader
+In order to use this crate in our kernel, we need to add a dependency on `bootloader_api`:
 
-To use the `bootloader` crate, we first need to add a dependency on it:
+[`bootloader`]: https://crates.io/crates/bootloader
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-bootloader = "0.10.1"
+bootloader_api = "0.11.0"
 ```
 
 For normal Rust crates, this step would be all that's needed for adding them as a dependency.
@@ -280,7 +280,7 @@ The `bootloader` crate also follows this convention, so we need to update our `_
 
 The [`bootloader` documentation][`BootInfo`] specifies that a kernel entry point should have the following signature:
 
-[`BootInfo`]: https://docs.rs/bootloader/0.10.1/bootloader/boot_info/struct.BootInfo.html
+[`BootInfo`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.BootInfo.html
 
 ```rust
 extern "C" fn(boot_info: &'static mut bootloader::BootInfo) -> ! { ...
@@ -290,7 +290,7 @@ extern "C" fn(boot_info: &'static mut bootloader::BootInfo) -> ! { ...
 The only difference to our `_start` entry point is the additional `boot_info` argument, which is passed by the `bootloader` crate.
 This argument is a mutable reference to a [`bootloader::BootInfo`] type, which provides various information about the system.
 
-[`bootloader::BootInfo`]: https://docs.rs/bootloader/0.10.1/bootloader/boot_info/struct.BootInfo.html
+[`bootloader::BootInfo`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.BootInfo.html
 
 <div class="note"><details>
 <summary><h5>About <code>extern "C"</code> and <code>!</code></h5></summary>
@@ -319,14 +319,14 @@ At runtime, however, the code would fail or introduce undefined behavior.
 To avoid these issues and make sure that the entry point function has always the correct signature, the `bootloader` crate provides an [`entry_point`] macro that provides a type-checked way to define a Rust function as the entry point.
 This way, the function signature is checked at compile time so that no runtime error can occur.
 
-[`entry_point`]: https://docs.rs/bootloader/0.6.4/bootloader/macro.entry_point.html
+[`entry_point`]: https://docs.rs/bootloader/0.11.0/bootloader/macro.entry_point.html
 
 To use the `entry_point` macro, we rewrite our entry point function in the following way:
 
 ```rust
 // in src/main.rs
 
-use bootloader::{entry_point, BootInfo};
+use bootloader_api::{entry_point, BootInfo};
 
 entry_point!(kernel_main);
 
@@ -348,7 +348,7 @@ The first step is to find the directory where cargo placed the source code of th
 Then, a special build command needs to be executed in that directory, passing the paths to the kernel binary and its `Cargo.toml` as arguments.
 This will result in multiple disk image files as output, which can be used to boot the kernel on BIOS and UEFI systems.
 
-[`bootloader` docs]: https://docs.rs/bootloader/0.10.1/bootloader/
+[`bootloader` docs]: https://docs.rs/bootloader/0.11.0/bootloader/
 
 #### A `boot` crate
 
@@ -380,57 +380,48 @@ This means that is has a classical `main` function and can use standard library 
 [`Path`]: https://doc.rust-lang.org/std/path/struct.Path.html
 [`Command`]: https://doc.rust-lang.org/std/process/struct.Command.html
 
-#### Locating the `bootloader` Source
+#### Artifact Dependencies
 
-The first step in creating the bootable disk image is to to locate where cargo put the source code of the `bootloader` dependency.
-For that we can use cargo's [`cargo metadata`] subcommand, which outputs all kinds of information about a cargo project as a JSON object.
-Among other things, it contains the manifest path (i.e. the path to the `Cargo.toml`) of all dependencies, including the `bootloader` crate.
+The first step in creating the bootable disk image is to enable support for [artifact dependencies](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#artifact-dependencies) from inside your kernel's `.cargo/config.toml` because we're going to need that support later:
 
-[`cargo metadata`]: https://doc.rust-lang.org/cargo/commands/cargo-metadata.html
+```toml
+# in .cargo/config.toml
 
-To keep this post short, we won't include the code to parse the JSON output and to locate the right entry here.
-Instead, we created a small crate named [`bootloader-locator`] that wraps the needed functionality in a simple [`locate_bootloader`] function.
-Let's add that crate as a dependency and use it:
+[unstable]
+bindeps = true
+```
 
-[`bootloader-locator`]: https://docs.rs/bootloader-locator/0.0.4/bootloader_locator/index.html
-[`locate_bootloader`]: https://docs.rs/bootloader-locator/0.0.4/bootloader_locator/fn.locate_bootloader.html
+After this, you need to add an artifact dependency on your kernel from inside the boot crate. This tells the bootloader crate where the source code to your kernel resides:
 
 ```toml
 # in boot/Cargo.toml
 
 [dependencies]
-bootloader-locator = "0.0.4"
+blog_os = { path = "..", artifact = "bin", target = "x86_64-unknown-none" }
 ```
+
+Finally, you need to add a dependency on the main `bootloader` crate. Previous versions used `bootloader_locator` instead, but now, thanks to artifact dependencies, that is no longer necessary.
+
+```toml
+# in boot/Cargo.toml
+
+[dependencies]
+bootloader = "0.11.0"
+```
+
+We can see how this works by printing the Cargo-generated environment variable pointing to the absolute path of the kernel binary
 
 ```rust
 // in boot/src/main.rs
-
-use bootloader_locator::locate_bootloader; // new
+use std::path::Path;      // new
 
 pub fn main() {
-    let bootloader_manifest = locate_bootloader("bootloader").unwrap();
-    dbg!(bootloader_manifest);
+    let kernel_binary = Path::new(env!("CARGO_BIN_FILE_KERNEL_kernel"));
+    dbg!(kernel_binary);
 }
 ```
 
-The `locate_bootloader` function takes the name of the bootloader dependency as argument to allow alternative bootloader crates that are named differently.
-Since the function might fail, we use the [`unwrap`] method to [panic] on an error.
-Panicking is ok here because the `boot` crate is only part of our build process.
-
-[`unwrap`]: https://doc.rust-lang.org/std/result/enum.Result.html#method.unwrap
-[panic]: https://doc.rust-lang.org/stable/book/ch09-01-unrecoverable-errors-with-panic.html
-
-If you're interested in how the `locate_bootloader` function works, [check out its source code][locate_bootloader source].
-It first executes the `cargo metadata` command and parses it's result as JSON using the [`json` crate].
-Then it traverses the parsed metadata to find the `bootloader` dependency and return its manifest path.
-
-[locate_bootloader source]: https://docs.rs/crate/bootloader-locator/0.0.4/source/src/lib.rs
-[`json` crate]: https://docs.rs/json/0.12.4/json/
-
-Let's try to run it to see whether it works.
-If everything succeeds, the [`dbg!`] macro should print the path to the `bootloader` source code.
-Note that we need to run the `boot` binary from the root directory of our workspace, not from within the `boot` directory.
-Otherwise the `locate_bootloader` function would operate on the `boot/Cargo.toml`, where it won't find a bootloader dependency.
+The `CARGO_BIN_FILE_KERNEL_kernel` environment variable is defined by Cargo as the absolute path to the binary file created after compiling an artifact dependency — and in this case, the binary file it points to is your kernel's binary. This makes it very easy to begin the process of boot image creation, as explained in detail below.
 
 [`dbg!`]: https://doc.rust-lang.org/std/macro.dbg.html
 
@@ -440,163 +431,139 @@ To run the `boot` crate from our workspace root (i.e. the kernel directory), we 
 
 ```
 > cargo run --package boot
-[boot/src/main.rs:5] bootloader_manifest = "/.../.cargo/.../bootloader-.../Cargo.toml"
+[boot/src/main.rs:5] kernel_path = "/.../target/x86_64-unknown-none/debug/deps/artifact/kernel-.../bin/kernel-..."
 ```
 
-It worked! We see that the bootloader source code lives somewhere in the `.cargo` directory in our user directory.
-By querying the source code for the exact bootloader version that our kernel is using, we ensure that the bootloader and the kernel use the exact same version of the `BootInfo` type.
+It worked! We see that the kernel binary lives somewhere in the dependency tree of our `boot` crate.
+By depending on the kernel as a binary dependency of `boot`, we ensure that the bootloader and the kernel use the exact same version of the `BootInfo` type.
 This is important because the `BootInfo` type is not stable yet, so undefined behavior can occur when when using different `BootInfo` versions.
 
-#### Running the Build Command
+#### Building a Boot Image
 
-The next step is to run the build command of the bootloader.
-From the [`bootloader` docs] we learn that the crate requires the following build command:
+The next step is to actually build the boot image.
+From the [`bootloader` docs] we learn that the crate defines two completely unique bootloader objects: `BiosBoot` for BIOS and `UefiBoot` for UEFI.
 
+Each of these bootloader components has its own unique set of dependencies that need to also be depended on in order to work:
+
+##### BIOS
+In order to support BIOS booting, there are 5 additional dependencies that your `boot` crate needs to depend on:
+
+```toml
+# in boot/Cargo.toml
+
+[dependencies]
+bootloader-x86_64-bios-boot-sector = 0.11.0
+bootloader-x86_64-bios-common = 0.11.0
+bootloader-x86_64-bios-stage-2 = 0.11.0
+bootloader-x86_64-bios-stage-3 = 0.11.0
+bootloader-x86_64-bios-stage-4 = 0.11.0
 ```
-cargo builder --kernel-manifest path/to/kernel/Cargo.toml \
-    --kernel-binary path/to/kernel_bin
+
+Each of these stages represents an important part of the boot process. The boot sector, as you'd probably guess, is where the BIOS looks on the disk to find bootable code; without it the BIOS won't know an OS exists on the disk. The `-common` crate contains all the APIs that all subsequent stages depend on. Stage 2 is what switches you to protected mode; without it, you're stuck in 16-bit emulation. Stage 3 defines the jump to long mode, and finally Stage 4 maps memory so the kernel can allocate a heap later on.
+
+##### UEFI
+Unlike BIOS, UEFI booting only has one additional dependency:
+
+```toml
+# in boot/Cargo.toml
+
+[dependencies]
+bootloader-x86_64-uefi = 0.11.0
 ```
 
-In addition, the docs recommend to use the `--target-dir` and `--out-dir` arguments when building the bootloader as a dependency to override where cargo places the compilation artifacts.
+This is because UEFI supports booting directly into long mode. This completely eliminates the need for a real-to-protected-to-long-mode trampoline, and it supports this by default if the bootloader is run as a UEFI application — which it is in the case of the `bootloader` crate. However, QEMU needs additional setup to support emulating UEFI, as we will explain below, so until we go over that, you'll need to use real UEFI hardware to test this.
 
-Let's try to invoke that command from our `main` function.
-For that we use the [`process::Command`] type of the standard library, which allows us to spawn new processes and wait for their results:
+##### Implementation
 
-[`process::Command`]: https://doc.rust-lang.org/std/process/struct.Command.html
+Now that we've covered how to support BIOS, UEFI, or both, it's time to put everything together. To keep it simple, we support both:
+
+```toml
+# in boot/Cargo.toml
+
+[dependencies]
+bootloader = 0.11.0
+bootloader-x86_64-bios-boot-sector = 0.11.0
+bootloader-x86_64-bios-common = 0.11.0
+bootloader-x86_64-bios-stage-2 = 0.11.0
+bootloader-x86_64-bios-stage-3 = 0.11.0
+bootloader-x86_64-bios-stage-4 = 0.11.0
+bootloader-x86_64-uefi = 0.11.0
+```
+
+Once all dependencies are accounted for, it's time to put everything together:
 
 ```rust
 // in boot/src/main.rs
 
-use std::process::Command; // new
+// new
+use bootloader::{BiosBoot, UefiBoot}
+use std::{path::Path, process::exit};
 
 pub fn main() {
-    let bootloader_manifest = locate_bootloader("bootloader").unwrap();
-
     // new code below
 
-    let kernel_binary = todo!();
-    let kernel_manifest = todo!();
-    let target_dir = todo!();
-    let out_dir = todo!();
+    let kernel_dir = todo!();
+    let bios_image = todo!();
+    let uefi_image = todo!();
 
-    // create a new build command; use the `CARGO` environment variable to
-    // also support non-standard cargo versions
-    let mut build_cmd = Command::new(env!("CARGO"));
+    // invoke UEFI boot image builder
+    let uefi = UefiBoot::new(&kernel_binary);
 
-    // pass the arguments
-    build_cmd.arg("builder");
-    build_cmd.arg("--kernel-manifest").arg(&kernel_manifest);
-    build_cmd.arg("--kernel-binary").arg(&kernel_binary);
-    build_cmd.arg("--target-dir").arg(&target_dir);
-    build_cmd.arg("--out-dir").arg(&out_dir);
+    // invoke BIOS boot image builder
+    let bios = BiosBoot::new(&kernel_binary);
 
-    // set the working directory
-    let bootloader_dir = bootloader_manifest.parent().unwrap();
-    build_cmd.current_dir(&bootloader_dir);
+    // attempt to create UEFI boot image
+    if let Err(e) = uefi.create_disk_image(&uefi_path) {
+        eprintln!("{:#?}", &e);
+        exit(1)
+    }
 
-    // run the command
-    let exit_status = build_cmd.status().unwrap();
-    if !exit_status.success() {
-        panic!("bootloader build failed");
+    // attempt to create BIOS boot image
+    if let Err(e) = bios.create_disk_image(&bios_path) {
+        eprintln!("{:#?}", &e);
+        exit(1)
     }
 }
 ```
 
-We use the [`Command::new`] function to create a new [`process::Command`].
-Instead of hardcoding the command name "cargo", we use the [`CARGO` environment variable] that cargo sets when compiling the `boot` crate.
-This way, we ensure that we use the exact same cargo version for compiling the `bootloader` crate, which is important when using non-standard cargo versions, e.g. through rustup's [toolchain override shorthands].
-Since the environment variable is set at compile time, we use the compiler-builtin [`env!`] macro to retrieve its value.
+We use both the `UefiBoot` and `BiosBoot` types to create disk images for the BIOS and UEFI implementations, respectively. By using the `if let` syntax, we can exit the build gracefully whenever an error occurs.
 
-[`Command::new`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.new
-[`CARGO` environment variable]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
-[toolchain override shorthands]: https://rust-lang.github.io/rustup/overrides.html#toolchain-override-shorthand
-[`env!`]: https://doc.rust-lang.org/std/macro.env.html
+After creating the `UefiBoot` and  `BiosBoot` types using the `CARGO_BIN_FILE_KERNEL_kernel` environment variable that we went over previously as the constructor argument for both, we now are ready for the next step.
 
-After creating the `Command` type, we pass all the required arguments by calling the [`Command::arg`] method.
-Most of the paths are still set to [`todo!()`] as a placeholder and will be filled out in a moment.
+#### Filling in the Blanks
 
-[`Command::arg`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.arg
-[`todo!()`]: https://doc.rust-lang.org/std/macro.todo.html
-
-Since the build command needs to be run inside the source directory of the `bootloader` crate, we use the [`Command::current_dir`] method to set the working directory accordingly.
-We can determine the `bootloader_dir` path from the `bootloader_manifest` path by using the [`Path::parent`] method.
-Since not all paths have a parent directory (e.g. the path `/` has not), the `parent()` call can fail.
-However, this should never happen for the `bootloader_manifest` path, so we use the [`Option::unwrap`] method that panics on `None`.
-
-[`Command::current_dir`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.current_dir
-[`Path::parent`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.parent
-[`Option::unwrap`]: https://doc.rust-lang.org/std/option/enum.Option.html#method.unwrap
-
-After setting the arguments and the working directory, we use the [`Command::status`] method to execute the command and wait for its exit status.
-Through the [`ExitStatus::success`] method we verify that the command was successful.
-If not we use the [`panic!`] macro to cause a panic.
-
-[`Command::current_dir`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.current_dir
-[`Command::status`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.status
-[`ExitStatus::success`]: https://doc.rust-lang.org/std/process/struct.ExitStatus.html#method.success
-[`panic!`]: https://doc.rust-lang.org/std/macro.panic.html
-
-#### Filling in the Paths
-
-We still need to fill in the paths we marked as `todo!` above.
-We start with the path to the kernel binary:
+We still need to fill in the paths we marked as `todo!` above. Since we already started with the kernel binary earlier using the `env!()` builtin, we can now use it as a reference point for determining all the others:
 
 ```rust
 // in `main` in boot/src/main.rs
 
-use std::path::Path;
+// we know that the kernel lives in the parent directory of the `boot` crate
+let kernel_dir = Path::new(env!("CARGO_MANIFEST_DIR")).manifest_dir.parent().unwrap();
 
-// TODO: don't hardcore this
-let kernel_binary = Path::new("target/x86_64-blog_os/debug/blog_os").canonicalize().unwrap();
-```
-
-By default, cargo places our compiled kernel executable in a subdirectory of the `target` folder.
-The `x86_64_blog_os` is the name of our target JSON file and the `debug` indicates that this was a build with debug information and without optimizations.
-For now we simply hardcode the path to keep things simple, but we will make it more flexible later in this post.
-
-Since we're going to need an absolute path, we use the [`Path::canonicalize`] method to get the full path to the file.
-We use [`unwrap`] to panic if the file doesn't exist.
-
-[`Path::canonicalize`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.canonicalize
-[`Result`]: https://doc.rust-lang.org/std/result/enum.Result.html
-
-To fill in the other path variables, we utilize another environment variable that cargo passes on build:
-
-```rust
-// in `main` in boot/src/main.rs
-
-// the path to the root of this crate, set by cargo
-let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-// we know that the kernel lives in the parent directory
-let kernel_dir = manifest_dir.parent().unwrap();
-
-let kernel_manifest = kernel_dir.join("Cargo.toml");
-// use the same target folder for building the bootloader
-let target_dir = kernel_dir.join("target");
-// place the resulting disk image next to our kernel binary
-let out_dir = kernel_binary.parent().unwrap();
+// use the above as a target folder in which to place both the BIOS and UEFI disk images  
+let bios_image = kernel_dir.join("bootimage-bios-blog_os.img");
+let uefi_image = kernel_dir.join("bootimage-uefi-blog_os.img");
 ```
 
 The [`CARGO_MANIFEST_DIR`] environment variable always points to the `boot` directory, even if the crate is built from a different directory (e.g. via cargo's `--manifest-path` argument).
 This gives use a good starting point for creating the paths we care about since we know that our kernel lives in the [parent][`Path::parent`] directory.
 
+[`Path::parent`]: https://doc.rust-lang.org/std/path/struct.Path.html
 [`CARGO_MANIFEST_DIR`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
 
-From the `kernel_dir`, we can then construct the `kernel_manifest` and `target_dir` paths using the [`Path::join`] method.
-For the `out_dir` binding, we use the parent directory of the `kernel_binary` path.
-This way, the bootloader will create the disk image files next to our kernel executable.
+From the `kernel_dir`, we can then construct the `bios_image` and `uefi_image` paths using the [`Path::join`] method.
 
 [`Path::join`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.join
 
 #### Creating the Disk Images
 
 There is one last step before we can create the bootable disk images: The `bootloader` build requires the [rustup component] `llvm-tools-preview`.
-To install it, we can either run `rustup component add llvm-tools-preview` or specify it in our `rust-toolchain` file:
+To install it, we can either run `rustup component add llvm-tools-preview` or specify it in our `rust-toolchain.toml` file:
 
 [rustup component]: https://rust-lang.github.io/rustup/concepts/components.html
 
 ```toml
-# in rust-toolchain
+# in rust-toolchain.toml
 
 [toolchain]
 channel = "nightly"
@@ -606,28 +573,15 @@ components = ["rust-src", "rustfmt", "clippy", "llvm-tools-preview"]
 After that can finally use our `boot` crate to create some bootable disk images from our kernel:
 
 ```bash
-> cargo kbuild
 > cargo run --package boot
 ```
 
-We first compile our kernel through `cargo kbuild` to ensure that the kernel binary is up to date.
-Then we run our `boot` crate through `cargo run --package boot`, which takes the kernel binary and builds the bootloader around it.
-The result are some disk image files named `bootimage-*` next to our kernel binary inside `target/x86_64-blog_os/debug`.
+Because we're using artifact dependencies, when you run the `boot` package, the kernel is automatically pulled in and compiled as a dependency. Previously, in version 0.10 of the bootloader crate, you had to build the kernel binary first, but now, thanks to artifact dependencies, this is no longer required.
 Note that the command will only work from the root directory of our project.
 This is because we hardcoded the `kernel_binary` path in our `main` function.
 We will fix this later in the post, but first it is time to actually run our kernel!
 
-From the [`bootloader` docs], we learn that the bootloader the following disk images:
-
-- A BIOS boot image named `bootimage-bios-<bin_name>.img`.
-- Multiple images suitable for UEFI booting
-  - An EFI executable named `bootimage-uefi-<bin_name>.efi`.
-  - A FAT partition image named `bootimage-uefi-<bin_name>.fat`, which contains the EFI executable under `efi\boot\bootx64.efi`.
-  - A GPT disk image named `bootimage-uefi-<bin_name>.img`, which contains the FAT image as EFI system partition.
-
-In general, the `.img` files are the ones that you want to copy to an USB stick in order to boot from it.
-The other files are useful for booting the kernel in virtual machines such as [QEMU].
-The `<bin_name>` placeholder is the binary name of the kernel, i.e. `blog_os` or the crate name you chose.
+Note also that we specified names for the image files. Although we used `bootimage-bios-blog_os.img` and `bootimage-uefi-blog_os.img` for compatibility, they can now be given whatever names you see fit.
 
 ## Running our Kernel
 
@@ -652,7 +606,7 @@ Then you can run the BIOS disk image of our kernel through the following command
 
 ```
 qemu-system-x86_64 -drive \
-    format=raw,file=target/x86_64-blog_os/debug/bootimage-bios-blog_os.img
+    format=raw,file=bootimage-bios-blog_os.img
 ```
 
 As a result, you should see a window open that looks like this:
@@ -685,7 +639,7 @@ After downloading it, we can then run our UEFI disk image using the following co
 
 ```
 qemu-system-x86_64 -drive \
-    format=raw,file=target/x86_64-blog_os/debug/bootimage-uefi-blog_os.img \
+    format=raw,file=bootimage-uefi-blog_os.img \
     -bios /path/to/OVMF_pure-efi.fd,
 ```
 
@@ -733,8 +687,8 @@ Since screen output won't be essential for our kernel (there are other possible 
 The [`FrameBuffer`] type provides two methods: The `info` method returns a [`FrameBufferInfo`] instance with all kinds of information about the framebuffer format, including the pixel type and the screen resolution.
 The `buffer` method returns the actual framebuffer content in form of a mutable byte [slice].
 
-[`FrameBuffer`]: https://docs.rs/bootloader/0.10.1/bootloader/boot_info/struct.FrameBuffer.html
-[`FrameBufferInfo`]: https://docs.rs/bootloader/0.10.1/bootloader/boot_info/struct.FrameBufferInfo.html
+[`FrameBuffer`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.FrameBuffer.html
+[`FrameBufferInfo`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.FrameBufferInfo.html
 [slice]: https://doc.rust-lang.org/std/primitive.slice.html
 
 We will look into programming the framebuffer in detail in the next post.
