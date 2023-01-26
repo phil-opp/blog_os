@@ -132,7 +132,7 @@ CPUはダブルフォルトハンドラを呼べるようになったので、�
 [ゼロ除算],<br>[無効TSS],<br>[セグメント不在],<br>[スタックセグメントフォルト],<br>[一般保護違反] | [無効TSS],<br>[セグメント不在],<br>[スタックセグメントフォルト],<br>[一般保護違反]
 [ページフォルト] | [ページフォルト],<br>[無効TSS],<br>[セグメント不在],<br>[スタックセグメントフォルト],<br>[一般保護違反]
 
-[ゼロ除算]: https://wiki.osdev.org/Exceptions#Divide-by-zero_Error
+[ゼロ除算]: https://wiki.osdev.org/Exceptions#Division_Error
 [無効TSS]: https://wiki.osdev.org/Exceptions#Invalid_TSS
 [セグメント不在]: https://wiki.osdev.org/Exceptions#Segment_Not_Present
 [スタックセグメントフォルト]: https://wiki.osdev.org/Exceptions#Stack-Segment_Fault
