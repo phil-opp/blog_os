@@ -422,7 +422,7 @@ extern "C" fn divide_by_zero_handler() -> ! {
 ```
 We register a single handler function for a [divide by zero error] \(index 0). Like the name says, this exception occurs when dividing a number by 0. Thus we have an easy way to test our new exception handler.
 
-[divide by zero error]: https://wiki.osdev.org/Exceptions#Divide-by-zero_Error
+[divide by zero error]: https://wiki.osdev.org/Exceptions#Division_Error
 
 However, it doesn't work this way:
 

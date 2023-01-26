@@ -890,7 +890,7 @@ fn test_println() {
 
 標準ライブラリのテストフレームワークは、[`#[should_panic]`属性][should_panic]をサポートしています。これを使うと、失敗しなければならないテストを作ることができます。これは、例えば、関数が無効な引数を渡されたときに失敗することを確かめる場合などに便利です。残念なことに、この機能は標準ライブラリのサポートを必要とするため、`#[no_std]`クレートではこの属性はサポートされていません。
 
-[should_panic]: https://doc.rust-jp.rs/rust-by-example-ja/testing/unit_testing.html#testing-panics
+[should_panic]: https://doc.rust-jp.rs/rust-by-example-ja/testing/unit_testing.html#パニックをテストする
 
 `#[should_panic]`属性は使えませんが、パニックハンドラから成功のエラーコードで終了するような結合テストを作れば、似たような動きをさせることはできます。そのようなテストを`should_panic`という名前で作ってみましょう：
 
