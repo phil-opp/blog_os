@@ -452,11 +452,11 @@ In order to support BIOS booting, there are 5 additional dependencies that your 
 # in boot/Cargo.toml
 
 [dependencies]
-bootloader-x86_64-bios-boot-sector = 0.11.0
-bootloader-x86_64-bios-common = 0.11.0
-bootloader-x86_64-bios-stage-2 = 0.11.0
-bootloader-x86_64-bios-stage-3 = 0.11.0
-bootloader-x86_64-bios-stage-4 = 0.11.0
+bootloader-x86_64-bios-boot-sector = "0.11.0"
+bootloader-x86_64-bios-common = "0.11.0"
+bootloader-x86_64-bios-stage-2 = "0.11.0"
+bootloader-x86_64-bios-stage-3 = "0.11.0"
+bootloader-x86_64-bios-stage-4 = "0.11.0"
 ```
 
 Each of these stages represents an important part of the boot process. The boot sector, as you'd probably guess, is where the BIOS looks on the disk to find bootable code; without it the BIOS won't know an OS exists on the disk. The `-common` crate contains all the APIs that all subsequent stages depend on. Stage 2 is what switches you to protected mode; without it, you're stuck in 16-bit emulation. Stage 3 defines the jump to long mode, and finally Stage 4 maps memory so the kernel can allocate a heap later on.
@@ -468,7 +468,7 @@ Unlike BIOS, UEFI booting only has one additional dependency:
 # in boot/Cargo.toml
 
 [dependencies]
-bootloader-x86_64-uefi = 0.11.0
+bootloader-x86_64-uefi = "0.11.0"
 ```
 
 This is because UEFI supports booting directly into long mode. This completely eliminates the need for a real-to-protected-to-long-mode trampoline, and it supports this by default if the bootloader is run as a UEFI application — which it is in the case of the `bootloader` crate. However, QEMU needs additional setup to support emulating UEFI, as we will explain below, so until we go over that, you'll need to use real UEFI hardware to test this.
@@ -482,12 +482,12 @@ Now that we've covered how to support BIOS, UEFI, or both, it's time to put ever
 
 [dependencies]
 bootloader = 0.11.0
-bootloader-x86_64-bios-boot-sector = 0.11.0
-bootloader-x86_64-bios-common = 0.11.0
-bootloader-x86_64-bios-stage-2 = 0.11.0
-bootloader-x86_64-bios-stage-3 = 0.11.0
-bootloader-x86_64-bios-stage-4 = 0.11.0
-bootloader-x86_64-uefi = 0.11.0
+bootloader-x86_64-bios-boot-sector = "0.11.0"
+bootloader-x86_64-bios-common = "0.11.0"
+bootloader-x86_64-bios-stage-2 = "0.11.0"
+bootloader-x86_64-bios-stage-3 = "0.11.0"
+bootloader-x86_64-bios-stage-4 = "0.11.0"
+bootloader-x86_64-uefi = "0.11.0"
 ```
 
 Once all dependencies are accounted for, it's time to put everything together:
