@@ -250,7 +250,7 @@ In this section, we will learn how to combine the [minimal kernel] we created in
 
 Since bootloaders quite complex on their own, we won't create our own bootloader here (but we are planning a separate series of posts on this).
 Instead, we will boot our kernel using the [`bootloader`] crate.
-This crate is subdivided into multiple crates to support both BIOS (via the multitude of `bootloader-x86_64-bios-*` sub-crates) and UEFI (via the `bootloader-x86_64-uefi` sub-crate) booting, provide all the necessary system information we need (via the `bootloader_api` sub-crate), and creates a reasonable default execution environment for our kernel.
+This crate is subdivided into multiple crates to support both BIOS (via the multitude of `bootloader-x86_64-bios-*` sub-crates) and UEFI (via the `bootloader-x86_64-uefi` sub-crate) booting, provide all the necessary system information we need (via the `bootloader_api` sub-crate), and create a reasonable default execution environment for our kernel.
 This way, we can focus on the actual kernel design in the following posts instead of spending a lot of time on system initialization.
 
 In order to use this crate in our kernel, we need to add a dependency on `bootloader_api`:
