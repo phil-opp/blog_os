@@ -250,10 +250,10 @@ In this section, we will learn how to combine the [minimal kernel] we created in
 
 Since bootloaders quite complex on their own, we won't create our own bootloader here (but we are planning a separate series of posts on this).
 Instead, we will boot our kernel using the [`bootloader`] crate.
-This crate is subdivided into multiple crates to support both BIOS (via the multitude of `bootloader-x86_64-bios-*` sub-crates) and UEFI (via the `bootloader-x86_64-uefi` sub-crate) booting, provide all the necessary system information we need (via the `bootloader_api` sub-crate), and create a reasonable default execution environment for our kernel.
+This crate supports both BIOS and UEFI booting and and creates a reasonable default execution environment for our kernel. 
 This way, we can focus on the actual kernel design in the following posts instead of spending a lot of time on system initialization.
 
-In order to use this crate in our kernel, we need to add a dependency on `bootloader_api`:
+In order to use this crate in our kernel, we need to add a dependency on `bootloader_api` which provides all the necessary information we need to allow our kernel to function:
 
 [`bootloader`]: https://crates.io/crates/bootloader
 
@@ -278,16 +278,16 @@ Before we look into the bootable disk image creation, we update need to update o
 As we already mentioned above, bootloaders commonly pass additional system information when invoking the kernel, such as the amount of available memory.
 The `bootloader` crate also follows this convention, so we need to update our `_start` entry point to expect an additional argument.
 
-The [`bootloader` documentation][`BootInfo`] specifies that a kernel entry point should have the following signature:
+The [`bootloader_api` documentation][`BootInfo`] specifies that a kernel entry point should have the following signature:
 
-[`BootInfo`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.BootInfo.html
+[`BootInfo`]: https://docs.rs/bootloader_api/0.11.0/bootloader_api/info/struct.BootInfo.html
 
 ```rust
 extern "C" fn(boot_info: &'static mut bootloader::BootInfo) -> ! { ...
 }
 ```
 
-The only difference to our `_start` entry point is the additional `boot_info` argument, which is passed by the `bootloader` crate.
+The only difference to our `_start` entry point is the additional `boot_info` argument, which is passed by the `bootloader_api` crate.
 This argument is a mutable reference to a [`bootloader::BootInfo`] type, which provides various information about the system.
 
 [`bootloader::BootInfo`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.BootInfo.html
@@ -343,7 +343,7 @@ After adjusting our entry point for the `bootloader` crate, we can now look into
 
 ### Creating a Disk Image
 
-The [docs of the `bootloader` crate][`bootloader` docs] describes how to create a bootable disk image for a kernel.
+The [docs of the `bootloader` crate][`bootloader` docs] describe how to create a bootable disk image for a kernel.
 The first step is to find the directory where cargo placed the source code of the `bootloader` dependency.
 Then, a special build command needs to be executed in that directory, passing the paths to the kernel binary and its `Cargo.toml` as arguments.
 This will result in multiple disk image files as output, which can be used to boot the kernel on BIOS and UEFI systems.
@@ -397,7 +397,7 @@ After this, you need to add an artifact dependency on your kernel from inside th
 # in boot/Cargo.toml
 
 [dependencies]
-blog_os = { path = "..", artifact = "bin", target = "x86_64-unknown-none" }
+kernel = { path = "..", artifact = "bin", target = "x86_64-unknown-none" }
 ```
 
 Finally, you need to add a dependency on the main `bootloader` crate. Previous versions used `bootloader_locator` instead, but now, thanks to artifact dependencies, that is no longer necessary.
@@ -441,53 +441,14 @@ This is important because the `BootInfo` type is not stable yet, so undefined be
 #### Building a Boot Image
 
 The next step is to actually build the boot image.
-From the [`bootloader` docs] we learn that the crate defines two completely unique bootloader objects: `BiosBoot` for BIOS and `UefiBoot` for UEFI.
-
-Each of these bootloader components has its own unique set of dependencies that need to also be depended on in order to work:
-
-##### BIOS
-In order to support BIOS booting, there are 5 additional dependencies that your `boot` crate needs to depend on:
-
-```toml
-# in boot/Cargo.toml
-
-[dependencies]
-bootloader-x86_64-bios-boot-sector = "0.11.0"
-bootloader-x86_64-bios-common = "0.11.0"
-bootloader-x86_64-bios-stage-2 = "0.11.0"
-bootloader-x86_64-bios-stage-3 = "0.11.0"
-bootloader-x86_64-bios-stage-4 = "0.11.0"
-```
-
-Each of these stages represents an important part of the boot process. The boot sector, as you'd probably guess, is where the BIOS looks on the disk to find bootable code; without it the BIOS won't know an OS exists on the disk. The `-common` crate contains all the APIs that all subsequent stages depend on. Stage 2 is what switches you to protected mode; without it, you're stuck in 16-bit emulation. Stage 3 defines the jump to long mode, and finally Stage 4 maps memory so the kernel can allocate a heap later on.
-
-##### UEFI
-Unlike BIOS, UEFI booting only has one additional dependency:
-
-```toml
-# in boot/Cargo.toml
-
-[dependencies]
-bootloader-x86_64-uefi = "0.11.0"
-```
-
-This is because UEFI supports booting directly into long mode. This completely eliminates the need for a real-to-protected-to-long-mode trampoline, and it supports this by default if the bootloader is run as a UEFI application — which it is in the case of the `bootloader` crate. However, QEMU needs additional setup to support emulating UEFI, as we will explain below, so until we go over that, you'll need to use real UEFI hardware to test this.
-
-##### Implementation
-
-Now that we've covered how to support BIOS, UEFI, or both, it's time to put everything together. To keep it simple, we support both:
+From the [`bootloader` docs] we learn that the crate defines two completely unique bootloader objects: `BiosBoot` for BIOS and `UefiBoot` for UEFI. To keep it simple, we will support both, although it's possible to choose which to exclusively support later to keep your workflow streamlined as your kernel becomes more complex.
 
 ```toml
 # in boot/Cargo.toml
 
 [dependencies]
 bootloader = "0.11.0"
-bootloader-x86_64-bios-boot-sector = "0.11.0"
-bootloader-x86_64-bios-common = "0.11.0"
-bootloader-x86_64-bios-stage-2 = "0.11.0"
-bootloader-x86_64-bios-stage-3 = "0.11.0"
-bootloader-x86_64-bios-stage-4 = "0.11.0"
-bootloader-x86_64-uefi = "0.11.0"
+kernel = { path = "..", artifact = "bin", target = "x86_64-unknown-none" }
 ```
 
 Once all dependencies are accounted for, it's time to put everything together:
@@ -532,7 +493,7 @@ After creating the `UefiBoot` and  `BiosBoot` types using the `CARGO_BIN_FILE_KE
 
 #### Filling in the Blanks
 
-We still need to fill in the paths we marked as `todo!` above. Since we already started with the kernel binary earlier using the `env!()` builtin, we can now use it as a reference point for determining all the others:
+We still need to fill in the paths we marked as `todo!` above. Like with the kernel binary, we can also use the `env!()` builtin for this, since another environment variable can also be used as a reference point for determining the filenames for the disk images:
 
 ```rust
 // in `main` in boot/src/main.rs
