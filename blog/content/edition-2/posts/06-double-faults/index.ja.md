@@ -275,7 +275,7 @@ Rustの定数評価機はこの初期化をコンパイル時に行うことが�
 #### TSSを読み込む
 新しいTSSをつくったので、CPUにそれを使うように教える方法が必要です。残念ながら、これはちょっと面倒くさいです。なぜならTSSは（歴史的な理由で）セグメンテーションシステムを使うためです。テーブルを直接読み込むのではなく、新しいセグメントディスクリプタを[グローバルディスクリプタテーブル]（GDT: Global Descriptor Table）に追加する必要があります。そうすると各自のGDTインデックスで[`ltr`命令]を呼び出すことで私達のTSSを読み込むことができます。
 
-[グローバルディスクリプタテーブル]: https://web.archive.org/web/20190217233448/https://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
+[グローバルディスクリプタテーブル]:https://wiki.osdev.org/Global_Descriptor_Table
 [`ltr`命令]: https://www.felixcloutier.com/x86/ltr
 
 ### グローバルディスクリプタテーブル

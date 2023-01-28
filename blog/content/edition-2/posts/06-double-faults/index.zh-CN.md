@@ -282,7 +282,7 @@ lazy_static! {
 #### 加载TSS
 我们已经创建了一个TSS，现在的问题就是怎么让CPU使用它。不幸的是这事有点繁琐，因为TSS用到了分段系统（历史原因）。但我们可以不直接加载，而是在[全局描述符表][Global Descriptor Table]（GDT）中添加一个段描述符，然后我们就可以通过[`ltr` 指令][`ltr` instruction]加上GDT序号加载我们的TSS。（这也是为什么我们将模块取名为 `gdt`。）
 
-[Global Descriptor Table]: https://web.archive.org/web/20190217233448/https://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
+[Global Descriptor Table]:https://wiki.osdev.org/Global_Descriptor_Table
 [`ltr` instruction]: https://www.felixcloutier.com/x86/ltr
 
 ### 全局描述符表

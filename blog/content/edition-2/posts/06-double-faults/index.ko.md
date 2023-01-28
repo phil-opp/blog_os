@@ -278,7 +278,7 @@ Rust의 const evaluator가 위와 같은 TSS의 초기화를 컴파일 중에 �
 #### TSS 불러오기
 새로운 TSS도 만들었으니, 이제 CPU에게 이 TSS를 쓰도록 지시할 방법이 필요합니다. TSS가 역사적 이유로 인해 세그멘테이션 (segmentation) 시스템을 사용하는 탓에, CPU에 TSS를 쓰도록 지시하는 과정이 꽤 번거롭습니다. TSS를 직접 불러오는 대신, [전역 서술자 테이블 (Global Descriptor Table; GDT)][Global Descriptor Table]을 가리키는 새로운 세그먼트 서술자 (segment descriptor)를 추가해야 합니다. 그 후 [`ltr` 명령어][`ltr` instruction]에 GDT 안에서의 TSS의 인덱스를 주고 호출하여 TSS를 불러올 수 있습니다. (이것이 모듈 이름을 `gdt`로 설정한 이유입니다.)
 
-[Global Descriptor Table]: https://web.archive.org/web/20190217233448/https://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
+[Global Descriptor Table]:https://wiki.osdev.org/Global_Descriptor_Table
 [`ltr` instruction]: https://www.felixcloutier.com/x86/ltr
 
 ### 전역 서술자 테이블 (Global Descriptor Table)

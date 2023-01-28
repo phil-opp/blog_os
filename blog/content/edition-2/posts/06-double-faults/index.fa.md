@@ -286,7 +286,7 @@ lazy_static! {
 
 اکنون که TSS جدیدی ایجاد کردیم، به روشی نیاز داریم که به CPU بگوییم باید از آن استفاده کند. متأسفانه این کمی دشوار است، زیرا TSS به دلایل تاریخی از سیستم سگمنت‌بندی (ترجمه: segmentation) استفاده می‌کند. به جای بارگذاری مستقیم جدول، باید توصیفگر سگمنت جدیدی را به [جدول توصیف‌گر سراسری] \(Global Descriptor Table: GDT) اضافه کنیم. سپس می‌توانیم TSS خود را با فراخوانی [دستور `ltr`] با اندیس GDT مربوطه بارگذاری کنیم. (دلیل این‌که نام ماژول را `gdt` گذاشتیم نیز همین بود).
 
-[جدول توصیف‌گر سراسری]: https://web.archive.org/web/20190217233448/https://www.flingos.co.uk/docs/reference/Global-Descriptor-Table/
+[جدول توصیف‌گر سراسری]:https://wiki.osdev.org/Global_Descriptor_Table
 [دستور `ltr`]: https://www.felixcloutier.com/x86/ltr
 
 ### جدول توصیف‌گر سراسری
