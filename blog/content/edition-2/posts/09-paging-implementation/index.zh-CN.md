@@ -81,7 +81,7 @@ translation_contributors = ["weijiew"]
 
 这种方法仍然有一个缺点，即每当我们创建一个新的页表时，我们都需要创建一个新的映射。另外，它不允许访问其他地址空间的页表，这在创建新进程时是很有用的。
 
-### 映射完整的物理内存
+### 映射完整物理内存
 
 我们可以通过**映射完整的物理**内存来解决这些问题，而不是只映射页表框架。
 
@@ -129,7 +129,7 @@ translation_contributors = ["weijiew"]
 
 与[本文开头的例子]的唯一区别是在4级表中的索引`511`处增加了一个条目，它被映射到物理帧`4 KiB`，即4级表本身的帧。
 
-[本文开头的例子]: #访问页表
+[本文开头的例子]:#访问页表
 
 通过让CPU跟随这个条目进行翻译，它不会到达3级表，而是再次到达同一个4级表。这类似于一个调用自身的递归函数，因此这个表被称为 _递归页表_ 。重要的是，CPU假定4级表的每个条目都指向3级表，所以它现在把4级表当作3级表。这是因为所有级别的表在x86_64上都有完全相同的布局。
 
@@ -282,7 +282,7 @@ frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
 
 [cargo features]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 
-- `map_physical_memory` 功能将某处完整的物理内存映射到虚拟地址空间。因此，内核可以访问所有的物理内存，并且可以遵循[_映射完整的物理内存_](#映射完整的物理内存)的方法。
+- `map_physical_memory` 功能将某处完整的物理内存映射到虚拟地址空间。因此，内核可以访问所有的物理内存，并且可以遵循[_映射完整物理内存_](#映射完整物理内存)的方法。
 - 有了 "recursive_page_table "功能，bootloader会递归地映射4级page table的一个条目。这允许内核访问页表，如[_递归页表_](#递归页表)部分所述。
 
 我们为我们的内核选择了第一种方法，因为它很简单，与平台无关，而且更强大（它还允许访问非页表框架）。为了启用所需的引导程序支持，我们在 "引导程序 "的依赖中加入了 "map_physical_memory"功能。
@@ -704,7 +704,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 [`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
 [`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html
 
-#### `create_example_mapping`函数
+####  create_example_mapping 函数
 
 我们实现的第一步是创建一个新的`create_example_mapping`函数，将一个给定的虚拟页映射到`0xb8000`，VGA文本缓冲区的物理帧。我们选择这个帧是因为它允许我们很容易地测试映射是否被正确创建。我们只需要写到新映射的页面，看看是否看到写的内容出现在屏幕上。
 
@@ -890,7 +890,7 @@ impl BootInfoFrameAllocator {
 
 该结构有两个字段。一个是对bootloader传递的内存 map 的 `'static`  引用，一个是跟踪分配器应该返回的下一帧的 `next`字段。
 
-正如我们在[_Boot Information_](#启动信息)部分所解释的，内存图是由 BIOS/UEFI 固件提供的。它只能在启动过程的早期被查询，所以引导程序已经为我们调用了相应的函数。内存地图由[`MemoryRegion`]结构列表组成，其中包含每个内存区域的起始地址、长度和类型（如未使用、保留等）。
+正如我们在[_启动信息_](#启动信息)部分所解释的，内存图是由 BIOS/UEFI 固件提供的。它只能在启动过程的早期被查询，所以引导程序已经为我们调用了相应的函数。内存地图由[`MemoryRegion`]结构列表组成，其中包含每个内存区域的起始地址、长度和类型（如未使用、保留等）。
 
 `init`函数用一个给定的内存映射初始化一个`BootInfoFrameAllocator`。`next`字段被初始化为`0`，并将在每次分配帧时增加，以避免两次返回相同的帧。由于我们不知道内存映射的可用帧是否已经在其他地方被使用，我们的`init`函数必须是`不安全的`，以要求调用者提供额外的保证。
 
@@ -992,7 +992,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 虽然我们的`create_example_mapping`函数只是一些示例代码，但我们现在能够为任意的页面创建新的映射。这对于分配内存或在未来的文章中实现多线程是至关重要的。
 
-此时，我们应该再次删除`create_example_mapping`函数，以避免意外地调用未定义的行为，正如[上面](#`create_example_mapping`函数)所解释的那样。
+此时，我们应该再次删除`create_example_mapping`函数，以避免意外地调用未定义的行为，正如[上面](#create_example_mapping 函数)所解释的那样。
 
 ## 总结
 
