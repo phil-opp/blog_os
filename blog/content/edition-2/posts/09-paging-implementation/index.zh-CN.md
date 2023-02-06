@@ -284,7 +284,7 @@ frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
 [cargo features]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 
 - `map_physical_memory` 功能将某处完整的物理内存映射到虚拟地址空间。因此，内核可以访问所有的物理内存，并且可以遵循[_映射完整物理内存_](#ying-she-wan-zheng-de-wu-li-nei-cun)的方法。
-- 有了 "recursive_page_table "功能，bootloader会递归地映射4级page table的一个条目。这允许内核访问页表，如[_递归页表_](#recursive-page-tables)部分所述。
+- 有了 "recursive_page_table "功能，bootloader会递归地映射4级page table的一个条目。这允许内核访问页表，如[_递归页表_](#di-gui-ye-biao)部分所述。
 
 我们为我们的内核选择了第一种方法，因为它很简单，与平台无关，而且更强大（它还允许访问非页表框架）。为了启用所需的引导程序支持，我们在 "引导程序 "的依赖中加入了 "map_physical_memory"功能。
 
@@ -623,7 +623,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 [`translate_addr`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
 [`translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
 
-特质只定义接口，不提供任何实现。`x86_64`板块目前提供了三种类型来实现不同要求的特征。[`OffsetPageTable`] 类型假设完整的物理内存被映射到虚拟地址空间的某个偏移处。[`MappedPageTable']更灵活一些。它只要求每个页表帧在一个可计算的地址处被映射到虚拟地址空间。最后，[`递归页表`]类型可以用来通过[递归页表](#recursive-page-tables)访问页表框架。
+特质只定义接口，不提供任何实现。`x86_64`板块目前提供了三种类型来实现不同要求的特征。[`OffsetPageTable`] 类型假设完整的物理内存被映射到虚拟地址空间的某个偏移处。[`MappedPageTable']更灵活一些。它只要求每个页表帧在一个可计算的地址处被映射到虚拟地址空间。最后，[递归页表]类型可以用来通过[递归页表](#di-gui-ye-biao)访问页表框架。
 
 [`OffsetPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
 [`MappedPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MappedPageTable.html
