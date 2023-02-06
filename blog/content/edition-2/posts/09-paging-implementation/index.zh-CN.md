@@ -42,7 +42,7 @@ translation_contributors = ["weijiew"]
 
 为了实现这个方法，我们需要 bootloader 的支持，所以首先要配置它。之后将实现一个遍历页表层次结构的函数，以便将虚拟地址转换为物理地址。最后，我们学习如何在页表中创建新的映射，以及如何为创建新的页表找到未使用的内存框。
 
-## Accessing Page Tables
+## 访问页表
 
 从内核中访问页表并不像它看起来那么容易。为了理解这个问题，让我们再看一下上一篇文章中的4级页表层次结构的例子。
 
@@ -81,9 +81,9 @@ translation_contributors = ["weijiew"]
 
 这种方法仍然有一个缺点，即每当我们创建一个新的页表时，我们都需要创建一个新的映射。另外，它不允许访问其他地址空间的页表，这在创建新进程时是很有用的。
 
-### Map the Complete Physical Memory
+### 映射完整的物理内存
 
-我们可以通过**映射完整的物理**内存来解决这些问题，而不是只映射页表框架。
+我们可以通过**映射完整的物理内存**来解决这些问题，而不是只映射页表框架。
 
 ![与偏移量映射的数字相同，但每个物理帧都有一个映射（在10 TiB + X），而不是只有页表帧。](map-complete-physical-memory.svg)
 
@@ -119,7 +119,7 @@ translation_contributors = ["weijiew"]
 
 这种方法重复使用相同的512个虚拟页来创建映射，因此只需要4&nbsp;KiB的物理内存。缺点是有点麻烦，尤其是一个新的映射可能需要对多个表层进行修改，这意味着我们需要多次重复上述过程。
 
-### Recursive Page Tables
+### 递归页表
 
 另一种有趣的方法，根本不需要额外的页表，就是**映射页表的递归**。这种方法背后的想法是将一个条目从第4级页面表映射到第4级表本身。通过这样做，我们有效地保留了虚拟地址空间的一部分，并将所有当前和未来的页表框架映射到该空间。
 
@@ -129,7 +129,7 @@ translation_contributors = ["weijiew"]
 
 与[本文开头的例子]的唯一区别是在4级表中的索引`511`处增加了一个条目，它被映射到物理帧`4 KiB`，即4级表本身的帧。
 
-[本文开头的例子]: #accessing-page-tables
+[本文开头的例子]: #fang-wen-ye-biao
 
 
 通过让CPU跟随这个条目进行翻译，它不会到达3级表，而是再次到达同一个4级表。这类似于一个调用自身的递归函数，因此这个表被称为 _递归页表_ 。重要的是，CPU假定4级表的每个条目都指向3级表，所以它现在把4级表当作3级表。这是因为所有级别的表在x86_64上都有完全相同的布局。
@@ -283,7 +283,7 @@ frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
 
 [cargo features]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 
-- `map_physical_memory` 功能将某处完整的物理内存映射到虚拟地址空间。因此，内核可以访问所有的物理内存，并且可以遵循[_映射完整物理内存_](#map-the-complete-physical-memory)的方法。
+- `map_physical_memory` 功能将某处完整的物理内存映射到虚拟地址空间。因此，内核可以访问所有的物理内存，并且可以遵循[_映射完整物理内存_](#ying-she-wan-zheng-de-wu-li-nei-cun)的方法。
 - 有了 "recursive_page_table "功能，bootloader会递归地映射4级page table的一个条目。这允许内核访问页表，如[_递归页表_](#recursive-page-tables)部分所述。
 
 我们为我们的内核选择了第一种方法，因为它很简单，与平台无关，而且更强大（它还允许访问非页表框架）。为了启用所需的引导程序支持，我们在 "引导程序 "的依赖中加入了 "map_physical_memory"功能。
@@ -295,7 +295,7 @@ bootloader = { version = "0.9.23", features = ["map_physical_memory"]}
 
 启用这个功能后，bootloader 将整个物理内存映射到一些未使用的虚拟地址范围。为了将虚拟地址范围传达给我们的内核，bootloader 传递了一个 _启动信息_ 结构。
 
-### Boot Information
+### 启动信息
 
 
 Bootloader "板块定义了一个[`BootInfo`]结构，包含了它传递给我们内核的所有信息。这个结构还处于早期阶段，所以在更新到未来的[semver-incompatible]bootloader版本时，可能会出现一些故障。在启用 "map_physical_memory "功能后，它目前有两个字段 "memory_map "和 "physical_memory_offset"。
@@ -322,7 +322,7 @@ pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // new argument
 
 以前省去这个参数并不是什么问题，因为x86_64的调用惯例在CPU寄存器中传递第一个参数。因此，当这个参数没有被声明时，它被简单地忽略了。然而，如果我们不小心使用了一个错误的参数类型，那将是一个问题，因为编译器不知道我们入口点函数的正确类型签名。
 
-### The `entry_point` Macro
+### `entry_point` 宏
 
 由于我们的`_start`函数是在外部从引导程序中调用的，所以没有对我们的函数签名进行检查。这意味着我们可以让它接受任意参数而不出现任何编译错误，但在运行时它会失败或导致未定义行为。
 
@@ -892,7 +892,7 @@ impl BootInfoFrameAllocator {
 
 该结构有两个字段。一个是对bootloader传递的内存 map 的 `'static`  引用，一个是跟踪分配器应该返回的下一帧的 `next`字段。
 
-正如我们在[_启动信息_](#boot-information)部分所解释的，内存图是由 BIOS/UEFI 固件提供的。它只能在启动过程的早期被查询，所以引导程序已经为我们调用了相应的函数。内存地图由[`MemoryRegion`]结构列表组成，其中包含每个内存区域的起始地址、长度和类型（如未使用、保留等）。
+正如我们在[_启动信息_](#qi-dong-xin-xi)部分所解释的，内存图是由 BIOS/UEFI 固件提供的。它只能在启动过程的早期被查询，所以引导程序已经为我们调用了相应的函数。内存地图由[`MemoryRegion`]结构列表组成，其中包含每个内存区域的起始地址、长度和类型（如未使用、保留等）。
 
 `init`函数用一个给定的内存映射初始化一个`BootInfoFrameAllocator`。`next`字段被初始化为`0`，并将在每次分配帧时增加，以避免两次返回相同的帧。由于我们不知道内存映射的可用帧是否已经在其他地方被使用，我们的`init`函数必须是`不安全的`，以要求调用者提供额外的保证。
 
