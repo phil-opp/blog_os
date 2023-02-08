@@ -30,7 +30,7 @@ translation_contributors = ["weijiew"]
 
 ## 介绍
 
-上一篇[文章]已经对分页的概念做了介绍。通过比较分页和分段来证明分页的优势，然后解释了分页和页表如何工作，最后介绍了`x86_64`的4级页表设计。此时 bootloader 已经为内核建立了一个页表层次结构，这意味着内核已经在虚拟地址上运行。这样做提高了安全性，因为非法的内存访问会导致页面故障异常，而不是修改任意的物理内存。
+[前文]已经对分页的概念做了介绍。通过比较分页和分段来证明分页的优势，然后解释了分页和页表如何工作，最后介绍了`x86_64`的4级页表设计。此时 bootloader 已经为内核建立了一个页表层次结构，这意味着内核已经在虚拟地址上运行。这样做提高了安全性，因为非法的内存访问会导致页面故障异常，而不是修改任意的物理内存。
 
 [前文]: @/edition-2/posts/08-paging-introduction/index.md
 
@@ -54,13 +54,13 @@ translation_contributors = ["weijiew"]
 
 因此，为了访问页表框架，我们需要将一些虚拟页面映射到它们。有不同的方法来创建这些映射，这些映射都允许我们访问任意的页表框架。
 
-### Identity Mapping
+### 直接映射
 
 一个简单的解决方案是**所有页表的身份映射**。
 
 ![一个虚拟和一个物理地址空间，各种虚拟页以相同的地址映射到物理帧上](identity-mapped-page-tables.svg)
 
-在这个例子中，我们看到各种 Identity Mapping 的页表框架。页表的物理地址也是有效的虚拟地址，这样我们就可以很容易地访问从CR3寄存器开始的各级页表。
+在这个例子中，我们看到各种直接映射的页表框架。页表的物理地址也是有效的虚拟地址，这样我们就可以很容易地访问从CR3寄存器开始的各级页表。
 
 然而，它使虚拟地址空间变得杂乱无章，并使寻找较大尺寸的连续内存区域更加困难。例如，想象一下，我们想在上述图形中创建一个大小为1000&nbsp;KiB的虚拟内存区域，例如： [memory-mapping a file] . 我们不能在`28 KiB`处开始区域，因为它将与`1004 KiB`处已经映射的页面相撞。所以我们必须进一步寻找，直到找到一个足够大的未映射区域，例如在`1008 KiB`。这是一个类似于[segmentation]的碎片化问题。
 
@@ -71,11 +71,11 @@ translation_contributors = ["weijiew"]
 
 ### 映射一个固定的偏移
 
-为了避免虚拟地址空间的杂乱问题，我们可以**使用一个单独的内存区域来进行页表映射**。因此，我们不是以 identity mapping 页表帧，而是以虚拟地址空间中的固定偏移量来映射它们。例如，偏移量可以是10&nbsp;TiB。
+为了避免虚拟地址空间的杂乱问题，我们可以**使用一个单独的内存区域来进行页表映射**。因此，我们不是以直接映射页表帧，而是以虚拟地址空间中的固定偏移量来映射它们。例如，偏移量可以是10&nbsp;TiB。
 
-![与 identity mapping 的数字相同，但每个映射的虚拟页偏移了10TiB。](page-tables-mapped-at-offset.svg)
+![与直接映射的数字相同，但每个映射的虚拟页偏移了10TiB。](page-tables-mapped-at-offset.svg)
 
-通过使用范围为`10 TiB...（10 TiB + 物理内存大小）`的虚拟内存专门用于页表映射，避免了 identity mapping 的碰撞问题。只有当虚拟地址空间比物理内存大小大得多时，保留如此大的虚拟地址空间区域才有可能。这在x86_64上不是一个问题，因为48位的地址空间有256&nbsp;TiB大。
+通过使用范围为`10 TiB...（10 TiB + 物理内存大小）`的虚拟内存专门用于页表映射，避免了直接映射的碰撞问题。只有当虚拟地址空间比物理内存大小大得多时，保留如此大的虚拟地址空间区域才有可能。这在x86_64上不是一个问题，因为48位的地址空间有256&nbsp;TiB大。
 
 这种方法仍然有一个缺点，即每当我们创建一个新的页表时，我们都需要创建一个新的映射。另外，它不允许访问其他地址空间的页表，这在创建新进程时是很有用的。
 
@@ -101,7 +101,7 @@ translation_contributors = ["weijiew"]
 
 该图中的第1级表控制着虚拟地址空间的前2&nbsp;MiB。这是因为它可以通过从CR3寄存器开始，按照第4级、第3级和第2级页面表中的第0个条目到达。索引为`8`的条目将地址为`32 KiB`的虚拟页映射到地址为`32 KiB`的物理帧，从而对1级表本身进行身份映射。图形显示了这种 identity-mapping ，在 "32 KiB "处有一个水平箭头。
 
-通过写到 identity-mapped 的1级表，我们的内核可以创建多达511个临时映射（512减去 identity mapping 需要的条目）。在上面的例子中，内核创建了两个临时映射。
+通过写到 identity-mapped 的1级表，我们的内核可以创建多达511个临时映射（512减去直接映射需要的条目）。在上面的例子中，内核创建了两个临时映射。
 
 - 通过将第1级表的第0条映射到地址为`24 KiB`的帧，它创建了一个`0 KiB`的虚拟页到第2级页表的物理帧的临时映射，虚线箭头所示。
 - 通过将第1级表的第9条映射到地址为`4 KiB`的帧，它创建了一个`36 KiB`的虚拟页与第4级页表的物理帧的临时映射，虚线箭头所示。
@@ -612,7 +612,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 抽象的基础是两个特征，它们定义了各种页表映射功能。
 
 - [`Mapper`] 特质在页面大小上是通用的，并提供对页面进行操作的函数。例如[`translate_page`]，它将一个给定的页面翻译成相同大小的框架，以及[`map_to`]，它在页面表中创建一个新的映射。
-- `Translate`]特性提供了与多个页面大小有关的函数，如[`translate_addr`]或一般[`translate`]。
+- [`Translate`]特性提供了与多个页面大小有关的函数，如[`translate_addr`]或一般[`translate`]。
 
 [`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
 [`translate_page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
@@ -621,7 +621,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 [`translate_addr`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
 [`translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
 
-特质只定义接口，不提供任何实现。`x86_64`板块目前提供了三种类型来实现不同要求的特征。[`OffsetPageTable`] 类型假设完整的物理内存被映射到虚拟地址空间的某个偏移处。[`MappedPageTable']更灵活一些。它只要求每个页表帧在一个可计算的地址处被映射到虚拟地址空间。最后，[递归页表]类型可以用来通过[递归页表](#di-gui-ye-biao)访问页表框架。
+特质只定义接口，不提供任何实现。`x86_64`板块目前提供了三种类型来实现不同要求的特征。[`OffsetPageTable`] 类型假设完整的物理内存被映射到虚拟地址空间的某个偏移处。[`MappedPageTable`]更灵活一些。它只要求每个页表帧在一个可计算的地址处被映射到虚拟地址空间。最后，[递归页表]类型可以用来通过[递归页表](#di-gui-ye-biao)访问页表框架。
 
 [`OffsetPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
 [`MappedPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MappedPageTable.html
@@ -921,10 +921,10 @@ impl BootInfoFrameAllocator {
 }
 ```
 
-这个函数使用迭代器组合方法将初始的`MemoryMap'转化为可用的物理帧的迭代器。
+这个函数使用迭代器组合方法将初始的`MemoryMap`转化为可用的物理帧的迭代器。
 
 - 首先，我们调用`iter`方法，将内存映射转换为[`MemoryRegion`]s的迭代器。
-- 然后我们使用[`filter`]方法跳过任何保留或其他不可用的区域。Bootloader为它创建的所有映射更新了内存地图，所以被我们的内核使用的帧（代码、数据或堆栈）或存储启动信息的帧已经被标记为`InUse'或类似的。因此，我们可以确定 "可使用 "的帧没有在其他地方使用。
+- 然后我们使用[`filter`]方法跳过任何保留或其他不可用的区域。Bootloader为它创建的所有映射更新了内存地图，所以被我们的内核使用的帧（代码、数据或堆栈）或存储启动信息的帧已经被标记为`InUse`或类似的。因此，我们可以确定 "可使用" 的帧没有在其他地方使用。
 - 之后，我们使用[`map`]组合器和Rust的[range语法]将我们的内存区域迭代器转化为地址范围的迭代器。
 - 接下来，我们使用[`flat_map`]将地址范围转化为帧起始地址的迭代器，使用[`step_by`]选择每4096个地址。由于4096字节（=4&nbsp;KiB）是页面大小，我们得到了每个帧的起始地址。Bootloader对所有可用的内存区域进行页对齐，所以我们在这里不需要任何对齐或舍入代码。通过使用[`flat_map`]而不是`map`，我们得到一个`Iterator<Item = u64>`而不是`Iterator<Item = Iterator<Item = u64>`。
 - 最后，我们将起始地址转换为 `PhysFrame` 类型，以构建一个 `Iterator<Item = PhysFrame>`。
@@ -996,11 +996,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 ## 总结
 
-在这篇文章中，我们了解了访问页表物理框架的不同技术，包括 identity mapping 、完整物理内存的映射、临时映射和递归页表。我们选择了映射完整的物理内存，因为它简单、可移植，而且功能强大。
+在这篇文章中，我们了解了访问页表物理框架的不同技术，包括直接映射、完整物理内存的映射、临时映射和递归页表。我们选择了映射完整的物理内存，因为它简单、可移植，而且功能强大。
 
 我们不能在没有页表访问的情况下从我们的内核映射物理内存，所以我们需要bootloader的支持。`bootloader`板块支持通过可选的 cargo 板块功能创建所需的映射。它以"&BootInfo "参数的形式将所需信息传递给我们的内核。
 
-对于我们的实现，我们首先手动遍历页表以实现翻译功能，然后使用`x86_64'板块的`MappedPageTable`类型。我们还学习了如何在页表中创建新的映射，以及如何在引导程序传递的内存映射之上创建必要的 "FrameAllocator"。
+对于我们的实现，我们首先手动遍历页表以实现翻译功能，然后使用`x86_64`板块的`MappedPageTable`类型。我们还学习了如何在页表中创建新的映射，以及如何在引导程序传递的内存映射之上创建必要的 "FrameAllocator"。
 
 ## 下篇文章是什么？
 
