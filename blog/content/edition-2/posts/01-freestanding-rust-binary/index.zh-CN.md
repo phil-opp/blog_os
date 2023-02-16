@@ -236,7 +236,7 @@ rustup target add thumbv7em-none-eabihf
 cargo build --target thumbv7em-none-eabihf
 ```
 
-我们传递了 `--target` 参数，来为裸机目标系统**交叉编译**（[cross compile](https://en.wikipedia.org/wiki/Cross_compiler)）我们的程序。我们的目标并不包括操作系统，所以链接器不会试着链接 C 语言运行环境，因此构建过程成功会完成，不会产生链接器错误。
+我们传递了 `--target` 参数，来为裸机目标系统**交叉编译**（[cross compile](https://en.wikipedia.org/wiki/Cross_compiler)）我们的程序。我们的目标并不包括操作系统，所以链接器不会试着链接 C 语言运行环境，因此构建过程会成功完成，不会产生链接器错误。
 
 我们将使用这个方法编写自己的操作系统内核。我们不会编译到 `thumbv7em-none-eabihf`，而是使用描述 `x86_64` 环境的**自定义目标**（[custom target](https://doc.rust-lang.org/rustc/targets/custom.html)）。在下一篇文章中，我们将详细描述一些相关的细节。
 
@@ -424,7 +424,7 @@ use core::panic::PanicInfo;
 
 #[no_mangle] // 不重整函数名
 pub extern "C" fn _start() -> ! {
-    // 因为编译器会寻找一个名为 `_start` 的函数，所以这个函数就是入口点
+    // 因为链接器会寻找一个名为 `_start` 的函数，所以这个函数就是入口点
     // 默认命名为 `_start`
     loop {}
 }
