@@ -94,7 +94,7 @@ This bootloader is then responsible for multiple things:
 
 - **Loading the kernel from disk:** The bootloader has to determine the location of the kernel image on the disk and load it into memory.
 - **Initializing the CPU:** As noted above, all `x86_64` CPUs start up in a 16-bit [real mode] to be compatible with older operating systems.
-So in order to run current 64-bit operating systems, the bootloader needsn to switch the CPU from the 16-bit [real mode] first to the 32-bit [protected mode], and then to the 64-bit [long mode], where all CPU registers and the complete main memory are available.
+So in order to run current 64-bit operating systems, the bootloader needs to switch the CPU from the 16-bit [real mode] first to the 32-bit [protected mode], and then to the 64-bit [long mode], where all CPU registers and the complete main memory are available.
 - **Querying system information:** The third job of the bootloader is to query certain information from the BIOS and pass it to the OS kernel.
 This, for example, includes information about the available main memory and graphical output devices.
 - **Setting up an execution environment:** Kernels are typically stored as normal executable files (e.g. in the [ELF] or [PE] format), which require some loading procedure.
