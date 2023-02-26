@@ -179,13 +179,13 @@ translation_contributors = ["liuyuran"]
 
 下表总结了访问不同种类框架的地址结构。
 
-Virtual Address for | Address Structure ([octal])
-------------------- | -------------------------------
-Page                | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE`
-Level 1 Table Entry | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD`
-Level 2 Table Entry | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC`
-Level 3 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB`
-Level 4 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA`
+| Virtual Address for | Address Structure ([octal])      |
+| ------------------- | -------------------------------- |
+| Page                | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE` |
+| Level 1 Table Entry | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD` |
+| Level 2 Table Entry | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC` |
+| Level 3 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB` |
+| Level 4 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA` |
 
 [八进制]: https://en.wikipedia.org/wiki/Octal
 
