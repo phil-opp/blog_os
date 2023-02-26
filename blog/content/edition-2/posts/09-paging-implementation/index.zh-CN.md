@@ -10,7 +10,7 @@ translation_based_on_commit = "e56c635c13b61f052089ea6365be8422b5b28d15"
 # GitHub usernames of the people that translated this post
 translators = ["weijiew"]
 # GitHub usernames of the people that contributed to this translation
-translation_contributors = ["weijiew"]
+translation_contributors = ["liuyuran"]
 +++
 
 这篇文章展示了如何在我们的内核中实现分页支持。它首先探讨了使物理页表帧能够被内核访问的不同技术，并讨论了它们各自的优点和缺点。然后，它实现了一个地址转换功能和一个创建新映射的功能。
