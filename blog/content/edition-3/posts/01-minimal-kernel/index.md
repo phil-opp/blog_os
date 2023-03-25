@@ -26,12 +26,12 @@ The result is a minimal operating system kernel that forms the base for the foll
 This blog is openly developed on [GitHub].
 If you have any problems or questions, please open an issue there.
 You can also leave comments [at the bottom].
-The complete source code for this post can be found in the [`post-01`][post branch] branch.
+The complete source code for this post can be found in the [`post-3.1`][post branch] branch.
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
 <!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-01
+[post branch]: https://github.com/phil-opp/blog_os/tree/post-3.1
 
 <!-- toc -->
 
