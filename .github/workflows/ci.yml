@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "05 9 * * *" # every day at 9:05
+
+jobs:
+  check:
+    name: Check
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustup target add x86_64-unknown-none
+      - run: cargo check --target x86_64-unknown-none
+
+  test:
+    name: Test
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - run: rustup target add x86_64-unknown-none
+      - run: cargo build --target x86_64-unknown-none
+
+  fmt:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - run: rustup target add x86_64-unknown-none
+      - run: rustup component add clippy
+      - run: cargo clippy --target x86_64-unknown-none
