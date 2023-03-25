@@ -3,8 +3,9 @@
 
 use core::panic::PanicInfo;
 
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+bootloader_api::entry_point!(kernel_main);
+
+fn kernel_main(bootinfo: &'static mut bootloader_api::BootInfo) -> ! {
     loop {}
 }
 
