@@ -270,6 +270,15 @@ pre code {
     color: inherit;
     background-color: transparent;
 }
+pre mark {
+    // make highlights take the full width
+    display: block;
+    // use the code color (instead of black)
+    color: inherit;
+    // override the background color (instead of black)
+    background-color: rgba(0, 255, 0, 0.1) !important;
+}
+
 .highlight {
     margin-bottom: 1rem;
     border-radius: 4px;

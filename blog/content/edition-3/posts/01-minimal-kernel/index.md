@@ -102,7 +102,7 @@ You can compile your crate through `cargo build` and then run the compiled `kern
 Right now our crate implicitly links the standard library.
 Let's try to disable this by adding the [`no_std` attribute]:
 
-```rust
+```rust,hl_lines=3
 // main.rs
 
 #![no_std]
@@ -112,7 +112,7 @@ fn main() {
 }
 ```
 
-When we try to build it now (by running `cargo build`), the following error occurs:
+When we try to build it now (by running `cargo build`), the following errors occur:
 
 ```
 error: cannot find macro `println!` in this scope
@@ -127,8 +127,7 @@ error: language item required, but not found: `eh_personality`
 [...]
 ```
 
-There are multiple errors.
-The reason for the first one is that the [`println` macro] is part of the standard library, which we no longer include.
+The reason for the first error is that the [`println` macro] is part of the standard library, which we no longer include.
 So we can no longer print things.
 This makes sense, since `println` writes to [standard output], which is a special file descriptor provided by the operating system.
 
@@ -137,7 +136,7 @@ This makes sense, since `println` writes to [standard output], which is a specia
 
 So let's remove the printing and try again with an empty main function:
 
-```rust
+```rust,hl_lines=5
 // main.rs
 
 #![no_std]
@@ -158,14 +157,18 @@ The `println` error is gone, but the compiler is still missing a `#[panic_handle
 ### Panic Implementation
 
 The `panic_handler` attribute defines the function that the compiler should invoke when a [panic] occurs.
-The standard library provides its own panic handler function, but in a `no_std` environment we need to define it ourselves:
+The standard library provides its own panic handler function, but in a `no_std` environment we need to define one ourselves:
 
 [panic]: https://doc.rust-lang.org/stable/book/ch09-01-unrecoverable-errors-with-panic.html
 
-```rust
+```rust,hl_lines=3 9-13
 // in main.rs
 
 use core::panic::PanicInfo;
+
+#![no_std]
+
+fn main() {}
 
 /// This function is called on panic.
 #[panic_handler]
@@ -222,7 +225,7 @@ There are multiple ways to set the panic strategy, the easiest is to use [cargo 
 
 [cargo profiles]: https://doc.rust-lang.org/cargo/reference/profiles.html
 
-```toml
+```toml,hl_lines=3-7
 # in Cargo.toml
 
 [profile.dev]
@@ -235,9 +238,7 @@ panic = "abort"
 This sets the panic strategy to `abort` for both the `dev` profile (used for `cargo build`) and the `release` profile (used for `cargo build --release`).
 Now the `eh_personality` language item should no longer be required.
 
-
-Now we fixed both of the above errors.
-However, if we try to compile it now, another error occurs:
+When we try to compile our kernel now, a new error occurs:
 
 ```
 ❯ cargo build
@@ -284,13 +285,13 @@ You can see the target triple for your host system by running `rustc --version -
 [_target triple_]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
 
 ```
-rustc 1.66.0 (69f9c33d7 2022-12-12)
+rustc 1.68.1 (8460ca823 2023-03-20)
 binary: rustc
-commit-hash: 69f9c33d71c871fc16ac445211281c6e7a340943
-commit-date: 2022-12-12
+commit-hash: 8460ca823e8367a30dda430efda790588b8c84d3
+commit-date: 2023-03-20
 host: x86_64-unknown-linux-gnu
-release: 1.66.0
-LLVM version: 15.0.2
+release: 1.68.1
+LLVM version: 15.0.6
 ```
 
 The above output is from a `x86_64` Linux system.
@@ -339,7 +340,9 @@ We still get the error about a missing `start` language item because we're still
 
 To tell the Rust compiler that we don't want to use the normal entry point chain, we add the `#![no_main]` attribute.
 
-```rust
+```rust,hl_lines=4
+// main.rs
+
 #![no_std]
 #![no_main]
 
@@ -356,7 +359,9 @@ You might notice that we removed the `main` function.
 The reason is that a `main` doesn't make sense without an underlying runtime that calls it.
 Instead, we are now overwriting the operating system entry point with our own `_start` function:
 
-```rust
+```rust,hl_lines=3-6
+// in main.rs
+
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     loop {}
@@ -401,7 +406,8 @@ cargo build --target x86_64-unknown-none --release
 The compiled executable is placed at `target/x86_64-unknown-none/release/kernel` in this case.
 
 In the next post we will cover how to turn this kernel into a bootable disk image that can be run in a virtual machine or on real hardware.
-But before that, we will examine our executable to verify that it looks as expected.
+In the rest of this post, we will introduce some tools for examining our kernel executable.
+These tools are very useful for debugging future issues, so it's good to know about them.
 
 ## Useful Tools
 
@@ -411,8 +417,8 @@ In this section, we will examine our kernel executable using the [`objdump`], [`
 [`nm`]: https://man7.org/linux/man-pages/man1/nm.1.html
 [`size`]: https://man7.org/linux/man-pages/man1/size.1.html
 
-If you're on a UNIX system, you might already have the `nm`, `objdump`, and `strip` tools installed.
-Otherwise, you can use the LLVM binutils shipped by `rustup` through the [`cargo-binutils`] crate.
+If you're on a UNIX system, you might already have the above tools installed.
+Otherwise (and on Windows), you can use the LLVM binutils shipped by `rustup` through the [`cargo-binutils`] crate.
 To install it, run **`cargo install cargo-binutils`** and **`rustup component add llvm-tools-preview`**.
 Afterwards, you can run the tools through `rust-nm`, `rust-objdump`, and `rust-strip`.
 
@@ -425,26 +431,26 @@ To verify that it is properly exposed in the executable, we can run `nm` to list
 
 ```
 ❯ rust-nm target/x86_64-unknown-none/debug/kernel
-0000000000002218 d _DYNAMIC
-0000000000001210 T _start
+0000000000201120 T _start
 ```
 
 If we comment out the `_start` function or if we remove the `#[no_mangle]` attribute, the `_start` symbol is no longer there after recompiling:
 
 ```
 ❯ rust-nm target/x86_64-unknown-none/debug/kernel
-0000000000002218 d _DYNAMIC
 ```
+
+This way we can ensure that we set the `_start` function correctly.
 
 ### `objdump`
 
-The `objdump` tool can inspect different parts of executables that use the [ELF file format].
+The `objdump` tool can inspect different parts of executables that use the [ELF file format]. This is the file format that the `x86_64-unknown-none` target uses, so we can use `objdump` to inspect our kernel executable.
 
 [ELF file format]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 
 #### File Headers
 
-Upon other things, the ELF [file header] specifies the target architecture and the entry point address of the executable files.
+Among other things, the ELF [file header] specifies the target architecture and the entry point address of the executable files.
 To print the file header, we can use `objdump -f`:
 
 [file header]: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format#File_header
@@ -462,7 +468,7 @@ The start address specifies the memory address of our `_start` function.
 Here the function name `_start` becomes important.
 If we rename the function to something else (e.g., `_start_here`) and recompile, we see that no start address is set in the ELF file anymore:
 
-```
+```hl_lines=5
 ❯ rust-objdump -f target/x86_64-unknown-none/debug/kernel
 
 target/x86_64-unknown-none/debug/kernel:	file format elf64-x86-64
