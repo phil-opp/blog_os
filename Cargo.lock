@@ -3,5 +3,14 @@
 version = 3
 
 [[package]]
+name = "bootloader_api"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec2d46a2b93edb1383023db2a95fc9480847a6e137c60e214f3fb62727f028da"
+
+[[package]]
 name = "kernel"
 version = "0.1.0"
+dependencies = [
+ "bootloader_api",
+]
