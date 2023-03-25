@@ -1,23 +1,16 @@
-# Blog OS (Minimal Kernel)
+# Blog OS (Booting)
 
-[![Build Status](https://github.com/phil-opp/blog_os/workflows/Code/badge.svg?branch=post-3.1)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Code%22+branch%3Apost-3.1)
+[![Build Status](https://github.com/phil-opp/blog_os/workflows/Code/badge.svg?branch=post-3.2)](https://github.com/phil-opp/blog_os/actions?query=workflow%3A%22Code%22+branch%3Apost-3.2)
 
-This repository contains the source code for the [Minimal Kernel][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
+This repository contains the source code for the [Booting][post] post of the [Writing an OS in Rust](https://os.phil-opp.com) series.
 
-[post]: https://os.phil-opp.com/minimal-kernel
+[post]: https://os.phil-opp.com/booting
 
 **Check out the [master branch](https://github.com/phil-opp/blog_os) for more information.**
 
 ## Building
 
-- Install the `x86_64-unknown-none` target using rustup:
-  ```
-  rustup target add x86_64-unknown-none
-  ```
-- Build by running:
-  ```
-  cargo build --target x86_64-unknown-none
-  ```
+TODO
 
 ## License
 
