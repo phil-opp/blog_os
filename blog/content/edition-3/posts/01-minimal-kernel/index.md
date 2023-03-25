@@ -36,13 +36,16 @@ The complete source code for this post can be found in the [`post-3.1`][post bra
 <!-- toc -->
 
 ## Introduction
-To write an operating system kernel, we need code that does not depend on any operating system features.
-So we can't use threads, files, heap memory, the network, random numbers, standard output, or any other features requiring OS abstractions or specific hardware.
-Which makes sense, since we're trying to write our own OS and our own drivers.
+Kernels are the heart of an operating system.
+They provide all the fundamental building blocks that are required for building higher-level programs.
+Typical building blocks are threads, files, heap memory, timers, or sockets.
+Other important tasks of a kernel are the isolation of different programs and the multiplexing of resources.
 
-While this means that we can't use most of the [Rust standard library], there are still a lot of Rust features that we _can_ use.
+When writing an operating system kernel, we need to provide all of these building blocks ourselves.
+This means that we can't use most of the [Rust standard library].
+However, there are still a lot of Rust features that we _can_ use.
 For example, we can use [iterators], [closures], [pattern matching], [`Option`] and [`Result`], [string formatting], and of course the [ownership system].
-These features make it possible to write a kernel in a very expressive, high level way without worrying about [undefined behavior] or [memory safety].
+These features make it possible to write a kernel in a very expressive, high level way and worry less about [undefined behavior] or [memory safety].
 
 [`Option`]: https://doc.rust-lang.org/core/option/
 [`Result`]: https://doc.rust-lang.org/core/result/
@@ -55,7 +58,7 @@ These features make it possible to write a kernel in a very expressive, high lev
 [undefined behavior]: https://www.nayuki.io/page/undefined-behavior-in-c-and-cplusplus-programs
 [memory safety]: https://tonyarcieri.com/it-s-time-for-a-memory-safety-intervention
 
-In order to create a minimal OS kernel in Rust, we start by creating an executable that can be run without an underlying operating system.
+In this post, we create a minimal OS kernel that can be run without an underlying operating system.
 Such an executable is often called a “freestanding” or “bare-metal” executable.
 We then make this executable compatible with the early-boot environment of the `x86_64` architecture so that we can boot it as an operating system kernel.
 
