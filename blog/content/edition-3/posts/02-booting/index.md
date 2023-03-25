@@ -47,8 +47,8 @@ Afterwards it looks for a bootable disk and starts booting the operating system 
 [power-on self-test]: https://en.wikipedia.org/wiki/Power-on_self-test
 
 On x86, there are two firmware standards: the “Basic Input/Output System“ (**[BIOS]**) and the newer “Unified Extensible Firmware Interface” (**[UEFI]**).
-The BIOS standard is old and outdated, but simple and well-supported on any x86 machine since the 1980s.
-UEFI, in contrast, is more modern and has much more features, but also more complex.
+The BIOS standard is outdated and not standardized, but relatively simple and supported on almost any x86 machine since the 1980s.
+UEFI, in contrast, is more modern and has much more features, but also more complex and only runs on fairly recent hardware (built since ~2012).
 
 [BIOS]: https://en.wikipedia.org/wiki/BIOS
 [UEFI]: https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
@@ -116,8 +116,10 @@ Since it is not possible to do all that within the available 446 bytes, most boo
 
 Writing a BIOS bootloader is cumbersome as it requires assembly language and a lot of non insightful steps like _“write this magic value to this processor register”_.
 Therefore we don't cover bootloader creation in this post and instead use the existing [`bootloader`] crate to make our kernel bootable.
-If you are interested in building your own BIOS bootloader: Stay tuned, a set of posts on this topic is already planned! <!-- , check out our “_[Writing a Bootloader]_” posts, where we explain in detail how a bootloader is built.
--->
+
+(If you are interested in building your own BIOS bootloader, you can look through the [BIOS source code] of the `bootloader` crate on GitHub, which is mostly written in Rust and has only about 50 lines of assembly code.)
+
+[BIOS source code]: https://github.com/rust-osdev/bootloader/tree/main/bios
 
 #### The Future of BIOS
 
@@ -152,9 +154,7 @@ Thus, malware should be prevented from compromising the early boot process.
 #### Issues & Criticism
 
 While most of the UEFI specification sounds like a good idea, there are also many issues with the standard.
-The main issue for most people is the fear that the _secure boot_ mechanism can be used to [lock users into the Windows operating system][uefi-secure-boot-lock-in] and thus prevent the installation of alternative operating systems such as Linux.
-
-[uefi-secure-boot-lock-in]: https://arstechnica.com/information-technology/2015/03/windows-10-to-make-the-secure-boot-alt-os-lock-out-a-reality/
+The main issue for most people is the fear that the _secure boot_ mechanism could be used to lock users into a specific operating system (e.g. Windows) and thus prevent the installation of alternative operating systems.
 
 Another point of criticism is that the large number of features make the UEFI firmware very complex, which increases the chance that there are some bugs in the firmware implementation itself.
 This can lead to security problems because the firmware has complete control over the hardware.
@@ -174,7 +174,7 @@ The UEFI boot process works in the following way:
 These partitions must be formatted with the [FAT file system] and assigned a special ID that indicates them as EFI system partition.
 The UEFI standard understands both the [MBR] and [GPT] partition table formats for this, at least theoretically.
 In practice, some UEFI implementations seem to [directly switch to BIOS-style booting when an MBR partition table is used][mbr-csm], so it is recommended to only use the GPT format with UEFI.
-- If the firmware finds a EFI system partition, it looks for an executable file named `efi\boot\bootx64.efi` (on x86_64 systems) in it.
+- If the firmware finds an EFI system partition, it looks for an executable file named `efi\boot\bootx64.efi` (on x86_64 systems).
 This executable must use the [Portable Executable (PE)] format, which is common in the Windows world.
 - It then loads the executable from disk to memory, sets up the execution environment (CPU state, page tables, etc.) in a standardized way, and finally jumps to the entry point of the loaded executable.
 
@@ -218,13 +218,13 @@ The reference implementation is [GNU GRUB], which is the most popular bootloader
 
 To make a kernel Multiboot compliant, one just needs to insert a so-called [Multiboot header] at the beginning of the kernel file.
 This makes it very easy to boot an OS in GRUB.
-However, GRUB and the Multiboot standard have some problems too:
+However, GRUB and the Multiboot standard have some issues too:
 
 [Multiboot header]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
 
 - The standard is designed to make the bootloader simple instead of the kernel.
 For example, the kernel needs to be linked with an [adjusted default page size], because GRUB can't find the Multiboot header otherwise.
-Another example is that the [boot information], which is passed to the kernel, contains lots of architecture dependent structures instead of providing clean abstractions.
+Another example is that the [boot information], which is passed to the kernel, contains lots of architecture-dependent structures instead of providing clean abstractions.
 - The standard supports only the 32-bit protected mode on BIOS systems.
 This means that you still have to do the CPU configuration to switch to the 64-bit long mode.
 - For UEFI systems, the standard provides very little added value as it simply exposes the normal UEFI interface to kernels.
@@ -236,7 +236,7 @@ This makes development on Windows or Mac more difficult.
 [boot information]: https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 
 Because of these drawbacks we decided to not use GRUB or the Multiboot standard for this series.
-However, we plan to add Multiboot support to our [`bootloader`] crate, so that it becomes possible to load your kernel on a GRUB system too.
+However, we might add Multiboot support to our [`bootloader`] crate at some point, so that it becomes possible to load your kernel on a GRUB system too.
 If you're interested in writing a Multiboot compliant kernel, check out the [first edition] of this blog series.
 
 [first edition]: @/edition-1/_index.md
@@ -246,100 +246,80 @@ If you're interested in writing a Multiboot compliant kernel, check out the [fir
 We now know that most operating system kernels are loaded by bootloaders, which are small programs that initialize the hardware to reasonable defaults, load the kernel from disk, and provide it with some fundamental information about the underlying system.
 In this section, we will learn how to combine the [minimal kernel] we created in the previous post with the `bootloader` crate in order to create a bootable disk image.
 
-### The `bootloader` Crate
-
-Since bootloaders quite complex on their own, we won't create our own bootloader here (but we are planning a separate series of posts on this).
-Instead, we will boot our kernel using the [`bootloader`] crate.
-This crate supports both BIOS and UEFI booting and and creates a reasonable default execution environment for our kernel. 
+The [`bootloader`] crate supports both BIOS and UEFI booting on `x86_64` and creates a reasonable default execution environment for our kernel.
 This way, we can focus on the actual kernel design in the following posts instead of spending a lot of time on system initialization.
 
-In order to use this crate in our kernel, we need to add a dependency on `bootloader_api` which provides all the necessary information we need to allow our kernel to function:
+### The `bootloader_api` Crate
 
-[`bootloader`]: https://crates.io/crates/bootloader
+In order to make our kernel compatible with the `bootloader` crate, we first need to add a dependency on the [`bootloader_api`] crate:
 
-```toml
+[`bootloader`]: https://docs.rs/bootloader/latest/bootloader/
+[`bootloader_api`]: https://docs.rs/bootloader_api/latest/bootloader_api/
+
+```toml,hl_lines=4
 # in Cargo.toml
 
 [dependencies]
-bootloader_api = "0.11.0"
+bootloader_api = "0.11.2"
 ```
 
-For normal Rust crates, this step would be all that's needed for adding them as a dependency.
-However, the `bootloader` crate is a bit special.
-The problem is that it needs access to our kernel _after compilation_ in order to create a bootable disk image.
-However, cargo has no support for automatically running code after a successful build, so we need some manual build code for this.
-(There is a proposal for [post-build scripts] that would solve this issue, but it is not clear yet whether the Cargo team wants to add such a feature.)
+Now we need to replace our custom `_start` entry point function with [`bootloader_api::entry_point`] macro. This macro instructs the compiler to create a special `.bootloader-config` section with encoded configuration options in the resulting executable, which is later read by the bootloader implementation.
 
-[post-build scripts]: https://github.com/rust-lang/cargo/issues/545
+[`bootloader_api::entry_point`]: https://docs.rs/bootloader_api/latest/bootloader_api/macro.entry_point.html
 
-#### Receiving the Boot Information
+We will take a closer look at the `entry_point` macro and the different configuration options later. For now, we just use the default setup:
 
-Before we look into the bootable disk image creation, we update need to update our `_start` entry point to be compatible with the `bootloader` crate.
-As we already mentioned above, bootloaders commonly pass additional system information when invoking the kernel, such as the amount of available memory.
-The `bootloader` crate also follows this convention, so we need to update our `_start` entry point to expect an additional argument.
+```rust,hl_lines=3 6-8
+// in main.rs
 
-The [`bootloader_api` documentation][`BootInfo`] specifies that a kernel entry point should have the following signature:
+bootloader_api::entry_point!(kernel_main);
 
-[`BootInfo`]: https://docs.rs/bootloader_api/0.11.0/bootloader_api/info/struct.BootInfo.html
-
-```rust
-extern "C" fn(boot_info: &'static mut bootloader::BootInfo) -> ! { ...
-}
-```
-
-The only difference to our `_start` entry point is the additional `boot_info` argument, which is passed by the `bootloader_api` crate.
-This argument is a mutable reference to a [`bootloader::BootInfo`] type, which provides various information about the system.
-
-[`bootloader::BootInfo`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.BootInfo.html
-
-<div class="note"><details>
-<summary><h5>About <code>extern "C"</code> and <code>!</code></h5></summary>
-
-The [`extern "C"`] qualifier specifies that the function should use the same [ABI] and [calling convention] as C code.
-It is common to use this qualifier when communicating across different executables because C has a stable ABI that is guaranteed to never change.
-Normal Rust functions, on the other hand, don't have a stable ABI, so they might change it the future (e.g. to optimize performance) and thus shouldn't be used across different executables.
-
-[`extern "C"`]: https://doc.rust-lang.org/reference/items/functions.html#extern-function-qualifier
-[ABI]: https://en.wikipedia.org/wiki/Application_binary_interface
-[calling convention]: https://en.wikipedia.org/wiki/Calling_convention
-
-The `!` return type indicates that the function is [diverging], which means that it must never return.
-The `bootloader` requires this because its code might no longer be valid after the kernel modified the system state such as the [page tables].
-
-[diverging]: https://doc.rust-lang.org/rust-by-example/fn/diverging.html
-[page tables]: @/edition-2/posts/08-paging-introduction/index.md
-
-</details></div>
-
-While we could simply add the additional argument to our `_start` function, it would result in very fragile code.
-The problem is that because the `_start` function is called externally from the bootloader, no checking of the function signature occurs.
-So no compilation error occurs, even if the function signature completely changed after updating to a newer `bootloader` version.
-At runtime, however, the code would fail or introduce undefined behavior.
-
-To avoid these issues and make sure that the entry point function has always the correct signature, the `bootloader` crate provides an [`entry_point`] macro that provides a type-checked way to define a Rust function as the entry point.
-This way, the function signature is checked at compile time so that no runtime error can occur.
-
-[`entry_point`]: https://docs.rs/bootloader/0.11.0/bootloader/macro.entry_point.html
-
-To use the `entry_point` macro, we rewrite our entry point function in the following way:
-
-```rust
-// in src/main.rs
-
-use bootloader_api::{entry_point, BootInfo};
-
-entry_point!(kernel_main);
-
-fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+// ↓ this replaces the `_start` function ↓
+fn kernel_main(bootinfo: &'static mut bootloader_api::BootInfo) -> ! {
     loop {}
 }
 ```
 
-We no longer need to use `extern "C"` or `no_mangle` for our entry point, as the macro defines the actual lower-level `_start` entry point for us.
-The `kernel_main` function is now a completely normal Rust function, so we can choose an arbitrary name for it.
-Since the signature of the function is enforced by the macro, a compilation error occurs when it e.g. has the wrong argument type.
+There are a few notable things:
 
-After adjusting our entry point for the `bootloader` crate, we can now look into how to create a bootable disk image from our kernel.
+- The `kernel_main` function is just a normal Rust function with an arbitrary name. No `#[no_mangle]` attribute is needed anymore since the `entry_point` macro handles this internally.
+- Like before, our entry point function is [diverging], i.e. it must never return. We ensure this by looping endlessly.
+- There is a new [`BootInfo`] argument, which the bootloader fills with various system information. We will use this argument later.
+- The `entry_point` macro verifies that the `kernel_main` function has the correct arguments and return type, otherwise a compile error will occur. This is important because undefined behavior might occur when the function signature does not match the bootloader's expectations.
+
+[diverging]: https://doc.rust-lang.org/rust-by-example/fn/diverging.html
+[`BootInfo`]: https://docs.rs/bootloader_api/latest/bootloader_api/info/struct.BootInfo.html
+
+To verify that the `entry_point` macro worked as expected, we can use the `objdump` tool as [described in the previous post][objdump-prev]. First, we recompile using `cargo build --target x86_64-unknown-none`, then we inspect the section headers using `objdump` or `rust-objdump`:
+
+[objdump-prev]: @/edition-3/posts/01-minimal-kernel/index.md#objdump
+
+```hl_lines=8
+❯ rust-objdump -h target/x86_64-unknown-none/debug/kernel
+
+target/x86_64-unknown-none/debug/kernel:        file format elf64-x86-64
+
+Sections:
+Idx Name               Size     VMA              Type
+  0                    00000000 0000000000000000
+  1 .bootloader-config 0000007c 0000000000200120 DATA
+  2 .text              00000075 00000000002011a0 TEXT
+  3 .debug_abbrev      000001c8 0000000000000000 DEBUG
+  4 .debug_info        00000b56 0000000000000000 DEBUG
+  5 .debug_aranges     00000090 0000000000000000 DEBUG
+  6 .debug_ranges      00000040 0000000000000000 DEBUG
+  7 .debug_str         00000997 0000000000000000 DEBUG
+  8 .debug_pubnames    0000014c 0000000000000000 DEBUG
+  9 .debug_pubtypes    00000548 0000000000000000 DEBUG
+ 10 .debug_frame       000000b0 0000000000000000 DEBUG
+ 11 .debug_line        0000012c 0000000000000000 DEBUG
+ 12 .comment           00000013 0000000000000000
+ 13 .symtab            000000a8 0000000000000000
+ 14 .shstrtab          000000b8 0000000000000000
+ 15 .strtab            000000cd 0000000000000000
+```
+
+We see that there is indeed a new `.bootloader-config` section of size `0x7c` in our kernel executable. This means that we can now look into how to create a bootable disk image from our kernel.
 
 ### Creating a Disk Image
 
@@ -501,7 +481,7 @@ We still need to fill in the paths we marked as `todo!` above. Like with the ker
 // we know that the kernel lives in the parent directory of the `boot` crate
 let kernel_dir = Path::new(env!("CARGO_MANIFEST_DIR")).manifest_dir.parent().unwrap();
 
-// use the above as a target folder in which to place both the BIOS and UEFI disk images  
+// use the above as a target folder in which to place both the BIOS and UEFI disk images
 let bios_image = kernel_dir.join("bootimage-bios-blog_os.img");
 let uefi_image = kernel_dir.join("bootimage-uefi-blog_os.img");
 ```
