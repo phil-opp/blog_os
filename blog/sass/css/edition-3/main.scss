@@ -290,8 +290,7 @@ pre {
     }
     &.language-bash mark {
         font-weight: bold;
-        text-decoration: underline;
-        text-decoration-color: rgba(255, 255, 155, 1);
+        color: rgba(255, 255, 255, 1);
     }
 }
 pre code {
