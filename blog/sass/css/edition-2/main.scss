@@ -22,13 +22,13 @@
  */
 
 /* Fonts */
-
 @font-face {
-    font-family: "Iosevka";
-    src: url("/fonts/iosevka-regular.woff2") format("woff2"), url("/fonts/iosevka-regular.woff") format("woff");
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
+	font-family: 'Iosevka Web';
+	font-display: swap;
+	font-weight: 400;
+	font-stretch: normal;
+	font-style: normal;
+	src: url('/fonts/ttf/iosevka-regular.ttf') format('truetype'), url('/fonts/woff2/iosevka-regular.woff2') format('woff2');
 }
 
 /*
@@ -221,7 +221,7 @@ abbr[title] {
 /* Code */
 code,
 pre {
-    font-family: "Iosevka", monospace;
+    font-family: "Iosevka Web", monospace;
 }
 code {
     padding: 0.25em 0.5em;
