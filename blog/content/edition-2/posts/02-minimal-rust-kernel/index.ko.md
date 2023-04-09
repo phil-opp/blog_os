@@ -99,7 +99,7 @@ UEFI 표준으로 동작하는 최신 기기들도 가상 BIOS를 지원하기�
 지난 포스트에서 우리는 `cargo`를 통해 freestanding 실행파일을 만들었었는데, 호스트 시스템의 운영체제에 따라 프로그램 실행 시작 지점의 이름 및 컴파일 인자들을 다르게 설정해야 했습니다. 이것은 `cargo`가 기본적으로 _호스트 시스템_ (여러 분이 실행 중인 컴퓨터 시스템) 을 목표로 빌드하기 때문이었습니다. 우리의 커널은 다른 운영체제 (예를 들어 Windows) 위에서 실행될 것이 아니기에, 호스트 시스템에 설정 값을 맞추는 대신에 우리가 명확히 정의한 _목표 시스템 (target system)_ 을 목표로 컴파일할 것입니다.
 
 ### Rust Nightly 설치하기 {#installing-rust-nightly}
-Rust는 _stable_, _beta_ 그리고 _nightly_ 이렇게 세 가지의 채널을 통해 배포됩니다. Rust Book에 [세 채널들 간의 차이에 대해 잘 정리한 챕터]((https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains))가 있습니다. 운영체제를 빌드하기 위해서는 _nightly_ 채널에서만 제공하는 실험적인 기능들을 이용해야 하기에 _nightly_ 버전의 Rust를 설치하셔야 합니다.
+Rust는 _stable_, _beta_ 그리고 _nightly_ 이렇게 세 가지의 채널을 통해 배포됩니다. Rust Book에 [세 채널들 간의 차이에 대해 잘 정리한 챕터](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains)가 있습니다. 운영체제를 빌드하기 위해서는 _nightly_ 채널에서만 제공하는 실험적인 기능들을 이용해야 하기에 _nightly_ 버전의 Rust를 설치하셔야 합니다.
 
 여러 버전의 Rust 언어 설치 파일들을 관리할 때 [rustup]을 사용하는 것을 강력 추천합니다. rustup을 통해 nightly, beta 그리고 stable 컴파일러들을 모두 설치하고 업데이트할 수 있습니다. `rustup override set nightly` 명령어를 통해 현재 디렉토리에서 항상 nightly 버전의 Rust를 사용하도록 설정할 수 있습니다.
 `rust-toolchain`이라는 파일을 프로젝트 루트 디렉토리에 만들고 이 파일에 `nightly`라는 텍스트를 적어 놓아도 같은 효과를 볼 수 있습니다. `rustc --version` 명령어를 통해 현재 nightly 버전이 설치되어 있는지 확인할 수 있습니다 (출력되는 버전 넘버가 `-nightly`라는 텍스트로 끝나야 합니다).
