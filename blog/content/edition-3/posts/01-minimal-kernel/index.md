@@ -480,7 +480,7 @@ start address: 0x0000000000000000
 
 Using `objdump -h`, we can print the various sections of our kernel executable:
 
-```
+```bash,hl_lines=12
 ❯ rust-objdump -h target/x86_64-unknown-none/debug/kernel
 
 target/x86_64-unknown-none/debug/kernel:	file format elf64-x86-64
