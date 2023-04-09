@@ -263,6 +263,20 @@ pre {
     overflow: auto;
     word-wrap: normal;
     background-color: var(--code-background-color);
+    &.language-rust, &.language-toml {
+        padding-left: 15px;
+        mark {
+            border-left: 3px solid rgba(0, 200, 0, 1);
+            margin-left: -10px;
+            padding-left: 7px;
+            font-weight: bold;
+        }
+    }
+    &.language-bash mark {
+        font-weight: bold;
+        text-decoration: underline;
+        text-decoration-color: rgba(255, 255, 155, 1);
+    }
 }
 pre code {
     padding: 0;
@@ -275,8 +289,8 @@ pre mark {
     display: block;
     // use the code color (instead of black)
     color: inherit;
-    // override the background color (instead of black)
-    background-color: rgba(0, 255, 0, 0.1) !important;
+    // override the hardcoded background color (set to black by the theme)
+    background-color: transparent !important;
 }
 
 .highlight {

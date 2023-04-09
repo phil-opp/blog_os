@@ -468,7 +468,7 @@ The start address specifies the memory address of our `_start` function.
 Here the function name `_start` becomes important.
 If we rename the function to something else (e.g., `_start_here`) and recompile, we see that no start address is set in the ELF file anymore:
 
-```hl_lines=5
+```bash,hl_lines=5
 ❯ rust-objdump -f target/x86_64-unknown-none/debug/kernel
 
 target/x86_64-unknown-none/debug/kernel:	file format elf64-x86-64
