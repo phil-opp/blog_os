@@ -323,7 +323,7 @@ build-std-features = ["compiler-builtins-mem"]
  در پشت صحنه، این پرچم [ویژگی `mem`] از کریت `compiler_builtins` را فعال می‌کند. اثرش این است که صفت `[no_mangle]#` بر روی [پیاده‌سازی `memcpy` و بقیه موارد] از کریت اعمال می‌شود، که آن‌ها در دسترس لینکر قرار می‌دهد. شایان ذکر است که این توابع در حال حاضر [بهینه نشده‌اند]، بنابراین ممکن است عملکرد آ‌ن‌ها در بهترین حالت نباشد، اما حداقل صحیح هستند. برای `x86_64` ، یک  pull request باز برای [بهینه سازی این توابع با استفاده از دستورالعمل‌های خاص اسمبلی][memcpy rep movsb] وجود دارد.
 
 [ویژگی `mem`]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L51-L52
-[پیاده‌سازی `memcpy` و بقیه موارد]: (https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69)
+[پیاده‌سازی `memcpy` و بقیه موارد]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
 [بهینه نشده‌اند]: https://github.com/rust-lang/compiler-builtins/issues/339
 [memcpy rep movsb]: https://github.com/rust-lang/compiler-builtins/pull/365
 
