@@ -294,7 +294,7 @@ To verify that the `entry_point` macro worked as expected, we can use the `objdu
 
 [objdump-prev]: @/edition-3/posts/01-minimal-kernel/index.md#objdump
 
-```hl_lines=8
+```bash,hl_lines=8
 ❯ rust-objdump -h target/x86_64-unknown-none/debug/kernel
 
 target/x86_64-unknown-none/debug/kernel:        file format elf64-x86-64
@@ -319,9 +319,261 @@ Idx Name               Size     VMA              Type
  15 .strtab            000000cd 0000000000000000
 ```
 
-We see that there is indeed a new `.bootloader-config` section of size `0x7c` in our kernel executable. This means that we can now look into how to create a bootable disk image from our kernel.
+We see that there is indeed a new `.bootloader-config` section of size `0x7c` in our kernel executable.
+This means that we can now look into how to create a bootable disk image from our kernel.
 
 ### Creating a Disk Image
+
+Now that our kernel is compatible with the `bootloader` crate, we can turn it into a bootable disk image.
+To do that, we need to create a disk image file with an [MBR] or [GPT] partition table and create a new [FAT][FAT file system] boot partition there.
+Then we can copy our compiled kernel and the compiled bootloader implementation there.
+
+While we could perform these steps manually using platform-specific tools (e.g. [`mkfs`] on Linux), this would not be cumbersome and fragile.
+Fortunately, the `bootloader` crate provides a [`DiskImageBuilder`] to construct both BIOS and UEFI disk images in a simple way.
+It works on Windows, macOS, and Linux without any additional dependencies.
+We just need to pass path to our kernel executable and then call `create_bios_image` and/or `create_uefi_image` with our desired target path.
+
+[`mkfs`]: https://www.man7.org/linux/man-pages/man8/mkfs.fat.8.html
+[`DiskImageBuilder`]: https://docs.rs/bootloader/0.11.3/bootloader/struct.DiskImageBuilder.html
+
+By using the `DiskImageBuilder` together with some advanced features of `cargo`, we can combine the kernel build and disk image creation steps.
+This way, we also don't need to pass the `--target x86_64-unknown-none` argument anymore.
+In the next sections, we will implement following steps to achieve this:
+
+- Create a [`cargo` workspace] with an empty root package.
+- Add an [_artifact dependency_] to include the compiled kernel binary in the root package.
+- Create a [build script] for the root package that invokes the `bootloader::DiskImageBuilder`.
+
+[`cargo` workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
+[_artifact dependency_]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#artifact-dependencies
+[build script]: https://doc.rust-lang.org/cargo/reference/build-scripts.html
+
+Don't worry if that sounds a bit complex!
+We will explain each of these steps in detail.
+
+#### Creating a Workspace
+
+TODO
+
+#### Adding an Artifact Dependency
+
+TODO
+
+#### Creating a Build Script
+
+TODO
+
+> For building the bootloader, you need to have the `llvm-tools-preview` rustup component installed.
+> You can do so by executing `rustup component add llvm-tools-preview`.
+
+
+#### Making `rust-analyzer` happy
+
+TODO
+
+## Running our Kernel
+
+After creating a bootable disk image for our kernel, we are finally able to run it.
+Before we learn how to run it on real hardware, we start by running it inside the [QEMU] system emulator.
+This has multiple advantages:
+
+- We can't break anything: Our kernel has full hardware access, so that a bug might have serious consequences on real hardware.
+- We don't need a separate computer: QEMU runs as a normal program on our development computer.
+- The edit-test cycle is much faster: We don't need to copy the disk image to bootable usb stick on every kernel change.
+- It's possible to debug our kernel via QEMU's debug tools and GDB.
+
+We will still learn how to boot our kernel on real hardware later in this post, but for now we focus on QEMU.
+For that you need to install QEMU on your machine as described on the [QEMU download page].
+
+[QEMU download page]: https://www.qemu.org/download/
+
+### Running in QEMU
+
+After installing QEMU, you can run `qemu-system-x86_64 --version` in a terminal to verify that it is installed.
+Then you can run the BIOS disk image of our kernel through the following command:
+
+```
+qemu-system-x86_64 -drive \
+    format=raw,file=bootimage-bios-blog_os.img
+```
+
+As a result, you should see a window open that looks like this:
+
+![QEMU printing several `INFO:` log messages](qemu-bios.png)
+
+This output comes from the bootloader.
+As we see, the last line is _"Jumping to kernel entry point at […]"_.
+This is the point where the `_start` function of our kernel is called.
+Since we currently only `loop {}` in that function nothing else happens, so it is expected that we don't see any additional output.
+
+Running the UEFI disk image works in a similar way, but we need to pass some additional files to QEMU to emulate an UEFI firmware.
+This is necessary because QEMU does not support emulating an UEFI firmware natively.
+The files that we need are provided by the [Open Virtual Machine Firmware (OVMF)][OVMF] project, which is a sub-project of [TianoCore] and implements UEFI support for virtual machines.
+Unfortunately, the project is only [sparsely documented][ovmf-whitepaper] and does not even have a clear homepage.
+
+[OVMF]: https://github.com/tianocore/tianocore.github.io/wiki/OVMF
+[TianoCore]: https://www.tianocore.org/
+[ovmf-whitepaper]: https://www.linux-kvm.org/downloads/lersek/ovmf-whitepaper-c770f8c.txt
+
+The easiest way to work with OVMF is to download pre-built images of the code.
+We provide such images in the [`rust-osdev/ovmf-prebuilt`] repository, which is updated daily from [Gerd Hoffman's RPM builds](https://www.kraxel.org/repos/).
+The compiled OVMF are provided as [GitHub releases][ovmf-prebuilt-releases].
+
+[`rust-osdev/ovmf-prebuilt`]: https://github.com/rust-osdev/ovmf-prebuilt/
+[ovmf-prebuilt-releases]: https://github.com/rust-osdev/ovmf-prebuilt/releases/latest
+
+To run our UEFI disk image in QEMU, we need the `OVMF_pure-efi.fd` file (other files might work as well).
+After downloading it, we can then run our UEFI disk image using the following command:
+
+```
+qemu-system-x86_64 -drive \
+    format=raw,file=bootimage-uefi-blog_os.img \
+    -bios /path/to/OVMF_pure-efi.fd,
+```
+
+If everything works, this command opens a window with the following content:
+
+
+![QEMU printing several `INFO:` log messages](qemu-uefi.png)
+
+The output is a bit different than with the BIOS disk image.
+Among other things, it explicitly mentions that this is an UEFI boot right on top.
+
+### Using `cargo run`
+
+TODO
+
+### Screen Output
+
+While we see some screen output from the bootloader, our kernel still does nothing.
+Let's fix this by trying to output something to the screen from our kernel too.
+
+Screen output works through a so-called [_framebuffer_].
+A framebuffer is a memory region that contains the pixels that should be shown on the screen.
+The graphics card automatically reads the contents of this region on every screen refresh and updates the shown pixels accordingly.
+
+[_framebuffer_]: https://en.wikipedia.org/wiki/Framebuffer
+
+Since the size, pixel format, and memory location of the framebuffer can vary between different systems, we need to find out these parameters first.
+The easiest way to do this is to read it from the [boot information structure][`BootInfo`] that the bootloader passes as argument to our kernel entry point:
+
+```rust
+// in src/main.rs
+
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    if let Some(framebuffer) = boot_info.framebuffer.as_ref() {
+        let info = framebuffer.info();
+        let buffer = framebuffer.buffer();
+    }
+    loop {}
+}
+```
+
+Even though most systems support a framebuffer, some might not.
+The [`BootInfo`] type reflects this by specifying its `framebuffer` field as an [`Option`].
+Since screen output won't be essential for our kernel (there are other possible communication channels such as serial ports), we use an [`if let`] statement to run the framebuffer code only if a framebuffer is available.
+
+[`Option`]: https://doc.rust-lang.org/std/option/enum.Option.html
+[`if let`]: https://doc.rust-lang.org/reference/expressions/if-expr.html#if-let-expressions
+
+The [`FrameBuffer`] type provides two methods: The `info` method returns a [`FrameBufferInfo`] instance with all kinds of information about the framebuffer format, including the pixel type and the screen resolution.
+The `buffer` method returns the actual framebuffer content in form of a mutable byte [slice].
+
+[`FrameBuffer`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.FrameBuffer.html
+[`FrameBufferInfo`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.FrameBufferInfo.html
+[slice]: https://doc.rust-lang.org/std/primitive.slice.html
+
+We will look into programming the framebuffer in detail in the next post.
+For now, let's just try setting the whole screen to some color.
+For this, we just set every pixel in the byte slice to some fixed value:
+
+
+```rust
+// in src/main.rs
+
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
+        for byte in framebuffer.buffer_mut() {
+            *byte = 0x90;
+        }
+    }
+    loop {}
+}
+```
+
+While it depends on the pixel color format how these values are interpreted, the result will likely be some shade of gray since we set the same value for every color channel (e.g. in the RGB color format).
+
+After running `cargo kbuild` and then our `boot` script again, we can boot the new version in QEMU.
+We see that our guess that the whole screen would turn gray was right:
+
+![QEMU showing a gray screen](qemu-gray.png)
+
+We finally see some output from our own little kernel!
+
+You can try experimenting with the pixel bytes if you like, for example by increasing the pixel value on each loop iteration:
+
+```rust
+// in src/main.rs
+
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
+        let mut value = 0x90;
+        for byte in framebuffer.buffer_mut() {
+            *byte = value;
+            value = value.wrapping_add(1);
+        }
+    }
+    loop {}
+}
+```
+
+We use the [`wrapping_add`] method here because Rust panics on implicit integer overflow (at least in debug mode).
+By adding a prime number, we try to add some variety.
+The result looks as follows:
+
+![QEMU showing repeating gradient columns](qemu-wrapping-add.png)
+
+### Booting on Real Hardware
+
+To boot on real hardware, you first need to write either the `bootimage-uefi-blog_os.img` or the `bootimage-bios-blog_os.img` disk image to an USB stick.
+This deletes everything on the stick, so be careful.
+The actual steps to do this depend on your operating system.
+
+
+#### Unix-like
+
+On any Unix-like host OS (including both Linux and macOS), you can use the `dd` command to write the disk image directly to a USB drive.
+First run either `sudo fdisk -l` (on Linux) or `diskutil list` (on a Mac) to get info about where in `/dev` the file representing your device is located.
+After that, open a terminal window and run either of the following commands:
+
+##### Linux
+```
+# replace /dev/sdX with device filename as revealed by "sudo fdisk -l"
+$ sudo dd if=boot-uefi-blog_os.img of=/dev/sdX
+```
+
+##### macOS
+```
+# replace /dev/diskX with device filename as revealed by "diskutil list"
+$ sudo dd if=boot-uefi-blog_os.img of=/dev/diskX
+```
+
+**WARNING**: Be very careful when running this command.
+If you specify the wrong device as the `of=` parameter, you could end up wiping your system clean, so make sure the device you run it on is a removable one.
+
+#### Windows
+
+On Windows, you can use the [Rufus] tool, which is developed as an open-source project [on GitHub][rufus-github].
+After downloading it you can directly run it, there's no installation necessary.
+In the interface, you select the USB stick you want to write to.
+
+[Rufus]: https://rufus.ie/
+[rufus-github]: https://github.com/pbatard/rufus
+
+
+
+
+### OLD
 
 The [docs of the `bootloader` crate][`bootloader` docs] describe how to create a bootable disk image for a kernel.
 The first step is to find the directory where cargo placed the source code of the `bootloader` dependency.
@@ -524,298 +776,4 @@ We will fix this later in the post, but first it is time to actually run our ker
 
 Note also that we specified names for the image files. Although we used `bootimage-bios-blog_os.img` and `bootimage-uefi-blog_os.img` for compatibility, they can now be given whatever names you see fit.
 
-## Running our Kernel
 
-After creating a bootable disk image for our kernel, we are finally able to run it.
-Before we learn how to run it on real hardware, we start by running it inside the [QEMU] system emulator.
-This has multiple advantages:
-
-- We can't break anything: Our kernel has full hardware access, so that a bug might have serious consequences on real hardware.
-- We don't need a separate computer: QEMU runs as a normal program on our development computer.
-- The edit-test cycle is much faster: We don't need to copy the disk image to bootable usb stick on every kernel change.
-- It's possible to debug our kernel via QEMU's debug tools and GDB.
-
-We will still learn how to boot our kernel on real hardware later in this post, but for now we focus on QEMU.
-For that you need to install QEMU on your machine as described on the [QEMU download page].
-
-[QEMU download page]: https://www.qemu.org/download/
-
-### Running in QEMU
-
-After installing QEMU, you can run `qemu-system-x86_64 --version` in a terminal to verify that it is installed.
-Then you can run the BIOS disk image of our kernel through the following command:
-
-```
-qemu-system-x86_64 -drive \
-    format=raw,file=bootimage-bios-blog_os.img
-```
-
-As a result, you should see a window open that looks like this:
-
-![QEMU printing several `INFO:` log messages](qemu-bios.png)
-
-This output comes from the bootloader.
-As we see, the last line is _"Jumping to kernel entry point at […]"_.
-This is the point where the `_start` function of our kernel is called.
-Since we currently only `loop {}` in that function nothing else happens, so it is expected that we don't see any additional output.
-
-Running the UEFI disk image works in a similar way, but we need to pass some additional files to QEMU to emulate an UEFI firmware.
-This is necessary because QEMU does not support emulating an UEFI firmware natively.
-The files that we need are provided by the [Open Virtual Machine Firmware (OVMF)][OVMF] project, which is a sub-project of [TianoCore] and implements UEFI support for virtual machines.
-Unfortunately, the project is only [sparsely documented][ovmf-whitepaper] and does not even have a clear homepage.
-
-[OVMF]: https://github.com/tianocore/tianocore.github.io/wiki/OVMF
-[TianoCore]: https://www.tianocore.org/
-[ovmf-whitepaper]: https://www.linux-kvm.org/downloads/lersek/ovmf-whitepaper-c770f8c.txt
-
-The easiest way to work with OVMF is to download pre-built images of the code.
-We provide such images in the [`rust-osdev/ovmf-prebuilt`] repository, which is updated daily from [Gerd Hoffman's RPM builds](https://www.kraxel.org/repos/).
-The compiled OVMF are provided as [GitHub releases][ovmf-prebuilt-releases].
-
-[`rust-osdev/ovmf-prebuilt`]: https://github.com/rust-osdev/ovmf-prebuilt/
-[ovmf-prebuilt-releases]: https://github.com/rust-osdev/ovmf-prebuilt/releases/latest
-
-To run our UEFI disk image in QEMU, we need the `OVMF_pure-efi.fd` file (other files might work as well).
-After downloading it, we can then run our UEFI disk image using the following command:
-
-```
-qemu-system-x86_64 -drive \
-    format=raw,file=bootimage-uefi-blog_os.img \
-    -bios /path/to/OVMF_pure-efi.fd,
-```
-
-If everything works, this command opens a window with the following content:
-
-
-![QEMU printing several `INFO:` log messages](qemu-uefi.png)
-
-The output is a bit different than with the BIOS disk image.
-Among other things, it explicitly mentions that this is an UEFI boot right on top.
-
-### Screen Output
-
-While we see some screen output from the bootloader, our kernel still does nothing.
-Let's fix this by trying to output something to the screen from our kernel too.
-
-Screen output works through a so-called [_framebuffer_].
-A framebuffer is a memory region that contains the pixels that should be shown on the screen.
-The graphics card automatically reads the contents of this region on every screen refresh and updates the shown pixels accordingly.
-
-[_framebuffer_]: https://en.wikipedia.org/wiki/Framebuffer
-
-Since the size, pixel format, and memory location of the framebuffer can vary between different systems, we need to find out these parameters first.
-The easiest way to do this is to read it from the [boot information structure][`BootInfo`] that the bootloader passes as argument to our kernel entry point:
-
-```rust
-// in src/main.rs
-
-fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    if let Some(framebuffer) = boot_info.framebuffer.as_ref() {
-        let info = framebuffer.info();
-        let buffer = framebuffer.buffer();
-    }
-    loop {}
-}
-```
-
-Even though most systems support a framebuffer, some might not.
-The [`BootInfo`] type reflects this by specifying its `framebuffer` field as an [`Option`].
-Since screen output won't be essential for our kernel (there are other possible communication channels such as serial ports), we use an [`if let`] statement to run the framebuffer code only if a framebuffer is available.
-
-[`Option`]: https://doc.rust-lang.org/std/option/enum.Option.html
-[`if let`]: https://doc.rust-lang.org/reference/expressions/if-expr.html#if-let-expressions
-
-The [`FrameBuffer`] type provides two methods: The `info` method returns a [`FrameBufferInfo`] instance with all kinds of information about the framebuffer format, including the pixel type and the screen resolution.
-The `buffer` method returns the actual framebuffer content in form of a mutable byte [slice].
-
-[`FrameBuffer`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.FrameBuffer.html
-[`FrameBufferInfo`]: https://docs.rs/bootloader/0.11.0/bootloader/boot_info/struct.FrameBufferInfo.html
-[slice]: https://doc.rust-lang.org/std/primitive.slice.html
-
-We will look into programming the framebuffer in detail in the next post.
-For now, let's just try setting the whole screen to some color.
-For this, we just set every pixel in the byte slice to some fixed value:
-
-
-```rust
-// in src/main.rs
-
-fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        for byte in framebuffer.buffer_mut() {
-            *byte = 0x90;
-        }
-    }
-    loop {}
-}
-```
-
-While it depends on the pixel color format how these values are interpreted, the result will likely be some shade of gray since we set the same value for every color channel (e.g. in the RGB color format).
-
-After running `cargo kbuild` and then our `boot` script again, we can boot the new version in QEMU.
-We see that our guess that the whole screen would turn gray was right:
-
-![QEMU showing a gray screen](qemu-gray.png)
-
-We finally see some output from our own little kernel!
-
-You can try experimenting with the pixel bytes if you like, for example by increasing the pixel value on each loop iteration:
-
-```rust
-// in src/main.rs
-
-fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        let mut value = 0x90;
-        for byte in framebuffer.buffer_mut() {
-            *byte = value;
-            value = value.wrapping_add(1);
-        }
-    }
-    loop {}
-}
-```
-
-We use the [`wrapping_add`] method here because Rust panics on implicit integer overflow (at least in debug mode).
-By adding a prime number, we try to add some variety.
-The result looks as follows:
-
-![QEMU showing repeating gradient columns](qemu-wrapping-add.png)
-
-### Booting on Real Hardware
-
-To boot on real hardware, you first need to write either the `bootimage-uefi-blog_os.img` or the `bootimage-bios-blog_os.img` disk image to an USB stick.
-This deletes everything on the stick, so be careful.
-The actual steps to do this depend on your operating system.
-
-
-#### Unix-like
-
-On any Unix-like host OS (including both Linux and macOS), you can use the `dd` command to write the disk image directly to a USB drive.
-First run either `sudo fdisk -l` (on Linux) or `diskutil list` (on a Mac) to get info about where in `/dev` the file representing your device is located.
-After that, open a terminal window and run either of the following commands:
-
-##### Linux
-```
-# replace /dev/sdX with device filename as revealed by "sudo fdisk -l"
-$ sudo dd if=boot-uefi-blog_os.img of=/dev/sdX
-```
-
-##### macOS
-```
-# replace /dev/diskX with device filename as revealed by "diskutil list"
-$ sudo dd if=boot-uefi-blog_os.img of=/dev/diskX
-```
-
-**WARNING**: Be very careful when running this command.
-If you specify the wrong device as the `of=` parameter, you could end up wiping your system clean, so make sure the device you run it on is a removable one.
-
-#### Windows
-
-On Windows, you can use the [Rufus] tool, which is developed as an open-source project [on GitHub][rufus-github].
-After downloading it you can directly run it, there's no installation necessary.
-In the interface, you select the USB stick you want to write to
-
-[Rufus]: https://rufus.ie/
-[rufus-github]: https://github.com/pbatard/rufus
-
-## Support for `cargo run`
-
-- take `kernel_binary` path as argument instead of hardcoding it
-- set `boot` crate as runner in `.cargo/config` (for no OS targets only)
-- add `krun` alias
-
-
-
-### Only create disk images
-
-- Add support for new `--no-run` arg to `boot` crate
-- Add `cargo disk-image` alias for `cargo run --package boot -- --no-run`
-
-
-
-
-
-
-
-
-
-
-
-# OLD
-
-
-
-
-
-
-
-
-
-
-
-
-For running `bootimage` and building the bootloader, you need to have the `llvm-tools-preview` rustup component installed.
-You can do so by executing `rustup component add llvm-tools-preview`.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Real Machine
-
-It is also possible to write it to an USB stick and boot it on a real machine:
-
-```
-> dd if=target/x86_64-blog_os/debug/bootimage-blog_os.img of=/dev/sdX && sync
-```
-
-Where `sdX` is the device name of your USB stick.
-**Be careful** to choose the correct device name, because everything on that device is overwritten.
-
-After writing the image to the USB stick, you can run it on real hardware by booting from it.
-You probably need to use a special boot menu or change the boot order in your BIOS configuration to boot from the USB stick.
-Note that it currently doesn't work for UEFI machines, since the `bootloader` crate has no UEFI support yet.
-
-### Using `cargo run`
-
-To make it easier to run our kernel in QEMU, we can set the `runner` configuration key for cargo:
-
-```toml
-# in .cargo/config.toml
-
-[target.'cfg(target_os = "none")']
-runner = "bootimage runner"
-```
-
-The `target.'cfg(target_os = "none")'` table applies to all targets that have set the `"os"` field of their target configuration file to `"none"`.
-This includes our `x86_64-blog_os.json` target.
-The `runner` key specifies the command that should be invoked for `cargo run`.
-The command is run after a successful build with the executable path passed as first argument.
-See the [cargo documentation][cargo configuration] for more details.
-
-The `bootimage runner` command is specifically designed to be usable as a `runner` executable.
-It links the given executable with the project's bootloader dependency and then launches QEMU.
-See the [Readme of `bootimage`] for more details and possible configuration options.
-
-[Readme of `bootimage`]: https://github.com/rust-osdev/bootimage
-
-Now we can use `cargo run` to compile our kernel and boot it in QEMU.
-
-## What's next?
-
-In the next post, we will explore the VGA text buffer in more detail and write a safe interface for it.
-We will also add support for the `println` macro.
