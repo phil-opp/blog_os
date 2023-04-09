@@ -530,7 +530,7 @@ After creating a bootable disk image for our kernel, we are finally able to run 
 Before we learn how to run it on real hardware, we start by running it inside the [QEMU] system emulator.
 This has multiple advantages:
 
-- We can't break anything: Our kernel has full hardware access, so that a bug might have serious consequences on read hardware.
+- We can't break anything: Our kernel has full hardware access, so that a bug might have serious consequences on real hardware.
 - We don't need a separate computer: QEMU runs as a normal program on our development computer.
 - The edit-test cycle is much faster: We don't need to copy the disk image to bootable usb stick on every kernel change.
 - It's possible to debug our kernel via QEMU's debug tools and GDB.
