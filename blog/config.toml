@@ -1,4 +1,6 @@
 base_url = "https://os.phil-opp.com"
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 
 generate_feed = true
 feed_filename = "rss.xml"
@@ -34,10 +36,7 @@ author = { name = "Philipp Oppermann" }
 default_language = "en"
 languages = ["en", "zh-CN", "zh-TW", "fr", "ja", "fa", "ru", "ko"]
 
-[languages.en]
-title = "Writing an OS in Rust"
-description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
-[languages.en.translations]
+[translations]
 lang_name = "English (original)"
 toc = "Table of Contents"
 all_posts = "« All Posts"
@@ -52,9 +51,6 @@ translation_contributors = "With contributions from"
 word_separator = "and"
 
 # Chinese (simplified)
-[languages.zh-CN]
-title = "Writing an OS in Rust"
-description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.zh-CN.translations]
 lang_name = "Chinese (simplified)"
 toc = "目录"
@@ -70,9 +66,6 @@ translation_contributors = "With contributions from"
 word_separator = "和"
 
 # Chinese (traditional)
-[languages.zh-TW]
-title = "Writing an OS in Rust"
-description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.zh-TW.translations]
 lang_name = "Chinese (traditional)"
 toc = "目錄"
@@ -88,9 +81,6 @@ translation_contributors = "With contributions from"
 word_separator = "和"
 
 # Japanese
-[languages.ja]
-title = "Writing an OS in Rust"
-description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.ja.translations]
 lang_name = "Japanese"
 toc = "目次"
@@ -106,9 +96,6 @@ translation_contributors = "With contributions from"
 word_separator = "及び"
 
 # Persian
-[languages.fa]
-title = "Writing an OS in Rust"
-description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.fa.translations]
 lang_name = "Persian"
 toc = "فهرست مطالب"
@@ -124,9 +111,6 @@ translation_contributors = "With contributions from"
 word_separator = "و"
 
 # Russian
-[languages.ru]
-title = "Writing an OS in Rust"
-description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.ru.translations]
 lang_name = "Russian"
 toc = "Содержание"
@@ -142,9 +126,6 @@ translation_contributors = "With contributions from"
 word_separator = "и"
 
 # French
-[languages.fr]
-title = "Writing an OS in Rust"
-description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.fr.translations]
 lang_name = "French"
 toc = "Table des matières"
@@ -160,9 +141,6 @@ translation_contributors = "With contributions from"
 word_separator = "et"
 
 # Korean
-[languages.ko]
-title = "Writing an OS in Rust"
-description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.ko.translations]
 lang_name = "Korean"
 toc = "목차"
