@@ -383,7 +383,7 @@ error: linking with `cc` failed: exit code: 1
 cargo rustc -- -C link-args="-e __start"
 ```
 
-`-e` 表示肉口點的函式名稱，然後由於 macOS 上所有的函式都會加上前綴 `_`，我們需要設置入口點為 `__start` 而不是 `_start`。
+`-e` 表示入口點的函式名稱，然後由於 macOS 上所有的函式都會加上前綴 `_`，我們需要設置入口點為 `__start` 而不是 `_start`。
 
 接下來會出現另一個連結器錯誤：
 
