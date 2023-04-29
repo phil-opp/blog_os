@@ -214,7 +214,7 @@ Since we are compiling for a custom target, we can't use the precompiled version
 
 [unstable]
 build-std = ["core", "compiler_builtins", "alloc"]
-````
+```
 
 Now the compiler will recompile and include the `alloc` crate in our kernel.
 
