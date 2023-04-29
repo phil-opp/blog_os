@@ -214,7 +214,7 @@ Since we are compiling for a custom target, we can't use the precompiled version
 
 [unstable]
 build-std = ["core", "compiler_builtins", "alloc"]
-````
+```
 
 Now the compiler will recompile and include the `alloc` crate in our kernel.
 
@@ -223,17 +223,11 @@ The reason that the `alloc` crate is disabled by default in `#[no_std]` crates i
 ```
 error: no global memory allocator found but one is required; link to std or add
        #[global_allocator] to a static item that implements the GlobalAlloc trait.
-
-error: `#[alloc_error_handler]` function required, but not found
 ```
 
-The first error occurs because the `alloc` crate requires a heap allocator, which is an object that provides the `allocate` and `deallocate` functions. In Rust, heap allocators are described by the [`GlobalAlloc`] trait, which is mentioned in the error message. To set the heap allocator for the crate, the `#[global_allocator]` attribute must be applied to a `static` variable that implements the `GlobalAlloc` trait.
-
-The second error occurs because calls to `allocate` can fail, most commonly when there is no more memory available. Our program must be able to react to this case, which is what the `#[alloc_error_handler]` function is for.
+The error occurs because the `alloc` crate requires a heap allocator, which is an object that provides the `allocate` and `deallocate` functions. In Rust, heap allocators are described by the [`GlobalAlloc`] trait, which is mentioned in the error message. To set the heap allocator for the crate, the `#[global_allocator]` attribute must be applied to a `static` variable that implements the `GlobalAlloc` trait.
 
 [`GlobalAlloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html
-
-We will describe these traits and attributes in detail in the following sections.
 
 ### The `GlobalAlloc` Trait
 
@@ -329,32 +323,7 @@ static ALLOCATOR: Dummy = Dummy;
 
 Since the `Dummy` allocator is a [zero-sized type], we don't need to specify any fields in the initialization expression.
 
-When we now try to compile it, the first error should be gone. Let's fix the remaining second error:
-
-```
-error: `#[alloc_error_handler]` function required, but not found
-```
-
-### The `#[alloc_error_handler]` Attribute
-
-As we learned when discussing the `GlobalAlloc` trait, the `alloc` function can signal an allocation error by returning a null pointer. The question is: how should the Rust runtime react to such an allocation failure? This is where the `#[alloc_error_handler]` attribute comes in. It specifies a function that is called when an allocation error occurs, similar to how our panic handler is called when a panic occurs.
-
-Let's add such a function to fix the compilation error:
-
-```rust
-// in src/lib.rs
-
-#![feature(alloc_error_handler)] // at the top of the file
-
-#[alloc_error_handler]
-fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
-    panic!("allocation error: {:?}", layout)
-}
-```
-
-The `alloc_error_handler` function is still unstable, so we need a feature gate to enable it. The function receives a single argument: the `Layout` instance that was passed to `alloc` when the allocation failure occurred. There's nothing we can do to resolve the failure, so we just panic with a message that contains the `Layout` instance.
-
-With this function, the compilation errors should be fixed. Now we can use the allocation and collection types of `alloc`. For example, we can use a [`Box`] to allocate a value on the heap:
+With this static, the compilation errors should be fixed. Now we can use the allocation and collection types of `alloc`. For example, we can use a [`Box`] to allocate a value on the heap:
 
 [`Box`]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html
 
@@ -380,11 +349,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 Note that we need to specify the `extern crate alloc` statement in our `main.rs` too. This is required because the `lib.rs` and `main.rs` parts are treated as separate crates. However, we don't need to create another `#[global_allocator]` static because the global allocator applies to all crates in the project. In fact, specifying an additional allocator in another crate would be an error.
 
-When we run the above code, we see that our `alloc_error_handler` function is called:
+When we run the above code, we see that a panic occurs:
 
 ![QEMU printing "panicked at `allocation error: Layout { size_: 4, align_: 4 }, src/lib.rs:89:5"](qemu-dummy-output.png)
 
-The error handler is called because the `Box::new` function implicitly calls the `alloc` function of the global allocator. Our dummy allocator always returns a null pointer, so every allocation fails. To fix this, we need to create an allocator that actually returns usable memory.
+The panic occurs because the `Box::new` function implicitly calls the `alloc` function of the global allocator. Our dummy allocator always returns a null pointer, so every allocation fails. To fix this, we need to create an allocator that actually returns usable memory.
 
 ## Creating a Kernel Heap
 
