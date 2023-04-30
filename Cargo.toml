@@ -8,3 +8,4 @@ members = ["kernel"]
 
 [dependencies]
 kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
+bootloader = "0.11.3"
