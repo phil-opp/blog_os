@@ -1,11 +1,9 @@
 [package]
-name = "blog_os"
+name = "kernel"
 version = "0.1.0"
 edition = "2021"
-
-[workspace]
-members = ["kernel"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bootloader_api = "0.11.0"

@@ -3,10 +3,14 @@
 version = 3
 
 [[package]]
+name = "blog_os"
+version = "0.1.0"
+
+[[package]]
 name = "bootloader_api"
-version = "0.11.2"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec2d46a2b93edb1383023db2a95fc9480847a6e137c60e214f3fb62727f028da"
+checksum = "19c9d143f231f95e18d3907023e4a8e6a3cbebb7b09ce7da4774a17edf4cce6d"
 
 [[package]]
 name = "kernel"
