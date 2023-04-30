@@ -350,7 +350,12 @@ Afterwards, we can [cross compile] our executable for a bare metal environment b
 error: requires `start` lang_item
 ```
 
-We still get the error about a missing `start` language item because we're still depending on the Rust runtime. To remove that dependency, we can use the `#[no_main]` attribute.
+We still get the error about a missing `start` language item because the custom target only removed the dependency on the C library.
+To remove the dependency on the Rust runtime as well, we can use the `#[no_main]` attribute.
+
+Before that, we can do a small cleanup.
+The `x86_64-unknown-none` target defaults to `panic = "abort"`, so the we can remove the `profile.dev` and `profile.release` tables from our `Cargo.toml` again.
+
 
 ### The `#[no_main]` Attribute
 
