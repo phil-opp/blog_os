@@ -593,8 +593,8 @@ kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
 bootloader = "0.11.3"
 ```
 
-The crate requires the `llvm-tools` component of `rustup`, which is not installed by default.
-To install it, we update our `rust-toolchain.toml` file:
+The crate requires the `rust-src` and `llvm-tools` components of `rustup`, which are not installed by default.
+To install them, we update our `rust-toolchain.toml` file:
 
 ```toml ,hl_lines=6
 # rust-toolchain.toml
@@ -602,7 +602,7 @@ To install it, we update our `rust-toolchain.toml` file:
 [toolchain]
 channel = "nightly"
 targets = ["x86_64-unknown-none"]
-components = ["llvm-tools-preview"]
+components = ["rust-src", "llvm-tools-preview"]
 ```
 
 If we run `cargo build` now, the bootloader should be built as a dependency.
