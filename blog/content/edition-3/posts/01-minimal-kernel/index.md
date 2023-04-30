@@ -314,10 +314,26 @@ For example, the `thumbv7em-none-eabihf` target triple can be used to compile fo
 
 Our kernel should run on a bare-metal `x86_64` system, so the suitable target triple is [`x86_64-unknown-none`].
 The `-none` suffix indicates that there is no underlying operating system.
-To be able to compile for this target, we need to add it using [`rustup`]:
+To be able to compile for this target, we need to add it using [`rustup`].
 
 [`x86_64-unknown-none`]: https://doc.rust-lang.org/rustc/platform-support/x86_64-unknown-none.html
-[`rustup`]: https://doc.rust-lang.org/rustc/platform-support/x86_64-unknown-none.html
+
+<div class = "note"><details>
+<summary><em>What is <code>rustup</code></em>?</summary>
+
+The [`rustup`] tool is the [officially recommended] way of installing Rust.
+It supports having multiple versions of Rust installed simultaneously and makes upgrading Rust easy.
+It also provides access to optional tools and components such as [`rustfmt`] or [`rust-analyzer`].
+This guide requires `rustup`, so please install it if you haven't already.
+
+[`rustup`]: https://rustup.rs/
+[officially recommended]: https://www.rust-lang.org/learn/get-started
+[`rustfmt`]: https://github.com/rust-lang/rustfmt/
+[`rust-analyzer`]: https://github.com/rust-lang/rust-analyzer
+
+</details></div>
+
+To download and set up the `x86_64-unknown-none` target, we use the following `rustup` command:
 
 ```
 rustup target add x86_64-unknown-none
