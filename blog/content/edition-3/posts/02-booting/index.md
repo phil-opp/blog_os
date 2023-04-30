@@ -275,7 +275,7 @@ We will take a closer look at the `entry_point` macro and the different configur
 bootloader_api::entry_point!(kernel_main);
 
 // ↓ this replaces the `_start` function ↓
-fn kernel_main(bootinfo: &'static mut bootloader_api::BootInfo) -> ! {
+fn kernel_main(_bootinfo: &'static mut bootloader_api::BootInfo) -> ! {
     loop {}
 }
 ```
@@ -284,7 +284,7 @@ There are a few notable things:
 
 - The `kernel_main` function is just a normal Rust function with an arbitrary name. No `#[no_mangle]` attribute is needed anymore since the `entry_point` macro handles this internally.
 - Like before, our entry point function is [diverging], i.e. it must never return. We ensure this by looping endlessly.
-- There is a new [`BootInfo`] argument, which the bootloader fills with various system information. We will use this argument later.
+- There is a new [`BootInfo`] argument, which the bootloader fills with various system information. We will use this argument later. For now, we prefix it with an underscore to avoid an "unused variable" warning.
 - The `entry_point` macro verifies that the `kernel_main` function has the correct arguments and return type, otherwise a compile error will occur. This is important because undefined behavior might occur when the function signature does not match the bootloader's expectations.
 
 [diverging]: https://doc.rust-lang.org/rust-by-example/fn/diverging.html
@@ -326,46 +326,391 @@ This means that we can now look into how to create a bootable disk image from ou
 
 Now that our kernel is compatible with the `bootloader` crate, we can turn it into a bootable disk image.
 To do that, we need to create a disk image file with an [MBR] or [GPT] partition table and create a new [FAT][FAT file system] boot partition there.
-Then we can copy our compiled kernel and the compiled bootloader implementation there.
+Then we copy our compiled kernel and the compiled bootloader to this boot partition.
 
-While we could perform these steps manually using platform-specific tools (e.g. [`mkfs`] on Linux), this would not be cumbersome and fragile.
-Fortunately, the `bootloader` crate provides a [`DiskImageBuilder`] to construct both BIOS and UEFI disk images in a simple way.
-It works on Windows, macOS, and Linux without any additional dependencies.
-We just need to pass path to our kernel executable and then call `create_bios_image` and/or `create_uefi_image` with our desired target path.
+While we could perform these steps manually using platform-specific tools (e.g. [`mkfs`] on Linux), this would be cumbersome to use and difficult to set up.
+Fortunately, the `bootloader` crate provides a cross-platform [`DiskImageBuilder`] type to construct BIOS and UEFI disk images.
+We just need to pass path to our kernel executable and then call [`create_bios_image`] and/or [`create_uefi_image`] with our desired target path.
 
 [`mkfs`]: https://www.man7.org/linux/man-pages/man8/mkfs.fat.8.html
 [`DiskImageBuilder`]: https://docs.rs/bootloader/0.11.3/bootloader/struct.DiskImageBuilder.html
+[`create_bios_image`]: https://docs.rs/bootloader/0.11.3/bootloader/struct.DiskImageBuilder.html#method.create_bios_image
+[`create_uefi_image`]: https://docs.rs/bootloader/0.11.3/bootloader/struct.DiskImageBuilder.html#method.create_uefi_image
 
 By using the `DiskImageBuilder` together with some advanced features of `cargo`, we can combine the kernel build and disk image creation steps.
-This way, we also don't need to pass the `--target x86_64-unknown-none` argument anymore.
+Another advantage of this approach is that we don't need to pass the `--target x86_64-unknown-none` argument anymore.
 In the next sections, we will implement following steps to achieve this:
 
 - Create a [`cargo` workspace] with an empty root package.
 - Add an [_artifact dependency_] to include the compiled kernel binary in the root package.
-- Create a [build script] for the root package that invokes the `bootloader::DiskImageBuilder`.
+- Invoke the `bootloader::DiskImageBuilder` in our new root package.
 
 [`cargo` workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 [_artifact dependency_]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#artifact-dependencies
-[build script]: https://doc.rust-lang.org/cargo/reference/build-scripts.html
 
 Don't worry if that sounds a bit complex!
 We will explain each of these steps in detail.
 
 #### Creating a Workspace
 
-TODO
+Cargo provides a feature named [_workspaces_] to manage projects that consistent of multiple crates.
+The idea is that the crates share a single `Cargo.lock` file (to pin dependencies) and a common `target` folder.
+The different crates can depend on each other by specifying [`path` dependencies].
+
+[_workspaces_]: https://doc.rust-lang.org/cargo/reference/workspaces.html
+[`path` dependencies]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#specifying-path-dependencies
+
+Creating a cargo workspace is easy. We first create a new subfolder named `kernel` and move our existing `Cargo.toml` file and `src` folder there.
+We keep the `Cargo.lock` file and the `target` folder in the outer level, `cargo` will update them automatically.
+The folder structure should look like this now:
+
+```bash ,hl_lines=3-6
+.
+├── Cargo.lock
+├── kernel
+│   ├── Cargo.toml
+│   └── src
+│       └── main.rs
+└── target
+```
+
+Next, we create a new `blog_os` crate at the root using `cargo init`:
+
+```bash
+❯ cargo init --name blog_os
+```
+
+You can of course choose any name you like for the crate.
+The command creates a new `src/main.rs` at the root with a main function printing "Hello, world!".
+It also creates a new `Cargo.toml` file at the root.
+The directory structure now looks like this:
+
+```bash,hl_lines=3 8-9
+.
+├── Cargo.lock
+├── Cargo.toml
+├── kernel
+│   ├── Cargo.toml
+│   └── src
+│       └── main.rs
+├── src
+│   └── main.rs
+└── target
+```
+
+The final step is to add the workspace configuration to the `Cargo.toml` at the root:
+
+```toml ,hl_lines=8-9
+# in top-level Cargo.toml
+
+[package]
+name = "blog_os"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = ["kernel"]
+
+[dependencies]
+```
+
+That's it!
+Now our `blog_os` and `kernel` crates live in the same workspace.
+To ensure that everything works as intended, we can run `cargo tree` to list all the packages in the workspace:
+
+```bash
+❯ cargo tree --workspace
+blog_os v0.1.0 (/.../os)
+
+kernel v0.1.0 (/.../os/kernel)
+└── bootloader_api v0.11.3
+```
+
+We see that both the `blog_os` and the `kernel` crates are listed, which means that `cargo` recognizes that they're both part of the same workspace.
+
+<div class="note">
+
+If you're getting a _"profiles for the non root package will be ignored"_ warning here, you probably still have a manual `panic = "abort"` override specified in your `kernel/Cargo.toml`.
+This override is no longer needed since we compile our kernel for the `x86_64-unknown-none` target, which uses `panic = "abort"` by default.
+So to fix this warning, just remove the `profile.dev` and `profile.release` tables from your `kernel/Cargo.toml` file.
+
+</div>
+
+We now have a simple cargo workspace and a new `blog_os` crate at the root.
+But what do we need that new crate for?
 
 #### Adding an Artifact Dependency
 
-TODO
+The reason that we added the new `blog_os` crate is that we want to do something with our _compiled_ kernel.
+`Cargo` provides an useful feature for this, called [_artifact dependencies_].
+The basic idea is that crates can depend on compiled artifacts (e.g. executables) of other crates.
+This is especially useful for artifacts that need to be compiled for a specific target, such as our OS kernel.
 
-#### Creating a Build Script
+[_artifact dependencies_]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#artifact-dependencies
 
-TODO
+Unfortunately, artifact dependencies are still an unstable feature and not available on stable Rust/Cargo releases yet.
+This means that we need to use a [nightly Rust] release for now.
 
-> For building the bootloader, you need to have the `llvm-tools-preview` rustup component installed.
-> You can do so by executing `rustup component add llvm-tools-preview`.
+##### Nightly Rust
 
+As the name implies, nightly releases are created every night from the latest `master` commit of the [`rust-lang/rust`] project.
+While there is some risk of breakage on the nightly channel, it only occurs very seldomly thanks to extensive checks on the [Rust CI].
+Most of the time, breakage only affects unstable features, which require an explicit opt-in.
+So by limiting the number of used unstable features as much as possible, we can get a quite stable experience on the nightly channel.
+In case something _does_ go wrong, [`rustup`] makes it easy to switch back to an earlier nightly until the issue is resolved.
+
+[nightly Rust]: https://doc.rust-lang.org/book/appendix-07-nightly-rust.html
+[`rust-lang/rust`]: https://github.com/rust-lang/rust
+[Rust CI]: https://forge.rust-lang.org/infra/docs/rustc-ci.html
+
+<div class = "note"><details>
+<summary><em>What is <code>rustup</code></em>?</summary>
+
+The [`rustup`] tool is the [officially recommended] way of installing Rust.
+It supports having multiple versions of Rust installed simultaneously and makes upgrading Rust easy.
+It also provides access to optional tools and components such as [`rustfmt`] or [`rust-analyzer`].
+This guide requires `rustup`, so please install it if you haven't already.
+
+[`rustup`]: https://rustup.rs/
+[officially recommended]: https://www.rust-lang.org/learn/get-started
+[`rustfmt`]: https://github.com/rust-lang/rustfmt/
+[`rust-analyzer`]: https://github.com/rust-lang/rust-analyzer
+
+</details></div>
+
+##### Using Nightly Rust
+
+To use nightly Rust for our project, we create a new [`rust-toolchain.toml`] file in the root directory of our project:
+
+[`rust-toolchain.toml`]: https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
+
+```toml ,hl_lines=1-3
+[toolchain]
+channel = "nightly"
+targets = ["x86_64-unknown-none"]
+```
+
+The `channel` field specifies which [toolchain`] to use.
+In our case, we want to use the latest nightly compiler.
+We could also specify a specific nightly here, e.g. `nightly-2023-04-30`, which can be useful when there is some breakage in the newest nightly.
+In the `targets` list, we can specify additional targets that we want to compile to.
+In our case, we specify the `x86_64-unknown-none` target that we use for our kernel.
+
+[`toolchain`]: https://rust-lang.github.io/rustup/concepts/toolchains.html
+
+Rustup automatically reads the `rust-toolchain.toml` file and sets up the requested Rust version when running a `cargo` or `rustc` command in this folder, or a subfolder.
+We can try this by running `cargo --version`:
+
+```bash
+❯ cargo --version
+info: syncing channel updates for 'nightly-x86_64-unknown-linux-gnu'
+info: latest update on 2023-04-30, rust version 1.71.0-nightly (87b1f891e 2023-04-29)
+info: downloading component 'cargo'
+info: downloading component 'clippy'
+info: downloading component 'rust-docs'
+info: downloading component 'rust-std'
+info: downloading component 'rust-std' for 'x86_64-unknown-none'
+info: downloading component 'rustc'
+info: downloading component 'rustfmt'
+info: installing component 'cargo'
+info: installing component 'clippy'
+info: installing component 'rust-docs'
+info: installing component 'rust-std'
+info: installing component 'rust-std' for 'x86_64-unknown-none'
+info: installing component 'rustc'
+info: installing component 'rustfmt'
+cargo 1.71.0-nightly (9e586fbd8 2023-04-25)
+```
+
+We see that `rustup` automatically downloads and install the nightly version of all Rust components.
+This is of course only done once, if the requested toolchain is not installed yet.
+To list all installed toolchains, use `rustup toolchain list`.
+Updating toolchains is possible through `rustup update`.
+
+##### Enabling Artifact Dependencies
+
+Now that we've installed a nightly version of Rust, we can opt-in to the unstable [_artifact dependency_] feature.
+To do this, we create a new folder named `.cargo` in the root of our project.
+Inside that folder, we create a new [`cargo` configuration file] named `config.toml`:
+
+[`cargo` configuration file]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml ,hl_lines=3-4
+# .cargo/config.toml
+
+[unstable]
+bindeps = true
+```
+
+##### Creating an Artifact Dependency
+
+After switching to nightly Rust and enabling the unstable `bindeps` feature, we can finally add an artifact dependency on our compiled kernel.
+For this, we update the `dependency` table of our `blog_os` crate:
+
+```toml ,hl_lines=9-10
+[package]
+name = "blog_os"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = ["kernel"]
+
+[dependencies]
+kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
+```
+
+We specify that the `kernel` crate lives in the `kernel` subdirectory through the `path` key.
+The `artifact = "bin"` key specifies that we're interested in the compiled kernel binary (this makes the dependency an artifact dependency).
+Finally, we use the `target` key to specify that our kernel binary should be compiled for the `x86_64-unknown-none` target.
+
+Now `cargo` will automatically build our kernel before building our `blog_os` crate.
+We can see this when building the `blog_os` crate using `cargo build`:
+
+```
+❯ cargo build
+   Compiling bootloader_api v0.11.3
+   Compiling kernel v0.1.0 (/.../os/kernel)
+   Compiling blog_os v0.1.0 (/.../os)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.51s
+```
+
+The `blog_os` crate should be built for our host system, so we don't specify a `--target` argument.
+Cargo uses the same profile for compiling the `blog_os` and `kernel` crates, so `cargo build --release` will also build the `kernel` binary with optimizations enabled.
+
+Now that we have set up an artifact dependency on our kernel, we can finally create the bootable disk image.
+
+#### Using the `DiskImageBuilder`
+
+The last step to create the bootable disk image is to invoke the [`DiskImageBuilder`] of the `bootloader` crate.
+For that, we first add a dependency on the `bootloader` crate to our `blog_os` crate:
+
+```toml ,hl_lines=5
+# in root Cargo.toml
+
+[dependencies]
+kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
+bootloader = "0.11.3"
+```
+
+The crate requires the `llvm-tools` component of `rustup`, which is not installed by default.
+To install it, we update our `rust-toolchain.toml` file:
+
+```toml ,hl_lines=6
+# rust-toolchain.toml
+
+[toolchain]
+channel = "nightly"
+targets = ["x86_64-unknown-none"]
+components = ["llvm-tools-preview"]
+```
+
+If we run `cargo build` now, the bootloader should be built as a dependency.
+The initial build will take a long time, but it should finish without errors.
+Please open an issue in the [`rust-osdev/bootloader`] repository if you encounter any issues.
+
+[`rust-osdev/bootloader`]: https://github.com/rust-osdev/bootloader
+
+Now we can use the [`DiskImageBuilder`] in the `main` function of our `blog_os` crate:
+
+```rust, hl_lines=3-4 7-9
+// src/main.rs
+
+use bootloader::DiskImageBuilder;
+use std::path::PathBuf;
+
+fn main() {
+    // set by cargo for the kernel artifact dependency
+    let kernel_path = PathBuf::from(env!("CARGO_BIN_FILE_KERNEL"));
+    let disk_builder = DiskImageBuilder::new(kernel_path);
+}
+```
+
+Cargo communicates the path of artifact dependencies through environment variables.
+For our `kernel` dependency, the environment variable name is `CARGO_BIN_FILE_KERNEL`.
+The environment variable is set at build time, so we can use the [`env!`] macro to read it.
+We then wrap convert it to a [`PathBuf`] because that's the type that [`DiskImageBuilder::new`] expects.
+
+[`env!`]: https://doc.rust-lang.org/std/macro.env.html
+[`PathBuf`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html
+[`DiskImageBuilder::new`]: https://docs.rs/bootloader/0.11.3/bootloader/struct.DiskImageBuilder.html#method.new
+
+Now we need to decide where we want to place the disk images.
+This is entirely up to.
+In the following, we will place the images next to `blog_os` executable, which will be under `target/debug` (for development builds) or `target/release` (for optimized builds):
+
+```rust ,hl_lines=2 4 9-10 12
+use bootloader::DiskImageBuilder;
+use std::{env, error::Error, path::PathBuf};
+
+fn main() -> Result<(), Box<dyn Error>> {
+    // set by cargo for the kernel artifact dependency
+    let kernel_path = PathBuf::from(env!("CARGO_BIN_FILE_KERNEL"));
+    let disk_builder = DiskImageBuilder::new(kernel_path);
+
+    // place the disk image files under target/debug or target/release
+    let target_dir = env::current_exe()?;
+
+    Ok(())
+}
+```
+
+We use the [`std::env::current_exe`] function to get the path to the `blog_os` executable.
+This function can (rarely) fail, so we add some basic error handling to our `main` function.
+For that, we change the return value of the function to a [`Result`] with a dynamic error type (a [_trait object_] of the [`Error`] trait).
+This allows us to use the [`?` operator] to exit with an error code on error.
+
+[`std::env::current_exe`]: https://doc.rust-lang.org/std/env/fn.current_exe.html
+[`Result`]: https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html#recoverable-errors-with-result
+[`?` operator]: https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html#a-shortcut-for-propagating-errors-the--operator
+[_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#using-trait-objects-that-allow-for-values-of-different-types
+[`Error`]: https://doc.rust-lang.org/std/error/trait.Error.html
+
+The final step is to actually create the UEFI and BIOS disk images:
+
+```rust ,hl_lines=12-14 16-18
+use bootloader::DiskImageBuilder;
+use std::{env, error::Error, path::PathBuf};
+
+fn main() -> Result<(), Box<dyn Error>> {
+    // set by cargo for the kernel artifact dependency
+    let kernel_path = PathBuf::from(env!("CARGO_BIN_FILE_KERNEL"));
+    let disk_builder = DiskImageBuilder::new(kernel_path);
+
+    // place the disk image files under target/debug or target/release
+    let target_dir = env::current_exe()?;
+
+    let uefi_path = target_dir.with_file_name("blog_os-uefi.img");
+    disk_builder.create_uefi_image(&uefi_path)?;
+    println!("Created UEFI disk image at {}", uefi_path.display());
+
+    let bios_path = target_dir.with_file_name("blog_os-bios.img");
+    disk_builder.create_bios_image(&bios_path)?;
+    println!("Created BIOS disk image at {}", bios_path.display());
+
+    Ok(())
+}
+```
+
+We use the [`PathBuf::with_file_name`] method to create the target paths for the disk images.
+To create the images, we call the `create_uefi_image` and `create_bios_image` methods of [`DiskImageBuilder`].
+Finally, we print the full paths to the created files.
+
+[`PathBuf::with_file_name`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.with_file_name
+
+Now we can use a simple `cargo run` to cross-compile our kernel, build the bootloader, and combine them to create a bootable disk image:
+
+```
+❯ cargo run
+   Compiling kernel v0.1.0 (/.../os/kernel)
+   Compiling blog_os v0.1.0 (/.../os)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.52s
+     Running `target/debug/blog_os`
+Created UEFI disk image at /.../os/target/debug/blog_os-uefi.img
+Created BIOS disk image at /.../os/target/debug/blog_os-bios.img
+```
+
+Cargo will automatically detect when our kernel code is modified and recompile the dependent `blog_os` crate.
 
 #### Making `rust-analyzer` happy
 
