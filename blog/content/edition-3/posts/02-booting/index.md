@@ -487,6 +487,7 @@ To use nightly Rust for our project, we create a new [`rust-toolchain.toml`] fil
 ```toml ,hl_lines=1-3
 [toolchain]
 channel = "nightly"
+profile = "default"
 targets = ["x86_64-unknown-none"]
 ```
 
@@ -601,6 +602,7 @@ To install them, we update our `rust-toolchain.toml` file:
 
 [toolchain]
 channel = "nightly"
+profile = "default"
 targets = ["x86_64-unknown-none"]
 components = ["rust-src", "llvm-tools-preview"]
 ```
