@@ -7,9 +7,3 @@ edition = "2021"
 
 [dependencies]
 bootloader_api = "0.11.0"
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"
