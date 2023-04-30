@@ -6,6 +6,5 @@ edition = "2021"
 [workspace]
 members = ["kernel"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
