@@ -15,8 +15,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - run: rustup target add x86_64-unknown-none
-      - run: cargo check --target x86_64-unknown-none
+      - run: cargo check
 
   test:
     name: Test
@@ -30,9 +29,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
-      - run: rustup target add x86_64-unknown-none
-      - run: cargo build --target x86_64-unknown-none
+      - run: cargo build
 
   fmt:
     name: Check Formatting
@@ -46,7 +43,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
-      - run: rustup target add x86_64-unknown-none
-      - run: rustup component add clippy
-      - run: cargo clippy --target x86_64-unknown-none
+      - run: cargo clippy
