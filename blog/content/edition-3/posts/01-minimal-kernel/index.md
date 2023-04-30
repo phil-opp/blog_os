@@ -82,7 +82,7 @@ We name the project `kernel` here, but of course you can choose your own name.
 The `--bin` flag specifies that we want to create an executable binary (in contrast to a library) and the `--edition 2021` flag specifies that we want to use the [2021 edition] of Rust for our crate.
 When we run the command, cargo creates the following directory structure for us:
 
-[2021 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2021/index.html
+[2021 edition]: https://doc.rust-lang.org/edition-guide/rust-2021/index.html
 
 ```
 kernel
@@ -181,9 +181,9 @@ The [`PanicInfo` parameter][PanicInfo] contains the file and line where the pani
 The handler function should never return, so it is marked as a [diverging function] by returning the [“never” type] `!`.
 There is not much we can do in this function for now, so we just loop indefinitely.
 
-[PanicInfo]: https://doc.rust-lang.org/nightly/core/panic/struct.PanicInfo.html
+[PanicInfo]: https://doc.rust-lang.org/core/panic/struct.PanicInfo.html
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
-[“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
+[“never” type]: https://doc.rust-lang.org/std/primitive.never.html
 
 After defining a panic handler, only the `eh_personality` language item error remains:
 
