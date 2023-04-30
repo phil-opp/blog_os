@@ -5,7 +5,7 @@ use core::panic::PanicInfo;
 
 bootloader_api::entry_point!(kernel_main);
 
-fn kernel_main(bootinfo: &'static mut bootloader_api::BootInfo) -> ! {
+fn kernel_main(_bootinfo: &'static mut bootloader_api::BootInfo) -> ! {
     loop {}
 }
 
