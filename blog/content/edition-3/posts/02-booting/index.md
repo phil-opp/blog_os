@@ -275,7 +275,7 @@ We will take a closer look at the `entry_point` macro and the different configur
 bootloader_api::entry_point!(kernel_main);
 
 // ↓ this replaces the `_start` function ↓
-fn kernel_main(_bootinfo: &'static mut bootloader_api::BootInfo) -> ! {
+fn kernel_main(_boot_info: &'static mut bootloader_api::BootInfo) -> ! {
     loop {}
 }
 ```
@@ -343,7 +343,7 @@ In the next sections, we will implement following steps to achieve this:
 
 - Create a [`cargo` workspace] with an empty root package.
 - Add an [_artifact dependency_] to include the compiled kernel binary in the root package.
-- Invoke the `bootloader::DiskImageBuilder` in our new root package.
+- Invoke the `bootloader::DiskImageBuilder` in the root package.
 
 [`cargo` workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
 [_artifact dependency_]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#artifact-dependencies
@@ -548,7 +548,7 @@ bindeps = true
 After switching to nightly Rust and enabling the unstable `bindeps` feature, we can finally add an artifact dependency on our compiled kernel.
 For this, we update the `dependency` table of our `blog_os` crate:
 
-```toml ,hl_lines=9-10
+```toml ,hl_lines=11-12
 [package]
 name = "blog_os"
 version = "0.1.0"
@@ -558,12 +558,17 @@ edition = "2021"
 members = ["kernel"]
 
 [dependencies]
+
+[build-dependencies]
 kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
 ```
 
+We will use the artifact in a cargo [_build script_], so we add it to the `build-dependencies` section instead of the normal `dependencies` section.
 We specify that the `kernel` crate lives in the `kernel` subdirectory through the `path` key.
 The `artifact = "bin"` key specifies that we're interested in the compiled kernel binary (this makes the dependency an artifact dependency).
 Finally, we use the `target` key to specify that our kernel binary should be compiled for the `x86_64-unknown-none` target.
+
+[_build script_]: https://doc.rust-lang.org/cargo/reference/build-scripts.html
 
 Now `cargo` will automatically build our kernel before building our `blog_os` crate.
 We can see this when building the `blog_os` crate using `cargo build`:
@@ -583,13 +588,43 @@ Now that we have set up an artifact dependency on our kernel, we can finally cre
 
 #### Using the `DiskImageBuilder`
 
-The last step to create the bootable disk image is to invoke the [`DiskImageBuilder`] of the `bootloader` crate.
-For that, we first add a dependency on the `bootloader` crate to our `blog_os` crate:
+The last step is to invoke the [`DiskImageBuilder`] of the `bootloader` crate, with our kernel executable as input.
+We will do this through a cargo [_build script_], which enables us to implement custom build steps that are run on `cargo build`.
+
+To set up a build script, we place a new file named `build.rs` in the root folder of our project (not in the `src` folder!).
+Inside it, we create a simple main function:
+
+```rust ,hl_lines=3-5
+// build.rs
+
+fn main() {
+    panic!("not implemented yet")
+}
+```
+
+When we run `cargo build` now, we see that the panic is hit:
+
+```bash
+❯ cargo build
+   Compiling blog_os v0.1.0 (/.../os)
+error: failed to run custom build command for `blog_os v0.1.0 (/.../os)`
+
+Caused by:
+  process didn't exit successfully: `/.../os/target/debug/build/blog_os-ff0a4f2814615867/build-script-build` (exit status: 101)
+  --- stderr
+  thread 'main' panicked at 'not implemented yet', build.rs:5:5
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+```
+
+This panic shows us that cargo found the build script and automatically invoked it as part of `cargo build`.
+
+Now we're ready to use the [`DiskImageBuilder`].
+For that, we first add a build dependency on the `bootloader` crate to our `blog_os` crate:
 
 ```toml ,hl_lines=5
 # in root Cargo.toml
 
-[dependencies]
+[build-dependencies]
 kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
 bootloader = "0.11.3"
 ```
@@ -613,110 +648,224 @@ Please open an issue in the [`rust-osdev/bootloader`] repository if you encounte
 
 [`rust-osdev/bootloader`]: https://github.com/rust-osdev/bootloader
 
-Now we can use the [`DiskImageBuilder`] in the `main` function of our `blog_os` crate:
+After adding the dependency, we can use the [`DiskImageBuilder`] in the `main` function of our build script:
 
 ```rust, hl_lines=3-4 7-9
-// src/main.rs
+// build.rs
 
 use bootloader::DiskImageBuilder;
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 fn main() {
     // set by cargo for the kernel artifact dependency
-    let kernel_path = PathBuf::from(env!("CARGO_BIN_FILE_KERNEL"));
-    let disk_builder = DiskImageBuilder::new(kernel_path);
+    let kernel_path = env::var("CARGO_BIN_FILE_KERNEL").unwrap();
+    let disk_builder = DiskImageBuilder::new(PathBuf::from(kernel_path));
 }
 ```
 
 Cargo communicates the path of artifact dependencies through environment variables.
 For our `kernel` dependency, the environment variable name is `CARGO_BIN_FILE_KERNEL`.
-The environment variable is set at build time, so we can use the [`env!`] macro to read it.
-We then wrap convert it to a [`PathBuf`] because that's the type that [`DiskImageBuilder::new`] expects.
+To read it, we use the [`std::env::var`] function.
+If it's not present, we panic using [`unwrap`].
+Then wrap convert it to a [`PathBuf`] and pass it to [`DiskImageBuilder::new`].
 
-[`env!`]: https://doc.rust-lang.org/std/macro.env.html
+[`std::env::var`]: https://doc.rust-lang.org/std/env/fn.var.html
+[`unwrap`]: https://doc.rust-lang.org/std/result/enum.Result.html#method.unwrap
 [`PathBuf`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html
 [`DiskImageBuilder::new`]: https://docs.rs/bootloader/0.11.3/bootloader/struct.DiskImageBuilder.html#method.new
 
-Now we need to decide where we want to place the disk images.
-This is entirely up to.
-In the following, we will place the images next to `blog_os` executable, which will be under `target/debug` (for development builds) or `target/release` (for optimized builds):
+Next, we call the `create_uefi_image` and `create_bios_image` methods to create the UEFI and BIOS disk images:
 
-```rust ,hl_lines=2 4 9-10 12
+```rust ,hl_lines=11-14 16-18
+// build.rs
+
 use bootloader::DiskImageBuilder;
-use std::{env, error::Error, path::PathBuf};
+use std::{env, path::PathBuf};
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     // set by cargo for the kernel artifact dependency
-    let kernel_path = PathBuf::from(env!("CARGO_BIN_FILE_KERNEL"));
-    let disk_builder = DiskImageBuilder::new(kernel_path);
+    let kernel_path = env::var("CARGO_BIN_FILE_KERNEL").unwrap();
+    let disk_builder = DiskImageBuilder::new(PathBuf::from(kernel_path));
 
-    // place the disk image files under target/debug or target/release
-    let target_dir = env::current_exe()?;
+    // specify output paths
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let uefi_path = out_dir.join("blog_os-uefi.img");
+    let bios_path = out_dir.join("blog_os-bios.img");
 
-    Ok(())
+    // create the disk images
+    disk_builder.create_uefi_image(&uefi_path).unwrap();
+    disk_builder.create_bios_image(&bios_path).unwrap();
 }
 ```
 
-We use the [`std::env::current_exe`] function to get the path to the `blog_os` executable.
-This function can (rarely) fail, so we add some basic error handling to our `main` function.
-For that, we change the return value of the function to a [`Result`] with a dynamic error type (a [_trait object_] of the [`Error`] trait).
-This allows us to use the [`?` operator] to exit with an error code on error.
+To prevent collisions, cargo [requires build scripts] to place all their outputs in a specific directory.
+Cargo specifies this directory through the `OUT_DIR` environment variable, which we read using [`std::env::var`] again.
+After converting the directory path to a [`PathBuf`], we can use the [`join`] method to append file names to it (choose any names you like).
+We then use the the `create_uefi_image` and `create_bios_image` methods to create bootable UEFI and BIOS disk images at these paths.
 
-[`std::env::current_exe`]: https://doc.rust-lang.org/std/env/fn.current_exe.html
-[`Result`]: https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html#recoverable-errors-with-result
-[`?` operator]: https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html#a-shortcut-for-propagating-errors-the--operator
-[_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#using-trait-objects-that-allow-for-values-of-different-types
-[`Error`]: https://doc.rust-lang.org/std/error/trait.Error.html
+[requires build scripts]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
+[`join`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.join
 
-The final step is to actually create the UEFI and BIOS disk images:
+We can now use use a simple `cargo build` to cross-compile our kernel, build the bootloader, and combine them to create a bootable disk image:
 
-```rust ,hl_lines=12-14 16-18
+```
+❯ cargo build
+   Compiling bootloader_api v0.11.3
+   Compiling blog_os v0.1.0 (/.../os)
+   Compiling kernel v0.1.0 (/.../os/kernel)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.43s
+```
+
+Cargo will automatically detect when our kernel code is modified and recompile the dependent `blog_os` crate. Builds with optimizations work too, by running `cargo build --release`.
+
+#### Where is it?
+
+We just have one remaining issue:
+We don't know in which directory we created the disk images.
+
+So let's update our build script to make the values `uefi_path` and `bios_path` variables accessible.
+The best way to do that is to instruct `cargo` to set an environment variable.
+We can do this by printing a special [`cargo:rustc-env` string] in our build script:
+
+```rust ,hl_lines=20-22
+// build.rs
+
 use bootloader::DiskImageBuilder;
-use std::{env, error::Error, path::PathBuf};
+use std::{env, path::PathBuf};
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     // set by cargo for the kernel artifact dependency
-    let kernel_path = PathBuf::from(env!("CARGO_BIN_FILE_KERNEL"));
-    let disk_builder = DiskImageBuilder::new(kernel_path);
+    let kernel_path = env::var("CARGO_BIN_FILE_KERNEL").unwrap();
+    let disk_builder = DiskImageBuilder::new(PathBuf::from(kernel_path));
 
-    // place the disk image files under target/debug or target/release
-    let target_dir = env::current_exe()?;
+    // specify output paths
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let uefi_path = out_dir.join("blog_os-uefi.img");
+    let bios_path = out_dir.join("blog_os-bios.img");
 
-    let uefi_path = target_dir.with_file_name("blog_os-uefi.img");
-    disk_builder.create_uefi_image(&uefi_path)?;
-    println!("Created UEFI disk image at {}", uefi_path.display());
+    // create the disk images
+    disk_builder.create_uefi_image(&uefi_path).unwrap();
+    disk_builder.create_bios_image(&bios_path).unwrap();
 
-    let bios_path = target_dir.with_file_name("blog_os-bios.img");
-    disk_builder.create_bios_image(&bios_path)?;
-    println!("Created BIOS disk image at {}", bios_path.display());
-
-    Ok(())
+    // pass the disk image paths via environment variables
+    println!("cargo:rustc-env=UEFI_IMAGE={}", uefi_path.display());
+    println!("cargo:rustc-env=BIOS_IMAGE={}", bios_path.display());
 }
 ```
 
-We use the [`PathBuf::with_file_name`] method to create the target paths for the disk images.
-To create the images, we call the `create_uefi_image` and `create_bios_image` methods of [`DiskImageBuilder`].
-Finally, we print the full paths to the created files.
+[`cargo:rustc-env` string]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-env
 
-[`PathBuf::with_file_name`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.with_file_name
+This sets two environment variables, `UEFI_IMAGE` and `BIOS_IMAGE`.
+These variables are now available at build time in the `src/main.rs` of our `blog_os` crate.
+This file still contains the default _"Hello, world!"_ output.
+Let's change it to print the disk image paths:
 
-Now we can use a simple `cargo run` to cross-compile our kernel, build the bootloader, and combine them to create a bootable disk image:
+```rust ,hl_lines=4-5
+// src/main.rs
+
+fn main() {
+    println!("UEFI disk image at {}", env!("UEFI_IMAGE"));
+    println!("BIOS disk image at {}", env!("BIOS_IMAGE"));
+}
+```
+
+Since the environment variables are set at build time, we can use the special [`env!` macro] to fill them in.
+
+[`env!` macro]: https://doc.rust-lang.org/std/macro.env.html
+
+Now we can invoke `cargo run` to find out where our disk images are:
 
 ```
 ❯ cargo run
-   Compiling kernel v0.1.0 (/.../os/kernel)
-   Compiling blog_os v0.1.0 (/.../os)
-    Finished dev [unoptimized + debuginfo] target(s) in 0.52s
+    Finished dev [unoptimized + debuginfo] target(s) in 0.02s
      Running `target/debug/blog_os`
-Created UEFI disk image at /.../os/target/debug/blog_os-uefi.img
-Created BIOS disk image at /.../os/target/debug/blog_os-bios.img
+UEFI disk image at /.../os/target/debug/build/blog_os-a2f3397119bcf798/out/blog_os-uefi.img
+BIOS disk image at /.../os/target/debug/build/blog_os-a2f3397119bcf798/out/blog_os-bios.img
 ```
 
-Cargo will automatically detect when our kernel code is modified and recompile the dependent `blog_os` crate.
+We see that they live in some subdirectory in `target/debug/build`.
+Note that cargo includes some internals hashes in this path and that it might change this path at any time.
+
+Using this long path is a bit cumbersome, so let's copy the files to the `target/debug` or `target/release` directories directly:
+
+```rust ,hl_lines=3 6-14
+// src/main.rs
+
+use std::{env, fs};
+
+fn main() {
+    let current_exe = env::current_exe().unwrap();
+    let uefi_target = current_exe.with_file_name("uefi.img");
+    let bios_target = current_exe.with_file_name("bios.img");
+
+    fs::copy(env!("UEFI_IMAGE"), &uefi_target).unwrap();
+    fs::copy(env!("BIOS_IMAGE"), &bios_target).unwrap();
+
+    println!("UEFI disk image at {}", uefi_target.display());
+    println!("BIOS disk image at {}", bios_target.display());
+}
+```
+
+We exploit that the `main` function becomes an executable in `target` or `target/release` after compilation, so we can use the [`current_exe`] path to find the right directory.
+Then we use the [`with_file_name`] method to create new file paths in the same directory.
+As before, choose any name you like here.
+
+[`current_exe`]: https://doc.rust-lang.org/std/env/fn.current_exe.html
+[`with_file_name`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.with_file_name
+
+To copy the disk images to their new path, we use the [`fs::copy`] function.
+The last step is to print the new paths.
+Now we have the disk images available at a shorter and stable path, which is easier to use:
+
+[`fs::copy`]: https://doc.rust-lang.org/std/fs/fn.copy.html
+
+```bash
+❯ cargo run
+    Finished dev [unoptimized + debuginfo] target(s) in 0.02s
+     Running `target/debug/blog_os`
+UEFI disk image at /.../os/target/debug/uefi.img
+BIOS disk image at /.../os/target/debug/bios.img
+❯ cargo run --release
+    Finished release [optimized] target(s) in 0.02s
+     Running `target/release/blog_os`
+UEFI disk image at /.../os/target/release/uefi.img
+BIOS disk image at /.../os/target/release/bios.img
+```
+
+We see that the disk images are copied to `target/debug` for development builds and to `target/release` for optimized builds, just as we intended.
 
 #### Making `rust-analyzer` happy
 
-TODO
+In case you're using [`rust-analyzer`], you might notice that it reports some errors in the `kernel/src/main.rs`.
+The error might be one of these:
+
+- _found duplicate lang item `panic_impl`_
+- _language item required, but not found: `eh_personality`_
+
+The reason for these errors is that `rust-analyzer` tries to build tests and benchmarks for all crates in the workspace.
+This fails for our `kernel` crate because testing/benchmarking automatically includes the `std` crate, which conflicts with our `#[no_std]` implementation.
+
+So to fix these errors, we need to specify that our `kernel` crate should not be tested or benchmarked.
+We can do this by adding the following to our `kernel/Cargo.toml` file:
+
+```toml ,hl_lines=8-11
+# in kernel/Cargo.toml
+
+[package]
+name = "kernel"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "kernel"
+test = false
+bench = false
+
+[dependencies]
+bootloader_api = "0.11.0"
+```
+
+Now `rust-analyzer` should not report any errors anymore.
 
 ## Running our Kernel
 
@@ -740,8 +889,7 @@ After installing QEMU, you can run `qemu-system-x86_64 --version` in a terminal 
 Then you can run the BIOS disk image of our kernel through the following command:
 
 ```
-qemu-system-x86_64 -drive \
-    format=raw,file=bootimage-bios-blog_os.img
+qemu-system-x86_64 -drive format=raw,file=target/debug/bios.img
 ```
 
 As a result, you should see a window open that looks like this:
@@ -763,19 +911,17 @@ Unfortunately, the project is only [sparsely documented][ovmf-whitepaper] and do
 [ovmf-whitepaper]: https://www.linux-kvm.org/downloads/lersek/ovmf-whitepaper-c770f8c.txt
 
 The easiest way to work with OVMF is to download pre-built images of the code.
-We provide such images in the [`rust-osdev/ovmf-prebuilt`] repository, which is updated daily from [Gerd Hoffman's RPM builds](https://www.kraxel.org/repos/).
+We provide such images in the [`rust-osdev/ovmf-prebuilt`] repository, ~~which is updated daily from [Gerd Hoffman's RPM builds](https://www.kraxel.org/repos/)~~.
 The compiled OVMF are provided as [GitHub releases][ovmf-prebuilt-releases].
 
 [`rust-osdev/ovmf-prebuilt`]: https://github.com/rust-osdev/ovmf-prebuilt/
 [ovmf-prebuilt-releases]: https://github.com/rust-osdev/ovmf-prebuilt/releases/latest
 
-To run our UEFI disk image in QEMU, we need the `OVMF_pure-efi.fd` file (other files might work as well).
+To run our UEFI disk image in QEMU, we need the `OVMF-pure-efi.fd` file (other files might work as well).
 After downloading it, we can then run our UEFI disk image using the following command:
 
 ```
-qemu-system-x86_64 -drive \
-    format=raw,file=bootimage-uefi-blog_os.img \
-    -bios /path/to/OVMF_pure-efi.fd,
+qemu-system-x86_64 -drive format=raw,file=target/debug/uefi.img  -bios OVMF-pure-efi.fd
 ```
 
 If everything works, this command opens a window with the following content:
@@ -786,9 +932,105 @@ If everything works, this command opens a window with the following content:
 The output is a bit different than with the BIOS disk image.
 Among other things, it explicitly mentions that this is an UEFI boot right on top.
 
-### Using `cargo run`
+### QEMU Run Scripts
 
-TODO
+Remembering the QEMU run commands and invoking them manually is a bit cumbersome, so let's invoke the commands from our Rust code.
+We implement this by creating a new `src/bin/qemu-bios.rs` file with the following contents:
+
+```rust ,hl_lines=3-14
+// src/bin/qemu-bios.rs
+
+use std::{
+    env,
+    process::{self, Command},
+};
+
+fn main() {
+    let mut qemu = Command::new("qemu-system-x86_64");
+    qemu.arg("-drive");
+    qemu.arg(format!("format=raw,file={}", env!("BIOS_IMAGE")));
+    let exit_status = qemu.status().unwrap();
+    process::exit(exit_status.code().unwrap_or(-1));
+}
+```
+
+Like our `src/main.rs` file, the `qemu_bios.rs` is an executable that can use the outputs of our build script.
+Instead of copying the disk images and printing their paths, we pass the original bios disk image path as input to a QEMU child process.
+We create this child process using [`Command::new`], add the arguments via [`Command::arg`], and finally start it using [`Command::status`].
+Once the command exits, we finish with the same exit code using [`std::process::exit`].
+
+[`Command::new`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.new
+[`Command::arg`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.arg
+[`Command::status`]: https://doc.rust-lang.org/std/process/struct.Command.html#method.status
+[`std::process::exit`]: https://doc.rust-lang.org/std/process/fn.exit.html
+
+Now we can use `cargo run --bin qemu-bios` to build the kernel, convert it to a bootable disk image, and launch the BIOS disk image in QEMU.
+Of course, cargo will only recompile the kernel and rerun the build script if necessary.
+
+Our `src/main.rs` is still usable through `cargo run --bin blog_os`.
+However, invoking `cargo run` without a `--bin` arguments will now error because cargo does not know which binary it should start in this case.
+We can specify this by adding a new `default-run` key to our top-level `Cargo.toml`:
+
+```toml ,hl_lines=7
+# in Cargo.toml
+
+[package]
+name = "blog_os"
+version = "0.1.0"
+edition = "2021"
+default-run = "blog_os"
+
+# <...>
+```
+
+Now `cargo run` works again.
+If you prefer, you can of course also set `default-run` to `qemu-bios` instead.
+
+Let's make things complete by adding a `qemu-uefi` executable as well.
+We need the `OVMF-pure-efi.fd`, which we could add as normal file path.
+However, the [`ovmf-prebuilt`] crate provides an easier way:
+It includes a prebuilt copy of the `OVMF` file and provides it through its `ovmf_pure_efi` function.
+To use it, we add it as a dependency to our top-level `Cargo.toml`:
+
+[`ovmf-prebuilt`]: https://docs.rs/ovmf-prebuilt/0.1.0-alpha.1/ovmf_prebuilt/
+
+```toml ,hl_lines=6
+# in Cargo.toml
+
+# ...
+
+[dependencies]
+ovmf-prebuilt = "0.1.0-alpha"
+
+[build-dependencies]
+kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
+bootloader = "0.11.3"
+```
+
+Now we can create our `qemu-uefi` executable at `src/bin/qemu-uefi.rs`:
+
+```rust ,hl_lines=3-15
+// src/bin/qemu-uefi.rs
+
+use std::{
+    env,
+    process::{self, Command},
+};
+
+fn main() {
+    let mut qemu = Command::new("qemu-system-x86_64");
+    qemu.arg("-drive");
+    qemu.arg(format!("format=raw,file={}", env!("UEFI_IMAGE")));
+    qemu.arg("-bios").arg(ovmf_prebuilt::ovmf_pure_efi());
+    let exit_status = qemu.status().unwrap();
+    process::exit(exit_status.code().unwrap_or(-1));
+}
+```
+
+It's very similar to our `qemu-bios` executable.
+The only two differences are that it passes an additional `-bios` argument and that it uses the `UEFI_IMAGE` instead of the `BIOS_IMAGE`.
+Using a quick `cargo run --bin qemu-uefi`, we can confirm that it works as intended.
+
 
 ### Screen Output
 
@@ -804,8 +1046,12 @@ The graphics card automatically reads the contents of this region on every scree
 Since the size, pixel format, and memory location of the framebuffer can vary between different systems, we need to find out these parameters first.
 The easiest way to do this is to read it from the [boot information structure][`BootInfo`] that the bootloader passes as argument to our kernel entry point:
 
-```rust
-// in src/main.rs
+```rust ,hl_lines=3 7-13
+// in src/kernel/main.rs
+
+use bootloader_api::BootInfo;
+
+// ...
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_ref() {
@@ -814,6 +1060,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     }
     loop {}
 }
+
+// ...
 ```
 
 Even though most systems support a framebuffer, some might not.
@@ -834,9 +1082,8 @@ We will look into programming the framebuffer in detail in the next post.
 For now, let's just try setting the whole screen to some color.
 For this, we just set every pixel in the byte slice to some fixed value:
 
-
-```rust
-// in src/main.rs
+```rust ,hl_lines=5-7
+// in src/kernel/main.rs
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
@@ -850,24 +1097,24 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
 While it depends on the pixel color format how these values are interpreted, the result will likely be some shade of gray since we set the same value for every color channel (e.g. in the RGB color format).
 
-After running `cargo kbuild` and then our `boot` script again, we can boot the new version in QEMU.
+To boot the new version in QEMU, we use `cargo run --bin qemu-bios` or `cargo run --bin qemu-uefi`.
 We see that our guess that the whole screen would turn gray was right:
 
 ![QEMU showing a gray screen](qemu-gray.png)
 
-We finally see some output from our own little kernel!
+We finally see some output from our little kernel!
 
 You can try experimenting with the pixel bytes if you like, for example by increasing the pixel value on each loop iteration:
 
-```rust
-// in src/main.rs
+```rust ,hl_lines=5-9
+// in src/kernel/main.rs
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
         let mut value = 0x90;
         for byte in framebuffer.buffer_mut() {
             *byte = value;
-            value = value.wrapping_add(1);
+            value = value.wrapping_add(7);
         }
     }
     loop {}
@@ -875,17 +1122,27 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 ```
 
 We use the [`wrapping_add`] method here because Rust panics on implicit integer overflow (at least in debug mode).
-By adding a prime number, we try to add some variety.
 The result looks as follows:
+
+[`wrapping_add`]: https://doc.rust-lang.org/std/primitive.u8.html#method.wrapping_add
 
 ![QEMU showing repeating gradient columns](qemu-wrapping-add.png)
 
 ### Booting on Real Hardware
 
-To boot on real hardware, you first need to write either the `bootimage-uefi-blog_os.img` or the `bootimage-bios-blog_os.img` disk image to an USB stick.
-This deletes everything on the stick, so be careful.
-The actual steps to do this depend on your operating system.
+To boot on real hardware, write either the `uefi.img` or the `bios.img` disk image to an USB thumb drive.
+The actual steps to do this depend on your operating system (see below).
+After writing the thumb drive, you can let your computer boot from it.
+You can typically choose the boot device by pressing some specific key during the BIOS setup that happens directly after you turn on the computer.
 
+In the following, we show some ways to write a disk image to a thumb drive.
+
+<div class="warning">
+
+**WARNING**: Be very with the following operations.
+If you specify the wrong device as the `of=` parameter, you could end up erasing your system or other important data, so make sure that you choose the right target drive.
+
+</div>
 
 #### Unix-like
 
@@ -896,17 +1153,14 @@ After that, open a terminal window and run either of the following commands:
 ##### Linux
 ```
 # replace /dev/sdX with device filename as revealed by "sudo fdisk -l"
-$ sudo dd if=boot-uefi-blog_os.img of=/dev/sdX
+$ sudo dd if=target/release/uefi.img of=/dev/sdX
 ```
 
 ##### macOS
 ```
 # replace /dev/diskX with device filename as revealed by "diskutil list"
-$ sudo dd if=boot-uefi-blog_os.img of=/dev/diskX
+$ sudo dd if=target/release/uefi.img of=/dev/diskX
 ```
-
-**WARNING**: Be very careful when running this command.
-If you specify the wrong device as the `of=` parameter, you could end up wiping your system clean, so make sure the device you run it on is a removable one.
 
 #### Windows
 
@@ -917,210 +1171,12 @@ In the interface, you select the USB stick you want to write to.
 [Rufus]: https://rufus.ie/
 [rufus-github]: https://github.com/pbatard/rufus
 
+## Summary and Next Steps
 
+In this post we learned about the [boot process](#the-boot-process) on x86 machines and about the [BIOS](#bios) and [UEFI](#uefi) firmware standards.
+We used the `bootloader` and `bootloader_api` crates to convert our kernel to a [bootable disk image](#bootable-disk-image) and [started in QEMU](#running-in-qemu).
+Through advanced cargo features such as [workspaces](#creating-a-workspace), [build scripts](#using-the-diskimagebuilder), and [artifact dependencies](#adding-an-artifact-dependency), we created a nice build system that can bring us directly from source code to a running QEMU instance using a single command.
 
-
-### OLD
-
-The [docs of the `bootloader` crate][`bootloader` docs] describe how to create a bootable disk image for a kernel.
-The first step is to find the directory where cargo placed the source code of the `bootloader` dependency.
-Then, a special build command needs to be executed in that directory, passing the paths to the kernel binary and its `Cargo.toml` as arguments.
-This will result in multiple disk image files as output, which can be used to boot the kernel on BIOS and UEFI systems.
-
-[`bootloader` docs]: https://docs.rs/bootloader/0.11.0/bootloader/
-
-#### A `boot` crate
-
-Since following these steps manually is cumbersome, we create a script to automate it.
-For that we create a new `boot` crate in a subdirectory, in which we will implement the build steps:
-
-```
-cargo new --bin boot
-```
-
-This command creates a new `boot` subfolder with a `Cargo.toml` and a `src/main.rs` in it.
-Since this new cargo project will be tightly coupled with our main project, it makes sense to combine the two crates as a [cargo workspace].
-This way, they will share the same `Cargo.lock` for their dependencies and place their compilation artifacts in a common `target` folder.
-To create such a workspace, we add the following to the `Cargo.toml` of our main project:
-
-[cargo workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
-
-```toml
-# in Cargo.toml
-
-[workspace]
-members = ["boot"]
-```
-
-After creating the workspace, we can begin the implementation of the `boot` crate.
-Note that the crate will be invoked as part as our build process, so it can be a normal Rust executable that runs on our host system.
-This means that is has a classical `main` function and can use standard library types such as [`Path`] or [`Command`] without problems.
-
-[`Path`]: https://doc.rust-lang.org/std/path/struct.Path.html
-[`Command`]: https://doc.rust-lang.org/std/process/struct.Command.html
-
-#### Artifact Dependencies
-
-The first step in creating the bootable disk image is to enable support for [artifact dependencies](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#artifact-dependencies) from inside your kernel's `.cargo/config.toml` because we're going to need that support later:
-
-```toml
-# in .cargo/config.toml
-
-[unstable]
-bindeps = true
-```
-
-After this, you need to add an artifact dependency on your kernel from inside the boot crate. This tells the bootloader crate where the source code to your kernel resides:
-
-```toml
-# in boot/Cargo.toml
-
-[dependencies]
-kernel = { path = "..", artifact = "bin", target = "x86_64-unknown-none" }
-```
-
-Finally, you need to add a dependency on the main `bootloader` crate. Previous versions used `bootloader_locator` instead, but now, thanks to artifact dependencies, that is no longer necessary.
-
-```toml
-# in boot/Cargo.toml
-
-[dependencies]
-bootloader = "0.11.0"
-```
-
-We can see how this works by printing the Cargo-generated environment variable pointing to the absolute path of the kernel binary
-
-```rust
-// in boot/src/main.rs
-use std::path::Path;      // new
-
-pub fn main() {
-    let kernel_binary = Path::new(env!("CARGO_BIN_FILE_KERNEL_kernel"));
-    dbg!(kernel_binary);
-}
-```
-
-The `CARGO_BIN_FILE_KERNEL_kernel` environment variable is defined by Cargo as the absolute path to the binary file created after compiling an artifact dependency — and in this case, the binary file it points to is your kernel's binary. This makes it very easy to begin the process of boot image creation, as explained in detail below.
-
-[`dbg!`]: https://doc.rust-lang.org/std/macro.dbg.html
-
-To run the `boot` crate from our workspace root (i.e. the kernel directory), we can pass a [`--package`] argument to `cargo run`:
-
-[`--package`]: https://doc.rust-lang.org/cargo/commands/cargo-run.html#package-selection
-
-```
-> cargo run --package boot
-[boot/src/main.rs:5] kernel_path = "/.../target/x86_64-unknown-none/debug/deps/artifact/kernel-.../bin/kernel-..."
-```
-
-It worked! We see that the kernel binary lives somewhere in the dependency tree of our `boot` crate.
-By depending on the kernel as a binary dependency of `boot`, we ensure that the bootloader and the kernel use the exact same version of the `BootInfo` type.
-This is important because the `BootInfo` type is not stable yet, so undefined behavior can occur when when using different `BootInfo` versions.
-
-#### Building a Boot Image
-
-The next step is to actually build the boot image.
-From the [`bootloader` docs] we learn that the crate defines two completely unique bootloader objects: `BiosBoot` for BIOS and `UefiBoot` for UEFI. To keep it simple, we will support both, although it's possible to choose which to exclusively support later to keep your workflow streamlined as your kernel becomes more complex.
-
-```toml
-# in boot/Cargo.toml
-
-[dependencies]
-bootloader = "0.11.0"
-kernel = { path = "..", artifact = "bin", target = "x86_64-unknown-none" }
-```
-
-Once all dependencies are accounted for, it's time to put everything together:
-
-```rust
-// in boot/src/main.rs
-
-// new
-use bootloader::{BiosBoot, UefiBoot}
-use std::{path::Path, process::exit};
-
-pub fn main() {
-    // new code below
-
-    let kernel_dir = todo!();
-    let bios_image = todo!();
-    let uefi_image = todo!();
-
-    // invoke UEFI boot image builder
-    let uefi = UefiBoot::new(&kernel_binary);
-
-    // invoke BIOS boot image builder
-    let bios = BiosBoot::new(&kernel_binary);
-
-    // attempt to create UEFI boot image
-    if let Err(e) = uefi.create_disk_image(&uefi_path) {
-        eprintln!("{:#?}", &e);
-        exit(1)
-    }
-
-    // attempt to create BIOS boot image
-    if let Err(e) = bios.create_disk_image(&bios_path) {
-        eprintln!("{:#?}", &e);
-        exit(1)
-    }
-}
-```
-
-We use both the `UefiBoot` and `BiosBoot` types to create disk images for the BIOS and UEFI implementations, respectively. By using the `if let` syntax, we can exit the build gracefully whenever an error occurs.
-
-After creating the `UefiBoot` and  `BiosBoot` types using the `CARGO_BIN_FILE_KERNEL_kernel` environment variable that we went over previously as the constructor argument for both, we now are ready for the next step.
-
-#### Filling in the Blanks
-
-We still need to fill in the paths we marked as `todo!` above. Like with the kernel binary, we can also use the `env!()` builtin for this, since another environment variable can also be used as a reference point for determining the filenames for the disk images:
-
-```rust
-// in `main` in boot/src/main.rs
-
-// we know that the kernel lives in the parent directory of the `boot` crate
-let kernel_dir = Path::new(env!("CARGO_MANIFEST_DIR")).manifest_dir.parent().unwrap();
-
-// use the above as a target folder in which to place both the BIOS and UEFI disk images
-let bios_image = kernel_dir.join("bootimage-bios-blog_os.img");
-let uefi_image = kernel_dir.join("bootimage-uefi-blog_os.img");
-```
-
-The [`CARGO_MANIFEST_DIR`] environment variable always points to the `boot` directory, even if the crate is built from a different directory (e.g. via cargo's `--manifest-path` argument).
-This gives use a good starting point for creating the paths we care about since we know that our kernel lives in the [parent][`Path::parent`] directory.
-
-[`Path::parent`]: https://doc.rust-lang.org/std/path/struct.Path.html
-[`CARGO_MANIFEST_DIR`]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
-
-From the `kernel_dir`, we can then construct the `bios_image` and `uefi_image` paths using the [`Path::join`] method.
-
-[`Path::join`]: https://doc.rust-lang.org/std/path/struct.Path.html#method.join
-
-#### Creating the Disk Images
-
-There is one last step before we can create the bootable disk images: The `bootloader` build requires the [rustup component] `llvm-tools-preview`.
-To install it, we can either run `rustup component add llvm-tools-preview` or specify it in our `rust-toolchain.toml` file:
-
-[rustup component]: https://rust-lang.github.io/rustup/concepts/components.html
-
-```toml
-# in rust-toolchain.toml
-
-[toolchain]
-channel = "nightly"
-components = ["rust-src", "rustfmt", "clippy", "llvm-tools-preview"]
-```
-
-After that can finally use our `boot` crate to create some bootable disk images from our kernel:
-
-```bash
-> cargo run --package boot
-```
-
-Because we're using artifact dependencies, when you run the `boot` package, the kernel is automatically pulled in and compiled as a dependency. Previously, in version 0.10 of the bootloader crate, you had to build the kernel binary first, but now, thanks to artifact dependencies, this is no longer required.
-Note that the command will only work from the root directory of our project.
-This is because we hardcoded the `kernel_binary` path in our `main` function.
-We will fix this later in the post, but first it is time to actually run our kernel!
-
-Note also that we specified names for the image files. Although we used `bootimage-bios-blog_os.img` and `bootimage-uefi-blog_os.img` for compatibility, they can now be given whatever names you see fit.
-
+We also started to look into frame buffers and [screen output](#screen-output).
+In the next post, we will continue with this and learn how to draw shapes and render text.
 
