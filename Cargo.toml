@@ -2,6 +2,7 @@
 name = "blog_os"
 version = "0.1.0"
 edition = "2021"
+default-run = "blog_os"
 
 [workspace]
 members = ["kernel"]
