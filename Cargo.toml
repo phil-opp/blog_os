@@ -8,6 +8,7 @@ default-run = "blog_os"
 members = ["kernel"]
 
 [dependencies]
+ovmf-prebuilt = "0.1.0-alpha"
 
 [build-dependencies]
 kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
