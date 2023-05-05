@@ -52,7 +52,7 @@ Par défaut, tous les crates Rust relient la [bibliothèque standard], qui dépe
 [bibliothèque standard]: https://doc.rust-lang.org/std/
 [attribut `no std`]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
 
-Nous commencons par créer un nouveau projet d'application cargo. La manière la plus simple de faire est avec la ligne de commande : 
+Nous commençons par créer un nouveau projet d'application cargo. La manière la plus simple de faire est avec la ligne de commande : 
 
 ```
 cargo new blog_os --bin --edition 2018
@@ -75,7 +75,7 @@ Le fichier `Cargo.toml` contient la configuration de la crate, par exemple le no
 
 ### L'Attribut `no_std`
 
-Pour l'instant, notre crate relie la bilbiothèque standard implicitement. Désactivons cela en ajoutant l'[attribut `no std`] : 
+Pour l'instant, notre crate relie la bibliothèque standard implicitement. Désactivons cela en ajoutant l'[attribut `no std`] : 
 
 ```rust
 // main.rs
