@@ -47,7 +47,7 @@ Cet article décrit les étapes nécessaires pour créer un exécutable Rust aut
 
 ## Désactiver la Bibliothèque Standard
 
-Par défaut, toutes les crates Rust sont liées à la bibliothèque standard, qui repose sur les fonctionnalités du système d’exploitation telles que les threads, les fichiers et la connectivité réseau. Elle est également liée à la bibliothèque standard C, libc, qui interagit étroitement avec les services fournis par l'OS. Comme notre plan est d'écrire un système d'exploitation, nous ne pouvons pas utiliser des bibliothèques dépendant de l'OS. Nous devons donc désactiver l'inclusion automatique de la bibliothèque standard en utilisant l'[attribut `no std`].
+Par défaut, toutes les crates Rust sont liées à la bibliothèque standard, qui repose sur les fonctionnalités du système d’exploitation telles que les fils d'exécution, les fichiers et la connectivité réseau. Elle est également liée à la bibliothèque standard C `libc`, qui interagit étroitement avec les services fournis par l'OS. Comme notre plan est d'écrire un système d'exploitation, nous ne pouvons pas utiliser des bibliothèques dépendant de l'OS. Nous devons donc désactiver l'inclusion automatique de la bibliothèque standard en utilisant l'[attribut `no std`].
 
 [bibliothèque standard]: https://doc.rust-lang.org/std/
 [attribut `no std`]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
