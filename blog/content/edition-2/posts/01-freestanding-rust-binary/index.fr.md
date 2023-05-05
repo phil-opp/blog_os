@@ -29,7 +29,7 @@ Ce blog est développé sur [GitHub]. Si vous avez un problème ou une question,
 
 ## Introduction
 Pour écrire un noyau de système d'exploitation, nous avons besoin d'un code qui ne dépend pas de fonctionnalités de système d'exploitation. Cela signifie que nous ne pouvons pas utiliser les fils d'exécution, les fichiers, la mémoire sur le tas, le réseau, les nombres aléatoires, la sortie standard ou tout autre fonctionnalité nécessitant une abstraction du système d'exploitation ou un matériel spécifique. Cela a du sens, étant donné que nous essayons d'écrire notre propre OS et nos propres pilotes.
-Cela signifie que nous ne pouvons pas utiliser la majeure partie de la [bibliothèque standard de Rust]. Il y a néanmoins beaucoup de fonctionnalités de Rust que nous _pouvons_ utiliser. Par exemple, nous pouvons utiliser les [iterators], les [closures], le [pattern matching], l'[option] et le [result], le [string formatting], et bien-sûr l'[ownership system]. Ces fonctionnalités permettent l'écriture d'un noyau d'une façon expressive et haut-niveau sans se soucier des [comportements indéfinis] ou de la [sécurité de la mémoire].
+Cela signifie que nous ne pouvons pas utiliser la majeure partie de la [bibliothèque standard de Rust]. Il y a néanmoins beaucoup de fonctionnalités de Rust que nous _pouvons_ utiliser. Par exemple, nous pouvons utiliser les [iterators], les [closures], le [pattern matching], l'[option] et le [result], le [string formatting], et bien sûr l'[ownership system]. Ces fonctionnalités permettent l'écriture d'un noyau d'une façon expressive et haut-niveau sans se soucier des [comportements indéfinis] ou de la [sécurité de la mémoire].
 
 [option]: https://doc.rust-lang.org/core/option/
 [result]:https://doc.rust-lang.org/core/result/
@@ -58,7 +58,7 @@ Nous commençons par créer un nouveau projet d'application cargo. La manière l
 cargo new blog_os --bin --edition 2018
 ```
 
-J'ai nommé le projet `blog_os`, mais vous pouvez bien sûr choisir le nom qu'il vous convient. Le flag `--bin` indique que nous voulons créer un exécutable (contrairement à une bibliothèque) et le flag `--edition 2018` indique que nous voulons utiliser l'[édition 2018] de Rust pour notre crate. Quand nous lançons la commande, cargo crée la structure de répertoire suivante pour nous :
+J'ai nommé le projet `blog_os`, mais vous pouvez évidemment choisir le nom qu'il vous convient. Le flag `--bin` indique que nous voulons créer un exécutable (contrairement à une bibliothèque) et le flag `--edition 2018` indique que nous voulons utiliser l'[édition 2018] de Rust pour notre crate. Quand nous lançons la commande, cargo crée la structure de répertoire suivante pour nous :
 
 [édition 2018]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
 
