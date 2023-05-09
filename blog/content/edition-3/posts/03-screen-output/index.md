@@ -60,7 +60,7 @@ conquer-once = { version = "0.4.0", default-features = false }
 
 Note that we need to add `default-features = false` to our `conquer-once` dependency —that's because the [`conquer-once` crate](https://crates.io/crates/conquer-once) tries to pull in the standard library by default, which in the kernel will result in compilation errors.
 
-Now that we've added out two dependencies, it's time to use them:
+Now that we've added our two dependencies, it's time to use them:
 
 ```rust
 // in src/main.rs
