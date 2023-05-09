@@ -109,6 +109,8 @@ fn kernel_main(boot_info: &'static mut bootloader_api::BootInfo) -> ! {
     
     // finally, initialize the logger using the last two variables
     init_logger(raw_frame_buffer, frame_buffer_info);
+    // ...
+}
 ```
 
 Any one of these steps, if skipped, will cause the borrow checker to throw a hissy fit due to the use of the `move ||` closure by the initializer function. With this, however, you're done, and you'll know the logger has been initialized when you see "Hello, Kernel Mode!" printed on the screen.
