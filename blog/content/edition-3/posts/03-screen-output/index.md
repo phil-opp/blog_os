@@ -70,7 +70,7 @@ use bootloader_x86_64_common::logger::LockedLogger;
 pub(crate) static LOGGER: OnceCell<LockedLogger> = OnceCell::uninit();
 ```
 
-By setting the logger up as a static `OnceCell` it becomes much easier to intialize. We use `pub(crate)` to ensure that the kernel can see it but nothing else can.
+By setting the logger up as a static `OnceCell` it becomes much easier to initialize. We use `pub(crate)` to ensure that the kernel can see it but nothing else can.
 
 After this, it's time to actually initialize it. To do that, we use a function:
 
