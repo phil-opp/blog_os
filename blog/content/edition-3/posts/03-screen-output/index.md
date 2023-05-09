@@ -34,7 +34,7 @@ If you were paying attention to the post before that one, however, you may have 
 
 ## `bootloader-x86_64-common`
 
-In version 0.11.x of the bootloader crate, each component is separate, unlike in 0.10.x where the bootloader was a huge monolith. This is fantastic as it means that a lot of the APIs that the bootloader uses behind the scenes are also free for kernels to use, including, of course, the logger. The set of APIs that the logger belongs to are in a crate called `bootloader-x86_64-common` which also contains some other useful abstractions that will come in handy later:
+In version 0.11.x of the bootloader crate, each component is separate, unlike in 0.10.x where the bootloader was a huge monolith. This is fantastic as it means that a lot of the APIs that the bootloader uses behind the scenes are also free for kernels to use, including, of course, the logger. The set of APIs that the logger belongs to are in a crate called `bootloader-x86_64-common` which also contains some other useful abstractions related to things like memory management that will come in handy later:
 
 ```toml
 # in Cargo.toml
