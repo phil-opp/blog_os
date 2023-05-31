@@ -316,7 +316,7 @@ pub extern "C" fn _start() -> ! {
     blog_os::init();
 
     // new
-    let ptr = 0xdeadbeaf as *mut u32;
+    let ptr = 0xdeadbeaf as *mut u8;
     unsafe { *ptr = 42; }
 
     // as before
@@ -341,7 +341,7 @@ We see that the current instruction pointer is `0x2031b2`, so we know that this 
 ```rust
 // Note: The actual address might be different for you. Use the address that
 // your page fault handler reports.
-let ptr = 0x2031b2 as *mut u32;
+let ptr = 0x2031b2 as *mut u8;
 
 // read from a code page
 unsafe { let x = *ptr; }
