@@ -48,7 +48,7 @@ pub extern "C" fn _start() -> ! {
 
     // 페이지 폴트 일으키기
     unsafe {
-        *(0xdeadbeef as *mut u64) = 42;
+        *(0xdeadbeef as *mut u8) = 42;
     };
 
     // 이전과 동일

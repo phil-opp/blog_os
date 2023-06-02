@@ -45,7 +45,7 @@ pub extern "C" fn _start() -> ! {
 
     // ページフォルトを起こす
     unsafe {
-        *(0xdeadbeef as *mut u64) = 42;
+        *(0xdeadbeef as *mut u8) = 42;
     };
 
     // 前回同様

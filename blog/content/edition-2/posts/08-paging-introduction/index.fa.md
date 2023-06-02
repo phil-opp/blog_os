@@ -322,7 +322,7 @@ pub extern "C" fn _start() -> ! {
     blog_os::init();
 
     // new
-    let ptr = 0xdeadbeaf as *mut u32;
+    let ptr = 0xdeadbeaf as *mut u8;
     unsafe { *ptr = 42; }
 
     // as before
@@ -347,7 +347,7 @@ pub extern "C" fn _start() -> ! {
 ```rust
 // Note: The actual address might be different for you. Use the address that
 // your page fault handler reports.
-let ptr = 0x2031b2 as *mut u32;
+let ptr = 0x2031b2 as *mut u8;
 
 // read from a code page
 unsafe { let x = *ptr; }
