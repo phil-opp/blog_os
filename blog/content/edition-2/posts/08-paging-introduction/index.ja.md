@@ -329,7 +329,7 @@ pub extern "C" fn _start() -> ! {
     blog_os::init();
 
     // ここを追加
-    let ptr = 0xdeadbeaf as *mut u32;
+    let ptr = 0xdeadbeaf as *mut u8;
     unsafe { *ptr = 42; }
 
     // ここはこれまでと同じ
@@ -354,7 +354,7 @@ pub extern "C" fn _start() -> ! {
 ```rust
 // 注意：実際のアドレスは個々人で違うかもしれません。
 // あなたのページフォルトハンドラが報告した値を使ってください。
-let ptr = 0x2031b2 as *mut u32;
+let ptr = 0x2031b2 as *mut u8;
 
 // コードページから読み込む
 unsafe { let x = *ptr; }

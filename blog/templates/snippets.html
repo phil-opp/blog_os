@@ -10,9 +10,11 @@
 {% macro giscus(search_term, lang) %}
     {% if lang != "en" %}
         {% set category = "Post Comments (translated)" %}
+        {% set category_id = "DIC_kwDOAlvePc4CPg4c" %}
         {% set category_path = "post-comments-translated" %}
     {% else %}
         {% set category = "Post Comments" %}
+        {% set category_id = "MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMzMDE4OTg1" %}
         {% set category_path = "post-comments" %}
     {% endif %}
 
@@ -33,7 +35,7 @@
         data-repo="phil-opp/blog_os"
         data-repo-id="MDEwOlJlcG9zaXRvcnkzOTU3NTEwMQ=="
         data-category="{{ category }}"
-        data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMzMDE4OTg1"
+        data-category-id="{{ category_id }}"
     {% if search_term is number %}
         data-mapping="number"
     {% else %}
