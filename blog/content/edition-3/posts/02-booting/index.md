@@ -1178,5 +1178,6 @@ We used the `bootloader` and `bootloader_api` crates to convert our kernel to a 
 Through advanced cargo features such as [workspaces](#creating-a-workspace), [build scripts](#using-the-diskimagebuilder), and [artifact dependencies](#adding-an-artifact-dependency), we created a nice build system that can bring us directly from source code to a running QEMU instance using a single command.
 
 We also started to look into frame buffers and [screen output](#screen-output).
-In the next post, we will continue with this and learn how to draw shapes and render text.
+In the [next post], we will continue with this and learn how to draw shapes and render text.
 
+[next post]: @/edition-3/posts/03-screen-output/index.md

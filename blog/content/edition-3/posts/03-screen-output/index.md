@@ -12,7 +12,67 @@ icon = '''<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi 
 </svg>'''
 +++
 
-In the previous post, we learned how to draw shapes and pixels directly onto the framebuffer. That's fine and all, but how is one able to go from that to displaying text on the screen? Understanding this requires taking a deep dive into how characters are rendered behind the scenes.
+In this post we focus on the [framebuffer], a special memory region that controls the screen output.
+Using an [external crate], we will create functions for writing individual pixels, lines, and various shapes.
+In the the second half of this post, we will explore text rendering and learn how to print the obligatory _["Hello, World!"]_.
+
+[framebuffer]: https://en.wikipedia.org/wiki/Framebuffer
+[external crate]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html
+["Hello, World!"]: https://en.wikipedia.org/wiki/Hello_world
+
+<!-- more -->
+
+This blog is openly developed on [GitHub].
+If you have any problems or questions, please open an issue there.
+You can also leave comments [at the bottom].
+The complete source code for this post can be found in the [`post-3.3`][post branch] branch.
+
+[GitHub]: https://github.com/phil-opp/blog_os
+[at the bottom]: #comments
+<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
+[post branch]: https://github.com/phil-opp/blog_os/tree/post-3.3
+
+<!-- toc -->
+
+## Recap
+
+In the [previous post], we learned how to make our minimal kernel bootable.
+Using the [`BootInfo`] provided by the bootloader, we were able to access a special memory region called the _[framebuffer]_, which controls the screen output.
+We wrote some example code to display a gray stripe pattern:
+
+[previous post]: @/edition-3/posts/02-booting/index.md
+[`BootInfo`]: https://docs.rs/bootloader_api/latest/bootloader_api/info/struct.BootInfo.html
+
+```rust
+// in src/kernel/main.rs
+
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
+        let mut value = 0x90;
+        for byte in framebuffer.buffer_mut() {
+            *byte = value;
+            value = value.wrapping_add(7);
+        }
+    }
+    loop {}
+}
+```
+
+The reason that the above code affects the screen output is because the graphics card interprets the framebuffer memory as a [bitmap] image.
+A bitmap describes an image through a predefined number of bits per pixel.
+TODO
+
+[bitmap]: https://en.wikipedia.org/wiki/Bitmap
+
+
+---
+
+
+
+
+
+
+  draw shapes and pixels directly onto the framebuffer. That's fine and all, but how is one able to go from that to displaying text on the screen? Understanding this requires taking a deep dive into how characters are rendered behind the scenes.
 
 When a key is pressed on the keyboard, it sends a character code to the CPU. It's the CPU's job at that point to then interpret the character code and match it with an image to draw on the screen. The image is then sent to either the GPU or the framebuffer (the latter in our case) to be drawn on the screen, and the user sees that image as a letter, number, CJK character, emoji, or whatever else he or she wanted to have displayed by pressing that key.
 
