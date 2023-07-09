@@ -1104,30 +1104,6 @@ We see that our guess that the whole screen would turn gray was right:
 
 We finally see some output from our little kernel!
 
-You can try experimenting with the pixel bytes if you like, for example by increasing the pixel value on each loop iteration:
-
-```rust ,hl_lines=5-9
-// in src/kernel/main.rs
-
-fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        let mut value = 0x90;
-        for byte in framebuffer.buffer_mut() {
-            *byte = value;
-            value = value.wrapping_add(7);
-        }
-    }
-    loop {}
-}
-```
-
-We use the [`wrapping_add`] method here because Rust panics on implicit integer overflow (at least in debug mode).
-The result looks as follows:
-
-[`wrapping_add`]: https://doc.rust-lang.org/std/primitive.u8.html#method.wrapping_add
-
-![QEMU showing repeating gradient columns](qemu-wrapping-add.png)
-
 ### Booting on Real Hardware
 
 To boot on real hardware, write either the `uefi.img` or the `bios.img` disk image to an USB thumb drive.

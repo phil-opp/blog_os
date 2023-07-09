@@ -38,7 +38,7 @@ The complete source code for this post can be found in the [`post-3.3`][post bra
 
 In the [previous post], we learned how to make our minimal kernel bootable.
 Using the [`BootInfo`] provided by the bootloader, we were able to access a special memory region called the _[framebuffer]_, which controls the screen output.
-We wrote some example code to display a gray stripe pattern:
+We wrote some example code to display a gray background:
 
 [previous post]: @/edition-3/posts/02-booting/index.md
 [`BootInfo`]: https://docs.rs/bootloader_api/latest/bootloader_api/info/struct.BootInfo.html
@@ -48,10 +48,8 @@ We wrote some example code to display a gray stripe pattern:
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        let mut value = 0x90;
         for byte in framebuffer.buffer_mut() {
-            *byte = value;
-            value = value.wrapping_add(7);
+            *byte = 0x90;
         }
     }
     loop {}
