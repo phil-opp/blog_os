@@ -9,10 +9,8 @@ bootloader_api::entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        let mut value = 0x90;
         for byte in framebuffer.buffer_mut() {
-            *byte = value;
-            value = value.wrapping_add(1);
+            *byte = 0x90;
         }
     }
     loop {}
