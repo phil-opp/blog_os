@@ -34,7 +34,7 @@ The complete source code for this post can be found in the [`post-3.3`][post bra
 
 <!-- toc -->
 
-## Recap
+## Bitmap Images
 
 In the [previous post], we learned how to make our minimal kernel bootable.
 Using the [`BootInfo`] provided by the bootloader, we were able to access a special memory region called the _[framebuffer]_, which controls the screen output.
@@ -59,10 +59,29 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 ```
 
 The reason that the above code affects the screen output is because the graphics card interprets the framebuffer memory as a [bitmap] image.
-A bitmap describes an image through a predefined number of bits per pixel.
-TODO
+A bitmap describes an image through a predefined number of bytes per pixel.
+The pixels are laid out line by line, typically starting at the top.
 
 [bitmap]: https://en.wikipedia.org/wiki/Bitmap
+[RGB]: https://en.wikipedia.org/wiki/Rgb
+
+For example, the pixels of an image with width 10 and height 3 would be typically stored in this order:
+
+<table><tbody>
+  <tr><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td></tr>
+  <tr><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td><td>17</td><td>18</td><td>19</td></tr>
+  <tr><td>20</td><td>21</td><td>22</td><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr>
+</tbody></table>
+
+So top left pixel is stored at offset 0 in the bitmap array.
+The pixel on its right is at offset `pixel_size`.
+The first pixel of the next line starts at offset `line_length * pixel_size`.
+
+### Padding
+
+Depending on the hardware and GPU firmware, it is often more efficient 
+
+### Color formats
 
 
 ---
