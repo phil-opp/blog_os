@@ -22,4 +22,4 @@ sed -i 's|../paging-introduction/||g' book/book.md
 
 # go to work dir and create epub
 cd book/
-pandoc book.md -o book.epub --metadata title="Writing an OS in Rust"  --metadata author="Philipp Oppermann"
+pandoc book.md -o book.epub --metadata cover-image="../cover.png" --metadata title="Writing an OS in Rust"  --metadata author="Philipp Oppermann" --metadata description="This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code, so you can follow along if you like. The source code is also available in the corresponding Github repository."
