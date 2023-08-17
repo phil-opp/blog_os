@@ -260,7 +260,7 @@ That's where the [`build-std` feature] of cargo comes in. It allows to recompile
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust compilers]: #installing-rust-nightly
 
-To use the feature, we need to create a [cargo configuration] file at `.cargo/config.toml` with the following content:
+To use the feature, we need to create a local [cargo configuration] file at `.cargo/config.toml` (the `.cargo` folder should be next to your `src` folder) with the following content:
 
 ```toml
 # in .cargo/config.toml
@@ -410,7 +410,7 @@ Adding the bootloader as a dependency is not enough to actually create a bootabl
 
 [post-build scripts]: https://github.com/rust-lang/cargo/issues/545
 
-To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then links them together to create a bootable disk image. To install the tool, execute the following command in your terminal:
+To solve this problem, we created a tool named `bootimage` that first compiles the kernel and bootloader, and then links them together to create a bootable disk image. To install the tool, go into your home directory (or any directory outside of your cargo project) and execute the following command in your terminal:
 
 ```
 cargo install bootimage
@@ -418,7 +418,7 @@ cargo install bootimage
 
 For running `bootimage` and building the bootloader, you need to have the `llvm-tools-preview` rustup component installed. You can do so by executing `rustup component add llvm-tools-preview`.
 
-After installing `bootimage` and adding the `llvm-tools-preview` component, we can create a bootable disk image by executing:
+After installing `bootimage` and adding the `llvm-tools-preview` component, we can create a bootable disk image by going back into your cargo project directory and executing:
 
 ```
 > cargo bootimage
