@@ -260,7 +260,7 @@ That's where the [`build-std` feature] of cargo comes in. It allows to recompile
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust compilers]: #installing-rust-nightly
 
-To use the feature, we need to create a local [cargo configuration] file at `.cargo/config.toml` (if your cargo project is named `blog_os`, then create the file locally at `blog_os/.cargo/config.toml`) with the following content:
+To use the feature, we need to create a local [cargo configuration] file at `.cargo/config.toml` (the `.cargo` folder should be next to your `src` folder) with the following content:
 
 ```toml
 # in .cargo/config.toml
