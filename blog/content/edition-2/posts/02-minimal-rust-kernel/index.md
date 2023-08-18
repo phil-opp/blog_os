@@ -418,7 +418,7 @@ cargo install bootimage
 
 For running `bootimage` and building the bootloader, you need to have the `llvm-tools-preview` rustup component installed. You can do so by executing `rustup component add llvm-tools-preview`.
 
-After installing `bootimage` and adding the `llvm-tools-preview` component, we can create a bootable disk image by going back into your cargo project directory and executing:
+After installing `bootimage` and adding the `llvm-tools-preview` component, you can create a bootable disk image by going back into your cargo project directory and executing:
 
 ```
 > cargo bootimage
