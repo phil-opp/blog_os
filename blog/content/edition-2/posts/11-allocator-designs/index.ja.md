@@ -7,16 +7,16 @@ date = 2020-01-20
 [extra]
 chapter = "Memory Management"
 # Please update this when updating the translation
-translation_based_on_commit = "2f1918bf71e00658d7267e19918d75124567f688"
+translation_based_on_commit = "8a1063df5f843aecd97c86a12d55c96136d518ca"
 # GitHub usernames of the people that translated this post
 translators = ["woodyZootopia"]
 +++
 
-This post explains how to implement heap allocators from scratch. It presents and discusses different allocator designs, including bump allocation, linked list allocation, and fixed-size block allocation. For each of the three designs, we will create a basic implementation that can be used for our kernel.
+この記事ではヒープアロケータをゼロから実装する方法を説明します。バンプアロケータ、連結リストアロケータ、固定サイズブロックアロケータのような様々なアロケータの設計を示し、それらについて議論します。3つそれぞれのデザインについて、私たちのカーネルに使える基礎的な実装を作ります。
 
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-11`][post branch] branch.
+このブログの内容は [GitHub] 上で公開・開発されています。何か問題や質問などがあれば issue をたててください (訳注: リンクは原文(英語)のものになります)。また[こちら][at the bottom]にコメントを残すこともできます。この記事の完全なソースコードは[`post-11` ブランチ][post branch]にあります。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -25,52 +25,52 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 <!-- toc -->
 
-## Introduction
+## はじめに
 
-In the [previous post], we added basic support for heap allocations to our kernel. For that, we [created a new memory region][map-heap] in the page tables and [used the `linked_list_allocator` crate][use-alloc-crate] to manage that memory. While we have a working heap now, we left most of the work to the allocator crate without trying to understand how it works.
+[前回の記事][previous post]では、カーネルへのヒープ割り当ての基本的なサポートを追加しました。そのために、ページテーブルに[新しいメモリ領域を作成][map-heap]し、[`linked_list_allocator`クレートを使用][use-alloc-crate]してそのメモリを管理しました。ヒープは動作するようになりましたが、このアロケータクレートがどのように動作しているのかを理解しようとすることなく、仕事のほとんどを任せてしまっていました。
 
-[previous post]: @/edition-2/posts/10-heap-allocation/index.md
-[map-heap]: @/edition-2/posts/10-heap-allocation/index.md#creating-a-kernel-heap
-[use-alloc-crate]: @/edition-2/posts/10-heap-allocation/index.md#using-an-allocator-crate
+[previous post]: @/edition-2/posts/10-heap-allocation/index.ja.md
+[map-heap]: @/edition-2/posts/10-heap-allocation/index.ja.md#creating-a-kernel-heap
+[use-alloc-crate]: @/edition-2/posts/10-heap-allocation/index.ja.md#aroketakuretowoshi-u
 
-In this post, we will show how to create our own heap allocator from scratch instead of relying on an existing allocator crate. We will discuss different allocator designs, including a simplistic _bump allocator_ and a basic _fixed-size block allocator_, and use this knowledge to implement an allocator with improved performance (compared to the `linked_list_allocator` crate).
+この記事では、既存のアロケータクレートに頼るのではなく、独自のヒープアロケータをゼロから作成する方法を紹介します。単純無比の**バンプアロケータ**、基本の**固定サイズブロックアロケータ**など、さまざまなアロケータの設計について議論し、この知識を使用して（`linked_list_allocator`クレートと比較して）より性能のよいアロケータを実装します。
 
-### Design Goals
+### 設計目標
 
-The responsibility of an allocator is to manage the available heap memory. It needs to return unused memory on `alloc` calls and keep track of memory freed by `dealloc` so that it can be reused again. Most importantly, it must never hand out memory that is already in use somewhere else because this would cause undefined behavior.
+アロケータの責任は、利用可能なヒープメモリを管理することです。`alloc`が呼ばれたら未使用のメモリを返し、`dealloc`によって解放されたメモリが再利用できるように記録をとる必要があります。最も重要なことは、すでに他の場所で使用されているメモリを決して渡してはならないということで、これをすると未定義動作が起きてしまいます。
 
-Apart from correctness, there are many secondary design goals. For example, the allocator should effectively utilize the available memory and keep [_fragmentation_] low. Furthermore, it should work well for concurrent applications and scale to any number of processors. For maximal performance, it could even optimize the memory layout with respect to the CPU caches to improve [cache locality] and avoid [false sharing].
+正確さのほかにも多くの二次的な設計目標があります。たとえば、アロケータは利用可能なメモリを効果的に利用し、[**断片化**][_fragmentation_]があまり起きないようにすべきです。さらに、並列アプリケーションにもうまく機能し、任意の数のプロセッサに拡張できなくてはなりません。性能を最大化するため、CPUキャッシュに合わせてメモリレイアウトを最適化し[キャッシュの局所性][cache locality]を改善したり[false sharing]を回避するなどしても良いかもしれません。
 
 [cache locality]: https://www.geeksforgeeks.org/locality-of-reference-and-cache-operation-in-cache-memory/
 [_fragmentation_]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
 [false sharing]: https://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 
-These requirements can make good allocators very complex. For example, [jemalloc] has over 30.000 lines of code. This complexity is often undesired in kernel code, where a single bug can lead to severe security vulnerabilities. Fortunately, the allocation patterns of kernel code are often much simpler compared to userspace code, so that relatively simple allocator designs often suffice.
+これらの要件により、優れたアロケータは非常に複雑になりえます。例えば、[jemalloc]には3万行以上のコードがあります。ここまで複雑なものは、たった一つのバグが深刻なセキュリティ脆弱性につながりうるカーネルコードでは望ましくない場合が多いでしょう。幸いなことに、カーネルのコードにおけるメモリ割り当てのパターンは、ユーザースペースのコードと比較してはるかに単純であることが多いため、比較的単純なアロケータ設計で十分です。
 
 [jemalloc]: http://jemalloc.net/
 
-In the following, we present three possible kernel allocator designs and explain their advantages and drawbacks.
+以下では、3つのカーネルアロケータの設計を示し、その長所と短所を説明します。
 
-## Bump Allocator
+## バンプアロケータ
 
-The most simple allocator design is a _bump allocator_ (also known as _stack allocator_). It allocates memory linearly and only keeps track of the number of allocated bytes and the number of allocations. It is only useful in very specific use cases because it has a severe limitation: it can only free all memory at once.
+最も単純なアロケータの設計は**バンプアロケータ**（**スタックアロケータ**とも呼ばれる）です。メモリを直線的に割り当て、割り当てられたバイト数と割り当ての数のみを管理します。このアロケータは非常に特定のユースケースでのみ有用です——なぜなら、一度にすべてのメモリを解放することしかできないという厳しい制約があるからです。
 
-### Idea
+### 考え方
 
-The idea behind a bump allocator is to linearly allocate memory by increasing (_"bumping"_) a `next` variable, which points to the start of the unused memory. At the beginning, `next` is equal to the start address of the heap. On each allocation, `next` is increased by the allocation size so that it always points to the boundary between used and unused memory:
+バンプアロケータの考え方は、未使用のメモリの開始位置を指す`next`変数を増やす（"bump" する）ことによって、メモリを順に割り当てるというものです。はじめ、`next`はヒープの開始アドレスに等しいです。`next`が使用済みメモリと未使用メモリの境界を常に指すよう、この値は各割り当てにおいて割り当てサイズだけ増加します。
 
-![The heap memory area at three points in time:
- 1: A single allocation exists at the start of the heap; the `next` pointer points to its end.
- 2: A second allocation was added right after the first; the `next` pointer points to the end of the second allocation.
- 3: A third allocation was added right after the second one; the `next` pointer points to the end of the third allocation.](bump-allocation.svg)
+![3つの時点におけるヒープメモリ領域：
+ 1: ヒープの開始地点に一つの割り当てが存在する。`next`ポインタはその終端を指している。
+ 2: 二つ目の割り当てが一つ目のすぐ右に追加された。`next`ポインタは二つ目の割り当ての終端を指している。
+ 3: 三つ目の割り当てが二つ目のすぐ右に追加された。`next`ポインタは三つ目の割り当ての終端を指している。](bump-allocation.svg)
 
-The `next` pointer only moves in a single direction and thus never hands out the same memory region twice. When it reaches the end of the heap, no more memory can be allocated, resulting in an out-of-memory error on the next allocation.
+`next`ポインタは1つの方向にしか移動しないため、同じメモリ領域を2回渡すことはありません。ヒープの終わりに達すると、これ以上のメモリを割り当てることができないので、次の割り当てでメモリ不足エラーが発生します。
 
-A bump allocator is often implemented with an allocation counter, which is increased by 1 on each `alloc` call and decreased by 1 on each `dealloc` call. When the allocation counter reaches zero, it means that all allocations on the heap have been deallocated. In this case, the `next` pointer can be reset to the start address of the heap, so that the complete heap memory is available for allocations again.
+多くの場合、バンプアロケータは「割り当てカウンタ」付きで実装されます。これは、`alloc`の呼び出しのたび1増加し、`dealloc`の呼び出しのたび1減少します。割り当てカウンタがゼロになることは、ヒープ上のすべての割り当てがdeallocateされたことを意味します。このとき、`next`ポインタをヒープの開始アドレスにリセットし、ヒープメモリ全体を再び割り当てに使えるようにすることができます。
 
-### Implementation
+### 実装
 
-We start our implementation by declaring a new `allocator::bump` submodule:
+`allocator::bump`サブモジュールを宣言するところから実装を始めましょう：
 
 ```rust
 // in src/allocator.rs
@@ -78,7 +78,7 @@ We start our implementation by declaring a new `allocator::bump` submodule:
 pub mod bump;
 ```
 
-The content of the submodule lives in a new `src/allocator/bump.rs` file, which we create with the following content:
+サブモジュールの内容は、新しい`src/allocator/bump.rs`ファイルに、以下の内容で作ります：
 
 ```rust
 // in src/allocator/bump.rs
@@ -91,7 +91,7 @@ pub struct BumpAllocator {
 }
 
 impl BumpAllocator {
-    /// Creates a new empty bump allocator.
+    /// 新しい空のバンプアロケータを作る。
     pub const fn new() -> Self {
         BumpAllocator {
             heap_start: 0,
@@ -101,10 +101,10 @@ impl BumpAllocator {
         }
     }
 
-    /// Initializes the bump allocator with the given heap bounds.
+    /// 与えられたヒープ領域でバンプアロケータを初期化する。
     ///
-    /// This method is unsafe because the caller must ensure that the given
-    /// memory range is unused. Also, this method must be called only once.
+    /// このメソッドはunsafeである。呼び出し元は与えられたメモリ範囲が未使用であることを
+    /// 保証しなければならない。また、このメソッドは一度しか呼ばれてはならない。
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         self.heap_start = heap_start;
         self.heap_end = heap_start + heap_size;
@@ -113,19 +113,19 @@ impl BumpAllocator {
 }
 ```
 
-The `heap_start` and `heap_end` fields keep track of the lower and upper bounds of the heap memory region. The caller needs to ensure that these addresses are valid, otherwise the allocator would return invalid memory. For this reason, the `init` function needs to be `unsafe` to call.
+`heap_start`フィールドと`heap_end`フィールドは、ヒープメモリ領域の下限と上限を管理します。呼び出し元は、これらのアドレスが有効であることを保証する必要があります。そうでない場合、アロケータは不正なメモリを返すでしょう。このため、`init`関数の呼び出しは`unsafe`である必要があります。
 
-The purpose of the `next` field is to always point to the first unused byte of the heap, i.e., the start address of the next allocation. It is set to `heap_start` in the `init` function because at the beginning, the entire heap is unused. On each allocation, this field will be increased by the allocation size (_"bumped"_) to ensure that we don't return the same memory region twice.
+`next`フィールドの目的は、常にヒープの最初の未使用バイト、つまり次の割り当ての開始アドレスを指すことです。最初はヒープ全体が未使用であるため、`init`関数では`heap_start`に設定されています。各割り当てで、このフィールドは割り当てサイズだけ増加（"bump"）し、同じメモリ領域を2回返さないようにします。
 
-The `allocations` field is a simple counter for the active allocations with the goal of resetting the allocator after the last allocation has been freed. It is initialized with 0.
+`allocations`フィールドは、有効な割り当てのシンプルなカウンタで、最後の割り当てが解放されたときにアロケータをリセットするためにあります。0で初期化されます。
 
-We chose to create a separate `init` function instead of performing the initialization directly in `new` in order to keep the interface identical to the allocator provided by the `linked_list_allocator` crate. This way, the allocators can be switched without additional code changes.
+インターフェイスを`linked_list_allocator`クレートによって提供されるアロケータと同じにするために、初期化を`new`関数の中で直接実行するのではなく、別の`init`関数を作成するようにしました。こうすることで、コードの変更なしにアロケータを切り替えることができます。
 
-### Implementing `GlobalAlloc`
+### `GlobalAlloc`を実装する
 
-As [explained in the previous post][global-alloc], all heap allocators need to implement the [`GlobalAlloc`] trait, which is defined like this:
+[前回の記事で説明した][global-alloc]ように、すべてのヒープアロケータは、次のように定義されている[`GlobalAlloc`]トレイトを実装する必要があります：
 
-[global-alloc]: @/edition-2/posts/10-heap-allocation/index.md#the-allocator-interface
+[global-alloc]: @/edition-2/posts/10-heap-allocation/index.ja.md#aroketaintahuesu
 [`GlobalAlloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html
 
 ```rust
@@ -143,11 +143,11 @@ pub unsafe trait GlobalAlloc {
 }
 ```
 
-Only the `alloc` and `dealloc` methods are required; the other two methods have default implementations and can be omitted.
+必要なのは`alloc`と`dealloc`メソッドのみです。他の2つのメソッドにはデフォルト実装があるので省略できます。
 
-#### First Implementation Attempt
+#### 最初の実装
 
-Let's try to implement the `alloc` method for our `BumpAllocator`:
+`BumpAllocator`の`alloc`メソッドを実装してみましょう。
 
 ```rust
 // in src/allocator/bump.rs
@@ -156,7 +156,7 @@ use alloc::alloc::{GlobalAlloc, Layout};
 
 unsafe impl GlobalAlloc for BumpAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        // TODO alignment and bounds check
+        // TODO アラインメント・境界のチェック
         let alloc_start = self.next;
         self.next = alloc_start + layout.size();
         self.allocations += 1;
@@ -169,9 +169,9 @@ unsafe impl GlobalAlloc for BumpAllocator {
 }
 ```
 
-First, we use the `next` field as the start address for our allocation. Then we update the `next` field to point to the end address of the allocation, which is the next unused address on the heap. Before returning the start address of the allocation as a `*mut u8` pointer, we increase the `allocations` counter by 1.
+まず、割り当ての開始アドレスとして`next`フィールドを使用します。次に、割り当ての終端アドレス（ヒープの次の未使用アドレスでもある）を指すように`next`フィールドを更新します。`allocations`カウンタを1増やしてから、割り当ての開始アドレスを`*mut u8`ポインタとして返します。
 
-Note that we don't perform any bounds checks or alignment adjustments, so this implementation is not safe yet. This does not matter much because it fails to compile anyway with the following error:
+境界チェックやアラインメント調整を行わないので、この実装はまだsafeではないことに注意してください。まあいずれにせよ、以下のエラーでコンパイルに失敗するのでたいした問題ではないのですが：
 
 ```
 error[E0594]: cannot assign to `self.next` which is behind a `&` reference
@@ -181,35 +181,35 @@ error[E0594]: cannot assign to `self.next` which is behind a `&` reference
    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `self` is a `&` reference, so the data it refers to cannot be written
 ```
 
-(The same error also occurs for the `self.allocations += 1` line. We omitted it here for brevity.)
+（`self.allocations += 1`の行でも同じエラーが発生します。簡潔のためにここでは省略しました）
 
-The error occurs because the [`alloc`] and [`dealloc`] methods of the `GlobalAlloc` trait only operate on an immutable `&self` reference, so updating the `next` and `allocations` fields is not possible. This is problematic because updating `next` on every allocation is the essential principle of a bump allocator.
+このエラーが起こるのは、`GlobalAlloc`トレイトの[`alloc`]および[`dealloc`]メソッドが不変な`&self`参照に対してのみ動作するため、`next`フィールドと`allocations`フィールドを更新できないために発生します。割り当てで毎回`next`を更新することがバンプアロケータの大原則であるため、これは問題ですね。
 
 [`alloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.alloc
 [`dealloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html#tymethod.dealloc
 
-#### `GlobalAlloc` and Mutability
+#### `GlobalAlloc`と可変性
 
-Before we look at a possible solution to this mutability problem, let's try to understand why the `GlobalAlloc` trait methods are defined with `&self` arguments: As we saw [in the previous post][global-allocator], the global heap allocator is defined by adding the `#[global_allocator]` attribute to a `static` that implements the `GlobalAlloc` trait. Static variables are immutable in Rust, so there is no way to call a method that takes `&mut self` on the static allocator. For this reason, all the methods of `GlobalAlloc` only take an immutable `&self` reference.
+この可変性の問題にどんな解決策が可能かを見る前に、`GlobalAlloc`トレイトメソッドがなぜ`&self`引数で定義されているのかを考えてみましょう。[前回の記事][global-allocator]で見たように、グローバルヒープアロケータは`GlobalAlloc`トレイトを実装する`static`に`#[global_allocator]`属性を追加することによって定義されます。<ruby>静的<rp> (</rp><rt>スタティック</rt><rp>) </rp></ruby>変数はRustでは不変であるため、この静的なアロケータで`&mut self`を取るメソッドを呼び出すことはできません。このため、`GlobalAlloc`のすべてのメソッドは、不変な`&self`参照のみを取ります。
 
-[global-allocator]:  @/edition-2/posts/10-heap-allocation/index.md#the-global-allocator-attribute
+[global-allocator]:  @/edition-2/posts/10-heap-allocation/index.ja.md#global-allocator-shu-xing
 
-Fortunately, there is a way to get a `&mut self` reference from a `&self` reference: We can use synchronized [interior mutability] by wrapping the allocator in a [`spin::Mutex`] spinlock. This type provides a `lock` method that performs [mutual exclusion] and thus safely turns a `&self` reference to a `&mut self` reference. We've already used the wrapper type multiple times in our kernel, for example for the [VGA text buffer][vga-mutex].
+幸いなことに、`&self`参照から`&mut self`参照を取得する方法があります。アロケータを[`spin::Mutex`]スピンロックでラップすることで、同期された[内部可変性][interior mutability]を使えるのです。この型は、[相互排他制御][mutual exclusion]を行う`lock`メソッドを提供し、`&self`参照を`&mut self`参照に安全に変換します。このラッパ型はカーネルですでに複数回使用しています（[VGAテキストバッファ][vga-mutex]など）。
 
 [interior mutability]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html
-[vga-mutex]: @/edition-2/posts/03-vga-text-buffer/index.md#spinlocks
+[vga-mutex]: @/edition-2/posts/03-vga-text-buffer/index.ja.md#supinrotuku
 [`spin::Mutex`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html
 [mutual exclusion]: https://en.wikipedia.org/wiki/Mutual_exclusion
 
-#### A `Locked` Wrapper Type
+#### `Locked`ラッパ型
 
-With the help of the `spin::Mutex` wrapper type, we can implement the `GlobalAlloc` trait for our bump allocator. The trick is to implement the trait not for the `BumpAllocator` directly, but for the wrapped `spin::Mutex<BumpAllocator>` type:
+spin::Mutexラッパ型の助けを借りれば、バンプアロケータに`GlobalAlloc`トレイトを実装できます。このトレイトを`BumpAllocator`に直接実装するのではなく、ラップされた`spin::Mutex<BumpAllocator>`型に対して実装するのがミソです。
 
 ```rust
 unsafe impl GlobalAlloc for spin::Mutex<BumpAllocator> {…}
 ```
 
-Unfortunately, this still doesn't work because the Rust compiler does not permit trait implementations for types defined in other crates:
+残念ながら、Rustコンパイラは他のクレートで定義された型のトレイト実装を許可していないため、これはまだうまくいきません。
 
 ```
 error[E0117]: only traits defined in the current crate can be implemented for arbitrary types
@@ -224,12 +224,12 @@ error[E0117]: only traits defined in the current crate can be implemented for ar
    = note: define and implement a trait or new type instead
 ```
 
-To fix this, we need to create our own wrapper type around `spin::Mutex`:
+これに対処するためには、`spin::Mutex`型をラップする独自の型を作ればよいです：
 
 ```rust
 // in src/allocator.rs
 
-/// A wrapper around spin::Mutex to permit trait implementations.
+/// トレイト実装を許してもらうための、spin::Mutexをラップする型
 pub struct Locked<A> {
     inner: spin::Mutex<A>,
 }
@@ -247,11 +247,11 @@ impl<A> Locked<A> {
 }
 ```
 
-The type is a generic wrapper around a `spin::Mutex<A>`. It imposes no restrictions on the wrapped type `A`, so it can be used to wrap all kinds of types, not just allocators. It provides a simple `new` constructor function that wraps a given value. For convenience, it also provides a `lock` function that calls `lock` on the wrapped `Mutex`. Since the `Locked` type is general enough to be useful for other allocator implementations too, we put it in the parent `allocator` module.
+この型は、`spin::Mutex<A>`の<ruby>汎用<rp> (</rp><rt>ジェネリック</rt><rp>) </rp></ruby>ラッパです。ラップされる型`A`に制限はないので、アロケータだけでなく、あらゆる種類の型をラップするために使用できます。このラッパは、指定された値をラップする単純な`new`コンストラクタ関数を提供しています。ラップされた`Mutex`で`lock`を呼び出す`lock`関数もあると便利なので提供しています。`Locked`型は汎用的で他のアロケータの実装にも役立つため、親の`allocator`モジュールに入れました。
 
-#### Implementation for `Locked<BumpAllocator>`
+#### `Locked<BumpAllocator>`の実装
 
-The `Locked` type is defined in our own crate (in contrast to `spin::Mutex`), so we can use it to implement `GlobalAlloc` for our bump allocator. The full implementation looks like this:
+`Locked`型は（`spin::Mutex`とは違って）私たち自身のクレートで定義されているため、私たちのバンプアロケータに`GlobalAlloc`型を実装するために使用できます。完全な実装は次のようになります：
 
 ```rust
 // in src/allocator/bump.rs
@@ -262,7 +262,7 @@ use core::ptr;
 
 unsafe impl GlobalAlloc for Locked<BumpAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let mut bump = self.lock(); // get a mutable reference
+        let mut bump = self.lock(); // 可変参照を得る
 
         let alloc_start = align_up(bump.next, layout.align());
         let alloc_end = match alloc_start.checked_add(layout.size()) {
@@ -271,7 +271,7 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
         };
 
         if alloc_end > bump.heap_end {
-            ptr::null_mut() // out of memory
+            ptr::null_mut() // メモリ不足
         } else {
             bump.next = alloc_end;
             bump.allocations += 1;
@@ -280,7 +280,7 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        let mut bump = self.lock(); // get a mutable reference
+        let mut bump = self.lock(); // 可変参照を得る
 
         bump.allocations -= 1;
         if bump.allocations == 0 {
@@ -290,25 +290,25 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
 }
 ```
 
-The first step for both `alloc` and `dealloc` is to call the [`Mutex::lock`] method through the `inner` field to get a mutable reference to the wrapped allocator type. The instance remains locked until the end of the method, so that no data race can occur in multithreaded contexts (we will add threading support soon).
+`alloc`と`dealloc`は両方、まず、`inner`フィールドを通じて[`Mutex::lock`]メソッドを呼び出し、ラップされたアロケータ型への可変参照を取得します。インスタンスはメソッドの終了までロックされたままであるため、（まもなくスレッドのサポートを追加しますが）マルチスレッドになってもデータ競合が発生することはありません。
 
 [`Mutex::lock`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html#method.lock
 
-Compared to the previous prototype, the `alloc` implementation now respects alignment requirements and performs a bounds check to ensure that the allocations stay inside the heap memory region. The first step is to round up the `next` address to the alignment specified by the `Layout` argument. The code for the `align_up` function is shown in a moment. We then add the requested allocation size to `alloc_start` to get the end address of the allocation. To prevent integer overflow on large allocations, we use the [`checked_add`] method. If an overflow occurs or if the resulting end address of the allocation is larger than the end address of the heap, we return a null pointer to signal an out-of-memory situation. Otherwise, we update the `next` address and increase the `allocations` counter by 1 like before. Finally, we return the `alloc_start` address converted to a `*mut u8` pointer.
+前のプロトタイプと比較してみると、`alloc`の実装はアラインメント要件を守るようになっており、割り当てがヒープメモリ領域内にあることを保証するために境界チェックを実行するようになりました。この関数はまず、`next`アドレスを`Layout`引数で指定されたアラインメントに切り上げます。`align_up`関数のコードはすぐ後で示します。次に、要求された割り当てサイズを`alloc_start`に足して、割り当ての終端アドレスを得ます。巨大な割り当てが試みられた際に整数のオーバーフローが起きることを防ぐため、[`checked_add`]メソッドを使っています。オーバーフローが発生した場合、または割り当ての終端アドレスがヒープの終端アドレスよりも大きくなる場合、メモリ不足であることを示すためにヌルポインタを返します。それ以外の場合は、以前のように、`next`アドレスを更新し、`allocations`カウンタを1増やします。最後に、`*mut u8`ポインタに変換された`alloc_start`アドレスを返します。
 
 [`checked_add`]: https://doc.rust-lang.org/std/primitive.usize.html#method.checked_add
 [`Layout`]: https://doc.rust-lang.org/alloc/alloc/struct.Layout.html
 
-The `dealloc` function ignores the given pointer and `Layout` arguments. Instead, it just decreases the `allocations` counter. If the counter reaches `0` again, it means that all allocations were freed again. In this case, it resets the `next` address to the `heap_start` address to make the complete heap memory available again.
+`dealloc`関数は、指定されたポインタと`Layout`引数を無視します。代わりに、単に`allocations`カウンターを減らします。カウンターが`0`に戻ったなら、それはすべての割り当てが再び解放されたことを意味します。このとき、`next`アドレスを`heap_start`アドレスにリセットして、ヒープメモリ全体を再び使用できるようにします。
 
-#### Address Alignment
+#### アドレスのアラインメント
 
-The `align_up` function is general enough that we can put it into the parent `allocator` module. A basic implementation looks like this:
+`align_up`関数の用途は広いので、親の`allocator`モジュールに入れてもよいでしょう。基本的な実装は以下のようになります：
 
 ```rust
 // in src/allocator.rs
 
-/// Align the given address `addr` upwards to alignment `align`.
+/// 与えられたアドレス`addr`を`align`に上丸めする
 fn align_up(addr: usize, align: usize) -> usize {
     let remainder = addr % align;
     if remainder == 0 {
@@ -319,40 +319,40 @@ fn align_up(addr: usize, align: usize) -> usize {
 }
 ```
 
-The function first computes the [remainder] of the division of `addr` by `align`. If the remainder is `0`, the address is already aligned with the given alignment. Otherwise, we align the address by subtracting the remainder (so that the new remainder is 0) and then adding the alignment (so that the address does not become smaller than the original address).
+この関数はまず、`align`で`addr`を割った[余り][remainder]を計算します。余りが`0`の場合、アドレスはすでに指定されたアラインメントに整列されているということです。それ以外の場合は、（余りが0になるように）余りを引いてアドレスをアラインし、（アドレスが元のアドレスよりも小さくならないように）アラインメントを足します。
 
 [remainder]: https://en.wikipedia.org/wiki/Euclidean_division
 
-Note that this isn't the most efficient way to implement this function. A much faster implementation looks like this:
+実は、これはこの関数を実装する最も効率的な方法ではありません。はるかに高速な実装は次のようになります：
 
 ```rust
-/// Align the given address `addr` upwards to alignment `align`.
+/// 与えられたアドレス`addr`を`align`に上丸めする
 ///
-/// Requires that `align` is a power of two.
+/// `align`は2の累乗でなければならない
 fn align_up(addr: usize, align: usize) -> usize {
     (addr + align - 1) & !(align - 1)
 }
 ```
 
-This method requires `align` to be a power of two, which can be guaranteed by utilizing the `GlobalAlloc` trait (and its [`Layout`] parameter). This makes it possible to create a [bitmask] to align the address in a very efficient way. To understand how it works, let's go through it step by step, starting on the right side:
+この方法では、`align`が2の累乗である必要がありますが、これは`GlobalAlloc`トレイト（およびその[`Layout`]パラメータ）を利用するならば保証されています。この場合、非常に効率的にアドレスを揃えるための[ビットマスク][bitmask]を作成できます。その原理を理解するために、式の右側から一つずつ見ていきましょう：
 
 [`Layout`]: https://doc.rust-lang.org/alloc/alloc/struct.Layout.html
 [bitmask]: https://en.wikipedia.org/wiki/Mask_(computing)
 
-- Since `align` is a power of two, its [binary representation] has only a single bit set (e.g. `0b000100000`). This means that `align - 1` has all the lower bits set (e.g. `0b00011111`).
-- By creating the [bitwise `NOT`] through the `!` operator, we get a number that has all the bits set except for the bits lower than `align` (e.g. `0b…111111111100000`).
-- By performing a [bitwise `AND`] on an address and `!(align - 1)`, we align the address _downwards_. This works by clearing all the bits that are lower than `align`.
-- Since we want to align upwards instead of downwards, we increase the `addr` by `align - 1` before performing the bitwise `AND`. This way, already aligned addresses remain the same while non-aligned addresses are rounded to the next alignment boundary.
+- `align`は2の累乗であるため、その[2進数表現][binary representation]は1つのビットのみが1であるはずである（例：`0b000100000`）。これは、`align - 1`ではそれより下位のすべてのビットが1であることを意味する（例：`0b00011111`）。
+- `!`演算子すなわち[ビットごとの`NOT`][bitwise `NOT`]を行うことで、「`align`より下位のビット」以外がすべて1であるような数字を得ることができる（例：`0b…111111111100000`）
+- あるアドレスと`!(align - 1)`の間で[ビットごとの`AND`][bitwise `AND`]を行うことで、アドレスを**下向きに**アラインする。なぜなら、`align`よりも小さいビットがすべて0になるからである。
+- 下向きではなく上向きにアラインしたいので、ビットごとの`AND`の前に`addr`を`align - 1`だけ増やしておく。こうすると、すでにアラインされているアドレスには影響がないが、アラインされていないアドレスは次のアラインメント境界に丸められるようになる。
 
 [binary representation]: https://en.wikipedia.org/wiki/Binary_number#Representation
 [bitwise `NOT`]: https://en.wikipedia.org/wiki/Bitwise_operation#NOT
 [bitwise `AND`]: https://en.wikipedia.org/wiki/Bitwise_operation#AND
 
-Which variant you choose is up to you. Both compute the same result, only using different methods.
+どちらの実装を使うかは自由です。結果は同じで、計算方法が違うだけです。
 
-### Using It
+### 使ってみる
 
-To use the bump allocator instead of the `linked_list_allocator` crate, we need to update the `ALLOCATOR` static in `allocator.rs`:
+`linked_list_allocator`クレートの代わりにバンプアロケータを使うには、`allocator.rs`の`ALLOCATOR`静的変数を更新する必要があります：
 
 ```rust
 // in src/allocator.rs
@@ -363,16 +363,15 @@ use bump::BumpAllocator;
 static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new());
 ```
 
-Here it becomes important that we declared `BumpAllocator::new` and `Locked::new` as [`const` functions]. If they were normal functions, a compilation error would occur because the initialization expression of a `static` must be evaluable at compile time.
+ここで、`BumpAllocator::new`と`Locked::new`を`const`関数として宣言しておいたことが効いてきます。`static`の初期化式はコンパイル時に評価可能でなければならないため、もしそれらが通常の関数だったならコンパイルエラーが発生していたでしょう。
 
 [`const` functions]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-We don't need to change the  `ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE)` call in our `init_heap` function because the bump allocator provides the same interface as the allocator provided by the `linked_list_allocator`.
+バンプアロケータは`linked_list_allocator`によって提供されるアロケータと同じインターフェイスを提供するため、`init_heap`関数の`ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE)`呼び出しを変更する必要はありません。
 
-Now our kernel uses our bump allocator! Everything should still work, including the [`heap_allocation` tests] that we created in the previous post:
+これで、私たちのカーネルはバンプアロケータを使うようになりました！　前回の記事で作った[`heap_allocation`のテスト][`heap_allocation` tests]を含め、すべての機能がうまくいくはずです。
 
-[`heap_allocation` tests]: @/edition-2/posts/10-heap-allocation/index.md#adding-a-test
-
+[`heap_allocation` tests]: @/edition-2/posts/10-heap-allocation/index.ja.md#tesutowozhui-jia-suru
 ```
 > cargo test --test heap_allocation
 […]
@@ -382,39 +381,39 @@ large_vec... [ok]
 many_boxes... [ok]
 ```
 
-### Discussion
+### 議論
 
-The big advantage of bump allocation is that it's very fast. Compared to other allocator designs (see below) that need to actively look for a fitting memory block and perform various bookkeeping tasks on `alloc` and `dealloc`, a bump allocator [can be optimized][bump downwards] to just a few assembly instructions. This makes bump allocators useful for optimizing the allocation performance, for example when creating a [virtual DOM library].
+バンプアロケータの大きな利点は、非常に速いことです。`alloc`や`dealloc`のたびに、サイズの合うメモリを動的に探索し様々な管理タスクを行う必要があるほかのアロケータの設計（後述）に比べると、バンプアロケータはたった数個のアセンブリ命令に[最適化することができる][bump downwards]のですから。これによりバンプアロケータは、メモリ割り当ての性能を最大化したいとき、例えば[仮想DOMライブラリ][virtual DOM library]を作成したいときなどに役に立ちます。
 
 [bump downwards]: https://fitzgeraldnick.com/2019/11/01/always-bump-downwards.html
 [virtual DOM library]: https://hacks.mozilla.org/2019/03/fast-bump-allocated-virtual-doms-with-rust-and-wasm/
 
-While a bump allocator is seldom used as the global allocator, the principle of bump allocation is often applied in the form of [arena allocation], which basically batches individual allocations together to improve performance. An example of an arena allocator for Rust is contained in the [`toolshed`] crate.
+バンプアロケータがグローバルアロケータとして使われることはまれですが、バンプアロケーションの原理はしばしば[アリーナアロケーション][arena allocation]の形で使われます。これは要するに割り当てをバッチにまとめることで性能を上げるというものです。Rustにおけるアリーナアロケータの例は[`toolshed`]クレートに含まれています。
 
 [arena allocation]: https://mgravell.github.io/Pipelines.Sockets.Unofficial/docs/arenas.html
 [`toolshed`]: https://docs.rs/toolshed/0.8.1/toolshed/index.html
 
-#### The Drawback of a Bump Allocator
+#### バンプアロケータの欠点
 
-The main limitation of a bump allocator is that it can only reuse deallocated memory after all allocations have been freed. This means that a single long-lived allocation suffices to prevent memory reuse. We can see this when we add a variation of the `many_boxes` test:
+バンプアロケータの主な制約は、すべてのメモリ割り当てが解放されないと<ruby>割り当て解除<rp> (</rp><rt>デアロケート</rt><rp>) </rp></ruby>されたメモリを再利用できないことです。これは、たった一つでも寿命の長い割り当てがあると、メモリの再利用ができなくなってしまうことを意味します。`many_boxes`テストを少し変更したものを追加すると、それを見ることができます。
 
 ```rust
 // in tests/heap_allocation.rs
 
 #[test_case]
 fn many_boxes_long_lived() {
-    let long_lived = Box::new(1); // new
+    let long_lived = Box::new(1); // ここを追加
     for i in 0..HEAP_SIZE {
         let x = Box::new(i);
         assert_eq!(*x, i);
     }
-    assert_eq!(*long_lived, 1); // new
+    assert_eq!(*long_lived, 1); // ここを追加
 }
 ```
 
-Like the `many_boxes` test, this test creates a large number of allocations to provoke an out-of-memory failure if the allocator does not reuse freed memory. Additionally, the test creates a `long_lived` allocation, which lives for the whole loop execution.
+`many_boxes`テストと同様、このテストは大量の割り当てを行うことで、アロケータが解放されたメモリを再利用できていない場合にメモリ不足エラーを引き起こします。さらに、このテストではループの間ずっと存在している`long_lived`という割り当てを追加しています。
 
-When we try to run our new test, we see that it indeed fails:
+この新しいテストを実行しようとすると、実際に失敗することがわかります：
 
 ```
 > cargo test --test heap_allocation
@@ -427,52 +426,51 @@ many_boxes_long_lived... [failed]
 Error: panicked at 'allocation error: Layout { size_: 8, align_: 8 }', src/lib.rs:86:5
 ```
 
-Let's try to understand why this failure occurs in detail: First, the `long_lived` allocation is created at the start of the heap, thereby increasing the `allocations` counter by 1. For each iteration of the loop, a short-lived allocation is created and directly freed again before the next iteration starts. This means that the `allocations` counter is temporarily increased to 2 at the beginning of an iteration and decreased to 1 at the end of it. The problem now is that the bump allocator can only reuse memory after _all_ allocations have been freed, i.e., when the `allocations` counter falls to 0. Since this doesn't happen before the end of the loop, each loop iteration allocates a new region of memory, leading to an out-of-memory error after a number of iterations.
+この失敗が発生する理由を詳細に理解してみましょう。まず、ヒープの先頭に変数`long_lived`の割り当てが作成され、`allocations`カウンタが1増加します。ループの反復ごとに、一時的な割り当てが作成され、次の反復が始まる前にすぐ解放されます。これは、`allocations`カウンタが反復の開始時に一時的に2に増加し、終了時に1に減少することを意味します。問題は、バンプアロケータは**すべての**割り当てが解放された時、つまり`allocations`カウンタが0に減ったときにのみメモリを再利用できるということです。これはループの間には起こらないため、各ループ反復で新しいメモリ領域が割り当てられ、結果として大量の反復の後にメモリ不足エラーを引き起こします。
 
-#### Fixing the Test?
+#### テストを成功させるには
 
-There are two potential tricks that we could utilize to fix the test for our bump allocator:
+このテストを成功させるために、私たちのバンプアロケータに行える工夫が二つほど考えられます：
 
-- We could update `dealloc` to check whether the freed allocation was the last allocation returned by `alloc` by comparing its end address with the `next` pointer. In case they're equal, we can safely reset `next` back to the start address of the freed allocation. This way, each loop iteration reuses the same memory block.
-- We could add an `alloc_back` method that allocates memory from the _end_ of the heap using an additional `next_back` field. Then we could manually use this allocation method for all long-lived allocations, thereby separating short-lived and long-lived allocations on the heap. Note that this separation only works if it's clear beforehand how long each allocation will live. Another drawback of this approach is that manually performing allocations is cumbersome and potentially unsafe.
+- `dealloc`を更新し、解放されたメモリが前回の`alloc`によって返されたものであるかを、その終端アドレスと`next`ポインタを比較することでチェックするようにします。もし等しいなら、`next`を解放された割り当ての先頭に戻しても大丈夫でしょう。こうすれば、それぞれの反復は同じメモリブロックを使うようになります。
+- ヒープの**末尾**からメモリを割り当てていく`alloc_back`メソッドと、そのための`next_back`フィールドを追加するという方法もあります。長期間生存する割り当てには手動でこちらを使うようにすることで、ヒープ上における短期間の割り当てと長期間の割り当てを分離するのです。この「分離」は、どの割り当てがどのくらい生存するか事前にわかっていないと使えないということに注意してください。また、割り当てを手動で行うのは面倒だしunsafeかもしれないという欠点もあります。
 
-While both of these approaches work to fix the test, they are not a general solution since they are only able to reuse memory in very specific cases. The question is: Is there a general solution that reuses _all_ freed memory?
+どちらのアプローチでもテストを成功させられますが、非常に限られたケースでしかメモリを再利用できないため、一般的な解決策とはいえません。問題は、解放された**すべての**メモリを再利用する一般的な解決策はあるのか、ということです。
 
-#### Reusing All Freed Memory?
+#### 解放されたすべてのメモリを再利用するには？
 
-As we learned [in the previous post][heap-intro], allocations can live arbitrarily long and can be freed in an arbitrary order. This means that we need to keep track of a potentially unbounded number of non-continuous, unused memory regions, as illustrated by the following example:
+[前回の記事][heap-intro]で学んだように、割り当ては任意の期間生存する可能性があり、どのような順序でも解放され得ます。これは、次の例に示すように、個数に上限のない、非連続な未使用メモリ領域を管理する必要があることを意味します：
 
-[heap-intro]: @/edition-2/posts/10-heap-allocation/index.md#dynamic-memory
-
+[heap-intro]: @/edition-2/posts/10-heap-allocation/index.ja.md#dong-de-dainamituku-memori
 ![](allocation-fragmentation.svg)
 
-The graphic shows the heap over the course of time. At the beginning, the complete heap is unused, and the `next` address is equal to `heap_start` (line 1). Then the first allocation occurs (line 2). In line 3, a second memory block is allocated and the first allocation is freed. Many more allocations are added in line 4. Half of them are very short-lived and already get freed in line 5, where another new allocation is also added.
+この図は、ヒープの経時変化を示しています。最初は、ヒープ全体が未使用で、`next`アドレスは`heap_start`に等しいです（1行目）。その後、最初の割り当てが行われます（2行目）。3行目では、2つ目のメモリブロックが割り当てられ、最初の割り当ては解放されています。4行目ではたくさんの割り当てが追加されています。それらの半分は非常に短命であり、すでに5行目では解放されていますが、この行では新しい割り当ても追加されています。
 
-Line 5 shows the fundamental problem: We have five unused memory regions with different sizes, but the `next` pointer can only point to the beginning of the last region. While we could store the start addresses and sizes of the other unused memory regions in an array of size 4 for this example, this isn't a general solution since we could easily create an example with 8, 16, or 1000 unused memory regions.
+5行目が根本的な問題を示しています：サイズの異なる未使用のメモリ領域が5つありますが、`next`ポインタはそのうち最後の領域の先頭を指すことしかできません。たとえば今回なら、長さ4の配列に、ほかの未使用メモリ領域の開始アドレスとサイズを保存することはできます。しかし、未使用メモリ領域の数が8個とか16個、1000個にもなる例だって簡単にできてしまうので、これは一般的な解決策ではありません。
 
-Normally, when we have a potentially unbounded number of items, we can just use a heap-allocated collection. This isn't really possible in our case, since the heap allocator can't depend on itself (it would cause endless recursion or deadlocks). So we need to find a different solution.
+普通、要素数に上限がないときは、ただヒープに割り当てられたコレクションを使います。これは私たちの場合には実際には不可能です──なぜなら、ヒープアロケータが自分自身に依存するのは不可能ですから（無限再帰やデッドロックを起こしてしまうでしょう）。なので別の解決策を見つける必要があります。
 
-## Linked List Allocator
+## <ruby>連結<rp> (</rp><rt>リンクト</rt><rp>) </rp></ruby>リストアロケータ
 
-A common trick to keep track of an arbitrary number of free memory areas when implementing allocators is to use these areas themselves as backing storage. This utilizes the fact that the regions are still mapped to a virtual address and backed by a physical frame, but the stored information is not needed anymore. By storing the information about the freed region in the region itself, we can keep track of an unbounded number of freed regions without needing additional memory.
+アロケータを実装する際、任意の数の空きメモリ領域を管理するためによく使われる方法は、これらの領域自体を管理領域として使用することです。この方法は、未使用メモリ領域もまた仮想アドレスにマッピングされており、対応する物理フレームも存在するが、そこに保存された情報はもはや必要ない、ということを利用します。解放された領域に関する情報をそれらの領域自体に保存することで、追加のメモリを必要とせずにいくらでも解放された領域を管理できます。
 
-The most common implementation approach is to construct a single linked list in the freed memory, with each node being a freed memory region:
+最もよく見られる実装方法は、解放されたメモリの中に、各ノードが解放されたメモリ領域であるような一つの連結リストを作るというものです：
 
 ![](linked-list-allocation.svg)
 
-Each list node contains two fields: the size of the memory region and a pointer to the next unused memory region. With this approach, we only need a pointer to the first unused region (called `head`) to keep track of all unused regions, regardless of their number. The resulting data structure is often called a [_free list_].
+リストの各ノードには、メモリ領域のサイズと次の未使用メモリ領域へのポインタの2つのフィールドが含まれています。このアプローチでは、未使用領域がいくつあろうと、そのすべてを最初の未使用領域（`head`と呼ばれる）へのポインタだけで管理できます。結果として生じるこのデータ構造は、しばしば[フリーリスト][_free list_]と呼ばれます。
 
 [_free list_]: https://en.wikipedia.org/wiki/Free_list
 
-As you might guess from the name, this is the technique that the `linked_list_allocator` crate uses. Allocators that use this technique are also often called _pool allocators_.
+名前から想像がつくかもしれませんが、この方法は`linked_list_allocator`クレートが使用しているものです（訳注：連結リストアロケータはlinked list allocatorの訳）。このテクニックを使用するアロケータは、しばしば**プールアロケータ**とも呼ばれます。
 
-### Implementation
+### 実装
 
-In the following, we will create our own simple `LinkedListAllocator` type that uses the above approach for keeping track of freed memory regions. This part of the post isn't required for future posts, so you can skip the implementation details if you like.
+以下では、解放されたメモリ領域を管理するために上記の方法を使用する、独自のシンプルな`LinkedListAllocator`型を作成します。記事のこの部分は今後の記事には必要ありませんので、実装の詳細を飛ばしていただいてもかまいません。
 
-#### The Allocator Type
+#### アロケータ型
 
-We start by creating a private `ListNode` struct in a new `allocator::linked_list` submodule:
+まず、新しい`allocator::linked_list`サブモジュールの中に<ruby>非公開<rp> (</rp><rt>プライベート</rt><rp>) </rp></ruby>の`ListNode`構造体を作ることから始めましょう：
 
 ```rust
 // in src/allocator.rs
@@ -489,12 +487,12 @@ struct ListNode {
 }
 ```
 
-Like in the graphic, a list node has a `size` field and an optional pointer to the next node, represented by the `Option<&'static mut ListNode>` type. The `&'static mut` type semantically describes an [owned] object behind a pointer. Basically, it's a [`Box`] without a destructor that frees the object at the end of the scope.
+図に示したように、リストのノードは`size`フィールドと、次のノードへのオプショナルなポインタを持ちます。後者は`Option<&'static mut ListNode>`型によって表されます。`&'static mut`型はポインタで指されている[所有された][owned]オブジェクトを意味します。要するに、スコープの終了時にオブジェクトを解放するデストラクタを持たないような[`Box`]型です。
 
 [owned]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
 [`Box`]: https://doc.rust-lang.org/alloc/boxed/index.html
 
-We implement the following set of methods for `ListNode`:
+以下の`ListNode`のメソッドを実装します：
 
 ```rust
 // in src/allocator/linked_list.rs
@@ -514,11 +512,11 @@ impl ListNode {
 }
 ```
 
-The type has a simple constructor function named `new` and methods to calculate the start and end addresses of the represented region. We make the `new` function a [const function], which will be required later when constructing a static linked list allocator. Note that any use of mutable references in const functions (including setting the `next` field to `None`) is still unstable. In order to get it to compile, we need to add **`#![feature(const_mut_refs)]`** to the beginning of our `lib.rs`.
+この型は`new`という単純なコンストラクタ関数を持ち、表現する領域の開始・終端アドレスを計算するメソッドを持っています。`new`関数は[const関数][const function]としていますが、これは後で静的な連結リストアロケータを作る際に必要になるためです。const関数においては、あらゆる可変参照の使用（`next`フィールドを`None`にすることも含む）はunstableであることに注意してください。コンパイルを通すためには、`#![feature(const_mut_refs)]`を`lib.rs`の最初に追加する必要があります。
 
 [const function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-With the `ListNode` struct as a building block, we can now create the `LinkedListAllocator` struct:
+`ListNode`構造体を部品として使えば、`LinkedListAllocator`構造体を作ることができます：
 
 ```rust
 // in src/allocator/linked_list.rs
@@ -528,44 +526,44 @@ pub struct LinkedListAllocator {
 }
 
 impl LinkedListAllocator {
-    /// Creates an empty LinkedListAllocator.
+    /// 空のLinkedListAllocatorを作る。
     pub const fn new() -> Self {
         Self {
             head: ListNode::new(0),
         }
     }
 
-    /// Initialize the allocator with the given heap bounds.
+    /// 与えられたヒープ境界でアロケータを初期化する。
     ///
-    /// This function is unsafe because the caller must guarantee that the given
-    /// heap bounds are valid and that the heap is unused. This method must be
-    /// called only once.
+    /// この関数はunsafeである。なぜなら、呼び出し元は渡すヒープ境界が
+    /// 有効でヒープが未使用であることを保証しなければならないからである。
+    /// このメソッドは一度しか呼ばれてはならない。
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         self.add_free_region(heap_start, heap_size);
     }
 
-    /// Adds the given memory region to the front of the list.
+    /// 与えられたメモリ領域をリストの先頭に追加する。
     unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
         todo!();
     }
 }
 ```
 
-The struct contains a `head` node that points to the first heap region. We are only interested in the value of the `next` pointer, so we set the `size` to 0 in the `ListNode::new` function. Making `head` a `ListNode` instead of just a `&'static mut ListNode` has the advantage that the implementation of the `alloc` method will be simpler.
+この構造体は、最初のヒープ領域を指す`head`ノードを持っています。ここでは`next`ポインタの値にしか興味がないので、`ListNode::new`関数では`size`を0にしてしまいます。`head`を単に`&'static mut ListNode`にするのではなく`ListNode`にすると、`alloc`メソッドの実装が単純にできるというメリットがあります。
 
-Like for the bump allocator, the `new` function doesn't initialize the allocator with the heap bounds. In addition to maintaining API compatibility, the reason is that the initialization routine requires writing a node to the heap memory, which can only happen at runtime. The `new` function, however, needs to be a [`const` function] that can be evaluated at compile time because it will be used for initializing the `ALLOCATOR` static. For this reason, we again provide a separate, non-constant `init` method.
+バンプアロケータと同じように、`new`関数はアロケータをヒープ境界で初期化したりはしません。この理由は、APIの互換性を保つためというのに加え、初期化ルーチンがノードをヒープメモリに書き込む必要があり、これは実行時にしか行えないということがあります。`new`関数は`ALLOCATOR`静的変数を初期化するのに使われるので、[`const`関数][`const` function]すなわちコンパイル時に評価できる関数である必要があります。この理由によって、ここでも、非constな`init`メソッドを別に提供しているというわけです。
 
 [`const` function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-The `init` method uses an `add_free_region` method, whose implementation will be shown in a moment. For now, we use the [`todo!`] macro to provide a placeholder implementation that always panics.
+`init`メソッドは`add_free_region`メソッドを使っていますが、この実装はすぐ後で示します。今のところは、[`todo!`]マクロを実装の代わりに置いておいて、常にパニックするようにしておきましょう。
 
 [`todo!`]: https://doc.rust-lang.org/core/macro.todo.html
 
-#### The `add_free_region` Method
+#### `add_free_region`メソッド
 
-The `add_free_region` method provides the fundamental _push_ operation on the linked list. We currently only call this method from `init`, but it will also be the central method in our `dealloc` implementation. Remember, the `dealloc` method is called when an allocated memory region is freed again. To keep track of this freed memory region, we want to push it to the linked list.
+`add_free_region`メソッドは連結リストの最も基本的な操作である**プッシュ**操作を提供します。今はこのメソッドは`init`からしか呼んでいませんが、このメソッドは私たちが`dealloc`を実装する際にも中心的な役割を果たします。`dealloc`メソッドは割り当てられたメモリ領域が解放されたときに呼ばれるのだということを思い出してください。その解放されたメモリ領域を管理するために、それを連結リストにプッシュする必要があるのです。
 
-The implementation of the `add_free_region` method looks like this:
+`add_free_region`メソッドの実装は以下のようになります：
 
 ```rust
 // in src/allocator/linked_list.rs
@@ -574,13 +572,13 @@ use super::align_up;
 use core::mem;
 
 impl LinkedListAllocator {
-    /// Adds the given memory region to the front of the list.
+    /// 与えられたメモリ領域をリストの先頭に追加する。
     unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
-        // ensure that the freed region is capable of holding ListNode
+        // 解放された領域がListNodeを格納できることを確かめる
         assert_eq!(align_up(addr, mem::align_of::<ListNode>()), addr);
         assert!(size >= mem::size_of::<ListNode>());
 
-        // create a new list node and append it at the start of the list
+        // 新しいリストノードを作り、それをリストの先頭に追加する
         let mut node = ListNode::new(size);
         node.next = self.head.next.take();
         let node_ptr = addr as *mut ListNode;
@@ -590,81 +588,81 @@ impl LinkedListAllocator {
 }
 ```
 
-The method takes the address and size of a memory region as an argument and adds it to the front of the list. First, it ensures that the given region has the necessary size and alignment for storing a `ListNode`. Then it creates the node and inserts it into the list through the following steps:
+このメソッドはメモリ領域のアドレスと大きさを引数としてとり、リストの先頭にそれを追加します。まず、与えられた領域が`ListNode`を格納するのに必要なサイズとアラインメントを満たしていることを確認します。次に、ノードを作成し、それを以下のようなステップでリストに追加します：
 
 ![](linked-list-allocator-push.svg)
 
-Step 0 shows the state of the heap before `add_free_region` is called. In step 1, the method is called with the memory region marked as `freed` in the graphic. After the initial checks, the method creates a new `node` on its stack with the size of the freed region. It then uses the [`Option::take`] method to set the `next` pointer of the node to the current `head` pointer, thereby resetting the `head` pointer to `None`.
+Step 0は`add_free_region`が呼ばれる前のヒープの状態を示しています。Step 1では、`add_free_region`メソッドが図において`freed`と書かれているメモリ領域で呼ばれました。最初のチェックを終えると、このメソッドは[`Option::take`]メソッドを使ってノードの`next`ポインタを現在の`head`ポインタに設定し、これによって`head`ポインタは`None`に戻ります。
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-In step 2, the method writes the newly created `node` to the beginning of the freed memory region through the [`write`] method. It then points the `head` pointer to the new node. The resulting pointer structure looks a bit chaotic because the freed region is always inserted at the beginning of the list, but if we follow the pointers, we see that each free region is still reachable from the `head` pointer.
+Step 2では、このメソッドは新しく作られた`node`を`write`メソッドを使って解放されたメモリ領域の先頭に書き込みます。次に`head`ポインタがこの新しいノードを指すようにします。解放された領域は常にリストの先頭に挿入されていくので、結果として生じるポインタ構造はいささか混沌としているように思われますが、`head`ポインタからポインタをたどっていけば、それぞれの解放領域に到達できるというのには変わりありません。
 
 [`write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
 
-#### The `find_region` Method
+#### `find_region`メソッド
 
-The second fundamental operation on a linked list is finding an entry and removing it from the list. This is the central operation needed for implementing the `alloc` method. We implement the operation as a `find_region` method in the following way:
+連結リストの二つ目の基本操作は要素を探してリストからそれを取り除くことです。これは`alloc`メソッドの実装の中核となる操作です。この操作を`find_region`メソッドとして以下のように実装しましょう：
 
 ```rust
 // in src/allocator/linked_list.rs
 
 impl LinkedListAllocator {
-    /// Looks for a free region with the given size and alignment and removes
-    /// it from the list.
+    /// 与えられたサイズの解放された領域を探し、リストからそれを
+    /// 取り除く。
     ///
-    /// Returns a tuple of the list node and the start address of the allocation.
+    /// リストノードと割り当ての開始アドレスからなるタプルを返す。
     fn find_region(&mut self, size: usize, align: usize)
         -> Option<(&'static mut ListNode, usize)>
     {
-        // reference to current list node, updated for each iteration
+        // 現在のリストノードへの参照。繰り返しごとに更新していく
         let mut current = &mut self.head;
-        // look for a large enough memory region in linked list
+        // 連結リストから十分大きな領域を探す
         while let Some(ref mut region) = current.next {
             if let Ok(alloc_start) = Self::alloc_from_region(&region, size, align) {
-                // region suitable for allocation -> remove node from list
+                // 領域が割り当てに適している -> リストから除く
                 let next = region.next.take();
                 let ret = Some((current.next.take().unwrap(), alloc_start));
                 current.next = next;
                 return ret;
             } else {
-                // region not suitable -> continue with next region
+                // 割り当てに適していない -> 次の領域で続ける
                 current = current.next.as_mut().unwrap();
             }
         }
 
-        // no suitable region found
+        // 適した領域が見つからなかった
         None
     }
 }
 ```
 
-The method uses a `current` variable and a [`while let` loop] to iterate over the list elements. At the beginning, `current` is set to the (dummy) `head` node. On each iteration, it is then updated to the `next` field of the current node (in the `else` block). If the region is suitable for an allocation with the given size and alignment, the region is removed from the list and returned together with the `alloc_start` address.
+このメソッドは`current`変数と`while let`ループを使ってリストの各要素に関して反復を行っています。はじめ、`current`は（ダミーの）`head`ノードに設定されています。繰り返しごとに（`else`ブロックで）これは現在のノードの`next`フィールドへと更新されます。領域が与えられたサイズとアラインメントの割り当てに適しているなら、その領域がリストから取り除かれて`alloc_start`アドレスとともに返されます。
 
 [`while let` loop]: https://doc.rust-lang.org/reference/expressions/loop-expr.html#predicate-pattern-loops
 
-When the `current.next` pointer becomes `None`, the loop exits. This means we iterated over the whole list but found no region suitable for an allocation. In that case, we return `None`. Whether a region is suitable is checked by the `alloc_from_region` function, whose implementation will be shown in a moment.
+`current.next`ポインタが`None`になった場合、ループから抜けます。これは、リスト全体を反復したものの割り当てに適した領域が見つからなかったことを意味します。その場合`None`を返します。領域が適しているか否かは`alloc_from_region`によってチェックされていますが、この関数の実装はすぐに示します。
 
-Let's take a more detailed look at how a suitable region is removed from the list:
+適した領域がリストから除かれる様子をもう少し詳しく見てみましょう：
 
 ![](linked-list-allocator-remove-region.svg)
 
-Step 0 shows the situation before any pointer adjustments. The `region` and `current` regions and the `region.next` and `current.next` pointers are marked in the graphic. In step 1, both the `region.next` and `current.next` pointers are reset to `None` by using the [`Option::take`] method. The original pointers are stored in local variables called `next` and `ret`.
+Step 0はポインタに修正を行う前の状況を表しています。`region`と`current`という領域と、`region.next`と`current.next`というポインタが図中に示されています。Step 1では、`region.next`と`current.next`ポインタが[`Option::take`]メソッドによって`None`に戻されています。ポインタの元の値は`next`と`ret`というローカル変数に格納されています。
 
-In step 2, the `current.next` pointer is set to the local `next` pointer, which is the original `region.next` pointer. The effect is that `current` now directly points to the region after `region`, so that `region` is no longer an element of the linked list. The function then returns the pointer to `region` stored in the local `ret` variable.
+Step 2では、ポインタ`current.next`がローカル変数であるポインタ`next`（元々は`region.next`ポインタだったもの）に設定されています。これにより、`current`は`region`の次の領域を指すようになっているので、`region`はもはやこの連結リストの要素ではありません。この関数はその後、ローカル変数`ret`に格納されていた`region`へのポインタを返します。
 
-##### The `alloc_from_region` Function
+##### `alloc_from_region`関数
 
-The `alloc_from_region` function returns whether a region is suitable for an allocation with a given size and alignment. It is defined like this:
+`alloc_from_region`関数は領域が与えられたサイズとアラインメントの割り当てに適しているかどうかを返します。以下のように定義されます：
 
 ```rust
 // in src/allocator/linked_list.rs
 
 impl LinkedListAllocator {
-    /// Try to use the given region for an allocation with given size and
-    /// alignment.
+    /// 与えられた領域で与えられたサイズとアラインメントの
+    /// 割り当てを行おうとする。
     ///
-    /// Returns the allocation start address on success.
+    /// 成功した場合、割り当ての開始アドレスを返す。
     fn alloc_from_region(region: &ListNode, size: usize, align: usize)
         -> Result<usize, ()>
     {
@@ -672,34 +670,34 @@ impl LinkedListAllocator {
         let alloc_end = alloc_start.checked_add(size).ok_or(())?;
 
         if alloc_end > region.end_addr() {
-            // region too small
+            // 領域が小さすぎる
             return Err(());
         }
 
         let excess_size = region.end_addr() - alloc_end;
         if excess_size > 0 && excess_size < mem::size_of::<ListNode>() {
-            // rest of region too small to hold a ListNode (required because the
-            // allocation splits the region in a used and a free part)
+            // 領域の残りが小さすぎてListNodeを格納できない（割り当ては
+            // 領域を使う部分と解放されている部分に分けるので、この条件が必要）
             return Err(());
         }
 
-        // region suitable for allocation
+        // 領域は割り当てに適している
         Ok(alloc_start)
     }
 }
 ```
 
-First, the function calculates the start and end address of a potential allocation, using the `align_up` function we defined earlier and the [`checked_add`] method. If an overflow occurs or if the end address is behind the end address of the region, the allocation doesn't fit in the region and we return an error.
+まず、この関数は行おうとしている割り当ての開始・終端アドレスを、先ほど定義した`align_up`関数と[`checked_add`]メソッドを使って計算します。オーバーフローが起こったり、（割り当ての）終端アドレスが領域の終端アドレスよりも後ろにあったりした場合は、割り当ては領域に入りきらないのでエラーを返します。
 
-The function performs a less obvious check after that. This check is necessary because most of the time an allocation does not fit a suitable region perfectly, so that a part of the region remains usable after the allocation. This part of the region must store its own `ListNode` after the allocation, so it must be large enough to do so. The check verifies exactly that: either the allocation fits perfectly (`excess_size == 0`) or the excess size is large enough to store a `ListNode`.
+その後でこの関数の行うチェックは、先ほどのものほど自明ではありません。このチェックが必要になるのは、多くの場合適した領域にも割り当てがぴったりフィットするわけではないので、割り当て後も一部の領域が使用可能なままになるからです。領域のこの部分は割り当て後も自分自身の`ListNode`を格納しなければならないので、それが可能なくらいのサイズがないといけません。このチェックはまさにそれを確かめています：割り当てが完璧にフィットするか（`excess_size == 0`）、または`ListNode`を格納するのに十分超過領域が大きいかを調べています。
 
-#### Implementing `GlobalAlloc`
+#### `GlobalAlloc`を実装する
 
-With the fundamental operations provided by the `add_free_region` and `find_region` methods, we can now finally implement the `GlobalAlloc` trait. As with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator` but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references.
+`add_free_region`と`find_region`メソッドによって基本となる操作が提供されたので、ついに`GlobalAlloc`トレイトを実装することができます。バンプアロケータの時と同じように、このトレイトを`LinkedListAllocator`に直接実装するのではなく、ラップされた`Locked<LinkedListAllocator>`に実装するようにします。[`Locked`ラッパ][`Locked` wrapper]はスピンロックによって内部可変性を追加するので、これにより`&self`参照しか取らない`alloc`や`dealloc`メソッドでもアロケータを変更できるようになります。
 
-[`Locked` wrapper]: @/edition-2/posts/11-allocator-designs/index.md#a-locked-wrapper-type
+[`Locked` wrapper]: @/edition-2/posts/11-allocator-designs/index.ja.md#lockedratupaxing
 
-The implementation looks like this:
+実装は以下のようになります：
 
 ```rust
 // in src/allocator/linked_list.rs
@@ -710,7 +708,7 @@ use core::ptr;
 
 unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        // perform layout adjustments
+        // レイアウト調整を行う
         let (size, align) = LinkedListAllocator::size_align(layout);
         let mut allocator = self.lock();
 
@@ -727,7 +725,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        // perform layout adjustments
+        // レイアウト調整を行う
         let (size, _) = LinkedListAllocator::size_align(layout);
 
         self.lock().add_free_region(ptr as usize, size)
@@ -735,26 +733,26 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
 }
 ```
 
-Let's start with the `dealloc` method because it is simpler: First, it performs some layout adjustments, which we will explain in a moment. Then, it retrieves a `&mut LinkedListAllocator` reference by calling the [`Mutex::lock`] function on the [`Locked` wrapper]. Lastly, it calls the `add_free_region` function to add the deallocated region to the free list.
+`dealloc`メソッドのほうが単純なのでこちらから見ていきましょう：このメソッドではまず、何かしらのレイアウト調整（すぐ後に説明します）を行っています。その次に、`&mut LinkedListAllocator`という参照を[`Locked`ラッパ][`Locked` wrapper]の[`Mutex::lock`]関数を呼ぶことによって取得します。最後に、`add_free_region`関数で割り当て解除された領域をフリーリストに追加します。
 
-The `alloc` method is a bit more complex. It starts with the same layout adjustments and also calls the [`Mutex::lock`] function to receive a mutable allocator reference. Then it uses the `find_region` method to find a suitable memory region for the allocation and remove it from the list. If this doesn't succeed and `None` is returned, it returns `null_mut` to signal an error as there is no suitable memory region.
+`alloc`メソッドはもう少し複雑です。（`dealloc`と）同じようにレイアウト調整を行い、[`Mutex::lock`]でアロケータの可変参照を得るところから始めます。次に`find_region`メソッドを使って割り当てに適したメモリ領域を見つけ、それをリストから取り除きます。これが成功せず`None`が返された場合、適したメモリ領域がないため、（このメソッドは）`null_mut`を返すことでエラーを表します。
 
-In the success case, the `find_region` method returns a tuple of the suitable region (no longer in the list) and the start address of the allocation. Using `alloc_start`, the allocation size, and the end address of the region, it calculates the end address of the allocation and the excess size again. If the excess size is not null, it calls `add_free_region` to add the excess size of the memory region back to the free list. Finally, it returns the `alloc_start` address casted as a `*mut u8` pointer.
+成功した場合、`find_region`メソッドは適した領域（すでにリストにはない）と割り当ての開始アドレスからなるタプルを返します。（それを受け、`alloc`は）`alloc_start`と割り当てのサイズ、および領域の終端アドレスを使うことで、割り当ての終端アドレスと超過サイズを再び計算します。もし超過サイズがゼロでないなら、`add_free_region`を呼んでメモリ領域の超過サイズをフリーリストに戻します。最後に、`alloc_start`アドレスを`*mut u8`ポインタにキャストして返します。
 
-#### Layout Adjustments
+#### レイアウト調整
 
-So what are these layout adjustments that we make at the beginning of both `alloc` and `dealloc`? They ensure that each allocated block is capable of storing a `ListNode`. This is important because the memory block is going to be deallocated at some point, where we want to write a `ListNode` to it. If the block is smaller than a `ListNode` or does not have the correct alignment, undefined behavior can occur.
+で、`alloc`と`dealloc`両方の最初に行っていたレイアウト調整はいったい何なのでしょうか？これらは、それぞれの割り当てブロックが`ListNode`を格納することができることを保証するものです。これが重要なのは、このメモリブロックはいつか割り当て解除されることになるので、そのときそこに`ListNode`を書き込む必要が出てくるからです。ブロックが`ListNode`より小さかったり正しいアラインメントがなされていなかったりすると、未定義動作につながります。
 
-The layout adjustments are performed by the `size_align` function, which is defined like this:
+レイアウト調整は`size_align`関数によって行われています。この定義は以下のようになっています：
 
 ```rust
 // in src/allocator/linked_list.rs
 
 impl LinkedListAllocator {
-    /// Adjust the given layout so that the resulting allocated memory
-    /// region is also capable of storing a `ListNode`.
+    /// 与えられたレイアウトを調整し、割り当てられるメモリ領域が
+    /// `ListNode`を格納することもできるようにする。
     ///
-    /// Returns the adjusted size and alignment as a (size, align) tuple.
+    /// 調整されたサイズとアラインメントをタプルとして返す。
     fn size_align(layout: Layout) -> (usize, usize) {
         let layout = layout
             .align_to(mem::align_of::<ListNode>())
@@ -766,16 +764,16 @@ impl LinkedListAllocator {
 }
 ```
 
-First, the function uses the [`align_to`] method on the passed [`Layout`] to increase the alignment to the alignment of a `ListNode` if necessary. It then uses the [`pad_to_align`] method to round up the size to a multiple of the alignment to ensure that the start address of the next memory block will have the correct alignment for storing a `ListNode` too.
-In the second step, it uses the [`max`] method to enforce a minimum allocation size of `mem::size_of::<ListNode>`. This way, the `dealloc` function can safely write a `ListNode` to the freed memory block.
+まず、この関数は渡された[`Layout`]の[`align_to`]メソッドを使って、そのアラインメントを`ListNode`のアラインメントにまで（必要なら）増やします。次に[`pad_to_align`]メソッドを使って、レイアウトのサイズがアラインメントの倍数であるようにし、次のメモリブロックのアラインメントもまた`ListNode`を格納できる適切なものになるようにします。
+次に、[`max`]メソッドによって割り当てが最低でも`mem::size_of::<ListNode>`の大きさになるようにします。こうしておけば、`dealloc`関数は安心して`ListNode`を解放されたメモリブロックに書き込むことができます。
 
 [`align_to`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.align_to
 [`pad_to_align`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.pad_to_align
 [`max`]: https://doc.rust-lang.org/std/cmp/trait.Ord.html#method.max
 
-### Using it
+### 使ってみる
 
-We can now update the `ALLOCATOR` static in the `allocator` module to use our new `LinkedListAllocator`:
+これで、`allocator`モジュール内の`ALLOCATOR`静的変数を新しい`LinkedListAllocator`で更新できるようになりました：
 
 ```rust
 // in src/allocator.rs
@@ -787,9 +785,9 @@ static ALLOCATOR: Locked<LinkedListAllocator> =
     Locked::new(LinkedListAllocator::new());
 ```
 
-Since the `init` function behaves the same for the bump and linked list allocators, we don't need to modify the `init` call in `init_heap`.
+`init`関数はバンプアロケータでも連結リストアロケータでも同じように振る舞うので、`init_heap`内における`init`関数の呼び出しを修正する必要はありません。
 
-When we now run our `heap_allocation` tests again, we see that all tests pass now, including the `many_boxes_long_lived` test that failed with the bump allocator:
+`heap_allocation`テストをもう一度実行すると、バンプアロケータでは失敗していた`many_boxes_long_lived`テストを含めすべてのテストをパスします：
 
 ```
 > cargo test --test heap_allocation
@@ -799,94 +797,94 @@ many_boxes... [ok]
 many_boxes_long_lived... [ok]
 ```
 
-This shows that our linked list allocator is able to reuse freed memory for subsequent allocations.
+これは、私たちの連結リストアロケータが、二つ目以降の割り当てのメモリが解放されたときも、それを再利用できていることを示しています。
 
-### Discussion
+### 議論
 
-In contrast to the bump allocator, the linked list allocator is much more suitable as a general-purpose allocator, mainly because it is able to directly reuse freed memory. However, it also has some drawbacks. Some of them are only caused by our basic implementation, but there are also fundamental drawbacks of the allocator design itself.
+解放されたメモリをすぐに再利用できるため、連結リストアロケータは汎用のアロケータとしてバンプアロケータよりはるかに優れています。しかし欠点もあります。そのうちいくつかは私たちの実装が高度でないために起きているのですが、アロケータの設計自体にも根本的な欠点があるのです。
 
-#### Merging Freed Blocks
+#### 解放されたブロックを結合する
 
-The main problem with our implementation is that it only splits the heap into smaller blocks but never merges them back together. Consider this example:
+私たちの実装の大きな問題は、ヒープをより小さなブロックへと分割してはいくものの、それらを結合し直すことは全くやっていないことです。次の例を考えてみましょう：
 
 ![](linked-list-allocator-fragmentation-on-dealloc.svg)
 
-In the first line, three allocations are created on the heap. Two of them are freed again in line 2 and the third is freed in line 3. Now the complete heap is unused again, but it is still split into four individual blocks. At this point, a large allocation might not be possible anymore because none of the four blocks is large enough. Over time, the process continues, and the heap is split into smaller and smaller blocks. At some point, the heap is so fragmented that even normal sized allocations will fail.
+最初の行では、ヒープ上に三つの割り当てが作られています。2行目ではそのうち2つが、3行目では3つ目が解放されています。今やヒープ全体が未使用状態に戻ったわけですが、まだ4つの別々のブロックに分かれたままです。この時点で、4つのブロックどれもサイズが足らず、巨大な割り当てが不可能ということがあり得るかもしれません。時間がたち、このプロセスがさらに続くと、ヒープはさらに小さいブロックへと分割されています。いつかのタイミングで、ヒープがあまりにも断片化したせいで、普通の割り当てすら失敗するようになってしまうでしょう。
 
-To fix this problem, we need to merge adjacent freed blocks back together. For the above example, this would mean the following:
+この問題を解決するためには、隣り合う解放されたブロックを結合する必要があります。上の例の場合、以下を意味します：
 
 ![](linked-list-allocator-merge-on-dealloc.svg)
 
-Like before, two of the three allocations are freed in line `2`. Instead of keeping the fragmented heap, we now perform an additional step in line `2a` to merge the two rightmost blocks back together. In line `3`, the third allocation is freed (like before), resulting in a completely unused heap represented by three distinct blocks. In an additional merging step in line `3a`, we then merge the three adjacent blocks back together.
+図中の`2`の行では、以前のように、3つの割り当てのうち2つが解放されています。ここで、ヒープを断片化したままにしておくのではなく、追加で`2a`のステップを行って右端の二つのブロックを結合して一つに戻しましょう。`3`行目では（以前のように）3つめの領域が解放され、3つの異なるブロックで表される完全に未使用のヒープができました。追加で`3a`の結合ステップを行い、これらの隣り合ったブロックを結合して一つに戻します。
 
-The `linked_list_allocator` crate implements this merging strategy in the following way: Instead of inserting freed memory blocks at the beginning of the linked list on `deallocate`, it always keeps the list sorted by start address. This way, merging can be performed directly on the `deallocate` call by examining the addresses and sizes of the two neighboring blocks in the list. Of course, the deallocation operation is slower this way, but it prevents the heap fragmentation we saw above.
+`linked_list_allocator`クレートはこのような結合戦略を以下のように実装しています：`deallocate`にて、解放されたメモリブロックを連結リストの先頭に入れるかわりに、リストを常に開始アドレスでソートされた状態にしておくのです。こうすると、`deallocate`関数の呼び出しが行われたときに、リスト内で隣り合うブロックのアドレスとサイズを調べることで、結合を即座に行うことができます。もちろん、このようにすると割り当て解除操作は遅くなってしまいますが、上で見たようなヒープの断片化は防ぐことができます。
 
-#### Performance
+#### 性能
 
-As we learned above, the bump allocator is extremely fast and can be optimized to just a few assembly operations. The linked list allocator performs much worse in this category. The problem is that an allocation request might need to traverse the complete linked list until it finds a suitable block.
+前述したように、バンプアロケータはとんでもなく速く、ほんの数個のアセンブリ命令に最適化することができます。この点でいうと、連結リストアロケータの性能はずっと悪いです。問題は、割り当ての要求に対し、適したブロックが見つかるまで連結リスト全体を調べ上げる必要があるかもしれないことです。
 
-Since the list length depends on the number of unused memory blocks, the performance can vary extremely for different programs. A program that only creates a couple of allocations will experience relatively fast allocation performance. For a program that fragments the heap with many allocations, however, the allocation performance will be very bad because the linked list will be very long and mostly contain very small blocks.
+リスト長は未使用のメモリブロックの数によって決まるので、プログラムごとに性能は大きく変わり得ます。いくつかしか割り当てを行わないプログラムは、割り当ての性能が比較的よいと感じることでしょう。しかし、大量の割り当てでヒープを断片化させてしまうプログラムの場合、連結リストがとても長くなり、そのほとんどがとても小さなブロックしか持たないということになるので、割り当ての性能は非常に悪くなってしまうでしょう。
 
-It's worth noting that this performance issue isn't a problem caused by our basic implementation but a fundamental problem of the linked list approach. Since allocation performance can be very important for kernel-level code, we explore a third allocator design in the following that trades improved performance for reduced memory utilization.
+この性能の問題は、私たちの実装が簡素なせいで起きているのではなく、連結リストを使った方法の根本的な問題であるということに注目してください。アロケータの性能はカーネルレベルのコードにとって非常に重要になるので、ここからは第三のアプローチ──性能を向上する代わりに、メモリの利用効率を犠牲にするもの──を見ていきましょう。
 
-## Fixed-Size Block Allocator
+## 固定サイズブロックアロケータ
 
-In the following, we present an allocator design that uses fixed-size memory blocks for fulfilling allocation requests. This way, the allocator often returns blocks that are larger than needed for allocations, which results in wasted memory due to [internal fragmentation]. On the other hand, it drastically reduces the time required to find a suitable block (compared to the linked list allocator), resulting in much better allocation performance.
+以下では、割り当ての要求を遂行するために固定サイズのメモリブロックを使うアロケータの設計を示します。こうすると、アロケータはしばしば必要なものより大きなブロックを返すので、[内部断片化][internal fragmentation]によるメモリの無駄が発生します。いっぽうで、適切なブロックを見つけるのに必要な時間が（連結リストアロケータと比べて）激減するので、割り当ての性能はずっとよくなります。
 
-### Introduction
+### 導入
 
-The idea behind a _fixed-size block allocator_ is the following: Instead of allocating exactly as much memory as requested, we define a small number of block sizes and round up each allocation to the next block size. For example, with block sizes of 16, 64, and 512 bytes, an allocation of 4 bytes would return a 16-byte block, an allocation of 48 bytes a 64-byte block, and an allocation of 128 bytes a 512-byte block.
+**固定サイズブロックアロケータ**の背後にある発想は以下のようなものです：要求された量ぴったりのメモリを返す代わりに、いくつかのブロックサイズを決めて、割り当てのサイズを次のブロックサイズに切り上げるようにするのです。たとえば、ブロックサイズを16,64,512バイトとしたら、4バイトの割り当ては16バイトのブロックを、48バイトの割り当ては64バイトのブロックを、128バイトの割り当ては512バイトのブロックを返します。
 
-Like the linked list allocator, we keep track of the unused memory by creating a linked list in the unused memory. However, instead of using a single list with different block sizes, we create a separate list for each size class. Each list then only stores blocks of a single size. For example, with block sizes of 16, 64, and 512, there would be three separate linked lists in memory:
+連結リストアロケータと同じように、未使用メモリ部に連結リストを作ることによって未使用メモリを管理します。しかし、様々なブロックサイズのブロックを持つ一つのリストを使う代わりに、それぞれのサイズクラスごとに別のリストを作ります。それぞれのリストは一つのサイズのブロックのみを格納するのです。例えば、ブロックサイズが16, 64, 512のとき、3つの別々の連結リストがメモリ内にできます：
 
 ![](fixed-size-block-example.svg).
 
-Instead of a single `head` pointer, we have the three head pointers `head_16`, `head_64`, and `head_512` that each point to the first unused block of the corresponding size. All nodes in a single list have the same size. For example, the list started by the `head_16` pointer only contains 16-byte blocks. This means that we no longer need to store the size in each list node since it is already specified by the name of the head pointer.
+`head`ポインタも一つではなく、`head_16`、`head_64`、`head_512`という、対応するサイズの最初の未使用ブロックを指す3つのポインタがあることになります。一つのリスト内のノードはすべて同じサイズです。たとえば、`head_16`ポインタから始まるリストには16バイトのブロックのみが含まれます。これが意味するのは、ヘッドポインタの名前でそれぞれのリストのノードサイズは指定されているので、ノード内にそれらを格納する必要はないということです。
 
-Since each element in a list has the same size, each list element is equally suitable for an allocation request. This means that we can very efficiently perform an allocation using the following steps:
+リスト内のそれぞれの要素は同じサイズを持っているので、割り当ての要求に要素が適しているかはすべての要素について同じです。これは、以下の手順をとることで非常に効率的に割り当てを行えるということを意味します：
 
-- Round up the requested allocation size to the next block size. For example, when an allocation of 12 bytes is requested, we would choose the block size of 16 in the above example.
-- Retrieve the head pointer for the list, e.g., for block size 16, we need to use `head_16`.
-- Remove the first block from the list and return it.
+- 要求された割り当てサイズを次のブロックサイズに切り上げる。たとえば、上の例で12バイトの割り当てが要求されたら、ブロックサイズを16バイトとする。
+- リストのヘッドポインタを手に入れる。ブロックサイズが16なら、`head_16`を使う。
+- リストから最初のブロックを取り除きそれを返す。
 
-Most notably, we can always return the first element of the list and no longer need to traverse the full list. Thus, allocations are much faster than with the linked list allocator.
+注目すべきは、常にリストの最初の要素を返せばよく、リスト全体を走査する必要はないということです。よって、連結リストアロケータに比べて割り当てはずっと高速になります。
 
-#### Block Sizes and Wasted Memory
+#### ブロックサイズと無駄になるメモリ
 
-Depending on the block sizes, we lose a lot of memory by rounding up. For example, when a 512-byte block is returned for a 128-byte allocation, three-quarters of the allocated memory is unused. By defining reasonable block sizes, it is possible to limit the amount of wasted memory to some degree. For example, when using the powers of 2 (4, 8, 16, 32, 64, 128, …) as block sizes, we can limit the memory waste to half of the allocation size in the worst case and a quarter of the allocation size in the average case.
+ブロックサイズの決め方によっては、切り上げによって多くのメモリを失うことになります。例えば、128バイトの割り当てに対し512バイトのブロックが返されるとき、割り当てられたメモリの3/4は使われません。適切なブロックサイズを使うことで、無駄になるメモリの量をある程度にまで減らすことはできます。例えば、ブロックサイズとして2の累乗（4, 8, 16, 32, 64, 128, ……）を使うと、無駄になるメモリを最悪でもメモリサイズの半分、平均してメモリサイズの1/4とすることができます。
 
-It is also common to optimize block sizes based on common allocation sizes in a program. For example, we could additionally add block size 24 to improve memory usage for programs that often perform allocations of 24 bytes. This way, the amount of wasted memory can often be reduced without losing the performance benefits.
+ブロックサイズをプログラムにおいてよく使われるサイズに基づいて最適化するというのも、よく行われます。例えば、24バイトのメモリ割り当てをよく行うプログラムにおけるメモリ効率を向上するため、24バイトのブロックサイズを追加することができるでしょう。このように、無駄になるメモリの量はしばしば性能上の利点を失うことなく減らすことができます。
 
-#### Deallocation
+#### 割り当て解除
 
-Much like allocation, deallocation is also very performant. It involves the following steps:
+割り当てと同様、割り当ての解除もとても重要です。以下の手順をとります：
 
-- Round up the freed allocation size to the next block size. This is required since the compiler only passes the requested allocation size to `dealloc`, not the size of the block that was returned by `alloc`. By using the same size-adjustment function in both `alloc` and `dealloc`, we can make sure that we always free the correct amount of memory.
-- Retrieve the head pointer for the list.
-- Add the freed block to the front of the list by updating the head pointer.
+- 解放された割り当てサイズを次のブロックサイズに切り上げる。これが必要になるのは、コンパイラが`dealloc`に渡してくるのは要求された割り当てサイズであり、`alloc`によって返されたブロックのサイズではないためである。`alloc`と`dealloc`で同じサイズ修正関数を使うことで、正しい量のメモリを解放していることは保証される。
+- リストのヘッドポインタを手に入れる。
+- ヘッドポインタを更新することで、解放されたブロックをリストの先頭に追加する。
 
-Most notably, no traversal of the list is required for deallocation either. This means that the time required for a `dealloc` call stays the same regardless of the list length.
+注目すべきは、割り当て解除においてもリストの走査は必要ないということです。これが意味するのは、`dealloc`に必要な時間はリスト長によらず一定だということです。
 
-#### Fallback Allocator
+#### <ruby>代替<rp> (</rp><rt>フォールバック</rt><rp>) </rp></ruby>アロケータ
 
-Given that large allocations (>2&nbsp;KB) are often rare, especially in operating system kernels, it might make sense to fall back to a different allocator for these allocations. For example, we could fall back to a linked list allocator for allocations greater than 2048 bytes in order to reduce memory waste. Since only very few allocations of that size are expected, the linked list would stay small and the (de)allocations would still be reasonably fast.
+（2KBを超えるような）大きな割り当ては、とくにオペレーティングシステムのカーネルにおいては珍しいことが多いので、そのような割り当てに対しては<ruby>代替<rp> (</rp><rt>フォールバック</rt><rp>) </rp></ruby>のアロケータを使うのがよいかもしれません。例えば、2048バイトより大きな割り当てに対してはメモリの無駄を減らすために連結リストアロケータにフォールバックするのです。そのようなサイズの割り当ての数は非常に少ないはずなので、連結リストの長さが長くなることはなく、割り当て・割り当ての解除も比較的速くできるでしょう。
 
-#### Creating new Blocks
+#### 新しいブロックを作る
 
-Above, we always assumed that there are always enough blocks of a specific size in the list to fulfill all allocation requests. However, at some point, the linked list for a given block size becomes empty. At this point, there are two ways we can create new unused blocks of a specific size to fulfill an allocation request:
+上では、リスト内には特定のサイズのブロックがつねに十分あり、すべての割り当ての要求を満足できることを仮定していました。しかし、いつかの時点で、あるブロックサイズの連結リストが空になってしまうでしょう。そのとき、割り当ての要求を満足するために特定のサイズの未使用ブロックを作り出す方法が二つ考えられます：
 
-- Allocate a new block from the fallback allocator (if there is one).
-- Split a larger block from a different list. This best works if block sizes are powers of two. For example, a 32-byte block can be split into two 16-byte blocks.
+- 代替アロケータ（もしあるなら）から新しいブロックを割り当てる
+- 別のリストからより大きなブロックを持ってきて、それを分割する。この方法は、ブロックサイズが2の累乗であるときに最もうまくいく。例えば、32バイトのブロックは二つの16バイトのブロックに分割できる。
 
-For our implementation, we will allocate new blocks from the fallback allocator since the implementation is much simpler.
+実装がずっと簡単になるので、私たちの実装では代替アロケータから新しいブロックを割り当てることにしましょう。
 
-### Implementation
+### 実装
 
-Now that we know how a fixed-size block allocator works, we can start our implementation. We won't depend on the implementation of the linked list allocator created in the previous section, so you can follow this part even if you skipped the linked list allocator implementation.
+固定サイズブロックアロケータの仕組みを理解したので、実装を始めることができます。以前のパートで作成した連結リストアロケータの実装は使わないので、もし連結リストアロケータの実装部分を飛ばしていたとしても、この部分は読み進めることができます。
 
-#### List Node
+#### リストノード
 
-We start our implementation by creating a `ListNode` type in a new `allocator::fixed_size_block` module:
+実装は、新しい`allocator::fixed_size_block`モジュールに`ListNode`型を作るところから始めましょう。
 
 ```rust
 // in src/allocator.rs
@@ -902,31 +900,31 @@ struct ListNode {
 }
 ```
 
-This type is similar to the `ListNode` type of our [linked list allocator implementation], with the difference that we don't have a `size` field. It isn't needed because every block in a list has the same size with the fixed-size block allocator design.
+この型は[連結リストアロケータの実装][linked list allocator implementation]における`ListNode`型と似ていますが、`size`フィールドがありません。固定サイズブロックアロケータにおいては、リスト内のすべてのブロックが同じサイズを持つため、必要ないのです。
 
-[linked list allocator implementation]: #the-allocator-type
+[linked list allocator implementation]: #aroketaxing
 
-#### Block Sizes
+#### ブロックサイズ
 
-Next, we define a constant `BLOCK_SIZES` slice with the block sizes used for our implementation:
+つぎに、私たちの実装におけるブロックサイズをもつ定数スライス`BLOCK_SIZES`を定義します：
 
 ```rust
 // in src/allocator/fixed_size_block.rs
 
-/// The block sizes to use.
+/// 使用するブロックサイズ。
 ///
-/// The sizes must each be power of 2 because they are also used as
-/// the block alignment (alignments must be always powers of 2).
+/// これらは2の累乗でなければならない。なぜなら、これらは
+/// （2の累乗でなければならない）ブロックのアラインメントとしても使われるからである。
 const BLOCK_SIZES: &[usize] = &[8, 16, 32, 64, 128, 256, 512, 1024, 2048];
 ```
 
-As block sizes, we use powers of 2, starting from 8 up to 2048. We don't define any block sizes smaller than 8 because each block must be capable of storing a 64-bit pointer to the next block when freed. For allocations greater than 2048 bytes, we will fall back to a linked list allocator.
+ブロックサイズとして、8から2048までの2の累乗を使います。8より小さいブロックサイズを定義しないのは、それぞれのブロックは、解放されたときに次のブロックを指す64ビットのポインタを格納することができなければならないからです。2048バイトより大きな割り当てに対しては、代替の連結リストアロケータに任せましょう。
 
-To simplify the implementation, we define the size of a block as its required alignment in memory. So a 16-byte block is always aligned on a 16-byte boundary and a 512-byte block is aligned on a 512-byte boundary. Since alignments always need to be powers of 2, this rules out any other block sizes. If we need block sizes that are not powers of 2 in the future, we can still adjust our implementation for this (e.g., by defining a second `BLOCK_ALIGNMENTS` array).
+実装を簡単にするために、ブロックのサイズとメモリに要求されるアラインメントを同じにすることにします。つまり、16バイトのブロックはつねに16バイトの境界に、512バイトのブロックは512バイトの境界に合わせられます。アラインメントは常に2の累乗でなければならないので、他のブロックサイズは許されないのです。2の累乗でないブロックサイズが必要になった場合は、（例えば、`BLOCK_ALIGNMENTS`配列を定義することで）この実装を修正することもできます。
 
-#### The Allocator Type
+#### アロケータ型
 
-Using the `ListNode` type and the `BLOCK_SIZES` slice, we can now define our allocator type:
+`ListNode`型と`BLOCK_SIZES`スライスを使って、私たちのアロケータ型を定義することができます：
 
 ```rust
 // in src/allocator/fixed_size_block.rs
@@ -937,17 +935,17 @@ pub struct FixedSizeBlockAllocator {
 }
 ```
 
-The `list_heads` field is an array of `head` pointers, one for each block size. This is implemented by using the `len()` of the `BLOCK_SIZES` slice as the array length. As a fallback allocator for allocations larger than the largest block size, we use the allocator provided by the `linked_list_allocator`. We could also use the `LinkedListAllocator` we implemented ourselves instead, but it has the disadvantage that it does not [merge freed blocks].
+`list_heads`フィールドはブロックサイズごとの`head`ポインタの配列です。これは`BLOCK_SIZES`に`len()`を使うことで配列長とすることで実装しています。最大のブロックサイズよりも大きな割り当てに対する代替アロケータとして、`linked_list_allocator`の提供するアロケータを使います。私たち自身で実装した`LinkedListAllocator`を使っても良いのですが、これには[解放されたブロックを結合][merge freed blocks]する機能が実装されていません。
 
-[merge freed blocks]: #merging-freed-blocks
+[merge freed blocks]: #jie-fang-saretaburotukuwojie-he-suru
 
-For constructing a `FixedSizeBlockAllocator`, we provide the same `new` and `init` functions that we implemented for the other allocator types too:
+`FixedSizeBlockAllocator`を作るには、他のアロケータ型に実装したのと同じ`new`関数と`init`関数を実装すれば良いです：
 
 ```rust
 // in src/allocator/fixed_size_block.rs
 
 impl FixedSizeBlockAllocator {
-    /// Creates an empty FixedSizeBlockAllocator.
+    /// 空のFixedSizeBlockAllocatorを作る。
     pub const fn new() -> Self {
         const EMPTY: Option<&'static mut ListNode> = None;
         FixedSizeBlockAllocator {
@@ -956,28 +954,28 @@ impl FixedSizeBlockAllocator {
         }
     }
 
-    /// Initialize the allocator with the given heap bounds.
+    /// アロケータを与えられたヒープ境界で初期化する。
     ///
-    /// This function is unsafe because the caller must guarantee that the given
-    /// heap bounds are valid and that the heap is unused. This method must be
-    /// called only once.
+    /// この関数はunsafeである；呼び出し元は与えるヒープ境界が有効であり
+    /// ヒープが未使用であることを保証しなければならないからである。
+    /// このメソッドは一度しか呼ばれてはならない。
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         self.fallback_allocator.init(heap_start, heap_size);
     }
 }
 ```
 
-The `new` function just initializes the `list_heads` array with empty nodes and creates an [`empty`] linked list allocator as `fallback_allocator`. The `EMPTY` constant is needed to tell the Rust compiler that we want to initialize the array with a constant value. Initializing the array directly as `[None; BLOCK_SIZES.len()]` does not work, because then the compiler requires `Option<&'static mut ListNode>` to implement the `Copy` trait, which it does not. This is a current limitation of the Rust compiler, which might go away in the future.
+`new`関数は`list_heads`配列を空のノードで初期化し、`fallback_allocator`として[`empty`]で空の連結リストアロケータを作るだけです。`EMPTY`定数が必要なのは、Rustコンパイラに配列を定数値で初期化したいのだと伝えるためです。配列を直接`[None; BLOCK_SIZES.len()]`で初期化するとうまくいきません──なぜなら、そうするとコンパイラは`Option<&'static mut ListNode>`が`Copy`トレイトを実装していることを要求するようになるのですが、そうはなっていないからです。これは現在のRustコンパイラの制約であり、将来解決するかもしれません。
 
 [`empty`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.empty
 
-If you haven't done so already for the `LinkedListAllocator` implementation, you also need to add **`#![feature(const_mut_refs)]`** to the top of your `lib.rs`. The reason is that any use of mutable reference types in const functions is still unstable, including the `Option<&'static mut ListNode>` array element type of the `list_heads` field (even if we set it to `None`).
+もし`LinkedListAllocator`を実装するときにまだやっていないのなら、 **`#![feature(const_mut_refs)]`** を`lib.rs`の最初に追記しないといけません。const関数内におけるあらゆる可変参照型の使用はまだunstableで、それには`list_heads`フィールドの配列要素の型である`Option<&'static mut ListNode>`も（その値を`None`にしているにもかかわらず）含まれるからです。
 
-The unsafe `init` function only calls the [`init`] function of the `fallback_allocator` without doing any additional initialization of the `list_heads` array. Instead, we will initialize the lists lazily on `alloc` and `dealloc` calls.
+このunsafeな`init`関数は`fallback_allocator`の[`init`]関数を呼ぶだけで、`list_heads`配列の初期化などは行いません。これらの配列の初期化は、`alloc`と`dealloc`呼び出しが行われたときに初めて行います。
 
 [`init`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.init
 
-For convenience, we also create a private `fallback_alloc` method that allocates using the `fallback_allocator`:
+利便性のため、`fallback_allocator`を使って割り当てを行う非公開のメソッド`fallback_alloc`も作ります：
 
 ```rust
 // in src/allocator/fixed_size_block.rs
@@ -986,7 +984,7 @@ use alloc::alloc::Layout;
 use core::ptr;
 
 impl FixedSizeBlockAllocator {
-    /// Allocates using the fallback allocator.
+    /// 代替アロケータを使って割り当てを行う。
     fn fallback_alloc(&mut self, layout: Layout) -> *mut u8 {
         match self.fallback_allocator.allocate_first_fit(layout) {
             Ok(ptr) => ptr.as_ptr(),
@@ -996,31 +994,31 @@ impl FixedSizeBlockAllocator {
 }
 ```
 
-The [`Heap`] type of the `linked_list_allocator` crate does not implement [`GlobalAlloc`] (as it's [not possible without locking]). Instead, it provides an [`allocate_first_fit`] method that has a slightly different interface. Instead of returning a `*mut u8` and using a null pointer to signal an error, it returns a `Result<NonNull<u8>, ()>`. The [`NonNull`] type is an abstraction for a raw pointer that is guaranteed to not be a null pointer. By mapping the `Ok` case to the [`NonNull::as_ptr`] method and the `Err` case to a null pointer, we can easily translate this back to a `*mut u8` type.
+`linked_list_allocator`クレートの[`Heap`]型は[`GlobalAlloc`]を実装してはいません（[ロックを使わない限り不可能なため][not possible without locking]）。代わりに、[`allocate_first_fit`]というインターフェイスの少し違うメソッドを提供しています。これは、`*mut u8`を返したり、エラーを表すためにヌルポインタを使うのではなく、`Result<NonNull<u8>, ()>`を返します。[`NonNull`]型は、ヌルポインタでないことが保証されている生ポインタの抽象化です。`Ok`の場合は[`NonNull::as_ptr`]メソッドへ、`Err`の場合ヌルポインタへと対応づけることで、これを簡単に`*mut u8` 型に戻すことができます。
 
 [`Heap`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html
-[not possible without locking]: #globalalloc-and-mutability
+[not possible without locking]: #globalalloctoke-bian-xing
 [`allocate_first_fit`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.allocate_first_fit
 [`NonNull`]: https://doc.rust-lang.org/nightly/core/ptr/struct.NonNull.html
 [`NonNull::as_ptr`]: https://doc.rust-lang.org/nightly/core/ptr/struct.NonNull.html#method.as_ptr
 
-#### Calculating the List Index
+#### リストのインデックスを計算する
 
-Before we implement the `GlobalAlloc` trait, we define a `list_index` helper function that returns the lowest possible block size for a given [`Layout`]:
+`GlobalAlloc`トレイトを実装する前に、与えられた[`Layout`]を格納できる最小のブロックサイズを返すようなヘルパ関数`list_index`を定義します：
 
 ```rust
 // in src/allocator/fixed_size_block.rs
 
-/// Choose an appropriate block size for the given layout.
+/// 与えられたレイアウトに対して適切なブロックサイズを選ぶ。
 ///
-/// Returns an index into the `BLOCK_SIZES` array.
+/// `BLOCK_SIZES`配列のインデックスを返す。
 fn list_index(layout: &Layout) -> Option<usize> {
     let required_block_size = layout.size().max(layout.align());
     BLOCK_SIZES.iter().position(|&s| s >= required_block_size)
 }
 ```
 
-The block must have at least the size and alignment required by the given `Layout`. Since we defined that the block size is also its alignment, this means that the `required_block_size` is the [maximum] of the layout's [`size()`] and [`align()`] attributes. To find the next-larger block in the `BLOCK_SIZES` slice, we first use the [`iter()`] method to get an iterator and then the [`position()`] method to find the index of the first block that is at least as large as the `required_block_size`.
+ブロックは少なくとも与えられた`Layout`の要求するサイズとアラインメントを持っていないといけません。私たちはブロックサイズがブロックのアラインメントでもあると定義していたので、これは`required_block_size`がレイアウトの[`size()`]と[`align()`]属性の[最大値][maximum]であるということを意味します。`BLOCK_SIZES`スライスの中でそれよりも大きいブロックを探すために、まず[`iter()`]メソッドでイテレータを得て、つぎに[`position()`]メソッドで`required_block_size`以上の大きさを持つ最初のブロックのインデックスを見つけます。
 
 [maximum]: https://doc.rust-lang.org/core/cmp/trait.Ord.html#method.max
 [`size()`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.size
@@ -1028,11 +1026,11 @@ The block must have at least the size and alignment required by the given `Layou
 [`iter()`]: https://doc.rust-lang.org/std/primitive.slice.html#method.iter
 [`position()`]:  https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.position
 
-Note that we don't return the block size itself, but the index into the `BLOCK_SIZES` slice. The reason is that we want to use the returned index as an index into the `list_heads` array.
+ブロックサイズそのものではなく、`BLOCK_SIZES`スライスのインデックスを返していることに注意してください。これは、ここで返したインデックスを`list_heads`配列のインデックスとして使いたいからです。
 
-#### Implementing `GlobalAlloc`
+#### `GlobalAlloc`を実装する
 
-The last step is to implement the `GlobalAlloc` trait:
+最後のステップは、`GlobalAlloc`トレイトを実装することです：
 
 ```rust
 // in src/allocator/fixed_size_block.rs
@@ -1051,14 +1049,14 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
 }
 ```
 
-Like for the other allocators, we don't implement the `GlobalAlloc` trait directly for our allocator type, but use the [`Locked` wrapper] to add synchronized interior mutability. Since the `alloc` and `dealloc` implementations are relatively large, we introduce them one by one in the following.
+他のアロケータの時と同じく、`GlobalAlloc`トレイトをアロケータ型に直接実装するのではなく、[`Locked`ラッパ][`Locked` wrapper]を使って同期された内部可変性を追加しています。`alloc`と`dealloc`の実装は比較的長いので、以下で一つ一つ示していきます。
 
 ##### `alloc`
 
-The implementation of the `alloc` method looks like this:
+`alloc`メソッドの実装は以下のようになります：
 
 ```rust
-// in `impl` block in src/allocator/fixed_size_block.rs
+// src/allocator/fixed_size_block.rsの`impl`ブロックの中
 
 unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
     let mut allocator = self.lock();
@@ -1070,9 +1068,9 @@ unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
                     node as *mut ListNode as *mut u8
                 }
                 None => {
-                    // no block exists in list => allocate new block
+                    // リストにブロックがない→新しいブロックを割り当てる
                     let block_size = BLOCK_SIZES[index];
-                    // only works if all block sizes are a power of 2
+                    // すべてのブロックサイズが2の累乗であるときにのみ正しく動く
                     let block_align = block_size;
                     let layout = Layout::from_size_align(block_size, block_align)
                         .unwrap();
@@ -1085,26 +1083,26 @@ unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
 }
 ```
 
-Let's go through it step by step:
+一つ一つ見ていきましょう：
 
-First, we use the `Locked::lock` method to get a mutable reference to the wrapped allocator instance. Next, we call the `list_index` function we just defined to calculate the appropriate block size for the given layout and get the corresponding index into the `list_heads` array. If this index is `None`, no block size fits for the allocation, therefore we use the `fallback_allocator` using the `fallback_alloc` function.
+まず、`Locked::lock`メソッドを使ってラップされたアロケータのインスタンスへの可変参照を手に入れます。次に、ついさっき定義した`list_index`関数を呼んで与えられたレイアウトに対して適切なブロックサイズを計算し、`list_heads`配列への対応するインデックスを得ます。これが`None`だったなら、割り当てに適したブロックサイズはないので、`fallback_alloc`関数を使って`fallback_allocator`を使います。
 
-If the list index is `Some`, we try to remove the first node in the corresponding list started by `list_heads[index]` using the [`Option::take`] method. If the list is not empty, we enter the `Some(node)` branch of the `match` statement, where we point the head pointer of the list to the successor of the popped `node` (by using [`take`][`Option::take`] again). Finally, we return the popped `node` pointer as a `*mut u8`.
+もしリストのインデックスが`Some`なら、`list_heads[index]`から始まる対応するリストから[`Option::take`]メソッドを使って最初のノードを取り出すことを試みます。リストが空でないなら、`match`文の`Some(node)`節に入り、（ふたたび[`take`][`Option::take`]を使って）`node`の次の要素を取り出しリストの先頭のポインタとします。最後に、取り出された`node`ポインタを`*mut u8`として返します。
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-If the list head is `None`, it indicates that the list of blocks is empty. This means that we need to construct a new block as [described above](#creating-new-blocks). For that, we first get the current block size from the `BLOCK_SIZES` slice and use it as both the size and the alignment for the new block. Then we create a new `Layout` from it and call the `fallback_alloc` method to perform the allocation. The reason for adjusting the layout and alignment is that the block will be added to the block list on deallocation.
+もしリストのヘッドが`None`だったなら、ブロックリストが空であったということです。この場合、[上で説明した](#xin-siiburotukuwozuo-ru)ように新しいブロックを作らなくてはなりません。そのために、まず現在のブロックサイズを`BLOCK_SIZES`スライスから得て、それを新しいブロックのサイズとアラインメント両方として使います。それによって新しい`Layout`を作り、`fallback_alloc`メソッドを使って割り当てを行います。レイアウトとアラインメントの調整をしているのは、割り当て解除の際にこのブロックがブロックリストに追加されるからです。
 
 #### `dealloc`
 
-The implementation of the `dealloc` method looks like this:
+`dealloc`メソッドの実装は以下のようになります：
 
 ```rust
 // in src/allocator/fixed_size_block.rs
 
 use core::{mem, ptr::NonNull};
 
-// inside the `unsafe impl GlobalAlloc` block
+// `unsafe impl GlobalAlloc`ブロックの中
 
 unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
     let mut allocator = self.lock();
@@ -1113,7 +1111,7 @@ unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
             let new_node = ListNode {
                 next: allocator.list_heads[index].take(),
             };
-            // verify that block has size and alignment required for storing node
+            // ブロックがノードを格納できるサイズとアラインメントを持っていることを確認
             assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index]);
             assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
             let new_node_ptr = ptr as *mut ListNode;
@@ -1128,23 +1126,23 @@ unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
 }
 ```
 
-Like in `alloc`, we first use the `lock` method to get a mutable allocator reference and then the `list_index` function to get the block list corresponding to the given `Layout`. If the index is `None`, no fitting block size exists in `BLOCK_SIZES`, which indicates that the allocation was created by the fallback allocator. Therefore, we use its [`deallocate`][`Heap::deallocate`] to free the memory again. The method expects a [`NonNull`] instead of a `*mut u8`, so we need to convert the pointer first. (The `unwrap` call only fails when the pointer is null, which should never happen when the compiler calls `dealloc`.)
+`alloc`と同じように、まず`lock`メソッドを使ってアロケータの可変参照を得て、`list_index`関数で与えられた`Layout`に対応するブロックリストを得ます。インデックスが`None`なら、`BLOCK_SIZES`にはサイズの合うブロックサイズがなかった、つまりこの割り当てが代替アロケータによって行われたことを意味します。従って、その[`deallocate`][`Heap::deallocate`]をつかってメモリを解放します。このメソッドは`*mut u8`ではなく[`NonNull`]を受け取るので、先にポインタを変換しておく必要があります（ここの`unwrap`はポインタがヌル値だったときのみ失敗するのですが、コンパイラが`dealloc`を呼ぶときにはそれは決して起きないはずです）。
 
 [`Heap::deallocate`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.deallocate
 
-If `list_index` returns a block index, we need to add the freed memory block to the list. For that, we first create a new `ListNode` that points to the current list head (by using [`Option::take`] again). Before we write the new node into the freed memory block, we first assert that the current block size specified by `index` has the required size and alignment for storing a `ListNode`. Then we perform the write by converting the given `*mut u8` pointer to a `*mut ListNode` pointer and then calling the unsafe [`write`][`pointer::write`] method on it. The last step is to set the head pointer of the list, which is currently `None` since we called `take` on it, to our newly written `ListNode`. For that, we convert the raw `new_node_ptr` to a mutable reference.
+もし`list_index`がブロックのインデックスを返したなら、解放されたメモリブロックをリストに追加しなければなりません。このために、まず現在のリストの先頭を指す新しい`ListNode`を（ここでも[`Option::take`]を使って）作ります。新しいノードを解放されたメモリブロックに書き込む前に、`index`によって指定されている現在のブロックサイズが`ListNode`を格納するのに必要なサイズとアラインメントを満たしていることをassertします。その後与えられた`*mut u8`ポインタを`*mut ListNode`ポインタに変換し、これに対しunsafeな[`write`][`pointer::write`]メソッドを使うことで書き込みを実行します。最後のステップはリストの先頭ポインタ──これに対して`take`を呼んだので現在は`None`です──を設定することです。このために、生の`new_node_ptr`を可変参照に変換します。
 
 [`pointer::write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
 
-There are a few things worth noting:
+いくつか注目すべきことがあります：
 
-- We don't differentiate between blocks allocated from a block list and blocks allocated from the fallback allocator. This means that new blocks created in `alloc` are added to the block list on `dealloc`, thereby increasing the number of blocks of that size.
-- The `alloc` method is the only place where new blocks are created in our implementation. This means that we initially start with empty block lists and only fill these lists lazily when allocations of their block size are performed.
-- We don't need `unsafe` blocks in `alloc` and `dealloc`, even though we perform some `unsafe` operations. The reason is that Rust currently treats the complete body of unsafe functions as one large `unsafe` block. Since using explicit `unsafe` blocks has the advantage that it's obvious which operations are unsafe and which are not, there is a [proposed RFC](https://github.com/rust-lang/rfcs/pull/2585) to change this behavior.
+- 私たちは、ブロックリストによって割り当てられたブロックと代替アロケータによって割り当てられたブロックを区別していません。これにより、`alloc`で作られた新しいブロックは`dealloc`でブロックリストに追加されるので、そのサイズのブロックの数は増えることになります。
+- 私たちの実装において、`alloc`メソッドが新しいブロックが作られる唯一の場所です。つまり、最初は空のブロックリストから始めて、それらのブロックサイズの割り当てが行われたときに初めてリストを埋めていくということです。
+- `alloc`と`dealloc`で`unsafe`な操作を行っていますが、`unsafe`ブロックは必要ありません。これは、Rustは現在unsafeな関数の中身全体を大きな`unsafe`ブロックとして扱っているからです。明示的に`unsafe`ブロックを使うと、どの操作がunsafeなのかそうでないのかが明白になるという利点があるので、この挙動を変更する[RFCが提案](https://github.com/rust-lang/rfcs/pull/2585)されています。
 
-### Using it
+### 使う
 
-To use our new `FixedSizeBlockAllocator`, we need to update the `ALLOCATOR` static in the `allocator` module:
+私たちのできたての`FixedSizeBlockAllocator`を使うには、`allocator`モジュールの`ALLOCATOR`静的変数を更新する必要があります：
 
 ```rust
 // in src/allocator.rs
@@ -1156,9 +1154,10 @@ static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(
     FixedSizeBlockAllocator::new());
 ```
 
-Since the `init` function behaves the same for all allocators we implemented, we don't need to modify the `init` call in `init_heap`.
+`init`関数は、私たちの実装してきたすべてのアロケータで同じように振る舞うので、`init_heap`内における`init`関数の呼び出しを修正する必要はありません。
 
-When we now run our `heap_allocation` tests again, all tests should still pass:
+
+`heap_allocation`テストをもう一度実行すると、すべてのテストがパスするはずです：
 
 ```
 > cargo test --test heap_allocation
@@ -1168,43 +1167,43 @@ many_boxes... [ok]
 many_boxes_long_lived... [ok]
 ```
 
-Our new allocator seems to work!
+私たちの新しいアロケータはうまく動いてるみたいですね！
 
-### Discussion
+### 議論
 
-While the fixed-size block approach has much better performance than the linked list approach, it wastes up to half of the memory when using powers of 2 as block sizes. Whether this tradeoff is worth it heavily depends on the application type. For an operating system kernel, where performance is critical, the fixed-size block approach seems to be the better choice.
+固定サイズブロック方式は連結リスト方式よりはるかに優れた性能を持っていますが、（2の累乗をブロックサイズとして使うとき）最大でメモリの半分を無駄にします。このトレードオフに価値があるかは、行われる割り当ての種類に大きく依存します。オペレーティングシステムのカーネルについては、性能が非常に重要なので、固定サイズブロック方式はよりよい選択であるように思われます。
 
-On the implementation side, there are various things that we could improve in our current implementation:
+実装の面では、現在の実装には様々な改善可能な箇所があります。
 
-- Instead of only allocating blocks lazily using the fallback allocator, it might be better to pre-fill the lists to improve the performance of initial allocations.
-- To simplify the implementation, we only allowed block sizes that are powers of 2 so that we could also use them as the block alignment. By storing (or calculating) the alignment in a different way, we could also allow arbitrary other block sizes. This way, we could add more block sizes, e.g., for common allocation sizes, in order to minimize the wasted memory.
-- We currently only create new blocks, but never free them again. This results in fragmentation and might eventually result in allocation failure for large allocations. It might make sense to enforce a maximum list length for each block size. When the maximum length is reached, subsequent deallocations are freed using the fallback allocator instead of being added to the list.
-- Instead of falling back to a linked list allocator, we could have a special allocator for allocations greater than 4&nbsp;KiB. The idea is to utilize [paging], which operates on 4&nbsp;KiB pages, to map a continuous block of virtual memory to non-continuous physical frames. This way, fragmentation of unused memory is no longer a problem for large allocations.
-- With such a page allocator, it might make sense to add block sizes up to 4&nbsp;KiB and drop the linked list allocator completely. The main advantages of this would be reduced fragmentation and improved performance predictability, i.e., better worst-case performance.
+- ブロックが必要になってから代替アロケータで割り当てる代わりに、リストを事前に埋めておき最初の割り当ての性能を向上させる方が良いかもしれません。
+- 実装を簡単にするため、2の累乗のブロックサイズのみを許すことで、ブロックサイズをアラインメントとしても使えるようにしました。アラインメントを別のやり方で格納する（もしくは計算する）ことで、任意の他のブロックサイズを使うこともできるでしょう。こうすると、より多くのブロックサイズ（例えば、よくある割り当てサイズのもの）を追加でき、無駄になるメモリを最小化できます。
+- 現在、新しいブロックを作ることはしますが、それらを解放することはおこなっていません。これは断片化につながり、最終的には巨大な割り当ての失敗につながるかもしれません。それぞれのブロックサイズの最大リスト長を制限する方が良いかもしれません。最大長に達すると、その後の割り当て解除はリストに加える代わりに代替アロケータを使って解放するようにします。
+- 4KiB以上の割り当てについて、連結リストアロケータで代替するかわりに特別なアロケータを使うことが考えられます。発想としては、4KiBのページの上で動作する仕組みである[ページング][paging]を利用し、連続した仮想メモリのブロックを非連続な物理フレームへと対応づけるのです。こうすると、巨大な割り当てに関する未使用メモリの断片化はもはや問題ではなくなります。
+- このような「ページアロケータ」があるなら、ブロックサイズを4KiBまで増やし、連結リストアロケータはなくしてしまっても良いかもしれません。このやり方の利点は、断片化が少なくなり、性能の予測性が高まる──つまり、最悪の場合の性能がよりよくなる──ことです。
 
-[paging]: @/edition-2/posts/08-paging-introduction/index.md
+[paging]: @/edition-2/posts/08-paging-introduction/index.ja.md
 
-It's important to note that the implementation improvements outlined above are only suggestions. Allocators used in operating system kernels are typically highly optimized for the specific workload of the kernel, which is only possible through extensive profiling.
+上で述べた実装の改善点は、あくまで提案に過ぎないということを忘れないでください。オペレーティングシステムのアロケータは、概してカーネル特有の作業のために高度に最適化されていますが、これは詳細なプロファイリングをしてこそ可能になるものなのです。
 
-### Variations
+### 変化版
 
-There are also many variations of the fixed-size block allocator design. Two popular examples are the _slab allocator_ and the _buddy allocator_, which are also used in popular kernels such as Linux. In the following, we give a short introduction to these two designs.
+また、固定サイズブロックアロケータの設計には多くの変化版があります。有名な例として**スラブアロケータ**と**バディアロケータ**の二つがあり、これらはLinuxのような有名なカーネルにおいても使われています。以下では、これらの二つの設計を軽く紹介します。
 
-#### Slab Allocator
+#### スラブアロケータ
 
-The idea behind a [slab allocator] is to use block sizes that directly correspond to selected types in the kernel. This way, allocations of those types fit a block size exactly and no memory is wasted. Sometimes, it might be even possible to preinitialize type instances in unused blocks to further improve performance.
+[スラブアロケータ][slab allocator]の発想は、カーネルで使われる型をいくつか選び、それらに直接対応するブロックサイズを使うというものです。こうすると、それらの型の割り当てサイズはブロックサイズに完全に一致するので、メモリは一切無駄になりません。時には、未使用ブロック内の型インスタンスを事前初期化することでさらに性能を向上させられるかもしれません。
 
 [slab allocator]: https://en.wikipedia.org/wiki/Slab_allocation
 
-Slab allocation is often combined with other allocators. For example, it can be used together with a fixed-size block allocator to further split an allocated block in order to reduce memory waste. It is also often used to implement an [object pool pattern] on top of a single large allocation.
+スラブアロケータはしばしば他のアロケータと組み合わせて使われます。例えば、固定サイズブロックアロケータと組み合わせて、割り当てられたブロックをさらに分割しメモリの無駄を減らすことができます。一つの巨大な割り当ての上で[オブジェクトプール][object pool pattern]を実装するのにもよく使われます。
 
 [object pool pattern]: https://en.wikipedia.org/wiki/Object_pool_pattern
 
-#### Buddy Allocator
+#### バディアロケータ
 
-Instead of using a linked list to manage freed blocks, the [buddy allocator] design uses a [binary tree] data structure together with power-of-2 block sizes. When a new block of a certain size is required, it splits a larger sized block into two halves, thereby creating two child nodes in the tree. Whenever a block is freed again, its neighbor block in the tree is analyzed. If the neighbor is also free, the two blocks are joined back together to form a block of twice the size.
+[バディアロケータ][buddy allocator]では、解放されたブロックの管理に連結リストを使う代わりに、[二分木][binary tree]を使い、ブロックサイズを2の累乗にします。あるサイズの新しいブロックが必要になったら、より大きいサイズのブロックを二つに割り、木に二つの子ノードを作ります。ブロックが解放されたときは毎回、木での隣のブロックを調べます。もし隣も解放されているなら、二つのブロックを合わせて二倍の大きさのブロックに戻します。
 
-The advantage of this merge process is that [external fragmentation] is reduced so that small freed blocks can be reused for a large allocation. It also does not use a fallback allocator, so the performance is more predictable. The biggest drawback is that only power-of-2 block sizes are possible, which might result in a large amount of wasted memory due to [internal fragmentation]. For this reason, buddy allocators are often combined with a slab allocator to further split an allocated block into multiple smaller blocks.
+この合体ステップのおかげで、[外部断片化][external fragmentation]が少なくなり、解放されたブロックが大きな割り当てに再利用できます。代替アロケータも使わないので、性能の予測可能性も高まります。最大の問題は、2の累乗のブロックサイズしか使えないので、大量のメモリが[内部断片化][internal fragmentation]で無駄になるかもしれないことです。このためバディアロケータはしばしば、割り当てたブロックをより小さな複数のブロックに分割するスラブアロケータと組み合わせて使われます。
 
 [buddy allocator]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
 [binary tree]: https://en.wikipedia.org/wiki/Binary_tree
@@ -1212,30 +1211,30 @@ The advantage of this merge process is that [external fragmentation] is reduced 
 [internal fragmentation]: https://en.wikipedia.org/wiki/Fragmentation_(computing)#Internal_fragmentation
 
 
-## Summary
+## まとめ
 
-This post gave an overview of different allocator designs. We learned how to implement a basic [bump allocator], which hands out memory linearly by increasing a single `next` pointer. While bump allocation is very fast, it can only reuse memory after all allocations have been freed. For this reason, it is rarely used as a global allocator.
+この記事では様々なアロケータの設計を概観しました。一つの`next`ポインタを増やしていくことでメモリを線形に渡していく、基本の[バンプアロケータ][bump allocator]の実装を学びました。バンプアロケータはとても速いですが、割り当てがすべて解放されてからでないとメモリを再利用できません。そのため、グローバルアロケータとして使われることはまれです。
 
-[bump allocator]: @/edition-2/posts/11-allocator-designs/index.md#bump-allocator
+[bump allocator]: @/edition-2/posts/11-allocator-designs/index.ja.md#banpuaroketa
 
-Next, we created a [linked list allocator] that uses the freed memory blocks itself to create a linked list, the so-called [free list]. This list makes it possible to store an arbitrary number of freed blocks of different sizes. While no memory waste occurs, the approach suffers from poor performance because an allocation request might require a complete traversal of the list. Our implementation also suffers from [external fragmentation] because it does not merge adjacent freed blocks back together.
+次に、解放されたメモリブロック自体を使って[フリーリスト][free list]と呼ばれる連結リストを作る[連結リストアロケータ][linked list allocator]を作りました。このリストによって、さまざまなサイズ・任意の数の解放されたブロックを格納することができます。この手法は、メモリが一切無駄にならない一方、割り当ての要求によってリスト全体を走査する必要が出てくる可能性があり、性能が悪いです。私たちの実装では、隣接する解放されたブロックを結合することをしていないので、[外部断片化][external fragmentation]も起きてしまいます。
 
-[linked list allocator]: @/edition-2/posts/11-allocator-designs/index.md#linked-list-allocator
+[linked list allocator]: @/edition-2/posts/11-allocator-designs/index.ja.md#lian-jie-rinkuto-risutoaroketa
 [free list]: https://en.wikipedia.org/wiki/Free_list
 
-To fix the performance problems of the linked list approach, we created a [fixed-size block allocator] that predefines a fixed set of block sizes. For each block size, a separate [free list] exists so that allocations and deallocations only need to insert/pop at the front of the list and are thus very fast. Since each allocation is rounded up to the next larger block size, some memory is wasted due to [internal fragmentation].
+連結リスト方式の性能の問題を解決するため、決められたブロックサイズの集合を事前に定義しておく[固定サイズブロックアロケータ][fixed-size block allocator]を作りました。ブロックサイズごとに別々の[フリーリスト][free list]が存在するので、割り当て・割り当て解除はリストの先頭で挿入・取り出しを行えば良いだけになり、非常に速いです。
 
-[fixed-size block allocator]: @/edition-2/posts/11-allocator-designs/index.md#fixed-size-block-allocator
+[fixed-size block allocator]: @/edition-2/posts/11-allocator-designs/index.ja.md#gu-ding-saizuburotukuaroketa
 
-There are many more allocator designs with different tradeoffs. [Slab allocation] works well to optimize the allocation of common fixed-size structures, but is not applicable in all situations. [Buddy allocation] uses a binary tree to merge freed blocks back together, but wastes a large amount of memory because it only supports power-of-2 block sizes. It's also important to remember that each kernel implementation has a unique workload, so there is no "best" allocator design that fits all cases.
+アロケータの設計はもっとたくさんあり、それぞれ異なるトレードオフがあります。[スラブアロケータ][Slab allocation]はよくある固定サイズの構造の割り当てをうまく最適化できますが、どのような状況でも使えるとは限りません。[バディアロケータ][Buddy allocation]は二分木を使って解放されたブロックを結合し直しますが、2の累乗のブロックサイズしか使えないので、大量のメモリを無駄にしてしまいます。また、カーネルの実装ごとに行う作業の内容は違うので、どんな状況にも対応できる「最強の」アロケータの設計などないということを覚えておくのが大事です。
 
-[Slab allocation]: @/edition-2/posts/11-allocator-designs/index.md#slab-allocator
-[Buddy allocation]: @/edition-2/posts/11-allocator-designs/index.md#buddy-allocator
+[Slab allocation]: @/edition-2/posts/11-allocator-designs/index.ja.md#surabuaroketa
+[Buddy allocation]: @/edition-2/posts/11-allocator-designs/index.ja.md#badeiaroketa
 
 
-## What's next?
+## 次は？
 
-With this post, we conclude our memory management implementation for now. Next, we will start exploring [_multitasking_], starting with cooperative multitasking in the form of [_async/await_]. In subsequent posts, we will then explore [_threads_], [_multiprocessing_], and [_processes_].
+この記事で、メモリ管理の実装に関してはいったん終わりとします。次は[**マルチタスク**][_multitasking_]について、手始めに[**async/await**][_async/await_]の形を取った協調的マルチタスクから学んでいきます。その後の記事で、[**スレッド**][_threads_]、[**マルチプロセス**][_multiprocessing_]、[**プロセス**][_processes_]についても学びます。
 
 [_multitasking_]: https://en.wikipedia.org/wiki/Computer_multitasking
 [_threads_]: https://en.wikipedia.org/wiki/Thread_(computing)
