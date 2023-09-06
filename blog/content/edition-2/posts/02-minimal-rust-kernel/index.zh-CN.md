@@ -426,7 +426,7 @@ warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 要让在 QEMU 中运行内核更轻松，我们可以设置在 cargo 配置文件中设置 `runner` 配置项：
 
 ```toml
-# in .cargo/config
+# in .cargo/config.toml
 
 [target.'cfg(target_os = "none")']
 runner = "bootimage runner"
