@@ -22,11 +22,21 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 
 ## Multitasking
 
-One of the fundamental features of most operating systems is [_multitasking_], which is the ability to execute multiple tasks concurrently. For example, you probably have other programs open while looking at this blog post, such as a text editor or a terminal window. Even if you have only a single browser window open, there are probably various background tasks for managing your desktop windows, checking for updates, or indexing files.
+One of the fundamental features of most operating systems is [_multitasking_], which is the ability to execute multiple tasks concurrently. For example, you probably have other programs open while looking at this post, such as a text editor or a terminal window. Even if you have only a single browser window open, there are probably various background tasks for managing your desktop windows, checking for updates, or indexing files.
 
 [_multitasking_]: https://en.wikipedia.org/wiki/Computer_multitasking
 
-While it seems like all tasks run in parallel, only a single task can be executed on a CPU core at a time. This means that there can be at most 4 active tasks on a quad-core CPU and only a single active task on a single core CPU. A common technique to work around this hardware limitation is _time slicing_.
+While it seems like all tasks run in parallel, only a single task can be executed on a CPU core at a time. This means that there can be at most 4 active tasks on a quad-core CPU and only a single active task on a single core CPU. This also applies to the operating system itself: No OS task can run if there are other tasks active on the CPU cores.
+
+In the following, we will focus on a single CPU core to make things simpler. There will be a separate post that explains how to correctly set up the other cores of multi-core CPUs.
+
+
+
+We don't know how to set up multicore CPUs yet, so we will focus on the single core where our operating system kernel was started in the following.
+
+To ensure that all tasks make progress
+
+A common technique to work around this hardware limitation is _time slicing_.
 
 ### Time Slicing
 
@@ -34,13 +44,13 @@ The idea of time slicing is to rapidly switch between tasks multiple times per s
 
 ![Visualization of time slices for two CPU cores. Core 1 uses fixed time slices, while core 2 uses variable timeslices.](time_slicing.svg)
 
-The above graphic shows an example for time slicing on two CPU cores. Each color in the graphic hereby represents a different task. CPU core 1 uses a fixed time slice length, which gives each task exactly the same execution time until it is paused again. CPU core 2, on the other hand, uses a variable time slice length. It also does not switch between tasks in a varying order and even executes tasks from core 1 at some times. As we will learn below, both variants have their advantages, so it's up to the operating system designer to decide.
+The above graphic shows an example for time slicing on two CPU cores. Each color in the graphic represents a different task. CPU core 1 uses a fixed time slice length, which gives each task exactly the same execution time until it is paused again. CPU core 2, on the other hand, uses a variable time slice length. It also does not switch between tasks in a varying order and even executes tasks from core 1 at some times. As we will learn below, both variants have their advantages, so it's up to the operating system designer to decide.
 
 ### Preemption
 
 In order to enforce time slices, the operating system must be able to pause a task when its time slice is used up. For this, it must first regain control of the CPU core. Remember, a CPU core can only execute a single task at a time, so the OS kernel can't "run in background" either.
 
-A common way to regain control after a specific time is to program a hardware timer. After the time is elapsed, the timer sends an [interrupt] to the CPU, which in turn invokes an interrupt handler in the kernel. Now the kernel has control again and perform the necessary work to switch to the next task. This technique of forcibly interrupting a running task is called _preemption_ or _preemptive multitasking_.
+A common way to regain control after a specific time is to program a hardware timer. After the time is elapsed, the timer sends an [interrupt] to the CPU, which in turn invokes an interrupt handler in the kernel. Now the kernel has control again and can perform the necessary work to switch to the next task. This technique of forcibly interrupting a running task is called _preemption_ or _preemptive multitasking_.
 
 [interrupt]: @/second-edition/posts/07-hardware-interrupts/index.md
 
