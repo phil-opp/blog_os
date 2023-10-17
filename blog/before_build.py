@@ -8,7 +8,7 @@ from github import Github
 
 g = Github()
 
-one_month_ago = datetime.datetime.now() - datetime.timedelta(days=32)
+one_month_ago = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=32)
 
 def filter_date(issue):
     return issue.closed_at > one_month_ago
