@@ -471,7 +471,7 @@ Futureは `Poll::Ready` を返した後、再びポーリングされるべき�
 
 コンパイラが生成するステートマシンとその `Future` traitの実装はこのようになっている**かもしれません**。実際には、コンパイラは異なる方法でコードを生成しています。 (一応、現在は[_generators_]をベースにした実装になっていますが、これはあくまでも実装の詳細です。)
 
-[_generators_]: https://doc.rust-lang.org/nightly/unstable-book/language-features/generators.html
+[_generators_]: https://doc.rust-lang.org/stable/unstable-book/language-features/generators.html
 
 パズルの最後のピースは、生成された `example` 関数自体のコードです。関数のヘッダは次のように定義されていたことを思い出してください:
 
