@@ -9,7 +9,7 @@ chapter = "Interrupts"
 # Please update this when updating the translation
 translation_based_on_commit = "81d4f49f153eb5f390681f5c13018dd2aa6be0b1"
 # GitHub usernames of the people that translated this post
-translators = ["shimomura1004", "woodyZootopia"]
+translators = ["shimomura1004", "swnakamura"]
 +++
 
 この記事では、ハードウェア割り込みを正しく CPU に転送するためにプログラム可能な割り込みコントローラの設定を行います。これらの割り込みに対処するため、例外ハンドラのときに行ったのと同じように割り込み記述子表に新しいエントリを追加しなくてはいけません。ここでは周期タイマ割り込みの受け方と、キーボードからの入力の受け方を学びます。

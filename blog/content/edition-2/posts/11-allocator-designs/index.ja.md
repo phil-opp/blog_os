@@ -9,7 +9,7 @@ chapter = "Memory Management"
 # Please update this when updating the translation
 translation_based_on_commit = "2e3230eca2275226ec33c2dfe7f98f2f4b9a48b4"
 # GitHub usernames of the people that translated this post
-translators = ["woodyZootopia"]
+translators = ["swnakamura"]
 +++
 
 この記事ではヒープアロケータをゼロから実装する方法を説明します。バンプアロケータ、連結リストアロケータ、固定サイズブロックアロケータなどの様々なアロケータの設計を示し、それらについて議論します。3つそれぞれのデザインについて、私たちのカーネルに使える基礎的な実装を作ります。

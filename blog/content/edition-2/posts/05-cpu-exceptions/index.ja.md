@@ -9,7 +9,7 @@ chapter = "Interrupts"
 # Please update this when updating the translation
 translation_based_on_commit = "a8a6b725cff2e485bed76ff52ac1f18cec08cc7b"
 # GitHub usernames of the people that translated this post
-translators = ["woodyZootopia"]
+translators = ["swnakamura"]
 +++
 
 CPU例外は、例えば無効なメモリアドレスにアクセスしたときやゼロ除算したときなど、様々なミスによって発生します。それらに対処するために、ハンドラ関数を提供する **<ruby>割り込み記述子表<rp> (</rp><rt>interrupt descriptor table</rt><rp>) </rp></ruby>** を設定しなくてはなりません。この記事を読み終わる頃には、私達のカーネルは[ブレークポイント例外][breakpoint exceptions]を捕捉し、その後通常の実行を継続できるようになっているでしょう。

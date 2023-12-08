@@ -9,7 +9,7 @@ chapter = "Multitasking"
 # Please update this when updating the translation
 translation_based_on_commit = "bf4f88107966c7ab1327c3cdc0ebfbd76bad5c5f"
 # GitHub usernames of the authors of this translation
-translators = ["kahirokunn", "garasubo", "sozysozbot", "woodyZootopia"]
+translators = ["kahirokunn", "garasubo", "sozysozbot", "swnakamura"]
 # GitHub usernames of the people that contributed to this translation
 translation_contributors = ["asami-kawasaki", "Foo-x"]
 +++
