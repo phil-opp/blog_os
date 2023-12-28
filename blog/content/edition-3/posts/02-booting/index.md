@@ -292,7 +292,7 @@ There are a few notable things:
 
 To verify that the `entry_point` macro worked as expected, we can use the `objdump` tool as [described in the previous post][objdump-prev]. First, we recompile using `cargo build --target x86_64-unknown-none`, then we inspect the section headers using `objdump` or `rust-objdump`:
 
-[objdump-prev]: @/edition-3/posts/01-minimal-kernel/index.md#objdump
+[objdump-prev]: @/edition-3/posts/01-minimal-kernel/index.md#inspect-elf-file-using-objdump
 
 ```bash,hl_lines=8
 ❯ rust-objdump -h target/x86_64-unknown-none/debug/kernel

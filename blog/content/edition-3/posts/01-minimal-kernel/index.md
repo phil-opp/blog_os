@@ -445,7 +445,7 @@ Afterwards, you can run the tools through `rust-nm`, `rust-objdump`, and `rust-s
 
 [`cargo-binutils`]: https://github.com/rust-embedded/cargo-binutils
 
-### `nm`
+### List Symbols using `nm`
 
 We defined a `_start` function as the entry point of our kernel.
 To verify that it is properly exposed in the executable, we can run `nm` to list all the symbols defined in the executable:
@@ -463,7 +463,7 @@ If we comment out the `_start` function or if we remove the `#[no_mangle]` attri
 
 This way we can ensure that we set the `_start` function correctly.
 
-### `objdump`
+### Inspect ELF File using `objdump`
 
 The `objdump` tool can inspect different parts of executables that use the [ELF file format]. This is the file format that the `x86_64-unknown-none` target uses, so we can use `objdump` to inspect our kernel executable.
 
