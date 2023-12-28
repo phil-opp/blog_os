@@ -1047,7 +1047,7 @@ Since the size, pixel format, and memory location of the framebuffer can vary be
 The easiest way to do this is to read it from the [boot information structure][`BootInfo`] that the bootloader passes as argument to our kernel entry point:
 
 ```rust ,hl_lines=3 7-13
-// in src/kernel/main.rs
+// in kernel/src/main.rs
 
 use bootloader_api::BootInfo;
 
@@ -1083,7 +1083,7 @@ For now, let's just try setting the whole screen to some color.
 For this, we just set every pixel in the byte slice to some fixed value:
 
 ```rust ,hl_lines=5-7
-// in src/kernel/main.rs
+// in kernel/src/main.rs
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {

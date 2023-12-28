@@ -44,7 +44,7 @@ We wrote some example code to display a gray background:
 [`BootInfo`]: https://docs.rs/bootloader_api/latest/bootloader_api/info/struct.BootInfo.html
 
 ```rust
-// in src/kernel/main.rs
+// in kernel/src/main.rs
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
