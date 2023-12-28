@@ -41,7 +41,7 @@ Using the [`BootInfo`] provided by the bootloader, we were able to access a spec
 We wrote some example code to display a gray background:
 
 [previous post]: @/edition-3/posts/02-booting/index.md
-[`BootInfo`]: https://docs.rs/bootloader_api/latest/bootloader_api/info/struct.BootInfo.html
+[`BootInfo`]: https://docs.rs/bootloader_api/0.11/bootloader_api/info/struct.BootInfo.html
 
 ```rust
 // in kernel/src/main.rs
@@ -65,22 +65,229 @@ The pixels are laid out line by line, typically starting at the top.
 
 For example, the pixels of an image with width 10 and height 3 would be typically stored in this order:
 
-<table><tbody>
+<table style = "width: fit-content;"><tbody>
   <tr><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td></tr>
   <tr><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td><td>17</td><td>18</td><td>19</td></tr>
   <tr><td>20</td><td>21</td><td>22</td><td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td></tr>
 </tbody></table>
 
 So top left pixel is stored at offset 0 in the bitmap array.
-The pixel on its right is at offset `pixel_size`.
-The first pixel of the next line starts at offset `line_length * pixel_size`.
+The pixel on its right is at pixel offset 1.
+The first pixel of the next line starts at pixel offset `line_length`, which is 10 in this case.
+The last line starts at pixel offset 20, which is `line_length * 2`.
 
 ### Padding
 
-Depending on the hardware and GPU firmware, it is often more efficient 
+Depending on the hardware and GPU firmware, it is often more efficient to make lines start at well-aligned offsets.
+Because of this, there is often some additional padding at the end of each line.
+So the actual memory layout of the 10x3 example image might look like this, with the padding marked as yellow:
+
+<table style = "width: fit-content;"><tbody>
+  <tr><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td style="background-color:yellow;">10</td><td style="background-color:yellow;">11</td></tr>
+  <tr><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td><td>17</td><td>18</td><td>19</td><td>20</td><td>21</td><td style="background-color:yellow;">22</td><td style="background-color:yellow;">23</td></tr>
+  <tr><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td><td>30</td><td>31</td><td>32</td><td>33</td><td style="background-color:yellow;">34</td><td style="background-color:yellow;">35</td></tr>
+</tbody></table>
+
+So now the second line starts at pixel offset 12.
+The two pixels at the end of each line are considered as padding and ignored.
+So if we want to set the first pixel of the second line, we need to be aware of the additional padding and set the pixel at offset 12 instead of offset 10.
+
+The line length plus the padding bytes is typically called the _stride_ or _pitch_ of the buffer.
+In the example above, the stride is 12 and the line length is 10.
+
+Since the amount of padding depends on the hardware, the stride is only known at runtime.
+The `bootloader` crate queries the framebuffer parameters from the UEFI or BIOS firmware and reports them as part of the `BootInfo`.
+It provides the stride of the framebuffer, among other parameters, in form of a [`FrameBufferInfo`] struct that can be created using the [`FrameBuffer::info`] method.
+
+[`FrameBufferInfo`]: https://docs.rs/bootloader_api/0.11/bootloader_api/info/struct.FrameBufferInfo.html
+[`FrameBuffer::info`]: https://docs.rs/bootloader_api/0.11/bootloader_api/info/struct.FrameBuffer.html#method.info
 
 ### Color formats
 
+The [`FrameBufferInfo`] also specifies the [`PixelFormat`] of the framebuffer, which also depends on the underlying hardware.
+Using this information, we can set pixels to different colors.
+For example, the [`PixelFormat::Rgb`] variant specifies that each pixel is represented in the [RGB color space], which stores the red, green, and blue parts of the pixel as separate bytes.
+In this model, the color red would be represented as the three bytes `[255, 0, 0]`, or `0xff0000` in [hexadecimal representation].
+The color yellow is represented the addition of red and green, which results in `[255, 255, 0]` (or `0xffff00` in hexadecimal representation).
+
+[`PixelFormat`]: https://docs.rs/bootloader_api/0.11/bootloader_api/info/enum.PixelFormat.html
+[`PixelFormat::Rgb`]: https://docs.rs/bootloader_api/0.11/bootloader_api/info/enum.PixelFormat.html#variant.Rgb
+[RGB color space]: https://en.wikipedia.org/wiki/RGB_color_spaces
+[hexadecimal representation]: https://en.wikipedia.org/wiki/RGB_color_model#Numeric_representations
+
+While the `Rgb` format is most common, there are also framebuffers that use a different color format.
+For example, the [`PixelFormat::Bgr`] stores the three colors in inverted order, i.e. blue first and red last.
+There are also buffers that don't support colors at all and can represent only grayscale pixels.
+The `bootloader_api` crate reports such buffers as [`PixelFormat::U8`].
+
+[`PixelFormat::Bgr`]: https://docs.rs/bootloader_api/0.11.5/bootloader_api/info/enum.PixelFormat.html#variant.Bgr
+[`PixelFormat::U8`]: https://docs.rs/bootloader_api/0.11.5/bootloader_api/info/enum.PixelFormat.html#variant.U8
+
+Note that there might be some additional padding at the pixel-level as well.
+For example, an `Rgb` pixel might be stored as 4 bytes instead of 3 to ensure 32-bit alignment.
+The number of bytes per pixel is reported by the bootloader in the [`FrameBufferInfo::bytes_per_pixel`] field.
+
+[`FrameBufferInfo::bytes_per_pixel`]: https://docs.rs/bootloader_api/0.11/bootloader_api/info/struct.FrameBufferInfo.html#structfield.bytes_per_pixel
+
+## Setting specific Pixels
+
+Based on this above details, we can now create a function to set a specific pixel to a certain color.
+We start by creating a new `framebuffer` [module]:
+
+[module]: https://doc.rust-lang.org/book/ch07-02-defining-modules-to-control-scope-and-privacy.html
+
+```rust ,hl_lines=3-5
+// in kernel/src/main.rs
+
+// declare a submodule -> the compiler will automatically look
+// for a file named `framebuffer.rs` or `framebuffer/mod.rs`
+mod framebuffer;
+```
+
+```rust ,hl_lines=3-16
+// in new kernel/src/framebuffer.rs file
+
+pub struct Position {
+    pub x: usize,
+    pub y: usize,
+}
+
+pub struct Color {
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
+}
+
+pub fn set_pixel_in(framebuffer: &mut FrameBuffer, position: Position, color: Color) {
+    todo!()
+}
+```
+
+TODO explain
+
+```rust ,hl_lines=4-12 14-34
+// in new kernel/src/framebuffer.rs file
+
+pub fn set_pixel_in(framebuffer: &mut FrameBuffer, position: Position, color: Color) {
+    // calculate offset to first byte of pixel
+    let byte_offset = {
+      // use stride to calculate pixel offset of target line
+      let line_offset = position.y * framebuffer.info.stride;
+      // add x position to get the absolute pixel offset in buffer
+      let pixel_offset = line_offset + position.x;
+      // convert to byte offset
+      pixel_offset * framebuffer.bytes_per_pixel
+    };
+
+    /// set pixel based on color format
+    match framebuffer.info.pixel_format {
+        PixelFormat::Rgb => {
+            let bytes = &mut framebuffer.buffer_mut()[byte_offset..][..3];
+            bytes[0] = color.red;
+            bytes[1] = color.green;
+            bytes[2] = color.blue;
+        }
+        PixelFormat::Bgr => {
+            let bytes = &mut framebuffer.buffer_mut()[byte_offset..][..3];
+            bytes[0] = color.blue;
+            bytes[1] = color.green;
+            bytes[2] = color.red;
+        }
+        PixelFormat::U8 => {
+            // use a simple average-based grayscale transform
+            let gray = color.red / 3 + color.green / 3 + color.blue / 3;
+            framebuffer.buffer_mut()[byte_offset] = gray;
+        }
+        other => panic!("unknown pixel format {other:?}"),
+    }
+}
+```
+
+TODO explain
+
+Let's try our new function:
+
+```rust ,hl_lines=5-7
+// in kernel/src/main.rs
+
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
+        let position = framebuffer::Position { x: 200, y: 100 };
+        let color = framebuffer::Color { red: 0, green: 0, blue: 255 };
+        set_pixel_in(framebuffer, position, color);
+    }
+    loop {}
+}
+```
+
+Of course a single pixel is difficult to see, so let's set a square of 10 pixels:
+
+```rust ,hl_lines=6-11
+// in kernel/src/main.rs
+
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
+        let color = framebuffer::Color { red: 0, green: 0, blue: 255 };
+        for x in 0..10 {
+          for y in 0..10 {
+              let position = framebuffer::Position { x: 200 + x, y: 100 + y};
+              set_pixel_in(framebuffer, position, color);
+            }
+        }
+    }
+    loop {}
+}
+```
+
+Now we modifications more easily: TODO image
+
+## The `embedded-graphics` crate
+
+
+### Implementing `DrawTarget`
+
+```rust ,hl_lines=3
+// in kernel/src/framebuffer.rs
+
+pub struct Display {
+    framebuffer: Framebuffer,
+}
+
+impl Display {
+    pub fn new(framebuffer: Framebuffer) -> Display {
+        Self { framebuffer }
+    }
+
+    fn draw_pixel(&mut self, pixel: Pixel) {
+        // ignore any pixels that are out of bounds.
+        let (width, height) = {
+            let info = self.framebuffer.info();
+            (info.width, info.height)
+        }
+        if let Ok((x @ 0..width, y @ 0..height)) = coordinates.try_into() {
+            let color = Color { red: color.r(), green: color.g(), blue: color.b()};
+            set_pixel_in(&mut self.framebuffer, Position { x, y }, color);
+        }
+    }
+}
+
+impl embedded_graphics::draw_target::DrawTarget for Display {
+    type Color = embedded_graphics::pixelcolor::Rgb888;
+
+    /// Drawing operations can never fail.
+    type Error = core::convert::Infallible;
+
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        for Pixel(coordinates, color) in pixels.into_iter() {
+            self.draw_pixel(pixel);
+        }
+        Ok(())
+    }
+}
+```
 
 ---
 
