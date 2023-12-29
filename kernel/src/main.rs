@@ -7,8 +7,8 @@ use bootloader_api::BootInfo;
 use embedded_graphics::{
     draw_target::DrawTarget,
     geometry::Point,
-    mono_font::{self, MonoTextStyle},
-    pixelcolor::{Rgb888, RgbColor, WebColors},
+    mono_font::{ascii::FONT_10X20, MonoTextStyle},
+    pixelcolor::{Rgb888, RgbColor},
     primitives::{Circle, PrimitiveStyle, StyledDrawable},
     text::Text,
     Drawable,
@@ -27,7 +27,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
             .draw_styled(&style, &mut display)
             .unwrap_or_else(infallible);
 
-        let character_style = MonoTextStyle::new(&mono_font::ascii::FONT_10X20, Rgb888::BLUE);
+        let character_style = MonoTextStyle::new(&FONT_10X20, Rgb888::BLUE);
         let text = Text::new("Hello, world!", Point::new(190, 250), character_style);
         text.draw(&mut display).unwrap_or_else(infallible);
     }
