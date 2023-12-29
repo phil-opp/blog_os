@@ -8,22 +8,23 @@ use embedded_graphics::{
 
 pub struct Display {
     framebuffer: &'static mut FrameBuffer,
+    width: usize,
+    height: usize,
 }
 
 impl Display {
     pub fn new(framebuffer: &'static mut FrameBuffer) -> Display {
-        Self { framebuffer }
+        Self {
+            width: framebuffer.info().width,
+            height: framebuffer.info().height,
+            framebuffer,
+        }
     }
 
     fn draw_pixel(&mut self, coordinates: Point, color: Rgb888) {
         // ignore any pixels that are out of bounds.
-        let (width, height) = {
-            let info = self.framebuffer.info();
-            (info.width, info.height)
-        };
-
         let position = match (coordinates.x.try_into(), coordinates.y.try_into()) {
-            (Ok(x), Ok(y)) if x < width && y < height => Position { x, y },
+            (Ok(x), Ok(y)) if x < self.width && y < self.height => Position { x, y },
             _ => return, // ignore out-of-bounds pixel
         };
         let color = Color {
@@ -54,10 +55,9 @@ impl DrawTarget for Display {
 
 impl geometry::OriginDimensions for Display {
     fn size(&self) -> geometry::Size {
-        let info = self.framebuffer.info();
         geometry::Size::new(
-            info.width.try_into().unwrap(),
-            info.height.try_into().unwrap(),
+            self.width.try_into().unwrap(),
+            self.height.try_into().unwrap(),
         )
     }
 }
