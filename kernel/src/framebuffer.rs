@@ -1,4 +1,4 @@
-use bootloader_api::info::{FrameBuffer, PixelFormat};
+use bootloader_api::info::{FrameBuffer, FrameBufferInfo, PixelFormat};
 use embedded_graphics::{
     draw_target::DrawTarget,
     geometry::{self, Point},
@@ -7,24 +7,22 @@ use embedded_graphics::{
 };
 
 pub struct Display {
-    framebuffer: &'static mut FrameBuffer,
-    width: usize,
-    height: usize,
+    framebuffer: &'static mut [u8],
+    info: FrameBufferInfo,
 }
 
 impl Display {
     pub fn new(framebuffer: &'static mut FrameBuffer) -> Display {
         Self {
-            width: framebuffer.info().width,
-            height: framebuffer.info().height,
-            framebuffer,
+            info: framebuffer.info(),
+            framebuffer: framebuffer.buffer_mut(),
         }
     }
 
     fn draw_pixel(&mut self, coordinates: Point, color: Rgb888) {
         // ignore any pixels that are out of bounds.
         let position = match (coordinates.x.try_into(), coordinates.y.try_into()) {
-            (Ok(x), Ok(y)) if x < self.width && y < self.height => Position { x, y },
+            (Ok(x), Ok(y)) if x < self.info.width && y < self.info.height => Position { x, y },
             _ => return, // ignore out-of-bounds pixel
         };
         let color = Color {
@@ -32,7 +30,33 @@ impl Display {
             green: color.g(),
             blue: color.b(),
         };
-        set_pixel_in(self.framebuffer, position, color);
+        set_pixel_in(self.framebuffer, self.info, position, color);
+    }
+
+    pub fn split_at_line(self, line_index: usize) -> (Self, Self) {
+        assert!(line_index < self.info.height);
+
+        let byte_offset = line_index * self.info.stride * self.info.bytes_per_pixel;
+        let (first_buffer, second_buffer) = self.framebuffer.split_at_mut(byte_offset);
+
+        let first = Self {
+            framebuffer: first_buffer,
+            info: FrameBufferInfo {
+                byte_len: byte_offset,
+                height: line_index,
+                ..self.info
+            },
+        };
+        let second = Self {
+            framebuffer: second_buffer,
+            info: FrameBufferInfo {
+                byte_len: self.info.byte_len - byte_offset,
+                height: self.info.height - line_index,
+                ..self.info
+            },
+        };
+
+        (first, second)
     }
 }
 
@@ -56,8 +80,8 @@ impl DrawTarget for Display {
 impl geometry::OriginDimensions for Display {
     fn size(&self) -> geometry::Size {
         geometry::Size::new(
-            self.width.try_into().unwrap(),
-            self.height.try_into().unwrap(),
+            self.info.width.try_into().unwrap(),
+            self.info.height.try_into().unwrap(),
         )
     }
 }
@@ -75,9 +99,12 @@ pub struct Color {
     pub blue: u8,
 }
 
-pub fn set_pixel_in(framebuffer: &mut FrameBuffer, position: Position, color: Color) {
-    let info = framebuffer.info();
-
+pub fn set_pixel_in(
+    framebuffer: &mut [u8],
+    info: FrameBufferInfo,
+    position: Position,
+    color: Color,
+) {
     // calculate offset to first byte of pixel
     let byte_offset = {
         // use stride to calculate pixel offset of target line
@@ -89,22 +116,22 @@ pub fn set_pixel_in(framebuffer: &mut FrameBuffer, position: Position, color: Co
     };
 
     // set pixel based on color format
-    let pixel_buffer = &mut framebuffer.buffer_mut()[byte_offset..];
+    let pixel_bytes = &mut framebuffer[byte_offset..];
     match info.pixel_format {
         PixelFormat::Rgb => {
-            pixel_buffer[0] = color.red;
-            pixel_buffer[1] = color.green;
-            pixel_buffer[2] = color.blue;
+            pixel_bytes[0] = color.red;
+            pixel_bytes[1] = color.green;
+            pixel_bytes[2] = color.blue;
         }
         PixelFormat::Bgr => {
-            pixel_buffer[0] = color.blue;
-            pixel_buffer[1] = color.green;
-            pixel_buffer[2] = color.red;
+            pixel_bytes[0] = color.blue;
+            pixel_bytes[1] = color.green;
+            pixel_bytes[2] = color.red;
         }
         PixelFormat::U8 => {
             // use a simple average-based grayscale transform
             let gray = color.red / 3 + color.green / 3 + color.blue / 3;
-            pixel_buffer[0] = gray;
+            pixel_bytes[0] = gray;
         }
         other => panic!("unknown pixel format {other:?}"),
     }

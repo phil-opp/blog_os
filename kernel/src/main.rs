@@ -20,16 +20,21 @@ bootloader_api::entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        let mut display = framebuffer::Display::new(framebuffer);
-        display.clear(Rgb888::RED).unwrap_or_else(infallible);
+        let height = framebuffer.info().height;
+        let display = framebuffer::Display::new(framebuffer);
+        let (mut upper, mut lower) = display.split_at_line(height / 2);
+
+        upper.clear(Rgb888::RED).unwrap_or_else(infallible);
+        lower.clear(Rgb888::BLUE).unwrap_or_else(infallible);
+
         let style = PrimitiveStyle::with_fill(Rgb888::YELLOW);
-        Circle::new(Point::new(50, 50), 400)
-            .draw_styled(&style, &mut display)
+        Circle::new(Point::new(50, 50), 300)
+            .draw_styled(&style, &mut upper)
             .unwrap_or_else(infallible);
 
         let character_style = MonoTextStyle::new(&FONT_10X20, Rgb888::BLUE);
-        let text = Text::new("Hello, world!", Point::new(190, 250), character_style);
-        text.draw(&mut display).unwrap_or_else(infallible);
+        let text = Text::new("Hello, world!", Point::new(140, 210), character_style);
+        text.draw(&mut upper).unwrap_or_else(infallible);
     }
     loop {}
 }
