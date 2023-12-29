@@ -1,9 +1,18 @@
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
+use core::{convert::Infallible, panic::PanicInfo};
 
 use bootloader_api::BootInfo;
+use embedded_graphics::{
+    draw_target::DrawTarget,
+    geometry::Point,
+    mono_font::{self, MonoTextStyle},
+    pixelcolor::{Rgb888, RgbColor, WebColors},
+    primitives::{Circle, PrimitiveStyle, StyledDrawable},
+    text::Text,
+    Drawable,
+};
 
 mod framebuffer;
 
@@ -11,20 +20,16 @@ bootloader_api::entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        let color = framebuffer::Color {
-            red: 0,
-            green: 0,
-            blue: 255,
-        };
-        for x in 0..100 {
-            for y in 0..100 {
-                let position = framebuffer::Position {
-                    x: 20 + x,
-                    y: 100 + y,
-                };
-                framebuffer::set_pixel_in(framebuffer, position, color);
-            }
-        }
+        let mut display = framebuffer::Display::new(framebuffer);
+        display.clear(Rgb888::RED).unwrap_or_else(infallible);
+        let style = PrimitiveStyle::with_fill(Rgb888::YELLOW);
+        Circle::new(Point::new(50, 50), 400)
+            .draw_styled(&style, &mut display)
+            .unwrap_or_else(infallible);
+
+        let character_style = MonoTextStyle::new(&mono_font::ascii::FONT_10X20, Rgb888::BLUE);
+        let text = Text::new("Hello, world!", Point::new(190, 250), character_style);
+        text.draw(&mut display).unwrap_or_else(infallible);
     }
     loop {}
 }
@@ -33,4 +38,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
+}
+
+fn infallible<T>(v: Infallible) -> T {
+    match v {}
 }

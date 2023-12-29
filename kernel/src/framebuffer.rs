@@ -1,4 +1,66 @@
 use bootloader_api::info::{FrameBuffer, PixelFormat};
+use embedded_graphics::{
+    draw_target::DrawTarget,
+    geometry::{self, Point},
+    pixelcolor::{Rgb888, RgbColor},
+    Pixel,
+};
+
+pub struct Display {
+    framebuffer: &'static mut FrameBuffer,
+}
+
+impl Display {
+    pub fn new(framebuffer: &'static mut FrameBuffer) -> Display {
+        Self { framebuffer }
+    }
+
+    fn draw_pixel(&mut self, coordinates: Point, color: Rgb888) {
+        // ignore any pixels that are out of bounds.
+        let (width, height) = {
+            let info = self.framebuffer.info();
+            (info.width, info.height)
+        };
+
+        let position = match (coordinates.x.try_into(), coordinates.y.try_into()) {
+            (Ok(x), Ok(y)) if x < width && y < height => Position { x, y },
+            _ => return, // ignore out-of-bounds pixel
+        };
+        let color = Color {
+            red: color.r(),
+            green: color.g(),
+            blue: color.b(),
+        };
+        set_pixel_in(self.framebuffer, position, color);
+    }
+}
+
+impl DrawTarget for Display {
+    type Color = Rgb888;
+
+    /// Drawing operations can never fail.
+    type Error = core::convert::Infallible;
+
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        for Pixel(coordinates, color) in pixels.into_iter() {
+            self.draw_pixel(coordinates, color);
+        }
+        Ok(())
+    }
+}
+
+impl geometry::OriginDimensions for Display {
+    fn size(&self) -> geometry::Size {
+        let info = self.framebuffer.info();
+        geometry::Size::new(
+            info.width.try_into().unwrap(),
+            info.height.try_into().unwrap(),
+        )
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {

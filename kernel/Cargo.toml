@@ -10,3 +10,4 @@ bench = false
 
 [dependencies]
 bootloader_api = "0.11.0"
+embedded-graphics = "0.8.1"
