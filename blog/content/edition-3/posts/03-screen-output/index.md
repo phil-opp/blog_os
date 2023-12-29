@@ -144,94 +144,146 @@ We start by creating a new `framebuffer` [module]:
 mod framebuffer;
 ```
 
+In the new module, we create basic structs for representing pixel positions and colors:
+
 ```rust ,hl_lines=3-16
 // in new kernel/src/framebuffer.rs file
 
+use bootloader_api::info::FrameBuffer;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
     pub x: usize,
     pub y: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color {
     pub red: u8,
     pub green: u8,
     pub blue: u8,
 }
-
-pub fn set_pixel_in(framebuffer: &mut FrameBuffer, position: Position, color: Color) {
-    todo!()
-}
 ```
 
-TODO explain
+By marking the sturcts and their fields as `pub`, we make them accessible from the parent `kernel` module.
+We use the `#[derive]` attribute to implement the [`Debug`], [`Clone`], [`Copy`], [`PartialEq`], and [`Eq`] traits of Rust's core library.
+These traits allow us to duplicate, compare, and print the structs.
 
-```rust ,hl_lines=4-12 14-34
+[`Debug`]: https://doc.rust-lang.org/stable/core/fmt/trait.Debug.html
+[`Clone`]: https://doc.rust-lang.org/stable/core/clone/trait.Clone.html
+[`Copy`]: https://doc.rust-lang.org/stable/core/marker/trait.Copy.html
+[`PartialEq`]: https://doc.rust-lang.org/stable/core/cmp/trait.PartialEq.html
+[`Eq`]: https://doc.rust-lang.org/stable/core/cmp/trait.Eq.html
+
+Next, we create a function for setting a specific pixel in the framebuffer to a given color:
+
+```rust ,hl_lines=3 5-39
 // in new kernel/src/framebuffer.rs file
 
+use bootloader_api::info::PixelFormat;
+
 pub fn set_pixel_in(framebuffer: &mut FrameBuffer, position: Position, color: Color) {
+    let info = framebuffer.info();
+
     // calculate offset to first byte of pixel
     let byte_offset = {
-      // use stride to calculate pixel offset of target line
-      let line_offset = position.y * framebuffer.info.stride;
-      // add x position to get the absolute pixel offset in buffer
-      let pixel_offset = line_offset + position.x;
-      // convert to byte offset
-      pixel_offset * framebuffer.bytes_per_pixel
+        // use stride to calculate pixel offset of target line
+        let line_offset = position.y * info.stride;
+        // add x position to get the absolute pixel offset in buffer
+        let pixel_offset = line_offset + position.x;
+        // convert to byte offset
+        pixel_offset * info.bytes_per_pixel
     };
 
-    /// set pixel based on color format
-    match framebuffer.info.pixel_format {
+    // set pixel based on color format
+    let pixel_buffer = &mut framebuffer.buffer_mut()[byte_offset..];
+    match info.pixel_format {
         PixelFormat::Rgb => {
-            let bytes = &mut framebuffer.buffer_mut()[byte_offset..][..3];
-            bytes[0] = color.red;
-            bytes[1] = color.green;
-            bytes[2] = color.blue;
+            pixel_buffer[0] = color.red;
+            pixel_buffer[1] = color.green;
+            pixel_buffer[2] = color.blue;
         }
         PixelFormat::Bgr => {
-            let bytes = &mut framebuffer.buffer_mut()[byte_offset..][..3];
-            bytes[0] = color.blue;
-            bytes[1] = color.green;
-            bytes[2] = color.red;
+            pixel_buffer[0] = color.blue;
+            pixel_buffer[1] = color.green;
+            pixel_buffer[2] = color.red;
         }
         PixelFormat::U8 => {
             // use a simple average-based grayscale transform
             let gray = color.red / 3 + color.green / 3 + color.blue / 3;
-            framebuffer.buffer_mut()[byte_offset] = gray;
+            pixel_buffer[0] = gray;
         }
         other => panic!("unknown pixel format {other:?}"),
     }
 }
 ```
 
-TODO explain
+The first step is to calculate the byte offset within the framebuffer slice at which the pixel starts.
+For this, we first calculate the pixel offset of the line by multiplying the `y` position with the stride of the framebuffer, i.e. its line width plus the line padding.
+We then add the `x` position to get the absolute index of the pixel.
+As the framebuffer slice is a byte slice, we need to transform the pixel index to a byte offset by multiplying it with the number of `bytes_per_pixel`.
 
-Let's try our new function:
+[`FrameBuffer::buffer_mut`]: https://docs.rs/bootloader_api/0.11.5/bootloader_api/info/struct.FrameBuffer.html#method.buffer_mut
 
-```rust ,hl_lines=5-7
+The second step is to set the pixel to the desired color.
+We first use the [`FrameBuffer::buffer_mut`] method to get access to the actual bytes of the framebuffer in form of a slice.
+Then, we use the slicing operator `[byte_offset..]` to get a sub-slice starting at the `byte_offset` of the target pixel.
+As the write operation depends on the pixel format, we use a [`match`] statement:
+
+[`match`]: https://doc.rust-lang.org/stable/std/keyword.match.html
+
+- For `Rgb` framebuffers, we write three bytes; first red, then green, then blue.
+- For `Bgr` framebuffers, we also write three bytes, but blue first and red last.
+- For `U8` framebuffers, we first convert the color to grayscale by taking the average of the three color channels.
+  Note that there are multiple [different ways to convert colors to grayscale], so you can also use different factors here.
+- For all other framebuffer formats, we [panic] for now.
+
+[different ways to convert colors to grayscale]: https://www.baeldung.com/cs/convert-rgb-to-grayscale#bd-convert-rgb-to-grayscale
+[panic]: https://doc.rust-lang.org/stable/core/macro.panic.html
+
+Let's try to use our new function to write a blue pixel in our `kernel_main` function:
+
+```rust ,hl_lines=5-11
 // in kernel/src/main.rs
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        let position = framebuffer::Position { x: 200, y: 100 };
-        let color = framebuffer::Color { red: 0, green: 0, blue: 255 };
-        set_pixel_in(framebuffer, position, color);
+        let position = framebuffer::Position { x: 20, y: 100 };
+        let color = framebuffer::Color {
+            red: 0,
+            green: 0,
+            blue: 255,
+        };
+        framebuffer::set_pixel_in(framebuffer, position, color);
     }
     loop {}
 }
 ```
 
-Of course a single pixel is difficult to see, so let's set a square of 10 pixels:
+When we run our code in QEMU using `cargo run --bin qemu-bios` (or `--bin qemu-uefi`) and look _very closely_, we can see the blue pixel.
+It's really difficult to see, so I marked with an arrow below:
 
-```rust ,hl_lines=6-11
+![QEMU the bootloader text output with one pixel set to blue. An annotated arrow points to the pixel](qemu-blue-pixel.png)
+
+As this single pixel is too difficult to see, let's draw a filled square of 100x100 pixels instead:
+
+```rust ,hl_lines=10-18
 // in kernel/src/main.rs
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        let color = framebuffer::Color { red: 0, green: 0, blue: 255 };
-        for x in 0..10 {
-          for y in 0..10 {
-              let position = framebuffer::Position { x: 200 + x, y: 100 + y};
-              set_pixel_in(framebuffer, position, color);
+        let color = framebuffer::Color {
+            red: 0,
+            green: 0,
+            blue: 255,
+        };
+        for x in 0..100 {
+            for y in 0..100 {
+                let position = framebuffer::Position {
+                    x: 20 + x,
+                    y: 100 + y,
+                };
+                framebuffer::set_pixel_in(framebuffer, position, color);
             }
         }
     }
@@ -239,9 +291,21 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 }
 ```
 
-Now we modifications more easily: TODO image
+Now we clearly see that our code works as intended:
+
+![QEMU showing a blue square above the bootloader text output](qemu-blue-square.png)
+
+Feel free to experiment with different positions and colors if you like.
+You can also try to draw a circle instead of a square, or a line with a certain thickness.
+
+As you can probably imagine, it would be a lot of work to draw more complex shapes this way.
+One example for such complex shapes is _text_, i.e. the rendering of letters and punctuation.
+Fortunately, there is the nice `no_std`-compatible [`embedded-graphics`] crate, which provides draw functions for text, various shapes, and image data.
+
+[`embedded-graphics`]: https://docs.rs/embedded-graphics/latest/embedded_graphics/index.html
 
 ## The `embedded-graphics` crate
+
 
 
 ### Implementing `DrawTarget`
