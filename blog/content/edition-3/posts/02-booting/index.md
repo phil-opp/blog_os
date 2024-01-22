@@ -491,7 +491,7 @@ profile = "default"
 targets = ["x86_64-unknown-none"]
 ```
 
-The `channel` field specifies which [toolchain`] to use.
+The `channel` field specifies which [`toolchain`] to use.
 In our case, we want to use the latest nightly compiler.
 We could also specify a specific nightly here, e.g. `nightly-2023-04-30`, which can be useful when there is some breakage in the newest nightly.
 In the `targets` list, we can specify additional targets that we want to compile to.
