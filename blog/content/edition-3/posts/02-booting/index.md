@@ -56,7 +56,7 @@ UEFI, in contrast, is more modern and has much more features, but also more comp
 ### BIOS
 
 Almost all x86 systems have support for BIOS booting, including most UEFI-based machines that support an emulated BIOS.
-This is great, because you can use the same boot logic across all machines from the last centuries.
+This is great, because you can use the same boot logic across all machines from the last century.
 The drawback is that the standard is very old, for example the CPU is put into a 16-bit compatibility mode called [real mode] before booting so that archaic bootloaders from the 1980s would still work.
 Also, BIOS-compatibility will be slowly removed on newer UEFI machines over the next years (see below).
 
