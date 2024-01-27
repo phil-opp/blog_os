@@ -312,22 +312,24 @@ Fortunately, there is the nice `no_std`-compatible [`embedded-graphics`] crate, 
 
 ```rust ,hl_lines=3
 // in kernel/src/framebuffer.rs
+use embedded_graphics::pixelcolor::Rgb888;
 
 pub struct Display {
-    framebuffer: Framebuffer,
+    framebuffer: FrameBuffer,
 }
 
 impl Display {
-    pub fn new(framebuffer: Framebuffer) -> Display {
+    pub fn new(framebuffer: FrameBuffer) -> Display {
         Self { framebuffer }
     }
 
-    fn draw_pixel(&mut self, pixel: Pixel) {
+    fn draw_pixel(&mut self, Pixel(coordinates, color): Pixel<Rgb888>) {
         // ignore any pixels that are out of bounds.
         let (width, height) = {
             let info = self.framebuffer.info();
             (info.width, info.height)
         }
+
         if let Ok((x @ 0..width, y @ 0..height)) = coordinates.try_into() {
             let color = Color { red: color.r(), green: color.g(), blue: color.b()};
             set_pixel_in(&mut self.framebuffer, Position { x, y }, color);
@@ -336,7 +338,7 @@ impl Display {
 }
 
 impl embedded_graphics::draw_target::DrawTarget for Display {
-    type Color = embedded_graphics::pixelcolor::Rgb888;
+    type Color = Rgb888;
 
     /// Drawing operations can never fail.
     type Error = core::convert::Infallible;
@@ -345,9 +347,10 @@ impl embedded_graphics::draw_target::DrawTarget for Display {
     where
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
-        for Pixel(coordinates, color) in pixels.into_iter() {
+        for pixel in pixels.into_iter() {
             self.draw_pixel(pixel);
         }
+
         Ok(())
     }
 }
