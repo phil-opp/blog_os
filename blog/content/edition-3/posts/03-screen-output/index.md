@@ -157,6 +157,15 @@ pub struct Position {
     pub y: usize,
 }
 
+impl From<Point> for Position {
+    fn from(value: Point) -> Self {
+        Self {
+            x: value.x as usize,
+            y: value.y as usize,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color {
     pub red: u8,
@@ -312,27 +321,48 @@ Fortunately, there is the nice `no_std`-compatible [`embedded-graphics`] crate, 
 
 ```rust ,hl_lines=3
 // in kernel/src/framebuffer.rs
+use embedded_graphics::geometry::Point;
 use embedded_graphics::pixelcolor::Rgb888;
+use embedded_graphics::prelude::OriginDimensions;
+use embedded_graphics::prelude::Pixel;
+use embedded_graphics::prelude::Size;
 
 pub struct Display {
-    framebuffer: FrameBuffer,
+    framebuffer: &'static mut FrameBuffer,
 }
 
 impl Display {
-    pub fn new(framebuffer: FrameBuffer) -> Display {
+    pub fn new(framebuffer: &'static mut FrameBuffer) -> Display {
         Self { framebuffer }
     }
 
-    fn draw_pixel(&mut self, Pixel(coordinates, color): Pixel<Rgb888>) {
-        // ignore any pixels that are out of bounds.
+    fn in_range(&mut self, point: Point) -> bool {
         let (width, height) = {
             let info = self.framebuffer.info();
             (info.width, info.height)
-        }
+        };
 
-        if let Ok((x @ 0..width, y @ 0..height)) = coordinates.try_into() {
-            let color = Color { red: color.r(), green: color.g(), blue: color.b()};
-            set_pixel_in(&mut self.framebuffer, Position { x, y }, color);
+        if point.x < width as i32 && point.x > 0 && point.y < height as i32 && point.y > 0 {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.framebuffer.buffer_mut().fill(0);
+    }
+
+    fn draw_pixel(&mut self, Pixel(point, color): Pixel<Rgb888>) {
+        use embedded_graphics::prelude::RgbColor;
+
+        if self.in_range(point) {
+            let color = Color {
+                red: color.r(),
+                green: color.g(),
+                blue: color.b(),
+            };
+            set_pixel_in(&mut self.framebuffer, Position::from(point), color)
         }
     }
 }
@@ -353,6 +383,41 @@ impl embedded_graphics::draw_target::DrawTarget for Display {
 
         Ok(())
     }
+}
+
+impl OriginDimensions for Display {
+    fn size(&self) -> Size {
+        let width: usize = self.framebuffer.info().width.try_into().unwrap();
+        let height: usize = self.framebuffer.info().height.try_into().unwrap();
+        Size::new(width as u32, height as u32)
+    }
+}
+```
+
+```rust ,hl_lines=3
+// in kernel/src/main.rs
+use kernel::framebuffer::Display;
+
+use embedded_graphics::{
+    mono_font::{ascii::FONT_9X18, MonoTextStyle},
+    pixelcolor::Rgb888,
+    prelude::*,
+    text::Text,
+};
+
+entry_point!(kernel_main);
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
+    let mut display = Display::new(boot_info.framebuffer.as_mut().unwrap());
+
+    // clear the log
+    display.clear();
+
+    let style = MonoTextStyle::new(&FONT_9X18, Rgb888::WHITE);
+
+    // Create a text at position (20, 30) and draw it using the previously defined style
+    Text::new("Hello Rust!", Point::new(20, 30), style).draw(&mut display).unwrap();
+
+    loop {}
 }
 ```
 
