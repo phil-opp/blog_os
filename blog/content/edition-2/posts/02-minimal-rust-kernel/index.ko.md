@@ -124,7 +124,7 @@ Cargo는 `--target` 인자를 통해 여러 컴파일 대상 시스템들을 지
 ```json
 {
     "llvm-target": "x86_64-unknown-linux-gnu",
-    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
@@ -148,7 +148,7 @@ Cargo는 `--target` 인자를 통해 여러 컴파일 대상 시스템들을 지
 ```json
 {
     "llvm-target": "x86_64-unknown-none",
-    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
@@ -209,7 +209,7 @@ SIMD 레지스터 값들을 메모리에 백업하고 또 다시 복구하는 �
 ```json
 {
     "llvm-target": "x86_64-unknown-none",
-    "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
