@@ -165,7 +165,7 @@ pub struct Color {
 }
 ```
 
-By marking the sturcts and their fields as `pub`, we make them accessible from the parent `kernel` module.
+By marking the structs and their fields as `pub`, we make them accessible from the parent `kernel` module.
 We use the `#[derive]` attribute to implement the [`Debug`], [`Clone`], [`Copy`], [`PartialEq`], and [`Eq`] traits of Rust's core library.
 These traits allow us to duplicate, compare, and print the structs.
 
