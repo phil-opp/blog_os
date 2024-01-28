@@ -505,7 +505,7 @@ A minimal target specification that describes the `x86_64-unknown-linux-gnu` tar
 ```json
 {
   "llvm-target": "x86_64-unknown-linux-gnu",
-  "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+  "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
   "target-endian": "little",
   "target-pointer-width": "64",
   "target-c-int-width": "32",
@@ -527,7 +527,7 @@ In order to disable the multimedia extensions, we create a new target named `x86
 ```json
 {
   "llvm-target": "x86_64-unknown-linux-gnu",
-  "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
+  "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
   "target-endian": "little",
   "target-pointer-width": "64",
   "target-c-int-width": "32",
