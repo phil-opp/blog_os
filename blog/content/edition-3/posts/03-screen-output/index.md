@@ -443,7 +443,7 @@ This function takes two parameters: a byte slice representing a raw framebuffer 
 // in src/main.rs
 fn kernel_main(boot_info: &'static mut bootloader_api::BootInfo) -> ! {
     // ...
-    // free the doubly wrapped framebuffer from the boot info struct
+    // free the double-wrapped framebuffer from the boot info struct
     let frame_buffer_optional = &mut boot_info.framebuffer;
     
     // free the wrapped framebuffer from the FFI-safe abstraction provided by bootloader_api
