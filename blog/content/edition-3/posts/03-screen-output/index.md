@@ -312,32 +312,45 @@ Fortunately, there is the nice `no_std`-compatible [`embedded-graphics`] crate, 
 
 ```rust ,hl_lines=3
 // in kernel/src/framebuffer.rs
-use embedded_graphics::pixelcolor::Rgb888;
+use embedded_graphics::{
+    Pixel,
+    draw_target::DrawTarget,
+    geometry::{OriginDimensions, Size},
+    pixelcolor::{Rgb888, RgbColor},
+};
 
-pub struct Display {
-    framebuffer: FrameBuffer,
+pub struct Display<'f> {
+    framebuffer: &'f mut FrameBuffer,
 }
 
-impl Display {
-    pub fn new(framebuffer: FrameBuffer) -> Display {
-        Self { framebuffer }
+impl<'f> Display<'f> {
+    pub fn new(framebuffer: &'f mut FrameBuffer) -> Display {
+        Display { framebuffer }
     }
 
     fn draw_pixel(&mut self, Pixel(coordinates, color): Pixel<Rgb888>) {
-        // ignore any pixels that are out of bounds.
+        // ignore any out of bounds pixels
         let (width, height) = {
             let info = self.framebuffer.info();
-            (info.width, info.height)
-        }
 
-        if let Ok((x @ 0..width, y @ 0..height)) = coordinates.try_into() {
-            let color = Color { red: color.r(), green: color.g(), blue: color.b()};
-            set_pixel_in(&mut self.framebuffer, Position { x, y }, color);
+            (info.width, info.height)
+        };
+
+        let (x, y) = {
+            let c: (i32, i32) = coordinates.into();
+            (c.0 as usize, c.1 as usize)
+        };
+
+        if (0..width).contains(&x) && (0..height).contains(&y) {
+            let color = Color { red: color.r(), green: color.g(), blue: color.b() };
+
+            set_pixel_in(self.framebuffer, Position { x, y }, color);
         }
     }
 }
 
-impl embedded_graphics::draw_target::DrawTarget for Display {
+
+impl<'f> DrawTarget for Display<'f> {
     type Color = Rgb888;
 
     /// Drawing operations can never fail.
@@ -354,6 +367,14 @@ impl embedded_graphics::draw_target::DrawTarget for Display {
         Ok(())
     }
 }
+
+impl<'f> OriginDimensions for Display<'f> {
+    fn size(&self) -> Size {
+        let info = self.framebuffer.info();
+
+        Size::new(info.width as u32, info.height as u32)
+    }
+}
 ```
 
 ---
@@ -363,7 +384,7 @@ impl embedded_graphics::draw_target::DrawTarget for Display {
 
 
 
-  draw shapes and pixels directly onto the framebuffer. That's fine and all, but how is one able to go from that to displaying text on the screen? Understanding this requires taking a deep dive into how characters are rendered behind the scenes.
+So far, we have drawn shapes and pixels directly onto the framebuffer. That's fine and all, but how is one able to go from that to displaying text on the screen? Understanding this requires taking a deep dive into how characters are rendered behind the scenes.
 
 When a key is pressed on the keyboard, it sends a character code to the CPU. It's the CPU's job at that point to then interpret the character code and match it with an image to draw on the screen. The image is then sent to either the GPU or the framebuffer (the latter in our case) to be drawn on the screen, and the user sees that image as a letter, number, CJK character, emoji, or whatever else he or she wanted to have displayed by pressing that key.
 
