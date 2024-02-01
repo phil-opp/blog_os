@@ -175,3 +175,21 @@ translated_content_notice = "이것은 커뮤니티 멤버가 <strong><a href=\"
 translated_by = "번역한 사람 : "
 translation_contributors = "With contributions from"
 word_separator = "와"
+
+# Esperanto
+[languages.eo]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.eo.translations]
+lang_name = "Esperanto"
+toc = "Enhavtabelo"
+all_posts = "« Ĉiuj Afiŝoj"
+comments = "Komentoj"
+comments_notice = "Bonvolu lasi viajn komentojn en la Angla se eble."
+readmore = "legu&nbsp;pli&nbsp;»"
+not_translated = "(Ĉi tiu afiŝo ankoraŭ ne estas tradukita. )"
+translated_content = "Tradukita Enhavo:"
+translated_content_notice = "Ĉi tiu estas komunuma traduko de la <strong><a href=\"_original.permalink_\">_original.title_</a></strong> enhavo. Ĝi eble estas nekompleta, malmoderna aŭ enhavas erarojn. Bonvolu raporti ajnajn problemojn!!"
+translated_by = "Traduko de"
+translation_contributors = "Kun kontribuoj de"
+word_separator = "kaj"
