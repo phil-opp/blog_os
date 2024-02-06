@@ -60,7 +60,7 @@ The VGA text buffer is accessible via [memory-mapped I/O] to the address `0xb800
 
 Note that memory-mapped hardware might not support all normal RAM operations. For example, a device could only support byte-wise reads and return junk when a `u64` is read. Fortunately, the text buffer [supports normal reads and writes], so we don't have to treat it in a special way.
 
-[supports normal reads and writes]: https://web.stanford.edu/class/cs140/projects/pintos/specs/freevga/vga/vgamem.htm#manip
+[supports normal reads and writes]: https://www.scs.stanford.edu/21wi-cs140/pintos/specs/freevga/vga/vga.htm
 
 ## A Rust Module
 Now that we know how the VGA buffer works, we can create a Rust module to handle printing:
