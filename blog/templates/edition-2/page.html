@@ -91,8 +91,7 @@
     </div>
 
     <div class="post-footer-support{% if page.extra.rtl %} right-to-left{% endif %}">
-        <h2>Support Me</h2>
-        {{ snippets::support() }}
+        {{ trans(key="support_me", lang=lang) | safe }}
     </div>
 
     <hr>
