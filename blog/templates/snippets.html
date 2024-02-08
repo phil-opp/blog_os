@@ -1,15 +1,3 @@
-{% macro support() %}
-<p>
-    Creating and <a href="{{ get_url(path="@/status-update/_index.md") }}">maintaining</a> this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance.
-</p>
-<p>
-    The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>, since they don't charge any fees. If you prefer other platforms, I also have <a href="https://www.patreon.com/phil_opp"><em>Patreon</em></a> and <a href="https://donorbox.org/phil-opp"><em>Donorbox</em></a> accounts. The latter is the most flexible as it supports multiple currencies and one-time contributions.
-</p>
-<p>
-    Thank you!
-</p>
-{% endmacro support %}
-
 {% macro giscus(search_term, lang) %}
     {% if lang != "en" %}
         {% set category = "Post Comments (translated)" %}

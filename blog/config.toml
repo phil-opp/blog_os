@@ -49,6 +49,10 @@ translated_content_notice = "This is a community translation of the <strong><a h
 translated_by = "Translation by"
 translation_contributors = "With contributions from"
 word_separator = "and"
+support_me = """
+<h2>Support Me</h2>
+<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+"""
 
 # Chinese (simplified)
 [languages.zh-CN]
@@ -67,6 +71,10 @@ translated_content_notice = "这是对原文章 <strong><a href=\"_original.perm
 translated_by = "翻译者："
 translation_contributors = "With contributions from"
 word_separator = "和"
+support_me = """
+<h2>Support Me</h2>
+<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+"""
 
 # Chinese (traditional)
 [languages.zh-TW]
@@ -85,6 +93,10 @@ translated_content_notice = "這是對原文章 <strong><a href=\"_original.perm
 translated_by = "翻譯者："
 translation_contributors = "With contributions from"
 word_separator = "和"
+support_me = """
+<h2>Support Me</h2>
+<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+"""
 
 # Japanese
 [languages.ja]
@@ -103,6 +115,10 @@ translated_content_notice = "この記事は<strong><a href=\"_original.permalin
 translated_by = "翻訳者："
 translation_contributors = "With contributions from"
 word_separator = "及び"
+support_me = """
+<h2>Support Me</h2>
+<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+"""
 
 # Persian
 [languages.fa]
@@ -121,6 +137,10 @@ translated_content_notice = "این یک ترجمه از جامعه کاربرا
 translated_by = "ترجمه توسط"
 translation_contributors = "With contributions from"
 word_separator = "و"
+support_me = """
+<h2>Support Me</h2>
+<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+"""
 
 # Russian
 [languages.ru]
@@ -139,6 +159,10 @@ translated_content_notice = "Это перевод сообщества пост
 translated_by = "Перевод сделан"
 translation_contributors = "With contributions from"
 word_separator = "и"
+support_me = """
+<h2>Support Me</h2>
+<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+"""
 
 # French
 [languages.fr]
@@ -157,6 +181,10 @@ translated_content_notice = "Ceci est une traduction communautaire de l'article 
 translated_by = "Traduit par : "
 translation_contributors = "With contributions from"
 word_separator = "et"
+support_me = """
+<h2>Support Me</h2>
+<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+"""
 
 # Korean
 [languages.ko]
@@ -175,3 +203,7 @@ translated_content_notice = "이것은 커뮤니티 멤버가 <strong><a href=\"
 translated_by = "번역한 사람 : "
 translation_contributors = "With contributions from"
 word_separator = "와"
+support_me = """
+<h2>Support Me</h2>
+<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+"""

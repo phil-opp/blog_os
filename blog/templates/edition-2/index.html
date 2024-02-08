@@ -61,8 +61,7 @@
 </div>
 
 <div class="">
-    <h2>Support Me</h2>
-    {{ snippets::support() }}
+    {{ trans(key="support_me", lang=lang) | safe }}
 </div>
 {% endblock main %}
 
