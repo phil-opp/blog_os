@@ -17,7 +17,7 @@
     {% endif %}
 
     <p class="comment-note">
-        Do you have a problem, want to share feedback, or discuss further ideas? Feel free to leave a comment here! Please stick to English and follow Rust's <a href="https://www.rust-lang.org/policies/code-of-conduct">code of conduct</a>. This comment thread directly maps to a <a href="{{ discussion_url | safe }}"><em>discussion on GitHub</em></a>, so you can also comment there if you prefer.
+        {{ trans(key="comment_note", lang=lang) | replace(from="_discussion_url_", to=discussion_url) | safe }}
     </p>
 
     <div class="giscus"></div>
