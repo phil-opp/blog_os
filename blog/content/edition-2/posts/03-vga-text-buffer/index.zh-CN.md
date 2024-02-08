@@ -169,7 +169,7 @@ pub struct Writer {
 }
 ```
 
-我们将让这个 `Writer` 类型将字符写入屏幕的最后一行，并在一行写满或接收到换行符 `\n` 的时候，将所有的字符向上位移一行。`column_position` 变量将跟踪光标在最后一行的位置。当前字符的前景和背景色将由 `color_code` 变量指定；另外，我们存入一个 VGA 字符缓冲区的可变借用到`buffer`变量中。需要注意的是，这里我们对借用使用**显式生命周期**（[explicit lifetime](https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#lifetime-annotation-syntax)），告诉编译器这个借用在何时有效：我们使用** `'static` 生命周期 **（['static lifetime](https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime)），意味着这个借用应该在整个程序的运行期间有效；这对一个全局有效的 VGA 字符缓冲区来说，是非常合理的。
+我们将让这个 `Writer` 类型将字符写入屏幕的最后一行，并在一行写满或接收到换行符 `\n` 的时候，将所有的字符向上位移一行。`column_position` 变量将跟踪光标在最后一行的位置。当前字符的前景和背景色将由 `color_code` 变量指定；另外，我们存入一个 VGA 字符缓冲区的可变借用到`buffer`变量中。需要注意的是，这里我们对借用使用**显式生命周期**（[explicit lifetime](https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#lifetime-annotation-syntax)），告诉编译器这个借用在何时有效：我们使用 `'static` 生命周期（['static lifetime](https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime)），意味着这个借用应该在整个程序的运行期间有效；这对一个全局有效的 VGA 字符缓冲区来说，是非常合理的。
 
 ### 打印字符
 
