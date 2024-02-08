@@ -462,9 +462,9 @@ ExampleStateMachine::End(_) => {
 
 Futures should not be polled again after they returned `Poll::Ready`, so we panic if `poll` is called while we are already in the `End` state.
 
-We now know what the compiler-generated state machine and its implementation of the `Future` trait _could_ look like. In practice, the compiler generates code in a different way. (In case you're interested, the implementation is currently based on [_generators_], but this is only an implementation detail.)
+We now know what the compiler-generated state machine and its implementation of the `Future` trait _could_ look like. In practice, the compiler generates code in a different way. (In case you're interested, the implementation is currently based on [_coroutines_], but this is only an implementation detail.)
 
-[_generators_]: https://doc.rust-lang.org/stable/unstable-book/language-features/generators.html
+[_coroutines_]: https://doc.rust-lang.org/stable/unstable-book/language-features/coroutines.html
 
 The last piece of the puzzle is the generated code for the `example` function itself. Remember, the function header was defined like this:
 
