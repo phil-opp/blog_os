@@ -75,11 +75,11 @@ translated_by = "翻译者："
 translation_contributors = "With contributions from"
 word_separator = "和"
 support_me = """
-<h2>Support Me</h2>
-<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+<h2>支持我</h2>
+<p>创建和维护这个博客以及相关的库带来了十分庞大的工作量，即便我十分热爱它们，仍然需要你们的支持。通过赞助我，可以让我有能投入更多时间与精力在创造新内容，开发新功能上。赞助我最好的办法是通过<a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. 十分感谢各位！</p>
 """
 comment_note = """
-Do you have a problem, want to share feedback, or discuss further ideas? Feel free to leave a comment here! Please stick to English and follow Rust's <a href="https://www.rust-lang.org/policies/code-of-conduct">code of conduct</a>. This comment thread directly maps to a <a href="_discussion_url_"><em>discussion on GitHub</em></a>, so you can also comment there if you prefer.
+你有问题需要解决，想要分享反馈，或者讨论更多的想法吗？请随时在这里留下评论！请使用尽量使用英文并遵循 Rust 的 <a href="https://www.rust-lang.org/policies/code-of-conduct">code of conduct</a>. 这个讨论串将与 <a href="_discussion_url_"><em>discussion on GitHub</em></a> 直接连接，所以你也可以直接在那边发表评论
 """
 
 # Chinese (traditional)
