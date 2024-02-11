@@ -62,7 +62,7 @@ translation_contributors = ["liuyuran"]
 
 在这个例子中，我们看到各种直接映射的页表框架。页表的物理地址也是有效的虚拟地址，这样我们就可以很容易地访问从CR3寄存器开始的各级页表。
 
-然而，它使虚拟地址空间变得杂乱无章，并使寻找较大尺寸的连续内存区域更加困难。例如，想象一下，我们想在上述图形中创建一个大小为1000&nbsp;KiB的虚拟内存区域，例如： [memory-mapping a file] . 我们不能在`28 KiB`处开始区域，因为它将与`1004 KiB`处已经映射的页面相撞。所以我们必须进一步寻找，直到找到一个足够大的未映射区域，例如在`1008 KiB`。这是一个类似于[segmentation]的碎片化问题。
+然而，它使虚拟地址空间变得杂乱无章，并使寻找较大尺寸的连续内存区域更加困难。例如，想象一下，我们想在上述图形中创建一个大小为1000&nbsp;KiB的虚拟内存区域，例如： [memory-mapping a file]。我们不能在`28 KiB`处开始区域，因为它将与`1004 KiB`处已经映射的页面相撞。所以我们必须进一步寻找，直到找到一个足够大的未映射区域，例如在`1008 KiB`。这是一个类似于[segmentation]的碎片化问题。
 
 [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
 [segmentation]: @/edition-2/posts/08-paging-introduction/index.md#fragmentation
@@ -277,14 +277,14 @@ frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
 
 所有这些方法的设置都需要对页表进行修改。例如，需要创建物理内存的映射，或者需要对4级表的一个条目进行递归映射。问题是，如果没有访问页表的现有方法，我们就无法创建这些所需的映射。
 
-这意味着我们需要 bootloader 的帮助，bootloader 创建了内核运行的页表。Bootloader 可以访问页表，所以它可以创建内核需要的任何映射。在目前的实现中，"bootloader "工具箱支持上述两种方法，通过 [cargo features] 进行控制。
+这意味着我们需要 bootloader 的帮助，bootloader 创建了内核运行的页表。Bootloader 可以访问页表，所以它可以创建内核需要的任何映射。在目前的实现中，“bootloader” 工具箱支持上述两种方法，通过 [cargo features] 进行控制。
 
 [cargo features]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 
 - `map_physical_memory` 功能将某处完整的物理内存映射到虚拟地址空间。因此，内核可以访问所有的物理内存，并且可以遵循[_映射完整物理内存_](#ying-she-wan-zheng-de-wu-li-nei-cun)的方法。
-- 有了 "recursive_page_table "功能，bootloader会递归地映射4级page table的一个条目。这允许内核访问页表，如[_递归页表_](#di-gui-ye-biao)部分所述。
+- 有了 “recursive_page_table” 功能，bootloader会递归地映射4级page table的一个条目。这允许内核访问页表，如[_递归页表_](#di-gui-ye-biao)部分所述。
 
-我们为我们的内核选择了第一种方法，因为它很简单，与平台无关，而且更强大（它还允许访问非页表框架）。为了启用所需的引导程序支持，我们在 "引导程序 "的依赖中加入了 "map_physical_memory"功能。
+我们为我们的内核选择了第一种方法，因为它很简单，与平台无关，而且更强大（它还允许访问非页表框架）。为了启用所需的引导程序支持，我们在 “引导程序” 的依赖中加入了 "map_physical_memory"功能。
 
 ```toml
 [dependencies]
@@ -296,7 +296,7 @@ bootloader = { version = "0.9.23", features = ["map_physical_memory"]}
 ### 启动信息
 
 
-Bootloader "板块定义了一个[`BootInfo`]结构，包含了它传递给我们内核的所有信息。这个结构还处于早期阶段，所以在更新到未来的[semver-incompatible]bootloader版本时，可能会出现一些故障。在启用 "map_physical_memory "功能后，它目前有两个字段 "memory_map "和 "physical_memory_offset"。
+`Bootloader` 板块定义了一个[`BootInfo`]结构，包含了它传递给我们内核的所有信息。这个结构还处于早期阶段，所以在更新到未来的[semver-incompatible] bootloader版本时，可能会出现一些故障。在启用 "map_physical_memory" 功能后，它目前有两个字段 "memory_map" 和 "physical_memory_offset"。
 
 [`BootInfo`]: https://docs.rs/bootloader/0.9.3/bootloader/bootinfo/struct.BootInfo.html
 [semver-incompatible]: https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html#caret-requirements
@@ -305,7 +305,7 @@ Bootloader "板块定义了一个[`BootInfo`]结构，包含了它传递给我�
 - physical_memory_offset`告诉我们物理内存映射的虚拟起始地址。通过把这个偏移量加到物理地址上，我们得到相应的虚拟地址。这使得我们可以从我们的内核中访问任意的物理内存。
 - 这个物理内存偏移可以通过在Cargo.toml中添加一个`[package.metadata.bootloader]`表并设置`physical-memory-offset = "0x0000f00000000000"`（或任何其他值）来定制。然而，请注意，如果bootloader遇到物理地址值开始与偏移量以外的空间重叠，也就是说，它以前会映射到其他早期的物理地址的区域，就会出现恐慌。所以一般来说，这个值越高（>1 TiB）越好。
 
-Bootloader将 "BootInfo "结构以"&'static BootInfo "参数的形式传递给我们的内核，并传递给我们的"_start "函数。我们的函数中还没有声明这个参数，所以让我们添加它。
+Bootloader将 `BootInfo` 结构以 `&'static BootInfo`参数的形式传递给我们的内核，并传递给我们的`_start`函数。我们的函数中还没有声明这个参数，所以让我们添加它。
 
 ```rust
 // in src/main.rs
@@ -415,7 +415,7 @@ pub unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
 
 首先，我们从`CR3`寄存器中读取活动的4级表的物理帧。然后我们取其物理起始地址，将其转换为`u64`，并将其添加到`physical_memory_offset`中，得到页表框架映射的虚拟地址。最后，我们通过`as_mut_ptr`方法将虚拟地址转换为`*mut PageTable`原始指针，然后不安全地从它创建一个`&mut PageTable`引用。我们创建一个`&mut`引用，而不是`&`引用，因为我们将在本篇文章的后面对页表进行突变。
 
-我们不需要在这里使用不安全块，因为Rust把一个 "不安全 "fn的完整主体当作一个大的 "不安全 "块。这使得我们的代码更加危险，因为我们可能会在不知不觉中在前几行引入不安全操作。这也使得在安全操作之间发现不安全操作的难度大大增加。有一个[RFC]（https://github.com/rust-lang/rfcs/pull/2585）可以改变这种行为。
+我们不需要在这里使用不安全块，因为Rust把一个 `不安全 fn` 的完整主体当作一个大的 `不安全`块。这使得我们的代码更加危险，因为我们可能会在不知不觉中在前几行引入不安全操作。这也使得在安全操作之间发现不安全操作的难度大大增加。有一个[RFC](https://github.com/rust-lang/rfcs/pull/2585)可以改变这种行为。
 
 现在我们可以用这个函数来打印第4级表格的条目。
 
