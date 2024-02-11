@@ -828,9 +828,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 我们首先通过调用 "create_example_mapping "函数为地址为0的页面创建映射，并为 "mapper "和 "frame_allocator "实例提供一个可变的引用。这将页面映射到VGA文本缓冲区框架，所以我们应该在屏幕上看到对它的任何写入。
 
-然后我们将页面转换为原始指针，并写一个值到偏移量`400`。我们不写到页面的开始，因为VGA缓冲区的顶行被下一个`println`直接移出了屏幕。我们写值`0x_f021_f077_f065_f04e`，表示白色背景上的字符串 _"New!"_ 。正如我们[在_"VGA文本模式"_帖子中]所学到的，对VGA缓冲区的写入应该是不稳定的，所以我们使用[`write_volatile`]方法。
+然后我们将页面转换为原始指针，并写一个值到偏移量`400`。我们不写到页面的开始，因为VGA缓冲区的顶行被下一个`println`直接移出了屏幕。我们写值`0x_f021_f077_f065_f04e`，表示白色背景上的字符串 _"New!"_ 。正如我们[在 _"VGA文本模式"_ 帖子中]所学到的，对VGA缓冲区的写入应该是不稳定的，所以我们使用[`write_volatile`]方法。
 
-[在_"VGA文本模式"_帖子中]: @/edition-2/posts/03-vga-text-buffer/index.md#volatile
+[在 _"VGA文本模式"_ 帖子中]: @/edition-2/posts/03-vga-text-buffer/index.md#volatile
 [`write_volatile`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write_volatile
 
 当我们在QEMU中运行它时，我们看到以下输出。
@@ -992,7 +992,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 虽然我们的`create_example_mapping`函数只是一些示例代码，但我们现在能够为任意的页面创建新的映射。这对于分配内存或在未来的文章中实现多线程是至关重要的。
 
-此时，我们应该再次删除`create_example_mapping`函数，以避免意外地调用未定义的行为，正如[上面](#create_example_mapping 函数)所解释的那样。
+此时，我们应该再次删除`create_example_mapping`函数，以避免意外地调用未定义的行为，正如 [上面](#create-example-mapping-han-shu) 所解释的那样。
 
 ## 总结
 
