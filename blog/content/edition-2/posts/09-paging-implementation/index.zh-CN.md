@@ -296,13 +296,13 @@ bootloader = { version = "0.9.23", features = ["map_physical_memory"]}
 ### 启动信息
 
 
-`Bootloader` 板块定义了一个[`BootInfo`]结构，包含了它传递给我们内核的所有信息。这个结构还处于早期阶段，所以在更新到未来的[semver-incompatible] bootloader版本时，可能会出现一些故障。在启用 "map_physical_memory" 功能后，它目前有两个字段 "memory_map" 和 "physical_memory_offset"。
+`Bootloader` 板块定义了一个[`BootInfo`]结构，包含了它传递给我们内核的所有信息。这个结构还处于早期阶段，所以在更新到未来的 [semver-incompatible] bootloader 版本时，可能会出现一些故障。在启用 "map_physical_memory" 功能后，它目前有两个字段 "memory_map" 和 "physical_memory_offset"。
 
 [`BootInfo`]: https://docs.rs/bootloader/0.9.3/bootloader/bootinfo/struct.BootInfo.html
 [semver-incompatible]: https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html#caret-requirements
 
 - `memory_map`字段包含了可用物理内存的概览。它告诉我们的内核，系统中有多少物理内存可用，哪些内存区域被保留给设备，如VGA硬件。内存图可以从BIOS或UEFI固件中查询，但只能在启动过程的早期查询。由于这个原因，它必须由引导程序提供，因为内核没有办法在以后检索到它。在这篇文章的后面我们将需要内存图。
-- physical_memory_offset`告诉我们物理内存映射的虚拟起始地址。通过把这个偏移量加到物理地址上，我们得到相应的虚拟地址。这使得我们可以从我们的内核中访问任意的物理内存。
+- `physical_memory_offset`告诉我们物理内存映射的虚拟起始地址。通过把这个偏移量加到物理地址上，我们得到相应的虚拟地址。这使得我们可以从我们的内核中访问任意的物理内存。
 - 这个物理内存偏移可以通过在Cargo.toml中添加一个`[package.metadata.bootloader]`表并设置`physical-memory-offset = "0x0000f00000000000"`（或任何其他值）来定制。然而，请注意，如果bootloader遇到物理地址值开始与偏移量以外的空间重叠，也就是说，它以前会映射到其他早期的物理地址的区域，就会出现恐慌。所以一般来说，这个值越高（>1 TiB）越好。
 
 Bootloader将 `BootInfo` 结构以 `&'static BootInfo`参数的形式传递给我们的内核，并传递给我们的`_start`函数。我们的函数中还没有声明这个参数，所以让我们添加它。
