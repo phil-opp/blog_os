@@ -621,11 +621,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 [`translate_addr`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
 [`translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
 
-特质只定义接口，不提供任何实现。`x86_64`板块目前提供了三种类型来实现不同要求的特征。[`OffsetPageTable`] 类型假设完整的物理内存被映射到虚拟地址空间的某个偏移处。[`MappedPageTable`]更灵活一些。它只要求每个页表帧在一个可计算的地址处被映射到虚拟地址空间。最后，[递归页表]类型可以用来通过[递归页表](#di-gui-ye-biao)访问页表框架。
+特质只定义接口，不提供任何实现。`x86_64`板块目前提供了三种类型来实现不同要求的特征。[`OffsetPageTable`] 类型假设完整的物理内存被映射到虚拟地址空间的某个偏移处。[`MappedPageTable`]更灵活一些。它只要求每个页表帧在一个可计算的地址处被映射到虚拟地址空间。最后，[`递归页表`]类型可以用来通过[递归页表](#di-gui-ye-biao)访问页表框架。
 
 [`OffsetPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
 [`MappedPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MappedPageTable.html
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`递归页表`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 在我们的例子中，bootloader在`physical_memory_offset`变量指定的虚拟地址上映射完整的物理内存，所以我们可以使用`OffsetPageTable`类型。为了初始化它，我们在`memory`模块中创建一个新的`init`函数。
 
@@ -961,7 +961,7 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 
 [`Iterator::nth`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.nth
 
-这个实现不是很理想，因为它在每次分配时都会重新创建`usable_frame`分配器。最好的办法是直接将迭代器存储为一个结构域。这样我们就不需要`nth`方法了，可以在每次分配时直接调用[`next`]。这种方法的问题是，目前不可能将 "impl Trait "类型存储在一个结构字段中。当[_name existential types_]完全实现时，它可能会在某一天发挥作用。
+这个实现不是很理想，因为它在每次分配时都会重新创建`usable_frame`分配器。最好的办法是直接将迭代器存储为一个结构域。这样我们就不需要`nth`方法了，可以在每次分配时直接调用[`next`]。这种方法的问题是，目前不可能将 "impl Trait "类型存储在一个结构字段中。当[_named existential types_]完全实现时，它可能会在某一天发挥作用。
 
 [`next`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#tymethod.next
 [_named existential types_]: https://github.com/rust-lang/rfcs/pull/2071
