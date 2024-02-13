@@ -62,7 +62,7 @@ translation_contributors = ["liuyuran"]
 
 在这个例子中，我们看到各种直接映射的页表框架。页表的物理地址也是有效的虚拟地址，这样我们就可以很容易地访问从CR3寄存器开始的各级页表。
 
-然而，它使虚拟地址空间变得杂乱无章，并使寻找较大尺寸的连续内存区域更加困难。例如，想象一下，我们想在上述图形中创建一个大小为1000&nbsp;KiB的虚拟内存区域，例如： [memory-mapping a file] . 我们不能在`28 KiB`处开始区域，因为它将与`1004 KiB`处已经映射的页面相撞。所以我们必须进一步寻找，直到找到一个足够大的未映射区域，例如在`1008 KiB`。这是一个类似于[segmentation]的碎片化问题。
+然而，它使虚拟地址空间变得杂乱无章，并使寻找较大尺寸的连续内存区域更加困难。例如，想象一下，我们想在上述图形中创建一个大小为1000&nbsp;KiB的虚拟内存区域，例如： [memory-mapping a file]。我们不能在`28 KiB`处开始区域，因为它将与`1004 KiB`处已经映射的页面相撞。所以我们必须进一步寻找，直到找到一个足够大的未映射区域，例如在`1008 KiB`。这是一个类似于[segmentation]的碎片化问题。
 
 [memory-mapping a file]: https://en.wikipedia.org/wiki/Memory-mapped_file
 [segmentation]: @/edition-2/posts/08-paging-introduction/index.md#fragmentation
@@ -277,14 +277,14 @@ frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
 
 所有这些方法的设置都需要对页表进行修改。例如，需要创建物理内存的映射，或者需要对4级表的一个条目进行递归映射。问题是，如果没有访问页表的现有方法，我们就无法创建这些所需的映射。
 
-这意味着我们需要 bootloader 的帮助，bootloader 创建了内核运行的页表。Bootloader 可以访问页表，所以它可以创建内核需要的任何映射。在目前的实现中，"bootloader "工具箱支持上述两种方法，通过 [cargo features] 进行控制。
+这意味着我们需要 bootloader 的帮助，bootloader 创建了内核运行的页表。Bootloader 可以访问页表，所以它可以创建内核需要的任何映射。在目前的实现中，“bootloader” 工具箱支持上述两种方法，通过 [cargo features] 进行控制。
 
 [cargo features]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
 
 - `map_physical_memory` 功能将某处完整的物理内存映射到虚拟地址空间。因此，内核可以访问所有的物理内存，并且可以遵循[_映射完整物理内存_](#ying-she-wan-zheng-de-wu-li-nei-cun)的方法。
-- 有了 "recursive_page_table "功能，bootloader会递归地映射4级page table的一个条目。这允许内核访问页表，如[_递归页表_](#di-gui-ye-biao)部分所述。
+- 有了 “recursive_page_table” 功能，bootloader会递归地映射4级page table的一个条目。这允许内核访问页表，如[_递归页表_](#di-gui-ye-biao)部分所述。
 
-我们为我们的内核选择了第一种方法，因为它很简单，与平台无关，而且更强大（它还允许访问非页表框架）。为了启用所需的引导程序支持，我们在 "引导程序 "的依赖中加入了 "map_physical_memory"功能。
+我们为我们的内核选择了第一种方法，因为它很简单，与平台无关，而且更强大（它还允许访问非页表框架）。为了启用所需的引导程序支持，我们在 “引导程序” 的依赖中加入了 "map_physical_memory"功能。
 
 ```toml
 [dependencies]
@@ -296,16 +296,16 @@ bootloader = { version = "0.9.23", features = ["map_physical_memory"]}
 ### 启动信息
 
 
-Bootloader "板块定义了一个[`BootInfo`]结构，包含了它传递给我们内核的所有信息。这个结构还处于早期阶段，所以在更新到未来的[semver-incompatible]bootloader版本时，可能会出现一些故障。在启用 "map_physical_memory "功能后，它目前有两个字段 "memory_map "和 "physical_memory_offset"。
+`Bootloader` 板块定义了一个[`BootInfo`]结构，包含了它传递给我们内核的所有信息。这个结构还处于早期阶段，所以在更新到未来的 [semver-incompatible] bootloader 版本时，可能会出现一些故障。在启用 "map_physical_memory" 功能后，它目前有两个字段 "memory_map" 和 "physical_memory_offset"。
 
 [`BootInfo`]: https://docs.rs/bootloader/0.9.3/bootloader/bootinfo/struct.BootInfo.html
 [semver-incompatible]: https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html#caret-requirements
 
 - `memory_map`字段包含了可用物理内存的概览。它告诉我们的内核，系统中有多少物理内存可用，哪些内存区域被保留给设备，如VGA硬件。内存图可以从BIOS或UEFI固件中查询，但只能在启动过程的早期查询。由于这个原因，它必须由引导程序提供，因为内核没有办法在以后检索到它。在这篇文章的后面我们将需要内存图。
-- physical_memory_offset`告诉我们物理内存映射的虚拟起始地址。通过把这个偏移量加到物理地址上，我们得到相应的虚拟地址。这使得我们可以从我们的内核中访问任意的物理内存。
+- `physical_memory_offset`告诉我们物理内存映射的虚拟起始地址。通过把这个偏移量加到物理地址上，我们得到相应的虚拟地址。这使得我们可以从我们的内核中访问任意的物理内存。
 - 这个物理内存偏移可以通过在Cargo.toml中添加一个`[package.metadata.bootloader]`表并设置`physical-memory-offset = "0x0000f00000000000"`（或任何其他值）来定制。然而，请注意，如果bootloader遇到物理地址值开始与偏移量以外的空间重叠，也就是说，它以前会映射到其他早期的物理地址的区域，就会出现恐慌。所以一般来说，这个值越高（>1 TiB）越好。
 
-Bootloader将 "BootInfo "结构以"&'static BootInfo "参数的形式传递给我们的内核，并传递给我们的"_start "函数。我们的函数中还没有声明这个参数，所以让我们添加它。
+Bootloader将 `BootInfo` 结构以 `&'static BootInfo`参数的形式传递给我们的内核，并传递给我们的`_start`函数。我们的函数中还没有声明这个参数，所以让我们添加它。
 
 ```rust
 // in src/main.rs
@@ -415,7 +415,7 @@ pub unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
 
 首先，我们从`CR3`寄存器中读取活动的4级表的物理帧。然后我们取其物理起始地址，将其转换为`u64`，并将其添加到`physical_memory_offset`中，得到页表框架映射的虚拟地址。最后，我们通过`as_mut_ptr`方法将虚拟地址转换为`*mut PageTable`原始指针，然后不安全地从它创建一个`&mut PageTable`引用。我们创建一个`&mut`引用，而不是`&`引用，因为我们将在本篇文章的后面对页表进行突变。
 
-我们不需要在这里使用不安全块，因为Rust把一个 "不安全 "fn的完整主体当作一个大的 "不安全 "块。这使得我们的代码更加危险，因为我们可能会在不知不觉中在前几行引入不安全操作。这也使得在安全操作之间发现不安全操作的难度大大增加。有一个[RFC]（https://github.com/rust-lang/rfcs/pull/2585）可以改变这种行为。
+我们不需要在这里使用不安全块，因为Rust把一个 `不安全 fn` 的完整主体当作一个大的 `不安全`块。这使得我们的代码更加危险，因为我们可能会在不知不觉中在前几行引入不安全操作。这也使得在安全操作之间发现不安全操作的难度大大增加。有一个[RFC](https://github.com/rust-lang/rfcs/pull/2585)可以改变这种行为。
 
 现在我们可以用这个函数来打印第4级表格的条目。
 
@@ -621,11 +621,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 [`translate_addr`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
 [`translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
 
-特质只定义接口，不提供任何实现。`x86_64`板块目前提供了三种类型来实现不同要求的特征。[`OffsetPageTable`] 类型假设完整的物理内存被映射到虚拟地址空间的某个偏移处。[`MappedPageTable`]更灵活一些。它只要求每个页表帧在一个可计算的地址处被映射到虚拟地址空间。最后，[递归页表]类型可以用来通过[递归页表](#di-gui-ye-biao)访问页表框架。
+特质只定义接口，不提供任何实现。`x86_64`板块目前提供了三种类型来实现不同要求的特征。[`OffsetPageTable`] 类型假设完整的物理内存被映射到虚拟地址空间的某个偏移处。[`MappedPageTable`]更灵活一些。它只要求每个页表帧在一个可计算的地址处被映射到虚拟地址空间。最后，[`递归页表`]类型可以用来通过[递归页表](#di-gui-ye-biao)访问页表框架。
 
 [`OffsetPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
 [`MappedPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MappedPageTable.html
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`递归页表`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 在我们的例子中，bootloader在`physical_memory_offset`变量指定的虚拟地址上映射完整的物理内存，所以我们可以使用`OffsetPageTable`类型。为了初始化它，我们在`memory`模块中创建一个新的`init`函数。
 
@@ -828,9 +828,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 我们首先通过调用 "create_example_mapping "函数为地址为0的页面创建映射，并为 "mapper "和 "frame_allocator "实例提供一个可变的引用。这将页面映射到VGA文本缓冲区框架，所以我们应该在屏幕上看到对它的任何写入。
 
-然后我们将页面转换为原始指针，并写一个值到偏移量`400`。我们不写到页面的开始，因为VGA缓冲区的顶行被下一个`println`直接移出了屏幕。我们写值`0x_f021_f077_f065_f04e`，表示白色背景上的字符串 _"New!"_ 。正如我们[在_"VGA文本模式"_帖子中]所学到的，对VGA缓冲区的写入应该是不稳定的，所以我们使用[`write_volatile`]方法。
+然后我们将页面转换为原始指针，并写一个值到偏移量`400`。我们不写到页面的开始，因为VGA缓冲区的顶行被下一个`println`直接移出了屏幕。我们写值`0x_f021_f077_f065_f04e`，表示白色背景上的字符串 _"New!"_ 。正如我们[在 _"VGA文本模式"_ 帖子中]所学到的，对VGA缓冲区的写入应该是不稳定的，所以我们使用[`write_volatile`]方法。
 
-[在_"VGA文本模式"_帖子中]: @/edition-2/posts/03-vga-text-buffer/index.md#volatile
+[在 _"VGA文本模式"_ 帖子中]: @/edition-2/posts/03-vga-text-buffer/index.md#volatile
 [`write_volatile`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write_volatile
 
 当我们在QEMU中运行它时，我们看到以下输出。
@@ -961,7 +961,7 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 
 [`Iterator::nth`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.nth
 
-这个实现不是很理想，因为它在每次分配时都会重新创建`usable_frame`分配器。最好的办法是直接将迭代器存储为一个结构域。这样我们就不需要`nth`方法了，可以在每次分配时直接调用[`next`]。这种方法的问题是，目前不可能将 "impl Trait "类型存储在一个结构字段中。当[_name existential types_]完全实现时，它可能会在某一天发挥作用。
+这个实现不是很理想，因为它在每次分配时都会重新创建`usable_frame`分配器。最好的办法是直接将迭代器存储为一个结构域。这样我们就不需要`nth`方法了，可以在每次分配时直接调用[`next`]。这种方法的问题是，目前不可能将 "impl Trait "类型存储在一个结构字段中。当[_named existential types_]完全实现时，它可能会在某一天发挥作用。
 
 [`next`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#tymethod.next
 [_named existential types_]: https://github.com/rust-lang/rfcs/pull/2071
@@ -992,7 +992,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 虽然我们的`create_example_mapping`函数只是一些示例代码，但我们现在能够为任意的页面创建新的映射。这对于分配内存或在未来的文章中实现多线程是至关重要的。
 
-此时，我们应该再次删除`create_example_mapping`函数，以避免意外地调用未定义的行为，正如[上面](#create_example_mapping 函数)所解释的那样。
+此时，我们应该再次删除`create_example_mapping`函数，以避免意外地调用未定义的行为，正如 [上面](#create-example-mapping-han-shu) 所解释的那样。
 
 ## 总结
 
