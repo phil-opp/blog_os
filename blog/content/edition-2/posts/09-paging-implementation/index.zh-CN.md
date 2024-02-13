@@ -648,7 +648,7 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
 {…}
 ```
 
-该函数接受 "physical_memory_offset "作为参数，并返回一个新的 "OffsetPageTable "实例，该实例具有 "静态 "寿命。这意味着该实例在我们内核的整个运行时间内保持有效。在函数体中，我们首先调用 "active_level_4_table "函数来获取4级页表的可变引用。然后我们用这个引用调用[`OffsetPageTable::new`] 函数。作为第二个参数，`new`函数希望得到物理内存映射开始的虚拟地址，该地址在`physical_memory_offset'变量中给出。
+该函数接受 "physical_memory_offset "作为参数，并返回一个新的 "OffsetPageTable "实例，该实例具有 "静态 "寿命。这意味着该实例在我们内核的整个运行时间内保持有效。在函数体中，我们首先调用 "active_level_4_table "函数来获取4级页表的可变引用。然后我们用这个引用调用[`OffsetPageTable::new`] 函数。作为第二个参数，`new`函数希望得到物理内存映射开始的虚拟地址，该地址在`physical_memory_offset`变量中给出。
 
 [`OffsetPageTable::new`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
 
