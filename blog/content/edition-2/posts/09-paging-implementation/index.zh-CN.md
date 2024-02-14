@@ -648,11 +648,11 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
 {…}
 ```
 
-该函数接受 "physical_memory_offset "作为参数，并返回一个新的 "OffsetPageTable "实例，该实例具有 "静态 "寿命。这意味着该实例在我们内核的整个运行时间内保持有效。在函数体中，我们首先调用 "active_level_4_table "函数来获取4级页表的可变引用。然后我们用这个引用调用[`OffsetPageTable::new`] 函数。作为第二个参数，`new'函数希望得到物理内存映射开始的虚拟地址，该地址在`physical_memory_offset'变量中给出。
+该函数接受 "physical_memory_offset "作为参数，并返回一个新的 "OffsetPageTable "实例，该实例具有 "静态 "寿命。这意味着该实例在我们内核的整个运行时间内保持有效。在函数体中，我们首先调用 "active_level_4_table "函数来获取4级页表的可变引用。然后我们用这个引用调用[`OffsetPageTable::new`] 函数。作为第二个参数，`new`函数希望得到物理内存映射开始的虚拟地址，该地址在`physical_memory_offset'变量中给出。
 
 [`OffsetPageTable::new`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
 
-从现在开始，`active_level_4_table'函数只能从`init'函数中调用，因为它在多次调用时很容易导致别名的可变引用，这可能导致未定义的行为。出于这个原因，我们通过删除`pub`指定符使该函数成为私有的。
+从现在开始，`active_level_4_table`函数只能从`init`函数中调用，因为它在多次调用时很容易导致别名的可变引用，这可能导致未定义的行为。出于这个原因，我们通过删除`pub`指定符使该函数成为私有的。
 
 我们现在可以使用`Translate::translate_addr`方法而不是我们自己的`memory::translate_addr`函数。我们只需要在`kernel_main`中修改几行。
 
@@ -760,9 +760,9 @@ pub fn create_example_mapping(
 
 #### 一个假的  `FrameAllocator`
 
-为了能够调用`create_example_mapping`，我们需要首先创建一个实现`FrameAllocator`特质的类型。如上所述，如果`map_to'需要新的页表，该特质负责为其分配框架。
+为了能够调用`create_example_mapping`，我们需要首先创建一个实现`FrameAllocator`特质的类型。如上所述，如果`map_to`需要新的页表，该特质负责为其分配框架。
 
-让我们从简单的情况开始，假设我们不需要创建新的页面表。对于这种情况，一个总是返回 "无 "的框架分配器就足够了。我们创建这样一个`空框架分配器'来测试我们的映射函数。
+让我们从简单的情况开始，假设我们不需要创建新的页面表。对于这种情况，一个总是返回 "无 "的框架分配器就足够了。我们创建这样一个`空框架分配器`来测试我们的映射函数。
 
 ```rust
 // in src/memory.rs
@@ -787,7 +787,7 @@ unsafe impl FrameAllocator<Size4KiB> for EmptyFrameAllocator {
 
 图中左边是虚拟地址空间，右边是物理地址空间，中间是页表。页表被存储在物理内存框架中，用虚线表示。虚拟地址空间包含一个地址为`0x803fe00000`的单一映射页，用蓝色标记。为了将这个页面转换到它的框架，CPU在4级页表上行走，直到到达地址为36&nbsp;KiB的框架。
 
-此外，该图用红色显示了VGA文本缓冲区的物理帧。我们的目标是使用`create_example_mapping`函数将一个先前未映射的虚拟页映射到这个帧。由于我们的`EmptyFrameAllocator'总是返回`None'，我们想创建映射，这样就不需要分配器提供额外的帧。这取决于我们为映射选择的虚拟页。
+此外，该图用红色显示了VGA文本缓冲区的物理帧。我们的目标是使用`create_example_mapping`函数将一个先前未映射的虚拟页映射到这个帧。由于我们的`EmptyFrameAllocator`总是返回`None`，我们想创建映射，这样就不需要分配器提供额外的帧。这取决于我们为映射选择的虚拟页。
 
 图中显示了虚拟地址空间中的两个候选页，都用黄色标记。一个页面在地址`0x803fdfd000`，比映射的页面（蓝色）早3页。虽然4级和3级页表的索引与蓝色页相同，但2级和1级的索引不同（见[上一篇][页表-索引]）。2级表的不同索引意味着这个页面使用了一个不同的1级表。由于这个1级表还不存在，如果我们选择该页作为我们的例子映射，我们就需要创建它，这就需要一个额外的未使用的物理帧。相比之下，地址为`0x803fe02000`的第二个候选页就没有这个问题，因为它使用了与蓝色页面相同的1级页表。因此，所有需要的页表都已经存在。
 
@@ -923,7 +923,7 @@ impl BootInfoFrameAllocator {
 
 这个函数使用迭代器组合方法将初始的`MemoryMap`转化为可用的物理帧的迭代器。
 
-- 首先，我们调用`iter`方法，将内存映射转换为[`MemoryRegion`]s的迭代器。
+- 首先，我们调用`iter`方法，将内存映射转换为多个[`MemoryRegion`]的迭代器。
 - 然后我们使用[`filter`]方法跳过任何保留或其他不可用的区域。Bootloader为它创建的所有映射更新了内存地图，所以被我们的内核使用的帧（代码、数据或堆栈）或存储启动信息的帧已经被标记为`InUse`或类似的。因此，我们可以确定 "可使用" 的帧没有在其他地方使用。
 - 之后，我们使用[`map`]组合器和Rust的[range语法]将我们的内存区域迭代器转化为地址范围的迭代器。
 - 接下来，我们使用[`flat_map`]将地址范围转化为帧起始地址的迭代器，使用[`step_by`]选择每4096个地址。由于4096字节（=4&nbsp;KiB）是页面大小，我们得到了每个帧的起始地址。Bootloader对所有可用的内存区域进行页对齐，所以我们在这里不需要任何对齐或舍入代码。通过使用[`flat_map`]而不是`map`，我们得到一个`Iterator<Item = u64>`而不是`Iterator<Item = Iterator<Item = u64>`。
@@ -961,7 +961,7 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 
 [`Iterator::nth`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.nth
 
-这个实现不是很理想，因为它在每次分配时都会重新创建`usable_frame`分配器。最好的办法是直接将迭代器存储为一个结构域。这样我们就不需要`nth`方法了，可以在每次分配时直接调用[`next`]。这种方法的问题是，目前不可能将 "impl Trait "类型存储在一个结构字段中。当[_named existential types_]完全实现时，它可能会在某一天发挥作用。
+这个实现不是很理想，因为它在每次分配时都会重新创建`usable_frame`分配器。最好的办法是直接将迭代器存储为一个结构域。这样我们就不需要`nth`方法了，可以在每次分配时直接调用[`next`]。这种方法的问题是，目前不可能将 "impl Trait "类型存储在一个结构字段中。当 [_named existential types_] 完全实现时，它可能会在某一天发挥作用。
 
 [`next`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#tymethod.next
 [_named existential types_]: https://github.com/rust-lang/rfcs/pull/2071
