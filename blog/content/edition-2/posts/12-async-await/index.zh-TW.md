@@ -1,7 +1,7 @@
 +++
 title = "Async/Await"
 weight = 12
-path = "async-await"
+path = "zh-TW/async-await"
 date = 2020-03-27
 
 [extra]
@@ -581,7 +581,9 @@ fn example(min_len: usize) -> ExampleStateMachine {
 
 我們已經在本文中多次遇到了 _釘住_ (_pinning_) 這個詞。現在終於是時候探索 _釘住操作_ 是什麼以及為什麼它是必需的。
 
-#### 自引用結構體 (Self-Referential Structs)
+#### Self-Referential Structs
+
+自引用結構體 (Self-Referential Structs)
 
 正如上面所解釋的，狀態機轉換將每個暫停點的本地變量存儲在一個結構體中。
 對於像我們的 `example` 函數這樣的小例子來說，這是直接的，並且不會導致任何問題。
@@ -824,7 +826,7 @@ fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 該方法帶有 `self: Pin<&mut Self>` 而不是普通的 `&mut self` 的原因是，從 async/await 創建的 future 實例通常是自引用的，正如我們 [上面][self-ref-async-await] 所看到的。
 通過將 `Self` 包裝到 `Pin` 中，並讓編譯器為從 async/await 生成的自引用 future 選擇不實現 `Unpin`，可以保證在 `poll` 調用之間不會在內存中移動 future。這確保了所有內部引用仍然有效。
 
-[self-ref-async-await]: @/edition-2/posts/12-async-await/index.md#self-referential-structs
+[self-ref-async-await]: @/edition-2/posts/12-async-await/index.zh-TW.md#self-referential-structs
 
 值得注意的是，在第一次 `poll` 調用之前移動 future 是沒問題的。這是因為 future 是惰性的，直到第一次被輪詢之前它們不會做任何事情。
 生成的狀態機的 `start` 狀態因此只包含函數參數，而沒有內部引用。為了調用 `poll`，調用者必須首先將 future 包裝到 `Pin` 中，
