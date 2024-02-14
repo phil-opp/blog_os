@@ -196,7 +196,7 @@ pub enum Poll<T> {
 問題在於 futures 代表了異步任務的結果，這些結果可能還不可用。然而，在實踐中，我們經常需要這些值來進行進一步的計算。
 所以問題是：當我們需要時，我們如何有效地獲取 future 的值？
 
-#### 在 Futures 上等待
+#### Waiting on Futures
 
 一個可能的答案是等待直到 future 變得可用。這可能看起來像這樣：
 
@@ -285,7 +285,7 @@ Future 組合器作為具有 trait 實現的普通結構體，使得編譯器可
 
 [_Zero-cost futures in Rust_]: https://aturon.github.io/blog/2016/08/11/futures/
 
-##### 劣勢
+##### Drawbacks
 
 當 future 組合器 使得編寫非常高效的代碼成為可能時，它們在某些情況下可能很難使用，這是因為類型系統和基於閉包的接口。例如，考慮這樣的代碼：
 
