@@ -298,7 +298,7 @@ bootloader = { version = "0.9", features = ["map_physical_memory"]}
 
 `Bootloader` 板块定义了一个[`BootInfo`]结构，包含了它传递给我们内核的所有信息。这个结构还处于早期阶段，所以在更新到未来的 [semver-incompatible] bootloader 版本时，可能会出现一些故障。在启用 "map_physical_memory" 功能后，它目前有两个字段 "memory_map" 和 "physical_memory_offset"。
 
-[`BootInfo`]: https://docs.rs/bootloader/0.9.3/bootloader/bootinfo/struct.BootInfo.html
+[`BootInfo`]: https://docs.rs/bootloader/0.9/bootloader/bootinfo/struct.BootInfo.html
 [semver-incompatible]: https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html#caret-requirements
 
 - `memory_map`字段包含了可用物理内存的概览。它告诉我们的内核，系统中有多少物理内存可用，哪些内存区域被保留给设备，如VGA硬件。内存图可以从BIOS或UEFI固件中查询，但只能在启动过程的早期查询。由于这个原因，它必须由引导程序提供，因为内核没有办法在以后检索到它。在这篇文章的后面我们将需要内存图。

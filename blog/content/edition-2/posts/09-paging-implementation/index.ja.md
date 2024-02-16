@@ -291,7 +291,7 @@ bootloader = { version = "0.9", features = ["map_physical_memory"]}
 
 `bootloader`クレートは、カーネルに渡されるすべての情報を格納する[`BootInfo`]構造体を定義しています。この構造体はまだ開発の初期段階にあり、将来の[対応していないsemverの][semver-incompatible]ブートローダのバージョンに更新した際には、うまく動かなくなることが予想されます。`map_physical_memory` featureが有効化されているので、いまこれは`memory_map`と`physical_memory_offset`という2つのフィールドを持っています：
 
-[`BootInfo`]: https://docs.rs/bootloader/0.9.3/bootloader/bootinfo/struct.BootInfo.html
+[`BootInfo`]: https://docs.rs/bootloader/0.9/bootloader/bootinfo/struct.BootInfo.html
 [semver-incompatible]: https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html#caret-requirements
 
 - `memory_map`フィールドは、利用可能な物理メモリの情報の概要を保持しています。システムの利用可能な物理メモリがどのくらいかや、どのメモリ領域がVGAハードウェアのようなデバイスのために予約されているかをカーネルに伝えます。これらのメモリマッピングはBIOSやUEFIファームウェアから取得できますが、それが可能なのはブートのごく初期に限られます。そのため、これらをカーネルが後で取得することはできないので、ブートローダによって提供する必要があるわけです。このメモリマッピングは後で必要となります。
