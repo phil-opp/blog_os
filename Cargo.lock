@@ -40,9 +40,9 @@ dependencies = [
 
 [[package]]
 name = "bootloader"
-version = "0.9.26"
+version = "0.9.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16a25c039837fa0543254b422887e6753b48edaa756959999e125afb86ac51c8"
+checksum = "ca7c184781ceb5660872f833fc6bd64ec9ae2500f8c65354705af541e4c28f7f"
 
 [[package]]
 name = "cfg-if"
