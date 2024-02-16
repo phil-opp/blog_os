@@ -118,7 +118,7 @@ Pour notre système cible toutefois, nous avons besoin de paramètres de configu
 ```json
 {
     "llvm-target": "x86_64-unknown-linux-gnu",
-    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
@@ -141,7 +141,7 @@ Nous pouvons aussi cibler les systèmes `x86_64` avec notre noyau, donc notre sp
 ```json
 {
     "llvm-target": "x86_64-unknown-none",
-    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
@@ -201,7 +201,7 @@ Notre fichier de spécification de cible ressemble maintenant à ceci :
 ```json
 {
     "llvm-target": "x86_64-unknown-none",
-    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
