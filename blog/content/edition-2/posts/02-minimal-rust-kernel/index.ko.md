@@ -124,7 +124,7 @@ Cargo는 `--target` 인자를 통해 여러 컴파일 대상 시스템들을 지
 ```json
 {
     "llvm-target": "x86_64-unknown-linux-gnu",
-    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
@@ -148,7 +148,7 @@ Cargo는 `--target` 인자를 통해 여러 컴파일 대상 시스템들을 지
 ```json
 {
     "llvm-target": "x86_64-unknown-none",
-    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
@@ -209,7 +209,7 @@ SIMD 레지스터 값들을 메모리에 백업하고 또 다시 복구하는 �
 ```json
 {
     "llvm-target": "x86_64-unknown-none",
-    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
@@ -418,7 +418,7 @@ pub extern "C" fn _start() -> ! {
 # Cargo.toml 에 들어갈 내용
 
 [dependencies]
-bootloader = "0.9.23"
+bootloader = "0.9"
 ```
 
 부트로더를 의존 크레이트로 추가하는 것만으로는 부팅 가능한 디스크 이미지를 만들 수 없습니다. 커널 컴파일이 끝난 후 커널을 부트로더와 함께 링크할 수 있어야 하는데, cargo는 현재 [빌드 직후 스크립트 실행][post-build scripts] 기능을 지원하지 않습니다.

@@ -92,7 +92,7 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
 ```json
 {
     "llvm-target": "x86_64-unknown-linux-gnu",
-    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
@@ -112,7 +112,7 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
 ```json
 {
     "llvm-target": "x86_64-unknown-none",
-    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
@@ -166,7 +166,7 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
 ```json
 {
     "llvm-target": "x86_64-unknown-none",
-    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+    "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
@@ -365,7 +365,7 @@ pub extern "C" fn _start() -> ! {
 # in Cargo.toml
 
 [dependencies]
-bootloader = "0.9.23"
+bootloader = "0.9"
 ```
 
 只添加引导程序为依赖项，并不足以创建一个可引导的磁盘映像；我们还需要内核编译完成之后，将内核和引导程序组合在一起。然而，截至目前，原生的 cargo 并不支持在编译完成后添加其它步骤（详见[这个 issue](https://github.com/rust-lang/cargo/issues/545)）。
