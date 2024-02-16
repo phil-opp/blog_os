@@ -278,7 +278,7 @@ We choose the first approach for our kernel since it is simple, platform-indepen
 
 ```toml
 [dependencies]
-bootloader = { version = "0.9.23", features = ["map_physical_memory"]}
+bootloader = { version = "0.9", features = ["map_physical_memory"]}
 ```
 
 With this feature enabled, the bootloader maps the complete physical memory to some unused virtual address range. To communicate the virtual address range to our kernel, the bootloader passes a _boot information_ structure.

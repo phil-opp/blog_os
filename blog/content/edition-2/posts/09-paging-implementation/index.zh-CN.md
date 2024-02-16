@@ -288,7 +288,7 @@ frame.map(|frame| frame.start_address() + u64::from(addr.page_offset()))
 
 ```toml
 [dependencies]
-bootloader = { version = "0.9.23", features = ["map_physical_memory"]}
+bootloader = { version = "0.9", features = ["map_physical_memory"]}
 ```
 
 启用这个功能后，bootloader 将整个物理内存映射到一些未使用的虚拟地址范围。为了将虚拟地址范围传达给我们的内核，bootloader 传递了一个 _启动信息_ 结构。
