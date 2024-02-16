@@ -418,7 +418,7 @@ pub extern "C" fn _start() -> ! {
 # Cargo.toml 에 들어갈 내용
 
 [dependencies]
-bootloader = "0.9.23"
+bootloader = "0.9"
 ```
 
 부트로더를 의존 크레이트로 추가하는 것만으로는 부팅 가능한 디스크 이미지를 만들 수 없습니다. 커널 컴파일이 끝난 후 커널을 부트로더와 함께 링크할 수 있어야 하는데, cargo는 현재 [빌드 직후 스크립트 실행][post-build scripts] 기능을 지원하지 않습니다.
