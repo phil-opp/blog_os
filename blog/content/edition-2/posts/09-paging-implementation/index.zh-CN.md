@@ -18,7 +18,7 @@ translation_contributors = ["liuyuran"]
 
 <!-- more -->
 
-这个系列的 blog 在[GitHub]上开放开发，如果你有任何问题，请在这里开一个 issue 来讨论。当然你也可以在[底部][at the bottom]留言。你可以在[`post-08`][post branch]找到这篇文章的完整源码。
+这个系列的 blog 在[GitHub]上开放开发，如果你有任何问题，请在这里开一个 issue 来讨论。当然你也可以在[底部][at the bottom]留言。你可以在[`post-09`][post branch]找到这篇文章的完整源码。
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -555,9 +555,9 @@ fn translate_addr_inner(addr: VirtAddr, physical_memory_offset: VirtAddr)
 
 我们没有重复使用`active_level_4_table`函数，而是再次从`CR3`寄存器读取4级帧。我们这样做是因为它简化了这个原型的实现。别担心，我们一会儿就会创建一个更好的解决方案。
 
-`VirtAddr`结构已经提供了计算四级页面表索引的方法。我们将这些索引存储在一个小数组中，因为它允许我们使用`for`循环遍历页表。在循环之外，我们记住了最后访问的`frame'，以便以后计算物理地址。`frame`在迭代时指向页表框架，在最后一次迭代后指向映射的框架，也就是在跟随第1级条目之后。
+`VirtAddr`结构已经提供了计算四级页面表索引的方法。我们将这些索引存储在一个小数组中，因为它允许我们使用`for`循环遍历页表。在循环之外，我们记住了最后访问的`frame`，以便以后计算物理地址。`frame`在迭代时指向页表框架，在最后一次迭代后指向映射的框架，也就是在跟随第1级条目之后。
 
-在这个循环中，我们再次使用`physical_memory_offset`将帧转换为页表引用。然后我们读取当前页表的条目，并使用[`PageTableEntry::frame`]函数来检索映射的框架。如果该条目没有映射到一个框架，我们返回`None'。如果该条目映射了一个巨大的2&nbsp;MiB或1&nbsp;GiB页面，我们就暂时慌了。
+在这个循环中，我们再次使用`physical_memory_offset`将帧转换为页表引用。然后我们读取当前页表的条目，并使用[`PageTableEntry::frame`]函数来检索映射的框架。如果该条目没有映射到一个框架，我们返回`None`。如果该条目映射了一个巨大的2&nbsp;MiB或1&nbsp;GiB页面，我们就暂时慌了。
 
 [`PageTableEntry::frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
@@ -896,7 +896,7 @@ impl BootInfoFrameAllocator {
 
 #### 一个 `usable_frames` 方法
 
-在我们实现`FrameAllocator'特性之前，我们添加一个辅助方法，将内存映射转换为可用帧的迭代器。
+在我们实现`FrameAllocator`特性之前，我们添加一个辅助方法，将内存映射转换为可用帧的迭代器。
 
 ```rust
 // in src/memory.rs
