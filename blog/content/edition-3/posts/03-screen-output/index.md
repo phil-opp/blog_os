@@ -474,7 +474,7 @@ fn kernel_main(boot_info: &'static mut bootloader_api::BootInfo) -> ! {
     let frame_buffer_struct = frame_buffer_option.unwrap();
     
     // extract the framebuffer info and, to satisfy the borrow checker, clone it
-    let frame_buffer_info = frame_buffer.info().clone();
+    let frame_buffer_info = frame_buffer_struct.info().clone();
     
     // get the framebuffer's mutable raw byte slice
     let raw_frame_buffer = frame_buffer_struct.buffer_mut();
