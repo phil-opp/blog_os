@@ -2,6 +2,7 @@
 title = "Set Up GDB"
 template = "plain.html"
 path = "set-up-gdb"
+aliases = ["set-up-gdb.html"]
 weight = 4
 +++
 
