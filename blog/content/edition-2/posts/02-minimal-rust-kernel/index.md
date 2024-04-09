@@ -406,6 +406,8 @@ Instead of writing our own bootloader, which is a project on its own, we use the
 bootloader = "0.9"
 ```
 
+**Note:** This post is only compatible with `bootloader v0.9`. Newer versions use a different build system and will result in build errors when following this post.
+
 Adding the bootloader as a dependency is not enough to actually create a bootable disk image. The problem is that we need to link our kernel with the bootloader after compilation, but cargo has no support for [post-build scripts].
 
 [post-build scripts]: https://github.com/rust-lang/cargo/issues/545
