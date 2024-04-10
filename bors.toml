@@ -1,4 +1,0 @@
-status = [
-  "Zola Build", "Check Spelling"
-]
-delete_merged_branches = true
