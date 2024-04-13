@@ -511,7 +511,7 @@ cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
 cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
-注意這只是最小的 Rust 獨立執行檔範例，它還是會仰賴一些事情發生，像是當 `_start` 函式呼叫時堆疊已經初始化完畢。**所以如果想真的使用這樣的執行檔的話還需要更多步驟。**
+注意這只是最小的 Rust 獨立執行檔範例，它還是會依賴一些事情，像是當 `_start` 函式呼叫時堆疊已經初始化完畢。**所以如果想真的使用這樣的執行檔的話還需要更多步驟。**
 
 ## 接下來呢？
 
