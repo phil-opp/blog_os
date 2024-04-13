@@ -119,7 +119,7 @@ error: `#[panic_handler]` function required, but not found
 error: language item required, but not found: `eh_personality`
 ```
 
-現在編譯氣告訴我們缺少 `#[panic_handler]` 函式以及 _language item_。
+現在編譯器告訴我們缺少 `#[panic_handler]` 函式以及 _language item_。
 
 ## 實作 panic 處理函式
 
