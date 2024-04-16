@@ -119,7 +119,7 @@ error: `#[panic_handler]` function required, but not found
 error: language item required, but not found: `eh_personality`
 ```
 
-現在編譯氣告訴我們缺少 `#[panic_handler]` 函式以及 _language item_。
+現在編譯器告訴我們缺少 `#[panic_handler]` 函式以及 _language item_。
 
 ## 實作 panic 處理函式
 
@@ -220,9 +220,9 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-我們使用 `no_mangle` 屬性來停用[名字修飾][name mangling]，確保 Rust 編譯器輸出的函式名稱會是 `_start`。沒有這個屬性的話，編譯器會產生符號像是 `_ZN3blog_os4_start7hb173fedf945531caE` 來讓每個函式的名稱都是獨一無二的。我們會需要這項屬性的原因是因為我們接下來希望連結器能夠呼叫入口點函式的名稱。
+我們使用 `no_mangle` 屬性來停用[名稱重整][name mangling]，確保 Rust 編譯器輸出的函式名稱會是 `_start`。沒有這個屬性的話，編譯器會產生符號像是 `_ZN3blog_os4_start7hb173fedf945531caE` 來讓每個函式的名稱都是獨一無二的。我們會需要這項屬性的原因是因為我們接下來希望連結器能夠呼叫入口點函式的名稱。
 
-我們還將函式標記為 `extern "C"` 來告訴編譯器這個函式應當使用 [C 的調用約定][C calling convention]，而不是 Rust 的調用約定。而函式名稱選用 `_start` 的原因是因為這是大多數系統的預設入口點名稱。
+我們還將函式標記為 `extern "C"` 來告訴編譯器這個函式應當使用 [C 的呼叫慣例][C calling convention]，而不是 Rust 的呼叫慣例。而函式名稱選用 `_start` 的原因是因為這是大多數系統的預設入口點名稱。
 
 [name mangling]: https://en.wikipedia.org/wiki/Name_mangling
 [C calling convention]: https://en.wikipedia.org/wiki/Calling_convention
@@ -511,7 +511,7 @@ cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
 cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
-注意這只是最小的 Rust 獨立執行檔範例，它還是會仰賴一些事情發生，像是當 `_start` 函式呼叫時堆疊已經初始化完畢。**所以如果想真的使用這樣的執行檔的話還需要更多步驟。**
+注意這只是最小的 Rust 獨立執行檔範例，它還是會依賴一些事情，像是當 `_start` 函式呼叫時堆疊已經初始化完畢。**所以如果想真的使用這樣的執行檔的話還需要更多步驟。**
 
 ## 接下來呢？
 
