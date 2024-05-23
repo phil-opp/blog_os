@@ -654,13 +654,13 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 ترجمه کلیدهای دیگر نیز به همین روش کار می کند. خوشبختانه کرت ای با نام [`pc-keyboard`] برای ترجمه اسکن‌کد مجموعه های اسکن‌کد 1 و 2 وجود دارد ، بنابراین لازم نیست که خودمان این را پیاده سازی کنیم. برای استفاده از کرت ، آن را به `Cargo.toml` اضافه کرده و در`lib.rs` خود وارد می کنیم:
 
-[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/
+[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pc-keyboard = "0.5.0"
+pc-keyboard = "0.7.0"
 ```
 
 اکنون میتوانیم از این کرت برای باز نویسی `keyboard_interrupt_handler` استفاده کنیم:
@@ -677,8 +677,8 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
     lazy_static! {
         static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1,
-                HandleControl::Ignore)
+            Mutex::new(Keyboard::new(ScancodeSet1::new(),
+                layouts::Us104Key, HandleControl::Ignore)
             );
     }
 
@@ -704,17 +704,17 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 ما از ماکرو `lazy_static` برای ایجاد یک شی ثابت [`Keyboard`] محافظت شده توسط Mutex استفاده می کنیم. `Keyboard` را با طرح صفحه کلید ایالات متحده و مجموعه اسکن کد 1 مقداردهی می کنیم. پارامتر [`HandleControl`] اجازه می دهد تا `ctrl+[a-z]` را به کاراکتر های `U+0001` تا `U+001A` نگاشت کنیم. ما نمی خواهیم چنین کاری انجام دهیم ، بنابراین از گزینه `Ignore` برای برخورد با `ctrl` مانند کلیدهای عادی استفاده می کنیم.
 
-[`HandleControl`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/enum.HandleControl.html
+[`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 
 در هر وقفه ، Mutex را قفل می کنیم ، اسکن کد را از کنترل کننده صفحه کلید می خوانیم و آن را به متد [`add_byte`] منتقل می کنیم ، که اسکن کد را به یک `<Option<KeyEvent` ترجمه می کند. [`KeyEvent`] حاوی كلیدی است كه باعث رویداد شده و آیا این یک رویداد فشردن یا رها کردن بوده است.
 
-[`Keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html
-[`add_byte`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.add_byte
-[`KeyEvent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.KeyEvent.html
+[`Keyboard`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html
+[`add_byte`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html#method.add_byte
+[`KeyEvent`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.KeyEvent.html
 
 برای تفسیر این رویداد کلید ، آن را به متد [`process_keyevent`] منتقل می کنیم ، که در صورت امکان رویداد کلید را به یک کاراکتر ترجمه می کند. به عنوان مثال ، بسته به فشردن کلید shift ، یک رویداد فشردن کلید `A` را به یک حرف کوچک `a` یا یک حرف بزرگ `A` ترجمه می کند.
 
-[`process_keyevent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
+[`process_keyevent`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
 
 با استفاده از این کنترل کننده وقفه اصلاح شده اکنون می توانیم متن بنویسیم:
 

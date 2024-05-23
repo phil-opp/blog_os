@@ -655,13 +655,13 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 他の文字も同じように変換することができます。幸運なことに、スキャンコードセットの1と2のスキャンコードを変換するための [`pc-keyboard`] というクレートがありますので、これを自分で実装する必要はありません。このクレートを使うために `Cargo.toml` に以下を追加し、`lib.rs` でインポートしましょう:
 
-[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/
+[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pc-keyboard = "0.5.0"
+pc-keyboard = "0.7.0"
 ```
 
 これでこのクレートを使って `keyboard_interrupt_handler` を書き直すことができます:
@@ -678,8 +678,8 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
     lazy_static! {
         static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1,
-                HandleControl::Ignore)
+            Mutex::new(Keyboard::new(ScancodeSet1::new(),
+                layouts::Us104Key, HandleControl::Ignore)
             );
     }
 
@@ -705,17 +705,17 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 ミューテックスで保護された静的な [`Keyboard`] オブジェクトを作るために `lazy_static` マクロを使います。`Keyboard` は、レイアウトを US キーボードに、スキャンコードセットは1として初期化を行います。[`HandleControl`] パラメタは、`ctrl+[a-z]` を Unicode 文字の `U+0001` から `U+001A` にマッピングさせることができます。この機能は使いたくないので、`Ignore` オプションを使い `ctrl` キーを通常のキーと同様に扱います。
 
-[`HandleControl`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/enum.HandleControl.html
+[`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 
 各割り込みでは、ミューテックスをロックし、キーボードコントローラからスキャンコードを読み取り、それを読み取ったスキャンコードを `Option<KeyEvent>` に変換する [`add_byte`] メソッドに渡します。[`KeyEvent`] は、そのイベントを起こしたキーと、それが押されたのか離されたのかの情報を含んでいます。
 
-[`Keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html
-[`add_byte`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.add_byte
-[`KeyEvent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.KeyEvent.html
+[`Keyboard`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html
+[`add_byte`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html#method.add_byte
+[`KeyEvent`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.KeyEvent.html
 
 このキーイベントを解釈するために、変換可能であればキーイベントを文字に変換する [`process_keyevent`] メソッドにキーイベントを渡します。例えば `A` キーの押下イベントを、シフトキーが押されていたかによって小文字の `a` か大文字の `A` に変換します。
 
-[`process_keyevent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
+[`process_keyevent`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
 
 修正した割り込みハンドラで、テキストが入力できるようになります:
 

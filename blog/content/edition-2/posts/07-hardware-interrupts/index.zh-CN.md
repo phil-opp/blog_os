@@ -655,13 +655,13 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 其他扫描码也可以通过同样的手段进行译码，不过真的很麻烦，好在 [`pc-keyboard`] crate 已经帮助我们实现了Set-1和Set-2的译码工作，所以无需自己去实现。所以我们只需要将下述内容添加到 `Cargo.toml`，并在 `lib.rs` 里进行引用：
 
-[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/
+[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pc-keyboard = "0.5.0"
+pc-keyboard = "0.7.0"
 ```
 
 现在我们可以使用新的crate对 `keyboard_interrupt_handler` 进行改写：
@@ -678,8 +678,8 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
     lazy_static! {
         static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1,
-                HandleControl::Ignore)
+            Mutex::new(Keyboard::new(ScancodeSet1::new(),
+                layouts::Us104Key, HandleControl::Ignore)
             );
     }
 
@@ -705,17 +705,17 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 首先我们使用 `lazy_static` 宏创建一个受到Mutex同步锁保护的 [`Keyboard`] 对象，初始化参数为美式键盘布局以及Set-1。至于 [`HandleControl`]，它可以设定为将 `ctrl+[a-z]` 映射为Unicode字符 `U+0001` 至 `U+001A`，但我们不想这样，所以使用了 `Ignore` 选项让 `ctrl` 仅仅表现为一个正常键位。
 
-[`HandleControl`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/enum.HandleControl.html
+[`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 
 对于每一个中断，我们都会为 KEYBOARD 加锁，从键盘控制器获取扫描码并将其传入 [`add_byte`] 函数，并将其转化为 `Option<KeyEvent>` 结构。[`KeyEvent`] 包括了触发本次中断的按键信息，以及子动作是按下还是释放。
 
-[`Keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html
-[`add_byte`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.add_byte
-[`KeyEvent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.KeyEvent.html
+[`Keyboard`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html
+[`add_byte`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html#method.add_byte
+[`KeyEvent`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.KeyEvent.html
 
 要处理KeyEvent，我们还需要将其传入 [`process_keyevent`] 函数，将其转换为人类可读的字符，若果有必要，也会对字符进行一些处理。典型例子就是，要判断 `A` 键按下后输入的是小写 `a` 还是大写 `A`，这要取决于shift键是否同时被按下。
 
-[`process_keyevent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
+[`process_keyevent`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
 
 进行这些修改之后，我们就可以正常输入英文了：
 
