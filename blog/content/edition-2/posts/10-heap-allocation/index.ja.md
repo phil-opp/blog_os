@@ -5,7 +5,6 @@ path = "ja/heap-allocation"
 date = 2019-06-26
 
 [extra]
-chapter = "Memory Management"
 # Please update this when updating the translation
 translation_based_on_commit = "afeed7477bb19a29d94a96b8b0620fd241b0d55f"
 # GitHub usernames of the people that translated this post

@@ -5,7 +5,6 @@ path = "ja/double-fault-exceptions"
 date  = 2018-06-18
 
 [extra]
-chapter = "Interrupts"
 # Please update this when updating the translation
 translation_based_on_commit = "27ac0e1acc36f640d7045b427da2ed65b945756b"
 # GitHub usernames of the people that translated this post

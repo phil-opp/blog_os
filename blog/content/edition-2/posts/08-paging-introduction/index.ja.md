@@ -5,7 +5,6 @@ path = "ja/paging-introduction"
 date = 2019-01-14
 
 [extra]
-chapter = "Memory Management"
 # Please update this when updating the translation
 translation_based_on_commit = "3315bfe2f63571f5e6e924d58ed32afd8f39f892"
 # GitHub usernames of the people that translated this post

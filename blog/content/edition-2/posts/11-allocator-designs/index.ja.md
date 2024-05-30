@@ -5,7 +5,6 @@ path = "allocator-designs/ja"
 date = 2020-01-20
 
 [extra]
-chapter = "Memory Management"
 # Please update this when updating the translation
 translation_based_on_commit = "2e3230eca2275226ec33c2dfe7f98f2f4b9a48b4"
 # GitHub usernames of the people that translated this post

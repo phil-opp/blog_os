@@ -5,7 +5,6 @@ path = "ko/cpu-exceptions"
 date  = 2018-06-17
 
 [extra]
-chapter = "Interrupts"
 # Please update this when updating the translation
 translation_based_on_commit = "1c9b5edd6a5a667e282ca56d6103d3ff1fd7cfcb"
 # GitHub usernames of the people that translated this post

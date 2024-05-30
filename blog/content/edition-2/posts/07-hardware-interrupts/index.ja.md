@@ -5,7 +5,6 @@ path = "ja/hardware-interrupts"
 date = 2018-10-22
 
 [extra]
-chapter = "Interrupts"
 # Please update this when updating the translation
 translation_based_on_commit = "81d4f49f153eb5f390681f5c13018dd2aa6be0b1"
 # GitHub usernames of the people that translated this post

@@ -5,7 +5,6 @@ path = "zh-TW/async-await"
 date = 2020-03-27
 
 [extra]
-chapter = "多任務"
 translators = ["ssrlive"]
 +++
 

@@ -5,7 +5,6 @@ path = "ja/cpu-exceptions"
 date  = 2018-06-17
 
 [extra]
-chapter = "Interrupts"
 # Please update this when updating the translation
 translation_based_on_commit = "a8a6b725cff2e485bed76ff52ac1f18cec08cc7b"
 # GitHub usernames of the people that translated this post

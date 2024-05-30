@@ -5,7 +5,6 @@ path = "ko/minimal-rust-kernel"
 date = 2018-02-10
 
 [extra]
-chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "c1af4e31b14e562826029999b9ab1dce86396b93"
 # GitHub usernames of the people that translated this post

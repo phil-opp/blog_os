@@ -5,7 +5,6 @@ path = "fa/hardware-interrupts"
 date = 2018-10-22
 
 [extra]
-chapter = "Interrupts"
 # Please update this when updating the translation
 translation_based_on_commit = "b6ff79ac3290ea92c86763d49cc6c0ff4fb0ea30"
 # GitHub usernames of the people that translated this post

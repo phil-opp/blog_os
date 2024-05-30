@@ -5,7 +5,6 @@ path = "ja/async-await"
 date = 2020-03-27
 
 [extra]
-chapter = "Multitasking"
 # Please update this when updating the translation
 translation_based_on_commit = "bf4f88107966c7ab1327c3cdc0ebfbd76bad5c5f"
 # GitHub usernames of the authors of this translation

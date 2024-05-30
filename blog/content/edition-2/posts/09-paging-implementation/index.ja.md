@@ -5,7 +5,6 @@ path = "ja/paging-implementation"
 date = 2019-03-14
 
 [extra]
-chapter = "Memory Management"
 translation_based_on_commit = "27ab4518acbb132e327ed4f4f0508393e9d4d684"
 translators = ["swnakamura", "garasubo"]
 +++
