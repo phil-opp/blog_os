@@ -8,6 +8,12 @@ I finally managed to get `blog_os` building on my Android phone using [termux](h
 
 <!-- more -->
 
+<div class = "warning">
+
+This post is outdated and the instructions provided here might not work anymore.
+
+</div>
+
 <img src="building-on-android.png" alt="Screenshot of the compilation output from android" style="height: 50rem;" >
 
 
@@ -29,7 +35,7 @@ First, install [termux](https://termux.com/) from the [Google Play Store](https:
     pkg install wget tar
     ```
 
-- Add the [community repository by its-pointless](https://wiki.termux.com/wiki/Package_Management#By_its-pointless):
+- Add the [community repository by its-pointless](https://wiki.termux.com/wiki/Package_Management):
     ```
     wget https://its-pointless.github.io/setup-pointless-repo.sh
     bash setup-pointless-repo.sh
