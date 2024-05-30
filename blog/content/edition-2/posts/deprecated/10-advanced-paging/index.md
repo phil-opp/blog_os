@@ -562,9 +562,8 @@ pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // new argument
 }
 ```
 
-The [`BootInfo`] struct is still in an early stage, so expect some breakage when updating to future [semver-incompatible] bootloader versions. It currently has the three fields `p4_table_addr`, `memory_map`, and `package`:
+The `BootInfo` struct is still in an early stage, so expect some breakage when updating to future [semver-incompatible] bootloader versions. It currently has the three fields `p4_table_addr`, `memory_map`, and `package`:
 
-[`BootInfo`]: https://docs.rs/bootloader/0.3.11/bootloader/bootinfo/struct.BootInfo.html
 [semver-incompatible]: https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html#caret-requirements
 
 - The `p4_table_addr` field contains the recursive virtual address of the level 4 page table. By using this field we can avoid hardcoding the address `0o_177777_777_777_777_777_0000`.
@@ -577,9 +576,7 @@ Before we use the `memory_map` field to create a proper `FrameAllocator`, we wan
 
 Since our `_start` function is called externally from the bootloader, no checking of our function signature occurs. This means that we could let it take arbitrary arguments without any compilation errors, but it would fail or cause undefined behavior at runtime.
 
-To make sure that the entry point function has always the correct signature that the bootloader expects, the `bootloader` crate provides an [`entry_point`] macro that provides a type-checked way to define a Rust function as the entry point. Let's rewrite our entry point function to use this macro:
-
-[`entry_point`]: https://docs.rs/bootloader/0.3.12/bootloader/macro.entry_point.html
+To make sure that the entry point function has always the correct signature that the bootloader expects, the `bootloader` crate provides an `entry_point` macro that provides a type-checked way to define a Rust function as the entry point. Let's rewrite our entry point function to use this macro:
 
 ```rust
 // in src/main.rs
@@ -662,12 +659,11 @@ pub fn init_frame_allocator(
 
 This function uses iterator combinator methods to transform the initial `MemoryMap` into an iterator of usable physical frames:
 
-- First, we call the `iter` method to convert the memory map to an iterator of [`MemoryRegion`]s. Then we use the [`filter`] method to skip any reserved or otherwise unavailable regions. The bootloader updates the memory map for all the mappings it creates, so frames that are used by our kernel (code, data or stack) or to store the boot information are already marked as `InUse` or similar. Thus we can be sure that `Usable` frames are not used somewhere else.
+- First, we call the `iter` method to convert the memory map to an iterator of `MemoryRegion`s. Then we use the [`filter`] method to skip any reserved or otherwise unavailable regions. The bootloader updates the memory map for all the mappings it creates, so frames that are used by our kernel (code, data or stack) or to store the boot information are already marked as `InUse` or similar. Thus we can be sure that `Usable` frames are not used somewhere else.
 - In the second step, we use the [`map`] combinator and Rust's [range syntax] to transform our iterator of memory regions to an iterator of address ranges.
 - The third step is the most complicated: We convert each range to an iterator through the `into_iter` method and then choose every 4096th address using [`step_by`]. Since 4096 bytes (= 4 KiB) is the page size, we get the start address of each frame. The bootloader page aligns all usable memory areas so that we don't need any alignment or rounding code here. By using [`flat_map`] instead of `map`, we get an `Iterator<Item = u64>` instead of an `Iterator<Item = Iterator<Item = u64>>`.
 - In the final step, we convert the start addresses to `PhysFrame` types to construct the desired `Iterator<Item = PhysFrame>`. We then use this iterator to create and return a new `BootInfoFrameAllocator`.
 
-[`MemoryRegion`]: https://docs.rs/bootloader/0.3.12/bootloader/bootinfo/struct.MemoryRegion.html
 [`filter`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.filter
 [`map`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.map
 [range syntax]: https://doc.rust-lang.org/core/ops/struct.Range.html
