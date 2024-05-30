@@ -51,17 +51,17 @@ impl Stream for ScancodeStream {
             .expect("scancode queue not initialized");
 
         // fast path
-        if let Ok(scancode) = queue.pop() {
+        if let Some(scancode) = queue.pop() {
             return Poll::Ready(Some(scancode));
         }
 
         WAKER.register(&cx.waker());
         match queue.pop() {
-            Ok(scancode) => {
+            Some(scancode) => {
                 WAKER.take();
                 Poll::Ready(Some(scancode))
             }
-            Err(crossbeam_queue::PopError) => Poll::Pending,
+            None => Poll::Pending,
         }
     }
 }
