@@ -5,7 +5,6 @@ path = "ko/hardware-interrupts"
 date = 2018-10-22
 
 [extra]
-chapter = "Interrupts"
 # Please update this when updating the translation
 translation_based_on_commit = "a108367d712ef97c28e8e4c1a22da4697ba6e6cd"
 # GitHub usernames of the people that translated this post

@@ -5,7 +5,6 @@ path = "fa/vga-text-mode"
 date  = 2018-02-26
 
 [extra]
-chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "fb8b03e82d9805473fed16e8795a78a020a6b537"
 # GitHub usernames of the people that translated this post

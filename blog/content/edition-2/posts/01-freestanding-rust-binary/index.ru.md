@@ -5,7 +5,6 @@ path = "ru/freestanding-rust-binary"
 date = 2018-02-10
 
 [extra]
-chapter = "С нуля"
 translators = ["MrZloHex"]
 +++
 

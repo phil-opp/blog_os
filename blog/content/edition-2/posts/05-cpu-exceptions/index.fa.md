@@ -5,7 +5,6 @@ path = "fa/cpu-exceptions"
 date  = 2018-06-17
 
 [extra]
-chapter = "Interrupts"
 # Please update this when updating the translation
 translation_based_on_commit = "a081faf3cced9aeb0521052ba91b74a1c408dcff"
 # GitHub usernames of the people that translated this post

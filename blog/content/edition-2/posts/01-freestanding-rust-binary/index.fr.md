@@ -5,7 +5,6 @@ path = "fr/freestanding-rust-binary"
 date = 2018-02-10
 
 [extra]
-chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "3e87916b6c2ed792d1bdb8c0947906aef9013ac1"
 # GitHub usernames of the people that translated this post

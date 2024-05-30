@@ -5,7 +5,6 @@ path = "ja/testing"
 date = 2019-04-27
 
 [extra]
-chapter = "Bare Bones"
 # Please update this when updating the translation
 translation_based_on_commit = "dce5c9825bd4e7ea6c9530e999c9d58f80c585cc"
 # GitHub usernames of the people that translated this post
