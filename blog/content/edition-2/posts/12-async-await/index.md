@@ -1055,7 +1055,7 @@ To use the type, we need to add a dependency on the `crossbeam-queue` crate:
 # in Cargo.toml
 
 [dependencies.crossbeam-queue]
-version = "0.2.1"
+version = "0.3.11"
 default-features = false
 features = ["alloc"]
 ```
@@ -1233,8 +1233,8 @@ impl Stream for ScancodeStream {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<u8>> {
         let queue = SCANCODE_QUEUE.try_get().expect("not initialized");
         match queue.pop() {
-            Ok(scancode) => Poll::Ready(Some(scancode)),
-            Err(crossbeam_queue::PopError) => Poll::Pending,
+            Some(scancode) => Poll::Ready(Some(scancode)),
+            None => Poll::Pending,
         }
     }
 }
@@ -1284,17 +1284,17 @@ impl Stream for ScancodeStream {
             .expect("scancode queue not initialized");
 
         // fast path
-        if let Ok(scancode) = queue.pop() {
+        if let Some(scancode) = queue.pop() {
             return Poll::Ready(Some(scancode));
         }
 
         WAKER.register(&cx.waker());
         match queue.pop() {
-            Ok(scancode) => {
+            Some(scancode) => {
                 WAKER.take();
                 Poll::Ready(Some(scancode))
             }
-            Err(crossbeam_queue::PopError) => Poll::Pending,
+            None => Poll::Pending,
         }
     }
 }
@@ -1350,8 +1350,8 @@ use crate::print;
 
 pub async fn print_keypresses() {
     let mut scancodes = ScancodeStream::new();
-    let mut keyboard = Keyboard::new(layouts::Us104Key, ScancodeSet1,
-        HandleControl::Ignore);
+    let mut keyboard = Keyboard::new(ScancodeSet1::new(),
+        layouts::Us104Key, HandleControl::Ignore);
 
     while let Some(scancode) = scancodes.next().await {
         if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
@@ -1546,7 +1546,7 @@ impl Executor {
             waker_cache,
         } = self;
 
-        while let Ok(task_id) = task_queue.pop() {
+        while let Some(task_id) = task_queue.pop() {
             let task = match tasks.get_mut(&task_id) {
                 Some(task) => task,
                 None => continue, // task no longer exists

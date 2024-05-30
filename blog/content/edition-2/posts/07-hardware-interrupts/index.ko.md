@@ -655,13 +655,13 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 나머지 키를 인식하는 것도 위와 마찬가지 방법으로 진행하면 됩니다. 다행히도, [`pc-keyboard`] 크레이트가 1번/2번 스캔코드 셋을 해석하는 기능을 제공합니다. `Cargo.toml`에 이 크레이트를 추가하고 `lib.rs`에서 불러와 사용합니다.
 
-[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/
+[`pc-keyboard`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pc-keyboard = "0.5.0"
+pc-keyboard = "0.7.0"
 ```
 
 `pc-keyboard` 크레이트를 사용해 `keyboard_interrupt_handler` 함수를 새로 작성합니다.
@@ -678,8 +678,8 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
     lazy_static! {
         static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(layouts::Us104Key, ScancodeSet1,
-                HandleControl::Ignore)
+            Mutex::new(Keyboard::new(ScancodeSet1::new(),
+                layouts::Us104Key, HandleControl::Ignore)
             );
     }
 
@@ -705,17 +705,17 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 `lazy_static` 매크로를 사용해 Mutex로 감싼 [`Keyboard`] 타입의 static 오브젝트를 얻습니다. `Keyboard`가 미국 키보드 레이아웃과 1번 스캔코드 셋을 사용하도록 초기화합니다. [`HandleControl`] 매개변수를 사용하면 `ctrl+[a-z]` 키 입력을 유니코드 `U+0001`에서 `U+001A`까지 값에 대응시킬 수 있습니다. 우리는 그렇게 하지 않기 위해 해당 매개변수에 `Ignore` 옵션을 주고 `ctrl` 키를 일반 키로서 취급합니다.
 
-[`HandleControl`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/enum.HandleControl.html
+[`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 
 인터럽트마다 우리는 Mutex를 잠그고 키보드 컨트롤러로부터 스캔 코드를 읽어온 후, 그 스캔 코드를 [`add_byte`] 함수에 전달합니다. 이 함수는 스캔 코드를 `Option<KeyEvent>`으로 변환합니다. [`KeyEvent`] 타입은 입력된 키의 정보와 키의 누름/뗌 정보를 저장합니다.
 
-[`Keyboard`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html
-[`add_byte`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.add_byte
-[`KeyEvent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.KeyEvent.html
+[`Keyboard`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html
+[`add_byte`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html#method.add_byte
+[`KeyEvent`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.KeyEvent.html
 
 [`process_keyevent`] 함수가 인자로 받은 `KeyEvent`를 변환하여 입력된 키의 문자를 반환합니다 (변환 불가한 경우 `None` 반환). 예를 들어, `A`키 입력 시 shift키 입력 여부에 따라 소문자 `a` 또는 대문자 `A`를 얻습니다.
 
-[`process_keyevent`]: https://docs.rs/pc-keyboard/0.5.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
+[`process_keyevent`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/struct.Keyboard.html#method.process_keyevent
 
 수정한 인터럽트 처리 함수를 통해 텍스트를 입력한 대로 화면에 출력할 수 있습니다.
 
