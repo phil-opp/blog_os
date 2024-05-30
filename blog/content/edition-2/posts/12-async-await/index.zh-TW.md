@@ -6,6 +6,7 @@ date = 2020-03-27
 
 [extra]
 chapter = "多任務"
+translators = ["ssrlive"]
 +++
 
 在這篇文章中，我們將探索 _協作式多任務_ 和 Rust 的 _async/await_ 功能。我們將詳細了解 Rust 中的 async/await 是如何工作的，
