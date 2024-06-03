@@ -9,6 +9,7 @@ chapter = "Bare Bones"
 +++
 
 تتمثل الخطوة الأولى في إنشاء نواة نظام التشغيل الخاصة بنا في إنشاء ملف Rust قابل للتنفيذ لا يربط المكتبة القياسية. هذا يجعل من الممكن تشغيل شيفرة Rust على [bare metal] دون نظام تشغيل أساسي.
+
 [bare metal]: https://en.wikipedia.org/wiki/Bare_machine
 <!-- more -->
 
@@ -68,5 +69,58 @@ blog_os
     └── main.rs
 ```
 يحتوي ملف 'Cargo.toml' على تكوين الصندوق، على سبيل المثال اسم الصندوق، والمؤلف، ورقم [semantic version]، والتبعيات. يحتوي الملف 'src/main.rs' على الوحدة النمطية الجذرية للصندوق والدالة 'الرئيسية'. يمكنك تجميع قفصك من خلال 'cargo build' ثم تشغيل الملف الثنائي 'blog_os' المجمّع في المجلد الفرعي 'target/debug'.
+
 [semantic version]: https://semver.org/
+
+### السمة 'no_std'
+
+يربط صندوقنا الآن المكتبة القياسية ضمنيًا بالمكتبة القياسية. دعونا نحاول تعطيل ذلك بإضافة سمة [no_std]:
+
+
+```rust
+// main.rs
+
+#![no_std]
+
+fn main() {
+    println!("Hello, world!");
+}
+```
+
+عندما نحاول بناءه الآن (عن طريق تشغيل ”cargo build“)، يحدث الخطأ التالي:
+
+```
+error: cannot find macro `println!` in this scope
+ --> src/main.rs:4:5
+  |
+4 |     println!("Hello, world!");
+  |     ^^^^^^^
+```
+
+والسبب في هذا الخطأ هو أن [`println` macro] هو جزء من المكتبة القياسية، والتي لم نعد نضمّنها. لذا لم يعد بإمكاننا طباعة الأشياء. هذا أمر منطقي، لأن 'println' يكتب إلى [standard output]، وهو واصف ملف خاص يوفره نظام التشغيل.
+
+
+[`println` macro]: https://doc.rust-lang.org/std/macro.println.html
+[standard output]: https://en.wikipedia.org/wiki/Standard_streams#Standard_output_.28stdout.29
+
+لذا دعنا نحذف الطباعة ونحاول مرة أخرى بدالة رئيسية فارغة:
+
+```rust
+// main.rs
+
+#![no_std]
+
+fn main() {}
+```
+
+```
+> cargo build
+error: `#[panic_handler]` function required, but not found
+error: language item required, but not found: `eh_personality`
+```
+
+
+يفتقد بناء المترجمات البرمجية الآن إلى `#[panic_handler]`  دالة و _language item_.
+
+
 
