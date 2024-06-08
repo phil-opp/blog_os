@@ -570,11 +570,26 @@ use super::align_up;
 use core::mem;
 
 impl LinkedListAllocator {
+
+    /// Aligns a given address up to a multiple of
+    /// `mem::align_of::<ListNode>, which is 8 bytes
+    /// for x86_64.
+    fn align_to_list_node(addr: usize) -> usize {
+        align_up(addr, mem::align_of::<ListNode>())
+    }
+
+    /// Checks to make sure that alignment and size conditions
+    /// to store a `ListNode` are guaranteed for a given region
+    /// [addr, addr + size).
+    fn is_valid_region(addr: usize, size: usize) -> bool {
+        addr == Self::align_to_list_node(addr) &&
+            size >= mem::size_of::<ListNode>()
+    }
+
     /// Adds the given memory region to the front of the list.
     unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
-        // ensure that the freed region is capable of holding ListNode
-        assert_eq!(align_up(addr, mem::align_of::<ListNode>()), addr);
-        assert!(size >= mem::size_of::<ListNode>());
+        // ensure that the region is capable of holding ListNode
+        assert!(Self::is_valid_region(addr, size));
 
         // create a new list node and append it at the start of the list
         let mut node = ListNode::new(size);
@@ -664,18 +679,34 @@ impl LinkedListAllocator {
     fn alloc_from_region(region: &ListNode, size: usize, align: usize)
         -> Result<usize, ()>
     {
-        let alloc_start = align_up(region.start_addr(), align);
-        let alloc_end = alloc_start.checked_add(size).ok_or(())?;
+        let mut alloc_start = align_up(region.start_addr(), align);
 
+        if alloc_start != region.start_addr() {
+            // We have some potential wasted space at the beginning of the region
+            // that cannot be used due to alignment constraints. We want to be
+            // able to recycle this space as well in our linked list. Otherwise
+            // we may never be able to reclaim this space.
+            // We need to ensure that there is enough space up front for a `ListNode`
+            // so we need to realign alloc_start after `size_of::<ListNode>` bytes
+            // from `region.start_addr()`.
+            // In practice, this can occur in x86_64 only when align is set to 16 bytes.
+            let pushed_start_addr = region
+                .start_addr()
+                .checked_add(mem::size_of::<ListNode>())
+                .ok_or(())?;
+            alloc_start = align_up(pushed_start_addr, align);
+        }
+
+        let alloc_end = alloc_start.checked_add(size).ok_or(())?;
         if alloc_end > region.end_addr() {
             // region too small
             return Err(());
         }
 
         let excess_size = region.end_addr() - alloc_end;
-        if excess_size > 0 && excess_size < mem::size_of::<ListNode>() {
-            // rest of region too small to hold a ListNode (required because the
-            // allocation splits the region in a used and a free part)
+        if excess_size > 0 && !Self::is_valid_region(alloc_end, excess_size) {
+            // Improper alignment or the rest of region too small to hold a ListNode (required
+            // because the allocation splits the region into a used and up to two free parts).
             return Err(());
         }
 
@@ -687,7 +718,16 @@ impl LinkedListAllocator {
 
 First, the function calculates the start and end address of a potential allocation, using the `align_up` function we defined earlier and the [`checked_add`] method. If an overflow occurs or if the end address is behind the end address of the region, the allocation doesn't fit in the region and we return an error.
 
-The function performs a less obvious check after that. This check is necessary because most of the time an allocation does not fit a suitable region perfectly, so that a part of the region remains usable after the allocation. This part of the region must store its own `ListNode` after the allocation, so it must be large enough to do so. The check verifies exactly that: either the allocation fits perfectly (`excess_size == 0`) or the excess size is large enough to store a `ListNode`.
+The function performs a couple of less obvious checks on top of that. When we first perform `align_up` we may get an `alloc_start` that is not the same as `region.start_addr()`. In this case, there can still be some free memory we need to keep track of between `region.start_addr()` (inclusive) to this initially aligned `alloc_start` (exclusive). We need to ensure that this region is suitable for storing a `ListNode` by performing the alignment and size checks in `is_valid_region`.
+
+As `region.start_addr()` is guaranteed to satisfy the alignment condition of `ListNode`, we technically only need to guarantee that the size is not too small. We try and realign after accounting for this space to store one `ListNode` instance after `region.start_addr()`. This may end up pushing our end address out of our region, in which case this entire region we are checking will not be sufficient.
+
+It is interesting to note that this situation can occur in one edge case in the 64-bit architecture we are targeting, where `align` is set to 16 bytes and `region.start_addr()` happens to be some number `16*n + 8`. `alloc_start` would then be set to `16*(n+1)`, leaving us `head_excess_size` of just 8 bytes, which would be insufficient to store the 16 bytes required for a `ListNode`.
+
+We could also have some free memory between `alloc_end` (inclusive) to `region.end_addr()` (exclusive). Here `alloc_end` (in general) is not guaranteed to satisfy the alignment condition of `ListNode`, nor is there a guarantee that the remaining space is sufficient to store a `ListNode`. This check is necessary because most of the time an allocation does not fit a suitable region perfectly, so that a part of the region remains usable after the allocation. This part of the region must store its own `ListNode` after the allocation, so it must be large enough to do so, and it must satisfy the alignment condition, which is exactly what our `is_valid_region` method performs.
+
+We shall soon see how we will actually modify the requested layout size and alignment in our implementation of `GlobalAlloc::alloc()` for the `LinkedListAllocator` to ensure that it additionally conforms to the alignment requirements for storing a `ListNode`. This is essential to ensure that `GlobalAllocator::dealloc()` can successfully add the region back into our linked list.
+
 
 #### Implementing `GlobalAlloc`
 
@@ -712,10 +752,20 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
 
         if let Some((region, alloc_start)) = allocator.find_region(size, align) {
             let alloc_end = alloc_start.checked_add(size).expect("overflow");
-            let excess_size = region.end_addr() - alloc_end;
-            if excess_size > 0 {
-                allocator.add_free_region(alloc_end, excess_size);
+
+            let start_addr = region.start_addr();
+            let end_addr = region.end_addr();
+
+            let tail_excess_size = end_addr - alloc_end;
+            if tail_excess_size > 0 {
+                allocator.add_free_region(alloc_end, tail_excess_size);
             }
+
+            let head_excess_size = alloc_start - start_addr;
+            if head_excess_size > 0 {
+                allocator.add_free_region(start_addr, head_excess_size);
+            }
+
             alloc_start as *mut u8
         } else {
             ptr::null_mut()
@@ -735,7 +785,7 @@ Let's start with the `dealloc` method because it is simpler: First, it performs 
 
 The `alloc` method is a bit more complex. It starts with the same layout adjustments and also calls the [`Mutex::lock`] function to receive a mutable allocator reference. Then it uses the `find_region` method to find a suitable memory region for the allocation and remove it from the list. If this doesn't succeed and `None` is returned, it returns `null_mut` to signal an error as there is no suitable memory region.
 
-In the success case, the `find_region` method returns a tuple of the suitable region (no longer in the list) and the start address of the allocation. Using `alloc_start`, the allocation size, and the end address of the region, it calculates the end address of the allocation and the excess size again. If the excess size is not null, it calls `add_free_region` to add the excess size of the memory region back to the free list. Finally, it returns the `alloc_start` address casted as a `*mut u8` pointer.
+In the success case, the `find_region` method returns a tuple of the suitable region (no longer in the list) and the start address of the allocation. Using `alloc_start`, the allocation size, and the end address of the region, it calculates the end address of the allocation and the excess free fragments that are usable again. If the excess sizes are not zero, it calls `add_free_region` to add the excess sizes of the memory regions back to the free list. Finally, it returns the `alloc_start` address casted as a `*mut u8` pointer.
 
 #### Layout Adjustments
 
@@ -796,6 +846,51 @@ many_boxes_long_lived... [ok]
 ```
 
 This shows that our linked list allocator is able to reuse freed memory for subsequent allocations.
+
+Additionally, to test that we are not leaking any excess segments due to `alloc_start` realignment we can add a simple test case:
+
+```rust
+// in tests/heap_allocation.rs
+
+#[test_case]
+fn head_excess_reuse() {
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[repr(C, align(8))]
+    struct A(u128, u64);
+
+    assert_eq!(8, align_of::<A>());
+    assert_eq!(24, size_of::<A>()); // 24 % 16 = 8
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[repr(C, align(16))]
+    struct B(u128, u64);
+
+    assert_eq!(16, align_of::<B>());
+    assert_eq!(32, size_of::<B>());
+
+    let a1 = Box::new(A(1, 1));
+    let b1 = Box::new(B(1, 1));
+    let a2 = Box::new(A(2, 2));
+
+    assert_eq!(*a1, A(1, 1));
+    assert_eq!(*b1, B(1, 1));
+    assert_eq!(*a2, A(2, 2));
+
+    let a1_raw = Box::into_raw(a1) as usize;
+    let b1_raw = Box::into_raw(b1) as usize;
+    let a2_raw = Box::into_raw(a2) as usize;
+
+    assert_eq!(HEAP_START, a1);
+    assert_eq!(HEAP_START + 48, b1);
+    assert_eq!(HEAP_START + 24, a2);
+}
+```
+
+In this test case we start off with two identical structs `A` and `B`, with different alignment requirements as specified in their struct `#[repr]` attributes. Instances of `A` will have addresses that are a multiple of 8 and those of `B` will have addresses that are a multiple of `16`.
+
+`a1`, an instance of struct `A` on the heap, takes up space from `HEAP_START` to `HEAP_START + 24`, as `HEAP_START` is a multiple of 8 already. `b1` is an instance of struct `B` on the heap, but it needs an address that is a multiple of 16. Therefore, although `HEAP_START + 24` is available, our `alloc_from_region` will first attempt to set `alloc_start = HEAP_START + 32`. However, this will not leave enough room to store a `ListNode` in the 8 bytes between `HEAP_START + 24` and `HEAP_START + 32`. Next, it will attempt to set `alloc_start = HEAP_START + 48` to satisfy both the alignment constraint and to allow a `ListNode` to account for the excess size at the head end of this region.
+
+Because we are adding the `head_excess_size` fragment after `tail_excess_size` fragment in our `alloc` implementation, and because our linked list implementation follows LIFO (Last In First Out) ordering, our linked list will first search the `head_excess_size` region first on a new heap alloc request. We exploit this fact in this test by trying to allocate `a2`, which is an instance of struct `A`, which should fit neatly in the 24 bytes that were recycled from `HEAP_START + 24` to `HEAP_START + 48` as a part of the `head_excess_size` fragment from the previous allocation for `b1`. We can see that in our final lines of this test we are leaking these Boxed pointers and casting them to `usize` to help perform these assertions to ensure that our linked list allocator accounted for all the excess fragments.
 
 ### Discussion
 
