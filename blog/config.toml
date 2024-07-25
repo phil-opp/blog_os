@@ -34,7 +34,7 @@ skip_anchor_prefixes = [
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }
 default_language = "en"
-languages = ["en", "zh-CN", "zh-TW", "fr", "ja", "fa", "ru", "ko"]
+languages = ["en", "zh-CN", "zh-TW", "fr", "ja", "fa", "ru", "ko", "ar"]
 
 [translations]
 lang_name = "English (original)"
@@ -224,6 +224,29 @@ translated_content_notice = "이것은 커뮤니티 멤버가 <strong><a href=\"
 translated_by = "번역한 사람 : "
 translation_contributors = "With contributions from"
 word_separator = "와"
+support_me = """
+<h2>Support Me</h2>
+<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+"""
+comment_note = """
+Do you have a problem, want to share feedback, or discuss further ideas? Feel free to leave a comment here! Please stick to English and follow Rust's <a href="https://www.rust-lang.org/policies/code-of-conduct">code of conduct</a>. This comment thread directly maps to a <a href="_discussion_url_"><em>discussion on GitHub</em></a>, so you can also comment there if you prefer.
+"""
+
+[languages.ar]
+title = "Writing an OS in Rust"
+[languages.ar.translations]
+lang_name = "Arabic"
+toc = "Table of Contents"
+all_posts = "« All Posts"
+comments = "Comments"
+comments_notice = "Please leave your comments in English if possible."
+readmore = "read&nbsp;more&nbsp;»"
+not_translated = "(This post is not translated yet.)"
+translated_content = "Translated Content:"
+translated_content_notice = "This is a community translation of the <strong><a href=\"_original.permalink_\">_original.title_</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!"
+translated_by = "Translation by"
+translation_contributors = "With contributions from"
+word_separator = "and"
 support_me = """
 <h2>Support Me</h2>
 <p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
