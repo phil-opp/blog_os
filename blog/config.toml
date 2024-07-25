@@ -2,8 +2,8 @@ base_url = "https://os.phil-opp.com"
 title = "Writing an OS in Rust"
 description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 
-generate_feed = true
-feed_filename = "rss.xml"
+generate_feeds = true
+feed_filenames = ["rss.xml"]
 compile_sass = true
 minify_html = false
 
