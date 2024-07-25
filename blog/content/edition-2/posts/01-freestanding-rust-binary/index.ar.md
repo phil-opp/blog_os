@@ -5,7 +5,10 @@ path = "ar/freestanding-rust-binary"
 date = 2018-02-10
 
 [extra]
-chapter = "Bare Bones"
+# Please update this when updating the translation
+translation_based_on_commit = "087a464ed77361cff6c459fb42fc655cb9eacbea"
+# GitHub usernames of the people that translated this post
+translators = ["ZAAFHachemrachid"]
 +++
 
 تتمثل الخطوة الأولى في إنشاء نواة نظام التشغيل الخاصة بنا في إنشاء ملف Rust قابل للتنفيذ لا يربط المكتبة القياسية. هذا يجعل من الممكن تشغيل شيفرة Rust على [bare metal] دون نظام تشغيل أساسي.
