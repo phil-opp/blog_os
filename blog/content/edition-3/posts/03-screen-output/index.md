@@ -149,8 +149,6 @@ In the new module, we create basic structs for representing pixel positions and 
 ```rust ,hl_lines=3-16
 // in new kernel/src/framebuffer.rs file
 
-use bootloader_api::info::FrameBuffer;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Position {
     pub x: usize,
@@ -180,7 +178,7 @@ Next, we create a function for setting a specific pixel in the framebuffer to a 
 ```rust ,hl_lines=3 5-39
 // in new kernel/src/framebuffer.rs file
 
-use bootloader_api::info::PixelFormat;
+use bootloader_api::info::{FrameBuffer, PixelFormat};
 
 pub fn set_pixel_in(framebuffer: &mut FrameBuffer, position: Position, color: Color) {
     let info = framebuffer.info();
