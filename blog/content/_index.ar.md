@@ -1,4 +1,6 @@
-+++ template = "edition-2/index.html" +++
++++
+template = "edition-2/index.html"
++++
 
 
 <h1 style="visibility: hidden; height: 0px; margin: 0px; padding: 0px;">كتابة نظام تشغيل بلغة Rust </h1>
