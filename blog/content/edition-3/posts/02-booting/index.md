@@ -75,7 +75,7 @@ This structure has the following general format:
 | 446    | partition entry 1 | 16   |
 | 462    | partition entry 2 | 16   |
 | 478    | partition entry 3 | 16   |
-| 444    | partition entry 4 | 16   |
+| 494    | partition entry 4 | 16   |
 | 510    | boot signature    | 2    |
 
 The bootstrap code is commonly called the _bootloader_ and responsible for loading and starting the operating system kernel.
@@ -706,7 +706,7 @@ We then use the the `create_uefi_image` and `create_bios_image` methods to creat
 [requires build scripts]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 [`join`]: https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.join
 
-We can now use use a simple `cargo build` to cross-compile our kernel, build the bootloader, and combine them to create a bootable disk image:
+We can now use a simple `cargo build` to cross-compile our kernel, build the bootloader, and combine them to create a bootable disk image:
 
 ```
 ❯ cargo build
