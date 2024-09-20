@@ -91,7 +91,7 @@ When we run `cargo test` now, we see that it now succeeds (if it doesn't, see th
 
 <div class = "warning">
 
-**Note:** There is currently a bug in cargo that leads to "duplicate lang item" errors on `cargo test` in some cases. It occurs when you have set `panic = "abort"` for a profile in your `Cargo.toml`. Try removing it, then `cargo test` should work. Alternatively, if that doesn't work, then add `panic-abort-tests = true` to the `[unstable]` section of your `.config/cargo.toml` file. See the [cargo issue](https://github.com/rust-lang/cargo/issues/7359) for more information on this.
+**Note:** There is currently a bug in cargo that leads to "duplicate lang item" errors on `cargo test` in some cases. It occurs when you have set `panic = "abort"` for a profile in your `Cargo.toml`. Try removing it, then `cargo test` should work. Alternatively, if that doesn't work, then add `panic-abort-tests = true` to the `[unstable]` section of your `.cargo/config.toml` file. See the [cargo issue](https://github.com/rust-lang/cargo/issues/7359) for more information on this.
 
 </div>
 
