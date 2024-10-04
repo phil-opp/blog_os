@@ -61,6 +61,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: generated_site
+        path: generated_site
 
     - name: Setup SSH Keys and known_hosts
       run: |
