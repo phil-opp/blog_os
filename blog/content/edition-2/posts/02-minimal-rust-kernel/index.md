@@ -211,7 +211,7 @@ Our target specification file now looks like this:
 ```
 
 ### Building our Kernel
-Compiling for our new target will use Linux conventions (I'm not quite sure why; I assume it's just LLVM's default). This means that we need an entry point named `_start` as described in the [previous post]:
+Compiling for our new target will use Linux conventions, since the ld.lld linker-flavor instructs llvm to compile with the `-flavor gnu` flag (for more linker options, see [the rustc documentation](https://doc.rust-lang.org/rustc/codegen-options/index.html#linker-flavor)). This means that we need an entry point named `_start` as described in the [previous post]:
 
 [previous post]: @/edition-2/posts/01-freestanding-rust-binary/index.md
 
