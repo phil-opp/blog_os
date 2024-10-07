@@ -33,7 +33,7 @@ jobs:
       working-directory: "blog"
 
     - name: Upload Generated Site
-      uses: actions/upload-artifact@v1.0.0
+      uses: actions/upload-artifact@v4
       with:
         name: generated_site
         path: blog/public
@@ -58,9 +58,10 @@ jobs:
 
     steps:
     - name: "Download Generated Site"
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
         name: generated_site
+        path: generated_site
 
     - name: Setup SSH Keys and known_hosts
       run: |

@@ -8,4 +8,4 @@ Philipp Oppermann
 
 <big>contact@phil-opp.com</big>
 
-<small>Gerwigstraße 17, 76131 Karlsruhe, Germany</small>
+<small>Erna-Hötzel-Str. 3, 76344 Eggenstein, Germany</small>
