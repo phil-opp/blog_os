@@ -8,7 +8,7 @@ date = 2018-02-10
 # Please update this when updating the translation
 translation_based_on_commit = "24d04e0e39a3395ecdce795bab0963cb6afe1bfd"
 # GitHub usernames of the people that translated this post
-translators = ["wusyong"]
+translators = ["wusyong", "gnitoahc"]
 +++
 
 建立我們自己的作業系統核心的第一步是建立一個不連結標準函式庫的 Rust 執行檔，這使得無需基礎作業系統即可在[裸機][bare metal]上執行 Rust 程式碼。
@@ -367,7 +367,7 @@ cargo rustc -- -C link-args="/ENTRY:_start /SUBSYSTEM:console"
 
 #### macOS
 
-以下是 Linux 上會出現的（簡化過）連結器錯誤：
+以下是 macOS 上會出現的（簡化過）連結器錯誤：
 
 ```
 error: linking with `cc` failed: exit code: 1
