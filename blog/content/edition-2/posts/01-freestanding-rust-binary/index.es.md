@@ -75,8 +75,6 @@ El archivo `Cargo.toml` contiene la configuración del crate, como el nombre del
 
 Actualmente, nuestro crate enlaza implícitamente con la biblioteca estándar. Intentemos deshabilitar esto añadiendo el [`atributo no_std`]:
 
-[`no_std` attribute]:
-
 ```rust
 // main.rs
 
