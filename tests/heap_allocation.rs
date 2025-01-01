@@ -7,9 +7,9 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, vec::Vec};
-use core::hint::black_box;
 use blog_os::allocator::HEAP_SIZE;
 use bootloader::{entry_point, BootInfo};
+use core::hint::black_box;
 use core::panic::PanicInfo;
 
 entry_point!(main);
