@@ -7,6 +7,7 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, vec::Vec};
+use core::hint::black_box;
 use blog_os::allocator::HEAP_SIZE;
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
@@ -61,6 +62,7 @@ fn many_boxes_long_lived() {
         let x = Box::new(i);
         assert_eq!(*x, i);
     }
+    black_box(&long_lived); // new - ensures long_lived isn't optimized away
     assert_eq!(*long_lived, 1); // new
 }
 
