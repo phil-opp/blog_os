@@ -8,13 +8,13 @@ date = 2018-02-10
 chapter = "Bare Bones"
 +++
 
-En este artículo, crearemos un kernel mínimo de 64 bits en Rust para la arquitectura x86. Partiremos del [un binario Rust autónomo] del artículo anterior para crear una imagen de disco arrancable que imprima algo en la pantalla.
+En esta publicación, crearemos un kernel mínimo de 64 bits en Rust para la arquitectura x86. Partiremos del [un binario Rust autónomo] de la publicación anterior para crear una imagen de disco arrancable que imprima algo en la pantalla.
 
 [un binario Rust autónomo]: @/edition-2/posts/01-freestanding-rust-binary/index.md
 
 <!-- more -->
 
-Este blog se desarrolla abiertamente en [GitHub]. Si tienes problemas o preguntas, por favor abre un issue ahí. También puedes dejar comentarios [al final]. El código fuente completo para este artículo se encuentra en la rama [`post-02`][post branch].
+Este blog se desarrolla abiertamente en [GitHub]. Si tienes problemas o preguntas, por favor abre un issue ahí. También puedes dejar comentarios [al final]. El código fuente completo para esta publicación se encuentra en la rama [`post-02`][post branch].
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [al final]: #comments
