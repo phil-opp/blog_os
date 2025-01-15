@@ -264,7 +264,7 @@ lazy_static! {
             const STACK_SIZE: usize = 4096 * 5;
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
+            let stack_start = VirtAddr::from_ptr(&raw const STACK);
             let stack_end = stack_start + STACK_SIZE;
             stack_end
         };
@@ -275,7 +275,9 @@ lazy_static! {
 
 这次依然是使用 `lazy_static`，Rust的静态变量求值器还没有强大到能够在编译器执行初始化代码。我们将IST的0号位定义为 double fault 的专属栈（其他IST序号也可以如此施为）。然后我们将栈的高地址指针写入0号位，之所以这样做，那是因为 x86 的栈内存分配是从高地址到低地址的。
 
-由于我们还没有实现内存管理机制，所以目前无法直接申请新栈，但我们可以使用 `static mut` 形式的数组来在内存中模拟出栈存储区。`unsafe` 块也是必须的，因为编译器认为这种可以被竞争的变量是不安全的，而且这里必须是 `static mut` 而不是不可修改的 `static`，否则 bootloader 会将其分配到只读页中。当然，在后续的文章中，我们会将其修改为真正的栈分配，`unsafe` 块也一定会去掉的。
+由于我们还没有实现内存管理机制，所以目前无法直接申请新栈，但我们可以使用 `static mut` 形式的数组来在内存中模拟出栈存储区。
+而且这里必须是 `static mut` 而不是不可修改的 `static`，否则 bootloader 会将其分配到只读页中。
+当然，在后续的文章中，我们会将其修改为真正的栈分配。
 
 但要注意，由于现在 double fault 获取的栈不再具有用于防止栈溢出的 guard page，所以我们不应该做任何栈密集型操作了，否则就有可能会污染到栈下方的内存区域。
 

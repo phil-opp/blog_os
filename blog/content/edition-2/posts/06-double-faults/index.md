@@ -124,10 +124,10 @@ For example, what happens if:
 
 Fortunately, the AMD64 manual ([PDF][AMD64 manual]) has an exact definition (in Section 8.2.9). According to it, a “double fault exception _can_ occur when a second exception occurs during the handling of a prior (first) exception handler”. The _“can”_ is important: Only very specific combinations of exceptions lead to a double fault. These combinations are:
 
-First Exception | Second Exception
-----------------|-----------------
-[Divide-by-zero],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault] | [Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
-[Page Fault] | [Page Fault],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]
+| First Exception                                                                                                       | Second Exception                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| [Divide-by-zero],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault] | [Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault]                  |
+| [Page Fault]                                                                                                          | [Page Fault],<br>[Invalid TSS],<br>[Segment Not Present],<br>[Stack-Segment Fault],<br>[General Protection Fault] |
 
 [Divide-by-zero]: https://wiki.osdev.org/Exceptions#Division_Error
 [Invalid TSS]: https://wiki.osdev.org/Exceptions#Invalid_TSS
@@ -215,15 +215,15 @@ On x86_64, the TSS no longer holds any task-specific information at all. Instead
 
 The 64-bit TSS has the following format:
 
-Field  | Type
------- | ----------------
-<span style="opacity: 0.5">(reserved)</span> | `u32`
-Privilege Stack Table | `[u64; 3]`
-<span style="opacity: 0.5">(reserved)</span> | `u64`
-Interrupt Stack Table | `[u64; 7]`
-<span style="opacity: 0.5">(reserved)</span> | `u64`
-<span style="opacity: 0.5">(reserved)</span> | `u16`
-I/O Map Base Address | `u16`
+| Field                                        | Type       |
+| -------------------------------------------- | ---------- |
+| <span style="opacity: 0.5">(reserved)</span> | `u32`      |
+| Privilege Stack Table                        | `[u64; 3]` |
+| <span style="opacity: 0.5">(reserved)</span> | `u64`      |
+| Interrupt Stack Table                        | `[u64; 7]` |
+| <span style="opacity: 0.5">(reserved)</span> | `u64`      |
+| <span style="opacity: 0.5">(reserved)</span> | `u16`      |
+| I/O Map Base Address                         | `u16`      |
 
 The _Privilege Stack Table_ is used by the CPU when the privilege level changes. For example, if an exception occurs while the CPU is in user mode (privilege level 3), the CPU normally switches to kernel mode (privilege level 0) before invoking the exception handler. In that case, the CPU would switch to the 0th stack in the Privilege Stack Table (since 0 is the target privilege level). We don't have any user-mode programs yet, so we will ignore this table for now.
 
@@ -254,7 +254,7 @@ lazy_static! {
             const STACK_SIZE: usize = 4096 * 5;
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
+            let stack_start = VirtAddr::from_ptr(&raw const STACK);
             let stack_end = stack_start + STACK_SIZE;
             stack_end
         };
@@ -265,7 +265,7 @@ lazy_static! {
 
 We use `lazy_static` because Rust's const evaluator is not yet powerful enough to do this initialization at compile time. We define that the 0th IST entry is the double fault stack (any other IST index would work too). Then we write the top address of a double fault stack to the 0th entry. We write the top address because stacks on x86 grow downwards, i.e., from high addresses to low addresses.
 
-We haven't implemented memory management yet, so we don't have a proper way to allocate a new stack. Instead, we use a `static mut` array as stack storage for now. The `unsafe` is required because the compiler can't guarantee race freedom when mutable statics are accessed. It is important that it is a `static mut` and not an immutable `static`, because otherwise the bootloader will map it to a read-only page. We will replace this with a proper stack allocation in a later post, then the `unsafe` will no longer be needed at this place.
+We haven't implemented memory management yet, so we don't have a proper way to allocate a new stack. Instead, we use a `static mut` array as stack storage for now. It is important that it is a `static mut` and not an immutable `static`, because otherwise the bootloader will map it to a read-only page. We will replace this with a proper stack allocation in a later post.
 
 Note that this double fault stack has no guard page that protects against stack overflow. This means that we should not do anything stack-intensive in our double fault handler because a stack overflow might corrupt the memory below the stack.
 
