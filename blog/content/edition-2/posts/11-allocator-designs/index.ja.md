@@ -511,7 +511,7 @@ impl ListNode {
 }
 ```
 
-この型は`new`という単純なコンストラクタ関数を持ち、表現する領域の開始・終端アドレスを計算するメソッドを持っています。`new`関数は[const関数][const function]としていますが、これは後で静的な連結リストアロケータを作る際に必要になるためです。const関数においては、あらゆる可変参照の使用（`next`フィールドを`None`にすることも含め）はunstableであることに注意してください。コンパイルを通すためには、`#![feature(const_mut_refs)]`を`lib.rs`の最初に追加する必要があります。
+この型は`new`という単純なコンストラクタ関数を持ち、表現する領域の開始・終端アドレスを計算するメソッドを持っています。`new`関数は[const関数][const function]としていますが、これは後で静的な連結リストアロケータを作る際に必要になるためです。
 
 [const function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
@@ -967,8 +967,6 @@ impl FixedSizeBlockAllocator {
 `new`関数がするのは、`list_heads`配列を空のノードで初期化し、`fallback_allocator`として[`empty`]で空の連結リストアロケータを作ることだけです。`EMPTY`定数が必要なのは、Rustコンパイラに配列を定数値で初期化したいのだと伝えるためです。配列を直接`[None; BLOCK_SIZES.len()]`で初期化するとうまくいきません──なぜなら、そうするとコンパイラは`Option<&'static mut ListNode>`が`Copy`トレイトを実装していることを要求するようになるのですが、そうはなっていないからです。これは現在のRustコンパイラの制約であり、将来解決するかもしれません。
 
 [`empty`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.empty
-
-もし`LinkedListAllocator`を実装するときにまだやっていないのなら、 **`#![feature(const_mut_refs)]`** を`lib.rs`の最初に追記しないといけません。const関数内におけるあらゆる可変参照型の使用はまだunstableで、それには`list_heads`フィールドの配列要素の型である`Option<&'static mut ListNode>`も（その値を`None`にしているにもかかわらず）含まれるからです。
 
 このunsafeな`init`関数は`fallback_allocator`の[`init`]関数を呼ぶだけで、`list_heads`配列の初期化などは行いません。これらの配列の初期化は、`alloc`と`dealloc`呼び出しが行われたときに初めて行います。
 
