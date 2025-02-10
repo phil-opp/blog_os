@@ -161,6 +161,12 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
 
 [disabling SIMD]: @/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.zh-CN.md
 
+```json
+"rustc-abi": "x86-softfloat"
+```
+
+As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `x86-softfloat` field to `x86-softfloat`.
+
 现在，我们将各个配置项整合在一起。我们的目标配置清单应该长这样：
 
 ```json
@@ -177,7 +183,8 @@ Nightly 版本的编译器允许我们在源码的开头插入**特性标签**�
     "linker": "rust-lld",
     "panic-strategy": "abort",
     "disable-redzone": true,
-    "features": "-mmx,-sse,+soft-float"
+    "features": "-mmx,-sse,+soft-float",
+    "rustc-abi": "x86-softfloat"
 }
 ```
 

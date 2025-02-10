@@ -202,6 +202,12 @@ SIMD 레지스터 값들을 메모리에 백업하고 또 다시 복구하는 �
 
 더 자세히 알고 싶으시다면, 저희가 작성한 [SIMD 기능 해제](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.ko.md)에 관한 포스트를 확인해주세요.
 
+```json
+"rustc-abi": "x86-softfloat"
+```
+
+As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `x86-softfloat` field to `x86-softfloat`.
+
 #### 요약
 컴파일 대상 환경 설정 파일을 아래와 같이 작성합니다:
 
@@ -219,7 +225,8 @@ SIMD 레지스터 값들을 메모리에 백업하고 또 다시 복구하는 �
     "linker": "rust-lld",
     "panic-strategy": "abort",
     "disable-redzone": true,
-    "features": "-mmx,-sse,+soft-float"
+    "features": "-mmx,-sse,+soft-float",
+    "rustc-abi": "x86-softfloat"
 }
 ```
 
