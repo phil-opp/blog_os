@@ -197,6 +197,12 @@ rtl = true
 
 For more information, see our post on [disabling SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
 
+```json
+"rustc-abi": "x86-softfloat"
+```
+
+As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `x86-softfloat` field to `x86-softfloat`.
+
 #### کنار هم قرار دادن
 فایل مشخصات هدف ما اکنون به این شکل است:
 
@@ -214,7 +220,8 @@ For more information, see our post on [disabling SIMD](@/edition-2/posts/02-mini
     "linker": "rust-lld",
     "panic-strategy": "abort",
     "disable-redzone": true,
-    "features": "-mmx,-sse,+soft-float"
+    "features": "-mmx,-sse,+soft-float",
+    "rustc-abi": "x86-softfloat"
 }
 ```
 
