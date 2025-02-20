@@ -193,7 +193,7 @@ For more information, see our post on [disabling SIMD](@/edition-2/posts/02-mini
 "rustc-abi": "x86-softfloat"
 ```
 
-As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `x86-softfloat` field to `x86-softfloat`.
+As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `rustc-abi` field to `x86-softfloat`.
 
 #### Putting it Together
 Our target specification file now looks like this:
