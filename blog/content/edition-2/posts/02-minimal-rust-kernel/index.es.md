@@ -23,7 +23,7 @@ Este blog se desarrolla abiertamente en [GitHub]. Si tienes problemas o pregunta
 
 <!-- toc -->
 
-## El Proceso de Arranque
+## El Proceso de Arranque {#el-proceso-de-arranque}
 Cuando enciendes una computadora, comienza a ejecutar código de firmware almacenado en la [ROM] de la placa madre. Este código realiza una [prueba automática de encendido], detecta la memoria RAM disponible y preinicializa la CPU y el hardware. Después, busca un disco arrancable y comienza a cargar el kernel del sistema operativo.
 
 [ROM]: https://en.wikipedia.org/wiki/Read-only_memory
@@ -88,7 +88,7 @@ Ahora que tenemos una idea general de cómo arranca una computadora, es momento 
 
 Como recordarás, construimos el binario independiente mediante `cargo`, pero dependiendo del sistema operativo, necesitábamos diferentes nombres de punto de entrada y banderas de compilación. Esto se debe a que `cargo` construye por defecto para el _sistema anfitrión_, es decir, el sistema en el que estás ejecutando el comando. Esto no es lo que queremos para nuestro kernel, ya que un kernel que funcione encima, por ejemplo, de Windows, no tiene mucho sentido. En su lugar, queremos compilar para un _sistema destino_ claramente definido.
 
-### Instalación de Rust Nightly
+### Instalación de Rust Nightly {#instalacion-de-rust-nightly}
 Rust tiene tres canales de lanzamiento: _stable_, _beta_ y _nightly_. El libro de Rust explica muy bien la diferencia entre estos canales, así que tómate un momento para [revisarlo](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html#choo-choo-release-channels-and-riding-the-trains). Para construir un sistema operativo, necesitaremos algunas características experimentales que solo están disponibles en el canal nightly, por lo que debemos instalar una versión nightly de Rust.
 
 Para administrar instalaciones de Rust, recomiendo ampliamente [rustup]. Este permite instalar compiladores nightly, beta y estable lado a lado, y facilita mantenerlos actualizados. Con rustup, puedes usar un compilador nightly en el directorio actual ejecutando `rustup override set nightly`. Alternativamente, puedes agregar un archivo llamado `rust-toolchain` con el contenido `nightly` en el directorio raíz del proyecto. Puedes verificar que tienes una versión nightly instalada ejecutando `rustc --version`: el número de versión debería contener `-nightly` al final.
@@ -259,7 +259,7 @@ El problema es que la biblioteca `core` se distribuye junto con el compilador de
 Aquí es donde entra en juego la característica [`build-std`] de cargo. Esta permite recompilar `core` y otras bibliotecas estándar bajo demanda, en lugar de usar las versiones precompiladas que vienen con la instalación de Rust. Esta característica es muy nueva y aún no está terminada, por lo que está marcada como "inestable" y solo está disponible en los [compiladores de Rust nightly].
 
 [`build-std`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
-[compiladores de Rust nightly]: #installing-rust-nightly
+[compiladores de Rust nightly]: #instalacion-de-rust-nightly
 
 Para usar esta característica, necesitamos crear un archivo de configuración local de [cargo] en `.cargo/config.toml` (la carpeta `.cargo` debería estar junto a tu carpeta `src`) con el siguiente contenido:
 
@@ -396,7 +396,7 @@ Ahora que tenemos un ejecutable que realiza algo perceptible, es momento de ejec
 
 Para convertir nuestro kernel compilado en una imagen de disco arrancable, debemos vincularlo con un cargador de arranque. Como aprendimos en la [sección sobre el proceso de arranque], el cargador de arranque es responsable de inicializar la CPU y cargar nuestro kernel.
 
-[sección sobre el proceso de arranque]: #the-boot-process
+[sección sobre el proceso de arranque]: #el-proceso-de-arranque
 
 En lugar de escribir nuestro propio cargador de arranque, lo cual es un proyecto en sí mismo, usamos el crate [`bootloader`]. Este crate implementa un cargador de arranque básico para BIOS sin dependencias en C, solo Rust y ensamblador en línea. Para usarlo y arrancar nuestro kernel, necesitamos agregarlo como dependencia:
 

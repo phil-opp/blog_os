@@ -33,7 +33,7 @@ La publicación terminó con el problema de que [no podemos acceder a las tablas
 
 Para implementar el enfoque, necesitaremos el soporte del bootloader, así que lo configuraremos primero. Después, implementaremos una función que recorra la jerarquía de tablas de páginas para traducir direcciones virtuales a físicas. Finalmente, aprenderemos a crear nuevos mapeos en las tablas de páginas y a encontrar marcos de memoria no utilizados para crear nuevas tablas de páginas.
 
-## Accediendo a las Tablas de Páginas
+## Accediendo a las Tablas de Páginas {#accediendo-a-las-tablas-de-paginas}
 
 Acceder a las tablas de páginas desde nuestro núcleo no es tan fácil como podría parecer. Para entender el problema, echemos un vistazo a la jerarquía de tablas de páginas de 4 niveles del artículo anterior nuevamente:
 
@@ -118,7 +118,7 @@ Veamos un ejemplo para entender cómo funciona todo esto:
 
 La única diferencia con el [ejemplo al principio de este artículo] es la entrada adicional en el índice `511` en la tabla de nivel 4, que está mapeada al marco físico `4 KiB`, el marco de la tabla de nivel 4 misma.
 
-[ejemplo al principio de este artículo]: #accessing-page-tables
+[ejemplo al principio de este artículo]: #accediendo-a-las-tablas-de-paginas
 
 Al permitir que la CPU siga esta entrada en una traducción, no llega a una tabla de nivel 3, sino a la misma tabla de nivel 4 nuevamente. Esto es similar a una función recursiva que se llama a sí misma; por lo tanto, esta tabla se llama _tabla de páginas recursiva_. Lo importante es que la CPU asume que cada entrada en la tabla de nivel 4 apunta a una tabla de nivel 3, por lo que ahora trata la tabla de nivel 4 como una tabla de nivel 3. Esto funciona porque las tablas de todos los niveles tienen la misma estructura exacta en `x86_64`.
 

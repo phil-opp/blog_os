@@ -41,7 +41,7 @@ Esto implica que no podemos usar la mayor parte de la [biblioteca estándar de R
 
 Para crear un kernel de sistema operativo en Rust, necesitamos crear un ejecutable que pueda ejecutarse sin un sistema operativo subyacente. Dicho ejecutable se llama frecuentemente un ejecutable “autónomo” o de “bare metal”.
 
-Esta publicación describe los pasos necesarios para crear un binario autónomo en Rust y explica por qué son necesarios. Si solo te interesa un ejemplo mínimo, puedes **[saltar al resumen](#summary)**.
+Esta publicación describe los pasos necesarios para crear un binario autónomo en Rust y explica por qué son necesarios. Si solo te interesa un ejemplo mínimo, puedes **[saltar al resumen](#resumen)**.
 
 ## Deshabilitando la Biblioteca Estándar
 Por defecto, todos los crates de Rust enlazan con la [biblioteca estándar], que depende del sistema operativo para características como hilos, archivos o redes. También depende de la biblioteca estándar de C, `libc`, que interactúa estrechamente con los servicios del sistema operativo. Como nuestro plan es escribir un sistema operativo, no podemos usar ninguna biblioteca que dependa del sistema operativo. Por lo tanto, tenemos que deshabilitar la inclusión automática de la biblioteca estándar mediante el atributo [`no_std`].
@@ -450,7 +450,7 @@ Si deseas crear un binario mínimo que se ejecute sobre un sistema operativo exi
 
 </details>
 
-## Resumen
+## Resumen {#resumen}
 
 Un binario mínimo autónomo en Rust se ve así:
 

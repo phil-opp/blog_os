@@ -199,7 +199,7 @@ En el crate `x86_64`, el marco de pila de interrupción está representado por l
 
 [`InterruptStackFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptStackFrame.html
 
-### Detrás de las escenas
+### Detrás de las escenas {#demasiada-magia}
 La convención de llamada `x86-interrupt` es una potente abstracción que oculta casi todos los detalles desordenados del proceso de manejo de excepciones. Sin embargo, a veces es útil saber lo que sucede tras el telón. Aquí hay un breve resumen de las cosas que la convención de llamada `x86-interrupt` maneja:
 
 - **Recuperando los argumentos**: La mayoría de las convenciones de llamada esperan que los argumentos se pasen en registros. Esto no es posible para los manejadores de excepciones, ya que no debemos sobrescribir los valores de ningún registro antes de respaldarlos en la pila. En cambio, la convención de llamada `x86-interrupt` es consciente de que los argumentos ya están en la pila en un desplazamiento específico.
@@ -210,7 +210,7 @@ La convención de llamada `x86-interrupt` es una potente abstracción que oculta
 Si está interesado en más detalles, también tenemos una serie de publicaciones que explican el manejo de excepciones utilizando [funciones desnudas] vinculadas [al final de esta publicación][too-much-magic].
 
 [funciones desnudas]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
-[too-much-magic]: #too-much-magic
+[too-much-magic]: #demasiada-magia
 
 ## Implementación
 Ahora que hemos entendido la teoría, es hora de manejar las excepciones de CPU en nuestro núcleo. Comenzaremos creando un nuevo módulo de interrupciones en `src/interrupts.rs`, que primero crea una función `init_idt` que crea una nueva `InterruptDescriptorTable`:
