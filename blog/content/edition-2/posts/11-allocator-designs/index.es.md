@@ -38,7 +38,7 @@ La responsabilidad de un allocador es gestionar la memoria heap disponible. Nece
 Aparte de la corrección, hay muchos objetivos secundarios de diseño. Por ejemplo, el allocador debería utilizar de manera efectiva la memoria disponible y mantener baja la [_fragmentación_]. Además, debería funcionar bien para aplicaciones concurrentes y escalar a cualquier número de procesadores. Para un rendimiento máximo, podría incluso optimizar el diseño de la memoria con respecto a los cachés de CPU para mejorar la [localidad de caché] y evitar [compartición falsa].
 
 [localidad de caché]: https://www.geeksforgeeks.org/locality-of-reference-and-cache-operation-in-cache-memory/
-[_fragmentación_]: https://es.wikipedia.org/wiki/Fragmentaci%C3%B3n_(computaci%C3%B3n)
+[_fragmentación_]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
 [compartición falsa]: https://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 
 Estos requisitos pueden hacer que los buenos allocadores sean muy complejos. Por ejemplo, [jemalloc] tiene más de 30.000 líneas de código. Esta complejidad a menudo es indeseable en el código del kernel, donde un solo error puede conducir a vulnerabilidades de seguridad graves. Afortunadamente, los patrones de asignación del código del kernel son a menudo mucho más simples en comparación con el código de espacio de usuario, de manera que diseños de allocadores relativamente simples suelen ser suficientes.
@@ -194,7 +194,7 @@ Afortunadamente, hay una manera de obtener una referencia `&mut self` de una ref
 [mutabilidad interna]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html
 [vga-mutex]: @/edition-2/posts/03-vga-text-buffer/index.md#spinlocks
 [`spin::Mutex`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html
-[exclusión mutua]: https://es.wikipedia.org/wiki/Exclusi%C3%B3n_mutua
+[exclusión mutua]: https://en.wikipedia.org/wiki/Mutual_exclusion
 
 #### Un Tipo Wrapper `Locked`
 
@@ -314,7 +314,7 @@ fn align_up(addr: usize, align: usize) -> usize {
 
 La función primero calcula el [resto] de la división de `addr` entre `align`. Si el resto es `0`, la dirección ya está alineada con la alineación dada. De lo contrario, alineamos la dirección restando el resto (para que el nuevo resto sea 0) y luego sumando la alineación (para que la dirección no se vuelva más pequeña que la dirección original).
 
-[resto]: https://es.wikipedia.org/wiki/Divisi%C3%B3n_euclidiana
+[resto]: https://en.wikipedia.org/wiki/Euclidean_division
 
 Ten en cuenta que esta no es la forma más eficiente de implementar esta función. Una implementación mucho más rápida se ve así:
 
@@ -330,16 +330,16 @@ fn align_up(addr: usize, align: usize) -> usize {
 Este método requiere que `align` sea una potencia de dos, lo que puede ser garantizado utilizando el trait `GlobalAlloc` (y su parámetro [`Layout`]). Esto hace posible crear una [máscara de bits] para alinear la dirección de manera muy eficiente. Para entender cómo funciona, repasemos el proceso paso a paso, comenzando por el lado derecho:
 
 [`Layout`]: https://doc.rust-lang.org/alloc/alloc/struct.Layout.html
-[máscara de bits]: https://es.wikipedia.org/wiki/M%C3%A1scara_(computaci%C3%B3n)
+[máscara de bits]: https://en.wikipedia.org/wiki/Mask_(computing)
 
 - Dado que `align` es una potencia de dos, su [representación binaria] tiene solo un solo bit establecido (por ejemplo, `0b000100000`). Esto significa que `align - 1` tiene todos los bits inferiores establecidos (por ejemplo, `0b00011111`).
 - Al crear el [NO bit a bit] a través del operador `!`, obtenemos un número que tiene todos los bits establecidos excepto los bits inferiores a `align` (por ejemplo, `0b…111111111100000`).
 - Al realizar un [Y bit a bit] en una dirección y `!(align - 1)`, alineamos la dirección _hacia abajo_. Esto funciona borrando todos los bits que están por debajo de `align`.
 - Dado que queremos alinear hacia arriba en lugar de hacia abajo, incrementamos `addr` en `align - 1` antes de realizar el Y bit a bit. De esta manera, las direcciones ya alineadas permanecen iguales mientras que las direcciones no alineadas se redondean al siguiente límite de alineación.
 
-[representación binaria]: https://es.wikipedia.org/wiki/N%C3%BAmero_binario#Representaci%C3%B3n
-[NO bit a bit]: https://es.wikipedia.org/wiki/Operaci%C3%B3n_bit_a_bit#NO
-[Y bit a bit]: https://es.wikipedia.org/wiki/Operaci%C3%B3n_bit_a_bit#Y
+[representación binaria]: https://en.wikipedia.org/wiki/Binary_number#Representation
+[NO bit a bit]: https://en.wikipedia.org/wiki/Bitwise_operation#NOT
+[Y bit a bit]: https://en.wikipedia.org/wiki/Bitwise_operation#AND
 
 Qué variante elijas depende de ti. Ambas calculan el mismo resultado, solo que utilizan diferentes métodos.
 
@@ -455,7 +455,7 @@ El enfoque de implementación más común es construir una lista enlazada simple
 
 Cada nodo de la lista contiene dos campos: el tamaño de la región de memoria y un puntero a la siguiente región de memoria no utilizada. Con este enfoque, solo necesitamos un puntero a la primera región no utilizada (llamada `head`) para llevar un registro de todas las regiones no utilizadas, independientemente de su número. La estructura de datos resultante se denomina a menudo [_lista libre_].
 
-[_lista libre_]: https://es.wikipedia.org/wiki/Free_list
+[_lista libre_]: https://en.wikipedia.org/wiki/Free_list
 
 Como puedes adivinar por el nombre, esta es la técnica que utiliza el crate `linked_list_allocator`. Los allocadores que utilizan esta técnica a menudo se llaman también _allocadores de piscina_.
 

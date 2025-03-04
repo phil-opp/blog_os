@@ -906,7 +906,7 @@ La función `from_raw` es insegura porque se puede producir un comportamiento in
 
 El tipo [`RawWaker`] requiere que el programador defina explícitamente un [_tabla de métodos virtuales_] (_vtable_) que especifica las funciones que deben ser llamadas cuando `RawWaker` se clona, se despierta o se elimina. La disposición de esta vtable es definida por el tipo [`RawWakerVTable`]. Cada función recibe un argumento `*const ()`, que es un puntero _sin tipo_ a algún valor. La razón por la que se utiliza un puntero `*const ()` en lugar de una referencia apropiada es que el tipo `RawWaker` debería ser no genérico pero aún así soportar tipos arbitrarios. El puntero se proporciona colocando `data` en la llamada a [`RawWaker::new`], que simplemente inicializa un `RawWaker`. Luego, el `Waker` utiliza este `RawWaker` para llamar a las funciones de la vtable con `data`.
 
-[_tabla de métodos virtuales_]: https://es.wikipedia.org/wiki/Tabla_de_metodos_virtuales
+[_tabla de métodos virtuales_]: https://en.wikipedia.org/wiki/Virtual_method_table
 [`RawWakerVTable`]: https://doc.rust-lang.org/stable/core/task/struct.RawWakerVTable.html
 [`RawWaker::new`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html#method.new
 

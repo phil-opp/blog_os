@@ -269,13 +269,13 @@ Para ver la salida de las pruebas en la consola, necesitamos enviar los datos de
 
 Una forma simple de enviar los datos es usar el [puerto serial], un estándar de interfaz antiguo que ya no se encuentra en computadoras modernas. Es fácil de programar y QEMU puede redirigir los bytes enviados a través del serial a la salida estándar del host o a un archivo.
 
-[puerto serial]: https://es.wikipedia.org/wiki/Puerto_serial
+[puerto serial]: https://en.wikipedia.org/wiki/Serial_port
 
 Los chips que implementan una interfaz serial se llaman [UARTs]. Hay [muchos modelos de UART] en x86, pero afortunadamente las únicas diferencias entre ellos son algunas características avanzadas que no necesitamos. Los UART comunes hoy en día son todos compatibles con el [UART 16550], así que utilizaremos ese modelo para nuestro framework de pruebas.
 
-[UARTs]: https://es.wikipedia.org/wiki/Transmisor-receptor_asíncrono_universal
-[muchos modelos de UART]: https://es.wikipedia.org/wiki/Transmisor-receptor_asíncrono_universal#Modelos_UART
-[UART 16550]: https://es.wikipedia.org/wiki/16550_UART
+[UARTs]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
+[muchos modelos de UART]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
+[UART 16550]: https://en.wikipedia.org/wiki/16550_UART
 
 Usaremos la crate [`uart_16550`] para inicializar el UART y enviar datos a través del puerto serial. Para añadirlo como dependencia, actualizamos nuestro `Cargo.toml` y `main.rs`:
 
@@ -545,7 +545,7 @@ where
 Implementamos la función `run` imprimiendo primero el nombre de la función utilizando la función [`any::type_name`] . Esta función se implementa directamente en el compilador y devuelve una descripción de cadena de cada tipo. Para las funciones, el tipo es su nombre, así que esto es exactamente lo que queremos en este caso. El carácter `\t` es el [carácter de tabulación], que añade algo de alineación a los mensajes `[ok]`.
 
 [`any::type_name`]: https://doc.rust-lang.org/stable/core/any/fn.type_name.html
-[carácter de tabulación]: https://es.wikipedia.org/wiki/Tecla_tabulador#Caracteres_de_tabulación
+[carácter de tabulación]: https://en.wikipedia.org/wiki/Tab_key#Tab_characters
 
 Después de imprimir el nombre de la función, invocamos la función de prueba a través de `self()`. Esto solo funciona porque requerimos que `self` implemente el trait `Fn()`. Después de que la función de prueba retorna, imprimimos `[ok]` para indicar que la función no provocó un pánico.
 
