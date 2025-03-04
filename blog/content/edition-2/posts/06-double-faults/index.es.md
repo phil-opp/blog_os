@@ -1,7 +1,7 @@
 +++
 title = "Excepciones de Doble Fallo"
 weight = 6
-path = "double-fault-exceptions"
+path = "es/double-fault-exceptions"
 date  = 2018-06-18
 
 [extra]

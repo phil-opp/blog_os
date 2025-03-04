@@ -1,7 +1,7 @@
 +++
 title = "Un Kernel Mínimo en Rust"
 weight = 2
-path = "minimal-rust-kernel"
+path = "es/minimal-rust-kernel"
 date = 2018-02-10
 
 [extra]

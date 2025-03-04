@@ -1,7 +1,7 @@
 +++
 title = "Diseños de Allocadores"
 weight = 11
-path = "allocator-designs"
+path = "es/allocator-designs"
 date = 2020-01-20
 
 [extra]

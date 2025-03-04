@@ -1,7 +1,7 @@
 +++
 title = "Introducción a la Paginación"
 weight = 8
-path = "paging-introduction"
+path = "es/paging-introduction"
 date = 2019-01-14
 
 [extra]

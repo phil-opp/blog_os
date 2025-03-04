@@ -1,7 +1,7 @@
 +++
 title = "Modo de Texto VGA"
 weight = 3
-path = "modo-texto-vga"
+path = "es/modo-texto-vga"
 date  = 2018-02-26
 
 [extra]

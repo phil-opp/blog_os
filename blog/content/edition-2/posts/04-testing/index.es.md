@@ -1,7 +1,7 @@
 +++
 title = "Pruebas"
 weight = 4
-path = "testing"
+path = "es/testing"
 date = 2019-04-27
 
 [extra]

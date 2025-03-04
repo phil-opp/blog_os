@@ -1,7 +1,7 @@
 +++
 title = "Interrupciones de Hardware"
 weight = 7
-path = "hardware-interrupts"
+path = "es/hardware-interrupts"
 date = 2018-10-22
 
 [extra]

@@ -1,7 +1,7 @@
 +++
 title = "Implementación de Paginación"
 weight = 9
-path = "implementacion-de-paginacion"
+path = "es/implementacion-de-paginacion"
 date = 2019-03-14
 
 [extra]

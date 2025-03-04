@@ -1,7 +1,7 @@
 +++
 title = "Excepciones de CPU"
 weight = 5
-path = "cpu-exceptions"
+path = "es/cpu-exceptions"
 date  = 2018-06-17
 
 [extra]
