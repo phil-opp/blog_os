@@ -2,6 +2,7 @@
 extend-exclude = [
     "*.svg",
     "*.fr.md",
+    "*.es.md",
 ]
 
 [default.extend-words]
