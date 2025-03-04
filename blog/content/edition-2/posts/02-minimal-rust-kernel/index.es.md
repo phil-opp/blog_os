@@ -219,21 +219,21 @@ Compilar para nuestro nuevo objetivo usará convenciones de Linux, ya que la opc
 ```rust
 // src/main.rs
 
-#![no_std] // don't link the Rust standard library
-#![no_main] // disable all Rust-level entry points
+#![no_std] // no enlazar con la biblioteca estándar de Rust
+#![no_main] // deshabilitar todos los puntos de entrada a nivel de Rust
 
 use core::panic::PanicInfo;
 
-/// This function is called on panic.
+/// Esta función se llama cuando ocurre un pánico.
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[no_mangle] // don't mangle the name of this function
+#[no_mangle] // no modificar el nombre de esta función
 pub extern "C" fn _start() -> ! {
-    // this function is the entry point, since the linker looks for a function
-    // named `_start` by default
+    // esta función es el punto de entrada, ya que el enlazador busca una función
+    // llamada `_start` por defecto
     loop {}
 }
 ```
@@ -266,7 +266,7 @@ Para usar esta característica, necesitamos crear un archivo de configuración l
 [cargo]: https://doc.rust-lang.org/cargo/reference/config.html
 
 ```toml
-# in .cargo/config.toml
+# en .cargo/config.toml
 
 [unstable]
 build-std = ["core", "compiler_builtins"]
@@ -306,7 +306,7 @@ Afortunadamente, el crate `compiler_builtins` ya contiene implementaciones para 
 [`build-std-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std-features
 
 ```toml
-# in .cargo/config.toml
+# en .cargo/config.toml
 
 [unstable]
 build-std-features = ["compiler-builtins-mem"]
@@ -329,7 +329,7 @@ Para evitar pasar el parámetro `--target` en cada invocación de `cargo build`,
 [configuración de cargo]: https://doc.rust-lang.org/cargo/reference/config.html
 
 ```toml
-# in .cargo/config.toml
+# en .cargo/config.toml
 
 [build]
 target = "x86_64-blog_os.json"
@@ -403,7 +403,7 @@ En lugar de escribir nuestro propio cargador de arranque, lo cual es un proyecto
 [`bootloader`]: https://crates.io/crates/bootloader
 
 ```toml
-# in Cargo.toml
+# en Cargo.toml
 
 [dependencies]
 bootloader = "0.9"
@@ -478,7 +478,7 @@ Después de escribir la imagen en la memoria USB, puedes ejecutarla en hardware 
 Para facilitar la ejecución de nuestro kernel en QEMU, podemos configurar la clave de configuración `runner` para cargo:
 
 ```toml
-# in .cargo/config.toml
+# en .cargo/config.toml
 
 [target.'cfg(target_os = "none")']
 runner = "bootimage runner"

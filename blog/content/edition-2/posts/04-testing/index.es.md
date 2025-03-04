@@ -67,7 +67,7 @@ La desventaja en comparación con el marco de prueba predeterminado es que mucha
 Para implementar un marco de prueba personalizado para nuestro núcleo, añadimos lo siguiente a nuestro `main.rs`:
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
@@ -98,7 +98,7 @@ Cuando ejecutamos `cargo test` ahora, vemos que ahora tiene éxito (si no lo tie
 Para solucionarlo, primero necesitamos cambiar el nombre de la función generada a algo diferente de `main` mediante el atributo `reexport_test_harness_main`. Luego podemos llamar a la función renombrada desde nuestra función `_start`:
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 #![reexport_test_harness_main = "test_main"]
 
@@ -118,7 +118,7 @@ Establecemos el nombre de la función de entrada del marco de prueba en `test_ma
 Cuando ejecutamos `cargo test` ahora, vemos el mensaje "Ejecutando 0 pruebas" en la pantalla. Ahora estamos listos para crear nuestra primera función de prueba:
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 #[test_case]
 fn trivial_assertion() {
@@ -146,7 +146,7 @@ En este momento, tenemos un bucle infinito al final de nuestra función `_start`
 Afortunadamente, hay una salida: QEMU soporta un dispositivo especial `isa-debug-exit`, que proporciona una forma fácil de salir de QEMU desde el sistema invitado. Para habilitarlo, necesitamos pasar un argumento `-device` a QEMU. Podemos hacerlo añadiendo una clave de configuración `package.metadata.bootimage.test-args` en nuestro `Cargo.toml`:
 
 ```toml
-# in Cargo.toml
+# en Cargo.toml
 
 [package.metadata.bootimage]
 test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
@@ -179,7 +179,7 @@ En lugar de invocar manualmente las instrucciones de ensamblaje `in` y `out`, ut
 [`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
 
 ```toml
-# in Cargo.toml
+# en Cargo.toml
 
 [dependencies]
 x86_64 = "0.14.2"
@@ -190,7 +190,7 @@ Ahora podemos usar el tipo [`Port`] proporcionado por la crate para crear una fu
 [`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -216,7 +216,7 @@ Para especificar el código de salida, creamos un enum `QemuExitCode`. La idea e
 Ahora podemos actualizar nuestro `test_runner` para salir de QEMU después de que se hayan ejecutado todas las pruebas:
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 fn test_runner(tests: &[&dyn Fn()]) {
     println!("Ejecutando {} pruebas", tests.len());
@@ -250,7 +250,7 @@ El problema es que `cargo test` considera todos los códigos de error que no sea
 Para solucionar esto, `bootimage` proporciona una clave de configuración `test-success-exit-code` que mapea un código de salida especificado al código de salida `0`:
 
 ```toml
-# in Cargo.toml
+# en Cargo.toml
 
 [package.metadata.bootimage]
 test-args = […]
@@ -282,7 +282,7 @@ Usaremos la crate [`uart_16550`] para inicializar el UART y enviar datos a trav�
 [`uart_16550`]: https://docs.rs/uart_16550
 
 ```toml
-# in Cargo.toml
+# en Cargo.toml
 
 [dependencies]
 uart_16550 = "0.2.0"
@@ -291,13 +291,13 @@ uart_16550 = "0.2.0"
 La crate `uart_16550` contiene una estructura `SerialPort` que representa los registros del UART, pero aún necesitamos construir una instancia de ella nosotros mismos. Para eso, creamos un nuevo módulo `serial` con el siguiente contenido:
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 mod serial;
 ```
 
 ```rust
-// in src/serial.rs
+// en src/serial.rs
 
 use uart_16550::SerialPort;
 use spin::Mutex;
@@ -321,7 +321,7 @@ Al igual que el dispositivo `isa-debug-exit`, el UART se programa usando E/S de 
 Para hacer que el puerto serial sea fácilmente utilizable, añadimos los macros `serial_print!` y `serial_println!`:
 
 ```rust
-// in src/serial.rs
+// en src/serial.rs
 
 #[doc(hidden)]
 pub fn _print(args: ::core::fmt::Arguments) {
@@ -354,7 +354,7 @@ La implementación es muy similar a la implementación de nuestros macros `print
 Ahora podemos imprimir en la interfaz serial en lugar de en el buffer de texto VGA en nuestro código de prueba:
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 #[cfg(test)]
 fn test_runner(tests: &[&dyn Fn()]) {
@@ -377,7 +377,7 @@ Ten en cuenta que el macro `serial_println` vive directamente en el espacio de n
 Para ver la salida serial de QEMU, necesitamos usar el argumento `-serial` para redirigir la salida a stdout:
 
 ```toml
-# in Cargo.toml
+# en Cargo.toml
 
 [package.metadata.bootimage]
 test-args = [
@@ -414,7 +414,7 @@ Para salir de QEMU con un mensaje de error en un pánico, podemos usar [compilac
 [compilación condicional]: https://doc.rust-lang.org/1.30.0/book/first-edition/conditional-compilation.html
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 // nuestro manejador de pánico existente
 #[cfg(not(test))] // nuevo atributo
@@ -463,7 +463,7 @@ Dado que ahora vemos toda la salida de prueba en la consola, ya no necesitamos l
 Dado que reportamos todos los resultados de las pruebas utilizando el dispositivo `isa-debug-exit` y el puerto serial, ya no necesitamos la ventana de QEMU. Podemos ocultarla pasando el argumento `-display none` a QEMU:
 
 ```toml
-# in Cargo.toml
+# en Cargo.toml
 
 [package.metadata.bootimage]
 test-args = [
@@ -492,7 +492,7 @@ Puedes intentarlo tú mismo añadiendo una instrucción `loop {}` en la prueba `
 [bootimage config]: https://github.com/rust-osdev/bootimage#configuration
 
 ```toml
-# in Cargo.toml
+# en Cargo.toml
 
 [package.metadata.bootimage]
 test-timeout = 300          # (en segundos)
@@ -516,7 +516,7 @@ fn trivial_assertion() {
 Añadir manualmente estas declaraciones de impresión para cada prueba que escribimos es engorroso, así que actualicemos nuestro `test_runner` para imprimir estos mensajes automáticamente. Para hacer eso, necesitamos crear un nuevo trait `Testable`:
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 pub trait Testable {
     fn run(&self) -> ();
@@ -528,7 +528,7 @@ El truco ahora es implementar este trait para todos los tipos `T` que implementa
 [`Fn()` trait]: https://doc.rust-lang.org/stable/core/ops/trait.Fn.html
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 impl<T> Testable for T
 where
@@ -552,7 +552,7 @@ Después de imprimir el nombre de la función, invocamos la función de prueba a
 El último paso es actualizar nuestro `test_runner` para usar el nuevo trait `Testable`:
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 #[cfg(test)]
 pub fn test_runner(tests: &[&dyn Testable]) { // nuevo
@@ -569,7 +569,7 @@ Los únicos dos cambios son el tipo del argumento `tests` de `&[&dyn Fn()]` a `&
 Ahora podemos eliminar las declaraciones de impresión de nuestra prueba `trivial_assertion` ya que ahora se imprimen automáticamente:
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 #[test_case]
 fn trivial_assertion() {
@@ -591,7 +591,7 @@ El nombre de la función ahora incluye la ruta completa a la función, que es ú
 Ahora que tenemos un marco de pruebas funcional, podemos crear algunas pruebas para nuestra implementación del buffer VGA. Primero, creamos una prueba muy simple para verificar que `println` funciona sin provocar un pánico:
 
 ```rust
-// in src/vga_buffer.rs
+// en src/vga_buffer.rs
 
 #[test_case]
 fn test_println_simple() {
@@ -604,7 +604,7 @@ La prueba simplemente imprime algo en el buffer VGA. Si termina sin provocar un 
 Para asegurarnos de que no se produzca un pánico incluso si se imprimen muchas líneas y las líneas se desplazan de la pantalla, podemos crear otra prueba:
 
 ```rust
-// in src/vga_buffer.rs
+// en src/vga_buffer.rs
 
 #[test_case]
 fn test_println_many() {
@@ -617,7 +617,7 @@ fn test_println_many() {
 También podemos crear una función de prueba para verificar que las líneas impresas realmente aparecen en la pantalla:
 
 ```rust
-// in src/vga_buffer.rs
+// en src/vga_buffer.rs
 
 #[test_case]
 fn test_println_output() {
@@ -649,7 +649,7 @@ La convención para las [pruebas de integración] en Rust es ponerlas en un dire
 Todas las pruebas de integración son sus propios ejecutables y completamente separadas de nuestro `main.rs`. Esto significa que cada prueba necesita definir su propia función de punto de entrada. Creemos una prueba de integración de ejemplo llamada `basic_boot` para ver cómo funciona en detalle:
 
 ```rust
-// in tests/basic_boot.rs
+// en tests/basic_boot.rs
 
 #![no_std]
 #![no_main]
@@ -700,7 +700,7 @@ Al igual que `main.rs`, `lib.rs` es un archivo especial que es automáticamente 
 Para que nuestra biblioteca funcione con `cargo test`, también necesitamos mover las funciones y atributos de prueba de `main.rs` a `lib.rs`:
 
 ```rust
-// in src/lib.rs
+// en src/lib.rs
 
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
@@ -763,7 +763,7 @@ Dado que nuestra `lib.rs` se prueba independientemente de `main.rs`, necesitamos
 También movemos el enum `QemuExitCode` y la función `exit_qemu` y los hacemos públicos:
 
 ```rust
-// in src/lib.rs
+// en src/lib.rs
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -785,7 +785,7 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 Ahora los ejecutables y las pruebas de integración pueden importar estas funciones de la biblioteca y no necesitan definir sus propias implementaciones. Para también hacer que `println` y `serial_println` estén disponibles, movemos también las declaraciones de módulo:
 
 ```rust
-// in src/lib.rs
+// en src/lib.rs
 
 pub mod serial;
 pub mod vga_buffer;
@@ -796,7 +796,7 @@ Hacemos que los módulos sean públicos para que sean utilizables fuera de nuest
 Ahora podemos actualizar nuestro `main.rs` para usar la biblioteca:
 
 ```rust
-// in src/main.rs
+// en src/main.rs
 
 #![no_std]
 #![no_main]
@@ -841,7 +841,7 @@ En este punto, `cargo run` y `cargo test` deberían funcionar nuevamente. Por su
 Al igual que nuestro `src/main.rs`, nuestro ejecutable `tests/basic_boot.rs` puede importar tipos de nuestra nueva biblioteca. Esto nos permite importar los componentes faltantes para completar nuestra prueba:
 
 ```rust
-// in tests/basic_boot.rs
+// en tests/basic_boot.rs
 
 #![test_runner(blog_os::test_runner)]
 
@@ -858,7 +858,7 @@ Ahora `cargo test` sale normalmente nuevamente. Cuando lo ejecutas, verás que c
 Ahora podemos añadir pruebas a nuestro `basic_boot.rs`. Por ejemplo, podemos probar que `println` funciona sin provocar un pánico, como hicimos en las pruebas del buffer VGA:
 
 ```rust
-// in tests/basic_boot.rs
+// en tests/basic_boot.rs
 
 use blog_os::println;
 
@@ -893,7 +893,7 @@ El marco de pruebas de la biblioteca estándar admite un atributo [`#[should_pan
 Si bien no podemos usar el atributo `#[should_panic]` en nuestro núcleo, podemos obtener un comportamiento similar creando una prueba de integración que salga con un código de error de éxito desde el manejador de pánicos. Comencemos a crear tal prueba con el nombre `should_panic`:
 
 ```rust
-// in tests/should_panic.rs
+// en tests/should_panic.rs
 
 #![no_std]
 #![no_main]
@@ -912,7 +912,7 @@ fn panic(_info: &PanicInfo) -> ! {
 Esta prueba aún está incompleta ya que no define una función `_start` ni ninguno de los atributos del marco de prueba personalizados que faltan. Añadamos las partes que faltan:
 
 ```rust
-// in tests/should_panic.rs
+// en tests/should_panic.rs
 
 #![feature(custom_test_frameworks)]
 #![test_runner(test_runner)]
@@ -941,7 +941,7 @@ En lugar de reutilizar el `test_runner` de `lib.rs`, la prueba define su propia 
 Ahora podemos crear una prueba que debería fallar:
 
 ```rust
-// in tests/should_panic.rs
+// en tests/should_panic.rs
 
 use blog_os::serial_print;
 
@@ -967,7 +967,7 @@ La clave para esto es deshabilitar la bandera `harness` para la prueba en el `Ca
 Deshabilitemos la bandera `harness` para nuestra prueba `should_panic`:
 
 ```toml
-# in Cargo.toml
+# en Cargo.toml
 
 [[test]]
 name = "should_panic"
@@ -977,7 +977,7 @@ harness = false
 Ahora simplificamos enormemente nuestra prueba `should_panic` al eliminar el código relacionado con el `test_runner`. El resultado se ve así:
 
 ```rust
-// in tests/should_panic.rs
+// en tests/should_panic.rs
 
 #![no_std]
 #![no_main]

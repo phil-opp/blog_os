@@ -125,11 +125,11 @@ El atributo `panic_handler` define la función que el compilador invoca cuando o
 [panic]: https://doc.rust-lang.org/stable/book/ch09-01-unrecoverable-errors-with-panic.html
 
 ```rust
-// in main.rs
+// en main.rs
 
 use core::panic::PanicInfo;
 
-/// This function is called on panic.
+/// Esta función se llama cuando ocurre un pánico.
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
@@ -206,7 +206,7 @@ Para indicar al compilador de Rust que no queremos usar la cadena normal de punt
 
 use core::panic::PanicInfo;
 
-/// This function is called on panic.
+/// Esta función se llama cuando ocurre un pánico.
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
@@ -426,7 +426,7 @@ Ahora nuestro programa debería compilarse exitosamente en macOS.
 Actualmente, tenemos diferentes comandos de construcción dependiendo de la plataforma host, lo cual no es ideal. Para evitar esto, podemos crear un archivo llamado `.cargo/config.toml` que contenga los argumentos específicos de cada plataforma:
 
 ```toml
-# in .cargo/config.toml
+# en .cargo/config.toml
 
 [target.'cfg(target_os = "linux")']
 rustflags = ["-C", "link-arg=-nostartfiles"]
@@ -457,19 +457,19 @@ Un binario mínimo autónomo en Rust se ve así:
 `src/main.rs`:
 
 ```rust
-#![no_std] // don't link the Rust standard library
-#![no_main] // disable all Rust-level entry points
+#![no_std] // no enlazar con la biblioteca estándar de Rust
+#![no_main] // deshabilitar todos los puntos de entrada a nivel de Rust
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // don't mangle the name of this function
+#[no_mangle] // no modificar el nombre de esta función
 pub extern "C" fn _start() -> ! {
-    // this function is the entry point, since the linker looks for a function
-    // named `_start` by default
+    // esta función es el punto de entrada, ya que el enlazador busca una función
+    // llamada `_start` por defecto
     loop {}
 }
 
-/// This function is called on panic.
+/// Esta función se llama cuando ocurre un pánico.
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
@@ -484,13 +484,13 @@ name = "crate_name"
 version = "0.1.0"
 authors = ["Author Name <author@example.com>"]
 
-# the profile used for `cargo build`
+# el perfil usado para `cargo build`
 [profile.dev]
-panic = "abort" # disable stack unwinding on panic
+panic = "abort" # deshabilitar el desenrollado de la pila en caso de pánico
 
-# the profile used for `cargo build --release`
+# el perfil usado para `cargo build --release`
 [profile.release]
-panic = "abort" # disable stack unwinding on panic
+panic = "abort" # deshabilitar el desenrollado de la pila en caso de pánico
 ```
 
 Para construir este binario, necesitamos compilar para un destino bare metal, como `thumbv7em-none-eabihf`:
