@@ -30,9 +30,9 @@ dependencies = [
 
 [[package]]
 name = "bootloader"
-version = "0.9.30"
+version = "0.9.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a9c8b93781debeb5bc44a12adc4be812aa9feb659d60eeafcd7e9bedb549561"
+checksum = "974e79cf1b0b737839f01330fb5393095daf1124d52693696494e32523ae9ef5"
 
 [[package]]
 name = "lazy_static"
