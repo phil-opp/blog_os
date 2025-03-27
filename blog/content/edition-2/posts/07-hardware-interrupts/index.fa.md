@@ -298,7 +298,7 @@ _never_ | _unlock `WRITER`_ |
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     […]
     loop {
@@ -461,7 +461,7 @@ pub fn hlt_loop() -> ! {
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     […]
 
@@ -486,7 +486,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 /// Entry point for `cargo test`
 #[cfg(test)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     init();
     test_main();

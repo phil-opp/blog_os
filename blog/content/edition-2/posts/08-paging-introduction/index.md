@@ -309,7 +309,7 @@ Now we can try to access some memory outside our kernel:
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -367,7 +367,7 @@ Let's try to take a look at the page tables that define how our kernel is mapped
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 

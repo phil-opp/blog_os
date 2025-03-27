@@ -294,7 +294,7 @@ We can easily provoke such a deadlock in our kernel by printing something in the
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     […]
     loop {
@@ -457,7 +457,7 @@ We can now use this `hlt_loop` instead of the endless loops in our `_start` and 
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     […]
 
@@ -482,7 +482,7 @@ Let's update our `lib.rs` as well:
 
 /// Entry point for `cargo test`
 #[cfg(test)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     init();
     test_main();

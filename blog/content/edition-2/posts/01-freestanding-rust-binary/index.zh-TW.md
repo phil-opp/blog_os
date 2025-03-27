@@ -216,7 +216,7 @@ fn panic(_info: &PanicInfo) -> ! {
 您可能會注意到我們移除了 `main` 函式，原因是因為既然沒有了底層的執行時系統呼叫，那麼 `main` 也沒必要存在。我們要重寫作業系統的入口點，定義為 `_start` 函式：
 
 ```rust
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     loop {}
 }
@@ -465,7 +465,7 @@ rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // 不修飾函式名稱
+#[unsafe(no_mangle)] // 不修飾函式名稱
 pub extern "C" fn _start() -> ! {
     // 因為連結器預設會尋找 `_start` 函式名稱
     // 所以這個函式就是入口點

@@ -301,7 +301,7 @@ The bootloader passes the `BootInfo` struct to our kernel in the form of a `&'st
 
 use bootloader::BootInfo;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // new argument
     […]
 }

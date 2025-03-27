@@ -245,7 +245,7 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[no_mangle] // don't mangle the name of this function
+#[unsafe(no_mangle)] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
     // named `_start` by default
@@ -367,7 +367,7 @@ target = "x86_64-blog_os.json"
 ```rust
 static HELLO: &[u8] = b"Hello World!";
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     let vga_buffer = 0xb8000 as *mut u8;
 

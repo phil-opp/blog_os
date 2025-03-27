@@ -208,7 +208,7 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[no_mangle] // 不重整函数名
+#[unsafe(no_mangle)] // 不重整函数名
 pub extern "C" fn _start() -> ! {
     // 因为编译器会寻找一个名为 `_start` 的函数，所以这个函数就是入口点
     // 默认命名为 `_start`
@@ -276,7 +276,7 @@ build-std = ["core", "compiler_builtins"]
 比如，`memset`（该函数可以为一个内存块内的所有比特进行赋值）、`memcpy`（将一个内存块里的数据拷贝到另一个内存块）以及`memcmp`（比较两个内存块的数据）。
 好在我们的内核暂时还不需要用到这些函数，但是不要高兴的太早，当我们编写更丰富的功能（比如拷贝数据结构）时就会用到了。
 
-现在我们当然无法提供操作系统相关的标准C库，所以我们需要使用其他办法提供这些东西。一个显而易见的途径就是自己实现 `memset` 这些函数，但不要忘记加入 `#[no_mangle]` 语句，以避免编译时被自动重命名。 当然，这样做很危险，底层函数中最细微的错误也会将程序导向不可预知的未来。比如，你可能在实现 `memcpy` 时使用了一个 `for` 循环，然而 `for` 循环本身又会调用 [`IntoIterator::into_iter`] 这个trait方法，这个方法又会再次调用 `memcpy`，此时一个无限递归就产生了，所以还是使用经过良好测试的既存实现更加可靠。
+现在我们当然无法提供操作系统相关的标准C库，所以我们需要使用其他办法提供这些东西。一个显而易见的途径就是自己实现 `memset` 这些函数，但不要忘记加入 `#[unsafe(no_mangle)]` 语句，以避免编译时被自动重命名。 当然，这样做很危险，底层函数中最细微的错误也会将程序导向不可预知的未来。比如，你可能在实现 `memcpy` 时使用了一个 `for` 循环，然而 `for` 循环本身又会调用 [`IntoIterator::into_iter`] 这个trait方法，这个方法又会再次调用 `memcpy`，此时一个无限递归就产生了，所以还是使用经过良好测试的既存实现更加可靠。
 
 [`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
 
@@ -294,7 +294,7 @@ build-std = ["core", "compiler_builtins"]
 
 （`compiler-builtins-mem` 特性是在 [这个PR](https://github.com/rust-lang/rust/pull/77284) 中被引入的，所以你的Rust nightly更新时间必须晚于 `2020-09-30`。）
 
-该参数为 `compiler_builtins` 启用了 [`mem` 特性][`mem` feature]，至于具体效果，就是已经在内部通过 `#[no_mangle]` 向链接器提供了 [`memcpy` 等函数的实现][`memcpy` etc. implementations]。
+该参数为 `compiler_builtins` 启用了 [`mem` 特性][`mem` feature]，至于具体效果，就是已经在内部通过 `#[unsafe(no_mangle)]` 向链接器提供了 [`memcpy` 等函数的实现][`memcpy` etc. implementations]。
 
 [`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L54-L55
 [`memcpy` etc. implementations]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
@@ -331,7 +331,7 @@ target = "x86_64-blog_os.json"
 ```rust
 static HELLO: &[u8] = b"Hello World!";
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     let vga_buffer = 0xb8000 as *mut u8;
 

@@ -318,7 +318,7 @@ extern "x86-interrupt" fn page_fault_handler(
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -376,7 +376,7 @@ println!("write worked");
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 

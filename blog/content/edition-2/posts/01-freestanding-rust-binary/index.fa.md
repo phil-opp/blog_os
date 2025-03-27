@@ -219,7 +219,7 @@ fn panic(_info: &PanicInfo) -> ! {
 ممکن است متوجه شده باشید که ما تابع `main` را حذف کردیم. دلیل این امر این است که `main` بدون یک رانتایم اساسی که آن را صدا کند معنی ندارد. در عوض، ما در حال بازنویسی نقطه ورود سیستم‌عامل با تابع `start_` خود هستیم:
 
 ```rust
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     loop {}
 }
@@ -469,7 +469,7 @@ rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // don't mangle the name of this function
+#[unsafe(no_mangle)] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
     // named `_start` by default

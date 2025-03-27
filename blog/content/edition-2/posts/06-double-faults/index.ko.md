@@ -39,7 +39,7 @@ translation_contributors = ["dalinaum"]
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -172,7 +172,7 @@ CPU는 이제 _더블 폴트 처리 함수_ 를 호출하려고 시도합니다.
 ```rust
 // in src/main.rs
 
-#[no_mangle] // 이 함수의 이름을 mangle하지 않습니다
+#[unsafe(no_mangle)] // 이 함수의 이름을 mangle하지 않습니다
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -429,7 +429,7 @@ lazy_static! {
 
 use core::panic::PanicInfo;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     unimplemented!();
 }
@@ -463,7 +463,7 @@ harness = false
 
 use blog_os::serial_print;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     serial_print!("stack_overflow::stack_overflow...\t");
 

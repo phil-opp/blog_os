@@ -34,7 +34,7 @@ Let's provoke a double fault by triggering an exception for which we didn't defi
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -167,7 +167,7 @@ Let's try it ourselves! We can easily provoke a kernel stack overflow by calling
 ```rust
 // in src/main.rs
 
-#[no_mangle] // don't mangle the name of this function
+#[unsafe(no_mangle)] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -422,7 +422,7 @@ Let's start with a minimal skeleton:
 
 use core::panic::PanicInfo;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     unimplemented!();
 }
@@ -456,7 +456,7 @@ The implementation of the `_start` function looks like this:
 
 use blog_os::serial_print;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     serial_print!("stack_overflow::stack_overflow...\t");
 

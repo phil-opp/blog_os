@@ -102,7 +102,7 @@ To fix this, we first need to change the name of the generated function to somet
 
 #![reexport_test_harness_main = "test_main"]
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -659,7 +659,7 @@ All integration tests are their own executables and completely separate from our
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // don't mangle the name of this function
+#[unsafe(no_mangle)] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     test_main();
 
@@ -741,7 +741,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 
 /// Entry point for `cargo test`
 #[cfg(test)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     test_main();
     loop {}
@@ -807,7 +807,7 @@ Now we can update our `main.rs` to use the library:
 use core::panic::PanicInfo;
 use blog_os::println;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -920,7 +920,7 @@ This test is still incomplete as it doesn't define a `_start` function or any of
 #![test_runner(test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     test_main();
 
@@ -987,7 +987,7 @@ Now we vastly simplify our `should_panic` test by removing the `test_runner`-rel
 use core::panic::PanicInfo;
 use blog_os::{exit_qemu, serial_print, serial_println, QemuExitCode};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     should_fail();
     serial_println!("[test did not panic]");

@@ -297,7 +297,7 @@ _(決して起こらない)_ | _`WRITER` のロックを解放する_ |
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     […]
     loop {
@@ -460,7 +460,7 @@ pub fn hlt_loop() -> ! {
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     […]
 
@@ -485,7 +485,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 /// `cargo test` のエントリポイント
 #[cfg(test)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     init();
     test_main();

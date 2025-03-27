@@ -39,7 +39,7 @@ double fault 的行为和普通异常十分相似，我们可以通过在IDT中�
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -175,7 +175,7 @@ guard page 是一类位于栈底部的特殊内存页，所以如果发生了栈
 ```rust
 // in src/main.rs
 
-#[no_mangle] // 禁止函数名自动修改
+#[unsafe(no_mangle)] // 禁止函数名自动修改
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -435,7 +435,7 @@ lazy_static! {
 
 use core::panic::PanicInfo;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     unimplemented!();
 }
@@ -469,7 +469,7 @@ harness = false
 
 use blog_os::serial_print;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     serial_print!("stack_overflow::stack_overflow...\t");
 

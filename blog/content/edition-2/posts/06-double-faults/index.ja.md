@@ -36,7 +36,7 @@ translators = ["garasubo"]
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -169,7 +169,7 @@ CPUはダブルフォルトハンドラを呼べるようになったので、�
 ```rust
 // in src/main.rs
 
-#[no_mangle] // この関数の名前修飾をしない
+#[unsafe(no_mangle)] // この関数の名前修飾をしない
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -429,7 +429,7 @@ lazy_static! {
 
 use core::panic::PanicInfo;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     unimplemented!();
 }
@@ -463,7 +463,7 @@ harness = false
 
 use blog_os::serial_print;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     serial_print!("stack_overflow::stack_overflow...\t");
 

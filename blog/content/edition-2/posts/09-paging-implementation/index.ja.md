@@ -303,7 +303,7 @@ bootloader = { version = "0.9", features = ["map_physical_memory"]}
 
 use bootloader::BootInfo;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // 新しい引数
     […]
 }

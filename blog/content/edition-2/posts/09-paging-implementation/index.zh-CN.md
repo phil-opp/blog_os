@@ -312,7 +312,7 @@ Bootloader将 `BootInfo` 结构以 `&'static BootInfo`参数的形式传递给�
 
 use bootloader::BootInfo;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // new argument
     […]
 }

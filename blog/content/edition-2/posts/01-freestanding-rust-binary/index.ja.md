@@ -218,13 +218,13 @@ fn panic(_info: &PanicInfo) -> ! {
 `main` 関数を削除したことに気付いたかもしれません。`main` 関数を呼び出す基盤となるランタイムなしには置いていても意味がないからです。代わりに、OS のエントリポイントを独自の `_start` 関数で上書きしていきます:
 
 ```rust
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     loop {}
 }
 ```
 
-Rust コンパイラが `_start` という名前の関数を実際に出力するように、`#[no_mangle]` attributeを用いて[名前修飾][name mangling]を無効にします。この attribute がないと、コンパイラはすべての関数にユニークな名前をつけるために、 `_ZN3blog_os4_start7hb173fedf945531caE` のようなシンボルを生成します。次のステップでエントリポイントとなる関数の名前をリンカに伝えるため、この属性が必要となります。
+Rust コンパイラが `_start` という名前の関数を実際に出力するように、`#[unsafe(no_mangle)]` attributeを用いて[名前修飾][name mangling]を無効にします。この attribute がないと、コンパイラはすべての関数にユニークな名前をつけるために、 `_ZN3blog_os4_start7hb173fedf945531caE` のようなシンボルを生成します。次のステップでエントリポイントとなる関数の名前をリンカに伝えるため、この属性が必要となります。
 
 また、(指定されていない Rust の呼び出し規約の代わりに)この関数に [C の呼び出し規約][C calling convention]を使用するようコンパイラに伝えるために、関数を `extern "C"` として定義する必要があります。`_start`という名前をつける理由は、これがほとんどのシステムのデフォルトのエントリポイント名だからです。
 
@@ -473,7 +473,7 @@ rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // この関数の名前修飾をしない
+#[unsafe(no_mangle)] // この関数の名前修飾をしない
 pub extern "C" fn _start() -> ! {
     // リンカはデフォルトで `_start` という名前の関数を探すので、
     // この関数がエントリポイントとなる
