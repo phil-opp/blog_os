@@ -7,8 +7,8 @@
 extern crate alloc;
 
 use blog_os::println;
-use blog_os::task::{executor::Executor, keyboard, Task};
-use bootloader::{entry_point, BootInfo};
+use blog_os::task::{Task, executor::Executor, keyboard};
+use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
 
 entry_point!(kernel_main);
