@@ -277,16 +277,16 @@ pub fn _print(args: fmt::Arguments) {
 
 Bloquea el `WRITER`, llama a `write_fmt` en él y lo desbloquea implícitamente al final de la función. Ahora imagina que una interrupción ocurre mientras `WRITER` está bloqueado y el manejador de interrupciones intenta imprimir algo también:
 
-Timestep | _start | manejador_interrupcion
----------|------|------------------
-0 | llama a `println!`      | &nbsp;
-1 | `print` bloquea `WRITER` | &nbsp;
-2 | | **ocurre la interrupción**, el manejador comienza a ejecutarse
-3 | | llama a `println!` |
-4 | | `print` intenta bloquear `WRITER` (ya bloqueado)
-5 | | `print` intenta bloquear `WRITER` (ya bloqueado)
-… | | …
-_nunca_ | _desbloquear `WRITER`_ |
+| Timestep | _start                   | manejador_interrupcion                                         |
+| -------- | ------------------------ | -------------------------------------------------------------- |
+| 0        | llama a `println!`       | &nbsp;                                                         |
+| 1        | `print` bloquea `WRITER` | &nbsp;                                                         |
+| 2        |                          | **ocurre la interrupción**, el manejador comienza a ejecutarse |
+| 3        |                          | llama a `println!`                                             |
+| 4        |                          | `print` intenta bloquear `WRITER` (ya bloqueado)               |
+| 5        |                          | `print` intenta bloquear `WRITER` (ya bloqueado)               |
+| …        |                          | …                                                              |
+| _nunca_  | _desbloquear `WRITER`_   |
 
 El `WRITER` está bloqueado, así que el manejador de interrupciones espera hasta que se libere. Pero esto nunca sucede, porque la función `_start` solo continúa ejecutándose después de que el manejador de interrupciones regrese. Así, todo el sistema se cuelga.
 

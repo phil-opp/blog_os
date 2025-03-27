@@ -46,28 +46,28 @@ Para ver la lista completa de excepciones, consulte la [wiki de OSDev][exception
 ### La tabla de descriptores de interrupción
 Para poder capturar y manejar excepciones, tenemos que configurar una llamada _tabla de descriptores de interrupción_ (IDT). En esta tabla, podemos especificar una función manejadora para cada excepción de CPU. El hardware utiliza esta tabla directamente, por lo que necesitamos seguir un formato predefinido. Cada entrada debe tener la siguiente estructura de 16 bytes:
 
-Tipo| Nombre                     | Descripción
-----|--------------------------|-----------------------------------
-u16 | Puntero a función [0:15]  | Los bits más bajos del puntero a la función manejadora.
-u16 | Selector GDT             | Selector de un segmento de código en la [tabla de descriptores global].
-u16 | Opciones                  | (ver abajo)
-u16 | Puntero a función [16:31] | Los bits del medio del puntero a la función manejadora.
-u32 | Puntero a función [32:63] | Los bits restantes del puntero a la función manejadora.
-u32 | Reservado                 |
+| Tipo | Nombre                    | Descripción                                                             |
+| ---- | ------------------------- | ----------------------------------------------------------------------- |
+| u16  | Puntero a función [0:15]  | Los bits más bajos del puntero a la función manejadora.                 |
+| u16  | Selector GDT              | Selector de un segmento de código en la [tabla de descriptores global]. |
+| u16  | Opciones                  | (ver abajo)                                                             |
+| u16  | Puntero a función [16:31] | Los bits del medio del puntero a la función manejadora.                 |
+| u32  | Puntero a función [32:63] | Los bits restantes del puntero a la función manejadora.                 |
+| u32  | Reservado                 |
 
 [tabla de descriptores global]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
 El campo de opciones tiene el siguiente formato:
 
-Bits  | Nombre                              | Descripción
-------|-----------------------------------|-----------------------------------
-0-2   | Índice de tabla de pila de interrupción | 0: No cambiar pilas, 1-7: Cambiar a la n-ésima pila en la Tabla de Pila de Interrupción cuando se llama a este manejador.
-3-7   | Reservado              |
-8     | 0: Puerta de interrupción, 1: Puerta de trampa   | Si este bit es 0, las interrupciones están deshabilitadas cuando se llama a este manejador.
-9-11  | debe ser uno                       |
-12    | debe ser cero                      |
-13‑14 | Nivel de privilegio del descriptor (DPL)  | El nivel mínimo de privilegio requerido para llamar a este manejador.
-15    | Presente                           |
+| Bits  | Nombre                                         | Descripción                                                                                                               |
+| ----- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 0-2   | Índice de tabla de pila de interrupción        | 0: No cambiar pilas, 1-7: Cambiar a la n-ésima pila en la Tabla de Pila de Interrupción cuando se llama a este manejador. |
+| 3-7   | Reservado                                      |
+| 8     | 0: Puerta de interrupción, 1: Puerta de trampa | Si este bit es 0, las interrupciones están deshabilitadas cuando se llama a este manejador.                               |
+| 9-11  | debe ser uno                                   |
+| 12    | debe ser cero                                  |
+| 13‑14 | Nivel de privilegio del descriptor (DPL)       | El nivel mínimo de privilegio requerido para llamar a este manejador.                                                     |
+| 15    | Presente                                       |
 
 Cada excepción tiene un índice de IDT predefinido. Por ejemplo, la excepción de código de operación inválido tiene índice de tabla 6 y la excepción de fallo de página tiene índice de tabla 14. Así, el hardware puede cargar automáticamente la entrada de IDT correspondiente para cada excepción. La [Tabla de Excepciones][exceptions] en la wiki de OSDev muestra los índices de IDT de todas las excepciones en la columna “Vector nr.”.
 
@@ -162,10 +162,10 @@ En contraste, una función llamada puede sobrescribir registros _de uso_ sin res
 
 En x86_64, la convención de llamada C especifica los siguientes registros preservados y de uso:
 
-registros preservados | registros de uso
----|---
-`rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11`
-_guardados por el llamado_ | _guardados por el llamador_
+| registros preservados                           | registros de uso                                            |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| `rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11` |
+| _guardados por el llamado_                      | _guardados por el llamador_                                 |
 
 El compilador conoce estas reglas, por lo que genera el código en consecuencia. Por ejemplo, la mayoría de las funciones comienzan con un `push rbp`, que respalda `rbp` en la pila (porque es un registro guardado por el llamado).
 

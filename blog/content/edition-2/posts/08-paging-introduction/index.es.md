@@ -204,21 +204,21 @@ Como se indica por el atributo `repr`, las tablas de páginas necesitan estar al
 
 Cada entrada tiene un tamaño de 8 bytes (64 bits) y tiene el siguiente formato:
 
-Bit(s) | Nombre | Significado
------- | ---- | -------
-0 | presente | la página está actualmente en memoria
-1 | escribible | se permite escribir en esta página
-2 | accesible por el usuario | si no se establece, solo el código en modo núcleo puede acceder a esta página
-3 | caché de escritura a través | las escrituras van directamente a la memoria
-4 | desactivar caché | no se utiliza caché para esta página
-5 | accedido | la CPU establece este bit cuando se utiliza esta página
-6 | sucio | la CPU establece este bit cuando se realiza una escritura en esta página
-7 | página enorme/null | debe ser 0 en P1 y P4, crea una página de 1&nbsp;GiB en P3, crea una página de 2&nbsp;MiB en P2
-8 | global | la página no se borra de las cachés al cambiar el espacio de direcciones (el bit PGE del registro CR4 debe estar establecido)
-9-11 | disponible | puede ser utilizado libremente por el sistema operativo
-12-51 | dirección física | la dirección física alineada de 52 bits del marco o de la siguiente tabla de páginas
-52-62 | disponible | puede ser utilizado libremente por el sistema operativo
-63 | no ejecutar | prohibir la ejecución de código en esta página (el bit NXE en el registro EFER debe estar establecido)
+| Bit(s) | Nombre                      | Significado                                                                                                                   |
+| ------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 0      | presente                    | la página está actualmente en memoria                                                                                         |
+| 1      | escribible                  | se permite escribir en esta página                                                                                            |
+| 2      | accesible por el usuario    | si no se establece, solo el código en modo núcleo puede acceder a esta página                                                 |
+| 3      | caché de escritura a través | las escrituras van directamente a la memoria                                                                                  |
+| 4      | desactivar caché            | no se utiliza caché para esta página                                                                                          |
+| 5      | accedido                    | la CPU establece este bit cuando se utiliza esta página                                                                       |
+| 6      | sucio                       | la CPU establece este bit cuando se realiza una escritura en esta página                                                      |
+| 7      | página enorme/null          | debe ser 0 en P1 y P4, crea una página de 1&nbsp;GiB en P3, crea una página de 2&nbsp;MiB en P2                               |
+| 8      | global                      | la página no se borra de las cachés al cambiar el espacio de direcciones (el bit PGE del registro CR4 debe estar establecido) |
+| 9-11   | disponible                  | puede ser utilizado libremente por el sistema operativo                                                                       |
+| 12-51  | dirección física            | la dirección física alineada de 52 bits del marco o de la siguiente tabla de páginas                                          |
+| 52-62  | disponible                  | puede ser utilizado libremente por el sistema operativo                                                                       |
+| 63     | no ejecutar                 | prohibir la ejecución de código en esta página (el bit NXE en el registro EFER debe estar establecido)                        |
 
 Vemos que solo los bits 12–51 se utilizan para almacenar la dirección física del marco. Los bits restantes se utilizan como banderas o pueden ser utilizados libremente por el sistema operativo. Esto es posible porque siempre apuntamos a una dirección alineada a 4096 bytes, ya sea a una tabla de páginas alineada a la página o al inicio de un marco mapeado. Esto significa que los bits 0–11 son siempre cero, por lo que no hay razón para almacenar estos bits porque el hardware puede simplemente configurarlos en cero antes de usar la dirección. Lo mismo es cierto para los bits 52–63, ya que la arquitectura x86_64 solo admite direcciones físicas de 52 bits (similar a como solo admite direcciones virtuales de 48 bits).
 

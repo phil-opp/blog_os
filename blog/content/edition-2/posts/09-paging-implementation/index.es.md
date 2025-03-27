@@ -172,13 +172,13 @@ Ahora podemos calcular direcciones virtuales para las tablas de los cuatro nivel
 
 La tabla a continuación resume la estructura de la dirección para acceder a los diferentes tipos de marcos:
 
-Dirección Virtual para | Estructura de Dirección ([octal])
-------------------- | -------------------------------
-Página                | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE`
-Entrada de Tabla de Nivel 1 | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD`
-Entrada de Tabla de Nivel 2 | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC`
-Entrada de Tabla de Nivel 3 | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB`
-Entrada de Tabla de Nivel 4 | `0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA`
+| Dirección Virtual para      | Estructura de Dirección ([octal]) |
+| --------------------------- | --------------------------------- |
+| Página                      | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE`  |
+| Entrada de Tabla de Nivel 1 | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD`  |
+| Entrada de Tabla de Nivel 2 | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC`  |
+| Entrada de Tabla de Nivel 3 | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB`  |
+| Entrada de Tabla de Nivel 4 | `0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA`  |
 
 [octal]: https://en.wikipedia.org/wiki/Octal
 

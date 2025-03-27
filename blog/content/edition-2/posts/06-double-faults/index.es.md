@@ -127,10 +127,10 @@ Por ejemplo, ¿qué ocurre si:
 
 Afortunadamente, el manual de AMD64 ([PDF][AMD64 manual]) tiene una definición exacta (en la Sección 8.2.9). Según él, una “excepción de doble fallo _puede_ ocurrir cuando una segunda excepción ocurre durante el manejo de un controlador de excepción previo (primera)”. El _“puede”_ es importante: Solo combinaciones muy específicas de excepciones conducen a un doble fallo. Estas combinaciones son:
 
-Primera Excepción | Segunda Excepción
-------------------|------------------
-[División por cero],<br>[TSS No Válido],<br>[Segmento No Presente],<br>[Fallo de Segmento de Pila],<br>[Fallo de Protección General] | [TSS No Válido],<br>[Segmento No Presente],<br>[Fallo de Segmento de Pila],<br>[Fallo de Protección General]
-[Fallo de Página] | [Fallo de Página],<br>[TSS No Válido],<br>[Segmento No Presente],<br>[Fallo de Segmento de Pila],<br>[Fallo de Protección General]
+| Primera Excepción                                                                                                                    | Segunda Excepción                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [División por cero],<br>[TSS No Válido],<br>[Segmento No Presente],<br>[Fallo de Segmento de Pila],<br>[Fallo de Protección General] | [TSS No Válido],<br>[Segmento No Presente],<br>[Fallo de Segmento de Pila],<br>[Fallo de Protección General]                       |
+| [Fallo de Página]                                                                                                                    | [Fallo de Página],<br>[TSS No Válido],<br>[Segmento No Presente],<br>[Fallo de Segmento de Pila],<br>[Fallo de Protección General] |
 
 [División por cero]: https://wiki.osdev.org/Exceptions#Division_Error
 [TSS No Válido]: https://wiki.osdev.org/Exceptions#Invalid_TSS
@@ -218,15 +218,15 @@ En `x86_64`, la TSS ya no contiene ninguna información específica de tarea. En
 
 La TSS de 64 bits tiene el siguiente formato:
 
-Campo  | Tipo
------- | ----------------
-<span style="opacity: 0.5">(reservado)</span> | `u32`
-Tabla de Pilas de Privilegio | `[u64; 3]`
-<span style="opacity: 0.5">(reservado)</span> | `u64`
-Tabla de Pila de Interrupciones | `[u64; 7]`
-<span style="opacity: 0.5">(reservado)</span> | `u64`
-<span style="opacity: 0.5">(reservado)</span> | `u16`
-Dirección Base del Mapa de E/S | `u16`
+| Campo                                         | Tipo       |
+| --------------------------------------------- | ---------- |
+| <span style="opacity: 0.5">(reservado)</span> | `u32`      |
+| Tabla de Pilas de Privilegio                  | `[u64; 3]` |
+| <span style="opacity: 0.5">(reservado)</span> | `u64`      |
+| Tabla de Pila de Interrupciones               | `[u64; 7]` |
+| <span style="opacity: 0.5">(reservado)</span> | `u64`      |
+| <span style="opacity: 0.5">(reservado)</span> | `u16`      |
+| Dirección Base del Mapa de E/S                | `u16`      |
 
 La _Tabla de Pilas de Privilegio_ es usada por la CPU cuando cambia el nivel de privilegio. Por ejemplo, si ocurre una excepción mientras la CPU está en modo usuario (nivel de privilegio 3), la CPU normalmente cambia a modo núcleo (nivel de privilegio 0) antes de invocar el controlador de excepciones. En ese caso, la CPU cambiaría a la 0ª pila en la Tabla de Pilas de Privilegio (ya que 0 es el nivel de privilegio de destino). Aún no tenemos programas en modo usuario, así que ignoraremos esta tabla por ahora.
 
