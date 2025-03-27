@@ -8,7 +8,7 @@ extern crate alloc;
 
 use alloc::{boxed::Box, rc::Rc, vec, vec::Vec};
 use blog_os::println;
-use bootloader::{entry_point, BootInfo};
+use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
 
 entry_point!(kernel_main);
