@@ -34,7 +34,7 @@ skip_anchor_prefixes = [
 subtitle = "Philipp Oppermann's blog"
 author = { name = "Philipp Oppermann" }
 default_language = "en"
-languages = ["en", "zh-CN", "zh-TW", "fr", "ja", "fa", "ru", "ko", "ar"]
+languages = ["en", "zh-CN", "zh-TW", "fr", "ja", "fa", "ru", "ko", "ar", "es"]
 
 [translations]
 lang_name = "English (original)"
@@ -253,4 +253,29 @@ support_me = """
 """
 comment_note = """
 Do you have a problem, want to share feedback, or discuss further ideas? Feel free to leave a comment here! Please stick to English and follow Rust's <a href="https://www.rust-lang.org/policies/code-of-conduct">code of conduct</a>. This comment thread directly maps to a <a href="_discussion_url_"><em>discussion on GitHub</em></a>, so you can also comment there if you prefer.
+"""
+
+# Spanish
+[languages.es]
+title = "Writing an OS in Rust"
+description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
+[languages.es.translations]
+lang_name = "Spanish"
+toc = "Tabla de Contenidos"
+all_posts = "« Todos los Posts"
+comments = "Comentarios"
+comments_notice = "Por favor deja tus comentarios en inglés si es posible."
+readmore = "leer&nbsp;más&nbsp;»"
+not_translated = "(Este post aún no está traducido.)"
+translated_content = "Contenido Traducido:"
+translated_content_notice = "Esta es una traducción comunitaria del post <strong><a href=\"_original.permalink_\">_original.title_</a></strong>. Puede estar incompleta, desactualizada o contener errores. ¡Por favor reporta cualquier problema!"
+translated_by = "Traducción por"
+translation_contributors = "Con contribuciones de"
+word_separator = "y"
+support_me = """
+<h2>Apóyame</h2>
+<p>Crear y mantener este blog y las bibliotecas asociadas es mucho trabajo, pero realmente disfruto haciéndolo. Al apoyarme, me permites invertir más tiempo en nuevo contenido, nuevas características y mantenimiento continuo. La mejor manera de apoyarme es <a href=\"https://github.com/sponsors/phil-opp\"><em>patrocinarme en GitHub</em></a>. ¡Gracias!</p>
+"""
+comment_note = """
+¿Tienes algún problema, quieres compartir comentarios o discutir más ideas? ¡No dudes en dejar un comentario aquí! Por favor, utiliza inglés y sigue el <a href=\"https://www.rust-lang.org/policies/code-of-conduct\">código de conducta</a> de Rust. Este hilo de comentarios se vincula directamente con una <a href=\"_discussion_url_\"><em>discusión en GitHub</em></a>, así que también puedes comentar allí si lo prefieres.
 """

@@ -2,6 +2,8 @@
 extend-exclude = [
     "*.svg",
     "*.fr.md",
+    "*.es.md",
+    "blog/config.toml",
 ]
 
 [default.extend-words]
