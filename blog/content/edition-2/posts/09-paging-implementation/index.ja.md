@@ -403,13 +403,11 @@ pub unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
     let virt = physical_memory_offset + phys.as_u64();
     let page_table_ptr: *mut PageTable = virt.as_mut_ptr();
 
-    &mut *page_table_ptr // unsafe
+    unsafe { &mut *page_table_ptr }
 }
 ```
 
 まず、有効なレベル4テーブルの物理フレームを`CR3`レジスタから読みます。その開始物理アドレスを取り出し、`u64`に変換し、`physical_memory_offset`に足すことでそのページテーブルフレームに対応する仮想アドレスを得ます。最後に、`as_mut_ptr`メソッドを使ってこの仮想アドレスを`*mut PageTable`生ポインタに変換し、これから`&mut PageTable`参照を作ります（ここがunsafe）。`&`参照ではなく`&mut`参照にしているのは、後でこのページテーブルを変更するためです。
-
-Rustは`unsafe fn`の中身全体を大きな`unsafe`ブロックであるかのように扱うので、ここでunsafeブロックを使う必要はありません。これでは、（unsafeを意図した）最後の行より前の行に間違ってunsafeな操作を書いても気づけないので、コードがより危険になります。また、どこがunsafeな操作であるのかを探すのも非常に難しくなります。そのため、この挙動を変更する[RFC](https://github.com/rust-lang/rfcs/pull/2585)が提案されています。
 
 この関数を使って、レベル4テーブルのエントリを出力してみましょう：
 
@@ -640,8 +638,10 @@ use x86_64::structures::paging::OffsetPageTable;
 /// 名称を持つこと (mutable aliasingといい、動作が未定義)
 /// につながるため、この関数は一度しか呼び出してはならない。
 pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static> {
-    let level_4_table = active_level_4_table(physical_memory_offset);
-    OffsetPageTable::new(level_4_table, physical_memory_offset)
+    unsafe {
+        let level_4_table = active_level_4_table(physical_memory_offset);
+        OffsetPageTable::new(level_4_table, physical_memory_offset)
+    }
 }
 
 // これは非公開にする

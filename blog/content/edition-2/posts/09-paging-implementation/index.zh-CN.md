@@ -409,13 +409,11 @@ pub unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
     let virt = physical_memory_offset + phys.as_u64();
     let page_table_ptr: *mut PageTable = virt.as_mut_ptr();
 
-    &mut *page_table_ptr // unsafe
+    unsafe { &mut *page_table_ptr }
 }
 ```
 
 首先，我们从`CR3`寄存器中读取活动的4级表的物理帧。然后我们取其物理起始地址，将其转换为`u64`，并将其添加到`physical_memory_offset`中，得到页表框架映射的虚拟地址。最后，我们通过`as_mut_ptr`方法将虚拟地址转换为`*mut PageTable`原始指针，然后不安全地从它创建一个`&mut PageTable`引用。我们创建一个`&mut`引用，而不是`&`引用，因为我们将在本篇文章的后面对页表进行突变。
-
-我们不需要在这里使用不安全块，因为Rust把一个 `不安全 fn` 的完整主体当作一个大的 `不安全`块。这使得我们的代码更加危险，因为我们可能会在不知不觉中在前几行引入不安全操作。这也使得在安全操作之间发现不安全操作的难度大大增加。有一个[RFC](https://github.com/rust-lang/rfcs/pull/2585)可以改变这种行为。
 
 现在我们可以用这个函数来打印第4级表格的条目。
 
@@ -638,8 +636,10 @@ use x86_64::structures::paging::OffsetPageTable;
 /// 传递的`physical_memory_offset`处被映射到虚拟内存。另
 /// 外，这个函数必须只被调用一次，以避免别名"&mut "引用（这是未定义的行为）。
 pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static> {
-    let level_4_table = active_level_4_table(physical_memory_offset);
-    OffsetPageTable::new(level_4_table, physical_memory_offset)
+    unsafe {
+        let level_4_table = active_level_4_table(physical_memory_offset);
+        OffsetPageTable::new(level_4_table, physical_memory_offset)
+    }
 }
 
 // 私下进行

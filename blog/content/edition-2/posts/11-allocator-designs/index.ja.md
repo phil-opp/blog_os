@@ -538,7 +538,9 @@ impl LinkedListAllocator {
     /// 有効でヒープが未使用であることを保証しなければならないからである。
     /// このメソッドは一度しか呼ばれてはならない。
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
-        self.add_free_region(heap_start, heap_size);
+        unsafe {
+            self.add_free_region(heap_start, heap_size);
+        }
     }
 
     /// 与えられたメモリ領域をリストの先頭に追加する。
@@ -581,8 +583,10 @@ impl LinkedListAllocator {
         let mut node = ListNode::new(size);
         node.next = self.head.next.take();
         let node_ptr = addr as *mut ListNode;
-        node_ptr.write(node);
-        self.head.next = Some(&mut *node_ptr)
+        unsafe {
+            node_ptr.write(node);
+            self.head.next = Some(&mut *node_ptr)
+        }
     }
 }
 ```
@@ -715,7 +719,9 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
             let alloc_end = alloc_start.checked_add(size).expect("overflow");
             let excess_size = region.end_addr() - alloc_end;
             if excess_size > 0 {
-                allocator.add_free_region(alloc_end, excess_size);
+                unsafe {
+                    allocator.add_free_region(alloc_end, excess_size);
+                }
             }
             alloc_start as *mut u8
         } else {
@@ -727,7 +733,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
         // レイアウト調整を行う
         let (size, _) = LinkedListAllocator::size_align(layout);
 
-        self.lock().add_free_region(ptr as usize, size)
+        unsafe { self.lock().add_free_region(ptr as usize, size) }
     }
 }
 ```
@@ -959,7 +965,9 @@ impl FixedSizeBlockAllocator {
     /// ヒープが未使用であることを保証しなければならないからである。
     /// このメソッドは一度しか呼ばれてはならない。
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
-        self.fallback_allocator.init(heap_start, heap_size);
+        unsafe {
+            self.fallback_allocator.init(heap_start, heap_size);
+        }
     }
 }
 ```
@@ -1112,12 +1120,16 @@ unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
             assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index]);
             assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
             let new_node_ptr = ptr as *mut ListNode;
-            new_node_ptr.write(new_node);
-            allocator.list_heads[index] = Some(&mut *new_node_ptr);
+            unsafe {
+                new_node_ptr.write(new_node);
+                allocator.list_heads[index] = Some(&mut *new_node_ptr);
+            }
         }
         None => {
             let ptr = NonNull::new(ptr).unwrap();
-            allocator.fallback_allocator.deallocate(ptr, layout);
+            unsafe {
+                allocator.fallback_allocator.deallocate(ptr, layout);
+            }
         }
     }
 }
