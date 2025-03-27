@@ -2,7 +2,7 @@
 name = "blog_os"
 version = "0.1.0"
 authors = ["Philipp Oppermann <dev@phil-opp.com>"]
-edition = "2018"
+edition = "2024"
 
 [[test]]
 name = "should_panic"
