@@ -7,7 +7,7 @@
 use blog_os::println;
 use core::panic::PanicInfo;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     use x86_64::registers::control::Cr3;
     println!("Hello World{}", "!");
