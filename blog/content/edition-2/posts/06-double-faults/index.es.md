@@ -6,6 +6,9 @@ date  = 2018-06-18
 
 [extra]
 chapter = "Interrupciones"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 Esta publicación explora en detalle la excepción de doble fallo, que ocurre cuando la CPU no logra invocar un controlador de excepciones. Al manejar esta excepción, evitamos fallos _triples_ fatales que causan un reinicio del sistema. Para prevenir fallos triples en todos los casos, también configuramos una _Tabla de Pila de Interrupciones_ (IST) para capturar dobles fallos en una pila de núcleo separada.

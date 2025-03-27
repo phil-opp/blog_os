@@ -6,6 +6,9 @@ date = 2019-06-26
 
 [extra]
 chapter = "Gestión de Memoria"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 Este post añade soporte para la asignación en el heap a nuestro núcleo. Primero, proporciona una introducción a la memoria dinámica y muestra cómo el borrow checker (verificador de préstamos) previene errores comunes de asignación. Luego, implementa la interfaz básica de asignación de Rust, crea una región de memoria en el heap y configura una crate de asignador. Al final de este post, todos los tipos de asignación y recolección de la crate `alloc` integrada estarán disponibles para nuestro núcleo.

@@ -6,6 +6,9 @@ date = 2018-02-10
 
 [extra]
 chapter = "Bare Bones"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 En esta publicación, crearemos un kernel mínimo de 64 bits en Rust para la arquitectura x86. Partiremos del [un binario Rust autónomo] de la publicación anterior para crear una imagen de disco arrancable que imprima algo en la pantalla.

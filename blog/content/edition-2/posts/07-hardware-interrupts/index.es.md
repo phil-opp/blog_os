@@ -6,6 +6,9 @@ date = 2018-10-22
 
 [extra]
 chapter = "Interrupciones"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 En esta publicación, configuramos el controlador de interrupciones programable para redirigir correctamente las interrupciones de hardware a la CPU. Para manejar estas interrupciones, agregamos nuevas entradas a nuestra tabla de descriptores de interrupciones, tal como lo hicimos con nuestros manejadores de excepciones. Aprenderemos cómo obtener interrupciones de temporizador periódicas y cómo recibir entrada del teclado.

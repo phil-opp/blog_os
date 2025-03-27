@@ -6,6 +6,9 @@ date = 2019-01-14
 
 [extra]
 chapter = "Gestión de Memoria"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 Esta publicación introduce la _paginación_ (paging), un esquema de gestión de memoria muy común que también utilizaremos para nuestro sistema operativo. Explica por qué se necesita la aislamiento de memoria, cómo funciona la _segmentación_ (segmentation), qué es la _memoria virtual_ (virtual memory) y cómo la paginación soluciona los problemas de fragmentación de memoria. También explora el diseño de las tablas de páginas multinivel en la arquitectura x86_64.

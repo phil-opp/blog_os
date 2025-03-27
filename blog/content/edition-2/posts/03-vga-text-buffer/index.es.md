@@ -6,6 +6,9 @@ date  = 2018-02-26
 
 [extra]
 chapter = "Fundamentos"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 El [modo de texto VGA] es una forma sencilla de imprimir texto en la pantalla. En esta publicación, creamos una interfaz que hace que su uso sea seguro y simple al encapsular toda la inseguridad en un módulo separado. También implementamos soporte para los [macros de formato] de Rust.

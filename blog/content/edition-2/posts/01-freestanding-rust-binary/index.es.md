@@ -6,6 +6,9 @@ date = 2018-02-10
 
 [extra]
 chapter = "Bare Bones"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 El primer paso para crear nuestro propio kernel de sistema operativo es crear un ejecutable en Rust que no enlace con la biblioteca estándar. Esto hace posible ejecutar código Rust directamente en el [bare metal] sin un sistema operativo subyacente.

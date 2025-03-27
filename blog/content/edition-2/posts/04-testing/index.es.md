@@ -7,6 +7,9 @@ date = 2019-04-27
 [extra]
 chapter = "Fundamentos"
 comments_search_term = 1009
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 Esta publicación explora las pruebas unitarias e integración en ejecutables `no_std`. Utilizaremos el soporte de Rust para marcos de prueba personalizados para ejecutar funciones de prueba dentro de nuestro núcleo. Para reportar los resultados fuera de QEMU, utilizaremos diferentes características de QEMU y la herramienta `bootimage`.

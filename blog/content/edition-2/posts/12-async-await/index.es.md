@@ -6,6 +6,9 @@ date = 2020-03-27
 
 [extra]
 chapter = "Multitasking"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 En esta publicación, exploramos el _multitasking cooperativo_ y la característica _async/await_ de Rust. Observamos en detalle cómo funciona async/await en Rust, incluyendo el diseño del trait `Future`, la transformación de máquina de estado y el _pinning_. Luego añadimos soporte básico para async/await a nuestro núcleo creando una tarea de teclado asíncrona y un ejecutor básico.

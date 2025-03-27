@@ -6,6 +6,9 @@ date  = 2018-06-17
 
 [extra]
 chapter = "Interrupciones"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 Las excepciones de CPU ocurren en diversas situaciones erróneas, por ejemplo, al acceder a una dirección de memoria inválida o al dividir por cero. Para reaccionar ante ellas, tenemos que configurar una _tabla de descriptores de interrupción_ (IDT, por sus siglas en inglés) que proporcione funciones manejadoras. Al final de esta publicación, nuestro núcleo será capaz de capturar [excepciones de punto de interrupción] y reanudar la ejecución normal después.

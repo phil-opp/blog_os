@@ -6,6 +6,9 @@ date = 2020-01-20
 
 [extra]
 chapter = "Gestión de Memoria"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 Este post explica cómo implementar allocadores de heap desde cero. Presenta y discute diferentes diseños de allocadores, incluyendo asignación de bump, asignación de lista enlazada y asignación de bloques de tamaño fijo. Para cada uno de los tres diseños, crearemos una implementación básica que se puede utilizar para nuestro kernel.

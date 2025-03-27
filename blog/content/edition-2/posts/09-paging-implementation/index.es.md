@@ -6,6 +6,9 @@ date = 2019-03-14
 
 [extra]
 chapter = "Gestión de la Memoria"
+
+# GitHub usernames of the people that translated this post
+translators = ["dobleuber"]
 +++
 
 Esta publicación muestra cómo implementar soporte para paginación en nuestro núcleo. Primero explora diferentes técnicas para hacer accesibles los marcos de la tabla de páginas físicas al núcleo y discute sus respectivas ventajas y desventajas. Luego implementa una función de traducción de direcciones y una función para crear un nuevo mapeo.
