@@ -5,7 +5,7 @@ use core::panic::PanicInfo;
 
 mod vga_buffer;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
