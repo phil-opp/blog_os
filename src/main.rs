@@ -5,14 +5,14 @@
 #![reexport_test_harness_main = "test_main"]
 
 use blog_os::println;
-use bootloader::{entry_point, BootInfo};
+use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
 
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     use blog_os::memory::{self, BootInfoFrameAllocator};
-    use x86_64::{structures::paging::Page, VirtAddr};
+    use x86_64::{VirtAddr, structures::paging::Page};
 
     println!("Hello World{}", "!");
     blog_os::init();
