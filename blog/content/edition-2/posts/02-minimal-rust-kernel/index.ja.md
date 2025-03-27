@@ -239,7 +239,7 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[no_mangle] // don't mangle the name of this function
+#[unsafe(no_mangle)] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     // this function is the entry point, since the linker looks for a function
     // named `_start` by default
@@ -304,7 +304,7 @@ build-std = ["core", "compiler_builtins"]
 
 Rustコンパイラは、すべてのシステムにおいて、特定の組み込み関数が利用可能であるということを前提にしています。それらの関数の多くは、私達がちょうど再コンパイルした`compiler_builtins`クレートによって提供されています。しかしながら、通常システムのCライブラリによって提供されているので標準では有効化されていない、メモリ関係の関数がいくつかあります。それらの関数には、メモリブロック内のすべてのバイトを与えられた値にセットする`memset`、メモリーブロックを他のブロックへとコピーする`memcpy`、2つのメモリーブロックを比較する`memcmp`などがあります。これらの関数はどれも、現在の段階で我々のカーネルをコンパイルするのに必要というわけではありませんが、コードを追加していくとすぐに必要になるでしょう（たとえば、構造体をコピーする、など）。
 
-オペレーティングシステムのCライブラリにリンクすることはできませんので、これらの関数をコンパイラに与えてやる別の方法が必要になります。このための方法として考えられるものの一つが、自前で`memset`を実装し、（コンパイル中の自動リネームを防ぐため）`#[no_mangle]`アトリビュートをこれらに適用することでしょう。しかし、こうすると、これらの関数の実装のちょっとしたミスが未定義動作に繋がりうるため危険です。たとえば、`for`ループを使って`memcpy`を実装すると無限再帰を起こしてしまうかもしれません。なぜなら、`for`ループは暗黙のうちに[`IntoIterator::into_iter`]トレイトメソッドを呼び出しており、これが`memcpy`を再び呼び出しているかもしれないためです。なので、代わりに既存のよくテストされた実装を再利用するのが良いでしょう。
+オペレーティングシステムのCライブラリにリンクすることはできませんので、これらの関数をコンパイラに与えてやる別の方法が必要になります。このための方法として考えられるものの一つが、自前で`memset`を実装し、（コンパイル中の自動リネームを防ぐため）`#[unsafe(no_mangle)]`アトリビュートをこれらに適用することでしょう。しかし、こうすると、これらの関数の実装のちょっとしたミスが未定義動作に繋がりうるため危険です。たとえば、`for`ループを使って`memcpy`を実装すると無限再帰を起こしてしまうかもしれません。なぜなら、`for`ループは暗黙のうちに[`IntoIterator::into_iter`]トレイトメソッドを呼び出しており、これが`memcpy`を再び呼び出しているかもしれないためです。なので、代わりに既存のよくテストされた実装を再利用するのが良いでしょう。
 
 [`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
 
@@ -321,7 +321,7 @@ build-std-features = ["compiler-builtins-mem"]
 
 （`compiler-builtins-mem`機能のサポートが追加されたのは[つい最近](https://github.com/rust-lang/rust/pull/77284)なので、`2019-09-30`以降のRust nightlyが必要です。）
 
-このとき、裏で`compiler_builtins`クレートの[`mem`機能][`mem` feature]が有効化されています。これにより、このクレートの[`memcpy`などの実装][`memcpy` etc. implementations]に`#[no_mangle]`アトリビュートが適用され、リンカがこれらを利用できるようになっています。
+このとき、裏で`compiler_builtins`クレートの[`mem`機能][`mem` feature]が有効化されています。これにより、このクレートの[`memcpy`などの実装][`memcpy` etc. implementations]に`#[unsafe(no_mangle)]`アトリビュートが適用され、リンカがこれらを利用できるようになっています。
 
 [`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L51-L52
 [`memcpy` etc. implementations]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
@@ -359,7 +359,7 @@ target = "x86_64-blog_os.json"
 ```rust
 static HELLO: &[u8] = b"Hello World!";
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     let vga_buffer = 0xb8000 as *mut u8;
 

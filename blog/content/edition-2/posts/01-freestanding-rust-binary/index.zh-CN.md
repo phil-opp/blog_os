@@ -184,7 +184,7 @@ fn panic(_info: &PanicInfo) -> ! {
 读者也许会注意到，我们移除了 `main` 函数。原因很显然，既然没有底层运行时调用它，`main` 函数也失去了存在的必要性。为了重写操作系统的入口点，我们转而编写一个 `_start` 函数：
 
 ```rust
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     loop {}
 }
@@ -422,7 +422,7 @@ rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // 不重整函数名
+#[unsafe(no_mangle)] // 不重整函数名
 pub extern "C" fn _start() -> ! {
     // 因为链接器会寻找一个名为 `_start` 的函数，所以这个函数就是入口点
     // 默认命名为 `_start`

@@ -234,13 +234,13 @@ fn panic(_info: &PanicInfo) -> ! {
 우리는 운영체제가 호출하는 프로그램 실행 시작 지점 대신 우리의 새로운 `_start` 함수를 실행 시작 지점으로 대체할 것입니다.
 
 ```rust
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     loop {}
 }
 ```
 
-`#[no_mangle]` 속성을 통해 [name mangling]을 해제하여 Rust 컴파일러가 `_start` 라는 이름 그대로 함수를 만들도록 합니다. 이 속성이 없다면, 컴파일러가 각 함수의 이름을 고유하게 만드는 과정에서 이 함수의 실제 이름을 `_ZN3blog_os4_start7hb173fedf945531caE` 라는 이상한 이름으로 바꿔 생성합니다. 우리가 원하는 실제 시작 지점 함수의 이름을 정확히 알고 있어야 링커 (linker)에도 그 이름을 정확히 전달할 수 있기에 (후속 단계에서 진행) `#[no_mangle]` 속성이 필요합니다.
+`#[unsafe(no_mangle)]` 속성을 통해 [name mangling]을 해제하여 Rust 컴파일러가 `_start` 라는 이름 그대로 함수를 만들도록 합니다. 이 속성이 없다면, 컴파일러가 각 함수의 이름을 고유하게 만드는 과정에서 이 함수의 실제 이름을 `_ZN3blog_os4_start7hb173fedf945531caE` 라는 이상한 이름으로 바꿔 생성합니다. 우리가 원하는 실제 시작 지점 함수의 이름을 정확히 알고 있어야 링커 (linker)에도 그 이름을 정확히 전달할 수 있기에 (후속 단계에서 진행) `#[unsafe(no_mangle)]` 속성이 필요합니다.
 
 또한 우리는 이 함수에 `extern "C"`라는 표시를 추가하여 이 함수가 Rust 함수 호출 규약 대신에 [C 함수 호출 규약][C calling convention]을 사용하도록 합니다. 함수의 이름을 `_start`로 지정한 이유는 그저 런타임 시스템들의 실행 시작 함수 이름이 대부분 `_start`이기 때문입니다.
 
@@ -487,7 +487,7 @@ Linux, Windows 또는 macOS 위에서 동작하는 freestanding 실행파일을 
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // 이 함수의 이름을 mangle하지 않습니다
+#[unsafe(no_mangle)] // 이 함수의 이름을 mangle하지 않습니다
 pub extern "C" fn _start() -> ! {
     // 링커는 기본적으로 '_start' 라는 이름을 가진 함수를 실행 시작 지점으로 삼기에,
     // 이 함수는 실행 시작 지점이 됩니다

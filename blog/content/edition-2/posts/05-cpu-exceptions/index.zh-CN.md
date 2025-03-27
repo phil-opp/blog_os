@@ -394,7 +394,7 @@ pub fn init() {
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -429,7 +429,7 @@ pub extern "C" fn _start() -> ! {
 
 /// Entry point for `cargo test`
 #[cfg(test)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     init();      // new
     test_main();

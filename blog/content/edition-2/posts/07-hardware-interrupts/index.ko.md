@@ -299,7 +299,7 @@ pub fn _print(args: fmt::Arguments) {
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     […]
     loop {
@@ -462,7 +462,7 @@ pub fn hlt_loop() -> ! {
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     […]
 
@@ -487,7 +487,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 /// `cargo test`의 실행 시작 지점
 #[cfg(test)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     init();
     test_main();

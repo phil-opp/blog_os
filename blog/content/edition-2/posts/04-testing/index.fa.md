@@ -105,7 +105,7 @@ pub fn test_runner(tests: &[&dyn Fn()]) {
 
 #![reexport_test_harness_main = "test_main"]
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -655,7 +655,7 @@ fn test_println_output() {
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // don't mangle the name of this function
+#[unsafe(no_mangle)] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     test_main();
 
@@ -738,7 +738,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 
 /// Entry point for `cargo test`
 #[cfg(test)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     test_main();
     loop {}
@@ -805,7 +805,7 @@ pub mod vga_buffer;
 use core::panic::PanicInfo;
 use blog_os::println;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -918,7 +918,7 @@ fn panic(_info: &PanicInfo) -> ! {
 #![test_runner(test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     test_main();
 
@@ -985,7 +985,7 @@ harness = false
 use core::panic::PanicInfo;
 use blog_os::{exit_qemu, serial_print, serial_println, QemuExitCode};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     should_fail();
     serial_println!("[test did not panic]");

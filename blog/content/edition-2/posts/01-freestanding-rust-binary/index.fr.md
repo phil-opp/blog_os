@@ -216,13 +216,13 @@ fn panic(_info: &PanicInfo) -> ! {
 Vous remarquerez peut-être que nous avons retiré la fonction `main`. La raison est que la présence de cette fonction n'a pas de sens sans un environnement d'exécution sous-jacent qui l'appelle. À la place, nous réécrivons le point d'entrée du système d'exploitation avec notre propre fonction `_start` :
 
 ```rust
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     loop {}
 }
 ```
 
-En utilisant l'attribut `#[no_mangle]`, nous désactivons la [décoration de nom] pour assurer que le compilateur Rust crée une fonction avec le nom `_start`. Sans cet attribut, le compilateur génèrerait un symbol obscure `_ZN3blog_os4_start7hb173fedf945531caE` pour donner un nom unique à chaque fonction. L'attribut est nécessaire car nous avons besoin d'indiquer le nom de la fonction de point d'entrée à l'éditeur de lien (*linker*) dans l'étape suivante.
+En utilisant l'attribut `#[unsafe(no_mangle)]`, nous désactivons la [décoration de nom] pour assurer que le compilateur Rust crée une fonction avec le nom `_start`. Sans cet attribut, le compilateur génèrerait un symbol obscure `_ZN3blog_os4_start7hb173fedf945531caE` pour donner un nom unique à chaque fonction. L'attribut est nécessaire car nous avons besoin d'indiquer le nom de la fonction de point d'entrée à l'éditeur de lien (*linker*) dans l'étape suivante.
 
 Nous devons aussi marquer la fonction avec `extern C` pour indiquer au compilateur qu'il devrait utiliser la [convention de nommage] de C pour cette fonction (au lieu de la convention de nommage de Rust non-spécifiée). Cette fonction se nomme `_start` car c'est le nom par défaut des points d'entrée pour la plupart des systèmes.
 
@@ -466,7 +466,7 @@ Un exécutable Rust autoporté minimal ressemble à ceci :
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // ne pas décorer le nom de cette fonction
+#[unsafe(no_mangle)] // ne pas décorer le nom de cette fonction
 pub extern "C" fn _start() -> ! {
     // cette fonction est le point d'entrée, comme le linker cherche une fonction
     // nomée `_start` par défaut

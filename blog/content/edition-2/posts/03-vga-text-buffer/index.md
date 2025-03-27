@@ -268,7 +268,7 @@ Then it writes the byte `b'H'` to it. The `b` prefix creates a [byte literal], w
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     vga_buffer::print_something();
 
@@ -564,7 +564,7 @@ Now we can delete the `print_something` function and print directly from our `_s
 
 ```rust
 // in src/main.rs
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     use core::fmt::Write;
     vga_buffer::WRITER.lock().write_str("Hello again").unwrap();
@@ -655,7 +655,7 @@ Now we can use `println` in our `_start` function:
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 

@@ -249,7 +249,7 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[no_mangle] // 이 함수의 이름을 mangle하지 않습니다
+#[unsafe(no_mangle)] // 이 함수의 이름을 mangle하지 않습니다
 pub extern "C" fn _start() -> ! {
     // 링커는 기본적으로 '_start' 라는 이름을 가진 함수를 실행 시작 지점으로 삼기에,
     // 이 함수는 실행 시작 지점이 됩니다
@@ -314,7 +314,7 @@ cargo 설정 키 `unstable.build-std`를 설정하고 `rust-src` 컴포넌트를
 
 Rust 컴파일러는 특정 군의 내장 함수들이 (built-in function) 모든 시스템에서 주어진다고 가정합니다. 대부분의 내장 함수들은 우리가 방금 컴파일한 `compiler_builtins` 크레이트가 이미 갖추고 있습니다. 하지만 그중 몇몇 메모리 관련 함수들은 기본적으로 사용 해제 상태가 되어 있는데, 그 이유는 해당 함수들을 호스트 시스템의 C 라이브러리가 제공하는 것이 관례이기 때문입니다. `memset`(메모리 블럭 전체에 특정 값 저장하기), `memcpy` (한 메모리 블럭의 데이터를 다른 메모리 블럭에 옮겨쓰기), `memcmp` (메모리 블럭 두 개의 데이터를 비교하기) 등이 이 분류에 해당합니다. 여태까지는 우리가 이 함수들 중 어느 하나도 사용하지 않았지만, 운영체제 구현을 더 추가하다 보면 필수적으로 사용될 함수들입니다 (예를 들어, 구조체를 복사하여 다른 곳에 저장할 때).
 
-우리는 운영체제의 C 라이브러리를 링크할 수 없기에, 다른 방식으로 이러한 내장 함수들을 컴파일러에 전달해야 합니다. 한 방법은 우리가 직접 `memset` 등의 내장함수들을 구현하고 컴파일 과정에서 함수명이 바뀌지 않도록 `#[no_mangle]` 속성을 적용하는 것입니다. 하지만 이 방법의 경우 우리가 직접 구현한 함수 로직에 아주 작은 실수만 있어도 undefined behavior를 일으킬 수 있기에 위험합니다. 예를 들어 `memcpy`를 구현하는 데에 `for`문을 사용한다면 무한 재귀 루프가 발생할 수 있는데, 그 이유는 `for`문의 구현이 내부적으로 trait 함수인 [`IntoIterator::into_iter`]를 호출하고 이 함수가 다시 `memcpy` 를 호출할 수 있기 때문입니다. 그렇기에 충분히 검증된 기존의 구현 중 하나를 사용하는 것이 바람직합니다.
+우리는 운영체제의 C 라이브러리를 링크할 수 없기에, 다른 방식으로 이러한 내장 함수들을 컴파일러에 전달해야 합니다. 한 방법은 우리가 직접 `memset` 등의 내장함수들을 구현하고 컴파일 과정에서 함수명이 바뀌지 않도록 `#[unsafe(no_mangle)]` 속성을 적용하는 것입니다. 하지만 이 방법의 경우 우리가 직접 구현한 함수 로직에 아주 작은 실수만 있어도 undefined behavior를 일으킬 수 있기에 위험합니다. 예를 들어 `memcpy`를 구현하는 데에 `for`문을 사용한다면 무한 재귀 루프가 발생할 수 있는데, 그 이유는 `for`문의 구현이 내부적으로 trait 함수인 [`IntoIterator::into_iter`]를 호출하고 이 함수가 다시 `memcpy` 를 호출할 수 있기 때문입니다. 그렇기에 충분히 검증된 기존의 구현 중 하나를 사용하는 것이 바람직합니다.
 
 [`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
 
@@ -332,7 +332,7 @@ build-std = ["core", "compiler_builtins"]
 
 (`compiler-builtins-mem` 기능에 대한 지원이 [굉장히 최근에 추가되었기에](https://github.com/rust-lang/rust/pull/77284), Rust nightly `2020-09-30` 이상의 버전을 사용하셔야 합니다.)
 
-이 기능은 `compiler_builtins` 크레이트의 [`mem` 기능 (feature)][`mem` feature]를 활성화 시킵니다. 이는 `#[no_mangle]` 속성이 [`memcpy` 등의 함수 구현][`memcpy` etc. implementations]에 적용되게 하여 링크가 해당 함수들을 식별하고 사용할 수 있게 합니다.
+이 기능은 `compiler_builtins` 크레이트의 [`mem` 기능 (feature)][`mem` feature]를 활성화 시킵니다. 이는 `#[unsafe(no_mangle)]` 속성이 [`memcpy` 등의 함수 구현][`memcpy` etc. implementations]에 적용되게 하여 링크가 해당 함수들을 식별하고 사용할 수 있게 합니다.
 
 [`mem` feature]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L54-L55
 [`memcpy` etc. implementations]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
@@ -371,7 +371,7 @@ VGA 버퍼가 정확히 어떤 구조를 하고 있는지는 다음 포스트에
 ```rust
 static HELLO: &[u8] = b"Hello World!";
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     let vga_buffer = 0xb8000 as *mut u8;
 

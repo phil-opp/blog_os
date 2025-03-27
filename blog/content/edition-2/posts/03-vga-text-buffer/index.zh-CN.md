@@ -254,7 +254,7 @@ pub fn print_something() {
 
 ```rust
 // in src/main.rs
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     vga_buffer::print_something();
     loop {}
@@ -523,7 +523,7 @@ lazy_static! {
 
 ```rust
 // in src/main.rs
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     use core::fmt::Write;
     vga_buffer::WRITER.lock().write_str("Hello again").unwrap();
@@ -606,7 +606,7 @@ pub fn _print(args: fmt::Arguments) {
 ```rust
 // in src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() {
     println!("Hello World{}", "!");
 
