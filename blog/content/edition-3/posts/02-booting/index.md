@@ -1025,9 +1025,9 @@ fn main() {
     let mut qemu = Command::new("qemu-system-x86_64");
     qemu.args([
         "-drive",
-        &format!("format=raw,if=pflash,readonly=on,file={}", ovmf_code.to_str().unwrap()),
+        &format!("format=raw,if=pflash,readonly=on,file={}", ovmf_code.display()),
         "-drive",
-        &format!("format=raw,if=pflash,file={}", ovmf_vars.to_str().unwrap()),
+        &format!("format=raw,if=pflash,file={}", ovmf_vars.display()),
         "-drive",
         &format!("format=raw,file={}", env!("UEFI_IMAGE")),
     ]);
