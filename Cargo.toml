@@ -11,3 +11,8 @@ panic = "abort"
 
 [profile.release]
 panic = "abort"
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
