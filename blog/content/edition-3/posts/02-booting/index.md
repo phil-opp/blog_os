@@ -1011,26 +1011,34 @@ Now we can create our `qemu-uefi` executable at `src/bin/qemu-uefi.rs`:
 
 ```rust ,hl_lines=3-15
 // src/bin/qemu-uefi.rs
-
 use std::{
-    env,
-    process::{self, Command},
+    env, process::{self, Command}
 };
 
+use ovmf_prebuilt::{Arch, FileType, Prebuilt, Source};
+
 fn main() {
+    let prebuilt =
+        Prebuilt::fetch(Source::LATEST, "target/ovmf").unwrap();
+    let ovmf_code = prebuilt.get_file(Arch::X64, FileType::Code);
+    let ovmf_vars = prebuilt.get_file(Arch::X64, FileType::Vars);
     let mut qemu = Command::new("qemu-system-x86_64");
-    qemu.arg("-drive");
-    qemu.arg(format!("format=raw,file={}", env!("UEFI_IMAGE")));
-    qemu.arg("-bios").arg(ovmf_prebuilt::ovmf_pure_efi());
+    qemu.args([
+        "-drive",
+        &format!("format=raw,if=pflash,readonly=on,file={}", ovmf_code.display()),
+        "-drive",
+        &format!("format=raw,if=pflash,file={}", ovmf_vars.display()),
+        "-drive",
+        &format!("format=raw,file={}", env!("UEFI_IMAGE")),
+    ]);
     let exit_status = qemu.status().unwrap();
     process::exit(exit_status.code().unwrap_or(-1));
 }
 ```
 
 It's very similar to our `qemu-bios` executable.
-The only two differences are that it passes an additional `-bios` argument and that it uses the `UEFI_IMAGE` instead of the `BIOS_IMAGE`.
+The only two differences are that it passes two additional `-drive if=pflash,..` arguments to load UEFI firmware (`OVMF_CODE.fd`) and writable NVRAM (`OVMF_VARS.fd`), and that it uses the `UEFI_IMAGE` instead of the `BIOS_IMAGE`.
 Using a quick `cargo run --bin qemu-uefi`, we can confirm that it works as intended.
-
 
 ### Screen Output
 
