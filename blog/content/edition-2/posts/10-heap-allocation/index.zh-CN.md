@@ -88,7 +88,7 @@ fn inner(i: usize) -> &'static u32 {
 
 [unsized rvalues]: https://github.com/rust-lang/rust/issues/48055
 
-为解决这些缺点，编程语言通常提供第三种内存区域，称为**堆**，用于存储变量。堆支持运行时 _动态内存分配_，利用 `allocate` 和 `deallocate` 两个函数：`allocate` 函数返回指定大小的空闲内存块，用于存储变量，该变量在调用 `deallocate` 函数释放前一直存在。
+为解决这些缺点，编程语言通常提供第三种内存区域，称为**堆**，用于存储变量。堆通过 `allocate` 和 `deallocate` 两个函数支持运行时_动态内存分配_：`allocate` 函数返回指定大小的空闲内存块，用于存储变量，该变量在被 `deallocate` 函数释放前一直存在。
 
 以下是一个示例：
 
@@ -104,28 +104,28 @@ fn inner(i: usize) -> &'static u32 {
 
 ![调用栈包含 outer 的局部变量，堆包含 z[0] 和 z[2]，但不再包含 z[1]。](call-stack-heap-freed.svg)
 
-我们看到 `z[1]` 已空闲，可用于下一次 `allocate` 调用。然而，`z[0]` 和 `z[2]` 从未被释放，这被称为**内存泄漏**，常导致程序内存消耗过高（想象在循环中反复调用 `inner` 的后果）。这可能导致严重的问题，但动态分配还可能引发更危险的错误。
+我们看到 `z[1]` 已被释放，可在下一次 `allocate` 调用时被重用。然而，`z[0]` 和 `z[2]` 从未被释放，这被称为**内存泄漏**，常导致程序内存消耗过高（想象在循环中反复调用 `inner` 的后果）。这可能导致严重的问题，但动态分配还可能引发更危险的错误。
 
 ### 常见错误
 
-除了内存泄漏（虽不利但不会使程序易受攻击），还有两种后果更严重的常见错误：
+除了内存泄漏（其虽不利但不会使程序易受攻击），还有两种后果更严重的常见错误：
 
-- **释放后使用(use-after-free)**：在对变量调用 `deallocate` 后继续使用，导致未定义行为，常被攻击者利用执行任意代码。
-- **双重释放(double-free)**：意外对变量释放两次，可能释放了在同一位置重新分配的其他内存块，从而导致释放后使用漏洞。
+- **释放后使用（use-after-free）**：在对变量 `deallocate` 后继续使用，这将导致未定义行为，常被攻击者利用以执行任意代码。
+- **双重释放（double-free）**：意外对变量进行两次释放，可能释放了在同一位置重新分配的其他内存块，从而导致释放后使用漏洞。
 
 这些漏洞广为人知，但即使在复杂项目中，最优秀的程序员也难以完全避免。例如，2019 年 Linux 中发现的[释放后使用漏洞][linux vulnerability]可导致任意代码执行。通过搜索 `use-after-free linux {年份}` 通常能找到相关结果。这表明即使最优秀的程序员在复杂项目中也难以正确处理动态内存。
 
 [linux vulnerability]: https://securityboulevard.com/2019/02/linux-use-after-free-vulnerability-found-in-linux-2-6-through-4-20-11/
 
-为避免这些问题，许多语言（如 Java 或 Python）使用 *垃圾回收(garbage collection)* 自动管理动态内存。程序员无需手动调用 `deallocate`，程序会定期暂停并扫描未使用的堆变量，自动释放它们，从而避免上述漏洞。但缺点是定期扫描会造成性能开销以及可能的长时间暂停。
+为避免这些问题，许多语言（如 Java 或 Python）使用*垃圾回收(garbage collection)*来自动管理动态内存。程序员无需手动调用 `deallocate`，而程序会定期暂停并扫描未使用的堆变量，并自动释放它们，从而避免上述漏洞。但这种方法的缺点是定期扫描会造成性能开销以及可能的长时间暂停。
 
-Rust 采用不同方法：通过 [*所有权*][_ownership_] 概念，在编译时检查动态内存操作的正确性，无需垃圾回收即可避免上述漏洞，意味着无性能开销。另一个好处是程序员仍能像在 C 或 C++ 中一样精细控制动态内存。
+Rust 采用了不同的方法：通过[*所有权*][_ownership_]概念，在编译时检查动态内存操作的正确性，无需垃圾回收即可避免上述漏洞，这意味着无性能开销。另一个好处是程序员仍能像在 C 或 C++ 中一样精细控制动态内存。
 
 [_ownership_]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
 
 ### Rust 中的分配
 
-Rust 标准库不需要程序员直接调用 `allocate` 和 `deallocate`，而是提供抽象类型隐式调用这些函数。最重要的类型是 [**`Box`**]，用于堆分配值。它提供 [`Box::new`] 构造函数，接受一个值，调用 `allocate` 获取所需大小的内存，并将值移动到堆上新分配的空间中。为了释放堆内存，`Box` 实现了[`Drop` 特性][`Drop` trait]，在变量超出作用域时调用 `deallocate`：
+Rust 标准库不需要程序员直接调用 `allocate` 和 `deallocate`，而是提供抽象类型隐式调用这些函数。最重要的类型是 [**`Box`**]，用于堆分配值。它提供 [`Box::new`] 构造函数，其接受一个值，调用 `allocate` 获取所需大小的内存，并将值移动到堆上新分配的空间中。为了释放堆内存，`Box` 实现了[`Drop` trait][`Drop` trait]，并在变量离开作用域时调用 `deallocate`：
 
 [**`Box`**]: https://doc.rust-lang.org/std/boxed/index.html
 [`Box::new`]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html#method.new
@@ -135,10 +135,10 @@ Rust 标准库不需要程序员直接调用 `allocate` 和 `deallocate`，而�
 {
     let z = Box::new([1,2,3]);
     […]
-} // z 超出作用域，调用 `deallocate`
+} // z 离开作用域，`deallocate` 被调用
 ```
 
-这种模式有一个奇怪的名字，称为[*资源获取即初始化*][_resource acquisition is initialization_]（简称为RAII），起源于 C++，用于实现类似的 [`std::unique_ptr`] 类型。
+这种模式有一个奇怪的名字，称为[*资源获取即初始化*][_resource acquisition is initialization_]（简称为RAII），起源于 C++，用于实现类似 [`std::unique_ptr`] 的类型。
 
 [_resource acquisition is initialization_]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 [`std::unique_ptr`]: https://en.cppreference.com/w/cpp/memory/unique_ptr
@@ -171,9 +171,9 @@ error[E0597]: `z[_]` does not live long enough
   |     - `z[_]` dropped here while still borrowed
 ```
 
-术语初看可能有些复杂。获取值的引用称为 *借用*，类似于现实中的借用：临时访问对象，但需在某时归还，且不能销毁。通过检查所有借用在对象销毁前结束，Rust 编译器保证不会发生释放后使用情况。
+这一术语初看可能有些复杂。获取值的引用称为 *借用*，类似于现实中的借用：临时访问对象，但需在某时归还，且不能销毁。通过检查所有借用在对象销毁前结束，Rust 编译器保证不会发生释放后使用情况。
 
-Rust 的所有权系统不仅防止释放后使用，还提供与 Java 或 Python 等垃圾回收语言相同的完全 [*内存安全*][_memory safety_]。此外，它保证 [*线程安全*][_thread safety_]，在多线程代码中比这些语言更安全。最重要的是，所有检查在编译时进行，与 C 的手动内存管理相比没有运行时开销。
+Rust 的所有权系统不仅防止释放后使用，还提供与 Java 或 Python 等垃圾回收语言相同的完全[*内存安全*][_memory safety_]。此外，它保证[*线程安全*][_thread safety_]，在多线程代码中比这些语言更安全。最重要的是，所有检查在编译时进行，与 C 的手动内存管理相比没有运行时开销。
 
 [_memory safety_]: https://en.wikipedia.org/wiki/Memory_safety
 [_thread safety_]: https://en.wikipedia.org/wiki/Thread_safety
@@ -205,9 +205,9 @@ Rust 的所有权系统不仅防止释放后使用，还提供与 Java 或 Pytho
 extern crate alloc;
 ```
 
-与普通依赖不同，无需修改 `Cargo.toml`，因为 `alloc` crate 作为标准库的一部分提供给 Rust 编译器。通过 `extern crate` 语句，指定编译器应尝试包含它。（出于历史原因，所有依赖都需要 `extern crate` 语句，现在是可选的。）
+与普通依赖不同，我们无需修改 `Cargo.toml`。因为 `alloc` crate 作为标准库的一部分提供给 Rust 编译器，编译器已经了解了这个 crate。通过 `extern crate` 语句，我们指定编译器去尝试包含它。（出于历史原因，所有依赖都需要 `extern crate` 语句，这现在是可选的。）
 
-由于我们为自定义目标编译，无法使用 Rust 安装中预编译的 `alloc` 版本。需通过在 `.cargo/config.toml` 中添加 `unstable.build-std` 数组，指示 cargo 从源代码重新编译：
+由于我们为自定义目标编译，无法使用 Rust 安装中预编译的 `alloc` 版本。需通过在 `.cargo/config.toml` 中添加 `unstable.build-std` 数组，指示 cargo 从源代码重新编译这个 crate：
 
 ```toml
 # in .cargo/config.toml
@@ -217,7 +217,7 @@ build-std = ["core", "compiler_builtins", "alloc"]
 
 现在编译器将重新编译并包含 `alloc` crate。
 
-`#[no_std]` crate 中默认禁用 `alloc` crate 的原因是它有额外要求。编译项目时，会看到错误：
+`#[no_std]` crate 中默认禁用 `alloc` crate 的原因是 `alloc` crate 有额外要求。编译项目时，我们会看到错误：
 
 ```
 error: no global memory allocator found but one is required; link to std or add
@@ -225,7 +225,7 @@ error: no global memory allocator found but one is required; link to std or add
 ```
 
 错误原因是 `alloc` crate 需要一个堆分配器，并且它需要实现 `allocate` 和 `deallocate` 函数。在 Rust 中，堆分配器由 [`GlobalAlloc`] 特性描述，错误信息中提到了这个特性。为了实现堆分配器，
-需将 `#[global_allocator]` 属性应用到一个实现了 `GlobalAlloc` 特性的 `static` 变量。
+我们需将 `#[global_allocator]` 属性应用到一个实现了 `GlobalAlloc` 特性的 `static` 变量。
 
 [`GlobalAlloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html
 
@@ -299,7 +299,7 @@ unsafe impl GlobalAlloc for Dummy {
 }
 ```
 
-这个结构体无需任何字段，所以我们定义它为[零大小类型][zero-sized type]。如上所述，`alloc` 始终返回空指针，这表示一个分配错误。由于从不返回内存，`dealloc` 不应被调用。因此在 `dealloc` 中只是简单调用 panic。`alloc_zeroed` 和 `realloc` 有默认实现，无需提供。
+这个结构体无需任何字段，所以我们定义它为[零大小类型][zero-sized type]。如上所述，`alloc` 始终返回空指针，这表示一个分配错误。由于从不返回内存，`dealloc` 不应被调用。因此 `dealloc` 只是简单调用 panic。`alloc_zeroed` 和 `realloc` 有默认实现，无需手动提供。
 
 [zero-sized type]: https://doc.rust-lang.org/nomicon/exotic-sizes.html#zero-sized-types-zsts
 
@@ -419,11 +419,11 @@ pub fn init_heap(
 
 - **映射页面**：第二步是映射我们刚创建的页面范围中的所有页面。为此，我们使用 `for` 循环迭代这些页面。对每个页面，我们执行以下操作：
 
-    - 使用 [`FrameAllocator::allocate_frame`] 方法分配页面应映射到的物理内存。当没有更多内存时，该方法返回 [`None`]。我们通过 [`Option::ok_or`] 方法将其映射到 [`MapToError::FrameAllocationFailed`] 错误，并使用 [问号操作符][question mark operator] 在错误情况下提前返回。
+    - 使用 [`FrameAllocator::allocate_frame`] 方法分配页面应映射到的物理内存。当没有更多内存时，该方法返回 [`None`]。我们通过 [`Option::ok_or`] 方法将其映射到 [`MapToError::FrameAllocationFailed`] 错误，并使用[问号操作符][question mark operator] 在错误情况下提前返回。
 
     - 为页面设置必需的 `PRESENT` 标志和 `WRITABLE` 标志。这些标志允许读写访问，这对堆内存来说是合理的。
 
-    - 使用 [`Mapper::map_to`] 方法在活动页面表中创建映射。该方法可能失败，因此我们再次使用 [问号操作符][question mark operator] 将错误转发给调用者。成功时，该方法返回一个 [`MapperFlush`] 实例，我们可以使用其 [`flush`] 方法更新 [_转换后备缓冲区_][_translation lookaside buffer_]。
+    - 使用 [`Mapper::map_to`] 方法在活动页面表中创建映射。该方法可能失败，因此我们再次使用[问号操作符][question mark operator]将错误转发给调用者。成功时，该方法返回一个 [`MapperFlush`] 实例，我们可以使用其 [`flush`] 方法更新[_转换后备缓冲区_][_translation lookaside buffer_]（简称TLB）。
 
 [`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
 [`Page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html
@@ -473,7 +473,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 [`Result::expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
 
-我们现在有了一个已映射的堆内存区域，可以开始使用了。但调用 `Box::new` 时仍使用旧的 `Dummy` 分配器，因此运行时仍会看到 "out of memory" 错误"。下面我们通过使用真正的分配器来修复这个问题。
+我们现在有了一个已映射的堆内存区域，可以开始使用了。但调用 `Box::new` 时仍使用旧的 `Dummy` 分配器，因此运行时仍会看到 "out of memory" 错误。下面我们通过使用真正的分配器来修复这个问题。
 
 ## 使用分配器 Crate 
 
@@ -503,7 +503,7 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 [`spinning_top::Spinlock`]: https://docs.rs/spinning_top/0.1.0/spinning_top/type.Spinlock.html
 
-仅将 `LockedHeap` 设置为全局分配器还不够。原因是使用了 [`empty`] 构造函数，该函数创建了一个没有备份内存的分配器。与我们的虚拟分配器一样，它在 `alloc` 时始终返回错误。要解决此问题，我们需要在创建堆后初始化分配器：
+仅将 `LockedHeap` 设置为全局分配器还不够。原因是使用了 [`empty`] 构造函数，该函数创建了一个没有可用内存的分配器。与我们的虚拟分配器一样，它在 `alloc` 时始终返回错误。要解决此问题，我们需要在创建堆后初始化分配器：
 
 [`empty`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.LockedHeap.html#method.empty
 
@@ -587,7 +587,7 @@ reference count is 1 now](qemu-alloc-showcase.png)
   - 线程安全的引用计数指针 [`Arc`][`Arc`]
   - 字符串类型 [`String`][`String`] 和 [`format!`][`format!`] 宏
   - [`LinkedList`][`LinkedList`]
-  -  可增长的环形缓冲区 [`VecDeque`][`VecDeque`]
+  - 可增长的环形缓冲区 [`VecDeque`][`VecDeque`]
   - [`BinaryHeap`][`BinaryHeap`] 优先队列
   - [`BTreeMap`][`BTreeMap`] 和 [`BTreeSet`][`BTreeSet`]
 
@@ -600,7 +600,7 @@ reference count is 1 now](qemu-alloc-showcase.png)
 [`btreemap`]: https://www.google.com/search?q=%5Bhttps://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html%5D\(https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html\)
 [`btreeset`]: https://www.google.com/search?q=%5Bhttps://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html%5D\(https://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html\)
 
-当我们想要实现线程列表，调度队列或支持 async/await 时，这些类型将变得非常有用。
+当我们想要实现线程列表、调度队列或支持 async/await 时，这些类型将变得非常有用。
 
 ## 添加测试
 
@@ -679,7 +679,7 @@ fn simple_allocation() {
 
 正如预期，测试验证了没有发生分配错误。
 
-接下来，我们迭代地构建一个大型向量，以测试大内存分配和多次内存分配（由于重新分配）：
+接下来，我们迭代地构建一个大型向量，以测试大内存分配和多次内存分配（多次内存分配是由重新分配造成的）：
 
 ```rust
 // in tests/heap_allocation.rs
