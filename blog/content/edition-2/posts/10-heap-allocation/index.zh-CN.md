@@ -29,7 +29,7 @@ translation_contributors = []
 
 ## 局部变量与静态变量
 
-目前，我们的内核中使用了两类变量：局部变量和 静态（`static`） 变量。局部变量存储在[调用栈]上，仅在函数返回前有效。静态变量存储在固定的内存位置，在程序的整个生命周期内有效。
+目前，我们的内核中使用了两类变量：局部变量和静态（`static`） 变量。局部变量存储在[调用栈]上，仅在函数返回前有效。静态变量存储在固定的内存位置，在程序的整个生命周期内有效。
 
 ### 局部变量
 
@@ -84,7 +84,7 @@ fn inner(i: usize) -> &'static u32 {
 - **局部变量**：仅在函数或块结束前有效，因为它们存储在调用栈上，函数返回后即被销毁。
 - **静态变量**：在程序整个运行期间始终存在，无法在不再需要时回收和重用其内存。此外，它们的所有权语义不明确，可被所有函数访问，因此修改时需使用 [`Mutex`] 保护。
 
-局部变量和静态变量的另一个限制是它们只能是固定大小，因此无法存储动态增长的集合。（Rust 中有关于[非固定大小值][unsized rvalues]的提案，允许动态大小的局部变量，但仅适用于特定场景。）
+局部变量和静态变量的另一个限制是它们只能有固定大小，因此无法存储动态增长的集合。（Rust 中有关于[非固定大小值][unsized rvalues]的提案，允许动态大小的局部变量，但仅适用于特定场景。）
 
 [unsized rvalues]: https://github.com/rust-lang/rust/issues/48055
 
@@ -591,14 +591,14 @@ reference count is 1 now](qemu-alloc-showcase.png)
   - [`BinaryHeap`][`BinaryHeap`] 优先队列
   - [`BTreeMap`][`BTreeMap`] 和 [`BTreeSet`][`BTreeSet`]
 
-[`arc`]: https://www.google.com/search?q=%5Bhttps://doc.rust-lang.org/alloc/sync/struct.Arc.html%5D\(https://doc.rust-lang.org/alloc/sync/struct.Arc.html\)
-[`string`]: https://www.google.com/search?q=%5Bhttps://doc.rust-lang.org/alloc/string/struct.String.html%5D\(https://doc.rust-lang.org/alloc/string/struct.String.html\)
-[`format!`]: https://www.google.com/search?q=%5Bhttps://doc.rust-lang.org/alloc/macro.format.html%5D\(https://doc.rust-lang.org/alloc/macro.format.html\)
-[`linkedlist`]: https://www.google.com/search?q=%5Bhttps://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.html%5D\(https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.html\)
-[`vecdeque`]: https://www.google.com/search?q=%5Bhttps://doc.rust-lang.org/alloc/collections/vec_deque/struct.VecDeque.html%5D\(https://doc.rust-lang.org/alloc/collections/vec_deque/struct.VecDeque.html\)
-[`binaryheap`]: https://www.google.com/search?q=%5Bhttps://doc.rust-lang.org/alloc/collections/binary_heap/struct.BinaryHeap.html%5D\(https://doc.rust-lang.org/alloc/collections/binary_heap/struct.BinaryHeap.html\)
-[`btreemap`]: https://www.google.com/search?q=%5Bhttps://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html%5D\(https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html\)
-[`btreeset`]: https://www.google.com/search?q=%5Bhttps://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html%5D\(https://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html\)
+[`arc`]: https://doc.rust-lang.org/alloc/sync/struct.Arc.html%5D\(https://doc.rust-lang.org/alloc/sync/struct.Arc.html\)
+[`string`]: https://doc.rust-lang.org/alloc/string/struct.String.html%5D\(https://doc.rust-lang.org/alloc/string/struct.String.html\)
+[`format!`]: https://doc.rust-lang.org/alloc/macro.format.html%5D\(https://doc.rust-lang.org/alloc/macro.format.html\)
+[`linkedlist`]: https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.html%5D\(https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.html\)
+[`vecdeque`]: https://doc.rust-lang.org/alloc/collections/vec_deque/struct.VecDeque.html%5D\(https://doc.rust-lang.org/alloc/collections/vec_deque/struct.VecDeque.html\)
+[`binaryheap`]: https://doc.rust-lang.org/alloc/collections/binary_heap/struct.BinaryHeap.html%5D\(https://doc.rust-lang.org/alloc/collections/binary_heap/struct.BinaryHeap.html\)
+[`btreemap`]: ttps://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html%5D\(https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html\)
+[`btreeset`]: https://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html%5D\(https://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html\)
 
 当我们想要实现线程列表、调度队列或支持 async/await 时，这些类型将变得非常有用。
 
