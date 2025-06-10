@@ -584,21 +584,21 @@ reference count is 1 now](qemu-alloc-showcase.png)
 
 当然，`alloc` crate 中还有许多其他的分配和集合类型，我们现在都可以在内核中使用，包括：
 
-  - 线程安全的引用计数指针 [`Arc`][`Arc`]
-  - 字符串类型 [`String`][`String`] 和 [`format!`][`format!`] 宏
-  - [`LinkedList`][`LinkedList`]
-  - 可增长的环形缓冲区 [`VecDeque`][`VecDeque`]
-  - [`BinaryHeap`][`BinaryHeap`] 优先队列
-  - [`BTreeMap`][`BTreeMap`] 和 [`BTreeSet`][`BTreeSet`]
+  - 线程安全的引用计数指针 [`Arc`]
+  - 字符串类型 [`String`]] 和 [`format!`] 宏
+  - [`LinkedList`]
+  - 可增长的环形缓冲区 [`VecDeque`]
+  - [`BinaryHeap`] 优先队列
+  - [`BTreeMap`] 和 [`BTreeSet`]
 
-[`arc`]: https://doc.rust-lang.org/alloc/sync/struct.Arc.html%5D\(https://doc.rust-lang.org/alloc/sync/struct.Arc.html\)
-[`string`]: https://doc.rust-lang.org/alloc/string/struct.String.html%5D\(https://doc.rust-lang.org/alloc/string/struct.String.html\)
-[`format!`]: https://doc.rust-lang.org/alloc/macro.format.html%5D\(https://doc.rust-lang.org/alloc/macro.format.html\)
-[`linkedlist`]: https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.html%5D\(https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.html\)
-[`vecdeque`]: https://doc.rust-lang.org/alloc/collections/vec_deque/struct.VecDeque.html%5D\(https://doc.rust-lang.org/alloc/collections/vec_deque/struct.VecDeque.html\)
-[`binaryheap`]: https://doc.rust-lang.org/alloc/collections/binary_heap/struct.BinaryHeap.html%5D\(https://doc.rust-lang.org/alloc/collections/binary_heap/struct.BinaryHeap.html\)
-[`btreemap`]: ttps://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html%5D\(https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html\)
-[`btreeset`]: https://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html%5D\(https://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html\)
+[`arc`]: https://doc.rust-lang.org/alloc/sync/struct.Arc.html
+[`string`]: https://doc.rust-lang.org/alloc/string/struct.String.html
+[`format!`]: https://doc.rust-lang.org/alloc/macro.format.html
+[`linkedlist`]: https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.htmlLinkedList.html\)
+[`vecdeque`]: https://doc.rust-lang.org/alloc/collections/vec_deque/struct.VecDeque.html
+[`binaryheap`]: https://doc.rust-lang.org/alloc/collections/binary_heap/struct.BinaryHeap.htmlBinaryHeap.html\)
+[`btreemap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
+[`btreeset`]: https://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html
 
 当我们想要实现线程列表、调度队列或支持 async/await 时，这些类型将变得非常有用。
 
