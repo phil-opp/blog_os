@@ -114,7 +114,7 @@ impl BumpAllocator {
         }
     }
 
-    /// 用给定的堆边界初始化指针碰撞分配器
+    /// 用给定的堆边界初始化bump分配器
     /// 这个方法是不安全的，因为调用者必须确保给定
     /// 的内存范围没有被使用。同样，这个方法只能被调用一次。
 
@@ -224,15 +224,12 @@ error[E0594]: cannot assign to `self.next` which is behind a `&` reference
 
 #### `Locked` 封装类型
 
-
-With the help of the `spin::Mutex` wrapper type, we can implement the `GlobalAlloc` trait for our bump allocator. The trick is to implement the trait not for the `BumpAllocator` directly, but for the wrapped `spin::Mutex<BumpAllocator>` type:
-在 `spin::Mutex`封装类型的帮助下，我们能为我们的指针碰撞分配器实现 `GlobalAlloc` 特征。技巧是不直接为 `BumpAllocator` 实现该特征，而是 `spin::Mutex<BumpAllocator>` 类型实现。
+在 `spin::Mutex`封装类型的帮助下，我们可以为我们的bump分配器实现 `GlobalAlloc` 特征。诀窍是不直接在 `BumpAllocator` 上实现该特征，而是在 `spin::Mutex<BumpAllocator>` 类型实现。
 
 ```rust
 unsafe impl GlobalAlloc for spin::Mutex<BumpAllocator> {…}
 ```
 
-Unfortunately, this still doesn't work because the Rust compiler does not permit trait implementations for types defined in other crates:
 不幸的是，这样还是不行，因为Rust编译器不允许为定义在其他crates中的类型实现特征。
 
 ```
@@ -249,12 +246,12 @@ error[E0117]: only traits defined in the current crate can be implemented for ar
 ```
 
 To fix this, we need to create our own wrapper type around `spin::Mutex`:
-为了解决这个问题，我们需要实现我们自己的 `spin::Mutex` 类型。
+为了解决这个问题，我们需要围绕 `spin::Mutex` 实现我们自己的包装器类型。
 
 ```rust
 // in src/allocator.rs
 
-/// A wrapper around spin::Mutex to permit trait implementations.
+/// 允许特征实现的围绕 `spin::Mutex` 类型的封装器。
 pub struct Locked<A> {
     inner: spin::Mutex<A>,
 }
@@ -272,14 +269,11 @@ impl<A> Locked<A> {
 }
 ```
 
-The type is a generic wrapper around a `spin::Mutex<A>`. It imposes no restrictions on the wrapped type `A`, so it can be used to wrap all kinds of types, not just allocators. It provides a simple `new` constructor function that wraps a given value. For convenience, it also provides a `lock` function that calls `lock` on the wrapped `Mutex`. Since the `Locked` type is general enough to be useful for other allocator implementations too, we put it in the parent `allocator` module.
-这个类型是一个泛型封装器，它可以封装任何类型 `A`。它不施加任何对封装类型 `A` 的限制，所以它可以用来封装所有种类的类型，而不仅仅是分配器。它提供了一个简单的 `new` 构造函数，用于封装给定的值。为了方便起见，它还提供了一个 `lock` 函数，用于调用封装的 `Mutex` 上的 `lock`。由于 `Locked` 类型对于其他分配器实现也很有用，所以我们将它放在父 `allocator` 模块中。
+这个类型是围绕 `spin::Mutex<A>` 的泛型封装器。它不施加任何对封装类型 `A` 的限制，所以它可以用来封装所有种类的类型，而不仅仅是分配器。它提供了一个简单的 `new` 构造函数，用于封装给定的值。为了方便起见，它还提供了一个 `lock` 函数，用于调用封装的 `Mutex` 上的 `lock` 。由于 `Locked` 类型对于其他分配器实现也很有帮助，所以我们将它放在父 `allocator` 模块中。
 
-#### Implementation for `Locked<BumpAllocator>`
 #### `Locked<BumpAllocator>` 类型的实现
 
-The `Locked` type is defined in our own crate (in contrast to `spin::Mutex`), so we can use it to implement `GlobalAlloc` for our bump allocator. The full implementation looks like this:
-`Locked` 类型已在我们自己的crate中定义。因此，我们可以使用它来为我们的指针碰撞分配器实现 `GlobalAlloc` 特征。完整的实现如下：
+`Locked` 类型已在我们自己的crate中定义（而不是直接使用 `spin::Mutex`）。因此，可以使用它来为我们的bump分配器实现 `GlobalAlloc` 特征。完整的实现如下：
 
 
 ```rust
@@ -291,7 +285,7 @@ use core::ptr;
 
 unsafe impl GlobalAlloc for Locked<BumpAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let mut bump = self.lock(); // get a mutable reference
+        let mut bump = self.lock(); // 获取可变引用
 
         let alloc_start = align_up(bump.next, layout.align());
         let alloc_end = match alloc_start.checked_add(layout.size()) {
@@ -300,7 +294,7 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
         };
 
         if alloc_end > bump.heap_end {
-            ptr::null_mut() // out of memory
+            ptr::null_mut() // 内存不足
         } else {
             bump.next = alloc_end;
             bump.allocations += 1;
@@ -309,7 +303,7 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        let mut bump = self.lock(); // get a mutable reference
+        let mut bump = self.lock(); // 获取可变引用
 
         bump.allocations -= 1;
         if bump.allocations == 0 {
@@ -319,81 +313,72 @@ unsafe impl GlobalAlloc for Locked<BumpAllocator> {
 }
 ```
 
-The first step for both `alloc` and `dealloc` is to call the [`Mutex::lock`] method through the `inner` field to get a mutable reference to the wrapped allocator type. The instance remains locked until the end of the method, so that no data race can occur in multithreaded contexts (we will add threading support soon).
-`alloc` 和 `dealloc` 的第一步都是调用[`Mutex::lock`]方法通过 `inner` 字段获取对封装类型的可变引用。封装实例在方法结束前保持锁定，因此不会在多线程上下文中发生数据竞争（我们很快会添加线程支持）。
+`alloc` 和 `dealloc` 的第一步都是调用[`Mutex::lock`]方法来通过 `inner` 字段获取封装类型的可变引用。封装实例在方法结束前保持锁定，因此不会在多线程上下文中发生数据竞争（我们很快会添加线程支持）。
 
 [`Mutex::lock`]: https://docs.rs/spin/0.5.0/spin/struct.Mutex.html#method.lock
 
-Compared to the previous prototype, the `alloc` implementation now respects alignment requirements and performs a bounds check to ensure that the allocations stay inside the heap memory region. The first step is to round up the `next` address to the alignment specified by the `Layout` argument. The code for the `align_up` function is shown in a moment. We then add the requested allocation size to `alloc_start` to get the end address of the allocation. To prevent integer overflow on large allocations, we use the [`checked_add`] method. If an overflow occurs or if the resulting end address of the allocation is larger than the end address of the heap, we return a null pointer to signal an out-of-memory situation. Otherwise, we update the `next` address and increase the `allocations` counter by 1 like before. Finally, we return the `alloc_start` address converted to a `*mut u8` pointer.
-相比于之前的原型，现在的 `alloc` 实现还会检查对齐要求并执行边界检查，确保分配的内存区域在堆内存区域内。第一步是将 `next` 地址向上舍入到 `Layout` 参数指定的对齐值。代码中展示了 `align_up` 函数的实现。然后，我们将请求的分配大小加到 `alloc_start` 地址上，得到分配结束地址。为了防止在大型分配中发生整数溢出，我们使用了[`checked_add`]方法。如果发生溢出或分配结束地址大于堆结束地址，我们返回空指针以表示内存不足情况。否则，我们更新 `next` 地址并增加 `allocations` 计数器，就像之前一样。最后，我们返回 `alloc_start` 地址转换为 `*mut u8` 指针。
+与之前的原型相比，现在的 `alloc` 实现遵循了对齐要求并执行了边界检查，确保分配的内存区域在堆内存区域内。第一步是将 `next` 地址向上对齐到 `Layout` 参数指定的对齐值。稍后展示 `align_up` 函数的实现。接着，我们将所请求的分配大小加到 `alloc_start` 地址上，得到该次分配的结束地址。为了防止在大内存分配时发生整数溢出，我们使用了 [`checked_add`] 方法。如果发生溢出或分配结束地址大于堆结束地址，我们就返回一个空指针以表示内存不足情况。否则，我们更新 `next` 地址并像之前一样增加 `allocations` 计数器。最后，我们返回转换为 `*mut u8` 指针 `alloc_start` 地址。
 
 
 [`checked_add`]: https://doc.rust-lang.org/std/primitive.usize.html#method.checked_add
 [`Layout`]: https://doc.rust-lang.org/alloc/alloc/struct.Layout.html
 
-The `dealloc` function ignores the given pointer and `Layout` arguments. Instead, it just decreases the `allocations` counter. If the counter reaches `0` again, it means that all allocations were freed again. In this case, it resets the `next` address to the `heap_start` address to make the complete heap memory available again.
-`dealloc` 函数忽略了给定的指针和 `Layout` 参数。相反，它只是减少了 `allocations` 计数器。如果计数器再次为 `0`，则意味着所有分配都已再次释放。在这种情况下，它将 `next` 地址重置为 `heap_start` 地址，使整个堆内存再次可用。
+`dealloc` 函数忽略了传入的指针和 `Layout` 参数。它仅仅是将 `allocations` 计数器减一。如果计数器再次变为 `0` ，则意味着所有分配都已再次释放。在这种情况下，它将 `next` 地址重置为 `heap_start` 地址，使整个堆内存重新可用。
 
-#### Address Alignment
 #### 地址对齐
 
-
-The `align_up` function is general enough that we can put it into the parent `allocator` module. A basic implementation looks like this:
-`align_up` 函数足够通用，因此我们可以将它放到父 `allocator` 模块中。基本实现如下：
+`align_up` 函数足够通用，因此我们可以将它放到父 `allocator` 模块中。其基本实现如下：
 
 ```rust
 // in src/allocator.rs
 
-/// Align the given address `addr` upwards to alignment `align`.
+/// 向上对齐给定地址 `addr` 到对齐值 `align`。
 fn align_up(addr: usize, align: usize) -> usize {
     let remainder = addr % align;
     if remainder == 0 {
-        addr // addr already aligned
+        addr // 地址已经对齐
     } else {
         addr - remainder + align
     }
 }
 ```
 
-The function first computes the [remainder] of the division of `addr` by `align`. If the remainder is `0`, the address is already aligned with the given alignment. Otherwise, we align the address by subtracting the remainder (so that the new remainder is 0) and then adding the alignment (so that the address does not become smaller than the original address).
-这个函数首先计算 `addr` 除以 `align` 的余数。如果余数为 `0`，则地址已经与给定的对齐对齐。否则，我们通过减去余数（以便余数为 `0`）并添加对齐（以便地址不小于原始地址）来对齐地址。
+这个函数首先计算 `addr` 除以 `align` 的[余数][remainder]。如果余数为 `0` ，则地址已经与给定的对齐值对齐。否则，我们通过减去余数（以便余数为 `0`）并加上对齐值（以便地址不小于原始地址）来对齐地址。
 
 
 [remainder]: https://en.wikipedia.org/wiki/Euclidean_division
 
-Note that this isn't the most efficient way to implement this function. A much faster implementation looks like this:
 注意这不是实现此函数最高效的方法，一个更快的实现如下所示：
 
 ```rust
-/// Align the given address `addr` upwards to alignment `align`.
+/// 向上对齐给定地址 `addr` 到对齐值 `align` 。 
 ///
-/// Requires that `align` is a power of two.
+/// 要求对齐值是2的幂
 fn align_up(addr: usize, align: usize) -> usize {
     (addr + align - 1) & !(align - 1)
 }
 ```
 
-This method requires `align` to be a power of two, which can be guaranteed by utilizing the `GlobalAlloc` trait (and its [`Layout`] parameter). This makes it possible to create a [bitmask] to align the address in a very efficient way. To understand how it works, let's go through it step by step, starting on the right side:
+此方法要求 `align` 必须是2的幂，通过 `GlobalAlloc` 特征（及其 [`Layout`] 参数）可以保证这一点。这使得我们可以创建[位掩码][bitmask]来高效地对齐地址。为了理解其工作原理，我们从表达式的右侧逐步解析： 
 
 
 [`Layout`]: https://doc.rust-lang.org/alloc/alloc/struct.Layout.html
 [bitmask]: https://en.wikipedia.org/wiki/Mask_(computing)
 
-- Since `align` is a power of two, its [binary representation] has only a single bit set (e.g. `0b000100000`). This means that `align - 1` has all the lower bits set (e.g. `0b00011111`).
-- By creating the [bitwise `NOT`] through the `!` operator, we get a number that has all the bits set except for the bits lower than `align` (e.g. `0b…111111111100000`).
-- By performing a [bitwise `AND`] on an address and `!(align - 1)`, we align the address _downwards_. This works by clearing all the bits that are lower than `align`.
-- Since we want to align upwards instead of downwards, we increase the `addr` by `align - 1` before performing the bitwise `AND`. This way, already aligned addresses remain the same while non-aligned addresses are rounded to the next alignment boundary.
+- 因为 `align` 是2的幂，它的[二进制表示][binary representation]仅有一个比特位为1（例如：`0b000100000`）。这意味着 `align - 1` 在该比特位下的所有低位均为1（例如：`0b00011111`）。  
+- 通过 `!` 运算符执行[按位取反][bitwise `NOT`]操作, 我们得到一个数，其除了低于 `align`的比特位为0外，其余位均为1。
+- 通过将给定地址和 `!(align - 1)` 执行[按位与][bitwise `AND`]操作，我们将该地址 _向下_ 对齐。这是通过将所有低于 `align` 的比特位清除来实现的。
+- 因为我们想要向上对齐而不是向下对齐，在执行按位 `AND` 操作之前，先将 `addr` 增加 `align - 1` 的值。这种方式下，已对齐的地址保持不变，而未对齐的地址将被对齐到下一个对齐边界。
 
 [binary representation]: https://en.wikipedia.org/wiki/Binary_number#Representation
 [bitwise `NOT`]: https://en.wikipedia.org/wiki/Bitwise_operation#NOT
 [bitwise `AND`]: https://en.wikipedia.org/wiki/Bitwise_operation#AND
 
-Which variant you choose is up to you. Both compute the same result, only using different methods.
+你选择使用哪一个变体，这取决于你。这两种方法计算的结果相同，只是使用不同的方法。
 
-### Using It
-
-To use the bump allocator instead of the `linked_list_allocator` crate, we need to update the `ALLOCATOR` static in `allocator.rs`:
-为了使用我们的指针碰撞分配器，我们需要更新 `allocator.rs` 中的 `ALLOCATOR` 静态变量：
+### 用法
+                                 
+为了使用我们的bump分配器，我们需要更新 `allocator.rs` 中的 `ALLOCATOR` 静态变量：
 
 ```rust
 // in src/allocator.rs
@@ -404,17 +389,14 @@ use bump::BumpAllocator;
 static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new());
 ```
 
-Here it becomes important that we declared `BumpAllocator::new` and `Locked::new` as [`const` functions]. If they were normal functions, a compilation error would occur because the initialization expression of a `static` must be evaluable at compile time.
-我们需要将 `BumpAllocator::new` 和 `Locked::new` 定义为 [`const` 函数][`const` functions]。如果它们是普通的函数，将会发生编译错误，因为
+我们需要将 `BumpAllocator::new` 和 `Locked::new` 定义为 [`const` 函数][`const` functions]。如果它们是一般的函数，将会发生编译错误，因为一个 `static` 变量的初始化表达式会在编译时求值。
 
 
 [`const` functions]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-We don't need to change the  `ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE)` call in our `init_heap` function because the bump allocator provides the same interface as the allocator provided by the `linked_list_allocator`.
-我们不需要修改我们的 `init_heap` 函数中的 `ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE)` 调用，因为指针碰撞分配器提供的接口与 `linked_list_allocator` 提供的接口相同。
+我们不需要修改我们的 `init_heap` 函数中的 `ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE)` 调用，因为bump分配器提供的接口与 `linked_list_allocator` 提供的接口是一致的。
 
-Now our kernel uses our bump allocator! Everything should still work, including the [`heap_allocation` tests] that we created in the previous post:
-现在我们的内核使用了我们的指针碰撞分配器！一切正常，包括我们在上一篇文章中创建的 [`heap_allocation` tests]：
+现在我们的内核使用了我们的bump分配器！一切正常，包括我们在上一篇文章中创建的 [`heap_allocation` tests]：
 
 [`heap_allocation` tests]: @/edition-2/posts/10-heap-allocation/index.md#adding-a-test
 
@@ -427,48 +409,40 @@ large_vec... [ok]
 many_boxes... [ok]
 ```
 
-### Discussion
 ### 讨论
 
-
-The big advantage of bump allocation is that it's very fast. Compared to other allocator designs (see below) that need to actively look for a fitting memory block and perform various bookkeeping tasks on `alloc` and `dealloc`, a bump allocator [can be optimized][bump downwards] to just a few assembly instructions. This makes bump allocators useful for optimizing the allocation performance, for example when creating a [virtual DOM library].
-指针碰撞分配最大的优势就是它非常快。相比于其他的分配器设计（见下文），指针碰撞分配器需要主动查找合适的内存块并在 `alloc` 和 `dealloc` 上执行各种簿记任务。但是，[可以对其进行优化][bump downwards]，使其仅降至几个汇编指令。这使得指针碰撞分配器在优化分配性能时非常有用，例如当创建一个[虚拟 DOM 库][virtual DOM library]时。
+bump分配最大的优势就是它非常快。相比其他的需要主动地寻找合适的内存块并且在 `alloc` 和 `dealloc` 时执行各种簿记工作的分配器设计（见下文），bump分配器[可以对其进行优化][bump downwards]，使其仅降至仅有几条汇编指令。这使得bump分配器在优化分配性能时非常有用，例如当创建一个[虚拟 DOM 库][virtual DOM library]时。
 
 
 [bump downwards]: https://fitzgeraldnick.com/2019/11/01/always-bump-downwards.html
 [virtual DOM library]: https://hacks.mozilla.org/2019/03/fast-bump-allocated-virtual-doms-with-rust-and-wasm/
 
-While a bump allocator is seldom used as the global allocator, the principle of bump allocation is often applied in the form of [arena allocation], which basically batches individual allocations together to improve performance. An example of an arena allocator for Rust is contained in the [`toolshed`] crate.
-指针碰撞分配器通常不被用作全局分配器，但指针碰撞分配的原理通常以[arena allocation]的形式应用，它基本上将多个分配捆绑在一起以提高性能。Rust 的一个arenas 分配器的例子包含在 [`toolshed`] 库中。
+bump分配器通常不被用作全局分配器，但bump分配的原理通常以[arena分配][arena allocation]的形式应用，其核心思想是将独立的小块内存分配操作批量合并处理以提高性能。Rust 的一个arena分配器的例子包含在 [`toolshed`] crate 中。
 
 
 [arena allocation]: https://mgravell.github.io/Pipelines.Sockets.Unofficial/docs/arenas.html
 [`toolshed`]: https://docs.rs/toolshed/0.8.1/toolshed/index.html
 
-#### The Drawback of a Bump Allocator
-#### 指针碰撞分配器的缺点
+#### bump分配器的缺点
 
-The main limitation of a bump allocator is that it can only reuse deallocated memory after all allocations have been freed. This means that a single long-lived allocation suffices to prevent memory reuse. We can see this when we add a variation of the `many_boxes` test:
-指针碰撞分配器的主要限制是它只能在所有已分配的内存都已释放后重用已释放的内存。这意味着单个长期存在的分配就可以阻止内存重用。我们可以通过添加 `many_boxes` 测试的变体来看到这一点：
+bump分配器的主要限制是它只能在所有已分配的内存都已释放后才能重用已释放的内存。这意味着单个长期存在的分配就可以阻止内存重用。我们可以通过添加 `many_boxes` 测试的变体来看到这一点：
 
 ```rust
 // in tests/heap_allocation.rs
 
 #[test_case]
 fn many_boxes_long_lived() {
-    let long_lived = Box::new(1); // new
+    let long_lived = Box::new(1); // 新的
     for i in 0..HEAP_SIZE {
         let x = Box::new(i);
         assert_eq!(*x, i);
     }
-    assert_eq!(*long_lived, 1); // new
+    assert_eq!(*long_lived, 1); // 新的
 }
 ```
 
-Like the `many_boxes` test, this test creates a large number of allocations to provoke an out-of-memory failure if the allocator does not reuse freed memory. Additionally, the test creates a `long_lived` allocation, which lives for the whole loop execution.
-就像 `many_boxes`测试，此测试创建了大量的分配，以触发如果分配器不重用已释放内存时的内存溢出错误。此外，该测试还创建了一个 `long_lived` 分配，它在整个循环执行期间存在。
+与 `many_boxes` 测试类似，此测试创建了大量的分配，以触发内存不足错误（如果分配器没有重用空闲的内存）。此外，该测试还创建了一个 `long_lived` 分配，它的生命周期贯穿整个循环执行过程。
 
-When we try to run our new test, we see that it indeed fails:
 当我们运行新的测试时，我们会看到它确实失败了：
 
 ```
@@ -482,76 +456,55 @@ many_boxes_long_lived... [failed]
 Error: panicked at 'allocation error: Layout { size_: 8, align_: 8 }', src/lib.rs:86:5
 ```
 
-Let's try to understand why this failure occurs in detail: First, the `long_lived` allocation is created at the start of the heap, thereby increasing the `allocations` counter by 1. For each iteration of the loop, a short-lived allocation is created and directly freed again before the next iteration starts. This means that the `allocations` counter is temporarily increased to 2 at the beginning of an iteration and decreased to 1 at the end of it. The problem now is that the bump allocator can only reuse memory after _all_ allocations have been freed, i.e., when the `allocations` counter falls to 0. Since this doesn't happen before the end of the loop, each loop iteration allocates a new region of memory, leading to an out-of-memory error after a number of iterations.
-让我们试着理解为什么会发生此错误：首先，`long_lived`分配在堆的起始位置被创建，然后 `allocations` 计数器增加1.对于在循环中的每一次迭代，一个分配会创建并在下一次循环开始前被直接释放。这意味着 `allocations` 计数器在迭代的一开始短暂地增加为2并在迭代结束时减少为1。现在问题是指针碰撞分配器只有在 _所有_ 分配均被释放之后才能重用内存，例如，当 `allocations` 计数器变为0时。因为这在循环结束前不会发生，每个循环迭代分配一个新的内存区域，在一定次数迭代后导致内存溢出错误。
+让我们试着理解为什么会发生此错误：首先，`long_lived` 分配在堆的起始位置被创建，然后 `allocations` 计数器增加1。对于在循环中的每一次迭代，一个分配会创建并在下一次迭代开始前被直接释放。这意味着 `allocations` 计数器在迭代的一开始短暂地增加为2并在迭代结束时减少为1。现在问题是bump分配器只有在 _所有_ 分配均被释放之后才能重用内存，例如，当 `allocations` 计数器变为0时。因为这在循环结束前不会发生，每次循环迭代分配一个新的内存区域，在一定次数迭代后将导致内存不足错误。
+
+#### 解决测试问题？
+
+有两个潜在的技巧可以用来解决我们bump分配器的测试问题：
+
+- 我们可以更新 `dealloc` 方法，通过比较其结束地址与 `next` 指针来检查释放的分配是否与 `alloc` 返回的最后一个分配的结束地址相等。在相等的情况下，我们可以安全地将 `next` 指针恢复为已释放分配的起始地址。这样，每次循环迭代都可以重用相同的内存块。
+
+- 我们可以添加一个 `alloc_back` 方法，该方法使用一个额外的 `next_back` 字段从堆的 _末尾_ 分配内存。然后我们可以为所有长生命周期的分配手动调用此分配方法，从而在堆上实现短生命周期和长生命周期的分配的分离。注意这种分离只有在清楚地知道每个分配会存活多久的前提下才能正常工作。此方法的另一个缺陷是手动进行内存分配是繁琐且不安全的。
 
 
-#### Fixing the Test?
-#### 修复测试？
+虽然这两种方法都可以解决这个测试问题，但因为它们都只能在非常特殊的场景下重用内存，它们都不是通用的解决方案。问题是：存在一种通用的解决方案来重用 _所有_ 已释放的内存吗？                    
 
-There are two potential tricks that we could utilize to fix the test for our bump allocator:
-有两个潜在的技巧可以用来修复我们指针碰撞分配器的测试：
-
-- We could update `dealloc` to check whether the freed allocation was the last allocation returned by `alloc` by comparing its end address with the `next` pointer. In case they're equal, we can safely reset `next` back to the start address of the freed allocation. This way, each loop iteration reuses the same memory block.
-- 我们可以更新 `dealloc` 通过比较其结束地址与 `next` 指针来检查释放的分配是否与 `alloc` 返回的最后一个分配的结束地址相等。如果是这种情况，我们可以安全地将 `next` 指针恢复为已释放分配的起始地址。这样，每个循环迭代都可以重用相同的内存块。
-
-
-- We could add an `alloc_back` method that allocates memory from the _end_ of the heap using an additional `next_back` field. Then we could manually use this allocation method for all long-lived allocations, thereby separating short-lived and long-lived allocations on the heap. Note that this separation only works if it's clear beforehand how long each allocation will live. Another drawback of this approach is that manually performing allocations is cumbersome and potentially unsafe.
-- 我们可以增加一个 `alloc_back` 方法，该方法使用一个额外的 `next_back` 字段从堆的 _末尾_ 分配内存。然后我们可以为所有长生命周期的分配手动调用此分配方法，以此在堆上分隔短生命周期和长生命周期的分配。注意这种分隔只有在清楚地知道每个分配会存活多久的前提下才能正常工作。此方法的另一个缺点时手动分配是潜在不安全的
-
-While both of these approaches work to fix the test, they are not a general solution since they are only able to reuse memory in very specific cases. The question is: Is there a general solution that reuses _all_ freed memory?
-虽然这两种方法都可以修复这个测试，但因为它们都只能在特定场景下重用内存，它们都不是通用的解决方案。问题是：存在一种通用的解决方案来重用 _所有_ 已释放的内存吗？                    
-
-#### Reusing All Freed Memory?
 #### 重用所有已释放的内存？
 
-
-As we learned [in the previous post][heap-intro], allocations can live arbitrarily long and can be freed in an arbitrary order. This means that we need to keep track of a potentially unbounded number of non-continuous, unused memory regions, as illustrated by the following example:
-从 [上一篇文章][heap-intro] 中我们知道，分配可以存活任意长的时间，也可以以任意顺序被释放。这意味着我们需要跟踪一个可能无界的未连续的未使用内存区域，如下面的示例所示：
+从 [上一篇文章][heap-intro] 中我们知道，分配可以存活任意长的时间，也可以以任意顺序被释放。这意味着我们需要跟踪一个可能无界的不连续的未使用内存区域，如下图所示：
 
 [heap-intro]: @/edition-2/posts/10-heap-allocation/index.md#dynamic-memory
 
 ![](allocation-fragmentation.svg)
 
-The graphic shows the heap over the course of time. At the beginning, the complete heap is unused, and the `next` address is equal to `heap_start` (line 1). Then the first allocation occurs (line 2). In line 3, a second memory block is allocated and the first allocation is freed. Many more allocations are added in line 4. Half of them are very short-lived and already get freed in line 5, where another new allocation is also added.
-这张图展示了堆随时间变化的情况。一开始，整个堆都是未使用的，`next` 地址等于 `heap_start`（第一行）。然后，第一次分配发生（第2行）。在第3行，分配了一个新的内存块并释放了第一个内存块。在第4行添加了更多的分配。其中有一半的分配是非常短暂的，在第5行已经被释放。
+这张图展示了堆随时间变化的情况。一开始，整个堆都是未使用的，`next` 地址等于 `heap_start`（第一行）。然后，第一次分配发生（第2行）。在第3行，分配了一个新的内存块并释放了第一个内存块。在第4行添加了更多的分配。其中半数分配是非常短暂的，在第5行已经被释放，此时还新增了一个新的分配。
 
+第五行展示了根本性问题：我们有5个大小不同的未使用内存区域，但 `next` 指针只能指向最后一个区域的开头。虽然我们可以在这个例子中使用一个大小为4的数组来存储其他未使用内存区域的起始地址和大小，但这不是一个通用的解决方案，因为我们可以轻松创建一个使用8、16或1000个未使用内存区域的示例。
 
-Line 5 shows the fundamental problem: We have five unused memory regions with different sizes, but the `next` pointer can only point to the beginning of the last region. While we could store the start addresses and sizes of the other unused memory regions in an array of size 4 for this example, this isn't a general solution since we could easily create an example with 8, 16, or 1000 unused memory regions.
-第五行展示了问题所在：我们有5个不同大小的未使用内存区域，但 `next` 指针只能指向最后一个区域的开头。虽然我们可以在这个例子中使用一个大小为4的数组来存储其他未使用内存区域的起始地址和大小，但这不是一个通用的解决方案，因为我们可以轻松创建一个使用8、16或1000个未使用内存区域的示例。
+通常，当存在潜在无限数量的元素时，我们可以使用一个堆分配集合。这在我们的场景中是不可能的，因为堆分配器不能依赖于它自身（会造成无限递归或死锁）。因此我们需要寻找一种不同的解决方案。
 
-Normally, when we have a potentially unbounded number of items, we can just use a heap-allocated collection. This isn't really possible in our case, since the heap allocator can't depend on itself (it would cause endless recursion or deadlocks). So we need to find a different solution.
-通常，当存在潜在无限数量的元素时，我们可以使用一个堆分配集合。这在我们的场景中是不可能的，因为堆分配器不能依赖于它自身（他会造成无限递归或死锁）。因此我们需要寻找一种不同的解决方案。
-## Linked List Allocator
 ## 链表分配器
 
-A common trick to keep track of an arbitrary number of free memory areas when implementing allocators is to use these areas themselves as backing storage. This utilizes the fact that the regions are still mapped to a virtual address and backed by a physical frame, but the stored information is not needed anymore. By storing the information about the freed region in the region itself, we can keep track of an unbounded number of freed regions without needing additional memory.
-在实现分配器时一个常用的跟踪任意数量的未使用内存区域的技巧是将未使用的内存区域本身用作后备存储。这利用了未使用区域仍然映射到虚拟地址并由物理帧支持，但存储的信息不再被需要这一事实。通过将有关已释放区域的信息存储在区域本身中，我们可以在不需要额外内存的情况下跟踪无限数量的已释放区域。
+在实现分配器时一个常用的跟踪任意数量的未使用内存区域的技巧是将未使用的内存区域本身用作后备存储。这利用了未使用区域仍然映射到虚拟地址并由物理帧支持，但存储的信息不再被需要这一事实。通过将有关已释放区域的信息存储在区域中，我们可以在不需要额外内存的情况下跟踪无限数量的已释放区域。
 
-The most common implementation approach is to construct a single linked list in the freed memory, with each node being a freed memory region:
-最常见的实现方法是在已释放的内存中构造一个单链表，每个节点都是一个已释放的内存区域：
+最常见的实现方法是在已释放的内存中构造一个单链表，每一个节点都是一个已释放的内存区域：
 
 ![](linked-list-allocation.svg)
 
-Each list node contains two fields: the size of the memory region and a pointer to the next unused memory region. With this approach, we only need a pointer to the first unused region (called `head`) to keep track of all unused regions, regardless of their number. The resulting data structure is often called a [_free list_].
-每个链表节点有两个字段：内存区域的大小和一个指向下一个未使用内存区域的指针。通过这种方法，我们仅需要一个指向第一个未使用区域（称为 `head` ）的指针就能跟踪所有未使用的区域而不管它们的数量。这个数据结构通常被称为一个 [_free list_]
+每个链表节点有两个字段：内存区域的大小和指向下一个未使用内存区域的指针。通过这种方法，我们只需要一个指向第一个未使用区域（称为 `head` ）的指针就能跟踪所有未使用的区域而不管它们的数量多少。最终形成的数据结构通常被称为  [_free list_]
 
 [_free list_]: https://en.wikipedia.org/wiki/Free_list
 
-As you might guess from the name, this is the technique that the `linked_list_allocator` crate uses. Allocators that use this technique are also often called _pool allocators_.
-你能从这个名字中猜到，这就是 `linked_list_allocator` crate中用到的技术。使用这种技术的分配器也常被称为 _池分配器_。
+你能从这个名字中猜到，这就是 `linked_list_allocator` crate 中用到的技术。使用这种技术的分配器也常被称为 _池分配器_ 。
 
-### Implementation
 ### 实现
 
-In the following, we will create our own simple `LinkedListAllocator` type that uses the above approach for keeping track of freed memory regions. This part of the post isn't required for future posts, so you can skip the implementation details if you like.
-接下来，我们会创建我们自己的简单的 `LinkedListAllocator` 类型，用于跟踪已释放的内存区域。文章的这部分不是必需的，所以你可以根据自己的喜好跳过实现细节。
+接下来，我们会创建我们自己的简单的 `LinkedListAllocator` 类型，用于跟踪已释放的内存区域。本部分内容在后续章节中非必需，所以你可以根据自己的喜好跳过实现细节。
 
-#### The Allocator Type
 #### 分配器类型
 
 We start by creating a private `ListNode` struct in a new `allocator::linked_list` submodule:
-我们从在 `allocator::linked_list` 子模块中创建一个私有的 `ListNode` 结构体开始：
+我们首先在一个新的 `allocator::linked_list` 子模块中创建一个私有的 `ListNode` 结构体：
 
 ```rust
 // in src/allocator.rs
@@ -568,13 +521,11 @@ struct ListNode {
 }
 ```
 
-Like in the graphic, a list node has a `size` field and an optional pointer to the next node, represented by the `Option<&'static mut ListNode>` type. The `&'static mut` type semantically describes an [owned] object behind a pointer. Basically, it's a [`Box`] without a destructor that frees the object at the end of the scope.
-和图中一样，一个链表节点有一个 `size` 字段和一个可选的指向下一个节点的指针，用 `Option<&'static mut ListNode>` 类型表示。`&'static mut` 类型的语义上描述了一个指针后面的[拥有][owned]对象。基本上，它是一个没有析构函数的 [`Box`]，它在作用域结束时释放对象。
+正如图示所示，链表节点包含一个 `size` 字段和一个指向下一个节点的可选的指针，用 `Option<&'static mut ListNode>` 类型表示。`&'static mut` 类型的语义上描述了一个由指持有的所有权对象。本质上，它是一个缺少在作用域结束时释放对象的析构函数的 [`Box`]智能指针。
 
 [owned]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
 [`Box`]: https://doc.rust-lang.org/alloc/boxed/index.html
 
-We implement the following set of methods for `ListNode`:
 我们为 `ListNode` 实现以下方法：
 
 ```rust
@@ -595,13 +546,11 @@ impl ListNode {
 }
 ```
 
-The type has a simple constructor function named `new` and methods to calculate the start and end addresses of the represented region. We make the `new` function a [const function], which will be required later when constructing a static linked list allocator.
-此类型拥有一个名为 `new` 的构造函数，用于创建新的 `ListNode` 实例，并具有计算代表区域起始地址和结束地址的方法。我们将 `new` 函数设为[常量函数][const function]，稍后在构造静态链表分配器时需要用到。
+此类型包含一个名为 `new` 的构造函数，以及用于计算代表区域起始地址和结束地址的方法。我们将 `new` 函数定义为[常量函数][const function]，这一特性在后续构建静态链表分配器时是必需的。
 
 [const function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-With the `ListNode` struct as a building block, we can now create the `LinkedListAllocator` struct:
-有了 `ListNode` 结构体后，我们现在可以创建 `LinkedListAllocator` 了：
+通过将 `ListNode` 结构体作为基础组件，我们现在可以创建 `LinkedListAllocator` 结构体了：
 
 ```rust
 // in src/allocator/linked_list.rs
@@ -611,7 +560,6 @@ pub struct LinkedListAllocator {
 }
 
 impl LinkedListAllocator {
-    /// Creates an empty LinkedListAllocator.
     /// 创建一个空的LinkedListAllocator。
     pub const fn new() -> Self {
         Self {
@@ -619,13 +567,9 @@ impl LinkedListAllocator {
         }
     }
 
-    /// Initialize the allocator with the given heap bounds.
     /// 用给定的堆边界初始化分配器
     ///
-    /// This function is unsafe because the caller must guarantee that the given
-    /// heap bounds are valid and that the heap is unused. This method must be
-    /// called only once.
-    /// 这个函数是不安全的，因为调用者必须保证给定的堆边界时有效的并且堆是未使用的。
+    /// 这个函数是不安全的，因为调用者必须保证给定的堆边界是有效的并且堆是未使用的。
     /// 此方法只能调用一次
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         unsafe {
@@ -633,7 +577,6 @@ impl LinkedListAllocator {
         }
     }
 
-    /// Adds the given memory region to the front of the list.
     /// 将给定的内存区域添加到链表前端。
     unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
         todo!();
@@ -641,28 +584,22 @@ impl LinkedListAllocator {
 }
 ```
 
-The struct contains a `head` node that points to the first heap region. We are only interested in the value of the `next` pointer, so we set the `size` to 0 in the `ListNode::new` function. Making `head` a `ListNode` instead of just a `&'static mut ListNode` has the advantage that the implementation of the `alloc` method will be simpler.
-此结构体包含一个指向第一个堆区域的 `head` 节点。我们只对 `next` 指针感兴趣，所以我们在 `ListNode::new` 函数中把 `size` 设置为0。把 `head` 设为 `ListNode` 类型而不是 `&'static mut ListNode` 类型有一个优势，即 `alloc` 方法的实现会更简单。
+此结构体包含一个指向第一个堆区域的 `head` 节点。我们只关注 `next` 指针的值，所以我们在 `ListNode::new` 函数中将 `size` 设置为0。将 `head` 定义为 `ListNode` 类型而不是 `&'static mut ListNode` 类型的优势在于，`alloc` 方法的实现会更简单。
 
-Like for the bump allocator, the `new` function doesn't initialize the allocator with the heap bounds. In addition to maintaining API compatibility, the reason is that the initialization routine requires writing a node to the heap memory, which can only happen at runtime. The `new` function, however, needs to be a [`const` function] that can be evaluated at compile time because it will be used for initializing the `ALLOCATOR` static. For this reason, we again provide a separate, non-constant `init` method.
-和指针碰撞分配器一样，`new` 函数不会用堆边界初始化分配器。除了保持API兼容性外，这是因为初始化例程需要向堆内存写入节点，而这只能在运行时发生。但是，`new` 函数需要是一个[常量函数][const function]，因为它将用于初始化 `ALLOCATOR` 静态变量。出于这个原因，我们再次提供一个单独的非常量 `init` 方法。
+和bump分配器一样，`new` 函数并未用堆边界初始化分配器。除了保持API兼容性外，这是因为初始化操作需要将链表节点写入堆内存，而这只能在运行时发生。但是，`new` 函数必须被定义为可以在编译期求值的[常量函数][const function]，因为该函数将用于初始化 `ALLOCATOR` 静态变量。出于这个原因，我们再次提供一个独立的非常量 `init` 方法。
 
 [`const` function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-The `init` method uses an `add_free_region` method, whose implementation will be shown in a moment. For now, we use the [`todo!`] macro to provide a placeholder implementation that always panics.
-`init` 方法使用一个 `add_free_region` 方法，该方法的实现会在稍后展示。现在，我们用 [`todo!`] 宏提供一个总是会panic的占位符实现。
+`init` 方法使用一个 `add_free_region` 方法，该方法的实现会在稍后展示。现在，我们用 [`todo!`] 宏提供一个总是会触发panic的占位符实现。
 
 
 [`todo!`]: https://doc.rust-lang.org/core/macro.todo.html
 
-#### The `add_free_region` Method
 #### `add_free_region` 方法
 
-The `add_free_region` method provides the fundamental _push_ operation on the linked list. We currently only call this method from `init`, but it will also be the central method in our `dealloc` implementation. Remember, the `dealloc` method is called when an allocated memory region is freed again. To keep track of this freed memory region, we want to push it to the linked list.
 `add_free_region` 方法提供链表的基础 _push_ 操作。我们目前只从 `init` 方法调用它，但它也会是我们 `dealloc` 实现的核心方法。记住，当再次释放已分配的内存区域时，会调用 `dealloc` 方法。为了跟踪此已释放的内存区域，我们希望将其推送到链表中。
 
 
-The implementation of the `add_free_region` method looks like this:
 `add_free_region` 方法的实现如下：
 
 ```rust
@@ -672,15 +609,12 @@ use super::align_up;
 use core::mem;
 
 impl LinkedListAllocator {
-    /// Adds the given memory region to the front of the list.
     /// 将给定的内存区域添加到链表前端。
     unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
-        // ensure that the freed region is capable of holding ListNode
         /// 确保给定的内存区域足以存储 ListNode
         assert_eq!(align_up(addr, mem::align_of::<ListNode>()), addr);
         assert!(size >= mem::size_of::<ListNode>());
 
-        // create a new list node and append it at the start of the list
         // 创建一个新的 ListNode 并将其添加到链表前端
         let mut node = ListNode::new(size);
         node.next = self.head.next.take();
@@ -693,62 +627,49 @@ impl LinkedListAllocator {
 }
 ```
 
-The method takes the address and size of a memory region as an argument and adds it to the front of the list. First, it ensures that the given region has the necessary size and alignment for storing a `ListNode`. Then it creates the node and inserts it into the list through the following steps:
-此方法将一个内存区域的地址和大小作为参数并且将它添加到链表前端。首先，它会确保给定的内存区域有足够的大小和对齐方式来存储一个 `ListNode`。然后，它会创建一个新的节点并通过以下步骤将其插入链表中：
+此方法接受一个内存区域的地址和大小作为参数并且将它添加到链表前端。首先，它会确保给定的内存区域是否满足存储 `ListNode` 的所需的最小大小和对齐要求。然后，它会通过以下步骤创建一个新的节点并将其插入链表中：
 
 ![](linked-list-allocator-push.svg)
 
-Step 0 shows the state of the heap before `add_free_region` is called. In step 1, the method is called with the memory region marked as `freed` in the graphic. After the initial checks, the method creates a new `node` on its stack with the size of the freed region. It then uses the [`Option::take`] method to set the `next` pointer of the node to the current `head` pointer, thereby resetting the `head` pointer to `None`.
-步骤0展示了调用 `add_free_region` 方法之前的堆内存状态。在步骤1中，方法用参数中标记为 `freed` 的内存区域调用。在初始检查之后，方法会在栈上创建一个新的 `node`，其大小与释放的内存区域相同。然后，它会使用[`Option::take`]方法将 `node` 的 `next` 指针设置为当前的 `head` 指针，从而将 `head` 指针重置为 `None`。
+步骤0展示了调用 `add_free_region` 方法之前的堆内存状态。在步骤1中，该方法以图中标记为 `freed` 的内存区域作为参数被调用。在初始检查之后，方法会在栈上创建一个新的 `node`，其大小与已释放的内存区域相同。随后，它使用[`Option::take`]方法将 `node` 的 `next` 指针设置为当前的 `head` 指针，从而将 `head` 指针重置为 `None` 。
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-In step 2, the method writes the newly created `node` to the beginning of the freed memory region through the [`write`] method. It then points the `head` pointer to the new node. The resulting pointer structure looks a bit chaotic because the freed region is always inserted at the beginning of the list, but if we follow the pointers, we see that each free region is still reachable from the `head` pointer.
-步骤2中，该方法在空闲内存区域的开始部分通过 [`write`] 方法写入这个新创建的 `node`。然后，它将 `head` 指针指向这个新节点。结果指针结构看起来有点混乱，因为总是将空闲区域插入到列表的开头，但如果我们跟随着指针，我们会看到每个空闲区域仍然可以从 `head` 指针到达。
+步骤2中，该方法通过 [`write`] 方法将这个新创建的 `node` 写入在空闲内存区域的开始部分。然后，它将 `head` 指针指向这个新节点。结果指针结构看起来有点混乱，因为总是将空闲区域插入到列表的开头，但如果我们跟随着指针，我们会看到每个空闲区域仍然可以从 `head` 指针到达。
 
 
 [`write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
 
-#### The `find_region` Method
+
 #### `find_region` 方法
 
-
-The second fundamental operation on a linked list is finding an entry and removing it from the list. This is the central operation needed for implementing the `alloc` method. We implement the operation as a `find_region` method in the following way:
 链表的第二个基础操作就是在链表中找到一个节点并移除它。这是实现 `alloc` 方法的中心操作，接下来我们将通过 `find_region` 方法来实现这个操作。
 
 ```rust
 // in src/allocator/linked_list.rs
 
 impl LinkedListAllocator {
-    /// Looks for a free region with the given size and alignment and removes
-    /// it from the list.
     /// 查找给定大小和对齐方式的空闲区域并将其从链表中移除。
     ///
-    /// Returns a tuple of the list node and the start address of the allocation.
     /// 返回一个包含链表节点和分配内存区域起始地址的元组。
     fn find_region(&mut self, size: usize, align: usize)
         -> Option<(&'static mut ListNode, usize)>
     {
-        // reference to current list node, updated for each iteration
-        // 当前链表节点的可变引用，用于遍历
+        // 当前链表节点的引用，每次迭代更新
         let mut current = &mut self.head;
-        // look for a large enough memory region in linked list
+        // 在链表中查找合适大小的内存区域
         while let Some(ref mut region) = current.next {
             if let Ok(alloc_start) = Self::alloc_from_region(&region, size, align) {
-                // region suitable for allocation -> remove node from list
                 // 区域适用于分配 -> 从链表中移除该节点
                 let next = region.next.take();
                 let ret = Some((current.next.take().unwrap(), alloc_start));
                 current.next = next;
                 return ret;
             } else {
-                // region not suitable -> continue with next region
                 // 区域不适用 -> 继续下一个区域
                 current = current.next.as_mut().unwrap();
             }
         }
-
-        // no suitable region found
         // 未找到合适的区域
         None
     }
@@ -831,9 +752,9 @@ The function performs a less obvious check after that. This check is necessary b
 #### 实现 `GlobalAlloc`
 
 With the fundamental operations provided by the `add_free_region` and `find_region` methods, we can now finally implement the `GlobalAlloc` trait. As with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator` but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references.
-有了在 `add_free_region` and `find_region` 方法中定义的基础操作，我们终于能实现 `GlobalAlloc` 特征了。和指针碰撞分配器一样，我们不会直接实现 `GlobalAlloc` 特征，而是为 `LinkedListAllocator` 类型实现一个 [`Locked` 包装器][`Locked` wrapper]。这个包装器通过自旋锁添加内部可变性，这样我们就可以在不获取 `alloc` 和 `dealloc` 方法的 `&self` 引用的情况下修改分配器实例。
+有了在 `add_free_region` and `find_region` 方法中定义的基础操作，我们终于能实现 `GlobalAlloc` 特征了。和bump分配器一样，我们不会直接实现 `GlobalAlloc` 特征，而是为 `LinkedListAllocator` 类型实现一个 [`Locked` 包装器][`Locked` wrapper]。这个包装器通过自旋锁添加内部可变性，这样我们就可以在不获取 `alloc` 和 `dealloc` 方法的 `&self` 引用的情况下修改分配器实例。
 
-有了在 `add_free_region` and `find_region` 方法中定义的基础操作，我们终于能实现 `GlobalAlloc` 特征了。和指针碰撞
+有了在 `add_free_region` and `find_region` 方法中定义的基础操作，我们终于能实现 `GlobalAlloc` 特征了。和bump
 
 [`Locked` wrapper]: @/edition-2/posts/11-allocator-designs/index.md#a-locked-wrapper-type
 
@@ -943,10 +864,10 @@ static ALLOCATOR: Locked<LinkedListAllocator> =
 ```
 
 Since the `init` function behaves the same for the bump and linked list allocators, we don't need to modify the `init` call in `init_heap`.
-因为 `init` 函数对于指针碰撞分配器和链表分配器的行为相同，所以我们不需要修改 `init_heap` 中的 `init` 调用。
+因为 `init` 函数对于bump分配器和链表分配器的行为相同，所以我们不需要修改 `init_heap` 中的 `init` 调用。
 
 When we now run our `heap_allocation` tests again, we see that all tests pass now, including the `many_boxes_long_lived` test that failed with the bump allocator:
-当我们再次运行 `heap_allocation` 测试时，我们看到所有测试都通过了，包括使用指针碰撞分配器失败的 `many_boxes_long_lived` 测试：
+当我们再次运行 `heap_allocation` 测试时，我们看到所有测试都通过了，包括使用bump分配器失败的 `many_boxes_long_lived` 测试：
 
 ```
 > cargo test --test heap_allocation
@@ -963,7 +884,7 @@ This shows that our linked list allocator is able to reuse freed memory for subs
 ### 讨论
 
 In contrast to the bump allocator, the linked list allocator is much more suitable as a general-purpose allocator, mainly because it is able to directly reuse freed memory. However, it also has some drawbacks. Some of them are only caused by our basic implementation, but there are also fundamental drawbacks of the allocator design itself.
-和指针碰撞分配器相比，链表分配器更适合走位一个通用的分配器，主要是因为它可以直接重用已释放的内训。然而，它也有一些缺点，一部分是由于我们的简单实现导致的，另一部分是由于分配器设计本身固有的问题。
+和bump分配器相比，链表分配器更适合走位一个通用的分配器，主要是因为它可以直接重用已释放的内训。然而，它也有一些缺点，一部分是由于我们的简单实现导致的，另一部分是由于分配器设计本身固有的问题。
 
 #### Merging Freed Blocks
 #### 合并已释放的内存块
@@ -991,7 +912,7 @@ The `linked_list_allocator` crate implements this merging strategy in the follow
 #### 表现
 
 As we learned above, the bump allocator is extremely fast and can be optimized to just a few assembly operations. The linked list allocator performs much worse in this category. The problem is that an allocation request might need to traverse the complete linked list until it finds a suitable block.
-我们在之前了解到的，指针碰撞分配器的性能非常好，因为它只需要几个简单的汇编指令就可以完成。链表分配器的性能要差得多，因为它需要遍历整个链表才能找到合适的块。
+我们在之前了解到的，bump分配器的性能非常好，因为它只需要几个简单的汇编指令就可以完成。链表分配器的性能要差得多，因为它需要遍历整个链表才能找到合适的块。
 
 
 Since the list length depends on the number of unused memory blocks, the performance can vary extremely for different programs. A program that only creates a couple of allocations will experience relatively fast allocation performance. For a program that fragments the heap with many allocations, however, the allocation performance will be very bad because the linked list will be very long and mostly contain very small blocks.
@@ -1487,7 +1408,7 @@ The advantage of this merge process is that [external fragmentation] is reduced 
 ## 总结
 
 This post gave an overview of different allocator designs. We learned how to implement a basic [bump allocator], which hands out memory linearly by increasing a single `next` pointer. While bump allocation is very fast, it can only reuse memory after all allocations have been freed. For this reason, it is rarely used as a global allocator.
-这篇文章介绍了不同的分配器设计。我们学习了如何实现一个基本的[指针碰撞分配器][bump allocator]，它通过增加一个`next`指针线性地分配内存。虽然这种分配很快，但只有在所有分配都被释放后才能重用内存。因此，它很少被用作全局分配器。
+这篇文章介绍了不同的分配器设计。我们学习了如何实现一个基本的[bump分配器][bump allocator]，它通过增加一个`next`指针线性地分配内存。虽然这种分配很快，但只有在所有分配都被释放后才能重用内存。因此，它很少被用作全局分配器。
 
 [bump allocator]: @/edition-2/posts/11-allocator-designs/index.md#bump-allocator
 
@@ -1514,11 +1435,10 @@ There are many more allocator designs with different tradeoffs. [Slab allocation
 [Buddy allocation]: @/edition-2/posts/11-allocator-designs/index.md#buddy-allocator
 
 
-## What's next?
 ## 下篇预告
 
 With this post, we conclude our memory management implementation for now. Next, we will start exploring [_multitasking_], starting with cooperative multitasking in the form of [_async/await_]. In subsequent posts, we will then explore [_threads_], [_multiprocessing_], and [_processes_].
-在下一篇中，我们将开始探索[_多任务处理_][_multitasking_]，首先从[_async/await_]的形式开始合作多任务处理。随后的帖子，我们将探讨[_线程_][_threads_]、[_多处理_][_multiprocessing_]和[_进程_][_processes_]。
+在下一篇中，我们将开始探索[_多任务处理_][_multitasking_]，首先从 [_async/await_] 的形式开始合作多任务处理。随后的帖子，我们将探讨[_线程_][_threads_]、[_多处理_][_multiprocessing_]和[_进程_][_processes_]。
 
 [_multitasking_]: https://en.wikipedia.org/wiki/Computer_multitasking
 [_threads_]: https://en.wikipedia.org/wiki/Thread_(computing)
