@@ -18,7 +18,6 @@ translation_contributors = []
 这篇文章讲解了如何从零开始实现堆分配器。文中介绍并探讨了三种不同的分配器设计，包括bump分配器，链表分配器和固定大小块分配器。对于这三种设计，我们都将构建一个基础实现，供我们的内核使用。
 <!-- more -->
 
-This blog is openly developed on [GitHub]. If you have any problems or questions, please open an issue there. You can also leave comments [at the bottom]. The complete source code for this post can be found in the [`post-11`][post branch] branch.
 这个系列的 blog 在 [GitHub] 上开放开发，如果你有任何问题，请在这里开一个 issue 来讨论。当然你也可以在 [底部][at the bottom] 留言。你可以在 [`post-11`][post branch] 找到这篇文章的完整源码。
 
 [GitHub]: https://github.com/phil-opp/blog_os
@@ -52,14 +51,12 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 [_fragmentation_]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
 [false sharing]: https://mechanical-sympathy.blogspot.de/2011/07/false-sharing.html
 
-These requirements can make good allocators very complex. For example, [jemalloc] has over 30.000 lines of code. This complexity is often undesired in kernel code, where a single bug can lead to severe security vulnerabilities. Fortunately, the allocation patterns of kernel code are often much simpler compared to userspace code, so that relatively simple allocator designs often suffice.
 这些需求使得优秀的分配器变得非常复杂。例如，[jemalloc] 有超过30,000行代码。这种复杂性不是内核代码所期望的，因为一个简单的bug就能导致严重的安全漏洞。幸运的是，内核代码的内存分配模式通常比用户空间代码简单得多，所以相对简单的分配器设计通常就足够了。
 
 [jemalloc]: http://jemalloc.net/
 
 接下来，我们将展示三种可能的内存分配器设计并且解释它们的优缺点。
 
-## Bump Allocator
 ## Bump分配器
 
 最简单的分配器设计是 _bump分配器_（也被称为 _栈分配器_ ）。它线性分配内存，并且只跟踪已分配的字节数量和分配的次数。它只适用于非常特殊的使用场景，因为他有一个严重的限制：它只能一次性释放全部内存。
@@ -90,7 +87,6 @@ bump分配器的设计思想是通过增加（_"bumping"_）一个指向未使�
 pub mod bump;
 ```
 
-The content of the submodule lives in a new `src/allocator/bump.rs` file, which we create with the following content:
 子模块的内容位于一个新的 `src/allocator/bump.rs` 文件中，我们将使用下面的内容创建它：
 
 ```rust
@@ -245,7 +241,6 @@ error[E0117]: only traits defined in the current crate can be implemented for ar
    = note: define and implement a trait or new type instead
 ```
 
-To fix this, we need to create our own wrapper type around `spin::Mutex`:
 为了解决这个问题，我们需要围绕 `spin::Mutex` 实现我们自己的包装器类型。
 
 ```rust
@@ -491,7 +486,7 @@ Error: panicked at 'allocation error: Layout { size_: 8, align_: 8 }', src/lib.r
 
 ![](linked-list-allocation.svg)
 
-每个链表节点有两个字段：内存区域的大小和指向下一个未使用内存区域的指针。通过这种方法，我们只需要一个指向第一个未使用区域（称为 `head` ）的指针就能跟踪所有未使用的区域而不管它们的数量多少。最终形成的数据结构通常被称为  [_free list_]
+每个链表节点有两个字段：内存区域的大小和指向下一个未使用内存区域的指针。通过这种方法，我们只需要一个指向第一个未使用区域（称为 `head` ）的指针就能跟踪所有未使用的区域而不管它们的数量多少。最终形成的数据结构通常被称为  [_free list_] 。
 
 [_free list_]: https://en.wikipedia.org/wiki/Free_list
 
@@ -503,7 +498,6 @@ Error: panicked at 'allocation error: Layout { size_: 8, align_: 8 }', src/lib.r
 
 #### 分配器类型
 
-We start by creating a private `ListNode` struct in a new `allocator::linked_list` submodule:
 我们首先在一个新的 `allocator::linked_list` 子模块中创建一个私有的 `ListNode` 结构体：
 
 ```rust
@@ -931,7 +925,6 @@ _固定大小分配器_ 背后的思想如下：我们不再精确分配请求�
 
 #### 链表节点
 
-We start our implementation by creating a `ListNode` type in a new `allocator::fixed_size_block` module:
 我们通过在一个新的 `allocator::fixed_size_block` 模块中创建一个 `ListNode` 类型开始我们的实现：
 
 ```rust
@@ -950,8 +943,7 @@ struct ListNode {
 
 这个类型和我们 [链表分配器实现][linked list allocator implementation] 中的 `ListNode` 类型类似，不同之处在于我们没有 `size` 字段。该字段在固定大小块分配器设计中不需要，因为每个链表中的块都有相同的大小。
 
-
-[linked list allocator implementation]: #the-allocator-type
+[linked list allocator implementation]: #分配器类型
 
 #### 块大小
 
@@ -986,7 +978,7 @@ pub struct FixedSizeBlockAllocator {
 
 `list_heads` 字段是一个 `head` 指针的数组，一个指针对应一个块大小。数组的长度通过 `BLOCK_SIZES` 切片的  `len()` 确定。我们使用 `linked_list_allocator` 作为分配请求大小大于最大的块大小时的后备分配器。我们也可以使用我们自己实现的 `LinkedListAllocator` 。但是它的缺点在于不能 [合并空闲块][merge freed blocks] 。   
 
-[merge freed blocks]: #merging-freed-blocks
+[merge freed blocks]: #合并已释放的内存块
 
 为了构造一个 `FixedSizeBlockAllocator`，我们提供与我们为其他分配器类型实现的相同的 `new` 和 `init` 函数：
 
@@ -1141,7 +1133,7 @@ unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-如果链表头是 `None`，则表明该尺寸的内存块链表为空。这意味着我们需要像[上文](#creating-new-blocks)中描述的那样构造一个新块。为此，我们首先从 `BLOCK_SIZES` 切片中获取当前块大小，并将其作为新块的大小和对齐方式。然后我们基于此大小和对齐方式创建一个新的 `Layout` 并调用 `fallback_alloc` 方法执行分配。调整布局和对齐的原因是确保内存块将在释放时能被正确地添加到对应的块列表中。
+如果链表头是 `None`，则表明该尺寸的内存块链表为空。这意味着我们需要像[上文](#创建新块)中描述的那样构造一个新块。为此，我们首先从 `BLOCK_SIZES` 切片中获取当前块大小，并将其作为新块的大小和对齐方式。然后我们基于此大小和对齐方式创建一个新的 `Layout` 并调用 `fallback_alloc` 方法执行分配。调整布局和对齐的原因是确保内存块将在释放时能被正确地添加到对应的块列表中。
 
 
 #### `dealloc`
