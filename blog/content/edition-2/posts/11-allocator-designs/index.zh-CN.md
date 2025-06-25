@@ -496,7 +496,7 @@ Error: panicked at 'allocation error: Layout { size_: 8, align_: 8 }', src/lib.r
 
 接下来，我们会创建我们自己的简单的 `LinkedListAllocator` 类型，用于跟踪已释放的内存区域。本部分内容在后续章节中非必需，所以你可以根据自己的喜好跳过实现细节。
 
-#### 分配器类型
+#### 分配器类型 {#allocator-type}
 
 我们首先在一个新的 `allocator::linked_list` 子模块中创建一个私有的 `ListNode` 结构体：
 
@@ -838,7 +838,8 @@ many_boxes_long_lived... [ok]
 
 和bump分配器相比，链表分配器更适合于作为一个通用分配器，主要是因为它可以直接重用已释放的内存。然而，它也有一些缺点，一部分是由于我们的基础实现所致，另一部分则是由于分配器设计本身的缺陷。
 
-#### 合并已释放的内存块
+#### 合并已释放的内存块 {#merge-free-blocks}
+
 
 我们的实现主要的问题就是它只将堆分成更小的内存块，但从不将它们合并到一起。考虑下面的例子：
 
@@ -908,7 +909,8 @@ _固定大小分配器_ 背后的思想如下：我们不再精确分配请求�
 
 考虑到大尺寸内存分配（ >2&nbsp;KB ）较少出现，尤其是在操作系统内核中，因此将这些分配回退到不同的分配器是有意义的。例如，我们可以将大于2048字节的分配回退到链表分配器，以减少内存浪费。由于预期这种大小的分配很少，链表规模会保持较小，分配和释放操作的性能也较好。
 
-#### 创建新块
+#### 创建新块 {#create-new-block}
+
 
 以上的叙述中，我们一直假定有足够的特定大小的未使用块可供分配。然而，在某个特定的块大小的链表为空时，我们有两种方法可以创建新的未使用的特定大小的块来满足分配请求：
 
@@ -943,7 +945,7 @@ struct ListNode {
 
 这个类型和我们 [链表分配器实现][linked list allocator implementation] 中的 `ListNode` 类型类似，不同之处在于我们没有 `size` 字段。该字段在固定大小块分配器设计中不需要，因为每个链表中的块都有相同的大小。
 
-[linked list allocator implementation]: #分配器类型
+[linked list allocator implementation]: #allocator-type
 
 #### 块大小
 
@@ -978,7 +980,7 @@ pub struct FixedSizeBlockAllocator {
 
 `list_heads` 字段是一个 `head` 指针的数组，一个指针对应一个块大小。数组的长度通过 `BLOCK_SIZES` 切片的  `len()` 确定。我们使用 `linked_list_allocator` 作为分配请求大小大于最大的块大小时的后备分配器。我们也可以使用我们自己实现的 `LinkedListAllocator` 。但是它的缺点在于不能 [合并空闲块][merge freed blocks] 。   
 
-[merge freed blocks]: #合并已释放的内存块
+[merge freed blocks]: #merge-free-blocks
 
 为了构造一个 `FixedSizeBlockAllocator`，我们提供与我们为其他分配器类型实现的相同的 `new` 和 `init` 函数：
 
@@ -1133,7 +1135,8 @@ unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-如果链表头是 `None`，则表明该尺寸的内存块链表为空。这意味着我们需要像[上文](#创建新块)中描述的那样构造一个新块。为此，我们首先从 `BLOCK_SIZES` 切片中获取当前块大小，并将其作为新块的大小和对齐方式。然后我们基于此大小和对齐方式创建一个新的 `Layout` 并调用 `fallback_alloc` 方法执行分配。调整布局和对齐的原因是确保内存块将在释放时能被正确地添加到对应的块列表中。
+如果链表头是 `None`，则表明该尺寸的内存块链表为空。这意味着我们需要像[上文](#create-new-block)中描述的那样构造一个新块。为此，我们首先从 `BLOCK_SIZES` 切片中获取当前块大小，并将其作为新块的大小和对齐方式。然后我们基于此大小和对齐方式创建一个新的 `Layout` 并调用 `fallback_alloc` 方法执行分配。调整布局和对齐的原因是确保内存块将在释放时能被正确地添加到对应的块列表中。
+
 
 
 #### `dealloc`
