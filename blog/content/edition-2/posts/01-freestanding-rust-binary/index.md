@@ -516,6 +516,78 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 
 Note that this is just a minimal example of a freestanding Rust binary. This binary expects various things, for example, that a stack is initialized when the `_start` function is called. **So for any real use of such a binary, more steps are required**.
 
+## Making `rust-analyzer` happy
+
+The [`rust-analyzer`](https://rust-analyzer.github.io/) project is a great way to get code completion and "go to definition" support (and many other features) for Rust code in your editor.
+It works really well for `#![no_std]` projects too, so I recommend using it for kernel development!
+
+If you're using the [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) feature of `rust-analyzer` (enabled by default), it might report an error for the panic function of our kernel:
+
+```
+found duplicate lang item `panic_impl`
+```
+
+The reason for this error is that `rust-analyzer` invokes `cargo check --all-targets` by default, which also tries to build the binary in [test](https://doc.rust-lang.org/book/ch11-01-writing-tests.html) and [benchmark](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) mode.
+
+<div class="note">
+
+### The two meanings of "target"
+
+The `--all-targets` flag is completely unrelated to the `--target` argument.
+There are two different meanings of the term "target" in `cargo`:
+
+- The `--target` flag specifies the **[_compilation target_]** that should be passed to the `rustc` compiler. This should be set to the [target triple] of the machine that should run our code.
+- The `--all-targets` flag references the **[_package target_]** of Cargo. Cargo packages can be a library and binary at the same time, so you can specify in which way you like to build your crate. In addition, Cargo also has package targets for [examples](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples), [tests](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests), and [benchmarks](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#benchmarks). These package targets can co-exist, so you can build/check the same crate in e.g. library or test mode.
+
+[_compilation target_]: https://doc.rust-lang.org/rustc/targets/index.html
+[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[_package target_]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html
+
+</div>
+
+By default, `cargo check` only builds the _library_ and _binary_ package targets.
+However, `rust-analyzer` chooses to check all package targets by default when [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) is enabled.
+This is the reason that `rust-analyzer` reports the above `lang item` error that we don't see in `cargo check`.
+If we run `cargo check --all-targets`, we see the error too:
+
+```
+error[E0152]: found duplicate lang item `panic_impl`
+  --> src/main.rs:13:1
+   |
+13 | / fn panic(_info: &PanicInfo) -> ! {
+14 | |     loop {}
+15 | | }
+   | |_^
+   |
+   = note: the lang item is first defined in crate `std` (which `test` depends on)
+   = note: first definition in `std` loaded from /home/[...]/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-8df6be531efb3fd0.rlib
+   = note: second definition in the local crate (`blog_os`)
+```
+
+The first `note` tells us that the panic language item is already defined in the `std` crate, which is a dependency of the `test` crate.
+The `test` crate is automatically included when building a crate in [test mode](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests).
+This does not make sense for our `#![no_std]` kernel as there is no way to support the standard library on bare metal.
+So this error is not relevant to our project and we can safely ignore it.
+
+The proper way to avoid this error is to specify in our `Cargo.toml` that our binary does not support building in `test` and `bench` modes.
+We can do that by adding a `[[bin]]` section to our `Cargo.toml` to [configure the build](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target) of our binary:
+
+```toml
+# in Cargo.toml
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+```
+
+The double-brackets around `bin` are not a mistake, this is how the TOML format defines keys that can appear multiple times.
+Since a crate can have multiple binaries, the `[[bin]]` section can appear multiple times in the `Cargo.toml` as well.
+This is also the reason for the mandatory `name` field, which needs to match the name of the binary (so that `cargo` knows which settings should be applied to whick binary).
+
+By setting the [`test`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field) and [`bench` ](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field) fields to `false`, we instruct `cargo` to not build our binary in test or benchmark mode.
+Now `cargo check --all-targets` should not throw any errors anymore, and the `checkOnSave` implementation of `rust-analyzer` should be happy too.
+
 ## What's next?
 
 The [next post] explains the steps needed for turning our freestanding binary into a minimal operating system kernel. This includes creating a custom target, combining our executable with a bootloader, and learning how to print something to the screen.
