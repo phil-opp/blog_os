@@ -119,7 +119,7 @@ Cargoは`--target`パラメータを使ってさまざまなターゲットを�
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "linux",
     "executables": true,
     "linker-flavor": "gcc",
@@ -142,7 +142,7 @@ Cargoは`--target`パラメータを使ってさまざまなターゲットを�
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "none",
     "executables": true
 }
@@ -208,7 +208,7 @@ As we want to use the `soft-float` feature, we also need to tell the Rust compil
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "none",
     "executables": true,
     "linker-flavor": "ld.lld",

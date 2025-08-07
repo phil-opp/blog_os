@@ -116,7 +116,7 @@ For our target system, however, we require some special configuration parameters
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "linux",
     "executables": true,
     "linker-flavor": "gcc",
@@ -139,7 +139,7 @@ We also target `x86_64` systems with our kernel, so our target specification wil
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "none",
     "executables": true
 }
@@ -205,7 +205,7 @@ Our target specification file now looks like this:
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "none",
     "executables": true,
     "linker-flavor": "ld.lld",

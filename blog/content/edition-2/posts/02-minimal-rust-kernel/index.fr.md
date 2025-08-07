@@ -121,7 +121,7 @@ Pour notre système cible toutefois, nous avons besoin de paramètres de configu
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "linux",
     "executables": true,
     "linker-flavor": "gcc",
@@ -144,7 +144,7 @@ Nous pouvons aussi cibler les systèmes `x86_64` avec notre noyau, donc notre sp
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "none",
     "executables": true
 }
@@ -210,7 +210,7 @@ Notre fichier de spécification de cible ressemble maintenant à ceci :
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "none",
     "executables": true,
     "linker-flavor": "ld.lld",

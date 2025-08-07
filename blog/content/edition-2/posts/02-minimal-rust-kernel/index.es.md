@@ -119,7 +119,7 @@ Para nuestro sistema destino, sin embargo, requerimos algunos parámetros de con
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "linux",
     "executables": true,
     "linker-flavor": "gcc",
@@ -142,7 +142,7 @@ Nuestro kernel también tiene como objetivo los sistemas `x86_64`, por lo que nu
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "none",
     "executables": true
 }
@@ -203,7 +203,7 @@ Nuestro archivo de especificación de objetivo ahora se ve así:
     "arch": "x86_64",
     "target-endian": "little",
     "target-pointer-width": "64",
-    "target-c-int-width": "32",
+    "target-c-int-width": 32,
     "os": "none",
     "executables": true,
     "linker-flavor": "ld.lld",
