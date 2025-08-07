@@ -818,6 +818,11 @@ div.note p:last-child {
     margin-bottom: 0;
 }
 
+div.note h2, div.note h3, div.note h4 {
+    margin-top: 0rem;
+}
+
+
 div.warning {
     padding: 0.7rem 1rem;
     margin: 1rem 0.2rem;
