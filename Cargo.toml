@@ -6,3 +6,8 @@ edition = "2024"
 
 [dependencies]
 bootloader = "0.9"
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
