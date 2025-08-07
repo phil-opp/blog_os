@@ -26,6 +26,11 @@ linked_list_allocator = "0.9.0"
 version = "1.0"
 features = ["spin_no_std"]
 
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+
 [dependencies.crossbeam-queue]
 version = "0.3.11"
 default-features = false
