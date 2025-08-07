@@ -25,6 +25,11 @@ pc-keyboard = "0.7.0"
 version = "1.0"
 features = ["spin_no_std"]
 
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+
 
 [package.metadata.bootimage]
 test-args = [
