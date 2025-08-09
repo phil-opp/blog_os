@@ -300,7 +300,7 @@ async fn example(min_len: usize) -> String {
 
 ([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=d93c28509a1c67661f31ff820281d434))
 
-此函数直接转换自[上文](#缺点)中使用组合函数的 `example` 函数。通过使用 `.await` 运算符，我们无需任何闭包或者 `Either` 类型就可以直接获取 future 的值。于是我们就可以像写普通的同步代码一样编写代码，只不过 _这实际上是异步代码_。
+此函数直接转换自[上文](#####缺点)中使用组合函数的 `example` 函数。通过使用 `.await` 运算符，我们无需任何闭包或者 `Either` 类型就可以直接获取 future 的值。于是我们就可以像写普通的同步代码一样编写代码，只不过 _这实际上是异步代码_。
 
 #### 状态机转换
 
