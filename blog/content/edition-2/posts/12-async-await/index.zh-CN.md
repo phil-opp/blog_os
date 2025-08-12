@@ -1031,7 +1031,7 @@ async fn example_task() {
   * 从 `task_queue` 前端弹出任务。
   * 为任务创建一个 `RawWaker` ，将其转换为`Waker` 实例，之后从它创建一个 `Context` 实例。
   * 使用 `Context` ，在任务的 future 上调用 `poll` 方法。
-  * 由于 `example_task` 并没有在等待谁，它可以在第一次轮询就直接跑完。于是就会打印出 _"async number: 42"_ 消息。
+  * 由于 `example_task` 并不需要等待什么，它可以在第一次轮询就直接跑完。于是就会打印出 _"async number: 42"_ 消息。
   * 由于 `example_task` 直接返回 `Poll::Ready` ，它不会被重新添加到 `task_queue` 尾部。
 * `run` 方法会在 `task_queue` 变空之后返回。`kernel_main` 函数会继续执行，并打印 _"It did not crash!"_ 。
 
@@ -1077,7 +1077,7 @@ default-features = false
 features = ["alloc"]
 ```
 
-默认情况下，该 crate 依赖于标准库。要使其兼容 `no_std` ，禁用其默认特性并启用 `alloc` 特性。（注意，我们也可以添加对主 `crossbeam` crate 的依赖，它会重新导出 `crossbeam-queue` crate，但这样会导致依赖项增多以及编译时间延长。)
+默认情况下，该 crate 依赖于标准库。要使其兼容 `no_std` ，需要禁用其默认特性并启用 `alloc` 特性。（注意，我们也可以添加对主 `crossbeam` crate 的依赖，它会重新导出 `crossbeam-queue` crate，但这样会导致依赖项增多，延长编译时间。)
 
 ##### 队列实现
 
@@ -1356,7 +1356,7 @@ pub(crate) fn add_scancode(scancode: u8) {
 
 #### 键盘任务
 
-既然我们已经为 `ScancodeStream` 实现了 `Stream` trait，现在我们可以用它来创建一个 异步键盘任务：
+既然我们已经为 `ScancodeStream` 实现了 `Stream` trait，现在我们可以用它来创建一个异步键盘任务：
 
 ```rust
 // in src/task/keyboard.rs
@@ -1449,7 +1449,7 @@ impl TaskId {
 }
 ```
 
-该函数使用了一个静态的 `NEXT_ID` 变量，其类型为 [`AtomicU64`] 以确保每个 ID 都仅被赋值一次。[`fetch_add`] 方法会原子性地增加该值并返回在单个原子操作中返回先前值。这意味着即使当 `TaskId::new` 方法被并行调用，每个 ID 都只被返回一次。[`Ordering`] 参数决定是否允许编译器在指令流中重新排列 `fetch_add` 操作。由于我们仅要求 ID 唯一，因此在此情况下，具有最弱要求的 `Relaxed` 排序就足够了。
+该函数使用了一个静态的 `NEXT_ID` 变量，其类型为 [`AtomicU64`] 以确保每个 ID 都仅被赋值一次。[`fetch_add`] 方法会原子性地增加该值并在单个原子操作中返回先前值。这意味着即使当 `TaskId::new` 方法被并行调用，每个 ID 都只被返回一次。[`Ordering`] 参数决定是否允许编译器在指令流中重新排列 `fetch_add` 操作。由于我们仅要求 ID 唯一，因此在此情况下，具有最弱要求的 `Relaxed` 排序就足够了。
 
 [`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
 [`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
@@ -1475,7 +1475,7 @@ impl Task {
 }
 ```
 
-新的 `id` 字段使得能够为任务赋予唯一名称，这是唤醒特定任务所必需的。
+新的 `id` 字段能够为任务赋予唯一名称，这是唤醒特定任务所必需的。
 
 #### `Executor` 类型
 
@@ -1512,11 +1512,11 @@ impl Executor {
 }
 ```
 
-与在 `SimpleExecutor` 中使用 `VecDeque` 存储任务不同，我们使用一个存储任务 ID 的 `task_queue` 和一个名为 `tasks` 、包含实际 `Task` 实例的 `BTreeMap`。该 map 通过 `TaskId` 索引以高效地继续特定任务。
+与在 `SimpleExecutor` 中使用 `VecDeque` 存储任务不同，我们使用一个存储任务 ID 的 `task_queue` 和一个名为 `tasks` 、包含实际 `Task` 实例的 `BTreeMap`。该 map 通过 `TaskId` 高效地索引特定任务。
 
-`task_queue` 字段是一个存储任务 ID 的 `ArrayQueue` 类型，被封装在 [`Arc`] 类型中以实现引用计数（_reference counting_）。引用计数使得在多个所有者之间共享所有权成为可能。它通过在堆上分配值并统计其活跃的引用来实现。当活跃引用数量降至零时，该值将被不再需要，可以释放。
+`task_queue` 字段是一个存储任务 ID 的 `ArrayQueue` 类型，被封装在 [`Arc`] 类型中以实现引用计数（_reference counting_）。引用计数可以实现在多个所有者之间共享所有权。它通过在堆上分配值并统计其活跃的引用来实现。当活跃引用数量降至零时，该值将被不再需要，可以释放。
 
-我们给 `task_queue` 使用 `Arc<ArrayQueue>` 类型，因为它将在执行器和唤醒器之间共享。其设计思路是唤醒器将被唤醒任务的 ID 推送到队列中。执行器位于队列的接收端，通过 ID 从 `tasks` map 中检索被唤醒的任务，然后运行它们。选择固定大小队列而非无界队列（例如 [`SegQueue`]）的原因是在往其中推入数据时，终端处理程序不应该进行内存分配。
+我们给 `task_queue` 使用 `Arc<ArrayQueue>` 类型，因为它将在执行器和唤醒器之间共享。其设计思路是唤醒器将被唤醒任务的 ID 推送到队列中。执行器位于队列的接收端，通过 ID 从 `tasks` map 中检索被唤醒的任务，然后运行它们。选择固定大小队列而非无界队列（例如 [`SegQueue`]）的原因是在往其中推入数据时，中断处理程序不应该进行内存分配。
 
 除了 `task_queue` 和 `tasks` map 外，`Executor` 类型还有一个 `waker_cache` 字段，同样为 map。该 map 会在任务创建后缓存其 `Waker`，原因有二：首先，它通过为同一任务的多次唤醒复用同一个唤醒器来提高性能，而不是每次都创建新的唤醒器。其次，它确保引用计数的唤醒器不会在中断处理程序中被释放，因为这可能导致死锁（下文将对此进行更详细的说明）。
 
@@ -1589,9 +1589,9 @@ impl Executor {
 
 让我们深入看看这个 `run_ready_tasks` 方法的一些实现细节：
 
-* 我们使用 [解构][_destructuring_] 将 self 拆分为三个字段，以避免一些借用检查器的错误。具体来说，我们的实现需要从一个闭包内访问 `self.task_queue`，这会导致尝试借用自身。这是一个基本的借用检查器问题，该问题将在 [RFC 2229] 被 [实现][RFC 2229 impl] 后得到解决。
-* 对于每个弹出的任务 ID，我们从 `tasks` map 中获取对应任务的可变引用。由于我们的 `ScancodeStream` 实现在检查任务是否需要进入休眠状态前会先注册唤醒器，可能会出现一个已不存在任务被唤醒的情况。这种情况下，我们只需忽略这次唤醒并继续处理队列里的下一个ID。
-* 为了避免每次轮询时创建唤醒器带来的性能开销，我们使用了 `waker_cache` map 用于存储每个任务创建后的对应的唤醒器。为此，我们使用 [`BTreeMap::entry`] 方法结合 [`Entry::or_insert_with`] ，来在唤醒器不存在时创建新实例，然后获取其可变引用。为了创建新的唤醒器，我们克隆 `task_queue` 并将其与任务 ID 一同传递给 `TaskWaker::new` 函数（具体实现如下所示）。由于 `task_queue` 被封装在 `Arc` 中，克隆操作仅会增加该值的引用计数，但仍指向同一个堆分配的队列。请注意，并非所有唤醒器的实现都能像这样重复使用，不过我们的 `TaskWaker` 类型可以做到。
+* 我们使用 [解构][_destructuring_] 将 self 拆分为三个字段，以避免一些借用检查器报错。具体来说，我们的实现需要从一个闭包内访问 `self.task_queue`，这会导致尝试借用自身。这是一个基本的借用检查器问题，该问题将在 [RFC 2229] 被 [实现][RFC 2229 impl] 后得到解决。
+* 对于每个弹出的任务 ID，我们从 `tasks` map 中获取对应任务的可变引用。由于我们的 `ScancodeStream` 实现在检查任务是否需要进入休眠状态前会先注册唤醒器，可能会出现一个已不存在的任务被唤醒的情况。这种情况下，我们只需忽略这次唤醒并继续处理队列里的下一个 ID。
+* 为了避免每次轮询时创建唤醒器带来的性能开销，我们使用了 `waker_cache` map 用于存储每个任务创建后对应的唤醒器。为此，我们使用 [`BTreeMap::entry`] 方法结合 [`Entry::or_insert_with`] ，来在唤醒器不存在时创建新实例，然后获取其可变引用。为了创建新的唤醒器，我们克隆 `task_queue` 并将其与任务 ID 一同传递给 `TaskWaker::new` 函数（具体实现如下所示）。由于 `task_queue` 被封装在 `Arc` 中，克隆操作仅会增加该值的引用计数，但仍指向同一个堆分配的队列。请注意，并非所有唤醒器的实现都能像这样重复使用，不过我们的 `TaskWaker` 类型可以做到。
 
 [_destructuring_]: https://doc.rust-lang.org/book/ch18-03-pattern-syntax.html#destructuring-to-break-apart-values
 [RFC 2229]: https://github.com/rust-lang/rfcs/pull/2229
@@ -1637,7 +1637,7 @@ impl TaskWaker {
 
 ##### `Wake` Trait
 
-为了使用我们的 `TaskWaker` 类型来轮询 future，首先需要将其转换为 [`Waker`] 实例。这是必需的，因为[`Future::poll`] 函数使用一个 [`Context`] 作为参数，而该实例只能从 `Waker` 类型构造。虽然我们可以通过提供对 [`RawWaker`] 类型的实现来做到这一点，但还是这么做更简单且安全：实现基于  `Arc` 的 [`Wake`][wake-trait] trait 并使用标准库提供的 [`From`] 实现来构造 `Waker`。
+为了使用我们的 `TaskWaker` 类型轮询 future，首先需要将其转换为 [`Waker`] 实例。这是必需的，因为[`Future::poll`] 函数使用一个 [`Context`] 实例作为参数，而该实例只能从 `Waker` 类型构造。虽然我们可以通过提供对 [`RawWaker`] 类型的实现来做到这一点，但还是这么做更简单且安全：实现基于  `Arc` 的 [`Wake`][wake-trait] trait 并使用标准库提供的 [`From`] 实现来构造 `Waker`。
 
 该 trait 的实现如下所示：
 
@@ -1661,11 +1661,11 @@ impl Wake for TaskWaker {
 
 由于唤醒器通常在执行器与异步任务之间共享，该 trait 方法要求将 `Self` 实例包装在实现了引用计数所有权的 [`Arc`] 类型中。这意味着为了调用它们，我们需要移动 `TaskWaker` 到 `Arc` 。
 
- `wake` 和 `wake_by_ref` 方法之间的区别在于，后者只需要一个对 `Arc` 的引用，而前者则获取 `Arc` 的所有权，因此通常需要增加引用计数。并非所有类型都支持通过引用唤醒，因此对 `wake_by_ref` 方法的实现是可选的。不过，它能带来更好的性能，因为它避免了不必要的引用计数修改。在我们的案例中，可以简单地将这两个trait 方法导向（forward）我们的 `wake_task` 函数，该函数只需要一个共享的 `&self` 引用。
+ `wake` 和 `wake_by_ref` 方法之间的区别在于，后者只需要一个对 `Arc` 的引用，而前者则获取 `Arc` 的所有权，因此通常需要增加引用计数。并非所有类型都支持通过引用唤醒，因此对 `wake_by_ref` 方法的实现是可选的。不过，它能带来更好的性能，因为它避免了不必要的引用计数修改。在我们的案例中，可以简单地将这两个 trait 方法导向（forward）我们的 `wake_task` 函数，该函数只需要一个共享的 `&self` 引用。
 
 ##### 创建唤醒器
 
-由于 `Waker` 类型对所有实现了 `Wake` trait 且用 `Arc` 包装的值都支持  [`From`] 转换，我们现在可以实现 `Executor::run_ready_tasks` 方法所需的 `TaskWaker::new` 函数了：
+由于 `Waker` 类型对所有实现了 `Wake` trait 且用 `Arc` 包装的值都支持 [`From`] 转换，我们现在可以实现 `Executor::run_ready_tasks` 方法所需的 `TaskWaker::new` 函数了：
 
 [`From`]: https://doc.rust-lang.org/nightly/core/convert/trait.From.html
 
@@ -1805,9 +1805,9 @@ impl Executor {
 
 我们的执行器现在能够高效地运行任务。它利用唤醒通知机制来避免轮询等待中的任务，并在当前无工作可做时让 CPU 进入休眠状态。不过，我们的执行器仍相当基础，还有许多扩展其功能的可能性：
 
-* **调度：**对于我们的 `task_queue`，我们目前使用 `VecDeque` 类型来实现 FIFO 策略，这也经常被称作 Round Robin 调度。该策略可能并非对所有工作负载都最高效。例如，在某些情况下，优先处理对延迟敏感的任务或执行大量 I/O 操作的任务会更有效。详情请参阅 [_Operating Systems: Three Easy Pieces_] 中的 [scheduling chapter] 章节或者 [Wikipedia article on scheduling][scheduling-wiki] 。
+* **调度：**对于我们的 `task_queue`，我们目前使用 `VecDeque` 类型来实现 FIFO 策略，这也经常被称作 Round Robin 调度。该策略可能并非对所有工作负载都最高效。例如，在某些情况下，优先处理对延迟敏感的任务或执行大量 I/O 操作的任务会更高效。详情请参阅 [_Operating Systems: Three Easy Pieces_] 中的 [scheduling chapter] 章节或者 [Wikipedia article on scheduling][scheduling-wiki] 。
 * **任务生成：**当前我们的 `Executor::spawn` 方法需要 `&mut self` 引用，因此在调用 `run` 方法后就不再可用。为解决这个问题，我们可以创建一个 `Spawner` 类型，它与执行器共享一些队列，并允许从任务自身创建新的任务。这些队列可以直接用 `task_queue` ，或者用一个单独的队列，让执行器在循环中不断检查。
-* **利用线程：**目前我们尚未支持线程功能，但将在下一篇文章中添加该功能。这将允许在不同线程中启动多个执行器实例。 这种方法的优势在于，由于其他任务可以并发运行，因此可以减少长时间运行任务造成的延迟。该方法还能充分利用多核 CPU 的处理能力。
+* **利用线程：**目前我们尚未支持线程功能，但将在下一篇文章中添加该功能。这将允许在不同线程中启动多个执行器实例。这种方法的优势在于，由于其他任务可以并发运行，因此可以减少长时间运行的任务造成的延迟。该方法还能充分利用多核 CPU 的处理能力。
 * **负载均衡：**在添加线程支持时，了解如何在多个执行器之间分配任务以确保所有 CPU 核心都得到利用变得至关重要。实现这一点的常用技术是 [工作窃取][_work stealing_]。
 
 [scheduling chapter]: http://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched.pdf
@@ -1821,7 +1821,7 @@ impl Executor {
 
 接着我们探讨了 Rust 对 async/await 的支持如何提供协作式多任务处理的语言层面的实现。Rust 的异步机制建立在基于轮询的 `Future` trait 之上，该 trait 对异步任务进行了抽象。通过 async/await 语法，可以像处理普通同步代码那样操作 futures。不同之处在于异步函数会再次返回一个 `Future` ，需要在某个时刻将其添加到执行器中才能运行。
 
-在幕后，编译器将 async/await 代码转换为 _状态机_ ，其中每个 `.await` 操作对应一个可能的暂停点。利用对程序的了解，编译器能够仅为每个暂停点保存最小状态，从而使得每个任务的内存消耗非常小。一个挑战在于生成的状态机可能包含 _自引用结构体_，例如当异步函数的局部变量互相引用。为了防止指针失效，Rust 使用 `Pin` 类型来确保 future 在首次被轮询后不再在内存中移动。
+在幕后，编译器将 async/await 代码转换为 _状态机_ ，其中每个 `.await` 操作对应一个可能的暂停点。利用对程序的了解，编译器能够为每个暂停点保存恢复所需的最小状态，从而使得每个任务的内存消耗非常小。一个挑战在于生成的状态机可能包含 _自引用结构体_，例如当异步函数的局部变量互相引用。为了防止指针失效，Rust 使用 `Pin` 类型来确保 future 在首次被轮询后不再在内存中移动。
 
 在我们的实现中，我们首先创建了一个非常基础的任务执行器，它会在一个繁忙的循环里轮询所有已生成的任务，而不使用 `Waker` 类型。随后我们通过实现异步键盘任务展示了唤醒器通知的优势。该任务使用 `crossbeam` crate 提供的无互斥锁 `ArrayQueue` 类型定义了静态的 `SCANCODE_QUEUE`。键盘中断处理程序不再直接处理按键操作，而是将所有接收到的扫描码放入队列中，随后唤醒已注册的 `Waker` 以通知有新输入可用。在接收端，我们创建了一个 `ScancodeStream` 类型，用于提供 `Future` 解析，来获得队列中的下一个扫描码。这使得创建异步的 `print_keypresses` 任务，使用 async/await 解释并打印队列中的扫描码成为可能。
 
@@ -1831,4 +1831,4 @@ impl Executor {
 
 通过使用 async/await，我们现在在内核中实现了基本的协作式多任务支持。协作式多任务非常高效，但当单个任务持续占用资源时会导致延迟问题，阻碍其他任务执行。正因如此，为我们的内核添加抢占式多任务处理支持就显得尤为重要。
 
-在下一篇文章中，我们将介绍 _线程_ ——作为抢占式多任务处理最常见的形式。除了可以解决长耗时任务的问题，线程机制还将有助于我们后续利用多 CPU 核心以及未来运行不受信任的用户程序。
+在下一篇文章中，我们将介绍 _线程_ ——作为抢占式多任务处理最常见的形式。除了可以解决长耗时任务的问题，线程机制还将有助于我们后续使用多 CPU 核心以及未来运行不受信任的用户程序。
