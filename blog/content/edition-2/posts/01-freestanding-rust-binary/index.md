@@ -583,7 +583,7 @@ bench = false
 
 The double-brackets around `bin` are not a mistake, this is how the TOML format defines keys that can appear multiple times.
 Since a crate can have multiple binaries, the `[[bin]]` section can appear multiple times in the `Cargo.toml` as well.
-This is also the reason for the mandatory `name` field, which needs to match the name of the binary (so that `cargo` knows which settings should be applied to whick binary).
+This is also the reason for the mandatory `name` field, which needs to match the name of the binary (so that `cargo` knows which settings should be applied to which binary).
 
 By setting the [`test`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field) and [`bench` ](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field) fields to `false`, we instruct `cargo` to not build our binary in test or benchmark mode.
 Now `cargo check --all-targets` should not throw any errors anymore, and the `checkOnSave` implementation of `rust-analyzer` should be happy too.
