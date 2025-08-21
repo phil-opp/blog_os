@@ -58,12 +58,12 @@ translators = ["ZAAFHachemrachid"]
 [`no_std` attribute]: https://doc.rust-lang.org/1.30.0/book/first-edition/using-rust-without-the-standard-library.html
 
 ```
-cargo new blog_os --bin --edition 2018
+cargo new blog_os --bin --edition 2024
 ```
 
-لقد أطلقتُ على المشروع اسم ”Blog_os“، ولكن بالطبع يمكنك اختيار اسمك الخاص. تُحدّد علامة ”bin“ أننا نريد إنشاء نسخة binary قابلة للتنفيذ (على عكس المكتبة) وتحدّد علامة ”--- Edition 2018“ أننا نريد استخدام [2018 edition] من Rust لصندوقنا. عندما نُشغّل الأمر، تُنشئ لنا الشحنة بنية الدليل التالية:
+لقد أطلقتُ على المشروع اسم ”Blog_os“، ولكن بالطبع يمكنك اختيار اسمك الخاص. تُحدّد علامة ”bin“ أننا نريد إنشاء نسخة binary قابلة للتنفيذ (على عكس المكتبة) وتحدّد علامة ”--- Edition 2024“ أننا نريد استخدام [2024 edition] من Rust لصندوقنا. عندما نُشغّل الأمر، تُنشئ لنا الشحنة بنية الدليل التالية:
 
-[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
+[2024 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2024/index.html
 
 ```
 blog_os

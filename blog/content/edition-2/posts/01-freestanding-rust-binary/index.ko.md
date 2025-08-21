@@ -58,13 +58,13 @@ Rust로 운영체제 커널을 작성하려면, 운영체제 없이도 실행가
 제일 먼저 아래의 명령어를 통해 새로운 cargo 애플리케이션 크레이트를 만듭니다.
 
 ```
-cargo new blog_os --bin --edition 2018
+cargo new blog_os --bin --edition 2024
 ```
 
-프로젝트 이름은 `blog_os` 또는 원하시는 이름으로 정해주세요. `--bin` 인자는 우리가 cargo에게 실행 파일 (라이브러리와 대조됨)을 만들겠다고 알려주고, `--edition 2018` 인자는 cargo에게 우리가 [Rust 2018 에디션][2018 edition]을 사용할 것이라고 알려줍니다.
+프로젝트 이름은 `blog_os` 또는 원하시는 이름으로 정해주세요. `--bin` 인자는 우리가 cargo에게 실행 파일 (라이브러리와 대조됨)을 만들겠다고 알려주고, `--edition 2024` 인자는 cargo에게 우리가 [Rust 2024 에디션][2024 edition]을 사용할 것이라고 알려줍니다.
 위 명령어를 실행하고 나면, cargo가 아래와 같은 크레이트 디렉토리를 만들어줍니다.
 
-[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
+[2024 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2024/index.html
 
 ```
 blog_os
