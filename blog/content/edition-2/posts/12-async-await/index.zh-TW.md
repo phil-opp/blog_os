@@ -301,7 +301,7 @@ fn example(min_len: usize) -> impl Future<Output = String> {
 }
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=91fc09024eecb2448a85a7ef6a97b8d8))
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=91fc09024eecb2448a85a7ef6a97b8d8))
 
 這裏我們讀取文件 `foo.txt`，然後使用 [`then`] 組合器 來連接 基於文件內容的第二個 future。
 如果內容的長度小於給定的 `min_len`，我們讀取一個不同的 `bar.txt` 文件並使用 [`map`] 組合器 將它附加到 `content` 上。
@@ -348,7 +348,7 @@ async fn example(min_len: usize) -> String {
 }
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=d93c28509a1c67661f31ff820281d434))
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=d93c28509a1c67661f31ff820281d434))
 
 這個函數是對 [上面](#drawbacks) 的 `example` 函數的直接翻譯，它使用了組合器函數。
 使用 `.await` 運算符，我們可以獲取 future 的值而不需要任何閉包或 `Either` 類型。
@@ -671,7 +671,7 @@ struct SelfReferential {
 
 ([Try it on the playground][playground-self-ref])
 
-[playground-self-ref]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=ce1aff3a37fcc1c8188eeaf0f39c97e8
+[playground-self-ref]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=ce1aff3a37fcc1c8188eeaf0f39c97e8
 
 我們創建了一個名為 `SelfReferential` 的簡單結構體，它包含一個單指針字段。首先，我們使用空指針初始化這個結構體，然後使用 `Box::new` 在堆上分配它。然後，我們確定堆分配的結構體的內存地址並將其存儲在 `ptr` 變量中。最後，我們通過將 `ptr` 變量賦值給 `self_ptr` 字段使結構體成為自引用。
 
@@ -689,7 +689,7 @@ println!("value at: {:p}", &stack_value);
 println!("internal reference: {:p}", stack_value.self_ptr);
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
 
 這裏我們使用 [`mem::replace`] 函數將堆分配的值替換為一個新的結構體實例。
 這允許我們將原始的 `heap_value` 移動到棧上，而結構體的 `self_ptr` 字段現在是一個懸空指針，它仍然指向舊的堆地址。
@@ -746,7 +746,7 @@ let mut heap_value = Box::pin(SelfReferential {
 
 除了將 `Box::new` 更改為 `Box::pin` 之外，我們還需要在結構體初始化程序中添加新的 `_pin` 字段。由於 `PhantomPinned` 是一個零大小的類型，我們只需要它的類型名稱來初始化它。
 
-當我們 [嘗試運行我們調整後的例子](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=961b0db194bbe851ff4d0ed08d3bd98a) 時，我們看到它不再工作：
+當我們 [嘗試運行我們調整後的例子](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=961b0db194bbe851ff4d0ed08d3bd98a) 時，我們看到它不再工作：
 
 ```
 error[E0594]: cannot assign to data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>`
@@ -783,7 +783,7 @@ unsafe {
 }
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=b9ebbb11429d9d79b3f9fffe819e2018))
+([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=b9ebbb11429d9d79b3f9fffe819e2018))
 
 [`get_unchecked_mut`] 函數在 `Pin<&mut T>` 上工作，而不是在 `Pin<Box<T>>` 上，因此我們必須使用 [`Pin::as_mut`] 來轉換值。
 然後我們可以使用 `get_unchecked_mut` 返回的 `&mut` 引用來設置 `self_ptr` 字段。

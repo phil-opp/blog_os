@@ -54,7 +54,7 @@ fn inner(i: usize) -> &'static u32 {
     &z[i]
 }
 ```
-[在 playground 上运行示例](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=6186a0f3a54f468e1de8894996d12819)
+[在 playground 上运行示例](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=6186a0f3a54f468e1de8894996d12819)
 
 在此示例中返回局部变量的引用没有意义，但在某些情况下，我们希望变量的生命周期超过函数。例如，在我们的内核中加载中断描述符表时，我们需要使用 `static` 变量来延长生命周期。
 
@@ -156,7 +156,7 @@ println!("{}", x);
 这就是 Rust 的所有权起作用的地方。它通过为每个引用分配一个抽象[生命周期][lifetime]（引用有效的范围）解决此问题。在上述示例中，`x` 引用了 `z` 数组，因此在 `z` 超出作用域后失效。在 [playground][playground-2] 运行上述代码，Rust 编译器会报错：
 
 [lifetime]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html
-[playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=28180d8de7b62c6b4a681a7b1f745a48
+[playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=28180d8de7b62c6b4a681a7b1f745a48
 
 ```
 error[E0597]: `z[_]` does not live long enough
