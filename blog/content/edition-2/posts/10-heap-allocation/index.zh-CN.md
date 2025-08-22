@@ -165,6 +165,7 @@ error[E0597]: `z[_]` does not live long enough
 2 |     let x = {
   |         - borrow later stored here
 3 |         let z = Box::new([1,2,3]);
+  |             - binding `z` declared here
 4 |         &z[1]
   |         ^^^^^ borrowed value does not live long enough
 5 |     }; // z goes out of scope and `deallocate` is called

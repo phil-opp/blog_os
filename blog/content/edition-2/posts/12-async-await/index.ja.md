@@ -640,21 +640,21 @@ let mut heap_value = Box::pin(SelfReferential {
 今、[調整した例を実行してみると](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=961b0db194bbe851ff4d0ed08d3bd98a)、動作しなくなっていることがわかります:
 
 ```
-error[E0594]: cannot assign to data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+error[E0594]: cannot assign to data in dereference of `Pin<Box<SelfReferential>>`
   --> src/main.rs:10:5
    |
 10 |     heap_value.self_ptr = ptr;
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^ cannot assign
    |
-   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Pin<Box<SelfReferential>>`
 
-error[E0596]: cannot borrow data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>` as mutable
+error[E0596]: cannot borrow data in dereference of `Pin<Box<SelfReferential>>` as mutable
   --> src/main.rs:16:36
    |
 16 |     let stack_value = mem::replace(&mut *heap_value, SelfReferential {
    |                                    ^^^^^^^^^^^^^^^^ cannot borrow as mutable
    |
-   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Pin<Box<SelfReferential>>`
 ```
 
 どちらのエラーも、`Pin<Box<SelfReferential>>` 型が `DerefMut` trait を実装しなくなったために発生します。これはまさに求めていた結果であり、というのも、`DerefMut` trait は `&mut` 参照を返してしまうからで、私達はこれを防ぎたかったのです。これは、`Unpin` を使用しないようにして、`Box::new` を `Box::pin` に変更したからこそ起こる現象です。
