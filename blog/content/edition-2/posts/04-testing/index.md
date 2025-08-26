@@ -38,7 +38,22 @@ Rust has a [built-in test framework] that is capable of running unit tests witho
 
 [built-in test framework]: https://doc.rust-lang.org/book/ch11-00-testing.html
 
-Unfortunately, it's a bit more complicated for `no_std` applications such as our kernel. The problem is that Rust's test framework implicitly uses the built-in [`test`] library, which depends on the standard library. This means that we can't use the default test framework for our `#[no_std]` kernel.
+To enable testing for our kernel binary, we can set the `test` flag in the Cargo.toml to `true`:
+
+```toml
+# in Cargo.toml
+
+[[bin]]
+name = "blog_os"
+test = true
+bench = false
+```
+
+This [`[[bin]]` section](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target) specifies how `cargo` should compile our `blog_os` executable.
+The `test` field specifies whether testing is supported for this executable.
+We set `test = false` in the first post to [make `rust-analyzer` happy](@/edition-2/posts/01-freestanding-rust-binary/index.md#making-rust-analyzer-happy), but now we want to enable testing, so we set it back to `true`.
+
+Unfortunately, testing is a bit more complicated for `no_std` applications such as our kernel. The problem is that Rust's test framework implicitly uses the built-in [`test`] library, which depends on the standard library. This means that we can't use the default test framework for our `#[no_std]` kernel.
 
 [`test`]: https://doc.rust-lang.org/test/index.html
 
