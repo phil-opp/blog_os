@@ -58,12 +58,12 @@ Rust 所有的 crate 在預設情況下都會連結[標準函式庫][standard li
 我們先從建立一個新的 cargo 專案開始，最簡單的辦法是輸入下面的命令：
 
 ```
-cargo new blog_os --bin --edition 2018
+cargo new blog_os --bin --edition 2024
 ```
 
-我將專案命名為 `blog_os`，當然讀者也可以自己的名稱。`--bin` 選項說明我們將要建立一個執行檔（而不是一個函式庫），`--edition 2018` 選項指明我們的 crate 想使用 Rust [2018 版本][2018 edition]。當我們執行這行指令的時候，cargo 會為我們建立以下目錄結構：
+我將專案命名為 `blog_os`，當然讀者也可以自己的名稱。`--bin` 選項說明我們將要建立一個執行檔（而不是一個函式庫），`--edition 2024` 選項指明我們的 crate 想使用 Rust [2024 版本][2024 edition]。當我們執行這行指令的時候，cargo 會為我們建立以下目錄結構：
 
-[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
+[2024 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2024/index.html
 
 ```
 blog_os
