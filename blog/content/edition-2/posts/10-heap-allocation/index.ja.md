@@ -52,7 +52,7 @@ fn inner(i: usize) -> &'static u32 {
 }
 ```
 
-([この例をplaygroundで実行する](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=6186a0f3a54f468e1de8894996d12819))
+([この例をplaygroundで実行する](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=6186a0f3a54f468e1de8894996d12819))
 
 上の例の場合、参照を返すことには意味がありませんが、変数に関数よりも長く生存して欲しいというケースは存在します。すでに私たちのカーネルでそのようなケースに遭遇しています。それは[割り込み記述子表 (IDT) を読み込][load an interrupt descriptor table]もうとしたときで、ライフタイムを延ばすために`static`変数を使う必要がありました。
 
@@ -158,7 +158,7 @@ println!("{}", x);
 ここでRustの所有権の出番です。所有権システムは、参照が有効なスコープを表す抽象[ライフタイム][lifetime]をそれぞれの参照に指定します。上の例では、参照`x`は配列`z`から取られているので、`z`がスコープ外に出ると無効になります。[上の例をplaygroundで実行する][playground-2]と、確かにRustコンパイラがエラーを投げるのが分かります：
 
 [lifetime]: https://doc.rust-jp.rs/book-ja/ch10-03-lifetime-syntax.html
-[playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=28180d8de7b62c6b4a681a7b1f745a48
+[playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=28180d8de7b62c6b4a681a7b1f745a48
 
 ```
 error[E0597]: `z[_]` does not live long enough
@@ -167,6 +167,7 @@ error[E0597]: `z[_]` does not live long enough
 2 |     let x = {
   |         - borrow later stored here
 3 |         let z = Box::new([1,2,3]);
+  |             - binding `z` declared here
 4 |         &z[1]
   |         ^^^^^ borrowed value does not live long enough
 5 |     }; // z goes out of scope and `deallocate` is called

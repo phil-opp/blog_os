@@ -52,7 +52,7 @@ fn inner(i: usize) -> &'static u32 {
 }
 ```
 
-([ejecutar el ejemplo en el playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=6186a0f3a54f468e1de8894996d12819))
+([ejecutar el ejemplo en el playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=6186a0f3a54f468e1de8894996d12819))
 
 Si bien devolver una referencia no tiene sentido en este ejemplo, hay casos en los que queremos que una variable viva más que la función. Ya hemos visto tal caso en nuestro núcleo cuando intentamos [cargar una tabla de descriptores de interrupción] y tuvimos que usar una variable `static` para extender la duración.
 
@@ -158,7 +158,7 @@ println!("{}", x);
 Aquí es donde entra la propiedad de Rust. Asigna una [duración] abstracta a cada referencia, que es el ámbito en el que la referencia es válida. En el ejemplo anterior, la referencia `x` se toma del arreglo `z`, por lo que se vuelve inválida después de que `z` sale del alcance. Cuando [ejecutas el ejemplo anterior en el playground][playground-2], verás que el compilador de Rust efectivamente lanza un error:
 
 [duración]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html
-[playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=28180d8de7b62c6b4a681a7b1f745a48
+[playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=28180d8de7b62c6b4a681a7b1f745a48
 
 ```
 error[E0597]: `z[_]` no vive lo suficiente
@@ -443,7 +443,7 @@ La implementación se puede dividir en dos partes:
 [`None`]: https://doc.rust-lang.org/core/option/enum.Option.html#variant.None
 [`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
 [`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
-[operador de signo de interrogación]: https://doc.rust-lang.org/edition-guide/rust-2018/error-handling-and-panics/the-question-mark-operator-for-easier-error-handling.html
+[operador de signo de interrogación]: https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html
 [`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
 [_buffer de traducción de direcciones_]: @/edition-2/posts/08-paging-introduction/index.md#the-translation-lookaside-buffer
 [`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
