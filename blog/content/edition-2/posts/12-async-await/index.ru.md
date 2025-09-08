@@ -67,7 +67,7 @@ translators = ["TakiMoysha"]
 
 Недостатком вытесняющей многозадачности является то, что каждой задаче требуется собственный стек. По сравнению с общим стеком это приводит к более высокому использованию памяти на задачу и часто ограничивает количество задач в системе. Другим недостатком является то, что ОС всегда должна сохранять полное состояние регистров ЦП при каждом переключении задач, даже если задача использовала только небольшую часть регистров.
 
-Вытесняющая многозадачность и потоки - фундаментальные компонтенты ОС, т.к. они позволяют запускать (run untrusted userspace programs ?TODO:). Мы подробнее обсудим эти концепции в будущийх постах. Однако сейчас, мы сосредоточимся на кооперативной многозадачности, которая также предоставляет полезные возможности для нашего ядра.
+Вытесняющая многозадачность и потоки - фундаментальные компонтенты ОС, т.к. они позволяют запускать недоверенные программы в userspace (run untrusted userspace programs) <!-- ?TODO: уточнить перевод -->. Мы подробнее обсудим эти концепции в будущийх постах. Однако сейчас, мы сосредоточимся на кооперативной многозадачности, которая также предоставляет полезные возможности для нашего ядра.
 
 ### Кооперативная Многозадачность
 
@@ -176,14 +176,12 @@ let file_content = loop {
 
 Более эффективным подходом может быть _блокировка_ текущего потока до тех пор, пока футура не станет доступной. Конечно, это возможно только при наличии потоков, поэтому это решение не работает для нашего ядра, по крайней мере, пока. Даже в системах, где поддерживается блокировка, она часто нежелательна, поскольку превращает асинхронную задачу в синхронную, тем самым сдерживая потенциальные преимущества параллельных задач в плане производительности.
 
-<!-- !TODO: -->
-#### Future Combinators
-
-An alternative to waiting is to use future combinators. Future combinators are methods like `map` that allow chaining and combining futures together, similar to the methods of the [`Iterator`] trait. Instead of waiting on the future, these combinators return a future themselves, which applies the mapping operation on `poll`.
+#### Комбинаторы Future
+Альтернативой ожиданию является использование комбинаторов future. _Комбинаторы future_ - это методы вроде `map`, которые позволяют объединять и связывать future между собой, аналогично методам трейта [`Iterator`]. Вместо того чтобы ожидать выполнения future, эти комбинаторы сами возвращают future, которые применяет операцию преобразования при вызове `poll`.
 
 [`Iterator`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html
 
-As an example, a simple `string_len` combinator for converting a `Future<Output = String>` to a `Future<Output = usize>` could look like this:
+Например, простой комбинатор `string_len` для преобразования `Future<Output = String>` в `Future<Output = usize>` может выглядеть так:
 
 ```rust
 struct StringLen<F> {
@@ -209,36 +207,30 @@ fn string_len(string: impl Future<Output = String>)
     }
 }
 
-// Usage
+// Использование
 fn file_len() -> impl Future<Output = usize> {
     let file_content_future = async_read_file("foo.txt");
     string_len(file_content_future)
 }
 ```
 
-This code does not quite work because it does not handle [_pinning_], but it suffices as an example. The basic idea is that the `string_len` function wraps a given `Future` instance into a new `StringLen` struct, which also implements `Future`. When the wrapped future is polled, it polls the inner future. If the value is not ready yet, `Poll::Pending` is returned from the wrapped future too. If the value is ready, the string is extracted from the `Poll::Ready` variant and its length is calculated. Afterwards, it is wrapped in `Poll::Ready` again and returned.
+Этот код не совсем корректен, потому что не учитывает [_pinning_], но он подходит для примера. Основная идея в том, что функция `string_len` оборачивает переданный экземпляр `Future` в новую структуру `StringLen`, которая также реализует `Future`. При опросе обёрнутого future опрашивается внутренний future. Если значение ещё не готово, из обёрнутого future также возвращается `Poll::Pending`. Если значение готово, строка извлекается из варианта `Poll::Ready`, вычисляется её длина, после чего результат снова оборачивается в `Poll::Ready` и возвращается.
 
 [_pinning_]: https://doc.rust-lang.org/stable/core/pin/index.html
 
-With this `string_len` function, we can calculate the length of an asynchronous string without waiting for it. Since the function returns a `Future` again, the caller can't work directly on the returned value, but needs to use combinator functions again. This way, the whole call graph becomes asynchronous and we can efficiently wait for multiple futures at once at some point, e.g., in the main function.
+С помощью функции `string_len` можно вычислить длину асинхронной строки, не дожидаясь её завершения. Поскольку функция снова возвращает `Future`, вызывающий код не может работать с возвращённым значением напрямую, а должен использовать комбинаторы. Таким образом, весь граф вызовов становится асинхронным, и в какой-то момент (например, в основной функции) можно эффективно ожидать завершения нескольких future одновременно.
 
-Because manually writing combinator functions is difficult, they are often provided by libraries. While the Rust standard library itself provides no combinator methods yet, the semi-official (and `no_std` compatible) [`futures`] crate does. Its [`FutureExt`] trait provides high-level combinator methods such as [`map`] or [`then`], which can be used to manipulate the result with arbitrary closures.
+Так как ручное написание функций-комбинаторов сложно, они обычно предоставляются библиотеками. Стандартная библиотека Rust пока не содержит методов-комбинаторов, но полуофициальная (и совместимая с `no_std`) библиотека [`futures`] предоставляет их. Её трейт [`FutureExt`] включает высокоуровневые методы-комбинаторы, такие как [`map`] или [`then`], которые позволяют манипулировать результатом с помощью произвольных замыканий.
 
-[`futures`]: https://docs.rs/futures/0.3.4/futures/
-[`FutureExt`]: https://docs.rs/futures/0.3.4/futures/future/trait.FutureExt.html
-[`map`]: https://docs.rs/futures/0.3.4/futures/future/trait.FutureExt.html#method.map
-[`then`]: https://docs.rs/futures/0.3.4/futures/future/trait.FutureExt.html#method.then
+##### Преимущества
 
-##### Advantages
+Большое преимущество future комбинаторов (future combinators) в том, что они сохраняют асинхронность. В сочетании с асинхронными интерфейсами ввода-вывода такой подход может обеспечить очень высокую производительность. То, что future кобинаторы реализованы как обычные структуры с имплементацией трейтов, позволяет компилятору чрезвычайно оптимизировать их. Подробнее см. в посте [_Futures с нулевой стоимостью в Rust_], где было объявлено о добавлении futures в экосистему Rust.
 
-The big advantage of future combinators is that they keep the operations asynchronous. In combination with asynchronous I/O interfaces, this approach can lead to very high performance. The fact that future combinators are implemented as normal structs with trait implementations allows the compiler to excessively optimize them. For more details, see the [_Zero-cost futures in Rust_] post, which announced the addition of futures to the Rust ecosystem.
+[_Futures с нулевой стоимостью в Rust_]: https://aturon.github.io/blog/2016/08/11/futures/
 
-[_Zero-cost futures in Rust_]: https://aturon.github.io/blog/2016/08/11/futures/
+##### Недостатки
 
-##### Drawbacks
-
-While future combinators make it possible to write very efficient code, they can be difficult to use in some situations because of the type system and the closure-based interface. For example, consider code like this:
-
+Хотя future комбинаторы позволяют писать очень эффективный код, их может быть сложно использовать в некоторых ситуациях из-за системы типов и интерфейса на основе замыканий. Например, рассмотрим такой код:
 ```rust
 fn example(min_len: usize) -> impl Future<Output = String> {
     async_read_file("foo.txt").then(move |content| {
@@ -251,34 +243,34 @@ fn example(min_len: usize) -> impl Future<Output = String> {
 }
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=91fc09024eecb2448a85a7ef6a97b8d8))
 
-Here we read the file `foo.txt` and then use the [`then`] combinator to chain a second future based on the file content. If the content length is smaller than the given `min_len`, we read a different `bar.txt` file and append it to `content` using the [`map`] combinator. Otherwise, we return only the content of `foo.txt`.
+([Попробовать в песочнице](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=91fc09024eecb2448a85a7ef6a97b8d8))
 
-We need to use the [`move` keyword] for the closure passed to `then` because otherwise there would be a lifetime error for `min_len`. The reason for the [`Either`] wrapper is that `if` and `else` blocks must always have the same type. Since we return different future types in the blocks, we must use the wrapper type to unify them into a single type. The [`ready`] function wraps a value into a future, which is immediately ready. The function is required here because the `Either` wrapper expects that the wrapped value implements `Future`.
+Здесь мы читаем файл `foo.txt`, а затем используем комбинатор [`then`], чтобы связать вторую футуру на основе содержимого файла. Если длина содержимого меньше заданного `min_len`, мы читаем другой файл `bar.txt` и добавляем его к `content` с помощью комбинатора [`map`]. В противном случае возвращаем только содержимое `foo.txt`.
+
+Нам нужно использовать ключевое слово [`move`] для замыкания, передаваемого в `then`, иначе возникнет ошибка времени жизни (lifetime) для `min_len`. Причина использования обёртки [`Either`] заключается в том, что блоки `if` и `else` всегда должны возвращать значения одного типа. Поскольку в блоках возвращаются разные типы будущих значений, нам необходимо использовать обёртку, чтобы привести их к единому типу. Функция [`ready`] оборачивает значение в будущее, которое сразу готово к использованию. Здесь она необходима, потому что обёртка `Either` ожидает, что обёрнутое значение реализует `Future`.
 
 [`move` keyword]: https://doc.rust-lang.org/std/keyword.move.html
 [`Either`]: https://docs.rs/futures/0.3.4/futures/future/enum.Either.html
 [`ready`]: https://docs.rs/futures/0.3.4/futures/future/fn.ready.html
 
-As you can imagine, this can quickly lead to very complex code for larger projects. It gets especially complicated if borrowing and different lifetimes are involved. For this reason, a lot of work was invested in adding support for async/await to Rust, with the goal of making asynchronous code radically simpler to write.
+Как можно догадаться, такой подход быстро приводит к очень сложному коду, особенно в крупных проектах. Ситуация ещё больше усложняется, если задействованы заимствования (borrowing) и разные времена жизни (lifetimes). Именно поэтому в Rust было вложено много усилий для добавления поддержки `async/await` — с целью сделать написание асинхронного кода радикально проще.
 
-### The Async/Await Pattern
+### Паттерн Async/Await
 
-The idea behind async/await is to let the programmer write code that _looks_ like normal synchronous code, but is turned into asynchronous code by the compiler. It works based on the two keywords `async` and `await`. The `async` keyword can be used in a function signature to turn a synchronous function into an asynchronous function that returns a future:
+Идея async/await заключается в том, чтобы позволить программисту писать код, который _выглядит_ как обычный синхронный код, но превращается в асинхронный код компилятором. Это работает на основе двух ключевых слов `async` и `await`. Ключевое слово `async` можно использовать в сигнатуре функции для превращения синхронной функции в асинхронную функцию, возвращающую future:
 
 ```rust
 async fn foo() -> u32 {
     0
 }
-
-// the above is roughly translated by the compiler to:
+// примерно переводится компилятором в:
 fn foo() -> impl Future<Output = u32> {
     future::ready(0)
 }
 ```
 
-This keyword alone wouldn't be that useful. However, inside `async` functions, the `await` keyword can be used to retrieve the asynchronous value of a future:
+Одного этого ключевого слова недостаточно. Однако внутри функций `async` можно использовать ключевое слово `await`, чтобы получить асинхронное значение future:
 
 ```rust
 async fn example(min_len: usize) -> String {
@@ -291,36 +283,48 @@ async fn example(min_len: usize) -> String {
 }
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=d93c28509a1c67661f31ff820281d434))
+В данном примере `async_read_file` — это асинхронная функция, возвращающая будущее строки.
 
-This function is a direct translation of the `example` function from [above](#drawbacks) that used combinator functions. Using the `.await` operator, we can retrieve the value of a future without needing any closures or `Either` types. As a result, we can write our code like we write normal synchronous code, with the difference that _this is still asynchronous code_.
+```rust
+async fn example(min_len: usize) -> String {
+    let content = async_read_file("foo.txt").await;
+    if content.len() < min_len {
+        content + &async_read_file("bar.txt").await
+    } else {
+        content
+    }
+}
+```
 
-#### State Machine Transformation
+([Попробовать в песочнице](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=d93c28509a1c67661f31ff820281d434))
 
-Behind the scenes, the compiler converts the body of the `async` function into a [_state machine_], with each `.await` call representing a different state. For the above `example` function, the compiler creates a state machine with the following four states:
+Эта ф-ция - прямой перевод `example` написанной [выше](#Недостатки), которая использовала комбинаторные ф-ции. Используя оператор `.await`, мы можем получить значение future без необходимости использования каких-либо замыканий или типов `Either`. В результате, мы можем писать наш код так же, как если бы это был обычный синхронный код, с той лишь разницей, что _это все еще асинхронный код_.
+
+#### Преобразованиe Конечных Автоматов (Машина состояний)
+
+За кулисами компилятор преобразует тело ф-ции `async` в [_state machine_] с каждым вызовом `.await`, представляющим собой разное состояние. Для вышеуказанной ф-ции `example`, компилятор создает state machine с четырьмя состояниями.
 
 [_state machine_]: https://en.wikipedia.org/wiki/Finite-state_machine
 
-![Four states: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-states.svg)
+![Четыре состояния: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-states.svg)
 
-Each state represents a different pause point in the function. The _"Start"_ and _"End"_ states represent the function at the beginning and end of its execution. The _"Waiting on foo.txt"_ state represents that the function is currently waiting for the first `async_read_file` result. Similarly, the _"Waiting on bar.txt"_ state represents the pause point where the function is waiting on the second `async_read_file` result.
+Каждое состояние представляет собой точку остановки в функции. Состояния _"Start"_ и _"End"_, указывают на начало и конец выполнения ф-ции. Состояние _"waiting on foo.txt"_ - функция в данный момент ждёт первого результата `async_read_file`. Аналогично, состояние _"waiting on bar.txt"_ представляет остановку, когда ф-ция ожидает второй результат `async_read_file`.
 
-The state machine implements the `Future` trait by making each `poll` call a possible state transition:
+Конечный автомат реализует trait `Future` делая каждый вызов `poll` возможным переход между состояниями:
 
-![Four states and their transitions: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-basic.svg)
+![Четыре состояния и переходы: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-basic.svg)
 
-The diagram uses arrows to represent state switches and diamond shapes to represent alternative ways. For example, if the `foo.txt` file is not ready, the path marked with _"no"_ is taken and the _"Waiting on foo.txt"_ state is reached. Otherwise, the _"yes"_ path is taken. The small red diamond without a caption represents the `if content.len() < 100` branch of the `example` function.
+Диаграмма использует стрелки для представления переключений состояний и ромбы для представления альтернативных путей. Например, если файл `foo.txt` не готов, то мы используется путь _"no"_ переходя в состояние _"waiting on foo.txt"_. Иначе, используется путь _"да"_. Где маленький красный комб без подписи - ветвь ф-ции exmple, где `if content.len() < 100`.
 
-We see that the first `poll` call starts the function and lets it run until it reaches a future that is not ready yet. If all futures on the path are ready, the function can run till the _"End"_ state, where it returns its result wrapped in `Poll::Ready`. Otherwise, the state machine enters a waiting state and returns `Poll::Pending`. On the next `poll` call, the state machine then starts from the last waiting state and retries the last operation.
+Мы видим, что первый вызов `poll` запускает функцию и она выполняться до тех пор, пока у футуры не будет результата. Если все футуры на пути готовы, ф-ция может выполниться до состояния _"end"_ , то есть вернуть свой результат, завернутый в `Poll::Ready`. В противном случае конечный автомат переходит в состояние ожидания и возвращает `Poll::Pending`. При следующем вызове `poll` машина состояний начинает с последнего состояния ожидания и повторяет последнюю операцию.
 
-#### Saving State
+#### Сохранение состояния
 
-In order to be able to continue from the last waiting state, the state machine must keep track of the current state internally. In addition, it must save all the variables that it needs to continue execution on the next `poll` call. This is where the compiler can really shine: Since it knows which variables are used when, it can automatically generate structs with exactly the variables that are needed.
+Для продолжнеия работы с последнего состояния ожидания, автомат должен отслеживать текущее состояние внутри себя. Еще, он должен сохранять все переменные, которые необходимы для продолжнеия выполнения при следующем вызове `poll`. Здесь компилятор действительно может проявить себя: зная, когда используются те или иные переменные, он может автоматически создавать структуры с точным набором требуемых переменных.
 
-As an example, the compiler generates structs like the following for the above `example` function:
-
+Например, компилятор генерирует структуры для вышеприведенной ф-ции `example`:
 ```rust
-// The `example` function again so that you don't have to scroll up
+// снова `example` что бы вам не пришлось прокручивать вверх
 async fn example(min_len: usize) -> String {
     let content = async_read_file("foo.txt").await;
     if content.len() < min_len {
@@ -330,7 +334,7 @@ async fn example(min_len: usize) -> String {
     }
 }
 
-// The compiler-generated state structs:
+// компиялтор генерирует структуры
 
 struct StartState {
     min_len: usize,
@@ -349,15 +353,15 @@ struct WaitingOnBarTxtState {
 struct EndState {}
 ```
 
-In the "start" and _"Waiting on foo.txt"_ states, the `min_len` parameter needs to be stored for the later comparison with `content.len()`. The _"Waiting on foo.txt"_ state additionally stores a `foo_txt_future`, which represents the future returned by the `async_read_file` call. This future needs to be polled again when the state machine continues, so it needs to be saved.
+В состояниях "start" и _"waiting on foo.txt"_ необходимо сохранить параметр `min_len` для последующего сравнения с `content.len()`. Состояние _"waiting on foo.txt"_ дополнительно содержит `foo_txt_future`, представляющий future возвращаемое вызовом `async_read_file`. Этe футуру нужно опросить снова, когда автомат продолжит свою работу, поэтому его нужно сохранить.
 
-The _"Waiting on bar.txt"_ state contains the `content` variable for the later string concatenation when `bar.txt` is ready. It also stores a `bar_txt_future` that represents the in-progress load of `bar.txt`. The struct does not contain the `min_len` variable because it is no longer needed after the `content.len()` comparison. In the _"end"_ state, no variables are stored because the function has already run to completion.
+Состояние "waiting on bar.txt" содержит переменную `content` для последующей конкатенации строк при загрузке файла `bar.txt`. Оно также хранит `bar_txt_future`, представляющее текущую загрузку файла `bar.txt`. Эта структура не содержит переменную `min_len`, потому что она уже не нужна после проверки длины строки `content.len()`. В состоянии _"end"_, в структуре ничего нет, т.к. ф-ция завершилась полностью.
 
-Keep in mind that this is only an example of the code that the compiler could generate. The struct names and the field layout are implementation details and might be different.
+Учтите, что приведенный здесь код - это только пример того, какая структура может быть сгенерирована компилятором Имена структур и расположение полей - детали реализации и могут отличаться.
 
-#### The Full State Machine Type
+#### Полный Конечный Автомат
 
-While the exact compiler-generated code is an implementation detail, it helps in understanding to imagine how the generated state machine _could_ look for the `example` function. We already defined the structs representing the different states and containing the required variables. To create a state machine on top of them, we can combine them into an [`enum`]:
+При этом точно сгенерированный код компилятора является деталью реализации, это помогает понять, представив, как могла бы выглядеть машина состояний для функции `example`. Мы уже определили структуры, представляющие разные состояния и содержащие необходимые переменные. Чтобы создать машину состояний на их основе, мы можем объединить их в [`enum`]:
 
 [`enum`]: https://doc.rust-lang.org/book/ch06-01-defining-an-enum.html
 
@@ -370,11 +374,11 @@ enum ExampleStateMachine {
 }
 ```
 
-We define a separate enum variant for each state and add the corresponding state struct to each variant as a field. To implement the state transitions, the compiler generates an implementation of the `Future` trait based on the `example` function:
+Мы определяем отдельный вариант перечисления (enum) для каждого состояния и добавляем соответствующую структуру состояния в каждый вариант как поле. Чтобы реализовать переходы между состояниями, компилятор генерирует реализацию trait'а `Future` на основе функции `example`:
 
 ```rust
 impl Future for ExampleStateMachine {
-    type Output = String; // return type of `example`
+    type Output = String; // возвращает тип из `example`
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         loop {
@@ -389,17 +393,17 @@ impl Future for ExampleStateMachine {
 }
 ```
 
-The `Output` type of the future is `String` because it's the return type of the `example` function. To implement the `poll` function, we use a `match` statement on the current state inside a `loop`. The idea is that we switch to the next state as long as possible and use an explicit `return Poll::Pending` when we can't continue.
+Тип `Output` будущего равен `String`, потому что это тип возвращаемого значения функции `example`. Для реализации метода `poll` мы используем условную инструкцию `match` на текущем состоянии внутри цикла. Идея в том, что мы переходим к следующему состоянию, пока это возможно, и явно возвращаем `Poll::Pending`, когда мы не можем продолжить.
 
-For simplicity, we only show simplified code and don't handle [pinning][_pinning_], ownership, lifetimes, etc. So this and the following code should be treated as pseudo-code and not used directly. Of course, the real compiler-generated code handles everything correctly, albeit possibly in a different way.
+Для упрощения мы представляем только упрощенный код и не обрабатываем [закрепление][_pinning_], владения, lifetimes, и т.д. Поэтому этот и следующий код должны быть восприняты как псевдокод и не использоваться напрямую. Конечно, реальный генерируемый компилятором код обрабатывает всё верно, хотя возможно это будет сделано по-другому.
 
-To keep the code excerpts small, we present the code for each `match` arm separately. Let's begin with the `Start` state:
+Чтобы сохранить примеры кода маленькими, мы представляем код для каждого варианта `match` отдельно. Начнем с состояния `Start`:
 
 ```rust
 ExampleStateMachine::Start(state) => {
-    // from body of `example`
+    // из тела `example`
     let foo_txt_future = async_read_file("foo.txt");
-    // `.await` operation
+    // операция`.await`
     let state = WaitingOnFooTxtState {
         min_len: state.min_len,
         foo_txt_future,
@@ -407,20 +411,19 @@ ExampleStateMachine::Start(state) => {
     *self = ExampleStateMachine::WaitingOnFooTxt(state);
 }
 ```
+Машина состояний находится в состоянии `Start`, когда она прямо в начале функции. В этом случае выполняем весь код из тела функции `example` до первого `.await`. Чтобы обработать операцию `.await`, мы меняем состояние машины на `WaitingOnFooTxt`, которое включает в себя построение структуры `WaitingOnFooTxtState`.
 
-The state machine is in the `Start` state when it is right at the beginning of the function. In this case, we execute all the code from the body of the `example` function until the first `.await`. To handle the `.await` operation, we change the state of the `self` state machine to `WaitingOnFooTxt`, which includes the construction of the `WaitingOnFooTxtState` struct.
-
-Since the `match self {…}` statement is executed in a loop, the execution jumps to the `WaitingOnFooTxt` arm next:
+Пока `match self {…}`  выполняется в цилке, выполнение прыгает к `WaitingOnFooTxt`:
 
 ```rust
 ExampleStateMachine::WaitingOnFooTxt(state) => {
     match state.foo_txt_future.poll(cx) {
         Poll::Pending => return Poll::Pending,
         Poll::Ready(content) => {
-            // from body of `example`
+            // из тела `example`
             if content.len() < state.min_len {
                 let bar_txt_future = async_read_file("bar.txt");
-                // `.await` operation
+                // операция `.await`
                 let state = WaitingOnBarTxtState {
                     content,
                     bar_txt_future,
@@ -435,13 +438,13 @@ ExampleStateMachine::WaitingOnFooTxt(state) => {
 }
 ```
 
-In this `match` arm, we first call the `poll` function of the `foo_txt_future`. If it is not ready, we exit the loop and return `Poll::Pending`. Since `self` stays in the `WaitingOnFooTxt` state in this case, the next `poll` call on the state machine will enter the same `match` arm and retry polling the `foo_txt_future`.
+В этом варианте `match`, вначале мы вызываем функцию `poll` для `foo_txt_future`. Если она не готова, мы выходим из цикла и возвращаем `Poll::Pending`. В этом случае `self` остается в состоянии `WaitingOnFooTxt`, следующий вызов функции `poll` на машине состояний попадёт в тот же `match` и повторит проверку готовности `foo_txt_future`.
 
-When the `foo_txt_future` is ready, we assign the result to the `content` variable and continue to execute the code of the `example` function: If `content.len()` is smaller than the `min_len` saved in the state struct, the `bar.txt` file is read asynchronously. We again translate the `.await` operation into a state change, this time into the `WaitingOnBarTxt` state. Since we're executing the `match` inside a loop, the execution directly jumps to the `match` arm for the new state afterward, where the `bar_txt_future` is polled.
+Когда `foo_txt_future` готов, мы присваиваем результат переменной `content` и продолжаем выполнять код функции `example`: Если `content.len()` меньше сохранённого в структуре состояния `min_len`, файл `bar.txt` читается асинхронно. Мы ещё раз переводим операцию `.await` в изменение состояния, теперь в состояние `WaitingOnBarTxt`. Следуя за выполнением `match` внутри цикла, выполнение прямо переходит к варианту `match` для нового состояния позже, где проверяется готовность `bar_txt_future`.
 
-In case we enter the `else` branch, no further `.await` operation occurs. We reach the end of the function and return `content` wrapped in `Poll::Ready`. We also change the current state to the `End` state.
+В случае входа в ветку `else`, более никаких операций `.await` не происходит. Мы достигаем конца функции и возвращаем `content` обёрнутую в `Poll::Ready`. Также меняем текущее состояние на `End`.
 
-The code for the `WaitingOnBarTxt` state looks like this:
+Код для состояния `WaitingOnBarTxt` выглядит следующим образом:
 
 ```rust
 ExampleStateMachine::WaitingOnBarTxt(state) => {
@@ -449,36 +452,34 @@ ExampleStateMachine::WaitingOnBarTxt(state) => {
         Poll::Pending => return Poll::Pending,
         Poll::Ready(bar_txt) => {
             *self = ExampleStateMachine::End(EndState);
-            // from body of `example`
+            // из тела `example`
             return Poll::Ready(state.content + &bar_txt);
         }
     }
 }
 ```
 
-Similar to the `WaitingOnFooTxt` state, we start by polling the `bar_txt_future`. If it is still pending, we exit the loop and return `Poll::Pending`. Otherwise, we can perform the last operation of the `example` function: concatenating the `content` variable with the result from the future. We update the state machine to the `End` state and then return the result wrapped in `Poll::Ready`.
+Аналогично состоянию `WaitingOnFooTxt`, мы начинаем с проверки готовности `bar_txt_future`. Если она ещё не готова, мы выходим из цикла и возвращаем `Poll::Pending`. В противном случае, мы можем выполнить последнюю операцию функции `example`: конкатенацию переменной `content` с результатом футуры. Обновляем машину состояний в состояние `End` и затем возвращаем результат обёрнутый в `Poll::Ready`.
 
-Finally, the code for the `End` state looks like this:
-
+В итоге, код для `End` состояния выглядит так:
 ```rust
 ExampleStateMachine::End(_) => {
-    panic!("poll called after Poll::Ready was returned");
+    panic!("poll вызван после возврата Poll::Ready");
 }
 ```
+Футуры не должны повторно проверяться после того, как они вернули `Poll::Ready`, поэтому паникуем, если вызвана функция `poll`, когда мы уже находимся в состоянии `End`.
 
-Futures should not be polled again after they returned `Poll::Ready`, so we panic if `poll` is called while we are already in the `End` state.
+Теперь мы знаем, что сгенерированная машина состояний и ее реализация интерфейса `Future` _могла бы_ выглядеть так. На практике компилятор генерирует код по-другому. (Если вас заинтересует, то реализация ныне основана на [_корутинах_], но это только деталь имплементации.)
 
-We now know what the compiler-generated state machine and its implementation of the `Future` trait _could_ look like. In practice, the compiler generates code in a different way. (In case you're interested, the implementation is currently based on [_coroutines_], but this is only an implementation detail.)
+[_корутинах_]: https://doc.rust-lang.org/stable/unstable-book/language-features/coroutines.html
 
-[_coroutines_]: https://doc.rust-lang.org/stable/unstable-book/language-features/coroutines.html
-
-The last piece of the puzzle is the generated code for the `example` function itself. Remember, the function header was defined like this:
+Последняя часть загадки – сгенерированный код для самой функции `example`. Помните, что заголовок функции был определён следующим образом:
 
 ```rust
 async fn example(min_len: usize) -> String
 ```
 
-Since the complete function body is now implemented by the state machine, the only thing that the function needs to do is to initialize the state machine and return it. The generated code for this could look like this:
+Теперь, когда весь функционал реализуется машиной состояний, единственное, что ф-ция должна сделать - это инициализировать эту машику и вернуть ее. Сгенерированный код для этого может выглядеть следующим образом:
 
 ```rust
 fn example(min_len: usize) -> ExampleStateMachine {
@@ -488,17 +489,18 @@ fn example(min_len: usize) -> ExampleStateMachine {
 }
 ```
 
-The function no longer has an `async` modifier since it now explicitly returns an `ExampleStateMachine` type, which implements the `Future` trait. As expected, the state machine is constructed in the `Start` state and the corresponding state struct is initialized with the `min_len` parameter.
+Функция больше не имеет модификатора `async`, поскольку теперь явно возвращает тип `ExampleStateMachine`, который реализует трейт `Future`. Как ожидалось, машина состояний создается в состоянии `start` и соответствующая ему структура состояния инициализируется параметром `min_len`.
 
-Note that this function does not start the execution of the state machine. This is a fundamental design decision of futures in Rust: they do nothing until they are polled for the first time.
+Заметьте, что эта функция не запускает выполнение машины состояний. Это фундаментальное архитектурное решение для футур в Rust: они ничего не делают, пока не будет произведена первая проверка на готовность.
 
-### Pinning
+#### Закрепление (Pinning)
 
-We already stumbled across _pinning_ multiple times in this post. Now is finally the time to explore what pinning is and why it is needed.
+Мы уже несколько раз столкнулись с понятием _закрепления_ (pinnig) в этом посте. Наконец, время чтобы изучить, что такое закрепление и почему оно необходимо.
 
-#### Self-Referential Structs
 
-As explained above, the state machine transformation stores the local variables of each pause point in a struct. For small examples like our `example` function, this was straightforward and did not lead to any problems. However, things become more difficult when variables reference each other. For example, consider this function:
+#### Самоссылающиеся структуры
+
+Как объяснялось выше, переходы конечных автоматов хранят локальные переменные для каждой точки остановки в структуре. Для простых примеров, как наш `example` функции, это было просто и не привело к никаким проблемам. Однако делаются сложнее, когда переменные ссылаются друг на друга. Например, рассмотрите следующую функцию:
 
 ```rust
 async fn pin_example() -> i32 {
@@ -509,50 +511,50 @@ async fn pin_example() -> i32 {
 }
 ```
 
-This function creates a small `array` with the contents `1`, `2`, and `3`. It then creates a reference to the last array element and stores it in an `element` variable. Next, it asynchronously writes the number converted to a string to a `foo.txt` file. Finally, it returns the number referenced by `element`.
+Эта функция создает маленький `array` с содержимым `1`, `2`, и `3`. Затем она создает ссылку на последний элемент массива и хранит ее в переменной `element`. Далее, асинхронно записывает число, преобразованное в строку, в файл `foo.txt`. В конце, возвращает число, ссылка на которое хранится в `element`.
 
-Since the function uses a single `await` operation, the resulting state machine has three states: start, end, and "waiting on write". The function takes no arguments, so the struct for the start state is empty. Like before, the struct for the end state is empty because the function is finished at this point. The struct for the "waiting on write" state is more interesting:
+Следуя своей единственной операции `await`, машина состояний состоит из трех состояний: start, end и "waiting on write". Функция не принимает аргументов, поэтому структура для начального состояния пуста. Как обычно, структура для конечного состояния также пустая, поскольку функция завершена на этом этапе. Структура для "waiting on write" более интересна:
 
 ```rust
 struct WaitingOnWriteState {
     array: [1, 2, 3],
-    element: 0x1001c, // address of the last array element
+    element: 0x1001c, // адрес последнего элемента в array
 }
 ```
 
-We need to store both the `array` and `element` variables because `element` is required for the return value and `array` is referenced by `element`. Since `element` is a reference, it stores a _pointer_ (i.e., a memory address) to the referenced element. We used `0x1001c` as an example memory address here. In reality, it needs to be the address of the last element of the `array` field, so it depends on where the struct lives in memory. Structs with such internal pointers are called _self-referential_ structs because they reference themselves from one of their fields.
+Мы должны хранить как `array`, так и `element` потому что `element` требуется для значения возврата, а `array` ссылается на `element`. Следовательно, `element` является _указателем_ (pointer) (адресом памяти), который хранит адрес ссылаемого элемента. В этом примере мы использовали `0x1001c` в качестве примера адреса, в реальности он должен быть адресом последнего элемента поля `array`, что зависит от места расположения структуры в памяти. Структуры с такими внутренними указателями называются _самоссылочными_ (self-referential) структурами, потому что они ссылаются на себя из одного из своих полей.
 
-#### The Problem with Self-Referential Structs
+#### Проблемы с Самоссылочными Структурами
 
-The internal pointer of our self-referential struct leads to a fundamental problem, which becomes apparent when we look at its memory layout:
+Внутренний указатель нашей самоссылочной структуры приводит к базовой проблеме, которая становится очевидной, когда мы посмотрим на её раскладку памяти:
 
-![array at 0x10014 with fields 1, 2, and 3; element at address 0x10020, pointing to the last array element at 0x1001c](self-referential-struct.svg)
+![массив от 0x10014 с полями 1, 2, и 3; элемент в адресе 0x10020, указывающий на последний массив-элемент в 0x1001c](self-referential-struct.svg)
 
-The `array` field starts at address 0x10014 and the `element` field at address 0x10020. It points to address 0x1001c because the last array element lives at this address. At this point, everything is still fine. However, an issue occurs when we move this struct to a different memory address:
+Поле `array` начинается в адресе `0x10014`, а поле `element` - в адресе `0x10020`. Оно указывает на адрес `0x1001c`, потому что последний элемент массива находится там. В этот момент все ещё в порядке. Однако проблема возникает, когда мы перемещаем эту структуру на другой адрес памяти:
 
-![array at 0x10024 with fields 1, 2, and 3; element at address 0x10030, still pointing to 0x1001c, even though the last array element now lives at 0x1002c](self-referential-struct-moved.svg)
+![массив от 0x10024 с полями 1, 2, и 3; элемент в адресе 0x10030, продолжающий указывать на 0x1001c, хотя последний массив-элемент сейчас находится в 0x1002c](self-referential-struct-moved.svg)
 
-We moved the struct a bit so that it starts at address `0x10024` now. This could, for example, happen when we pass the struct as a function argument or assign it to a different stack variable. The problem is that the `element` field still points to address `0x1001c` even though the last `array` element now lives at address `0x1002c`. Thus, the pointer is dangling, with the result that undefined behavior occurs on the next `poll` call.
+Мы переместили структуру немного так, чтобы она теперь начиналась в адресе `0x10024`. Это могло произойти, например, когда мы передаем структуру как аргумент функции или присваиваем ей другое переменной стека. Проблема заключается в том, что поле `element` все ещё указывает на адрес `0x1001c`, хотя последний элемент массива теперь находится в адресе `0x1002c`. Поэтому указатель висит, с результатом неопределённого поведения на следующем вызове `poll`.
 
-#### Possible Solutions
+#### Возможные решения
 
-There are three fundamental approaches to solving the dangling pointer problem:
+Существует три основных подхода к решению проблемы висящих указателей (dangling pointers):
 
-- **Update the pointer on move:** The idea is to update the internal pointer whenever the struct is moved in memory so that it is still valid after the move. Unfortunately, this approach would require extensive changes to Rust that would result in potentially huge performance losses. The reason is that some kind of runtime would need to keep track of the type of all struct fields and check on every move operation whether a pointer update is required.
-- **Store an offset instead of self-references:**: To avoid the requirement for updating pointers, the compiler could try to store self-references as offsets from the struct's beginning instead. For example, the `element` field of the above `WaitingOnWriteState` struct could be stored in the form of an `element_offset` field with a value of 8 because the array element that the reference points to starts 8 bytes after the struct's beginning. Since the offset stays the same when the struct is moved, no field updates are required.
+- **Обновление указателя при перемещении**: Идея состоит в обновлении внутреннего указателя при каждом перемещении структуры в памяти, чтобы она оставалась действительной после перемещения. Однако этот подход требует значительных изменений в Rust, которые могут привести к потенциальным значительным потерям производительности. Причина заключается в том, что необходимо каким-то образом отслеживать тип всех полей структуры и проверять на каждом операции перемещения, требуется ли обновление указателя.
+- **Хранение смещения (offset) вместо самоссылающихся ссылок**: Чтобы избежать необходимости обновления указателей, компилятор мог бы попытаться хранить самоссы ссылки в форме смещений от начала структуры вместо прямых ссылок. Например, поле `element` вышеупомянутой `WaitingOnWriteState` структуры можно было бы хранить в виде поля `element_offset` c значением 8, потому что элемент массива, на который указывает ссылка, находится за 8 байтов после начала структуры. Смещение остается неизменным при перемещении структуры, так что не требуются обновления полей.
+    Проблема с этим подходом в том, что требуется, чтобы компилятор обнаружил всех самоссылок. Это невозможно на этапе компилящии потому, что значение ссылки может зависеть от ввода пользователя, так что нам потребуется система анализа ссылок и корректная генерация состояния для структур во время исполнения. Это приведёт к дополнительным расходам времени на выполнение, а также предотвратит определённые оптимизации компилятора, что приведёт к еще большим потерям производительности.
+- **Запретить перемещать структуру**: Мы увидели выше, что висящий указатель возникает только при перемещении структуры в памяти. Запретив все операции перемещения для самоссылающихся структур, можно избежать этой проблемы. Большое преимущество этого подхода состоит в том, что он можно реализовать на уровне системы типов без дополнительных расходов времени выполнения. Недостаток заключается в том, что оно возлагает на программиста обязанности по обработке перемещений самоссылающихся структур.
 
-  The problem with this approach is that it requires the compiler to detect all self-references. This is not possible at compile-time because the value of a reference might depend on user input, so we would need a runtime system again to analyze references and correctly create the state structs. This would not only result in runtime costs but also prevent certain compiler optimizations, so that it would cause large performance losses again.
-- **Forbid moving the struct:** As we saw above, the dangling pointer only occurs when we move the struct in memory. By completely forbidding move operations on self-referential structs, the problem can also be avoided. The big advantage of this approach is that it can be implemented at the type system level without additional runtime costs. The drawback is that it puts the burden of dealing with move operations on possibly self-referential structs on the programmer.
+Rust выбрал третий подход из-за принципа предоставления _бесплатных абстракций_ (zero cost abstractions), что означает, что абстракции не должны накладывать дополнительные расходы времени выполнения. API [_pinning_] предлагалось для решения этой проблемы в RFC 2349 (<https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md>). В следующем разделе мы дадим краткий обзор этого API и объясним, как оно работает с async/await и futures.
 
-Rust chose the third solution because of its principle of providing _zero cost abstractions_, which means that abstractions should not impose additional runtime costs. The [_pinning_] API was proposed for this purpose in [RFC 2349](https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md). In the following, we will give a short overview of this API and explain how it works with async/await and futures.
+<!-- !TODO: -->
+#### Значения на Куче (Heap)
 
-#### Heap Values
-
-The first observation is that [heap-allocated] values already have a fixed memory address most of the time. They are created using a call to `allocate` and then referenced by a pointer type such as `Box<T>`. While moving the pointer type is possible, the heap value that the pointer points to stays at the same memory address until it is freed through a `deallocate` call again.
+Первый наблюдение состоит в том, что значения, выделенные на [куче], обычно имеют фиксированный адрес памяти. Они создаются с помощью вызова `allocate` и затем ссылаются на тип указателя, такой как `Box<T>`. Хотя перемещение указательного типа возможно, значение кучи, которое указывает на него, остается в том же адресе памяти до тех пор, пока оно не будет освобождено с помощью вызова `deallocate` еще раз.
 
 [heap-allocated]: @/edition-2/posts/10-heap-allocation/index.md
 
-Using heap allocation, we can try to create a self-referential struct:
+Используя аллокацию по куче, можно попытаться создать самоссылающуюся структуру:
 
 ```rust
 fn main() {
@@ -570,15 +572,15 @@ struct SelfReferential {
 }
 ```
 
-([Try it on the playground][playground-self-ref])
+([Попробовать в песочнице][playground-self-ref])
 
 [playground-self-ref]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=ce1aff3a37fcc1c8188eeaf0f39c97e8
 
-We create a simple struct named `SelfReferential` that contains a single pointer field. First, we initialize this struct with a null pointer and then allocate it on the heap using `Box::new`. We then determine the memory address of the heap-allocated struct and store it in a `ptr` variable. Finally, we make the struct self-referential by assigning the `ptr` variable to the `self_ptr` field.
+Мы создаем простую структуру с названием `SelfReferential`, которая содержит только одно поле c указателем. Во-первых, мы инициализируем эту структуру с пустым указателем и затем выделяем ее на куче с помощью `Box::new`. Затем мы определяем адрес кучи для выделенной структуры и храним его в переменной `ptr`. В конце концов, мы делаем структуру самоссылающейся, назначив переменную `ptr` полю `self_ptr`.
 
-When we execute this code [on the playground][playground-self-ref], we see that the address of the heap value and its internal pointer are equal, which means that the `self_ptr` field is a valid self-reference. Since the `heap_value` variable is only a pointer, moving it (e.g., by passing it to a function) does not change the address of the struct itself, so the `self_ptr` stays valid even if the pointer is moved.
+Когда мы запускаем этот код в [песочнице][playground-self-ref], мы видим, что адрес на куче и внутренний указатель равны, что означает, что поле `self_ptr` валидное. Поскольку переменная `heap_value` является только указателем, перемещение его (например, передачей в функцию) не изменяет адрес самой структуры, поэтому `self_ptr` остается действительным даже при перемещении указателя.
 
-However, there is still a way to break this example: We can move out of a `Box<T>` or replace its content:
+Тем не менее, все еще есть путь сломать этот пример: мы можем выйти из `Box<T>` или изменить содержимое:
 
 ```rust
 let stack_value = mem::replace(&mut *heap_value, SelfReferential {
@@ -588,13 +590,13 @@ println!("value at: {:p}", &stack_value);
 println!("internal reference: {:p}", stack_value.self_ptr);
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
+([Попробовать в песочнице](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
 
-Here we use the [`mem::replace`] function to replace the heap-allocated value with a new struct instance. This allows us to move the original `heap_value` to the stack, while the `self_ptr` field of the struct is now a dangling pointer that still points to the old heap address. When you try to run the example on the playground, you see that the printed _"value at:"_ and _"internal reference:"_ lines indeed show different pointers. So heap allocating a value is not enough to make self-references safe.
+Мы используем функцию [`mem::replace`], чтобы заменить значение, выделенное в куче, новым экземпляром структуры. Это позволяет нам переместить исходное значение `heap_value` в стек, в то время как поле `self_ptr` структуры теперь является висящим указателем, который по-прежнему указывает на старый адрес в куче. Когда вы запустите пример в песочнице, вы увидите, что строки _«value at:»_ и _«internal reference:»_, показывают разные указатели. Таким образом, выделение значения в куче недостаточно для обеспечения безопасности самоссылок.
 
 [`mem::replace`]: https://doc.rust-lang.org/nightly/core/mem/fn.replace.html
 
-The fundamental problem that allowed the above breakage is that `Box<T>` allows us to get a `&mut T` reference to the heap-allocated value. This `&mut` reference makes it possible to use methods like [`mem::replace`] or [`mem::swap`] to invalidate the heap-allocated value. To resolve this problem, we must prevent `&mut` references to self-referential structs from being created.
+Основная проблема, которая привела к вышеуказанной ошибке, заключается в том, что `Box<T>` позволяет нам получить ссылку `&mut T` на значение, выделенное в куче. Эта ссылка `&mut` позволяет использовать такие методы, как [`mem::replace`] или [`mem::swap`], для аннулирования значения, выделенного в куче. Чтобы решить эту проблему, мы должны предотвратить создание ссылок `&mut` на самореференциальные структуры.
 
 [`mem::swap`]: https://doc.rust-lang.org/nightly/core/mem/fn.swap.html
 
