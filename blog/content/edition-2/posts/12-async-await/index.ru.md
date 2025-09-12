@@ -154,13 +154,13 @@ pub enum Poll<T> {
 
 [`Waker`]: https://doc.rust-lang.org/nightly/core/task/struct.Waker.html
 
-### Работа с Futures
+### Working with Futures
 
 Теперь мы знаем, как определяются футуры, и понимаем основную идею метода `poll`. Однако мы все еще не знаем, как эффективно работать с футурами. Проблема в том, что они представляют собой результаты асинхронных задач, которые могут быть еще недоступны. На практике, однако, нам часто нужны эти значения непосредственно для дальнейших вычислений. Поэтому возникает вопрос: как мы можем эффективно получить значение, когда оно нам нужно?
 
-#### Ожидание Futures
+#### Waiting on Futures
 
-Один из возможных ответов — дождаться, пока будущее станет реальностью. Это может выглядеть примерно так:
+Один из возможных ответов — дождаться, пока футура исполнится. Это может выглядеть примерно так:
 
 ```rust
 let future = async_read_file("foo.txt");
@@ -493,10 +493,12 @@ fn example(min_len: usize) -> ExampleStateMachine {
 
 Заметьте, что эта функция не запускает выполнение машины состояний. Это фундаментальное архитектурное решение для футур в Rust: они ничего не делают, пока не будет произведена первая проверка на готовность.
 
-#### Закрепление (Pinning)
+#### Pinning
+> [!note] Закрепление (pinning, пиннинг)
 
-Мы уже несколько раз столкнулись с понятием _закрепления_ (pinnig) в этом посте. Наконец, время чтобы изучить, что такое закрепление и почему оно необходимо.
+Мы уже несколько раз столкнулись с понятием _закрепления_ (pinnig, пиннинг) в этом посте. Наконец, время чтобы изучить, что такое закрепление и почему оно необходимо.
 
+> [!note] pinning - механизм, который гарантирует, что объект в памяти не будет перемещен. 
 
 #### Самоссылающиеся структуры
 
@@ -547,14 +549,13 @@ struct WaitingOnWriteState {
 
 Rust выбрал третий подход из-за принципа предоставления _бесплатных абстракций_ (zero cost abstractions), что означает, что абстракции не должны накладывать дополнительные расходы времени выполнения. API [_pinning_] предлагалось для решения этой проблемы в RFC 2349 (<https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md>). В следующем разделе мы дадим краткий обзор этого API и объясним, как оно работает с async/await и futures.
 
-<!-- !TODO: -->
 #### Значения на Куче (Heap)
 
 Первый наблюдение состоит в том, что значения, выделенные на [куче], обычно имеют фиксированный адрес памяти. Они создаются с помощью вызова `allocate` и затем ссылаются на тип указателя, такой как `Box<T>`. Хотя перемещение указательного типа возможно, значение кучи, которое указывает на него, остается в том же адресе памяти до тех пор, пока оно не будет освобождено с помощью вызова `deallocate` еще раз.
 
 [heap-allocated]: @/edition-2/posts/10-heap-allocation/index.md
 
-Используя аллокацию по куче, можно попытаться создать самоссылающуюся структуру:
+Используя аллокацию на куче, можно попытаться создать самоссылающуюся структуру:
 
 ```rust
 fn main() {
@@ -600,9 +601,9 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 
 [`mem::swap`]: https://doc.rust-lang.org/nightly/core/mem/fn.swap.html
 
-#### `Pin<Box<T>>` and `Unpin`
+#### `Pin<Box<T>>` и `Unpin`
 
-The pinning API provides a solution to the `&mut T` problem in the form of the [`Pin`] wrapper type and the [`Unpin`] marker trait. The idea behind these types is to gate all methods of `Pin` that can be used to get `&mut` references to the wrapped value (e.g. [`get_mut`][pin-get-mut] or [`deref_mut`][pin-deref-mut]) on the `Unpin` trait. The `Unpin` trait is an [_auto trait_], which is automatically implemented for all types except those that explicitly opt-out. By making self-referential structs opt-out of `Unpin`, there is no (safe) way to get a `&mut T` from a `Pin<Box<T>>` type for them. As a result, their internal self-references are guaranteed to stay valid.
+API _закрепления_ предоставляет решение проблемы `&mut T` в виде типа-обертки [`Pin`] и трейта-маркера [`Unpin`]. Идея использования - ограничить все методы `Pin`, которые могут быть использованы для получения ссылок `&mut` на обернутое значение (например, [`get_mut`][pin-get-mut] или [`deref_mut`][pin-deref-mut]), на трейт `Unpin`. Трейт `Unpin` является _авто трейтом_ ([_auto trait_]), который автоматически реализуется для всех типов, за исключением тех, которые явно отказываются от него. Заставляя самореференциальные структуры отказаться от `Unpin`, не остается (безопасного) способа получить `&mut T` из типа `Pin<Box<T>>` для них. В результате их внутренние самореференции гарантированно остаются действительными.
 
 [`Pin`]: https://doc.rust-lang.org/stable/core/pin/struct.Pin.html
 [`Unpin`]: https://doc.rust-lang.org/nightly/std/marker/trait.Unpin.html
@@ -610,7 +611,7 @@ The pinning API provides a solution to the `&mut T` problem in the form of the [
 [pin-deref-mut]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.deref_mut
 [_auto trait_]: https://doc.rust-lang.org/reference/special-types-and-traits.html#auto-traits
 
-As an example, let's update the `SelfReferential` type from above to opt-out of `Unpin`:
+Как пример обновим тип `SelfReferential` тип из примера выше, что бы отказаться от `Unpin`:
 
 ```rust
 use core::marker::PhantomPinned;
@@ -621,11 +622,11 @@ struct SelfReferential {
 }
 ```
 
-We opt-out by adding a second `_pin` field of type [`PhantomPinned`]. This type is a zero-sized marker type whose only purpose is to _not_ implement the `Unpin` trait. Because of the way [auto traits][_auto trait_] work, a single field that is not `Unpin` suffices to make the complete struct opt-out of `Unpin`.
+Мы отказываемся от `Unpin`, добавляя второе поле `_pin` типа [`PhantomPinned`]. Этот тип является маркерным типом нулевого размера, единственной целью которого является _отказ_ от реализации трейта `Unpin`. Из-за того, как работают [_авто трейты_], одного поля, которое не является `Unpin`, достаточно, чтобы полностью исключить структуру из `Unpin`.
 
 [`PhantomPinned`]: https://doc.rust-lang.org/nightly/core/marker/struct.PhantomPinned.html
 
-The second step is to change the `Box<SelfReferential>` type in the example to a `Pin<Box<SelfReferential>>` type. The easiest way to do this is to use the [`Box::pin`] function instead of [`Box::new`] for creating the heap-allocated value:
+Второй шаг — изменить тип `Box<SelfReferential>` в примере на `Pin<Box<SelfReferential>>`. Самый простой способ сделать это — использовать функцию [`Box::pin`] вместо [`Box::new`] для создания значения, размещаемого в куче:
 
 [`Box::pin`]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html#method.pin
 [`Box::new`]: https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html#method.new
@@ -637,9 +638,9 @@ let mut heap_value = Box::pin(SelfReferential {
 });
 ```
 
-In addition to changing `Box::new` to `Box::pin`, we also need to add the new `_pin` field in the struct initializer. Since `PhantomPinned` is a zero-sized type, we only need its type name to initialize it.
+В дополнение к изменению `Box::new` на `Box::pin`, нам также нужно добавить новое поле `_pin` в инициализатор структуры. Т.к. `PhantomPinned` является типом нулевого размера, нам нужно только его имя типа для инициализации.
 
-When we [try to run our adjusted example](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=961b0db194bbe851ff4d0ed08d3bd98a) now, we see that it no longer works:
+Когда мы [попробуем запустить наш скорректированный пример](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=961b0db194bbe851ff4d0ed08d3bd98a) сейчас, он больше не работает:
 
 ```
 error[E0594]: cannot assign to data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>`
@@ -659,44 +660,44 @@ error[E0596]: cannot borrow data in a dereference of `std::pin::Pin<std::boxed::
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
 ```
 
-Both errors occur because the `Pin<Box<SelfReferential>>` type no longer implements the `DerefMut` trait. This is exactly what we wanted because the `DerefMut` trait would return a `&mut` reference, which we wanted to prevent. This only happens because we both opted-out of `Unpin` and changed `Box::new` to `Box::pin`.
+Обе ошибки возникают потому, что тип `Pin<Box<SelfReferential>>` больше не реализует трейт `DerefMut`. Это именно то, чего мы хотели, поскольку трейт `DerefMut` возвращал бы ссылку `&mut`, что мы и хотели предотвратить. Это происходит только потому, что мы отказались от `Unpin` и изменили `Box::new` на `Box::pin`.
 
-The problem now is that the compiler does not only prevent moving the type in line 16, but also forbids initializing the `self_ptr` field in line 10. This happens because the compiler can't differentiate between valid and invalid uses of `&mut` references. To get the initialization working again, we have to use the unsafe [`get_unchecked_mut`] method:
+Теперь проблема в том, что компилятор не только предотвращает перемещение типа в строке 16, но и запрещает инициализацию поля `self_ptr` в строке 10. Это происходит потому, что компилятор не может различить допустимые и недопустимые использования ссылок `&mut`. Чтобы инициализация снова заработала, нам нужно использовать небезопасный метод [`get_unchecked_mut`]:
 
 [`get_unchecked_mut`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.get_unchecked_mut
 
 ```rust
-// safe because modifying a field doesn't move the whole struct
+// безопасно, т.к. изменение поля не перемещает всю структуру
 unsafe {
     let mut_ref = Pin::as_mut(&mut heap_value);
     Pin::get_unchecked_mut(mut_ref).self_ptr = ptr;
 }
 ```
 
-([Try it on the playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=b9ebbb11429d9d79b3f9fffe819e2018))
+([Попробовать](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=b9ebbb11429d9d79b3f9fffe819e2018))
 
-The [`get_unchecked_mut`] function works on a `Pin<&mut T>` instead of a `Pin<Box<T>>`, so we have to use [`Pin::as_mut`] for converting the value. Then we can set the `self_ptr` field using the `&mut` reference returned by `get_unchecked_mut`.
+Функция [`get_unchecked_mut`] работает с `Pin<&mut T>` вместо `Pin<Box<T>>`, поэтому нам нужно использовать [`Pin::as_mut`] для преобразования значения. Затем мы можем установить поле `self_ptr`, используя ссылку `&mut`, возвращаемую `get_unchecked_mut`.
 
 [`Pin::as_mut`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.as_mut
 
-Now the only error left is the desired error on `mem::replace`. Remember, this operation tries to move the heap-allocated value to the stack, which would break the self-reference stored in the `self_ptr` field. By opting out of `Unpin` and using `Pin<Box<T>>`, we can prevent this operation at compile time and thus safely work with self-referential structs. As we saw, the compiler is not able to prove that the creation of the self-reference is safe (yet), so we need to use an unsafe block and verify the correctness ourselves.
+Теперь единственной оставшейся ошибкой является желаемая ошибка на `mem::replace`. Помните, что эта операция пытается переместить значение, размещённое в куче, на стек, что нарушило бы самоссылку, хранящуюся в поле `self_ptr`. Отказываясь от `Unpin` и используя `Pin<Box<T>>`, мы можем предотвратить эту операцию на этапе компиляции и таким образом безопасно работать с самоссыльными структурами. Как мы видели, компилятор не может доказать, что создание самоссылки безопасно (пока), поэтому нам нужно использовать небезопасный блок и самостоятельно проверить корректность.
 
-#### Stack Pinning and `Pin<&mut T>`
+#### Пиннинг на стеке и `Pin<&mut T>`
 
-In the previous section, we learned how to use `Pin<Box<T>>` to safely create a heap-allocated self-referential value. While this approach works fine and is relatively safe (apart from the unsafe construction), the required heap allocation comes with a performance cost. Since Rust strives to provide _zero-cost abstractions_ whenever possible, the pinning API also allows to create `Pin<&mut T>` instances that point to stack-allocated values.
+В предыдущем разделе мы узнали, как использовать `Pin<Box<T>>` для безопасного создания самоссыльного значения, размещённого в куче. Хотя этот подход работает хорошо и относительно безопасен (кроме unsafe), необходимая аллокация в куче бьет по производительности. Поскольку Rust стремится предоставлять _абстракции с нулевыми затратами_ (_zero-cost abstractions_) где это возможно, API закрепления также позволяет создавать экземпляры `Pin<&mut T>`, которые указывают на значения, размещённые на стеке.
 
-Unlike `Pin<Box<T>>` instances, which have _ownership_ of the wrapped value, `Pin<&mut T>` instances only temporarily borrow the wrapped value. This makes things more complicated, as it requires the programmer to ensure additional guarantees themselves. Most importantly, a `Pin<&mut T>` must stay pinned for the whole lifetime of the referenced `T`, which can be difficult to verify for stack-based variables. To help with this, crates like [`pin-utils`] exist, but I still wouldn't recommend pinning to the stack unless you really know what you're doing.
+В отличие от экземпляров `Pin<Box<T>>`, которые имеют _владение_ обёрнутым значением, экземпляры `Pin<&mut T>` лишь временно заимствуют обёрнутое значение. Это усложняет задачу, так как программисту необходимо самостоятельно обеспечивать дополнительные гарантии. Важно, чтобы `Pin<&mut T>` оставался закрепленным на протяжении всей жизни ссылочного `T`, что может быть сложно проверить для переменных на стеке. Чтобы помочь с этим, существуют такие крейты, как [`pin-utils`], но я все же не рекомендую закреплять на стеке, если вы не уверены в своих действиях.
 
 [`pin-utils`]: https://docs.rs/pin-utils/0.1.0-alpha.4/pin_utils/
 
-For further reading, check out the documentation of the [`pin` module] and the [`Pin::new_unchecked`] method.
+Что бы узнать большое обратитесь к документации модуля [`pin`] и метода [`Pin::new_unchecked`].
 
 [`pin` module]: https://doc.rust-lang.org/nightly/core/pin/index.html
 [`Pin::new_unchecked`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.new_unchecked
 
-#### Pinning and Futures
+#### Пиннинг и Футуры
 
-As we already saw in this post, the [`Future::poll`] method uses pinning in the form of a `Pin<&mut Self>` parameter:
+Как мы уже увидели в этом посте, метод [`Future::poll`] использует пиннинг в виде параметра `Pin<&mut Self>`:
 
 [`Future::poll`]: https://doc.rust-lang.org/nightly/core/future/trait.Future.html#tymethod.poll
 
@@ -704,43 +705,45 @@ As we already saw in this post, the [`Future::poll`] method uses pinning in the 
 fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 ```
 
-The reason that this method takes `self: Pin<&mut Self>` instead of the normal `&mut self` is that future instances created from async/await are often self-referential, as we saw [above][self-ref-async-await]. By wrapping `Self` into `Pin` and letting the compiler opt-out of `Unpin` for self-referential futures generated from async/await, it is guaranteed that the futures are not moved in memory between `poll` calls. This ensures that all internal references are still valid.
+Причина, по которой этот метод принимает `self: Pin<&mut Self>` вместо обычного `&mut self` в том, что экземпляры футур, созданные через async/await, часто являются самоссыльными, как мы видели [выше][self-ref-async-await]. Оборачивая `Self` в `Pin` и позволяя компилятору отказаться от `Unpin` для самоссыльных футур, генерируемых из async/await, гарантируется, что футуры не будут перемещены в памяти между вызовами `poll`. Это обеспечивает сохранность всех внутренних ссылок.
 
 [self-ref-async-await]: @/edition-2/posts/12-async-await/index.md#self-referential-structs
 
-It is worth noting that moving futures before the first `poll` call is fine. This is a result of the fact that futures are lazy and do nothing until they're polled for the first time. The `start` state of the generated state machines therefore only contains the function arguments but no internal references. In order to call `poll`, the caller must wrap the future into `Pin` first, which ensures that the future cannot be moved in memory anymore. Since stack pinning is more difficult to get right, I recommend to always use [`Box::pin`] combined with [`Pin::as_mut`] for this.
+Стоит отметить, что перемещение футур до первого вызова `poll` допустимо. Это связано с тем, что футуры являются ленивыми и ничего не делают, пока их не вызовут в первый раз. Состояние `start` сгенерированных конечных автоматов, следовательно, содержит только аргументы функции, но не внутренние ссылки. Чтобы вызвать `poll`, вызывающему необходимо сначала обернуть фьючерс в `Pin`, что гарантирует, что фьючерс больше не может быть перемещён в памяти. Поскольку пиннинг на стеке сложнее сделать правильно, я рекомендую всегда использовать [`Box::pin`] в сочетании с [`Pin::as_mut`] для этого.
 
 [`futures`]: https://docs.rs/futures/0.3.4/futures/
 
-In case you're interested in understanding how to safely implement a future combinator function using stack pinning yourself, take a look at the relatively short [source of the `map` combinator method][map-src] of the `futures` crate and the section about [projections and structural pinning] of the pin documentation.
+Если вас интересует, как безопасно реализовать комбинатора футур с использованием закрепления на стеке, взгляните на относительно короткий [исходный код метода комбинатора `map`][map-src] из крейта `futures` и раздел о [projections and structural pinning] в документации pin.
 
 [map-src]: https://docs.rs/futures-util/0.3.4/src/futures_util/future/future/map.rs.html
 [projections and structural pinning]: https://doc.rust-lang.org/stable/std/pin/index.html#projections-and-structural-pinning
 
-### Executors and Wakers
+### Executors and Wakers 
 
-Using async/await, it is possible to ergonomically work with futures in a completely asynchronous way. However, as we learned above, futures do nothing until they are polled. This means we have to call `poll` on them at some point, otherwise the asynchronous code is never executed.
+Используя async/await, можно эргономично работать с футурами в полностью асинхронном режиме. Однако, как мы узнали выше, футуры ничего не делают, пока их не вызовут. Это означает, что нам нужно в какой-то момент вызвать `poll`, иначе асинхронный код никогда не будет выполнен.
 
-With a single future, we can always wait for each future manually using a loop [as described above](#waiting-on-futures). However, this approach is very inefficient and not practical for programs that create a large number of futures. The most common solution to this problem is to define a global _executor_ that is responsible for polling all futures in the system until they are finished.
+Запуская одну футуры, мы можем вручную ожидать ее исполнения в цикле, [как описано выше](#waiting-on-futures). Однако этот подход очень неэффективен и непрактичен для программ, создающих большое количество футур. Наиболее распространённым решением этой проблемы является определение глобального _исполнителя_, который отвечает за опрос всех футур в системе, пока они не завершатся.
 
 #### Executors
 
-The purpose of an executor is to allow spawning futures as independent tasks, typically through some sort of `spawn` method. The executor is then responsible for polling all futures until they are completed. The big advantage of managing all futures in a central place is that the executor can switch to a different future whenever a future returns `Poll::Pending`. Thus, asynchronous operations are run in parallel and the CPU is kept busy.
+Цель исполнителя в том, чтобы позволить создавать футуры в качестве независимых задач, обычно через какой-либо метод `spawn`. Исполнитель затем отвечает за опрос всех футур, пока они не завершатся. Большое преимущество управления всеми футурами в одном месте состоит в том, что исполнитель может переключаться на другую футуру, когда текущая футура возвращает `Poll::Pending`. Таким образом, асинхронные операции выполняются параллельно, и процессор остаётся загруженным.
 
-Many executor implementations can also take advantage of systems with multiple CPU cores. They create a [thread pool] that is able to utilize all cores if there is enough work available and use techniques such as [work stealing] to balance the load between cores. There are also special executor implementations for embedded systems that optimize for low latency and memory overhead.
+Многие реализации исполнителей также могут использовать преимущества систем с несколькими ядрами процессора. Они создают [thread pool], способный использовать все ядра, если достаточно работы, и применяют такие техники, как [work stealing], для балансировки нагрузки между ядрами. Существуют также специальные реализации исполнителей для встроенных систем, которые оптимизируют низкую задержку и затраты памяти.
 
 [thread pool]: https://en.wikipedia.org/wiki/Thread_pool
 [work stealing]: https://en.wikipedia.org/wiki/Work_stealing
 
-To avoid the overhead of polling futures repeatedly, executors typically take advantage of the _waker_ API supported by Rust's futures.
+Чтобы избежать накладных расходов на повторный опрос футур, исполнители обычно используют API _waker_, поддерживаемый футурами Rust.
+
+<!-- !TODO: added wakers to post -->
 
 #### Wakers
 
-The idea behind the waker API is that a special [`Waker`] type is passed to each invocation of `poll`, wrapped in the [`Context`] type. This `Waker` type is created by the executor and can be used by the asynchronous task to signal its (partial) completion. As a result, the executor does not need to call `poll` on a future that previously returned `Poll::Pending` until it is notified by the corresponding waker.
+Идея API waker в том, что специальный тип [`Waker`] передаётся в каждом вызове `poll`, при этом обернутый в тип [`Context`]. Этот тип `Waker` создаётся исполнителем и может использоваться асинхронной задачей для сигнализации о своём (частичном) завершении. В результате исполнитель не должен вызывать `poll` на футуре, которая ранее вернула `Poll::Pending`, пока не получит уведомление от соответствующего waker.
 
 [`Context`]: https://doc.rust-lang.org/nightly/core/task/struct.Context.html
 
-This is best illustrated by a small example:
+Лучше всего иллюстрируется небольшим примером:
 
 ```rust
 async fn write_file() {
@@ -748,31 +751,31 @@ async fn write_file() {
 }
 ```
 
-This function asynchronously writes the string "Hello" to a `foo.txt` file. Since hard disk writes take some time, the first `poll` call on this future will likely return `Poll::Pending`. However, the hard disk driver will internally store the `Waker` passed to the `poll` call and use it to notify the executor when the file is written to disk. This way, the executor does not need to waste any time trying to `poll` the future again before it receives the waker notification.
+Эта функция асинхронно записывает строку "Hello" в файл `foo.txt`. Поскольку запись на жёсткий диск занимает некоторое время, первый вызов `poll` на этой футуре, вероятно, вернёт `Poll::Pending`. Однако драйвер жёсткого диска внутри будет хранить `Waker`, переданный в вызов `poll`, и использовать его для уведомления исполнителя, когда файл будет записан на диск. Таким образом, исполнитель не тратит время на `poll` футуры, пока не получит уведомление от waker.
 
-We will see how the `Waker` type works in detail when we create our own executor with waker support in the implementation section of this post.
+Мы увидим, как работает тип `Waker` в деталях, когда создадим свой собственный исполнитель с поддержкой waker в разделе реализации этого поста.
 
 ### Cooperative Multitasking?
 
-At the beginning of this post, we talked about preemptive and cooperative multitasking. While preemptive multitasking relies on the operating system to forcibly switch between running tasks, cooperative multitasking requires that the tasks voluntarily give up control of the CPU through a _yield_ operation on a regular basis. The big advantage of the cooperative approach is that tasks can save their state themselves, which results in more efficient context switches and makes it possible to share the same call stack between tasks.
+В начале этого поста мы говорили о вытесняющей (preemptive) и кооперативной многозадачности. В то время как вытесняющая многозадачность полагается на операционную систему для принудительного переключения между выполняемыми задачами, кооперативная многозадачность требует, чтобы задачи добровольно уступали контроль над CPU через операцию _yield_ на регулярной основе. Большое преимущество кооперативного подхода в том, что задачи могут сохранять своё состояние самостоятельно, что приводит к более эффективным переключениям контекста и делает возможным совместное использование одного и того же стека вызовов между задачами.
 
-It might not be immediately apparent, but futures and async/await are an implementation of the cooperative multitasking pattern:
+Это может не быть сразу очевидным, но футуры и async/await представляют собой реализацию кооперативного паттерна многозадачности:
 
-- Each future that is added to the executor is basically a cooperative task.
-- Instead of using an explicit yield operation, futures give up control of the CPU core by returning `Poll::Pending` (or `Poll::Ready` at the end).
-    - There is nothing that forces futures to give up the CPU. If they want, they can never return from `poll`, e.g., by spinning endlessly in a loop.
-    - Since each future can block the execution of the other futures in the executor, we need to trust them to not be malicious.
-- Futures internally store all the state they need to continue execution on the next `poll` call. With async/await, the compiler automatically detects all variables that are needed and stores them inside the generated state machine.
-    - Only the minimum state required for continuation is saved.
-    - Since the `poll` method gives up the call stack when it returns, the same stack can be used for polling other futures.
+- Каждая футура, добавляемая в исполнитель, по сути является кооперативной задачей.
+- Вместо использования явной операции yield, футуры уступают контроль над ядром CPU, возвращая `Poll::Pending` (или `Poll::Ready` в конце).
+    - Нет ничего, что заставляло бы футуру уступать CPU. Если они захотят, они могут никогда не возвращаться из `poll`, например, бесконечно выполняя цикл.
+    - Поскольку каждая футура может блокировать выполнение других футур в исполнителе, нам нужно доверять им, чтобы они не были вредоносными (malicious).
+- Футуры внутренне хранят всё состояние, необходимое для продолжения выполнения при следующем вызове `poll`. При использовании async/await компилятор автоматически определяет все переменные, которые необходимы, и сохраняет их внутри сгенерированной машины состояний.
+    - Сохраняется только минимально необходимое состояние для продолжения.
+    - Поскольку метод `poll` отдает стек вызовов при возврате, тот же стек может использоваться для опроса других футур.
 
-We see that futures and async/await fit the cooperative multitasking pattern perfectly; they just use some different terminology. In the following, we will therefore use the terms "task" and "future" interchangeably.
+Мы видим, что футуры и async/await идеально соответствуют паттерну кооперативной многозадачности; они просто используют другую терминологию. В дальнейшем мы будем использовать термины "задача" и "футура" взаимозаменяемо.
 
 ## Implementation
 
-Now that we understand how cooperative multitasking based on futures and async/await works in Rust, it's time to add support for it to our kernel. Since the [`Future`] trait is part of the `core` library and async/await is a feature of the language itself, there is nothing special we need to do to use it in our `#![no_std]` kernel. The only requirement is that we use at least nightly `2020-03-25` of Rust because async/await was not `no_std` compatible before.
+Теперь, когда мы понимаем, как работает кооперативная многозадачность на основе футур и async/await в Rust, пора добавить поддержку этого в наш ядро. Поскольку трейт [`Future`] является частью библиотеки `core`, а async/await — это особенность самого языка, нам не нужно делать ничего особенного, чтобы использовать его в нашем `#![no_std]` ядре. Единственное требование — использовать, как минимум, nightly версию Rust от `2020-03-25`, поскольку до этого времени async/await не поддерживала `no_std`.
 
-With a recent-enough nightly, we can start using async/await in our `main.rs`:
+С достаточно свежей nightly версией мы можем начать использовать async/await в нашем `main.rs`:
 
 ```rust
 // in src/main.rs
@@ -787,13 +790,13 @@ async fn example_task() {
 }
 ```
 
-The `async_number` function is an `async fn`, so the compiler transforms it into a state machine that implements `Future`. Since the function only returns `42`, the resulting future will directly return `Poll::Ready(42)` on the first `poll` call. Like `async_number`, the `example_task` function is also an `async fn`. It awaits the number returned by `async_number` and then prints it using the `println` macro.
+Функция `async_number` является `async fn`, поэтому компилятор преобразует её в машину состояний, реализующую `Future`. Поскольку функция возвращает только `42`, результирующая футура непосредственно вернёт `Poll::Ready(42)` при первом вызове `poll`. Как и `async_number`, функция `example_task` также является `async fn`. Она ожидает число, возвращаемое `async_number`, а затем выводит его с помощью макроса `println`.
 
-To run the future returned by `example_task`, we need to call `poll` on it until it signals its completion by returning `Poll::Ready`. To do this, we need to create a simple executor type.
+Чтобы запустить футуру, которую вернул `example_task`, нам нужно вызывать `poll` на ней, пока он не сигнализирует о своём завершении, возвращая `Poll::Ready`. Для этого нам нужно создать простой тип исполнителя.
 
 ### Task
 
-Before we start the executor implementation, we create a new `task` module with a `Task` type:
+Перед тем как начать реализацию исполнителя, мы создаем новый модуль `task` с типом `Task`:
 
 ```rust
 // in src/lib.rs
@@ -812,17 +815,17 @@ pub struct Task {
 }
 ```
 
-The `Task` struct is a newtype wrapper around a pinned, heap-allocated, and dynamically dispatched future with the empty type `()` as output. Let's go through it in detail:
+Структура `Task` является обёрткой вокруг _закрепленной_, _размещённой в куче_ и _динамически диспетчеризуемой футуры_ с пустым типом `()` в качестве выходного значения. Давайте разберём её подробнее:
 
-- We require that the future associated with a task returns `()`. This means that tasks don't return any result, they are just executed for their side effects. For example, the `example_task` function we defined above has no return value, but it prints something to the screen as a side effect.
-- The `dyn` keyword indicates that we store a [_trait object_] in the `Box`. This means that the methods on the future are [_dynamically dispatched_], allowing different types of futures to be stored in the `Task` type. This is important because each `async fn` has its own type and we want to be able to create multiple different tasks.
-- As we learned in the [section about pinning], the `Pin<Box>` type ensures that a value cannot be moved in memory by placing it on the heap and preventing the creation of `&mut` references to it. This is important because futures generated by async/await might be self-referential, i.e., contain pointers to themselves that would be invalidated when the future is moved.
+- Мы требуем, чтобы футура, связанная с задачей, возвращала `()`. Это означает, что задачи не возвращают никаких результатов, они просто выполняются для побочных эффектов. Например, функция `example_task`, которую мы определили выше, не имеет возвращаемого значения, но выводит что-то на экран как побочный эффект (side effect).
+- Ключевое слово `dyn` указывает на то, что мы храним [_trait object_] в `Box`. Это означает, что методы на футуре диспетчеризуются динамически, позволяя хранить в типе `Task` разные типы футур. Это важно, поскольку каждая `async fn` имеет свой собственный тип, и мы хотим иметь возможность создавать несколько разных задач.
+- Как мы узнали в [разделе о закреплении], тип `Pin<Box>` обеспечивает, что значение не может быть перемещено в памяти, помещая его в кучу и предотвращая создание `&mut` ссылок на него. Это важно, потому что фьючерсы, генерируемые async/await, могут быть самоссыльными, т.е. содержать указатели на себя, которые станут недействительными, если футура будет перемещена.
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
 [_dynamically dispatched_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
-[section about pinning]: #pinning
+[разделе о закреплении]: #pinning
 
-To allow the creation of new `Task` structs from futures, we create a `new` function:
+Чтобы разрешить создание новых структур `Task` из фьючерсов, мы создаём функцию `new`:
 
 ```rust
 // in src/task/mod.rs
@@ -836,9 +839,10 @@ impl Task {
 }
 ```
 
-The function takes an arbitrary future with an output type of `()` and pins it in memory through the [`Box::pin`] function. Then it wraps the boxed future in the `Task` struct and returns it. The `'static` lifetime is required here because the returned `Task` can live for an arbitrary time, so the future needs to be valid for that time too.
+Функция принимает произвольную футуру с выходным типом `()` и закрепляет его в памяти через [`Box::pin`]. Затем она оборачивает упакованную футуру в структуру `Task` и возвращает ее. Здесь нужно время жизни`'static`, т.к. возвращаемый `Task` может жить произвольное время, следовательно, футура также должна быть действительнтой в течение этого времени.
 
-We also add a `poll` method to allow the executor to poll the stored future:
+Мы также добавляем метод `poll`, чтобы позволить исполнителю опрашивать хранимую футуру:
+
 
 ```rust
 // in src/task/mod.rs
@@ -852,11 +856,12 @@ impl Task {
 }
 ```
 
-Since the [`poll`] method of the `Future` trait expects to be called on a `Pin<&mut T>` type, we use the [`Pin::as_mut`] method to convert the `self.future` field of type `Pin<Box<T>>` first. Then we call `poll` on the converted `self.future` field and return the result. Since the `Task::poll` method should only be called by the executor that we'll create in a moment, we keep the function private to the `task` module.
+Поскольку метод [`poll`] трейта `Future` ожидает вызова на типе `Pin<&mut T>`, мы сначала используем метод [`Pin::as_mut`], чтобы преобразовать поле `self.future` типа `Pin<Box<T>>`. Затем мы вызываем `poll` на преобразованном поле `self.future` и возвращаем результат. Поскольку метод `Task::poll` должен вызываться только исполнителем, который мы создадим через мгновение, мы оставляем функцию приватной для модуля `task`.
+
 
 ### Simple Executor
 
-Since executors can be quite complex, we deliberately start by creating a very basic executor before implementing a more featureful executor later. For this, we first create a new `task::simple_executor` submodule:
+Поскольку исполнители могут быть довольно сложными, мы намеренно начинаем с создания очень базового исполнителя, прежде чем реализовывать более продвинутого. Для этого мы сначала создаём новый подмодуль `task::simple_executor`:
 
 ```rust
 // in src/task/mod.rs
@@ -887,14 +892,14 @@ impl SimpleExecutor {
 }
 ```
 
-The struct contains a single `task_queue` field of type [`VecDeque`], which is basically a vector that allows for push and pop operations on both ends. The idea behind using this type is that we insert new tasks through the `spawn` method at the end and pop the next task for execution from the front. This way, we get a simple [FIFO queue] (_"first in, first out"_).
+Структура содержит единственное поле `task_queue` типа [`VecDeque`], которое по сути является вектором, позволяющим выполнять операции добавления и удаления с обоих концов. Идея в том, что мы можем вставлять новые задачи через метод `spawn` в конец и извлекаем следующую задачу для выполнения из начала. Таким образом, мы получаем простую [FIFO очередь] ("первый пришёл — первый вышел").
 
 [`VecDeque`]: https://doc.rust-lang.org/stable/alloc/collections/vec_deque/struct.VecDeque.html
-[FIFO queue]: https://en.wikipedia.org/wiki/FIFO_(computing_and_electronics)
+[FIFO очередь]: https://en.wikipedia.org/wiki/FIFO_(computing_and_electronics)
 
 #### Dummy Waker
 
-In order to call the `poll` method, we need to create a [`Context`] type, which wraps a [`Waker`] type. To start simple, we will first create a dummy waker that does nothing. For this, we create a [`RawWaker`] instance, which defines the implementation of the different `Waker` methods, and then use the [`Waker::from_raw`] function to turn it into a `Waker`:
+Чтобы вызвать метод `poll`, нам нужно создать тип [`Context`], который оборачивает тип [`Waker`]. Начнём с простого: мы сначала создадим заглушку waker, которая ничего не делает. Для этого мы создаём экземпляр [`RawWaker`], который определяет реализацию различных методов `Waker`, а затем используем функцию [`Waker::from_raw`], чтобы превратить его в `Waker`:
 
 [`RawWaker`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html
 [`Waker::from_raw`]: https://doc.rust-lang.org/stable/core/task/struct.Waker.html#method.from_raw
@@ -913,17 +918,18 @@ fn dummy_waker() -> Waker {
 }
 ```
 
-The `from_raw` function is unsafe because undefined behavior can occur if the programmer does not uphold the documented requirements of `RawWaker`. Before we look at the implementation of the `dummy_raw_waker` function, we first try to understand how the `RawWaker` type works.
+Функция `from_raw` является небезопасной, может быть неопределенное поведение (undefined behavior), если программист не соблюдает документированные требования к `RawWaker`. Прежде чем мы рассмотрим реализацию функции `dummy_raw_waker`, давайте сначала попытаемся понять, как работает тип `RawWaker`.
+
 
 ##### `RawWaker`
 
-The [`RawWaker`] type requires the programmer to explicitly define a [_virtual method table_] (_vtable_) that specifies the functions that should be called when the `RawWaker` is cloned, woken, or dropped. The layout of this vtable is defined by the [`RawWakerVTable`] type. Each function receives a `*const ()` argument, which is a _type-erased_ pointer to some value. The reason for using a `*const ()` pointer instead of a proper reference is that the `RawWaker` type should be non-generic but still support arbitrary types. The pointer is provided by putting it into the `data` argument of [`RawWaker::new`], which just initializes a `RawWaker`. The `Waker` then uses this `RawWaker` to call the vtable functions with `data`.
+Тип [`RawWaker`] требует от программиста явного определения [_таблицы виртуальных методов_] (_vtable_), которая указывает функции, которые должны быть вызваны при клонировании (cloned), пробуждении (woken) или удалении (droppen) `RawWaker`. Расположение этой vtable определяется типом [`RawWakerVTable`]. Каждая функция получает аргумент `*const ()`, который является _type-erased_ указателем на некоторое значение. Причина использования указателя `*const ()` вместо правильной ссылки в том, что тип `RawWaker` должен быть non-generic, но при этом поддерживать произвольные типы. Указатель передается в аргументе `data` ф-ции [`RawWaker::new`], которая просто инициализирует `RawWaker`. Затем `Waker` использует этот `RawWaker`, чтобы вызывать функции vtable с `data`.
 
-[_virtual method table_]: https://en.wikipedia.org/wiki/Virtual_method_table
+[_таблицы виртуальных методов_]: https://en.wikipedia.org/wiki/Virtual_method_table
 [`RawWakerVTable`]: https://doc.rust-lang.org/stable/core/task/struct.RawWakerVTable.html
 [`RawWaker::new`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html#method.new
 
-Typically, the `RawWaker` is created for some heap-allocated struct that is wrapped into the [`Box`] or [`Arc`] type. For such types, methods like [`Box::into_raw`] can be used to convert the `Box<T>` to a `*const T` pointer. This pointer can then be cast to an anonymous `*const ()` pointer and passed to `RawWaker::new`. Since each vtable function receives the same `*const ()` as an argument, the functions can safely cast the pointer back to a `Box<T>` or a `&T` to operate on it. As you can imagine, this process is highly dangerous and can easily lead to undefined behavior on mistakes. For this reason, manually creating a `RawWaker` is not recommended unless necessary.
+Как правило, `RawWaker` создаётся для какой-то структуры, размещённой в куче, которая обёрнута в тип [`Box`] или [`Arc`]. Для таких типов можно использовать методы, такие как [`Box::into_raw`], чтобы преобразовать `Box<T>` в указатель `*const T`. Этот указатель затем можно привести к анонимному указателю `*const ()` и передать в `RawWaker::new`. Поскольку каждая функция vtable получает один и тот же `*const ()` в качестве аргумента, функции могут безопасно привести указатель обратно к `Box<T>` или `&T`, чтобы работать с ним. Как вы можете себе представить, этот процесс крайне опасен и легко может привести к неопределённому поведению в случае ошибок. По этой причине вручную создавать `RawWaker` не рекомендуется, если это не является необходимым.
 
 [`Box`]: https://doc.rust-lang.org/stable/alloc/boxed/struct.Box.html
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
@@ -931,7 +937,7 @@ Typically, the `RawWaker` is created for some heap-allocated struct that is wrap
 
 ##### A Dummy `RawWaker`
 
-While manually creating a `RawWaker` is not recommended, there is currently no other way to create a dummy `Waker` that does nothing. Fortunately, the fact that we want to do nothing makes it relatively safe to implement the `dummy_raw_waker` function:
+Хотя вручную создавать `RawWaker` не рекомендуется, в настоящее время нет другого способа создать заглушку `Waker`, которая ничего не делает. К счастью, тот факт, что мы хотим ничего не делать, делает реализацию функции `dummy_raw_waker` относительно безопасной:
 
 ```rust
 // in src/task/simple_executor.rs
@@ -949,13 +955,13 @@ fn dummy_raw_waker() -> RawWaker {
 }
 ```
 
-First, we define two inner functions named `no_op` and `clone`. The `no_op` function takes a `*const ()` pointer and does nothing. The `clone` function also takes a `*const ()` pointer and returns a new `RawWaker` by calling `dummy_raw_waker` again. We use these two functions to create a minimal `RawWakerVTable`: The `clone` function is used for the cloning operations, and the `no_op` function is used for all other operations. Since the `RawWaker` does nothing, it does not matter that we return a new `RawWaker` from `clone` instead of cloning it.
+Сначала мы определяем две внутренние функции с именами `no_op` и `clone`. Функция `no_op` принимает указатель `*const ()` и ничего не делает. Функция `clone` также принимает указатель `*const ()` и возвращает новый `RawWaker`, снова вызывая `dummy_raw_waker`. Мы используем эти две функции для создания минимальной `RawWakerVTable`: функция `clone` используется для операций клонирования, а функция `no_op` — для всех остальных операций. Поскольку `RawWaker` ничего не делает, не имеет значения, что мы возвращаем новый `RawWaker` из `clone` вместо его клонирования.
 
-After creating the `vtable`, we use the [`RawWaker::new`] function to create the `RawWaker`. The passed `*const ()` does not matter since none of the vtable functions use it. For this reason, we simply pass a null pointer.
+После создания `vtable` мы используем функцию [`RawWaker::new`] для создания `RawWaker`. Переданный `*const ()` не имеет значения, поскольку ни одна из функций vtable не использует его. По этой причине мы просто передаем нулевой указатель.
 
 #### A `run` Method
 
-Now we have a way to create a `Waker` instance, we can use it to implement a `run` method on our executor. The most simple `run` method is to repeatedly poll all queued tasks in a loop until all are done. This is not very efficient since it does not utilize the notifications of the `Waker` type, but it is an easy way to get things running:
+Теперь у нас есть способ создать экземпляр `Waker`, и мы можем использовать его для реализации метода `run` в нашем исполнителе. Самый простой метод `run` — это многократный опрос всех задач в очереди в цикле до тех пор, пока все они не будут выполнены. Это не очень эффективно, так как не использует уведомления от `Waker`, но это простой способ запустить эти штуки:
 
 ```rust
 // in src/task/simple_executor.rs
@@ -968,7 +974,7 @@ impl SimpleExecutor {
             let waker = dummy_waker();
             let mut context = Context::from_waker(&waker);
             match task.poll(&mut context) {
-                Poll::Ready(()) => {} // task done
+                Poll::Ready(()) => {} // task готов
                 Poll::Pending => self.task_queue.push_back(task),
             }
         }
@@ -976,11 +982,11 @@ impl SimpleExecutor {
 }
 ```
 
-The function uses a `while let` loop to handle all tasks in the `task_queue`. For each task, it first creates a `Context` type by wrapping a `Waker` instance returned by our `dummy_waker` function. Then it invokes the `Task::poll` method with this `context`. If the `poll` method returns `Poll::Ready`, the task is finished and we can continue with the next task. If the task is still `Poll::Pending`, we add it to the back of the queue again so that it will be polled again in a subsequent loop iteration.
+Функция использует цикл `while let`, чтобы обработать все задачи в `task_queue`. Для каждой задачи сначала создаётся тип `Context`, оборачивая экземпляр `Waker`, возвращаемый нашей функцией `dummy_waker`. Затем вызывается метод `Task::poll` с этим `context`. Если метод `poll` возвращает `Poll::Ready`, задача завершена, и мы можем продолжить с следующей задачей. Если задача всё ещё `Poll::Pending`, мы добавляем её в конец очереди, чтобы она была опрошена снова в следующей итерации цикла.
 
 #### Trying It
 
-With our `SimpleExecutor` type, we can now try running the task returned by the `example_task` function in our `main.rs`:
+С нашим типом `SimpleExecutor` мы теперь можем попробовать запустить задачу, возвращаемую функцией `example_task`, в нашем `main.rs`:
 
 ```rust
 // in src/main.rs
@@ -988,17 +994,17 @@ With our `SimpleExecutor` type, we can now try running the task returned by the 
 use blog_os::task::{Task, simple_executor::SimpleExecutor};
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    // […] initialization routines, including `init_heap`
+    // […] инициализация всякого, включая `init_heap`
 
     let mut executor = SimpleExecutor::new();
     executor.spawn(Task::new(example_task()));
     executor.run();
 
-    // […] test_main, "it did not crash" message, hlt_loop
+    // […] test_main, "It did not crash!" сообщение, hlt_loop
 }
 
 
-// Below is the example_task function again so that you don't have to scroll up
+// ниже example_task, что бы вам не нужно было скролить
 
 async fn async_number() -> u32 {
     42
@@ -1010,21 +1016,21 @@ async fn example_task() {
 }
 ```
 
-When we run it, we see that the expected _"async number: 42"_ message is printed to the screen:
+Когда мы запускаем её, мы видим, что ожидаемое сообщение _"async number: 42"_ выводится на экран:
 
-![QEMU printing "Hello World", "async number: 42", and "It did not crash!"](qemu-simple-executor.png)
+![QEMU печатает "Hello World", "async number: 42" и "It did not crash!"](qemu-simple-executor.png)
 
-Let's summarize the various steps that happen in this example:
+Давайте подытожим шаги, которые происходят в этом примере:
 
-- First, a new instance of our `SimpleExecutor` type is created with an empty `task_queue`.
-- Next, we call the asynchronous `example_task` function, which returns a future. We wrap this future in the `Task` type, which moves it to the heap and pins it, and then add the task to the `task_queue` of the executor through the `spawn` method.
-- We then call the `run` method to start the execution of the single task in the queue. This involves:
-    - Popping the task from the front of the `task_queue`.
-    - Creating a `RawWaker` for the task, converting it to a [`Waker`] instance, and then creating a [`Context`] instance from it.
-    - Calling the [`poll`] method on the future of the task, using the `Context` we just created.
-    - Since the `example_task` does not wait for anything, it can directly run till its end on the first `poll` call. This is where the _"async number: 42"_ line is printed.
-    - Since the `example_task` directly returns `Poll::Ready`, it is not added back to the task queue.
-- The `run` method returns after the `task_queue` becomes empty. The execution of our `kernel_main` function continues and the _"It did not crash!"_ message is printed.
+- Сначала создаётся новый экземпляр нашего типа `SimpleExecutor` с пустой `task_queue`.
+- Затем мы вызываем асинхронную функцию `example_task`, которая возвращает футуру. Мы оборачиваем эту футуру в тип `Task`, который перемещает её в кучу и закрепляет, а затем добавляем задачу в `task_queue` исполнителя через метод `spawn`.
+- После этого мы вызываем метод `run`, чтобы начать выполнение единственной задачи в очереди. Это включает в себя:
+    - Извлечение задачи из начала `task_queue`.
+    - Создание `RawWaker` для задачи, преобразование его в экземпляр [`Waker`] и создание экземпляра [`Context`] на его основе.
+    - Вызов метода [`poll`] на футуре задачи, используя только что созданный `Context`.
+    - Поскольку `example_task` не ждёт ничего, она может непосредственно выполняться до конца при первом вызове `poll`. Именно здесь выводится строка _"async number: 42"_.
+    - Т.к `example_task` напрямую возвращает `Poll::Ready`, она не добавляется обратно в очередь задач.
+- Метод `run` возвращается после того, как `task_queue` становится пустым. Выполнение нашей функции `kernel_main` продолжается, и выводится сообщение _"It did not crash!"_.
 
 ### Async Keyboard Input
 
