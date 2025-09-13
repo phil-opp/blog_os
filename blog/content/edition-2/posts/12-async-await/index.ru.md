@@ -1034,36 +1034,36 @@ async fn example_task() {
 
 ### Async Keyboard Input
 
-Our simple executor does not utilize the `Waker` notifications and simply loops over all tasks until they are done. This wasn't a problem for our example since our `example_task` can directly run to finish on the first `poll` call. To see the performance advantages of a proper `Waker` implementation, we first need to create a task that is truly asynchronous, i.e., a task that will probably return `Poll::Pending` on the first `poll` call.
+Наш простой исполнитель не использует уведомления `Waker` и просто циклически обрабатывает все задачи до тех пор, пока они не завершатся. Это не было проблемой для нашего примера, так как наш `example_task` может завершиться сразу при первом вызове `poll`. Чтобы увидеть преимущества производительности правильной реализации `Waker`, нам нужно сначала создать задачу, которая действительно асинхронна, т.е. задачу, которая, вероятно, вернёт `Poll::Pending` при первом вызове `poll`.
 
-We already have some kind of asynchronicity in our system that we can use for this: hardware interrupts. As we learned in the [_Interrupts_] post, hardware interrupts can occur at arbitrary points in time, determined by some external device. For example, a hardware timer sends an interrupt to the CPU after some predefined time has elapsed. When the CPU receives an interrupt, it immediately transfers control to the corresponding handler function defined in the interrupt descriptor table (IDT).
+У нас уже есть некий вид асинхронности в нашей системе, который мы можем использовать для этого: аппаратные прерывания. Как мы узнали в посте [_Interrupts_], аппаратные прерывания могут происходить в произвольные моменты времени, определяемые каким-либо внешним устройством. Например, аппаратный таймер отправляет прерывание процессору после истечения заданного времени. Когда процессор получает прерывание, он немедленно передаёт управление соответствующей функции-обработчику, определённой в таблице дескрипторов прерываний (IDT).
 
 [_Interrupts_]: @/edition-2/posts/07-hardware-interrupts/index.md
 
-In the following, we will create an asynchronous task based on the keyboard interrupt. The keyboard interrupt is a good candidate for this because it is both non-deterministic and latency-critical. Non-deterministic means that there is no way to predict when the next key press will occur because it is entirely dependent on the user. Latency-critical means that we want to handle the keyboard input in a timely manner, otherwise the user will feel a lag. To support such a task in an efficient way, it will be essential that the executor has proper support for `Waker` notifications.
+В дальнейшем мы создадим асинхронную задачу на основе прерывания клавиатуры. Прерывание клавиатуры выбраны т.к. это хороший кандидат, т.к. это они недетерминированны, так и критично по времени задержки. Недетерминированность означает, что невозможно предсказать, когда произойдёт нажатие клавиши, поскольку это полностью зависит от пользователя. Критичность по времени задержки означает, что мы хотим обрабатывать ввод с клавиатуры своевременно, иначе пользователь почувствует задержку. Чтобы эффективно поддерживать такую задачу, исполнителю будет необходимо обеспечить надлежащую поддержку уведомлений `Waker`.
 
 #### Scancode Queue
 
-Currently, we handle the keyboard input directly in the interrupt handler. This is not a good idea for the long term because interrupt handlers should stay as short as possible as they might interrupt important work. Instead, interrupt handlers should only perform the minimal amount of work necessary (e.g., reading the keyboard scancode) and leave the rest of the work (e.g., interpreting the scancode) to a background task.
+Сейчас мы обрабатываем ввод с клавиатуры непосредственно в обработчике прерываний. Это нехорошая реализация в долгосрочной перспективе, потому что обработчики прерываний должны быть как можно короче (<!-- ?TODO: время исполнения, short as possible --> ), так как они могут прерывать важную работу. Вместо этого обработчики прерываний должны выполнять только минимальный объем необходимой работы (например, считывание кода сканирования клавиатуры) и оставлять остальную работу (например, интерпретацию кода сканирования) фоновой задаче.
 
-A common pattern for delegating work to a background task is to create some sort of queue. The interrupt handler pushes units of work to the queue, and the background task handles the work in the queue. Applied to our keyboard interrupt, this means that the interrupt handler only reads the scancode from the keyboard, pushes it to the queue, and then returns. The keyboard task sits on the other end of the queue and interprets and handles each scancode that is pushed to it:
+Распространённым шаблоном для делегирования работы фоновым задачам является очередь. Обработчик прерываний добавляет единицы работы в очередь, а фоновая задача обрабатывает работу в очереди. Применительно к нашему прерыванию клавиатуры это означает, что обработчик прерываний только считывает скан-код с клавиатуры, добавляет его в очередь, а затем возвращается. Задача клавиатуры находится на другом конце очереди и интерпретирует и обрабатывает каждый скан-код, который в неё добавляется:
 
-![Scancode queue with 8 slots on the top. Keyboard interrupt handler on the bottom left with a "push scancode" arrow to the left of the queue. Keyboard task on the bottom right with a "pop scancode" arrow coming from the right side of the queue.](scancode-queue.svg)
+![Очередь скан-кодов с 8 слотами вверху. Обработчик прерываний клавиатуры внизу слева с стрелкой "добавить скан-код" слева от очереди. Задача клавиатуры внизу справа со стрелкой "извлечь скан-код", идущей с правой стороны очереди.](scancode-queue.svg)
 
-A simple implementation of that queue could be a mutex-protected [`VecDeque`]. However, using mutexes in interrupt handlers is not a good idea since it can easily lead to deadlocks. For example, when the user presses a key while the keyboard task has locked the queue, the interrupt handler tries to acquire the lock again and hangs indefinitely. Another problem with this approach is that `VecDeque` automatically increases its capacity by performing a new heap allocation when it becomes full. This can lead to deadlocks again because our allocator also uses a mutex internally. Further problems are that heap allocations can fail or take a considerable amount of time when the heap is fragmented.
+Простая реализация такой очереди может быть основана на `VecDeque`, защищённом мьютексом. Однако использование мьютексов в обработчиках прерываний — не очень хорошая идея, так как это может легко привести к взаимным блокировкам (deadlock). Например, пользователь нажимает клавишу, но в тот же момент задача клавиатуру заблокировала очередь, обработчик прерываний пытается снова захватить блокировку и застревает навсегда. Ещё одна проблема с этим подходом в том, что `VecDeque` автоматически увеличивает свою ёмкость, выполняя новое выделение памяти в куче, когда она заполняется. Это также может привести к взаимным блокировкам, так как наш аллокатор также использует внутренний мьютекс. Другими проблемами являются то, что выделение памяти в куче может не удаться или занять значительное время, когда куча фрагментирована.
 
-To prevent these problems, we need a queue implementation that does not require mutexes or allocations for its `push` operation. Such queues can be implemented by using lock-free [atomic operations] for pushing and popping elements. This way, it is possible to create `push` and `pop` operations that only require a `&self` reference and are thus usable without a mutex. To avoid allocations on `push`, the queue can be backed by a pre-allocated fixed-size buffer. While this makes the queue _bounded_ (i.e., it has a maximum length), it is often possible to define reasonable upper bounds for the queue length in practice, so that this isn't a big problem.
+Чтобы предотвратить эти проблемы, нам нужна реализация очереди, которая не требует мьютексов или выделений памяти для своей операции `push`. Такие очереди могут быть реализованы с использованием неблокирующих [атомарных операций] для добавления и извлечения элементов. Таким образом, возможно создать операции `push` и `pop`, которые требуют только ссылки `&self` и могут использоваться без мьютекса. Чтобы избежать выделений памяти при `push`, очередь может быть основана на заранее выделенном буфере фиксированного размера. Хотя это делает очередь _ограниченной_ (_bounded_) (т.е. у неё есть максимальная длина), на практике часто возможно определить разумные верхние границы для длины очереди, так что это не представляет собой большой проблемы.
 
 [atomic operations]: https://doc.rust-lang.org/core/sync/atomic/index.html
 
 ##### The `crossbeam` Crate
 
-Implementing such a queue in a correct and efficient way is very difficult, so I recommend sticking to existing, well-tested implementations. One popular Rust project that implements various mutex-free types for concurrent programming is [`crossbeam`]. It provides a type named [`ArrayQueue`] that is exactly what we need in this case. And we're lucky: the type is fully compatible with `no_std` crates with allocation support.
+Реализовать такую очередь правильно и эффективно очень сложно, поэтому я рекомендую придерживаться существующих, хорошо протестированных реализаций. Один из популярных проектов на Rust, который реализует различные типы без мьютексов для конкурентного программирования — это [`crossbeam`]. Он предоставляет тип под названием [`ArrayQueue`], который именно то, что нам нужно в данном случае. И нам повезло: этот тип полностью совместим с `no_std` библиотеками, поддерживающими выделение памяти.
 
 [`crossbeam`]: https://github.com/crossbeam-rs/crossbeam
 [`ArrayQueue`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html
 
-To use the type, we need to add a dependency on the `crossbeam-queue` crate:
+Чтобы использовать этот тип, нам нужно добавить зависимость на библиотеку `crossbeam-queue`:
 
 ```toml
 # in Cargo.toml
@@ -1074,20 +1074,20 @@ default-features = false
 features = ["alloc"]
 ```
 
-By default, the crate depends on the standard library. To make it `no_std` compatible, we need to disable its default features and instead enable the `alloc` feature. <span class="gray">(Note that we could also add a dependency on the main `crossbeam` crate, which re-exports the `crossbeam-queue` crate, but this would result in a larger number of dependencies and longer compile times.)</span>
+По умолчанию библиотека зависит от стандартной библиотеки. Чтобы сделать её совместимой с `no_std`, нам нужно отключить её стандартные функции и вместо этого включить функцию `alloc`. <span class="gray">(Заметьте, что мы также могли бы добавить зависимость на основную библиотеку `crossbeam`, которая повторно экспортирует библиотеку `crossbeam-queue`, но это привело бы к большему количеству зависимостей и более длительному времени компиляции.)</span>
 
 ##### Queue Implementation
 
-Using the `ArrayQueue` type, we can now create a global scancode queue in a new `task::keyboard` module:
+Используя тип `ArrayQueue`, мы теперь можем создать глобальную очередь скан-кодов в новом модуле `task::keyboard`:
 
 ```rust
-// in src/task/mod.rs
+// src/task/mod.rs
 
 pub mod keyboard;
 ```
 
 ```rust
-// in src/task/keyboard.rs
+// src/task/keyboard.rs
 
 use conquer_once::spin::OnceCell;
 use crossbeam_queue::ArrayQueue;
@@ -1095,7 +1095,7 @@ use crossbeam_queue::ArrayQueue;
 static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 ```
 
-Since [`ArrayQueue::new`] performs a heap allocation, which is not possible at compile time ([yet][const-heap-alloc]), we can't initialize the static variable directly. Instead, we use the [`OnceCell`] type of the [`conquer_once`] crate, which makes it possible to perform a safe one-time initialization of static values. To include the crate, we need to add it as a dependency in our `Cargo.toml`:
+Поскольку [`ArrayQueue::new`] выполняет выделение памяти в куче, что невозможно на этапе компиляции ([пока что][const-heap-alloc]), мы не можем инициализировать статическую переменную напрямую. Вместо этого мы используем тип [`OnceCell`] из библиотеки [`conquer_once`], который позволяет безопасно выполнить одноразовую инициализацию статических значений. Чтобы включить библиотеку, нам нужно добавить её как зависимость в наш `Cargo.toml`:
 
 [`ArrayQueue::new`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html#method.new
 [const-heap-alloc]: https://github.com/rust-lang/const-eval/issues/20
@@ -1103,29 +1103,29 @@ Since [`ArrayQueue::new`] performs a heap allocation, which is not possible at c
 [`conquer_once`]: https://docs.rs/conquer-once/0.2.0/conquer_once/index.html
 
 ```toml
-# in Cargo.toml
+# Cargo.toml
 
 [dependencies.conquer-once]
 version = "0.2.0"
 default-features = false
 ```
 
-Instead of the [`OnceCell`] primitive, we could also use the [`lazy_static`] macro here. However, the `OnceCell` type has the advantage that we can ensure that the initialization does not happen in the interrupt handler, thus preventing the interrupt handler from performing a heap allocation.
+Вместо примитива [`OnceCell`] мы также могли бы использовать макрос [`lazy_static`]. Однако тип `OnceCell` имеет то преимущество, что мы можем гарантировать, что инициализация не произойдёт в обработчике прерываний, тем самым предотвращая выполнение выделения памяти в куче в обработчике прерываний.
 
 [`lazy_static`]: https://docs.rs/lazy_static/1.4.0/lazy_static/index.html
 
 #### Filling the Queue
 
-To fill the scancode queue, we create a new `add_scancode` function that we will call from the interrupt handler:
+Чтобы заполнить очередь скан-кодов, мы создаём новую функцию `add_scancode`, которую будем вызывать из обработчика прерываний:
 
 ```rust
-// in src/task/keyboard.rs
+// src/task/keyboard.rs
 
 use crate::println;
 
-/// Called by the keyboard interrupt handler
+/// вызывается обработчиком прерываний клавиатуры
 ///
-/// Must not block or allocate.
+/// не должен блокировать или аллоцировать.
 pub(crate) fn add_scancode(scancode: u8) {
     if let Ok(queue) = SCANCODE_QUEUE.try_get() {
         if let Err(_) = queue.push(scancode) {
@@ -1137,18 +1137,18 @@ pub(crate) fn add_scancode(scancode: u8) {
 }
 ```
 
-We use [`OnceCell::try_get`] to get a reference to the initialized queue. If the queue is not initialized yet, we ignore the keyboard scancode and print a warning. It's important that we don't try to initialize the queue in this function because it will be called by the interrupt handler, which should not perform heap allocations. Since this function should not be callable from our `main.rs`, we use the `pub(crate)` visibility to make it only available to our `lib.rs`.
+Мы используем [`OnceCell::try_get`] для получения ссылки на инициализированную очередь. Если очередь ещё не инициализирована, мы игнорируем скан-код клавиатуры и выводим предупреждение. Важно, чтобы мы не пытались инициализировать очередь в этой функции, так как она будет вызываться обработчиком прерываний, который не должен выполнять выделения памяти в куче. Поскольку эта функция не должна быть доступна из нашего `main.rs`, мы используем видимость `pub(crate)`, чтобы сделать её доступной только для нашего `lib.rs`.
 
 [`OnceCell::try_get`]: https://docs.rs/conquer-once/0.2.0/conquer_once/raw/struct.OnceCell.html#method.try_get
 
-The fact that the [`ArrayQueue::push`] method requires only a `&self` reference makes it very simple to call the method on the static queue. The `ArrayQueue` type performs all the necessary synchronization itself, so we don't need a mutex wrapper here. In case the queue is full, we print a warning too.
+Тот факт, что метод [`ArrayQueue::push`] требует только ссылки `&self`, делает его очень простым для вызова на статической очереди. Тип `ArrayQueue` выполняет все необходимые синхронизации сам, поэтому нам не нужен мьютекс-обёртка. В случае, если очередь полна, мы также выводим предупреждение.
 
 [`ArrayQueue::push`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html#method.push
 
-To call the `add_scancode` function on keyboard interrupts, we update our `keyboard_interrupt_handler` function in the `interrupts` module:
+Чтобы вызывать функцию `add_scancode` при прерываниях клавиатуры, мы обновляем нашу функцию `keyboard_interrupt_handler` в модуле `interrupts`:
 
 ```rust
-// in src/interrupts.rs
+// src/interrupts.rs
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: InterruptStackFrame
@@ -1157,7 +1157,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
     let mut port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
-    crate::task::keyboard::add_scancode(scancode); // new
+    crate::task::keyboard::add_scancode(scancode); // новое
 
     unsafe {
         PICS.lock()
@@ -1166,16 +1166,16 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-We removed all the keyboard handling code from this function and instead added a call to the `add_scancode` function. The rest of the function stays the same as before.
+Мы убрали весь код обработки клавиатуры из этой функции и вместо этого добавили вызов функции `add_scancode`. Остальная часть функции остаётся такой же, как и прежде.
 
-As expected, keypresses are no longer printed to the screen when we run our project using `cargo run` now. Instead, we see the warning that the scancode queue is uninitialized for every keystroke.
+Как и ожидалось, нажатия клавиш больше не выводятся на экран, когда мы запускаем наш проект с помощью `cargo run`. Вместо этого пишется предупреждение, что очередь не инициализирована при каждом нажатия клавиши.
 
 #### Scancode Stream
 
-To initialize the `SCANCODE_QUEUE` and read the scancodes from the queue in an asynchronous way, we create a new `ScancodeStream` type:
+Чтобы инициализировать `SCANCODE_QUEUE` и считывать скан-коды из очереди асинхронным способом, мы создаём новый тип `ScancodeStream`:
 
 ```rust
-// in src/task/keyboard.rs
+// src/task/keyboard.rs
 
 pub struct ScancodeStream {
     _private: (),
@@ -1190,13 +1190,13 @@ impl ScancodeStream {
 }
 ```
 
-The purpose of the `_private` field is to prevent construction of the struct from outside of the module. This makes the `new` function the only way to construct the type. In the function, we first try to initialize the `SCANCODE_QUEUE` static. We panic if it is already initialized to ensure that only a single `ScancodeStream` instance can be created.
+Цель поля `_private` — предотвратить создание структуры из внешних модулей. Это делает функцию `new` единственным способом создать данный тип. В функции мы сначала пытаемся инициализировать статическую переменную `SCANCODE_QUEUE`. Если она уже инициализирована, мы вызываем панику, чтобы гарантировать, что можно создать только один экземпляр `ScancodeStream`.
 
-To make the scancodes available to asynchronous tasks, the next step is to implement a `poll`-like method that tries to pop the next scancode off the queue. While this sounds like we should implement the [`Future`] trait for our type, this does not quite fit here. The problem is that the `Future` trait only abstracts over a single asynchronous value and expects that the `poll` method is not called again after it returns `Poll::Ready`. Our scancode queue, however, contains multiple asynchronous values, so it is okay to keep polling it.
+Чтобы сделать скан-коды доступными для асинхронных задач, далее нужно реализовать метод, подобный `poll`, который пытается извлечь следующий скан-код из очереди. Хотя это звучит так, будто мы должны реализовать трейт [`Future`] для нашего типа, здесь он не подходит. Проблема в том, что трейт `Future` абстрагируется только над одним асинхронным значением и ожидает, что метод `poll` не будет вызываться снова после того, как он вернёт `Poll::Ready`. Наша очередь скан-кодов, однако, содержит несколько асинхронных значений, поэтому нормально продолжать опрашивать её.
 
 ##### The `Stream` Trait
 
-Since types that yield multiple asynchronous values are common, the [`futures`] crate provides a useful abstraction for such types: the [`Stream`] trait. The trait is defined like this:
+Поскольку типы, которые возвращают несколько асинхронных значений, являются распространёнными, библиотека [`futures`] предоставляет полезную абстракцию для таких типов: трейт [`Stream`]. Трейт определяется следующим образом:
 
 [`Stream`]: https://rust-lang.github.io/async-book/05_streams/01_chapter.html
 
@@ -1209,21 +1209,21 @@ pub trait Stream {
 }
 ```
 
-This definition is quite similar to the [`Future`] trait, with the following differences:
+Это определение довольно похоже на трейт [`Future`], с следующими отличиями:
 
-- The associated type is named `Item` instead of `Output`.
-- Instead of a `poll` method that returns `Poll<Self::Item>`, the `Stream` trait defines a `poll_next` method that returns a `Poll<Option<Self::Item>>` (note the additional `Option`).
+- Ассоциированный тип называется `Item`, а не `Output`.
+- Вместо метода `poll`, который возвращает `Poll<Self::Item>`, трейт `Stream` определяет метод `poll_next`, который возвращает `Poll<Option<Self::Item>>` (обратите внимание на дополнительный `Option`).
 
-There is also a semantic difference: The `poll_next` can be called repeatedly, until it returns `Poll::Ready(None)` to signal that the stream is finished. In this regard, the method is similar to the [`Iterator::next`] method, which also returns `None` after the last value.
+Существует также семантическое отличие: метод `poll_next` можно вызывать многократно, пока он не вернёт `Poll::Ready(None)`, чтобы сигнализировать о том, что поток завершён. В этом отношении метод похож на метод [`Iterator::next`], который также возвращает `None` после последнего значения.
 
 [`Iterator::next`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html#tymethod.next
 
 ##### Implementing `Stream`
 
-Let's implement the `Stream` trait for our `ScancodeStream` to provide the values of the `SCANCODE_QUEUE` in an asynchronous way. For this, we first need to add a dependency on the `futures-util` crate, which contains the `Stream` type:
+Давайте реализуем трейт `Stream` для нашего `ScancodeStream`, чтобы предоставлять значения из `SCANCODE_QUEUE` асинхронным способом. Для этого нам сначала нужно добавить зависимость на библиотеку `futures-util`, которая содержит тип `Stream`:
 
 ```toml
-# in Cargo.toml
+# Cargo.toml
 
 [dependencies.futures-util]
 version = "0.3.4"
@@ -1231,12 +1231,12 @@ default-features = false
 features = ["alloc"]
 ```
 
-We disable the default features to make the crate `no_std` compatible and enable the `alloc` feature to make its allocation-based types available (we will need this later). <span class="gray">(Note that we could also add a dependency on the main `futures` crate, which re-exports the `futures-util` crate, but this would result in a larger number of dependencies and longer compile times.)</span>
+Мы отключаем стандартные функции, чтобы сделать библиотеку совместимой с `no_std`, и включаем функцию `alloc`, чтобы сделать доступными её типы, основанные на выделении памяти (это понадобится позже). <span class="gray">(Заметьте, что мы также могли бы добавить зависимость на основную библиотеку `futures`, которая повторно экспортирует библиотеку `futures-util`, но это привело бы к большему количеству зависимостей и более длительному времени компиляции.)</span>
 
-Now we can import and implement the `Stream` trait:
+Теперь мы можем импортировать и реализовать трейт `Stream`:
 
 ```rust
-// in src/task/keyboard.rs
+// src/task/keyboard.rs
 
 use core::{pin::Pin, task::{Poll, Context}};
 use futures_util::stream::Stream;
@@ -1254,40 +1254,40 @@ impl Stream for ScancodeStream {
 }
 ```
 
-We first use the [`OnceCell::try_get`] method to get a reference to the initialized scancode queue. This should never fail since we initialize the queue in the `new` function, so we can safely use the `expect` method to panic if it's not initialized. Next, we use the [`ArrayQueue::pop`]  method to try to get the next element from the queue. If it succeeds, we return the scancode wrapped in `Poll::Ready(Some(…))`. If it fails, it means that the queue is empty. In that case, we return `Poll::Pending`.
+Сначала мы используем метод [`OnceCell::try_get`] для получения ссылки на инициализированную очередь скан-кодов. Это никогда не должно вызывать ошибок, так как мы инициализируем очередь в функции `new`, поэтому мы можем безопасно использовать метод `expect`. Далее мы используем метод [`ArrayQueue::pop`] для попытки получить следующий элемент из очереди. Если это успешно, мы возвращаем скан-код, обёрнутый в `Poll::Ready(Some(…))`. Если это не удаётся, это означает, что очередь пуста. В этом случае мы возвращаем `Poll::Pending`.
 
 [`ArrayQueue::pop`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html#method.pop
 
 #### Waker Support
 
-Like the `Futures::poll` method, the `Stream::poll_next` method requires the asynchronous task to notify the executor when it becomes ready after `Poll::Pending` is returned. This way, the executor does not need to poll the same task again until it is notified, which greatly reduces the performance overhead of waiting tasks.
+Как и метод `Futures::poll`, метод `Stream::poll_next` требует от асинхронной задачи уведомить исполнителя, когда она становится готовой после возврата `Poll::Pending`. Таким образом, исполнителю не нужно повторно опрашивать ту же задачу, пока она не будет уведомлена, что значительно снижает накладные расходы на ожидание задач.
 
-To send this notification, the task should extract the [`Waker`] from the passed [`Context`] reference and store it somewhere. When the task becomes ready, it should invoke the [`wake`] method on the stored `Waker` to notify the executor that the task should be polled again.
+Чтобы отправить это уведомление, задача должна извлечь [`Waker`] из переданной ссылки [`Context`] и сохранить его где-то. Когда задача становится готовой, она должна вызвать метод [`wake`] на сохранённом `Waker`, чтобы уведомить исполнителя о том, что задачу следует опросить снова.
 
 ##### AtomicWaker
 
-To implement the `Waker` notification for our `ScancodeStream`, we need a place where we can store the `Waker` between poll calls. We can't store it as a field in the `ScancodeStream` itself because it needs to be accessible from the `add_scancode` function. The solution to this is to use a static variable of the [`AtomicWaker`] type provided by the `futures-util` crate. Like the `ArrayQueue` type, this type is based on atomic instructions and can be safely stored in a `static` and modified concurrently.
+Чтобы реализовать уведомление `Waker` для нашего `ScancodeStream`, нам нужно место, где мы можем хранить `Waker` между вызовами `poll`. Мы не можем хранить его как поле в самом `ScancodeStream`, потому что он должен быть доступен из функции `add_scancode`. Решение этой проблемы — использование статической переменной типа [`AtomicWaker`], предоставляемой библиотекой `futures-util`. Как и тип `ArrayQueue`, этот тип основан на атомарных инструкциях и может безопасно храниться в `static` и модифицироваться параллельно.
 
 [`AtomicWaker`]: https://docs.rs/futures-util/0.3.4/futures_util/task/struct.AtomicWaker.html
 
-Let's use the [`AtomicWaker`] type to define a static `WAKER`:
+Давайте используем тип [`AtomicWaker`] для определения статической переменной `WAKER`:
 
 ```rust
-// in src/task/keyboard.rs
+// src/task/keyboard.rs
 
 use futures_util::task::AtomicWaker;
 
 static WAKER: AtomicWaker = AtomicWaker::new();
 ```
 
-The idea is that the `poll_next` implementation stores the current waker in this static, and the `add_scancode` function calls the `wake` function on it when a new scancode is added to the queue.
+Идея в том, что реализация `poll_next` хранит текущий `waker` в этой статической переменной, а функция `add_scancode` вызывает функцию `wake` на ней, когда новый скан-код добавляется в очередь.
 
 ##### Storing a Waker
 
-The contract defined by `poll`/`poll_next` requires  the task to register a wakeup for the passed `Waker` when it returns `Poll::Pending`. Let's modify our `poll_next` implementation to satisfy this requirement:
+Контракт, определяемый `poll`/`poll_next`, требует, чтобы задача зарегистрировала уведомление для переданного `Waker`, когда она возвращает `Poll::Pending`. Давайте изменим нашу реализацию `poll_next`, чтобы удовлетворить этому требованию:
 
 ```rust
-// in src/task/keyboard.rs
+// src/task/keyboard.rs
 
 impl Stream for ScancodeStream {
     type Item = u8;
@@ -1297,7 +1297,7 @@ impl Stream for ScancodeStream {
             .try_get()
             .expect("scancode queue not initialized");
 
-        // fast path
+        // первый путь
         if let Some(scancode) = queue.pop() {
             return Poll::Ready(Some(scancode));
         }
@@ -1314,30 +1314,30 @@ impl Stream for ScancodeStream {
 }
 ```
 
-Like before, we first use the [`OnceCell::try_get`] function to get a reference to the initialized scancode queue. We then optimistically try to `pop` from the queue and return `Poll::Ready` when it succeeds. This way, we can avoid the performance overhead of registering a waker when the queue is not empty.
+Как и прежде, сначала мы используем функцию [`OnceCell::try_get`] для получения ссылки на инициализированную очередь скан-кодов. Затем мы оптимистично пытаемся выполнить `pop` из очереди и возвращаем `Poll::Ready`, при успехе. Таким образом, мы можем избежать накладных расходов на регистрацию `waker`, когда очередь не пуста.
 
-If the first call to `queue.pop()` does not succeed, the queue is potentially empty. Only potentially because the interrupt handler might have filled the queue asynchronously immediately after the check. Since this race condition can occur again for the next check, we need to register the `Waker` in the `WAKER` static before the second check. This way, a wakeup might happen before we return `Poll::Pending`, but it is guaranteed that we get a wakeup for any scancodes pushed after the check.
+Если первый вызов `queue.pop()` неуспешен, то очередь потенциально пуста. Потенциально, потому что обработчик прерываний мог заполнить очередь асинхронно сразу после проверки. Поскольку это состояние гонки может возникнуть снова для следующей проверки, мы должны зарегистрировать `Waker` в статической переменной `WAKER` перед второй проверкой. Таким образом, уведомление может произойти до того, как мы вернём `Poll::Pending`, но гарантируется, что мы получим уведомление для любых скан-кодов, добавленных после проверки.
 
-After registering the `Waker` contained in the passed [`Context`] through the [`AtomicWaker::register`] function, we try to pop from the queue a second time. If it now succeeds, we return `Poll::Ready`. We also remove the registered waker again using [`AtomicWaker::take`] because a waker notification is no longer needed. In case `queue.pop()` fails for a second time, we return `Poll::Pending` like before, but this time with a registered wakeup.
+После регистрации `Waker`, содержащегося в переданном [`Context`], через функцию [`AtomicWaker::register`], мы пытаемся выполнить `pop` из очереди во второй раз. Если теперь это получается, мы возвращаем `Poll::Ready`. Мы также снова удаляем зарегистрированный `waker` с помощью [`AtomicWaker::take`], т.к. уведомление `waker` больше не нужно. Если `queue.pop()` снова неуспешно, мы возвращаем `Poll::Pending`, как и прежде, но на этот раз с зарегистрированным уведомлением.
 
 [`AtomicWaker::register`]: https://docs.rs/futures-util/0.3.4/futures_util/task/struct.AtomicWaker.html#method.register
 [`AtomicWaker::take`]: https://docs.rs/futures/0.3.4/futures/task/struct.AtomicWaker.html#method.take
 
-Note that there are two ways that a wakeup can happen for a task that did not return `Poll::Pending` (yet). One way is the mentioned race condition when the wakeup happens immediately before returning `Poll::Pending`. The other way is when the queue is no longer empty after registering the waker, so that `Poll::Ready` is returned. Since these spurious wakeups are not preventable, the executor needs to be able to handle them correctly.
+Обратите внимание, что существует два способа, которыми может произойти уведомление для задачи, которая ещё не вернула `Poll::Pending`. Один из способов — это упомянутое состояние гонки, когда уведомление происходит незадолго до возвращения `Poll::Pending`. Другой способ — это когда очередь больше не пуста после регистрации `waker`, так что возвращается `Poll::Ready`. Поскольку эти ложные уведомления предотвратить невозможно, исполнитель должен уметь правильно с ними справляться.
 
 ##### Waking the Stored Waker
 
-To wake the stored `Waker`, we add a call to `WAKER.wake()` in the `add_scancode` function:
+Чтобы разбудить сохранённый `Waker`, мы добавляем вызов `WAKER.wake()` в функцию `add_scancode`:
 
 ```rust
-// in src/task/keyboard.rs
+// src/task/keyboard.rs
 
 pub(crate) fn add_scancode(scancode: u8) {
     if let Ok(queue) = SCANCODE_QUEUE.try_get() {
         if let Err(_) = queue.push(scancode) {
             println!("WARNING: scancode queue full; dropping keyboard input");
         } else {
-            WAKER.wake(); // new
+            WAKER.wake(); // новое
         }
     } else {
         println!("WARNING: scancode queue uninitialized");
@@ -1345,18 +1345,18 @@ pub(crate) fn add_scancode(scancode: u8) {
 }
 ```
 
-The only change that we made is to add a call to `WAKER.wake()` if the push to the scancode queue succeeds. If a waker is registered in the `WAKER` static, this method will call the equally-named [`wake`] method on it, which notifies the executor. Otherwise, the operation is a no-op, i.e., nothing happens.
+Единственное изменение, которое мы внесли, — это добавление вызова `WAKER.wake()`, если добавление в очередь скан-кодов прошло успешно. Если в статической переменной `WAKER` зарегистрирован `waker`, этот метод вызовет одноимённый метод [`wake`] на нём, который уведомляет исполнителя. В противном случае операция не приводит к никаким действиям (no-op).
 
 [`wake`]: https://doc.rust-lang.org/stable/core/task/struct.Waker.html#method.wake
 
-It is important that we call `wake` only after pushing to the queue because otherwise the task might be woken too early while the queue is still empty. This can, for example, happen when using a multi-threaded executor that starts the woken task concurrently on a different CPU core. While we don't have thread support yet, we will add it soon and don't want things to break then.
+Важно, чтобы мы вызывали `wake` только после добавления в очередь, потому что в противном случае задача может быть разбужена слишком рано, пока очередь всё ещё пуста. Это может, например, произойти при использовании многопоточного исполнителя, который запускает пробуждённую задачу параллельно на другом ядре CPU. Хотя у нас пока нет поддержки потоков, мы добавим её скоро и не хотим, чтобы всё сломалось в этом случае.
 
 #### Keyboard Task
 
-Now that we implemented the `Stream` trait for our `ScancodeStream`, we can use it to create an asynchronous keyboard task:
+Теперь, когда мы реализовали трейт `Stream` для нашего `ScancodeStream`, мы можем использовать его для создания асинхронной задачи клавиатуры:
 
 ```rust
-// in src/task/keyboard.rs
+// src/task/keyboard.rs
 
 use futures_util::stream::StreamExt;
 use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
@@ -1380,60 +1380,60 @@ pub async fn print_keypresses() {
 }
 ```
 
-The code is very similar to the code we had in our [keyboard interrupt handler] before we modified it in this post. The only difference is that, instead of reading the scancode from an I/O port, we take it from the `ScancodeStream`. For this, we first create a new `Scancode` stream and then repeatedly use the [`next`] method provided by the [`StreamExt`] trait to get a `Future` that resolves to the next element in the stream. By using the `await` operator on it, we asynchronously wait for the result of the future.
+Код очень похож на тот, который у нас был в нашем обработчике прерываний клавиатуры ([keyboard interrupt handler]) до того, как мы его изменили в этом посте. Единственное различие в том, что вместо чтения скан-кода из порта ввода-вывода мы берем его из `ScancodeStream`. Для этого мы сначала создаем новый поток `Scancode`, а затем многократно используем метод [`next`], предоставляемый трейтами [`StreamExt`], чтобы получить `Future`, который разрешается в следующий элемент потока. Используя оператор `await`, мы асинхронно ожидаем результат этого `Future`.
 
 [keyboard interrupt handler]: @/edition-2/posts/07-hardware-interrupts/index.md#interpreting-the-scancodes
 [`next`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html#method.next
 [`StreamExt`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html
 
-We use `while let` to loop until the stream returns `None` to signal its end. Since our `poll_next` method never returns `None`, this is effectively an endless loop, so the `print_keypresses` task never finishes.
+Мы используем `while let`, чтобы проходить цикл, пока поток не вернет `None`, сигнализируя о своем завершении. Поскольку наш метод `poll_next` никогда не возвращает `None`, это фактически бесконечный цикл, поэтому задача `print_keypresses` никогда не завершается.
 
-Let's add the `print_keypresses` task to our executor in our `main.rs` to get working keyboard input again:
+Давайте добавим задачу `print_keypresses` в наш исполнитель в `main.rs`, чтобы снова получить работающий ввод с клавиатуры:
 
 ```rust
-// in src/main.rs
+// src/main.rs
 
 use blog_os::task::keyboard; // new
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
-    // […] initialization routines, including init_heap, test_main
+    // […] инициализация всякого, включая init_heap, test_main
 
     let mut executor = SimpleExecutor::new();
     executor.spawn(Task::new(example_task()));
-    executor.spawn(Task::new(keyboard::print_keypresses())); // new
+    executor.spawn(Task::new(keyboard::print_keypresses())); // новое
     executor.run();
 
-    // […] "it did not crash" message, hlt_loop
+    // […] сообщение "it did not crash", hlt_loop
 }
 ```
 
-When we execute `cargo run` now, we see that keyboard input works again:
+Когда мы выполняем `cargo run` сейчас, мы видим, что ввод с клавиатуры снова работает:
 
-![QEMU printing ".....H...e...l...l..o..... ...W..o..r....l...d...!"](qemu-keyboard-output.gif)
+![QEMU печатает ".....H...e...l...l..o..... ...W..o..r....l...d...!"](qemu-keyboard-output.gif)
 
-If you keep an eye on the CPU utilization of your computer, you will see that the `QEMU` process now continuously keeps the CPU busy. This happens because our `SimpleExecutor` polls tasks over and over again in a loop. So even if we don't press any keys on the keyboard, the executor repeatedly calls `poll` on our `print_keypresses` task, even though the task cannot make any progress and will return `Poll::Pending` each time.
+Если вы будете следить за загрузкой процессора вашего компьютера, вы увидите, что процесс `QEMU` теперь постоянно загружает CPU. Это происходит потому, что наш `SimpleExecutor` многократно опрашивает задачи в цикле. Поэтому даже если мы не нажимаем никаких клавиш на клавиатуре, исполнитель снова и снова вызывает `poll` для нашей задачи `print_keypresses`, хотя задача не может добиться прогресса и будет каждый раз возвращать `Poll::Pending`.
 
 ### Executor with Waker Support
 
-To fix the performance problem, we need to create an executor that properly utilizes the `Waker` notifications. This way, the executor is notified when the next keyboard interrupt occurs, so it does not need to keep polling the `print_keypresses` task over and over again.
+Чтобы решить проблему производительности, нам нужно создать исполнитель, который правильно использует уведомления `Waker`. Таким образом, исполнитель будет уведомлен, когда произойдет следующее прерывание клавиатуры, и ему не нужно будет постоянно опрашивать задачу `print_keypresses`.
 
 #### Task Id
 
-The first step in creating an executor with proper support for waker notifications is to give each task a unique ID. This is required because we need a way to specify which task should be woken. We start by creating a new `TaskId` wrapper type:
+Первый шаг в создании исполнителя с правильной поддержкой уведомлений waker — это дать каждой задаче уникальный идентификатор. Это необходимо, потому что нам нужно иметь способ указать, какую задачу следует разбудить. Мы начинаем с создания нового типа-обёртки `TaskId`:
 
 ```rust
-// in src/task/mod.rs
+// src/task/mod.rs
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct TaskId(u64);
 ```
 
-The `TaskId` struct is a simple wrapper type around `u64`. We derive a number of traits for it to make it printable, copyable, comparable, and sortable. The latter is important because we want to use `TaskId` as the key type of a [`BTreeMap`] in a moment.
+Структура `TaskId` — это простая обёртка вокруг `u64`. Мы добавляем `derive` для того, что бы она была печатаемой, сравнимой, копируемой и сортируемой. Последнее важно, т.к. в дальнейшем мы хотим использовать `TaskId` в качестве типа ключа для [`BTreeMap`].
 
 [`BTreeMap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
 
-To create a new unique ID, we create a `TaskId::new` function:
+Для создания нового уникального идентификатора мы создаём функцию `TaskId::new`:
 
 ```rust
 use core::sync::atomic::{AtomicU64, Ordering};
@@ -1446,46 +1446,46 @@ impl TaskId {
 }
 ```
 
-The function uses a static `NEXT_ID` variable of type [`AtomicU64`] to ensure that each ID is assigned only once. The [`fetch_add`] method atomically increases the value and returns the previous value in one atomic operation. This means that even when the `TaskId::new` method is called in parallel, every ID is returned exactly once. The [`Ordering`] parameter defines whether the compiler is allowed to reorder the `fetch_add` operation in the instructions stream. Since we only require that the ID be unique, the `Relaxed` ordering with the weakest requirements is enough in this case.
+Функция использует статическую переменную `NEXT_ID` типа [`AtomicU64`], чтобы гарантировать, что каждый идентификатор присваивается только один раз. Метод [`fetch_add`] атомарно увеличивает значение и возвращает предыдущее за одну атомарную операцию. Это значит, что даже когда метод `TaskId::new` вызывается параллельно, каждый идентификатор возвращается ровно один раз. Параметр [`Ordering`] определяет, может ли компилятор переупорядочить операцию `fetch_add` в потоке инструкций. Поскольку мы только требуем, чтобы идентификатор был уникальным, в этом случае достаточно использования упорядочивание `Relaxed` с самыми слабыми требованиями.
 
 [`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
 [`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
 [`Ordering`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
 
-We can now extend our `Task` type with an additional `id` field:
+Теперь мы можем расширить наш тип `Task`, добавив поле `id`:
 
 ```rust
-// in src/task/mod.rs
+// src/task/mod.rs
 
 pub struct Task {
-    id: TaskId, // new
+    id: TaskId, // новое
     future: Pin<Box<dyn Future<Output = ()>>>,
 }
 
 impl Task {
     pub fn new(future: impl Future<Output = ()> + 'static) -> Task {
         Task {
-            id: TaskId::new(), // new
+            id: TaskId::new(), // новое
             future: Box::pin(future),
         }
     }
 }
 ```
 
-The new `id` field makes it possible to uniquely name a task, which is required for waking a specific task.
+Новое поле `id` позволяет уникально называть задачу, что необходимо для пробуждения конкретной задачи.
 
 #### The `Executor` Type
 
-We create our new `Executor` type in a `task::executor` module:
+Мы создаем наш новый тип `Executor` в модуле `task::executor`:
 
 ```rust
-// in src/task/mod.rs
+// src/task/mod.rs
 
 pub mod executor;
 ```
 
 ```rust
-// in src/task/executor.rs
+// src/task/executor.rs
 
 use super::{Task, TaskId};
 use alloc::{collections::BTreeMap, sync::Arc};
@@ -1509,25 +1509,25 @@ impl Executor {
 }
 ```
 
-Instead of storing tasks in a [`VecDeque`] like we did for our `SimpleExecutor`, we use a `task_queue` of task IDs and a [`BTreeMap`] named `tasks` that contains the actual `Task` instances. The map is indexed by the `TaskId` to allow efficient continuation of a specific task.
+Вместо хранения задач в [`VecDeque`], как мы делали для нашего `SimpleExecutor`, мы используем `task_queue` с идентификаторами задач и [`BTreeMap`] с именем `tasks`, который содержит фактические экземпляры `Task`. Карта индексируется по `TaskId`, что позволяет эффективно продолжать выполнение конкретной задачи.
 
-The `task_queue` field is an [`ArrayQueue`] of task IDs, wrapped into the [`Arc`] type that implements _reference counting_. Reference counting makes it possible to share ownership of the value among multiple owners. It works by allocating the value on the heap and counting the number of active references to it. When the number of active references reaches zero, the value is no longer needed and can be deallocated.
+Поле `task_queue` представляет собой [`ArrayQueue`] идентификаторов задач, обёрнутую в тип [`Arc`], который реализует _счётчик ссылок_ (_reference counting_). Счётчик ссылок позволяет разделять владение значением между несколькими владельцами. Он создает место в куче и записывает туда кол-во активных ссылок. Когда количество активных ссылок достигает нуля, значение больше не нужно и может быть освобождено.
 
-We use this `Arc<ArrayQueue>` type for the `task_queue` because it will be shared between the executor and wakers. The idea is that the wakers push the ID of the woken task to the queue. The executor sits on the receiving end of the queue, retrieves the woken tasks by their ID from the `tasks` map, and then runs them. The reason for using a fixed-size queue instead of an unbounded queue such as [`SegQueue`] is that interrupt handlers should not allocate on push to this queue.
+Мы используем тип `Arc<ArrayQueue>` для `task_queue`, потому что он будет разделяться между исполнителем и wakers. Идея в том, что wakers добавляют идентификатор разбуженной задачи в очередь. Исполнитель находится на приемной стороне очереди, извлекает разбуженные задачи по их идентификатору из `tasks` дерева и затем выполняет их. Причина использования фиксированной очереди вместо неограниченной, такой как [`SegQueue`] в том, что обработчики прерываний не должны выделять память при добавлении в эту очередь.
 
-In addition to the `task_queue` and the `tasks` map, the `Executor` type has a `waker_cache` field that is also a map. This map caches the [`Waker`] of a task after its creation. This has two reasons: First, it improves performance by reusing the same waker for multiple wake-ups of the same task instead of creating a new waker each time. Second, it ensures that reference-counted wakers are not deallocated inside interrupt handlers because it could lead to deadlocks (there are more details on this below).
+В дополнение к `task_queue` и дереве `tasks`, тип `Executor` имеет поле `waker_cache`, которое также является деревом. Это дерево кэширует [`Waker`] задачи после его создания. На это имеется две причины: во-первых, это улучшает производительность, повторно используя тот же waker для нескольких пробуждений одной и той же задачи, вместо создания нового waker каждый раз. Во-вторых, это гарантирует, что wakers с подсчётом ссылок не освобождаются внутри обработчиков прерываний, поскольку это может привести к взаимным блокировкам (подробнее об ниже).
 
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
 [`SegQueue`]: https://docs.rs/crossbeam-queue/0.2.1/crossbeam_queue/struct.SegQueue.html
 
-To create an `Executor`, we provide a simple `new` function. We choose a capacity of 100 for the `task_queue`, which should be more than enough for the foreseeable future. In case our system will have more than 100 concurrent tasks at some point, we can easily increase this size.
+Чтобы создать `Executor`, мы предоставляем простую функцию `new`. Мы выбираем ёмкость 100 для `task_queue`, что должно быть более чем достаточно на обозримое будущее. В случае, если в нашей системе в какой-то момент будет больше 100 параллельных задач, мы можем легко увеличить этот размер.
 
 #### Spawning Tasks
 
-As for the `SimpleExecutor`, we provide a `spawn` method on our `Executor` type that adds a given task to the `tasks` map and immediately wakes it by pushing its ID to the `task_queue`:
+Как и в `SimpleExecutor`, мы предоставляем метод `spawn` для нашего типа `Executor`, который добавляет данную задачу в дерево `tasks` и немедленно пробуждает её, добавляя её идентификатор в `task_queue`:
 
 ```rust
-// in src/task/executor.rs
+// src/task/executor.rs
 
 impl Executor {
     pub fn spawn(&mut self, task: Task) {
@@ -1540,20 +1540,20 @@ impl Executor {
 }
 ```
 
-If there is already a task with the same ID in the map, the [`BTreeMap::insert`] method returns it. This should never happen since each task has a unique ID, so we panic in this case since it indicates a bug in our code. Similarly, we panic when the `task_queue` is full since this should never happen if we choose a large-enough queue size.
+Если в карте уже существует задача с тем же идентификатором, метод [`BTreeMap::insert`] возвращает её. Это никогда не должно происходить, поскольку каждая задача имеет уникальный идентификатор, поэтому в этом случае мы вызываем панику, так как это указывает на ошибку в нашем коде. Аналогично, мы вызываем панику, когда `task_queue` полна, так как этого никогда не должно происходить, если мы выбираем достаточно большой размер очереди.
 
 #### Running Tasks
 
-To execute all tasks in the `task_queue`, we create a private `run_ready_tasks` method:
+Чтобы выполнить все задачи в `task_queue`, мы создаём приватный метод `run_ready_tasks`:
 
 ```rust
-// in src/task/executor.rs
+// src/task/executor.rs
 
 use core::task::{Context, Poll};
 
 impl Executor {
     fn run_ready_tasks(&mut self) {
-        // destructure `self` to avoid borrow checker errors
+        // деструктуризация `self` что бы избежать ошибок проверки заимствования (borrow checker)
         let Self {
             tasks,
             task_queue,
@@ -1563,7 +1563,7 @@ impl Executor {
         while let Some(task_id) = task_queue.pop() {
             let task = match tasks.get_mut(&task_id) {
                 Some(task) => task,
-                None => continue, // task no longer exists
+                None => continue, // task больше нету
             };
             let waker = waker_cache
                 .entry(task_id)
@@ -1571,7 +1571,7 @@ impl Executor {
             let mut context = Context::from_waker(waker);
             match task.poll(&mut context) {
                 Poll::Ready(()) => {
-                    // task done -> remove it and its cached waker
+                    // задача готова -> удалить ее и кеширумый waker
                     tasks.remove(&task_id);
                     waker_cache.remove(&task_id);
                 }
@@ -1582,15 +1582,15 @@ impl Executor {
 }
 ```
 
-The basic idea of this function is similar to our `SimpleExecutor`: Loop over all tasks in the `task_queue`, create a waker for each task, and then poll them. However, instead of adding pending tasks back to the end of the `task_queue`, we let our `TaskWaker` implementation take care of adding woken tasks back to the queue. The implementation of this waker type will be shown in a moment.
+Смысл функции схож со смыслом `SimpleExecutor`: циклично перебираем все задачи в `task_queue`, создаём waker для каждой задачи и затем опрашиваем их. Однако вместо того, чтобы добавлять ожидающие задачи обратно в конец `task_queue`, мы позволяем реализации нашего `TaskWaker` заботиться о добавлении пробуждённых задач обратно в очередь. Реализация этого типа waker будет показана через мгновение.
 
-Let's look into some of the implementation details of this `run_ready_tasks` method:
+Давайте рассмотрим некоторые детали реализации этого метода `run_ready_tasks`:
 
-- We use [_destructuring_] to split `self` into its three fields to avoid some borrow checker errors. Namely, our implementation needs to access the `self.task_queue` from within a closure, which currently tries to borrow `self` completely. This is a fundamental borrow checker issue that will be resolved when [RFC 2229] is [implemented][RFC 2229 impl].
+- Мы используем _деструктуризацию_ [_destructuring_], чтобы разделить `self` на три поля, чтобы избежать некоторых ошибок компилятора. В частности, наша реализация требует доступа к `self.task_queue` изнутри замыкания, что в данный момент пытается полностью заимствовать `self`. Это фундаментальная проблема компилятора, которая будет решена в [RFC 2229], [проблема][RFC 2229 impl].
 
-- For each popped task ID, we retrieve a mutable reference to the corresponding task from the `tasks` map. Since our `ScancodeStream` implementation registers wakers before checking whether a task needs to be put to sleep, it might happen that a wake-up occurs for a task that no longer exists. In this case, we simply ignore the wake-up and continue with the next ID from the queue.
+- Для каждого извлеченного идентификатора задачи мы получаем мутабельную ссылку на соответствующую задачу из дерева `tasks`. Поскольку наша реализация `ScancodeStream` регистрирует wakers перед проверкой, нужно ли задачу отправить в сон, может случиться так, что произойдёт пробуждение для задачи, которой больше не существует. В этом случае мы просто игнорируем пробуждение и продолжаем с следующим идентификатором из очереди.
 
-- To avoid the performance overhead of creating a waker on each poll, we use the `waker_cache` map to store the waker for each task after it has been created. For this, we use the [`BTreeMap::entry`] method in combination with [`Entry::or_insert_with`] to create a new waker if it doesn't exist yet and then get a mutable reference to it. For creating a new waker, we clone the `task_queue` and pass it together with the task ID to the `TaskWaker::new` function (implementation shown below). Since the `task_queue` is wrapped into an `Arc`, the `clone` only increases the reference count of the value, but still points to the same heap-allocated queue. Note that reusing wakers like this is not possible for all waker implementations, but our `TaskWaker` type will allow it.
+- Чтобы избежать накладных расходов на создание waker при каждом опросе, мы используем дерево `waker_cache` для хранения waker для каждой задачи после ее создания. Для этого мы используем метод [`BTreeMap::entry`] в сочетании с [`Entry::or_insert_with`] для создания нового waker, если он ещё не существует, а затем получаем на него мутабельную ссылку. Для создания нового waker мы клонируем `task_queue` и передаём его вместе с идентификатором задачи в функцию `TaskWaker::new` (реализация ниже). Поскольку `task_queue` обёрнута в `Arc`, `clone` только увеличивает счётчик ссылок на значение, но всё равно указывает на ту же выделенную в куче очередь. Обратите внимание, что повторное использование wakers таким образом невозможно для всех реализаций waker, но наш тип `TaskWaker` это позволит.
 
 [_destructuring_]: https://doc.rust-lang.org/book/ch18-03-pattern-syntax.html#destructuring-to-break-apart-values
 [RFC 2229]: https://github.com/rust-lang/rfcs/pull/2229
@@ -1599,16 +1599,16 @@ Let's look into some of the implementation details of this `run_ready_tasks` met
 [`BTreeMap::entry`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.entry
 [`Entry::or_insert_with`]: https://doc.rust-lang.org/alloc/collections/btree_map/enum.Entry.html#method.or_insert_with
 
-A task is finished when it returns `Poll::Ready`. In that case, we remove it from the `tasks` map using the [`BTreeMap::remove`] method. We also remove its cached waker, if it exists.
+Задача считается завершённой, когда она возвращает `Poll::Ready`. В этом случае мы удаляем её из дерева `tasks` с помощью метода [`BTreeMap::remove`]. Мы также удаляем её кэшированный waker, если он существует.
 
 [`BTreeMap::remove`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html#method.remove
 
 #### Waker Design
 
-The job of the waker is to push the ID of the woken task to the `task_queue` of the executor. We implement this by creating a new `TaskWaker` struct that stores the task ID and a reference to the `task_queue`:
+Задача waker — добавить идентификатор разбуженной задачи в `task_queue` исполнителя. Мы реализуем это, создавая новую структуру `TaskWaker`, которая хранит идентификатор задачи и ссылку на `task_queue`:
 
 ```rust
-// in src/task/executor.rs
+// src/task/executor.rs
 
 struct TaskWaker {
     task_id: TaskId,
@@ -1616,14 +1616,14 @@ struct TaskWaker {
 }
 ```
 
-Since the ownership of the `task_queue` is shared between the executor and wakers, we use the [`Arc`] wrapper type to implement shared reference-counted ownership.
+Поскольку владение `task_queue` разделяется между исполнителем и wakers, мы используем обёртку типа [`Arc`] для реализации совместного владения с подсчётом ссылок.
 
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
 
-The implementation of the wake operation is quite simple:
+Реализация операции пробуждения довольно проста:
 
 ```rust
-// in src/task/executor.rs
+// src/task/executor.rs
 
 impl TaskWaker {
     fn wake_task(&self) {
@@ -1632,18 +1632,18 @@ impl TaskWaker {
 }
 ```
 
-We push the `task_id` to the referenced `task_queue`. Since modifications to the [`ArrayQueue`] type only require a shared reference, we can implement this method on `&self` instead of `&mut self`.
+Мы добавляем `task_id` в ссылку на `task_queue`. Поскольку модификации типа [`ArrayQueue`] требуют только совместной ссылки, мы можем реализовать этот метод на `&self`, а не на `&mut self`.
 
 ##### The `Wake` Trait
 
-In order to use our `TaskWaker` type for polling futures, we need to convert it to a [`Waker`] instance first. This is required because the [`Future::poll`] method takes a [`Context`] instance as an argument, which can only be constructed from the `Waker` type. While we could do this by providing an implementation of the [`RawWaker`] type, it's both simpler and safer to instead implement the `Arc`-based [`Wake`][wake-trait] trait and then use the [`From`] implementations provided by the standard library to construct the `Waker`.
+Чтобы использовать наш тип `TaskWaker` для опроса futures, нам нужно сначала преобразовать его в экземпляр [`Waker`]. Это необходимо, потому что метод [`Future::poll`] принимает экземпляр [`Context`] в качестве аргумента, который можно создать только из типа `Waker`. Хотя мы могли бы сделать это, предоставив реализацию типа [`RawWaker`], проще и безопаснее реализовать трейт [`Wake`][wake-trait] на основе `Arc` и затем использовать реализации [`From`], предоставленные стандартной библиотекой, для создания `Waker`.
 
-The trait implementation looks like this:
+Реализация трейта выглядит следующим образом:
 
 [wake-trait]: https://doc.rust-lang.org/nightly/alloc/task/trait.Wake.html
 
 ```rust
-// in src/task/executor.rs
+// src/task/executor.rs
 
 use alloc::task::Wake;
 
@@ -1658,18 +1658,18 @@ impl Wake for TaskWaker {
 }
 ```
 
-Since wakers are commonly shared between the executor and the asynchronous tasks, the trait methods require that the `Self` instance is wrapped in the [`Arc`] type, which implements reference-counted ownership. This means that we have to move our `TaskWaker` to an `Arc` in order to call them.
+Поскольку wakers обычно разделяются между исполнителем и асинхронными задачами, методы трейта требуют, чтобы экземпляр `Self` был обёрнут в тип [`Arc`], который реализует владение с подсчётом ссылок. Это означает, что нам нужно переместить наш `TaskWaker` в `Arc`, чтобы вызвать их.
 
-The difference between the `wake` and `wake_by_ref` methods is that the latter only requires a reference to the `Arc`, while the former takes ownership of the `Arc` and thus often requires an increase of the reference count. Not all types support waking by reference, so implementing the `wake_by_ref` method is optional. However, it can lead to better performance because it avoids unnecessary reference count modifications. In our case, we can simply forward both trait methods to our `wake_task` function, which requires only a shared `&self` reference.
+Разница между методами `wake` и `wake_by_ref` заключается в том, что последний требует только ссылки на `Arc`, в то время как первый забирает владение `Arc` и, следовательно, часто требует увеличения счётчика ссылок. Не все типы поддерживают пробуждение по ссылке, поэтому реализация метода `wake_by_ref` является необязательной. Однако это может привести к лучшей производительности, так как избегает ненужных модификаций счётчика ссылок. В нашем случае мы можем просто перенаправить оба метода трейта к нашей функции `wake_task`, которая требует только совместимой ссылки `&self`.
 
 ##### Creating Wakers
 
-Since the `Waker` type supports [`From`] conversions for all `Arc`-wrapped values that implement the `Wake` trait, we can now implement the `TaskWaker::new` function that is required by our `Executor::run_ready_tasks` method:
+Поскольку тип `Waker` поддерживает преобразования [`From`] для всех значений, обёрнутых в `Arc`, которые реализуют трейт `Wake`, мы теперь можем реализовать функцию `TaskWaker::new`, которая требуется для метода `Executor::run_ready_tasks`:
 
 [`From`]: https://doc.rust-lang.org/nightly/core/convert/trait.From.html
 
 ```rust
-// in src/task/executor.rs
+// src/task/executor.rs
 
 impl TaskWaker {
     fn new(task_id: TaskId, task_queue: Arc<ArrayQueue<TaskId>>) -> Waker {
@@ -1681,16 +1681,16 @@ impl TaskWaker {
 }
 ```
 
-We create the `TaskWaker` using the passed `task_id` and `task_queue`. We then wrap the `TaskWaker` in an `Arc` and use the `Waker::from` implementation to convert it to a [`Waker`]. This `from` method takes care of constructing a [`RawWakerVTable`] and a [`RawWaker`] instance for our `TaskWaker` type. In case you're interested in how it works in detail, check out the [implementation in the `alloc` crate][waker-from-impl].
+Мы создаём `TaskWaker`, используя переданные `task_id` и `task_queue`. Затем мы оборачиваем `TaskWaker` в `Arc` и используем реализацию `Waker::from`, чтобы преобразовать его в [`Waker`]. Этот метод `from` заботится о создании экземпляра [`RawWakerVTable`] и [`RawWaker`] для нашего типа `TaskWaker`. Если вам интересно, как это работает в деталях, ознакомьтесь с [реализацией в crate `alloc`][waker-from-impl].
 
 [waker-from-impl]: https://github.com/rust-lang/rust/blob/cdb50c6f2507319f29104a25765bfb79ad53395c/src/liballoc/task.rs#L58-L87
 
 #### A `run` Method
 
-With our waker implementation in place, we can finally construct a `run` method for our executor:
+С нашей реализацией waker мы наконец можем создать метод `run` для нашего исполнителя:
 
 ```rust
-// in src/task/executor.rs
+// src/task/executor.rs
 
 impl Executor {
     pub fn run(&mut self) -> ! {
@@ -1701,51 +1701,51 @@ impl Executor {
 }
 ```
 
-This method just calls the `run_ready_tasks` function in a loop. While we could theoretically return from the function when the `tasks` map becomes empty, this would never happen since our `keyboard_task` never finishes, so a simple `loop` should suffice. Since the function never returns, we use the `!` return type to mark the function as [diverging] to the compiler.
+Этот метод просто вызывает функцию `run_ready_tasks` в цикле. Хотя теоретически мы могли бы выйти из функции, когда карта `tasks` станет пустой, этого никогда не произойдёт, так как наша `keyboard_task` никогда не завершается, поэтому простого `loop` будет достаточено. Поскольку функция никогда не возвращается, мы используем тип возвращаемого значения `!`, чтобы пометить функцию как [расходящуюся][diverging] для компилятора.
 
 [diverging]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
-We can now change our `kernel_main` to use our new `Executor` instead of the `SimpleExecutor`:
+Теперь мы можем изменить наш `kernel_main`, чтобы использовать наш новый `Executor` вместо `SimpleExecutor`:
 
 ```rust
-// in src/main.rs
+// src/main.rs
 
-use blog_os::task::executor::Executor; // new
+use blog_os::task::executor::Executor; // новое
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    // […] initialization routines, including init_heap, test_main
+    // […] инициализация всякого, включая init_heap, test_main
 
-    let mut executor = Executor::new(); // new
+    let mut executor = Executor::new(); // новое
     executor.spawn(Task::new(example_task()));
     executor.spawn(Task::new(keyboard::print_keypresses()));
     executor.run();
 }
 ```
 
-We only need to change the import and the type name. Since our `run` function is marked as diverging, the compiler knows that it never returns, so we no longer need a call to `hlt_loop` at the end of our `kernel_main` function.
+Нам нужно только изменить импорт и имя типа. Поскольку наша функция `run` помечена как расходящаяся, компилятор знает, что она никогда не возвращается, поэтому нам больше не нужно вызывать `hlt_loop` в конце функции `kernel_main`.
 
-When we run our kernel using `cargo run` now, we see that keyboard input still works:
+Когда мы теперь запускаем наше ядро с помощью `cargo run`, мы видим, что ввод с клавиатуры всё ещё работает:
 
-![QEMU printing ".....H...e...l...l..o..... ...a..g..a....i...n...!"](qemu-keyboard-output-again.gif)
+![QEMU печатает ".....H...e...l...l..o..... ...a..g..a....i...n...!"](qemu-keyboard-output-again.gif)
 
-However, the CPU utilization of QEMU did not get any better. The reason for this is that we still keep the CPU busy the whole time. We no longer poll tasks until they are woken again, but we still check the `task_queue` in a busy loop. To fix this, we need to put the CPU to sleep if there is no more work to do.
+Тем не менее загрузка процессора QEMU не уменьшилась. Причина в том, что мы по-прежнему загружаем процессор всё время. Мы больше не опрашиваем задачи, пока они не будут пробуждены снова, но мы всё же проверяем `task_queue` в цикле с занятым ожиданием. Чтобы это исправить, нам нужно перевести процессор в спящий режим, если больше нет работы.
 
 #### Sleep If Idle
 
-The basic idea is to execute the [`hlt` instruction] when the `task_queue` is empty. This instruction puts the CPU to sleep until the next interrupt arrives. The fact that the CPU immediately becomes active again on interrupts ensures that we can still directly react when an interrupt handler pushes to the `task_queue`.
+Основная идея в том, чтобы выполнять [инструкцию `hlt`][[`hlt` instruction]] при пустой `task_queue`. Эта инструкция ставит процессор в спящий режим до следующего прерывания. Факт, что процессор немедленно активируется снова при возникновении прерывания, обеспечивает возможность прямой реакции, когда обработчик прерываний добавляет задачу в `task_queue`.
 
 [`hlt` instruction]: https://en.wikipedia.org/wiki/HLT_(x86_instruction)
 
-To implement this, we create a new `sleep_if_idle` method in our executor and call it from our `run` method:
+Для реализации этого мы создаём новый метод `sleep_if_idle` в нашем исполнителе и вызываем его из метода `run`:
 
 ```rust
-// in src/task/executor.rs
+// src/task/executor.rs
 
 impl Executor {
     pub fn run(&mut self) -> ! {
         loop {
             self.run_ready_tasks();
-            self.sleep_if_idle();   // new
+            self.sleep_if_idle();   // новое
         }
     }
 
@@ -1757,30 +1757,30 @@ impl Executor {
 }
 ```
 
-Since we call `sleep_if_idle` directly after `run_ready_tasks`, which loops until the `task_queue` becomes empty, checking the queue again might seem unnecessary. However, a hardware interrupt might occur directly after `run_ready_tasks` returns, so there might be a new task in the queue at the time the `sleep_if_idle` function is called. Only if the queue is still empty, do we put the CPU to sleep by executing the `hlt` instruction through the [`instructions::hlt`] wrapper function provided by the [`x86_64`] crate.
+Поскольку мы вызываем `sleep_if_idle` сразу после `run_ready_tasks`, который циклично выполняется до тех пор, пока `task_queue` не станет пустой, проверка очереди может показаться ненужной. Однако аппаратное прерывание может произойти сразу после того, как `run_ready_tasks` возвращает, поэтому в момент вызова функции `sleep_if_idle` может оказаться новая задача в очереди. Только если очередь всё ещё пуста, мы ставим процессор в спящий режим, выполняя инструкцию `hlt` через обёрточную функцию [`instructions::hlt`], предоставляемую библиотекой [`x86_64`].
 
 [`instructions::hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/fn.hlt.html
 [`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/index.html
 
-Unfortunately, there is still a subtle race condition in this implementation. Since interrupts are asynchronous and can happen at any time, it is possible that an interrupt happens right between the `is_empty` check and the call to `hlt`:
+К сожалению, в этой реализации всё ещё присутствует небольшой race condition. Т.к. прерывания асинхронные и могут происходить в любое время, возможно, что прерывание произойдёт сразу между проверкой `is_empty` и вызовом `hlt`:
 
 ```rust
 if self.task_queue.is_empty() {
-    /// <--- interrupt can happen here
+    /// <--- прерывание может быть тут
     x86_64::instructions::hlt();
 }
 ```
 
-In case this interrupt pushes to the `task_queue`, we put the CPU to sleep even though there is now a ready task. In the worst case, this could delay the handling of a keyboard interrupt until the next keypress or the next timer interrupt. So how do we prevent it?
+Если это прерывание добавляет задачу в `task_queue`, мы ставим процессор в спящий режим, даже несмотря на то, что теперь есть готовая задача. В худшем случае это может задержать обработку прерывания клавиатуры до следующего нажатия клавиши или следующего таймерного прерывания. Как же нам этого избежать?
 
-The answer is to disable interrupts on the CPU before the check and atomically enable them again together with the `hlt` instruction. This way, all interrupts that happen in between are delayed after the `hlt` instruction so that no wake-ups are missed. To implement this approach, we can use the [`interrupts::enable_and_hlt`][`enable_and_hlt`] function provided by the [`x86_64`] crate.
+Ответ заключается в том, чтобы отключить прерывания на процессоре перед проверкой и атомарно включить их снова вместе с инструкцией `hlt`. Таким образом, все прерывания, которые происходят между этими действиями, будут отложены после инструкции `hlt`, чтобы не пропустить никаких пробуждений. Для реализации этого подхода мы можем использовать функцию [`interrupts::enable_and_hlt`][`enable_and_hlt`], предоставляемую библиотекой [`x86_64`].
 
 [`enable_and_hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
-The updated implementation of our `sleep_if_idle` function looks like this:
+Обновлённая реализация нашей функции `sleep_if_idle` выглядит следующим образом:
 
 ```rust
-// in src/task/executor.rs
+// src/task/executor.rs
 
 impl Executor {
     fn sleep_if_idle(&self) {
@@ -1796,18 +1796,18 @@ impl Executor {
 }
 ```
 
-To avoid race conditions, we disable interrupts before checking whether the `task_queue` is empty. If it is, we use the [`enable_and_hlt`] function to enable interrupts and put the CPU to sleep as a single atomic operation. In case the queue is no longer empty, it means that an interrupt woke a task after `run_ready_tasks` returned. In that case, we enable interrupts again and directly continue execution without executing `hlt`.
+Чтобы избежать состояний гонки, мы отключаем прерывания перед проверкой, пуста ли `task_queue`. Если она пуста, мы используем функцию [`enable_and_hlt`], чтобы включить прерывания и поставить процессор в спящий режим в рамках одной атомарной операции. Если очередь больше не пуста, это означает, что прерывание пробудило задачу после возврата `run_ready_tasks`. В этом случае мы снова включаем прерывания и продолжаем выполнение, не выполняя `hlt`.
 
-Now our executor properly puts the CPU to sleep when there is nothing to do. We can see that the QEMU process has a much lower CPU utilization when we run our kernel using `cargo run` again.
+Теперь наш исполнитель правильно ставит процессор в спящий режим, когда задач нету. Мы можем видеть, что загрузка процессора QEMU значительно снизилась, когда мы снова запускаем наше ядро с помощью `cargo run`.
 
 #### Possible Extensions
 
-Our executor is now able to run tasks in an efficient way. It utilizes waker notifications to avoid polling waiting tasks and puts the CPU to sleep when there is currently no work to do. However, our executor is still quite basic, and there are many possible ways to extend its functionality:
+Наш исполнитель теперь способен эффективно выполнять задачи. Он использует уведомления waker, чтобы избежать опроса ожидающих задач, и переводит процессор в спящий режим, когда задач нету. Однако наш исполнитель всё ещё довольно примитивный, и существует множество способов расширить его функциональность:
 
-- **Scheduling**: For our `task_queue`, we currently use the [`VecDeque`] type to implement a _first in first out_ (FIFO) strategy, which is often also called _round robin_ scheduling. This strategy might not be the most efficient for all workloads. For example, it might make sense to prioritize latency-critical tasks or tasks that do a lot of I/O. See the [scheduling chapter] of the [_Operating Systems: Three Easy Pieces_] book or the [Wikipedia article on scheduling][scheduling-wiki] for more information.
-- **Task Spawning**: Our `Executor::spawn` method currently requires a `&mut self` reference and is thus no longer available after invoking the `run` method. To fix this, we could create an additional `Spawner` type that shares some kind of queue with the executor and allows task creation from within tasks themselves. The queue could be the `task_queue` directly or a separate queue that the executor checks in its run loop.
-- **Utilizing Threads**: We don't have support for threads yet, but we will add it in the next post. This will make it possible to launch multiple instances of the executor in different threads. The advantage of this approach is that the delay imposed by long-running tasks can be reduced because other tasks can run concurrently. This approach also allows it to utilize multiple CPU cores.
-- **Load Balancing**: When adding threading support, it becomes important to know how to distribute the tasks between the executors to ensure that all CPU cores are utilized. A common technique for this is [_work stealing_].
+- **Планирование**: Для нашей `task_queue` мы в настоящее время используем тип [`VecDeque`] для реализации стратегии _первый пришёл — первый вышел_ (FIFO), которая часто также называется _круговым_ планированием. Эта стратегия может быть не самой эффективной для всех нагрузок. Например, имеет смысл приоритизировать задачи с критической задержкой или задачи, выполняющие много ввода-вывода. Для получения дополнительной информации смотрите [главу о планировании][scheduling chapter] книги [_Operating Systems: Three Easy Pieces_] или [статью в Википедии о планировании][scheduling-wiki].
+- **Создание задач**: Сейчас метод `Executor::spawn` требует ссылки `&mut self`, и поэтому он недоступен после вызова метода `run`. Чтобы это исправить, мы могли бы создать дополнительный тип `Spawner`, который делит какую-то очередь с исполнителем и позволяет создавать задачи изнутри самих задач. Очередь может быть `task_queue` напрямую или отдельной очередью, которую исполнитель проверяет в своём цикле выполнения.
+- **Использование потоков**: У нас пока нет поддержки потоков, но мы добавим её в следующем посте. Это сделает возможным запуск нескольких экземпляров исполнителя в разных потоках. Преимущество этого подхода заключается в том, что задержка, вызванная длительными задачами, может быть уменьшена, так как другие задачи могут выполняться параллельно. Этот подход также позволяет использовать несколько ядер процессора.
+- **Балансировка нагрузки**: При добавлении поддержки потоков становится важно быть в курсе, как распределяются задачи между исполнителями, чтобы обеспечить использование всех ядер процессора. Распространённой техникой для этого является [_work stealing_].
 
 [scheduling chapter]: http://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched.pdf
 [_Operating Systems: Three Easy Pieces_]: http://pages.cs.wisc.edu/~remzi/OSTEP/
@@ -1816,18 +1816,18 @@ Our executor is now able to run tasks in an efficient way. It utilizes waker not
 
 ## Summary
 
-We started this post by introducing **multitasking** and differentiating between _preemptive_ multitasking, which forcibly interrupts running tasks regularly, and _cooperative_ multitasking, which lets tasks run until they voluntarily give up control of the CPU.
+Мы начали этот пост с введения в **мультизадачность** и различия между _вытесняемой_ мультизадачностью, которая регулярно принудительно прерывает выполняющиеся задачи, и _кооперативной_ мультизадачностью, которая позволяет задачам выполняться до тех пор, пока они добровольно не отдадут управление процессором.
 
-We then explored how Rust's support of **async/await** provides a language-level implementation of cooperative multitasking. Rust bases its implementation on top of the polling-based `Future` trait, which abstracts asynchronous tasks. Using async/await, it is possible to work with futures almost like with normal synchronous code. The difference is that asynchronous functions return a `Future` again, which needs to be added to an executor at some point in order to run it.
+Затем мы исследовали, как поддержка Rust **async/await** предоставляет реализацию кооперативной мультизадачности на уровне языка. Rust основывает свою реализацию на поллинговом трейте `Future`, который абстрагирует асинхронные задачи. С использованием async/await возможно работать с futures почти так же, как с обычным синхронным кодом. Разница заключается в том, что асинхронные функции снова возвращают `Future`, который в какой-то момент должен быть добавлен в исполнитель для запуска.
 
-Behind the scenes, the compiler transforms async/await code to _state machines_, with each `.await` operation corresponding to a possible pause point. By utilizing its knowledge about the program, the compiler is able to save only the minimal state for each pause point, resulting in a very small memory consumption per task. One challenge is that the generated state machines might contain _self-referential_ structs, for example when local variables of the asynchronous function reference each other. To prevent pointer invalidation, Rust uses the `Pin` type to ensure that futures cannot be moved in memory anymore after they have been polled for the first time.
+За кулисами компилятор преобразует код async/await в _конечный автомат_, при этом каждая операция `.await` соответствует возможной точке остановки. Используя свои знания о программе, компилятор может сохранять только минимальное состояние для каждой точки остановки, что приводит к очень низкому потреблению памяти на задачу. Одной из проблем является то, что сгенерированные автоматы могут содержать _самоссылающиеся_ структуры, например, когда локальные переменные асинхронной функции ссылаются друг на друга. Чтобы избежать недействительных указателей, Rust использует тип `Pin`, чтобы гарантировать, что futures не могут быть перемещены в памяти после их первого опроса.
 
-For our **implementation**, we first created a very basic executor that polls all spawned tasks in a busy loop without using the `Waker` type at all. We then showed the advantage of waker notifications by implementing an asynchronous keyboard task. The task defines a static `SCANCODE_QUEUE` using the mutex-free `ArrayQueue` type provided by the `crossbeam` crate. Instead of handling keypresses directly, the keyboard interrupt handler now puts all received scancodes in the queue and then wakes the registered `Waker` to signal that new input is available. On the receiving end, we created a `ScancodeStream` type to provide a `Future` resolving to the next scancode in the queue. This made it possible to create an asynchronous `print_keypresses` task that uses async/await to interpret and print the scancodes in the queue.
+Для нашей **реализации** мы сначала создали очень простой исполнитель, который опрашивает все запущенные задачи в цикле с занятым ожиданием, не используя тип `Waker`. Затем мы продемонстрировали преимущество уведомлений waker, реализовав асинхронную задачу клавиатуры. Задача определяет статический `SCANCODE_QUEUE`, используя неблокирующий тип `ArrayQueue`, предоставленный библиотекой `crossbeam`. Вместо непосредственной обработки нажатий клавиш, обработчик прерываний клавиатуры теперь помещает все полученные скан-коды в очередь и затем пробуждает зарегистрированный `Waker`, чтобы сигнализировать, что новый ввод доступен. На принимающей стороне мы создали тип `ScancodeStream`, чтобы предоставить `Future`, разрешающийся в следующий скан-код в очереди. Это сделало возможным создание асинхронной задачи `print_keypresses`, которая использует async/await для интерпретации и вывода скан-кодов в очереди.
 
-To utilize the waker notifications of the keyboard task, we created a new `Executor` type that uses an `Arc`-shared `task_queue` for ready tasks. We implemented a `TaskWaker` type that pushes the ID of woken tasks directly to this `task_queue`, which are then polled again by the executor. To save power when no tasks are runnable, we added support for putting the CPU to sleep using the `hlt` instruction. Finally, we discussed some potential extensions to our executor, for example, providing multi-core support.
+Чтобы использовать уведомления waker для задачи клавиатуры, мы создали новый тип `Executor`, который использует совместно используемую `task_queue` на основе `Arc` для готовых задач. Мы реализовали тип `TaskWaker`, который добавляет идентификаторы разбуженных задач непосредственно в эту `task_queue`, которые затем снова опрашиваются исполнителем. Чтобы сэкономить энергию, когда нет запущенных задач, мы добавили поддержку перевода процессора в спящий режим с использованием инструкции `hlt`. Наконец, мы обсудили некоторые потенциальные расширения для нашего исполнителя, например, предоставление поддержки многопроцессорности.
 
 ## What's Next?
 
-Using async/wait, we now have basic support for cooperative multitasking in our kernel. While cooperative multitasking is very efficient, it leads to latency problems when individual tasks keep running for too long, thus preventing other tasks from running. For this reason, it makes sense to also add support for preemptive multitasking to our kernel.
+Используя async/await, мы теперь имеем базовую поддержку кооперативной мультизадачности в нашем ядре. Хотя кооперативная мультизадачность очень эффективна, она может привести к проблемам с задержкой, когда отдельные задачи выполняются слишком долго, тем самым препятствуя выполнению других задач. По этой причине имеет смысл также добавить поддержку вытесняющей мультизадачности в наше ядро.
 
-In the next post, we will introduce _threads_ as the most common form of preemptive multitasking. In addition to resolving the problem of long-running tasks, threads will also prepare us for utilizing multiple CPU cores and running untrusted user programs in the future.
+В следующем посте мы введём _потоки_ как наиболее распространённую форму вытесняющей мультизадачности. В дополнение к решению проблемы долгозадачных задач, потоки также подготовят нас к использованию нескольких ядер процессора и запуску ненадежных пользовательских программ в будущем.
