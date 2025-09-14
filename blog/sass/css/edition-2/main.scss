@@ -1050,8 +1050,7 @@ img {
     cursor: pointer;
     opacity: 0.6;
 
-    display: none; // Remove CSS-based visibility logic entirely
-
+    display: none;
     [data-theme="dark"] & {
         @include light-switch-reset-dark();
     }
