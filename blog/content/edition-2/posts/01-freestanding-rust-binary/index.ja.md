@@ -57,12 +57,12 @@ Rust で OS カーネルを書くには、基盤となる OS なしで動く実�
 新しい Cargo プロジェクトをつくるところから始めましょう。もっとも簡単なやり方はコマンドラインで以下を実行することです。
 
 ```bash
-cargo new blog_os --bin --edition 2018
+cargo new blog_os --bin --edition 2024
 ```
 
-プロジェクト名を `blog_os` としましたが、もちろんお好きな名前をつけていただいても大丈夫です。`--bin`フラグは実行可能バイナリを作成することを、 `--edition 2018` は[2018エディション][2018 edition]を使用することを明示的に指定します。コマンドを実行すると、 Cargoは以下のようなディレクトリ構造を作成します:
+プロジェクト名を `blog_os` としましたが、もちろんお好きな名前をつけていただいても大丈夫です。`--bin`フラグは実行可能バイナリを作成することを、 `--edition 2024` は[2024エディション][2024 edition]を使用することを明示的に指定します。コマンドを実行すると、 Cargoは以下のようなディレクトリ構造を作成します:
 
-[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
+[2024 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2024/index.html
 
 ```bash
 blog_os

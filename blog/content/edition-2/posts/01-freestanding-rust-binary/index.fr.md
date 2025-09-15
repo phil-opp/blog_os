@@ -54,12 +54,12 @@ Par défaut, toutes les crates Rust sont liées à la bibliothèque standard, qu
 Nous commençons par créer un nouveau projet d'application cargo. La manière la plus simple de faire est avec la ligne de commande : 
 
 ```
-cargo new blog_os --bin --edition 2018
+cargo new blog_os --bin --edition 2024
 ```
 
-J'ai nommé le projet `blog_os`, mais vous pouvez évidemment choisir le nom qu'il vous convient. Le flag `--bin` indique que nous voulons créer un exécutable (contrairement à une bibliothèque) et le flag `--edition 2018` indique que nous voulons utiliser l'[édition 2018] de Rust pour notre crate. Quand nous lançons la commande, cargo crée la structure de répertoire suivante pour nous :
+J'ai nommé le projet `blog_os`, mais vous pouvez évidemment choisir le nom qu'il vous convient. Le flag `--bin` indique que nous voulons créer un exécutable (contrairement à une bibliothèque) et le flag `--edition 2024` indique que nous voulons utiliser l'[édition 2024] de Rust pour notre crate. Quand nous lançons la commande, cargo crée la structure de répertoire suivante pour nous :
 
-[édition 2018]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
+[édition 2024]: https://doc.rust-lang.org/nightly/edition-guide/rust-2024/index.html
 
 ```
 blog_os

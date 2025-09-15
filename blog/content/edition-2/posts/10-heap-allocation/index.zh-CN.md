@@ -54,7 +54,7 @@ fn inner(i: usize) -> &'static u32 {
     &z[i]
 }
 ```
-[在 playground 上运行示例](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=6186a0f3a54f468e1de8894996d12819)
+[在 playground 上运行示例](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=6186a0f3a54f468e1de8894996d12819)
 
 在此示例中返回局部变量的引用没有意义，但在某些情况下，我们希望变量的生命周期超过函数。例如，在我们的内核中加载中断描述符表时，我们需要使用 `static` 变量来延长生命周期。
 
@@ -156,7 +156,7 @@ println!("{}", x);
 这就是 Rust 的所有权起作用的地方。它通过为每个引用分配一个抽象[生命周期][lifetime]（引用有效的范围）解决此问题。在上述示例中，`x` 引用了 `z` 数组，因此在 `z` 超出作用域后失效。在 [playground][playground-2] 运行上述代码，Rust 编译器会报错：
 
 [lifetime]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html
-[playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=28180d8de7b62c6b4a681a7b1f745a48
+[playground-2]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=28180d8de7b62c6b4a681a7b1f745a48
 
 ```
 error[E0597]: `z[_]` does not live long enough
@@ -165,6 +165,7 @@ error[E0597]: `z[_]` does not live long enough
 2 |     let x = {
   |         - borrow later stored here
 3 |         let z = Box::new([1,2,3]);
+  |             - binding `z` declared here
 4 |         &z[1]
   |         ^^^^^ borrowed value does not live long enough
 5 |     }; // z goes out of scope and `deallocate` is called
@@ -433,7 +434,7 @@ pub fn init_heap(
 [`None`]: https://doc.rust-lang.org/core/option/enum.Option.html#variant.None
 [`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
 [`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
-[question mark operator]: https://doc.rust-lang.org/edition-guide/rust-2018/error-handling-and-panics/the-question-mark-operator-for-easier-error-handling.html
+[question mark operator]: https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html
 [`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
 [_translation lookaside buffer_]: @/edition-2/posts/08-paging-introduction/index.md#the-translation-lookaside-buffer
 [`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush

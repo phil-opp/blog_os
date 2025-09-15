@@ -56,12 +56,12 @@ Comenzamos creando un nuevo proyecto de aplicación en Cargo. La forma más fác
 
 
 ```
-cargo new blog_os --bin --edition 2018
+cargo new blog_os --bin --edition 2024
 ```
 
-Nombré el proyecto `blog_os`, pero, por supuesto, puedes elegir tu propio nombre. La bandera `--bin` especifica que queremos crear un binario ejecutable (en contraste con una biblioteca), y la bandera `--edition 2018` indica que queremos usar la [edición 2018] de Rust para nuestro crate. Al ejecutar el comando, Cargo crea la siguiente estructura de directorios para nosotros:
+Nombré el proyecto `blog_os`, pero, por supuesto, puedes elegir tu propio nombre. La bandera `--bin` especifica que queremos crear un binario ejecutable (en contraste con una biblioteca), y la bandera `--edition 2024` indica que queremos usar la [edición 2024] de Rust para nuestro crate. Al ejecutar el comando, Cargo crea la siguiente estructura de directorios para nosotros:
 
-[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
+[2024 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2024/index.html
 
 ```
 blog_os

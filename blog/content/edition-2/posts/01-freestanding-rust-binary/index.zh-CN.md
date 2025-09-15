@@ -45,12 +45,12 @@ translation_contributors = ["JiangengDong"]
 我们可以从创建一个新的 cargo 项目开始。最简单的办法是使用下面的命令：
 
 ```bash
-cargo new blog_os --bin --edition 2018
+cargo new blog_os --bin --edition 2024
 ```
 
-在这里我把项目命名为 `blog_os`，当然读者也可以选择自己的项目名称。默认情况下，即使不显式指定，cargo 也会为我们添加`--bin` 选项，说明我们将要创建一个可执行文件（而不是一个库）； 另外 `--edition 2018` 参数指明了项目的包要使用 Rust 的 **2018 版次**（[2018 edition]），但在默认情况下，该参数会指向本地安装的最新版本。当我们成功执行这行指令后，cargo 为我们创建的目录结构如下：
+在这里我把项目命名为 `blog_os`，当然读者也可以选择自己的项目名称。默认情况下，即使不显式指定，cargo 也会为我们添加`--bin` 选项，说明我们将要创建一个可执行文件（而不是一个库）； 另外 `--edition 2024` 参数指明了项目的包要使用 Rust 的 **2024 版次**（[2024 edition]），但在默认情况下，该参数会指向本地安装的最新版本。当我们成功执行这行指令后，cargo 为我们创建的目录结构如下：
 
-[2018 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2018/index.html
+[2024 edition]: https://doc.rust-lang.org/nightly/edition-guide/rust-2024/index.html
 
 ```
 blog_os

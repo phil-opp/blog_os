@@ -7,7 +7,7 @@ date = 2020-03-27
 [extra]
 chapter = "Multitasking"
 # Please update this when updating the translation
-translation_based_on_commit = "f2966a53489a1c3eff3e5c3c1c82a3febb47569b"
+translation_based_on_commit = "b2e12433b94a39d2437c2a472a3fd7cc4c22edab"
 # GitHub usernames of the people that translated this post
 translators = ["TakiMoysha"]
 
@@ -17,7 +17,7 @@ translators = ["TakiMoysha"]
 
 <!-- more -->
 
-Этот блог открыто разрабатывается на [GitHub]. Если у вас возникают проблемы или вопросы, пожалуйста, откройте issue. Также вы можете оставлять комментарии [внизу][at the bottom]. Исходный код этого поста можно найти в [`post-12` ветку][post branch].
+Этот блог открыто разрабатывается на [GitHub]. Если у вас возникают проблемы или вопросы, пожалуйста, откройте issue. Также вы можете оставлять комментарии [внизу][at the bottom]. Исходный код этого поста можно найти в [`post-12`][post branch].
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [at the bottom]: #comments
@@ -36,7 +36,7 @@ translators = ["TakiMoysha"]
 
 Одноядерные центральные процессоры (ЦП) могут выполнять только одну задачу за раз, а многоядерные ЦП могут выполнять несколько задач по настоящему параллельно. Например, процессор с 8 ядрами может выполнять 8 задач одновременно. В следующей статье мы расскажем, как настроить многоядерные ЦП <!-- hot to setup multi-core CPUs -->. В этой статье для простоты мы сосредоточимся на одноядерных процессорах. (Стоит отметить, что все многоядерные ЦП запускаются с одним активным ядром, поэтому пока мы можем рассматривать их как одноядерные процессоры).
 
-Есть две формы многозадачности: _кооперативная_ или совместная (_cooperative_) - требует, чтобы задачи регулярно отдавали контроль над процессором для продвижения других задач; _вытесняющая_ или приоритетная () _preemptive_) - использующая функционал операционной системы (ОС) для переключения потоков в произвольные моменты моменты времени через принудительную остановку. Далее мы рассмотрим две формы многозадачности более подробно и обсудим их преимущества и недостатки.
+Есть две формы многозадачности: _кооперативная_ или совместная (_cooperative_) - требует, чтобы задачи регулярно отдавали контроль над процессором для продвижения других задач; _вытесняющая_ или приоритетная (_preemptive_) - использующая функционал операционной системы (ОС) для переключения потоков в произвольные моменты моменты времени через принудительную остановку. Далее мы рассмотрим две формы многозадачности более подробно и обсудим их преимущества и недостатки.
 
 ### Вытесняющая Многозадачность
 
@@ -250,7 +250,7 @@ fn example(min_len: usize) -> impl Future<Output = String> {
 }
 ```
 
-([Попробовать](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=91fc09024eecb2448a85a7ef6a97b8d8))
+([Попробовать](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=91fc09024eecb2448a85a7ef6a97b8d8))
 
 Здесь мы читаем файл `foo.txt`, а затем используем комбинатор [`then`], чтобы связать вторую футуру на основе содержимого файла. Если длина содержимого меньше заданного `min_len`, мы читаем другой файл `bar.txt` и добавляем его к `content` с помощью комбинатора [`map`]. В противном случае возвращаем только содержимое `foo.txt`.
 
@@ -302,7 +302,7 @@ async fn example(min_len: usize) -> String {
 }
 ```
 
-([Попробовать](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=d93c28509a1c67661f31ff820281d434))
+([Попробовать](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=d93c28509a1c67661f31ff820281d434))
 
 Эта ф-ция - прямой перевод `example` написанной [выше](#Недостатки), которая использовала комбинаторы. Используя оператор `.await`, мы можем получить значение футуры без необходимости использования каких-либо замыканий или типов `Either`. В результате, мы можем писать наш код так же, как если бы это был обычный синхронный код, с той лишь разницей, что _это все еще асинхронный код_.
 
@@ -583,7 +583,7 @@ struct SelfReferential {
 
 ([Попробовать][playground-self-ref])
 
-[playground-self-ref]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=ce1aff3a37fcc1c8188eeaf0f39c97e8
+[playground-self-ref]: https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=ce1aff3a37fcc1c8188eeaf0f39c97e8
 
 Мы создаем простую структуру с названием `SelfReferential`, которая содержит только одно поле c указателем. Во-первых, мы инициализируем эту структуру с пустым указателем и затем выделяем место в куче с помощью `Box::new`. Затем мы определяем адрес кучи для выделенной структуры и храним его в переменной `ptr`. В конце концов, мы делаем структуру самоссылающейся, назначив переменную `ptr` полю `self_ptr`.
 
@@ -599,7 +599,7 @@ println!("value at: {:p}", &stack_value);
 println!("internal reference: {:p}", stack_value.self_ptr);
 ```
 
-([Попробовать](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
+([Попробовать](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
 
 Мы используем функцию [`mem::replace`], чтобы заменить значение, выделенное в куче, новым экземпляром структуры. Это позволяет нам переместить исходное значение `heap_value` в стек, в то время как поле `self_ptr` структуры теперь является висящим указателем, который по-прежнему указывает на старый адрес в куче. Когда вы запустите пример в песочнице, вы увидите, что строки _«value at:»_ и _«internal reference:»_, показывают разные указатели. Таким образом, выделение значения в куче недостаточно для обеспечения безопасности самоссылок.
 
@@ -648,10 +648,10 @@ let mut heap_value = Box::pin(SelfReferential {
 
 В дополнение к изменению `Box::new` на `Box::pin`, нам также нужно добавить новое поле `_pin` в инициализатор структуры. Т.к. `PhantomPinned` является типом нулевого размера, нам нужно только его имя типа для инициализации.
 
-Когда мы [попробуем запустить наш скорректированный пример](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=961b0db194bbe851ff4d0ed08d3bd98a) сейчас, он больше не работает:
+Когда мы [попробуем запустить наш скорректированный пример](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=961b0db194bbe851ff4d0ed08d3bd98a) сейчас, он больше не работает:
 
 ```
-error[E0594]: cannot assign to data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+error[E0594]: cannot assign to data in dereference of `Pin<Box<SelfReferential>>`
   --> src/main.rs:10:5
    |
 10 |     heap_value.self_ptr = ptr;
@@ -659,13 +659,13 @@ error[E0594]: cannot assign to data in a dereference of `std::pin::Pin<std::boxe
    |
    = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
 
-error[E0596]: cannot borrow data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>` as mutable
+error[E0596]: cannot borrow data in dereference of `Pin<Box<SelfReferential>>` as mutable
   --> src/main.rs:16:36
    |
 16 |     let stack_value = mem::replace(&mut *heap_value, SelfReferential {
    |                                    ^^^^^^^^^^^^^^^^ cannot borrow as mutable
    |
-   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Pin<Box<SelfReferential>>`
 ```
 
 Обе ошибки возникают потому, что тип `Pin<Box<SelfReferential>>` больше не реализует трейт `DerefMut`. Это именно то, чего мы хотели, поскольку трейт `DerefMut` возвращал бы ссылку `&mut`, что мы и хотели предотвратить. Это происходит только потому, что мы отказались от `Unpin` и изменили `Box::new` на `Box::pin`.
@@ -682,7 +682,7 @@ unsafe {
 }
 ```
 
-([Попробовать](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=b9ebbb11429d9d79b3f9fffe819e2018))
+([Попробовать](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=b9ebbb11429d9d79b3f9fffe819e2018))
 
 Функция [`get_unchecked_mut`] работает с `Pin<&mut T>` вместо `Pin<Box<T>>`, поэтому нам нужно использовать [`Pin::as_mut`] для преобразования значения. Затем мы можем установить поле `self_ptr`, используя ссылку `&mut`, возвращаемую `get_unchecked_mut`.
 
@@ -1836,4 +1836,4 @@ impl Executor {
 
 Используя async/await, мы теперь имеем базовую поддержку кооперативной мультизадачности в нашем ядре. Хотя кооперативная мультизадачность очень эффективна, она может привести к проблемам с задержкой, когда отдельные задачи выполняются слишком долго, тем самым препятствуя выполнению других задач. По этой причине имеет смысл также добавить поддержку вытесняющей мультизадачности в наше ядро.
 
-В следующем посте мы введём _потоки_ как наиболее распространённую форму вытесняющей мультизадачности. В дополнение к решению проблемы долгозадачных задач, потоки также подготовят нас к использованию нескольких ядер процессора и запуску ненадежных пользовательских программ в будущем.
+В следующем посте мы введём _потоки_ как наиболее распространённую форму вытесняющей мультизадачности. В дополнение к решению проблемы длительных задач, потоки также подготовят нас к использованию нескольких ядер процессора и запуску ненадежных пользовательских программ в будущем.

@@ -245,7 +245,7 @@ fn example(min_len: usize) -> impl Future<Output = String> {
 }
 ```
 
-([Pruébalo en el playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=91fc09024eecb2448a85a7ef6a97b8d8))
+([Pruébalo en el playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=91fc09024eecb2448a85a7ef6a97b8d8))
 
 Aquí leemos el archivo `foo.txt` y luego usamos el combinador [`then`] para encadenar un segundo futuro basado en el contenido del archivo. Si la longitud del contenido es menor que lo dado en `min_len`, leemos un archivo diferente `bar.txt` y se lo anexamos a `content` usando el combinador [`map`]. De lo contrario, solo devolvemos el contenido de `foo.txt`.
 
@@ -285,7 +285,7 @@ async fn example(min_len: usize) -> String {
 }
 ```
 
-([Pruébalo en el playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=d93c28509a1c67661f31ff820281d434))
+([Pruébalo en el playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=d93c28509a1c67661f31ff820281d434))
 
 Esta función es una traducción directa de la función `example` de [arriba](#desventajas) que usó funciones combinadoras. Usando el operador `.await`, podemos recuperar el valor de un futuro sin necesitar closures o tipos `Either`. Como resultado, podemos escribir nuestro código como escribimos código síncrono normal, con la diferencia de que _esto sigue siendo código asíncrono_.
 
@@ -580,7 +580,7 @@ println!("valor en: {:p}", &stack_value);
 println!("referencia interna: {:p}", stack_value.self_ptr);
 ```
 
-([Pruébalo en el playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
+([Pruébalo en el playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=e160ee8a64cba4cebc1c0473dcecb7c8))
 
 Aquí usamos la función [`mem::replace`] para reemplazar el valor asignado en el heap con una nueva instancia de estructura. Esto nos permite mover el valor original `heap_value` a la pila, mientras que el campo `self_ptr` de la estructura es ahora un puntero colgante que aún apunta a la antigua dirección del heap. Cuando intentas ejecutar el ejemplo en el playground, verás que las líneas impresas _"valor en:"_ y _"referencia interna:"_ muestran punteros diferentes. Por lo tanto, la asignación de un valor en el heap no es suficiente para hacer que las auto-referencias sean seguras.
 
@@ -629,24 +629,24 @@ let mut heap_value = Box::pin(SelfReferential {
 
 Además de cambiar `Box::new` a `Box::pin`, también necesitamos añadir el nuevo campo `_pin` en el inicializador de la estructura. Dado que `PhantomPinned` es un tipo de tamaño cero, solo necesitamos su nombre de tipo para inicializarlo.
 
-Cuando [intentamos ejecutar nuestro ejemplo ajustado](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=961b0db194bbe851ff4d0ed08d3bd98a) ahora, vemos que ya no funciona:
+Cuando [intentamos ejecutar nuestro ejemplo ajustado](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=961b0db194bbe851ff4d0ed08d3bd98a) ahora, vemos que ya no funciona:
 
 ```
-error[E0594]: cannot assign to data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+error[E0594]: cannot assign to data in dereference of `Pin<Box<SelfReferential>>`
   --> src/main.rs:10:5
    |
 10 |     heap_value.self_ptr = ptr;
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^ cannot assign
    |
-   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Pin<Box<SelfReferential>>`
 
-error[E0596]: cannot borrow data in a dereference of `std::pin::Pin<std::boxed::Box<SelfReferential>>` as mutable
+error[E0596]: cannot borrow data in dereference of `Pin<Box<SelfReferential>>` as mutable
   --> src/main.rs:16:36
    |
 16 |     let stack_value = mem::replace(&mut *heap_value, SelfReferential {
    |                                    ^^^^^^^^^^^^^^^^ cannot borrow as mutable
    |
-   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Pin<Box<SelfReferential>>`
 ```
 
 Ambos errores ocurren porque el tipo `Pin<Box<SelfReferential>>` ya no implementa el trait `DerefMut`. Esto es exactamente lo que queremos porque el trait `DerefMut` devolvería una referencia `&mut`, que queremos prevenir. Esto solo ocurre porque ambos optamos por no implementar `Unpin` y cambiamos `Box::new` a `Box::pin`.
