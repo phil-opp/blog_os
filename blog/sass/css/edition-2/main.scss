@@ -1050,13 +1050,10 @@ img {
     cursor: pointer;
     opacity: 0.6;
 
-    display: none;
-    [data-theme="light"] & {
-        display: inline-block;
-    }
+    display: none; // Remove CSS-based visibility logic entirely
+
     [data-theme="dark"] & {
         @include light-switch-reset-dark();
-        display: inline-block;
     }
 
     @media (min-width: 80rem) {
