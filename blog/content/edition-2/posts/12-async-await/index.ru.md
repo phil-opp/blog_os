@@ -1,7 +1,7 @@
 +++
 title = "Async/Await"
 weight = 12
-path = "async-await"
+path = "ru/async-await"
 date = 2020-03-27
 
 [extra]
