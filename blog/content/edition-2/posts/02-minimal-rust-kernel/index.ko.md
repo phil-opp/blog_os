@@ -308,7 +308,7 @@ cargo 설정 키 `unstable.build-std`를 설정하고 `rust-src` 컴포넌트를
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-이제 `cargo build` 명령어가 `core`, `rustc-std-workspace-cord` (`compiler_builtins`가 필요로 하는 라이브러리) 그리고 `compiler_builtins` 라이브러리를 우리의 커스텀 컴파일 대상을 위해 다시 컴파일하는 것을 확인할 수 있습니다.
+이제 `cargo build` 명령어가 `core`, `rustc-std-workspace-core` (`compiler_builtins`가 필요로 하는 라이브러리) 그리고 `compiler_builtins` 라이브러리를 우리의 커스텀 컴파일 대상을 위해 다시 컴파일하는 것을 확인할 수 있습니다.
 
 #### 메모리 관련 내장 함수
 
