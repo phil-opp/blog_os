@@ -206,7 +206,7 @@ SIMD 레지스터 값들을 메모리에 백업하고 또 다시 복구하는 �
 "rustc-abi": "x86-softfloat"
 ```
 
-As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `rustc-abi` field to `x86-softfloat`.
+`soft-float` 기능을 사용하려면, Rust 컴파일러 `rustc` 에게도 해당 ABI를 사용하겠다고 알려줘야 합니다. 이를 위해 `rustc-abi` 필드를 `x86-softfloat` 으로 설정하면 됩니다.
 
 #### 요약
 컴파일 대상 환경 설정 파일을 아래와 같이 작성합니다:
