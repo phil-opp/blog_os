@@ -40,7 +40,7 @@ x86 시스템에는 두 가지 펌웨어 표준이 존재합니다: 하나는 "B
 [BIOS]: https://en.wikipedia.org/wiki/BIOS
 [UEFI]: https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
 
-우리가 만들 운영체제에서는 BIOS 표준만을 지원할 것이지만, UEFI 표준도 지원하고자 하는 계획이 있습니다. UEFI 표준을 지원할 수 있도록 도와주시고 싶다면 [해당 깃헙 이슈][Github issue]를 확인해주세요.
+우리가 만들 운영체제에서는 BIOS 표준만을 지원할 것이지만, UEFI 표준도 지원하고자 하는 계획이 있습니다. UEFI 표준을 지원할 수 있도록 도와주시고 싶다면 해당 [깃헙 이슈](https://github.com/phil-opp/blog_os/issues/349)를 확인해주세요.
 
 ### BIOS 부팅
 
@@ -206,7 +206,7 @@ SIMD 레지스터 값들을 메모리에 백업하고 또 다시 복구하는 �
 "rustc-abi": "x86-softfloat"
 ```
 
-As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `rustc-abi` field to `x86-softfloat`.
+`soft-float` 기능을 사용하려면, Rust 컴파일러 `rustc` 에게도 해당 ABI를 사용하겠다고 알려줘야 합니다. 이를 위해 `rustc-abi` 필드를 `x86-softfloat` 으로 설정하면 됩니다.
 
 #### 요약
 컴파일 대상 환경 설정 파일을 아래와 같이 작성합니다:
@@ -308,7 +308,7 @@ cargo 설정 키 `unstable.build-std`를 설정하고 `rust-src` 컴포넌트를
     Finished dev [unoptimized + debuginfo] target(s) in 0.29 secs
 ```
 
-이제 `cargo build` 명령어가 `core`, `rustc-std-workspace-cord` (`compiler_builtins`가 필요로 하는 라이브러리) 그리고 `compiler_builtins` 라이브러리를 우리의 커스텀 컴파일 대상을 위해 다시 컴파일하는 것을 확인할 수 있습니다.
+이제 `cargo build` 명령어가 `core`, `rustc-std-workspace-core` (`compiler_builtins`가 필요로 하는 라이브러리) 그리고 `compiler_builtins` 라이브러리를 우리의 커스텀 컴파일 대상을 위해 다시 컴파일하는 것을 확인할 수 있습니다.
 
 #### 메모리 관련 내장 함수
 
