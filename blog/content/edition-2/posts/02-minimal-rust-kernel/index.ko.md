@@ -40,7 +40,7 @@ x86 시스템에는 두 가지 펌웨어 표준이 존재합니다: 하나는 "B
 [BIOS]: https://en.wikipedia.org/wiki/BIOS
 [UEFI]: https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
 
-우리가 만들 운영체제에서는 BIOS 표준만을 지원할 것이지만, UEFI 표준도 지원하고자 하는 계획이 있습니다. UEFI 표준을 지원할 수 있도록 도와주시고 싶다면 [해당 깃헙 이슈][Github issue]를 확인해주세요.
+우리가 만들 운영체제에서는 BIOS 표준만을 지원할 것이지만, UEFI 표준도 지원하고자 하는 계획이 있습니다. UEFI 표준을 지원할 수 있도록 도와주시고 싶다면 해당 [깃헙 이슈](https://github.com/phil-opp/blog_os/issues/349)를 확인해주세요.
 
 ### BIOS 부팅
 
