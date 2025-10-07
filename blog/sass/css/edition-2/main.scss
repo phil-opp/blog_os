@@ -1051,12 +1051,8 @@ img {
     opacity: 0.6;
 
     display: none;
-    [data-theme="light"] & {
-        display: inline-block;
-    }
     [data-theme="dark"] & {
         @include light-switch-reset-dark();
-        display: inline-block;
     }
 
     @media (min-width: 80rem) {
