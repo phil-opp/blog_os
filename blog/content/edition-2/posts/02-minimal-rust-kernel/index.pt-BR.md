@@ -5,7 +5,7 @@ path = "pt-BR/minimal-rust-kernel"
 date = 2018-02-10
 
 [extra]
-chapter = "Bare Bones"
+chapter = "O Básico"
 # Please update this when updating the translation
 translation_based_on_commit = "95d4fbd54c6b0e5a874981558c0cc1fe85d31606"
 # GitHub usernames of the people that translated this post

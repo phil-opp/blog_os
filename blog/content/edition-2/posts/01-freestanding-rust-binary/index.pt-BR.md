@@ -5,6 +5,8 @@ path = "pt-BR/freestanding-rust-binary"
 date = 2018-02-10
 
 [extra]
+chapter = "O Básico"
+
 # Please update this when updating the translation
 translation_based_on_commit = "624f0b7663daca1ce67f297f1c450420fbb4d040"
 

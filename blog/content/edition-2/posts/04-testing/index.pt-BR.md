@@ -5,7 +5,7 @@ path = "pt-BR/testing"
 date = 2019-04-27
 
 [extra]
-chapter = "Bare Bones"
+chapter = "O Básico"
 comments_search_term = 1009
 # Please update this when updating the translation
 translation_based_on_commit = "33b7979468235b8637584e91e4c599cef37d9687"
