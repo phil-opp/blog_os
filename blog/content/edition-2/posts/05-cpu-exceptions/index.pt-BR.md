@@ -215,7 +215,7 @@ A convenção de chamada `x86-interrupt` é uma abstração poderosa que esconde
 Se você estiver interessado em mais detalhes, também temos uma série de postagens que explica a manipulação de exceção usando [funções nuas] vinculadas [no final desta postagem][too-much-magic].
 
 [funções nuas]: https://github.com/rust-lang/rfcs/blob/master/text/1201-naked-fns.md
-[too-much-magic]: #muita-magia
+[too-much-magic]: #muita-magica
 
 ## Implementação
 Agora que entendemos a teoria, é hora de manipular exceções de CPU em nosso kernel. Começaremos criando um novo módulo interrupts em `src/interrupts.rs`, que primeiro cria uma função `init_idt` que cria uma nova `InterruptDescriptorTable`:

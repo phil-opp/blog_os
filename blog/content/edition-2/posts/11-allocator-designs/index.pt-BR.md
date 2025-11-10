@@ -125,7 +125,7 @@ Escolhemos criar uma função `init` separada em vez de realizar a inicializaç�
 
 Como [explicado no post anterior][global-alloc], todos os alocadores heap precisam implementar a trait [`GlobalAlloc`], que é definida assim:
 
-[global-alloc]: @/edition-2/posts/10-heap-allocation/index.md#the-allocator-interface
+[global-alloc]: @/edition-2/posts/10-heap-allocation/index.pt-BR.md#a-interface-do-alocador
 [`GlobalAlloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html
 
 ```rust
@@ -912,7 +912,7 @@ struct ListNode {
 
 Este tipo é similar ao tipo `ListNode` de nossa [implementação de alocador de lista encadeada], com a diferença de que não temos um campo `size`. Ele não é necessário porque cada bloco em uma lista tem o mesmo tamanho com o design de alocador de bloco de tamanho fixo.
 
-[implementação de alocador de lista encadeada]: #the-allocator-type
+[implementação de alocador de lista encadeada]: #o-tipo-alocador
 
 #### Tamanhos de Bloco
 
@@ -947,7 +947,7 @@ pub struct FixedSizeBlockAllocator {
 
 O campo `list_heads` é um array de ponteiros `head`, um para cada tamanho de bloco. Isso é implementado usando o `len()` da slice `BLOCK_SIZES` como o comprimento do array. Como um alocador de fallback para alocações maiores que o maior tamanho de bloco, usamos o alocador fornecido pela crate `linked_list_allocator`. Também poderíamos usar o `LinkedListAllocator` que implementamos nós mesmos em vez disso, mas ele tem a desvantagem de que não [mescla blocos liberados].
 
-[mescla blocos liberados]: #merging-freed-blocks
+[mescla blocos liberados]: #mesclando-blocos-liberados
 
 Para construir um `FixedSizeBlockAllocator`, fornecemos as mesmas funções `new` e `init` que implementamos para os outros tipos de alocadores também:
 
@@ -1005,7 +1005,7 @@ impl FixedSizeBlockAllocator {
 O tipo [`Heap`] da crate `linked_list_allocator` não implementa [`GlobalAlloc`] (já que [não é possível sem bloqueio]). Em vez disso, ele fornece um método [`allocate_first_fit`] que tem uma interface ligeiramente diferente. Em vez de retornar um `*mut u8` e usar um ponteiro nulo para sinalizar um erro, ele retorna um `Result<NonNull<u8>, ()>`. O tipo [`NonNull`] é uma abstração para um ponteiro bruto que é garantido de não ser um ponteiro nulo. Ao mapear o caso `Ok` para o método [`NonNull::as_ptr`] e o caso `Err` para um ponteiro nulo, podemos facilmente traduzir isso de volta para um tipo `*mut u8`.
 
 [`Heap`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html
-[não é possível sem bloqueio]: #globalalloc-and-mutability
+[não é possível sem bloqueio]: #globalalloc-e-mutabilidade
 [`allocate_first_fit`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.allocate_first_fit
 [`NonNull`]: https://doc.rust-lang.org/nightly/core/ptr/struct.NonNull.html
 [`NonNull::as_ptr`]: https://doc.rust-lang.org/nightly/core/ptr/struct.NonNull.html#method.as_ptr
@@ -1099,7 +1099,7 @@ Se o índice da lista for `Some`, tentamos remover o primeiro nó na lista corre
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-Se o head da lista for `None`, indica que a lista de blocos está vazia. Isso significa que precisamos construir um novo bloco como [descrito acima](#creating-new-blocks). Para isso, primeiro obtemos o tamanho do bloco atual da slice `BLOCK_SIZES` e o usamos como tanto o tamanho quanto o alinhamento para o novo bloco. Então criamos um novo `Layout` a partir dele e chamamos o método `fallback_alloc` para realizar a alocação. A razão para ajustar o layout e alinhamento é que o bloco será adicionado à lista de blocos na desalocação.
+Se o head da lista for `None`, indica que a lista de blocos está vazia. Isso significa que precisamos construir um novo bloco como [descrito acima](#criando-novos-blocos). Para isso, primeiro obtemos o tamanho do bloco atual da slice `BLOCK_SIZES` e o usamos como tanto o tamanho quanto o alinhamento para o novo bloco. Então criamos um novo `Layout` a partir dele e chamamos o método `fallback_alloc` para realizar a alocação. A razão para ajustar o layout e alinhamento é que o bloco será adicionado à lista de blocos na desalocação.
 
 #### `dealloc`
 

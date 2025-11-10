@@ -702,7 +702,8 @@ fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 
 A razão pela qual este método recebe `self: Pin<&mut Self>` em vez do `&mut self` normal é que instâncias de future criadas a partir de async/await são frequentemente auto-referenciais, como vimos [acima][self-ref-async-await]. Ao encapsular `Self` em `Pin` e deixar o compilador desistir de `Unpin` para futures auto-referenciais gerados de async/await, é garantido que as futures não sejam movidas na memória entre chamadas `poll`. Isso garante que todas as referências internas ainda são válidas.
 
-[self-ref-async-await]: @/edition-2/posts/12-async-await/index.md#structs-auto-referenciais
+[self-ref-async-await]: @/edition-2/posts/12-async-await/index.md#o-problema-com-structs-auto-referenciais
+
 
 Vale notar que mover futures antes da primeira chamada `poll` é aceitável. Isso é resultado do fato de que futures são preguiçosas e não fazem nada até serem consultadas pela primeira vez. O estado `start` das máquinas de estados geradas, portanto, contém apenas os argumentos da função mas nenhuma referência interna. Para chamar `poll`, o chamador deve encapsular a future em `Pin` primeiro, o que garante que a future não pode ser movida na memória mais. Como fixar em pilha é mais difícil de acertar, recomendo sempre usar [`Box::pin`] combinado com [`Pin::as_mut`] para isso.
 
@@ -1373,7 +1374,7 @@ pub async fn print_keypresses() {
 
 O código é muito similar ao código que tínhamos em nosso [manipulador de interrupção de teclado] antes de modificá-lo neste post. A única diferença é que, em vez de ler o scancode de uma porta de E/S, nós o pegamos do `ScancodeStream`. Para isso, primeiro criamos um novo `Scancode` stream e então usamos repetidamente o método [`next`] fornecido pela trait [`StreamExt`] para obter uma `Future` que resolve para o próximo elemento no stream. Usando o operador `await` nele, aguardamos assincronamente o resultado da future.
 
-[manipulador de interrupção de teclado]: @/edition-2/posts/07-hardware-interrupts/index.md#interpretando-os-scancodes
+[manipulador de interrupção de teclado]: @/edition-2/posts/07-hardware-interrupts/index.pt-BR.md#interpretando-os-scancodes
 [`next`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html#method.next
 [`StreamExt`]: https://docs.rs/futures-util/0.3.4/futures_util/stream/trait.StreamExt.html
 
