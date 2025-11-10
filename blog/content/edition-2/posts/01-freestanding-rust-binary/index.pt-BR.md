@@ -47,7 +47,7 @@ Isso significa que não podemos usar a maior parte da [biblioteca padrão do Rus
 
 Para criar um kernel de sistema operacional em Rust, precisamos criar um executável que possa ser executado sem um sistema operacional subjacente. Esse executável é frequentemente chamado de executável “autônomo” ou “bare-metal”.
 
-Este post descreve as etapas necessárias para criar um binário Rust independente e explica por que essas etapas são necessárias. Se você estiver interessado apenas em um exemplo mínimo, pode **[ir para o sumário](#sumario)**.
+Este post descreve as etapas necessárias para criar um binário Rust independente e explica por que essas etapas são necessárias. Se você estiver interessado apenas em um exemplo mínimo, pode **[ir para o resumo](#resumo)**.
 
 ## Desativando a biblioteca padrão
 Por padrão, todos as crates Rust vinculam a [biblioteca padrão], que depende do sistema operacional para recursos como threads, arquivos ou rede. Ela também depende da biblioteca padrão C `libc`, que interage intimamente com os serviços do sistema operacional. Como nosso plano é escrever um sistema operacional, não podemos usar nenhuma biblioteca dependente de um sistema operacional. 
@@ -458,7 +458,7 @@ Se você quiser criar um binário mínimo que execute em cima de um sistema oper
 
 </details>
 
-## Sumário
+## Resumo
 
 Um binário Rust independente mínimo se parece com isto:
 
