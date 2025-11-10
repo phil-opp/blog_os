@@ -34,7 +34,7 @@ skip_anchor_prefixes = [
     "https://",
 ]
 
-# reat external link issues as warnings instead of build errors
+# Treat external link issues as warnings instead of build errors
 external_level = "warn"
 
 
