@@ -1,7 +1,7 @@
 +++
 title = "Alocação no Heap"
 weight = 10
-path = "heap-allocation"
+path = "pt-BR/heap-allocation"
 date = 2019-06-26
 
 [extra]
