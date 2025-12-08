@@ -151,7 +151,7 @@ Don't worry, you don't need to understand the details.
 ### Long Mode check
 Now we can use CPUID to detect whether long mode can be used. I use code from [OSDev][long mode detection] again:
 
-[long mode detection]: https://wiki.osdev.org/Setting_Up_Long_Mode#x86_or_x86-64
+[long mode detection]: wiki.osdev.org/Setting_Up_Long_Mode#Checking_for_long_mode_support
 
 ```nasm
 check_long_mode:

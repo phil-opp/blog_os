@@ -273,7 +273,7 @@ test-success-exit-code = 33         # (0x10 << 1) | 1
 تراشه‌های پیاده سازی یک رابط سریال [UART] نامیده می‌شوند. در x86 [مدلهای UART زیادی] وجود دارد، اما خوشبختانه تنها تفاوت آنها ویژگی‌های پیشرفته‌ای است که نیازی به آن‌ها نداریم. UART هایِ رایج امروزه همه با [16550 UART] سازگار هستند، بنابراین ما از آن مدل برای فریم‌ورک تست خود استفاده خواهیم کرد.
 
 [UARTs]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
-[مدلهای UART زیادی]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
+[مدلهای UART زیادی]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#Models
 [16550 UART]: https://en.wikipedia.org/wiki/16550_UART
 
 ما از کریت [`uart_16550`] برای شروع اولیه UART و ارسال داده‌ها از طریق پورت سریال استفاده خواهیم کرد. برای افزودن آن به عنوان یک وابستگی، ما `Cargo.toml` و `main.rs` خود را به روز می‌کنیم:

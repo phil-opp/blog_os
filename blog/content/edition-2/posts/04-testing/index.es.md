@@ -277,7 +277,7 @@ Una forma simple de enviar los datos es usar el [puerto serial], un estándar de
 Los chips que implementan una interfaz serial se llaman [UARTs]. Hay [muchos modelos de UART] en x86, pero afortunadamente las únicas diferencias entre ellos son algunas características avanzadas que no necesitamos. Los UART comunes hoy en día son todos compatibles con el [UART 16550], así que utilizaremos ese modelo para nuestro framework de pruebas.
 
 [UARTs]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
-[muchos modelos de UART]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
+[muchos modelos de UART]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#Models
 [UART 16550]: https://en.wikipedia.org/wiki/16550_UART
 
 Usaremos la crate [`uart_16550`] para inicializar el UART y enviar datos a través del puerto serial. Para añadirlo como dependencia, actualizamos nuestro `Cargo.toml` y `main.rs`:

@@ -278,7 +278,7 @@ test-success-exit-code = 33         # (0x10 << 1) | 1
 シリアルインターフェースを実装しているチップは[UART][UARTs]と呼ばれています。x86には[多くのUARTのモデルがありますが][lots of UART models]、幸運なことに、それらの違いは私達の必要としないような高度な機能だけです。今日よく見られるUARTはすべて[16550 UART]に互換性があるので、このモデルを私達のテストフレームワークに使いましょう。
 
 [UARTs]: https://ja.wikipedia.org/wiki/UART
-[lots of UART models]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
+[lots of UART models]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#Models
 [16550 UART]: https://ja.wikipedia.org/wiki/16550_UART
 
 [`uart_16550`]クレートを使ってUARTを初期化しデータをシリアルポートを使って送信しましょう。これを依存先として追加するため、`Cargo.toml`と`main.rs`を書き換えます：
