@@ -597,7 +597,7 @@ pub extern "C" fn _start() -> ! {
 ### printlnマクロ
 大域的なwriterを手に入れたので、プログラムのどこでも使える`println`マクロを追加できます。Rustの[マクロの構文][macro syntax]はすこしややこしいので、一からマクロを書くことはしません。代わりに、標準ライブラリで[`println!`マクロ][`println!` macro]のソースを見てみます：
 
-[macro syntax]: https://doc.rust-lang.org/nightly/book/ch19-06-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
+[macro syntax]: https://doc.rust-lang.org/nightly/book/ch20-05-macros.html#declarative-macros-for-general-metaprogramming
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust

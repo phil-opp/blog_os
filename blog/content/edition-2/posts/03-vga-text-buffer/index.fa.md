@@ -264,7 +264,7 @@ pub fn print_something() {
 ```
 ابتدا یک Writer جدید ایجاد می کند که به بافر VGA در `0xb8000` اشاره دارد. سینتکس این ممکن است کمی عجیب به نظر برسد: اول ، ما عدد صحیح `0xb8000` را به عنوان [اشاره گر خام] قابل تغییر در نظر می گیریم. سپس با dereferencing کردن آن (از طریق "*") و بلافاصله ارجاع مجدد (از طریق `&mut`) آن را به یک مرجع قابل تغییر تبدیل می کنیم. این تبدیل به یک [بلوک `غیرایمن`] احتیاج دارد ، زیرا کامپایلر نمی تواند صحت اشاره‌گر خام را تضمین کند.
 
-[اشاره گر خام]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[اشاره گر خام]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [بلوک `غیرایمن`]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
 
 سپس بایت `b'H'` را روی آن می نویسد. پیشوند `b` یک [بایت لیترال] ایجاد می کند ، که بیانگر یک کاراکتر ASCII است. با نوشتن رشته های `"ello "` و `"Wörld!"` ، ما متد `write_string` و واکنش به کاراکترهای غیر قابل چاپ را آزمایش می کنیم. برای دیدن خروجی ، باید تابع `print_something` را از تابع `_start` فراخوانی کنیم:
@@ -584,7 +584,7 @@ pub extern "C" fn _start() -> ! {
 ### یک ماکروی println
 اکنون که یک نویسنده گلوبال داریم ، می توانیم یک ماکرو `println` اضافه کنیم که می تواند از هر کجا در کد استفاده شود. [سینتکس ماکروی] راست کمی عجیب است ، بنابراین ما سعی نمی کنیم ماکرو را از ابتدا بنویسیم. در عوض به سورس [ماکروی `println!`] در کتابخانه استاندارد نگاه می کنیم:
 
-[سینتکس ماکروی]: https://doc.rust-lang.org/nightly/book/ch19-06-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
+[سینتکس ماکروی]: https://doc.rust-lang.org/nightly/book/ch20-05-macros.html#declarative-macros-for-general-metaprogramming
 [ماکروی `println!`]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust

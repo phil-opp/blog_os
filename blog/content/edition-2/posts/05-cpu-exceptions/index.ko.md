@@ -135,7 +135,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 `HandlerFunc`는 함수 타입 `extern "x86-interrupt" fn`의 [타입 별칭][type alias]입니다. `extern` 키워드는 [외부 함수 호출 규약 (foreign calling convention)][foreign calling convention]을 사용하는 함수를 정의할 때 쓰이는데, 주로 C 함수와 상호작용하는 경우에 쓰입니다 (`extern "C" fn`). `x86-interrupt` 함수 호출 규약은 무엇일까요?
 
-[type alias]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[type alias]: https://doc.rust-lang.org/book/ch20-03-advanced-types.html#creating-type-synonyms-with-type-aliases
 [foreign calling convention]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## 인터럽트 호출 규약

@@ -807,7 +807,7 @@ La estructura `Task` es un envoltorio nuevo alrededor de un futuro pinzado, asig
 - Como aprendimos en la [sección sobre pinning], el tipo `Pin<Box>` asegura que un valor no puede moverse en memoria al colocarlo en el heap y prevenir la creación de referencias `&mut` a él. Esto es importante porque los futuros generados por async/await podrían ser auto-referenciales, es decir, contener punteros a sí mismos que se invalidarían cuando el futuro se moviera.
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-[_despachados dinámicamente_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
+[_despachados dinámicamente_]: https://doc.rust-lang.org/book/ch18-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [sección sobre pinning]: #pinning
 
 Para permitir la creación de nuevas estructuras `Task` a partir de futuros, creamos una función `new`:

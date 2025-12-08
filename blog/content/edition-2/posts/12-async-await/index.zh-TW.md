@@ -966,7 +966,7 @@ pub struct Task {
 - 正如我們在 釘住操作 部分 [section about pinning] 學到的，`Pin<Box>` 類型通過將值放在堆上並防止創建對它的 `&mut` 引用來確保值在內存中不會被移動。這一點很重要，因為由 async/await 生成的 future 可能是自引用的，即包含指向自己的指針，當 future 被移動時這些指針將失效。
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
+[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch18-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [section about pinning]: #pinning
 
 爲允許從 future 創建新的 `Task` 結構體，我們創建一個 `new` 函數：

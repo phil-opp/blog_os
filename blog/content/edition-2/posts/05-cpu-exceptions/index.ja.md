@@ -132,7 +132,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 これは、`extern "x86-interrupt" fn`型への[型エイリアス][type alias]です。`extern`は[外部呼び出し規約][foreign calling convention]に従う関数を定義するのに使われ、おもにC言語のコードと連携したいときに使われます (`extern "C" fn`) 。しかし、`x86-interrupt`呼び出し規約とは何なのでしょう？
 
-[type alias]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[type alias]: https://doc.rust-lang.org/book/ch20-03-advanced-types.html#creating-type-synonyms-with-type-aliases
 [foreign calling convention]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## 例外の呼び出し規約

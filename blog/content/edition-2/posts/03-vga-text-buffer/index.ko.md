@@ -263,7 +263,7 @@ pub fn print_something() {
 ```
 우선 메모리 주소 `0xb8000`을 가리키는 새로운 Writer 인스턴스를 생성합니다. 이를 구현한 코드가 다소 난해하게 느껴질 수 있으니 단계별로 나누어 설명드리겠습니다: 먼저 정수 `0xb8000`을 읽기/쓰기 모두 가능한 (mutable) [포인터][raw pointer]로 타입 변환합니다. 그 후 `*` 연산자를 통해 이 포인터를 역참조 (dereference) 하고 `&mut`를 통해 즉시 borrow 함으로써 해당 주소에 저장된 값을 변경할 수 있는 레퍼런스 (mutable reference)를 만듭니다. 여기서 Rust 컴파일러는 포인터의 유효성 및 안전성을 보증할 수 없기에, [`unsafe` 블록][`unsafe` block]을 사용해야만 포인터를 레퍼런스로 변환할 수 있습니다.
 
-[raw pointer]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[raw pointer]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`unsafe` block]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
 
 그 다음 Writer 인스턴스에 바이트 `b'H'`를 적습니다. 접두사 `b`는 ASCII 문자를 나타내는 [바이트 상수 (literal)][byte literal] 를 생성합니다. 문자열 `"ello "`와 `"Wörld!"`를 적음으로써 `write_string` 함수 및 출력 불가능한 문자에 대한 특수 처리가 잘 구현되었는지 테스트 해봅니다. 화면에 메시지가 출력되는지 확인하기 위해 `print_something` 함수를 `_start` 함수에서 호출합니다:
@@ -583,7 +583,7 @@ pub extern "C" fn _start() -> ! {
 ### println 매크로
 전역 변수 `Writer`도 갖추었으니 이제 프로젝트 내 어디서든 사용할 수 있는 `println` 매크로를 추가할 수 있습니다. Rust의 [매크로 문법][macro syntax]은 다소 난해하기에, 우리에게 필요한 매크로를 밑바닥부터 작성하지는 않을 것입니다. 그 대신 표준 라이브러리의 [`println!` 매크로][`println!` macro] 구현 코드를 참조할 것입니다:
 
-[macro syntax]: https://doc.rust-lang.org/nightly/book/ch19-06-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
+[macro syntax]: https://doc.rust-lang.org/nightly/book/ch20-05-macros.html#declarative-macros-for-general-metaprogramming
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust

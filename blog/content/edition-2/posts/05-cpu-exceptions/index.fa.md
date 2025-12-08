@@ -134,7 +134,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 این یک [نوع مستعار(type alias)] برای نوع "`extern "x86-interrupt" fn` است. کلمه کلیدی `extern` تابعی را با یک [قرارداد فراخوانی خارجی] تعریف می کند و اغلب برای برقراری ارتباط با کد C استفاده می شود(`extern "C" fn`) . اما قرارداد فراخوانی `x86-interrupt` چیست؟
 
-[نوع مستعار(type alias)]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[نوع مستعار(type alias)]: https://doc.rust-lang.org/book/ch20-03-advanced-types.html#creating-type-synonyms-with-type-aliases
 [قرارداد فراخوانی خارجی]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## قرارداد فراخوانی وقفه

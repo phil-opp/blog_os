@@ -132,7 +132,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 Es un [alias de tipo] para un tipo de `extern "x86-interrupt" fn`. La palabra clave `extern` define una función con una [convención de llamada foránea] y se utiliza a menudo para comunicarse con código C (`extern "C" fn`). Pero, ¿cuál es la convención de llamada `x86-interrupt`?
 
-[alias de tipo]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[alias de tipo]: https://doc.rust-lang.org/book/ch20-03-advanced-types.html#creating-type-synonyms-with-type-aliases
 [convención de llamada foránea]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## La convención de llamada de interrupción

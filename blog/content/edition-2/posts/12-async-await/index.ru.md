@@ -829,7 +829,7 @@ pub struct Task {
 - Как мы узнали в [разделе о закреплении], тип `Pin<Box>` обеспечивает, что значение не может быть перемещено в памяти, помещая его в кучу и предотвращая создание `&mut` ссылок на него. Это важно, потому что футуры, генерируемые async/await, могут быть самоссылающимися, т.е. содержать указатели на себя, которые станут недействительными, если футура будет перемещена.
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
+[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch18-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [разделе о закреплении]: #pinning
 
 Чтобы разрешить создание новых структур `Task` из футур, мы создаём функцию `new`:
