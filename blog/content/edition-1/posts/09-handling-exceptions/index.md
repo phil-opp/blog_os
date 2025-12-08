@@ -317,7 +317,7 @@ pub fn init() {
 There are two problems with this. First, statics are immutable, so we can't modify the breakpoint entry from our `init` function. Second, the `Idt::new` function is not a [`const` function], so it can't be used to initialize a `static`. We could solve this problem by using a [`static mut`] of type `Option<Idt>`:
 
 [`const` function]: https://github.com/rust-lang/rfcs/blob/master/text/0911-const-fn.md
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: Option<Idt> = None;

@@ -330,7 +330,7 @@ pub fn init_idt() {
 
 با این وجود، یک مشکل وجود دارد: استاتیک‌ها تغییرناپذیر هستند، پس نمی توانیم ورودی بریک‌پوینت را از تابع `init` تغییر دهیم. می توانیم این مشکل را با استفاده از [`static mut`] حل کنیم:
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();

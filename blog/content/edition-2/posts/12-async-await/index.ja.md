@@ -130,7 +130,7 @@ pub trait Future {
 
 [関連型] `Output` は非同期値の型を指定します。例えば、上の図の `async_read_file` 関数は、`Output` を `File` に設定した `Future` インスタンスを返します。
 
-[関連型]: https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types
+[関連型]: https://doc.rust-lang.org/book/ch20-02-advanced-traits.html#associated-types
 
 [`poll`]メソッドは、その値がすでに利用可能かどうかをチェックすることができます。このメソッドは、以下のような [`Poll`] 列挙体を返します。
 

@@ -173,7 +173,7 @@ check_long_mode:
 ```
 Like many low-level things, CPUID is a bit strange. Instead of taking a parameter, the `cpuid` instruction implicitly uses the `eax` register as argument. To test if long mode is available, we need to call `cpuid` with `0x80000001` in `eax`. This loads some information to the `ecx` and `edx` registers. Long mode is supported if the 29th bit in `edx` is set. [Wikipedia][cpuid long mode] has detailed information.
 
-[cpuid long mode]: https://en.wikipedia.org/wiki/CPUID#EAX.3D80000001h:_Extended_Processor_Info_and_Feature_Bits
+[cpuid long mode]: https://en.wikipedia.org/wiki/CPUID#EAX=8000'0001h:_Extended_Processor_Info_and_Feature_Bits
 
 If you look at the assembly above, you'll probably notice that we call `cpuid` twice. The reason is that the CPUID command started with only a few functions and was extended over time. So old processors may not know the `0x80000001` argument at all. To test if they do, we need to invoke `cpuid` with `0x80000000` in `eax` first. It returns the highest supported parameter value in `eax`. If it's at least `0x80000001`, we can test for long mode as described above. Else the CPU is old and doesn't know what long mode is either. In that case, we directly jump to `.no_long_mode` through the `jb` instruction (“jump if below”).
 

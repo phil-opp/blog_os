@@ -383,13 +383,13 @@ D'abord, nous transformons l'entier `0xb8000` en un [pointeur brut][raw pointer]
 [static]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 [byte string]: https://doc.rust-lang.org/reference/tokens.html#byte-string-literals
-[raw pointer]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[raw pointer]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
 Notez qu'il y a un bloc [`unsafe`] qui enveloppe les écritures mémoire. La raison en est que le compilateur Rust ne peut pas prouver que les pointeurs bruts que nous créons sont valides. Ils pourraient pointer n'importe où et mener à une corruption de données. En les mettant dans un bloc `unsafe`, nous disons fondamentalement au compilateur que nous sommes absolument certains que les opérations sont valides. Notez qu'un bloc `unsafe` ne désactive pas les contrôles de sécurité de Rust. Il permet seulement de faire [cinq choses supplémentaires][five additional things].
 
 [`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
-[five additional things]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers
+[five additional things]: https://doc.rust-lang.org/stable/book/ch20-01-unsafe-rust.html#unsafe-superpowers
 
 Je veux souligner que **ce n'est pas comme cela que les choses se font en Rust!** Il est très facile de faire des erreurs en travaillant avec des pointeurs bruts à l'intérieur de blocs `unsafe`. Par exemple, nous pourrions facilement écrire au-delà de la fin du tampon si nous ne sommes pas prudents.
 

@@ -334,7 +334,7 @@ pub fn init_idt() {
 문제는 static 변수의 값은 변경할 수가 없어서, `init` 함수 실행 시 breakpoint 예외에 대응하는 IDT 엔트리를 수정할 수 없습니다.
 대신 `IDT`를 [`static mut`] 변수에 저장해보겠습니다:
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();

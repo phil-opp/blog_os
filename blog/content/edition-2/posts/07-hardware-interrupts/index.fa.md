@@ -644,7 +644,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 کد بالا فشردن کلیدهای عددی 9-0 را ترجمه کرده و کلیه کلیدهای دیگر را نادیده می گیرد. از عبارت [match] برای اختصاص یک کاراکتر یا `None` به هر اسکن کد استفاده می کند. سپس با استفاده از [`if let`] اپشن `key` را از بین می برد. با استفاده از همان نام متغیر `key` در الگو که یک روش معمول برای از بین بردن انواع`Option` در راست است تعریف قبلی را  [سایه می زنیم].
 
 [match]: https://doc.rust-lang.org/book/ch06-02-match.html
-[`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
+[`if let`]: https://doc.rust-lang.org/book/ch19-01-all-the-places-for-patterns.html#conditional-if-let-expressions
 [سایه می زنیم]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
 
 اکنون می توانیم اعداد را بنویسیم:

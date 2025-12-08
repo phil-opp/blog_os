@@ -378,13 +378,13 @@ First, we cast the integer `0xb8000` into a [raw pointer]. Then we [iterate] ove
 [static]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 [byte string]: https://doc.rust-lang.org/reference/tokens.html#byte-string-literals
-[raw pointer]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[raw pointer]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
 Note that there's an [`unsafe`] block around all memory writes. The reason is that the Rust compiler can't prove that the raw pointers we create are valid. They could point anywhere and lead to data corruption. By putting them into an `unsafe` block, we're basically telling the compiler that we are absolutely sure that the operations are valid. Note that an `unsafe` block does not turn off Rust's safety checks. It only allows you to do [five additional things].
 
 [`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
-[five additional things]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers
+[five additional things]: https://doc.rust-lang.org/stable/book/ch20-01-unsafe-rust.html#unsafe-superpowers
 
 I want to emphasize that **this is not the way we want to do things in Rust!** It's very easy to mess up when working with raw pointers inside unsafe blocks. For example, we could easily write beyond the buffer's end if we're not careful.
 

@@ -374,7 +374,7 @@ pub extern "C" fn _start() -> ! {
 Primero, convertimos el entero `0xb8000` en un [raw pointer]. Luego, [iteramos] sobre los bytes de la [cadena de bytes estática] `HELLO`. Usamos el método [`enumerate`] para obtener adicionalmente una variable de conteo `i`. En el cuerpo del bucle `for`, utilizamos el método [`offset`] para escribir el byte de la cadena y el byte de color correspondiente (`0xb` representa un cian claro).
 
 [iteramos]: https://doc.rust-lang.org/stable/book/ch13-02-iterators.html
-[raw pointer]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[raw pointer]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [estática]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 [cadena de bytes]: https://doc.rust-lang.org/reference/tokens.html#byte-string-literals
@@ -383,7 +383,7 @@ Primero, convertimos el entero `0xb8000` en un [raw pointer]. Luego, [iteramos] 
 Ten en cuenta que hay un bloque [`unsafe`] alrededor de todas las escrituras de memoria. Esto se debe a que el compilador de Rust no puede probar que los punteros crudos que creamos son válidos. Podrían apuntar a cualquier lugar y causar corrupción de datos. Al poner estas operaciones en un bloque `unsafe`, básicamente le decimos al compilador que estamos absolutamente seguros de que las operaciones son válidas. Sin embargo, un bloque `unsafe` no desactiva las verificaciones de seguridad de Rust; simplemente permite realizar [cinco operaciones adicionales].
 
 [`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
-[cinco operaciones adicionales]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers
+[cinco operaciones adicionales]: https://doc.rust-lang.org/stable/book/ch20-01-unsafe-rust.html#unsafe-superpowers
 
 Quiero enfatizar que **esta no es la forma en que queremos hacer las cosas en Rust**. Es muy fácil cometer errores al trabajar con punteros crudos dentro de bloques `unsafe`. Por ejemplo, podríamos escribir más allá del final del búfer si no somos cuidadosos.
 

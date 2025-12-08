@@ -331,7 +331,7 @@ pub fn init_idt() {
 
 然而这样就会引入一个新问题：静态变量是不可修改的，这样我们就无法在 `init` 函数中修改里面的数据了，所以需要把变量类型修改为 [`static mut`]：
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();

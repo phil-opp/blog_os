@@ -329,7 +329,7 @@ pub fn init_idt() {
 
 しかし、問題が発生します：staticは<ruby>不変<rp> (</rp><rt>イミュータブル</rt><rp>) </rp></ruby>なので、`init`関数でエントリを変更することができません。これは[`static mut`]を使って解決できそうです：
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();

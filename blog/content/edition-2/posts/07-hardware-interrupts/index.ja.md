@@ -645,7 +645,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 上記のコードは、0から9の数字キーが押された場合に変換を行い、それ以外のキーは無視します。全てのスキャンコードに対し、[match] 文を使って対応する文字か `None` を割り当てます。そのあと [`if let`] 構文を使ってオプション型の `key` から値を取り出します。パターン部分に `key` という同じ変数名を使うことでそれ以前の宣言を[シャドーイング][shadow]します。これは Rust において `Option` 型から値を取り出すときによく使うパターンです。
 
 [match]: https://doc.rust-lang.org/book/ch06-02-match.html
-[`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
+[`if let`]: https://doc.rust-lang.org/book/ch19-01-all-the-places-for-patterns.html#conditional-if-let-expressions
 [shadow]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
 
 これで数字が表示できるようになりました:

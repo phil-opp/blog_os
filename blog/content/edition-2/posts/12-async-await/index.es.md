@@ -125,7 +125,7 @@ pub trait Future {
 }
 ```
 
-El tipo [asociado](https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types) `Output` especifica el tipo del valor asíncrono. Por ejemplo, la función `async_read_file` en el diagrama anterior devolvería una instancia de `Future` con `Output` configurado a `File`.
+El tipo [asociado](https://doc.rust-lang.org/book/ch20-02-advanced-traits.html#associated-types) `Output` especifica el tipo del valor asíncrono. Por ejemplo, la función `async_read_file` en el diagrama anterior devolvería una instancia de `Future` con `Output` configurado a `File`.
 
 El método [`poll`] permite comprobar si el valor ya está disponible. Devuelve un enum [`Poll`], que se ve de la siguiente manera:
 

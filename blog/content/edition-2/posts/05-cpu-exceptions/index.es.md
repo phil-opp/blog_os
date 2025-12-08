@@ -329,7 +329,7 @@ pub fn init_idt() {
 
 Sin embargo, hay un problema: las estáticas son inmutables, por lo que no podemos modificar la entrada de punto de interrupción desde nuestra función `init`. Podríamos resolver este problema utilizando un [`static mut`]:
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();

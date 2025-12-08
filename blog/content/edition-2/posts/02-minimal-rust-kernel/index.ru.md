@@ -385,13 +385,13 @@ pub extern "C" fn _start() -> ! {
 [static]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 [byte string]: https://doc.rust-lang.org/reference/tokens.html#byte-string-literals
-[raw pointer]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[raw pointer]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
 Обратите внимание, что вокруг всех записей в память стоит блок [`unsafe`]. Причина в том, что компилятор Rust не может доказать, что сырые указатели, которые мы создаем, действительны. Они могут указывать куда угодно и привести к повреждению данных. Помещая их в блок `unsafe`, мы, по сути, говорим компилятору, что абсолютно уверены в правильности операций. Обратите внимание, что блок `unsafe` не отключает проверки безопасности Rust. Он только позволяет вам делать [пять дополнительных вещей][five additional things].
 
 [`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
-[five additional things]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers
+[five additional things]: https://doc.rust-lang.org/stable/book/ch20-01-unsafe-rust.html#unsafe-superpowers
 
 Я хочу подчеркнуть, что **это не тот способ, которым стоит что-либо делать в Rust!** Очень легко ошибиться при работе с сырыми указателями внутри блоков `unsafe`: например, мы можем легко записать за конец буфера, если не будем осторожны.
 

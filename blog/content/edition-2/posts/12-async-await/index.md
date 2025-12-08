@@ -125,7 +125,7 @@ pub trait Future {
 
 The [associated type] `Output` specifies the type of the asynchronous value. For example, the `async_read_file` function in the diagram above would return a `Future` instance with `Output` set to `File`.
 
-[associated type]: https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types
+[associated type]: https://doc.rust-lang.org/book/ch20-02-advanced-traits.html#associated-types
 
 The [`poll`] method allows to check if the value is already available. It returns a [`Poll`] enum, which looks like this:
 
@@ -1578,7 +1578,7 @@ Let's look into some of the implementation details of this `run_ready_tasks` met
 
 - To avoid the performance overhead of creating a waker on each poll, we use the `waker_cache` map to store the waker for each task after it has been created. For this, we use the [`BTreeMap::entry`] method in combination with [`Entry::or_insert_with`] to create a new waker if it doesn't exist yet and then get a mutable reference to it. For creating a new waker, we clone the `task_queue` and pass it together with the task ID to the `TaskWaker::new` function (implementation shown below). Since the `task_queue` is wrapped into an `Arc`, the `clone` only increases the reference count of the value, but still points to the same heap-allocated queue. Note that reusing wakers like this is not possible for all waker implementations, but our `TaskWaker` type will allow it.
 
-[_destructuring_]: https://doc.rust-lang.org/book/ch18-03-pattern-syntax.html#destructuring-to-break-apart-values
+[_destructuring_]: https://doc.rust-lang.org/book/ch19-03-pattern-syntax.html#destructuring-to-break-apart-values
 [RFC 2229]: https://github.com/rust-lang/rfcs/pull/2229
 [RFC 2229 impl]: https://github.com/rust-lang/rust/issues/53488
 
