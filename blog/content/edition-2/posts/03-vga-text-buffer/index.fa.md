@@ -525,7 +525,7 @@ lazy_static! {
 
 با این حال ، این `WRITER` بسیار بی فایده است زیرا غیر قابل تغییر است. این بدان معنی است که ما نمی توانیم چیزی در آن بنویسیم (از آنجا که همه متد های نوشتن `&mut self` را در ورودی میگیرند). یک راه حل ممکن استفاده از [استاتیک قابل تغییر] است. اما پس از آن هر خواندن و نوشتن آن ناامن (unsafe) است زیرا می تواند به راحتی باعث data race و سایر موارد بد باشد. استفاده از `static mut` بسیار نهی شده است ، حتی پیشنهادهایی برای [حذف آن][remove static mut] وجود داشت. اما گزینه های دیگر چیست؟ ما می توانیم سعی کنیم از یک استاتیک تغییرناپذیر با نوع سلول مانند [RefCell] یا حتی [UnsafeCell] استفاده کنیم که [تغییر پذیری داخلی] را فراهم می کند. اما این انواع [Sync] نیستند (با دلیل کافی) ، بنابراین نمی توانیم از آنها در استاتیک استفاده کنیم.
 
-[استاتیک قابل تغییر]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[استاتیک قابل تغییر]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
 [RefCell]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt
 [UnsafeCell]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html

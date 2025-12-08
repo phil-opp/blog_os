@@ -489,7 +489,7 @@ lazy_static! {
 }
 ```
 
-然而，这个 `WRITER` 可能没有什么用途，因为它目前还是**不可变变量**（immutable variable）：这意味着我们无法向它写入数据，因为所有与写入数据相关的方法都需要实例的可变引用 `&mut self`。一种解决方案是使用**可变静态**（[mutable static](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable)）的变量，但所有对它的读写操作都被规定为不安全的（unsafe）操作，因为这很容易导致数据竞争或发生其它不好的事情——使用 `static mut` 极其不被赞成，甚至有一些提案认为[应该将它删除](https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437)。也有其它的替代方案，比如可以尝试使用比如 [RefCell](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt) 或甚至 [UnsafeCell](https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html) 等类型提供的**内部可变性**（[interior mutability](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html)）；但这些类型都被设计为非同步类型，即不满足 [Sync](https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html) 约束，所以我们不能在静态变量中使用它们。
+然而，这个 `WRITER` 可能没有什么用途，因为它目前还是**不可变变量**（immutable variable）：这意味着我们无法向它写入数据，因为所有与写入数据相关的方法都需要实例的可变引用 `&mut self`。一种解决方案是使用**可变静态**（[mutable static](https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable)）的变量，但所有对它的读写操作都被规定为不安全的（unsafe）操作，因为这很容易导致数据竞争或发生其它不好的事情——使用 `static mut` 极其不被赞成，甚至有一些提案认为[应该将它删除](https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437)。也有其它的替代方案，比如可以尝试使用比如 [RefCell](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt) 或甚至 [UnsafeCell](https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html) 等类型提供的**内部可变性**（[interior mutability](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html)）；但这些类型都被设计为非同步类型，即不满足 [Sync](https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html) 约束，所以我们不能在静态变量中使用它们。
 
 ### spinlock
 

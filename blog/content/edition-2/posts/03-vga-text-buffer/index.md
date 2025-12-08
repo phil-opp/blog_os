@@ -522,7 +522,7 @@ lazy_static! {
 
 However, this `WRITER` is pretty useless since it is immutable. This means that we can't write anything to it (since all the write methods take `&mut self`). One possible solution would be to use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged. There were even proposals to [remove it][remove static mut]. But what are the alternatives? We could try to use an immutable static with a cell type like [RefCell] or even [UnsafeCell] that provides [interior mutability]. But these types aren't [Sync] \(with good reason), so we can't use them in statics.
 
-[mutable static]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[mutable static]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
 [RefCell]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt
 [UnsafeCell]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html

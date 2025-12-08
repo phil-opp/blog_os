@@ -642,7 +642,7 @@ impl LinkedListAllocator {
 
 このメソッドは`current`変数と`while let`ループを使ってリストの各要素に関して反復を行っています。はじめ、`current`は（ダミーの）`head`ノードに設定されています。繰り返しごとに（`else`ブロックで）これは現在のノードの`next`フィールドへと更新されます。領域が与えられたサイズとアラインメントの割り当てに適しているなら、その領域がリストから取り除かれて`alloc_start`アドレスとともに返されます。
 
-[`while let` loop]: https://doc.rust-lang.org/reference/expressions/loop-expr.html#predicate-pattern-loops
+[`while let` loop]: https://doc.rust-lang.org/reference/expressions/loop-expr.html#while-let-patterns
 
 `current.next`ポインタが`None`になった場合、ループから抜けます。これは、リスト全体を反復したものの割り当てに適した領域が見つからなかったことを意味します。その場合`None`を返します。領域が適しているか否かは`alloc_from_region`によってチェックされていますが、この関数の実装はすぐに示します。
 
