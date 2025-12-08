@@ -3,6 +3,7 @@ extend-exclude = [
     "*.svg",
     "*.fr.md",
     "*.es.md",
+    "*.pt-BR.md",
     "blog/config.toml",
 ]
 
