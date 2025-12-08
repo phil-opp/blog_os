@@ -143,13 +143,13 @@ We can now calculate virtual addresses for the page tables of all four levels. W
 
 The table below summarizes the address structure for accessing the different kinds of frames:
 
-Virtual Address for | Address Structure ([octal])
-------------------- | -------------------------------
-Page                | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE`
-Level 1 Table Entry | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD`
-Level 2 Table Entry | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC`
-Level 3 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB`
-Level 4 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA`
+| Virtual Address for | Address Structure ([octal])      |
+| ------------------- | -------------------------------- |
+| Page                | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE` |
+| Level 1 Table Entry | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD` |
+| Level 2 Table Entry | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC` |
+| Level 3 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB` |
+| Level 4 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA` |
 
 [octal]: https://en.wikipedia.org/wiki/Octal
 

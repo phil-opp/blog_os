@@ -27,12 +27,12 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 ## The VGA Text Buffer
 To print a character to the screen in VGA text mode, one has to write it to the text buffer of the VGA hardware. The VGA text buffer is a two-dimensional array with typically 25 rows and 80 columns, which is directly rendered to the screen. Each array entry describes a single screen character through the following format:
 
-Bit(s) | Value
------- | ----------------
-0-7    | ASCII code point
-8-11   | Foreground color
-12-14  | Background color
-15     | Blink
+| Bit(s) | Value            |
+| ------ | ---------------- |
+| 0-7    | ASCII code point |
+| 8-11   | Foreground color |
+| 12-14  | Background color |
+| 15     | Blink            |
 
 The first byte represents the character that should be printed in the [ASCII encoding]. To be more specific, it isn't exactly ASCII, but a character set named [_code page 437_] with some additional characters and slight modifications. For simplicity, we will proceed to call it an ASCII character in this post.
 
@@ -41,16 +41,16 @@ The first byte represents the character that should be printed in the [ASCII enc
 
 The second byte defines how the character is displayed. The first four bits define the foreground color, the next three bits the background color, and the last bit whether the character should blink. The following colors are available:
 
-Number | Color      | Number + Bright Bit | Bright Color
------- | ---------- | ------------------- | -------------
-0x0    | Black      | 0x8                 | Dark Gray
-0x1    | Blue       | 0x9                 | Light Blue
-0x2    | Green      | 0xa                 | Light Green
-0x3    | Cyan       | 0xb                 | Light Cyan
-0x4    | Red        | 0xc                 | Light Red
-0x5    | Magenta    | 0xd                 | Pink
-0x6    | Brown      | 0xe                 | Yellow
-0x7    | Light Gray | 0xf                 | White
+| Number | Color      | Number + Bright Bit | Bright Color |
+| ------ | ---------- | ------------------- | ------------ |
+| 0x0    | Black      | 0x8                 | Dark Gray    |
+| 0x1    | Blue       | 0x9                 | Light Blue   |
+| 0x2    | Green      | 0xa                 | Light Green  |
+| 0x3    | Cyan       | 0xb                 | Light Cyan   |
+| 0x4    | Red        | 0xc                 | Light Red    |
+| 0x5    | Magenta    | 0xd                 | Pink         |
+| 0x6    | Brown      | 0xe                 | Yellow       |
+| 0x7    | Light Gray | 0xf                 | White        |
 
 Bit 4 is the _bright bit_, which turns, for example, blue into light blue. For the background color, this bit is repurposed as the blink bit.
 

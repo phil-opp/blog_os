@@ -31,12 +31,12 @@ rtl = true
 ## بافر متن VGA
 برای چاپ یک کاراکتر روی صفحه در حالت متن VGA ، باید آن را در بافر متن سخت افزار VGA بنویسید. بافر متن VGA یک آرایه دو بعدی است که به طور معمول 25 ردیف و 80 ستون دارد که مستقیماً به صفحه نمایش داده(رندر) می شود. هر خانه آرایه یک کاراکتر صفحه نمایش را از طریق قالب زیر توصیف می کند:
 
-Bit(s) | Value
------- | ----------------
-0-7    | ASCII code point
-8-11   | Foreground color
-12-14  | Background color
-15     | Blink
+| Bit(s) | Value            |
+| ------ | ---------------- |
+| 0-7    | ASCII code point |
+| 8-11   | Foreground color |
+| 12-14  | Background color |
+| 15     | Blink            |
 
 اولین بایت کاراکتری در [کدگذاری ASCII] را نشان می دهد که باید چاپ شود. اگر بخواهیم دقیق باشیم ، دقیقاً ASCII نیست ، بلکه مجموعه ای از کاراکترها به نام [_کد صفحه 437_] با برخی کاراکتر های اضافی و تغییرات جزئی است. برای سادگی ، ما در این پست آنرا یک کاراکتر ASCII می نامیم.
 
@@ -45,16 +45,16 @@ Bit(s) | Value
 
 بایت دوم نحوه نمایش کاراکتر را مشخص می کند. چهار بیت اول رنگ پیش زمینه را مشخص می کند ، سه بیت بعدی رنگ پس زمینه و بیت آخر اینکه کاراکتر باید چشمک بزند یا نه. رنگ های زیر موجود است:
 
-Number | Color      | Number + Bright Bit | Bright Color
------- | ---------- | ------------------- | -------------
-0x0    | Black      | 0x8                 | Dark Gray
-0x1    | Blue       | 0x9                 | Light Blue
-0x2    | Green      | 0xa                 | Light Green
-0x3    | Cyan       | 0xb                 | Light Cyan
-0x4    | Red        | 0xc                 | Light Red
-0x5    | Magenta    | 0xd                 | Pink
-0x6    | Brown      | 0xe                 | Yellow
-0x7    | Light Gray | 0xf                 | White
+| Number | Color      | Number + Bright Bit | Bright Color |
+| ------ | ---------- | ------------------- | ------------ |
+| 0x0    | Black      | 0x8                 | Dark Gray    |
+| 0x1    | Blue       | 0x9                 | Light Blue   |
+| 0x2    | Green      | 0xa                 | Light Green  |
+| 0x3    | Cyan       | 0xb                 | Light Cyan   |
+| 0x4    | Red        | 0xc                 | Light Red    |
+| 0x5    | Magenta    | 0xd                 | Pink         |
+| 0x6    | Brown      | 0xe                 | Yellow       |
+| 0x7    | Light Gray | 0xf                 | White        |
 
 بیت 4، بیت روشنایی است ، که به عنوان مثال آبی به آبی روشن تبدیل می‌کند. برای رنگ پس زمینه ، این بیت به عنوان بیت چشمک مورد استفاده قرار می گیرد.
 
