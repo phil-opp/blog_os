@@ -31,12 +31,12 @@ Este blog é desenvolvido abertamente no [GitHub]. Se você tiver algum problema
 ## O Buffer de Texto VGA
 Para imprimir um caractere na tela em modo de texto VGA, é preciso escrevê-lo no buffer de texto do hardware VGA. O buffer de texto VGA é um array bidimensional com tipicamente 25 linhas e 80 colunas, que é renderizado diretamente na tela. Cada entrada do array descreve um único caractere da tela através do seguinte formato:
 
-Bit(s) | Valor
------- | ----------------
-0-7    | Ponto de código ASCII
-8-11   | Cor do primeiro plano
-12-14  | Cor do fundo
-15     | Piscar
+| Bit(s) | Valor                 |
+| ------ | --------------------- |
+| 0-7    | Ponto de código ASCII |
+| 8-11   | Cor do primeiro plano |
+| 12-14  | Cor do fundo          |
+| 15     | Piscar                |
 
 O primeiro byte representa o caractere que deve ser impresso na [codificação ASCII]. Para ser mais específico, não é exatamente ASCII, mas um conjunto de caracteres chamado [_página de código 437_] com alguns caracteres adicionais e pequenas modificações. Para simplificar, continuaremos chamando-o de caractere ASCII neste post.
 
@@ -45,16 +45,16 @@ O primeiro byte representa o caractere que deve ser impresso na [codificação A
 
 O segundo byte define como o caractere é exibido. Os primeiros quatro bits definem a cor do primeiro plano, os próximos três bits a cor do fundo, e o último bit se o caractere deve piscar. As seguintes cores estão disponíveis:
 
-Número | Cor           | Número + Bit Brilhante | Cor Brilhante
------- | ------------- | ---------------------- | --------------
-0x0    | Preto         | 0x8                    | Cinza Escuro
-0x1    | Azul          | 0x9                    | Azul Claro
-0x2    | Verde         | 0xa                    | Verde Claro
-0x3    | Ciano         | 0xb                    | Ciano Claro
-0x4    | Vermelho      | 0xc                    | Vermelho Claro
-0x5    | Magenta       | 0xd                    | Rosa
-0x6    | Marrom        | 0xe                    | Amarelo
-0x7    | Cinza Claro   | 0xf                    | Branco
+| Número | Cor         | Número + Bit Brilhante | Cor Brilhante  |
+| ------ | ----------- | ---------------------- | -------------- |
+| 0x0    | Preto       | 0x8                    | Cinza Escuro   |
+| 0x1    | Azul        | 0x9                    | Azul Claro     |
+| 0x2    | Verde       | 0xa                    | Verde Claro    |
+| 0x3    | Ciano       | 0xb                    | Ciano Claro    |
+| 0x4    | Vermelho    | 0xc                    | Vermelho Claro |
+| 0x5    | Magenta     | 0xd                    | Rosa           |
+| 0x6    | Marrom      | 0xe                    | Amarelo        |
+| 0x7    | Cinza Claro | 0xf                    | Branco         |
 
 O bit 4 é o _bit brilhante_, que transforma, por exemplo, azul em azul claro. Para a cor de fundo, este bit é reaproveitado como o bit de piscar.
 
@@ -264,7 +264,7 @@ pub fn print_something() {
 ```
 Primeiro ele cria um novo Writer que aponta para o buffer VGA em `0xb8000`. A sintaxe para isso pode parecer um pouco estranha: Primeiro, convertemos o inteiro `0xb8000` como um [ponteiro bruto] mutável. Então o convertemos em uma referência mutável ao desreferenciá-lo (através de `*`) e imediatamente emprestar novamente (através de `&mut`). Esta conversão requer um [bloco `unsafe`], pois o compilador não pode garantir que o ponteiro bruto é válido.
 
-[ponteiro bruto]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[ponteiro bruto]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [bloco `unsafe`]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
 
 Então ele escreve o byte `b'H'` nele. O prefixo `b` cria um [byte literal], que representa um caractere ASCII. Ao escrever as strings `"ello "` e `"Wörld!"`, testamos nosso método `write_string` e o tratamento de caracteres não imprimíveis. Para ver a saída, precisamos chamar a função `print_something` da nossa função `_start`:
@@ -526,7 +526,7 @@ lazy_static! {
 
 No entanto, este `WRITER` é praticamente inútil, pois é imutável. Isso significa que não podemos escrever nada nele (já que todos os métodos de escrita recebem `&mut self`). Uma solução possível seria usar um [static mutável]. Mas então cada leitura e escrita nele seria unsafe, pois poderia facilmente introduzir data races e outras coisas ruins. Usar `static mut` é altamente desencorajado. Até houve propostas para [removê-lo][remove static mut]. Mas quais são as alternativas? Poderíamos tentar usar um static imutável com um tipo de célula como [RefCell] ou até [UnsafeCell] que fornece [mutabilidade interior]. Mas esses tipos não são [Sync] \(com boa razão), então não podemos usá-los em statics.
 
-[static mutável]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[static mutável]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
 [RefCell]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt
 [UnsafeCell]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html
@@ -585,7 +585,7 @@ Note que temos apenas um bloco unsafe no nosso código, que é necessário para 
 ### Uma Macro println
 Agora que temos um writer global, podemos adicionar uma macro `println` que pode ser usada de qualquer lugar na base de código. A [sintaxe de macro] do Rust é um pouco estranha, então não tentaremos escrever uma macro do zero. Em vez disso, olhamos para o código-fonte da [macro `println!`] na biblioteca padrão:
 
-[sintaxe de macro]: https://doc.rust-lang.org/nightly/book/ch19-06-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
+[sintaxe de macro]: https://doc.rust-lang.org/nightly/book/ch20-05-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
 [macro `println!`]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust

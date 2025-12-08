@@ -47,28 +47,28 @@ rtl = true
 ### جدول توصیف کننده وقفه
 برای گرفتن و رسیدگی به استثنا‌ها ، باید اصطلاحاً _جدول توصیفگر وقفه_ (IDT) را تنظیم کنیم. در این جدول می توانیم برای هر استثنا پردازنده یک عملکرد تابع کننده مشخص کنیم. سخت افزار به طور مستقیم از این جدول استفاده می کند ، بنابراین باید از یک قالب از پیش تعریف شده پیروی کنیم. هر ورودی جدول باید ساختار 16 بایتی زیر را داشته باشد:
 
-Type| Name                     | Description
-----|--------------------------|-----------------------------------
-u16 | Function Pointer [0:15]  | The lower bits of the pointer to the handler function.
-u16 | GDT selector             | Selector of a code segment in the [global descriptor table].
-u16 | Options                  | (see below)
-u16 | Function Pointer [16:31] | The middle bits of the pointer to the handler function.
-u32 | Function Pointer [32:63] | The remaining bits of the pointer to the handler function.
-u32 | Reserved                 |
+| Type | Name                     | Description                                                  |
+| ---- | ------------------------ | ------------------------------------------------------------ |
+| u16  | Function Pointer [0:15]  | The lower bits of the pointer to the handler function.       |
+| u16  | GDT selector             | Selector of a code segment in the [global descriptor table]. |
+| u16  | Options                  | (see below)                                                  |
+| u16  | Function Pointer [16:31] | The middle bits of the pointer to the handler function.      |
+| u32  | Function Pointer [32:63] | The remaining bits of the pointer to the handler function.   |
+| u32  | Reserved                 |
 
 [global descriptor table]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
 قسمت گزینه ها (Options) دارای قالب زیر است:
 
-Bits  | Name                              | Description
-------|-----------------------------------|-----------------------------------
-0-2   | Interrupt Stack Table Index       | 0: Don't switch stacks, 1-7: Switch to the n-th stack in the Interrupt Stack Table when this handler is called.
-3-7   | Reserved              |
-8     | 0: Interrupt Gate, 1: Trap Gate   | If this bit is 0, interrupts are disabled when this handler is called.
-9-11  | must be one                       |
-12    | must be zero                      |
-13‑14 | Descriptor Privilege Level (DPL)  | The minimal privilege level required for calling this handler.
-15    | Present                           |
+| Bits  | Name                             | Description                                                                                                     |
+| ----- | -------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 0-2   | Interrupt Stack Table Index      | 0: Don't switch stacks, 1-7: Switch to the n-th stack in the Interrupt Stack Table when this handler is called. |
+| 3-7   | Reserved                         |
+| 8     | 0: Interrupt Gate, 1: Trap Gate  | If this bit is 0, interrupts are disabled when this handler is called.                                          |
+| 9-11  | must be one                      |
+| 12    | must be zero                     |
+| 13‑14 | Descriptor Privilege Level (DPL) | The minimal privilege level required for calling this handler.                                                  |
+| 15    | Present                          |
 
 هر استثنا دارای یک اندیس از پیش تعریف شده در IDT است. به عنوان مثال استثنا کد نامعتبر دارای اندیس 6 و استثنا خطای صفحه دارای اندیس 14 است. بنابراین ، سخت افزار می تواند به طور خودکار عنصر مربوطه را برای هر استثنا بارگذاری کند. [جدول استثناها][exceptions] در ویکی OSDev ، اندیس های IDT کلیه استثناها را در ستون “Vector nr.” نشان داده است.
 
@@ -134,7 +134,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 این یک [نوع مستعار(type alias)] برای نوع "`extern "x86-interrupt" fn` است. کلمه کلیدی `extern` تابعی را با یک [قرارداد فراخوانی خارجی] تعریف می کند و اغلب برای برقراری ارتباط با کد C استفاده می شود(`extern "C" fn`) . اما قرارداد فراخوانی `x86-interrupt` چیست؟
 
-[نوع مستعار(type alias)]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[نوع مستعار(type alias)]: https://doc.rust-lang.org/book/ch20-03-advanced-types.html#creating-type-synonyms-with-type-aliases
 [قرارداد فراخوانی خارجی]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## قرارداد فراخوانی وقفه
@@ -164,10 +164,10 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 در x86_64 ، قرارداد فراخوانی C ثبات‌های محفوظ شده و تغییرشونده زیر را مشخص می کند:
 
-preserved registers | scratch registers
----|---
-`rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11`
-_callee-saved_ | _caller-saved_
+| preserved registers                             | scratch registers                                           |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| `rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11` |
+| _callee-saved_                                  | _caller-saved_                                              |
 
 کامپایلر این قوانین را می داند ، بنابراین کد را متناسب با آن تولید می کند. به عنوان مثال ، بیشتر توابع با `push rbp` شروع می شوند که پشتیبان گیری از`rbp` روی پشته است (زیرا این یک ثبات _caller-saved_).
 
@@ -330,7 +330,7 @@ pub fn init_idt() {
 
 با این وجود، یک مشکل وجود دارد: استاتیک‌ها تغییرناپذیر هستند، پس نمی توانیم ورودی بریک‌پوینت را از تابع `init` تغییر دهیم. می توانیم این مشکل را با استفاده از [`static mut`] حل کنیم:
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();

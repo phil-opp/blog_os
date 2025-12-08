@@ -392,13 +392,13 @@ pub extern "C" fn _start() -> ! {
 [static]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 [byte string]: https://doc.rust-lang.org/reference/tokens.html#byte-string-literals
-[raw pointer]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[raw pointer]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
 메모리 쓰기 작업을 위한 코드 주변에 [`unsafe`] 블록이 있는 것에 주목해주세요. 여기서 `unsafe` 블록이 필요한 이유는 Rust 컴파일러가 우리가 만든 raw 포인터가 유효한 포인터인지 검증할 능력이 없기 때문입니다. `unsafe` 블록 안에 포인터에 대한 쓰기 작업 코드를 적음으로써, 우리는 컴파일러에게 해당 메모리 쓰기 작업이 확실히 안전하다고 선언한 것입니다. `unsafe` 블록이 Rust의 모든 안전성 체크를 해제하는 것은 아니며, `unsafe` 블록 안에서만 [다섯 가지 작업들을 추가적으로][five additional things] 할 수 있습니다.
 
 [`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
-[five additional things]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers
+[five additional things]: https://doc.rust-lang.org/stable/book/ch20-01-unsafe-rust.html#unsafe-superpowers
 
 **이런 식의 Rust 코드를 작성하는 것은 절대 바람직하지 않다는 것을 강조드립니다!** unsafe 블록 안에서 raw pointer를 쓰다보면 메모리 버퍼 크기를 넘어선 메모리 주소에 데이터를 저장하는 등의 실수를 범하기 매우 쉽습니다.
 

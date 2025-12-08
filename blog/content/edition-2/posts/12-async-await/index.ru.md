@@ -131,7 +131,7 @@ pub trait Future {
 
 [Ассоциированный тип][associated type] `Output` определяет тип асинхронного значения. Например, функция `async_read_file` на приведенной выше диаграмме вернет экземпляр `Future` с `Output`, установленным как `File`.
 
-[associated type]: https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types
+[associated type]: https://doc.rust-lang.org/book/ch20-02-advanced-traits.html#associated-types
 
 Метод [`poll`] позволяет проверить, доступно ли значение. Он возвращает перечисление [`Poll`], которое выглядит следующим образом:
 
@@ -829,7 +829,7 @@ pub struct Task {
 - Как мы узнали в [разделе о закреплении], тип `Pin<Box>` обеспечивает, что значение не может быть перемещено в памяти, помещая его в кучу и предотвращая создание `&mut` ссылок на него. Это важно, потому что футуры, генерируемые async/await, могут быть самоссылающимися, т.е. содержать указатели на себя, которые станут недействительными, если футура будет перемещена.
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
+[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch18-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [разделе о закреплении]: #pinning
 
 Чтобы разрешить создание новых структур `Task` из футур, мы создаём функцию `new`:
@@ -1599,7 +1599,7 @@ impl Executor {
 
 - Чтобы избежать накладных расходов на создание waker при каждом опросе, мы используем дерево `waker_cache` для хранения waker для каждой задачи после ее создания. Для этого мы используем метод [`BTreeMap::entry`] в сочетании с [`Entry::or_insert_with`] для создания нового waker, если он ещё не существует, а затем получаем на него мутабельную ссылку. Для создания нового waker мы клонируем `task_queue` и передаём его вместе с идентификатором задачи в функцию `TaskWaker::new` (реализация ниже). Поскольку `task_queue` обёрнута в `Arc`, `clone` только увеличивает счётчик ссылок на значение, но всё равно указывает на ту же выделенную в куче очередь. Обратите внимание, что повторное использование wakers таким образом, невозможно для всех реализаций waker, но наш тип `TaskWaker` это позволит.
 
-[_destructuring_]: https://doc.rust-lang.org/book/ch18-03-pattern-syntax.html#destructuring-to-break-apart-values
+[_destructuring_]: https://doc.rust-lang.org/book/ch19-03-pattern-syntax.html#destructuring-to-break-apart-values
 [RFC 2229]: https://github.com/rust-lang/rfcs/pull/2229
 [RFC 2229 impl]: https://github.com/rust-lang/rust/issues/53488
 

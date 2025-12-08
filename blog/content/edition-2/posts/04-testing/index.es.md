@@ -277,7 +277,7 @@ Una forma simple de enviar los datos es usar el [puerto serial], un estándar de
 Los chips que implementan una interfaz serial se llaman [UARTs]. Hay [muchos modelos de UART] en x86, pero afortunadamente las únicas diferencias entre ellos son algunas características avanzadas que no necesitamos. Los UART comunes hoy en día son todos compatibles con el [UART 16550], así que utilizaremos ese modelo para nuestro framework de pruebas.
 
 [UARTs]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
-[muchos modelos de UART]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
+[muchos modelos de UART]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#Models
 [UART 16550]: https://en.wikipedia.org/wiki/16550_UART
 
 Usaremos la crate [`uart_16550`] para inicializar el UART y enviar datos a través del puerto serial. Para añadirlo como dependencia, actualizamos nuestro `Cargo.toml` y `main.rs`:
@@ -548,7 +548,7 @@ where
 Implementamos la función `run` imprimiendo primero el nombre de la función utilizando la función [`any::type_name`] . Esta función se implementa directamente en el compilador y devuelve una descripción de cadena de cada tipo. Para las funciones, el tipo es su nombre, así que esto es exactamente lo que queremos en este caso. El carácter `\t` es el [carácter de tabulación], que añade algo de alineación a los mensajes `[ok]`.
 
 [`any::type_name`]: https://doc.rust-lang.org/stable/core/any/fn.type_name.html
-[carácter de tabulación]: https://en.wikipedia.org/wiki/Tab_key#Tab_characters
+[carácter de tabulación]: https://en.wikipedia.org/wiki/Tab_character
 
 Después de imprimir el nombre de la función, invocamos la función de prueba a través de `self()`. Esto solo funciona porque requerimos que `self` implemente el trait `Fn()`. Después de que la función de prueba retorna, imprimimos `[ok]` para indicar que la función no provocó un pánico.
 

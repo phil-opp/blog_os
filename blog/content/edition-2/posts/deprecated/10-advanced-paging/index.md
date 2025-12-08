@@ -143,13 +143,13 @@ We can now calculate virtual addresses for the page tables of all four levels. W
 
 The table below summarizes the address structure for accessing the different kinds of frames:
 
-Virtual Address for | Address Structure ([octal])
-------------------- | -------------------------------
-Page                | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE`
-Level 1 Table Entry | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD`
-Level 2 Table Entry | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC`
-Level 3 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB`
-Level 4 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA`
+| Virtual Address for | Address Structure ([octal])      |
+| ------------------- | -------------------------------- |
+| Page                | `0o_SSSSSS_AAA_BBB_CCC_DDD_EEEE` |
+| Level 1 Table Entry | `0o_SSSSSS_RRR_AAA_BBB_CCC_DDDD` |
+| Level 2 Table Entry | `0o_SSSSSS_RRR_RRR_AAA_BBB_CCCC` |
+| Level 3 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_AAA_BBBB` |
+| Level 4 Table Entry | `0o_SSSSSS_RRR_RRR_RRR_RRR_AAAA` |
 
 [octal]: https://en.wikipedia.org/wiki/Octal
 
@@ -369,7 +369,7 @@ When we run it, we see the same result as with our handcrafted translation funct
 
 Our `memory::init` function is an [unsafe function], which means that an `unsafe` block is required for calling it because the caller has to guarantee that certain requirements are met. In our case, the requirement is that the passed address is mapped to the physical frame of the level 4 page table.
 
-[unsafe function]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#calling-an-unsafe-function-or-method
+[unsafe function]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#calling-an-unsafe-function-or-method
 
 The second property of unsafe functions is that their complete body is treated as an `unsafe` block, which means that it can perform all kinds of unsafe operations without additional unsafe blocks. This is the reason that we didn't need an `unsafe` block for dereferencing the raw `level_4_table_ptr`:
 

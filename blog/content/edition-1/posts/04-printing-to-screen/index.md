@@ -26,25 +26,25 @@ This post uses recent unstable features, so you need an up-to-date nighly compil
 ## The VGA Text Buffer
 The text buffer starts at physical address `0xb8000` and contains the characters displayed on screen. It has 25 rows and 80 columns. Each screen character has the following format:
 
-Bit(s) | Value
------- | ----------------
-0-7    | ASCII code point
-8-11   | Foreground color
-12-14  | Background color
-15     | Blink
+| Bit(s) | Value            |
+| ------ | ---------------- |
+| 0-7    | ASCII code point |
+| 8-11   | Foreground color |
+| 12-14  | Background color |
+| 15     | Blink            |
 
 The following colors are available:
 
-Number | Color      | Number + Bright Bit | Bright Color
------- | ---------- | ------------------- | -------------
-0x0    | Black      | 0x8                 | Dark Gray
-0x1    | Blue       | 0x9                 | Light Blue
-0x2    | Green      | 0xa                 | Light Green
-0x3    | Cyan       | 0xb                 | Light Cyan
-0x4    | Red        | 0xc                 | Light Red
-0x5    | Magenta    | 0xd                 | Pink
-0x6    | Brown      | 0xe                 | Yellow
-0x7    | Light Gray | 0xf                 | White
+| Number | Color      | Number + Bright Bit | Bright Color |
+| ------ | ---------- | ------------------- | ------------ |
+| 0x0    | Black      | 0x8                 | Dark Gray    |
+| 0x1    | Blue       | 0x9                 | Light Blue   |
+| 0x2    | Green      | 0xa                 | Light Green  |
+| 0x3    | Cyan       | 0xb                 | Light Cyan   |
+| 0x4    | Red        | 0xc                 | Light Red    |
+| 0x5    | Magenta    | 0xd                 | Pink         |
+| 0x6    | Brown      | 0xe                 | Yellow       |
+| 0x7    | Light Gray | 0xf                 | White        |
 
 Bit 4 is the _bright bit_, which turns for example blue into light blue. It is unavailable in background color as the bit is used to control if the text should blink. If you want to use a light background color (e.g. white) you have to disable blinking through a [BIOS function][disable blinking].
 
@@ -441,7 +441,7 @@ But we can't use it to print anything! You can try it yourself in the `print_som
 
 To resolve it, we could use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged, there are even proposals to [remove it][remove static mut].
 
-[mutable static]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[mutable static]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
 
 But what are the alternatives? We could try to use a cell type like [RefCell] or even [UnsafeCell] to provide [interior mutability]. But these types aren't [Sync] \(with good reason), so we can't use them in statics.

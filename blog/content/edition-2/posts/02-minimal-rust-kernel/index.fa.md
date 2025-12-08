@@ -388,13 +388,13 @@ pub extern "C" fn _start() -> ! {
 [static]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 [byte string]: https://doc.rust-lang.org/reference/tokens.html#byte-string-literals
-[اشاره‌گر خام]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[اشاره‌گر خام]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
 توجه داشته باشید که یک بلوک [`unsafe`] همیشه هنگام نوشتن در حافظه مورد استفاده قرار می‌گیرد. دلیل این امر این است که کامپایلر Rust نمی‌تواند معتبر بودن اشاره‌گرهای خام که ایجاد میکنیم را ثابت کند. آن‌ها می‌توانند به هر کجا اشاره کنند و منجر به خراب شدن داده‌ها شوند. با قرار دادن آن‌ها در یک بلوک `unsafe`، ما در اصل به کامپایلر می‌گوییم که کاملاً از معتبر بودن عملیات اطمینان داریم. توجه داشته باشید که یک بلوک `unsafe`، بررسی‌های ایمنی Rust را خاموش نمی‌کند. فقط به شما این امکان را می‌دهد که [پنج کار اضافی] انجام دهید.
 
 [`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
-[پنج کار اضافی]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers
+[پنج کار اضافی]: https://doc.rust-lang.org/stable/book/ch20-01-unsafe-rust.html#unsafe-superpowers
 
 می خواهم تأکید کنم که **این روشی نیست که ما بخواهیم در Rust کارها را از طریق آن پبش ببریم!** به هم ریختگی هنگام کار با اشاره‌گرهای خام در داخل بلوک‌های ناامن بسیار محتمل و ساده است، به عنوان مثال، اگر مواظب نباشیم به راحتی می‌توانیم فراتر از انتهای بافر بنویسیم.
 

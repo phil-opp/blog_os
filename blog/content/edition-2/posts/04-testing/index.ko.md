@@ -282,7 +282,7 @@ test_runner는 이제 테스트 결과를 출력한 후 QEMU를 자동으로 종
 직렬 통신을 구현하는 칩을 [UART][UARTs]라고 부릅니다. x86에서 사용할 수 있는 [다양한 종류의 UART 구현 모델들][lots of UART models]이 존재하며, 다양한 구현 모델들 간 차이는 우리가 쓰지 않을 고급 기능 사용 시에만 유의미합니다. 우리의 테스트 프레임워크에서는 대부분의 UART 구현 모델들과 호환되는 [16550 UART] 모델을 이용할 것입니다.
 
 [UARTs]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
-[lots of UART models]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
+[lots of UART models]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#Models
 [16550 UART]: https://en.wikipedia.org/wiki/16550_UART
 
 [`uart_16550`] 크레이트를 이용해 UART 초기 설정을 마친 후 직렬 포트를 통해 데이터를 전송할 것입니다. `Cargo.toml`과 `main.rs`에 아래의 내용을 추가하여 의존 크레이트를 추가합니다.
@@ -556,7 +556,7 @@ where
 `run` 함수에서 먼저 [`any::type_name`] 함수를 이용해 테스트 함수의 이름을 출력합니다. 이 함수는 컴파일러 단에서 구현된 함수로, 주어진 타입의 이름을 문자열로 반환합니다. 함수 타입의 경우, 함수 이름이 곧 타입의 이름입니다. `\t` 문자는 [탭 문자][tab character]인데 `[ok]` 메시지를 출력 이전에 여백을 삽입합니다.
 
 [`any::type_name`]: https://doc.rust-lang.org/stable/core/any/fn.type_name.html
-[tab character]: https://en.wikipedia.org/wiki/Tab_key#Tab_characters
+[tab character]: https://en.wikipedia.org/wiki/Tab_character
 
 함수명을 출력한 후 `self()`를 통해 테스트 함수를 호출합니다. `self`가 `Fn()` 트레이트를 구현한다는 조건을 걸어놨기 때문에 이것이 가능합니다. 테스트 함수가 반환된 후, `[ok]` 메시지를 출력하여 테스트 함수가 패닉하지 않았다는 것을 알립니다.
 

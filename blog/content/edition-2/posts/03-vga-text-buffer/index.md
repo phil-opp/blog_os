@@ -27,12 +27,12 @@ This blog is openly developed on [GitHub]. If you have any problems or questions
 ## The VGA Text Buffer
 To print a character to the screen in VGA text mode, one has to write it to the text buffer of the VGA hardware. The VGA text buffer is a two-dimensional array with typically 25 rows and 80 columns, which is directly rendered to the screen. Each array entry describes a single screen character through the following format:
 
-Bit(s) | Value
------- | ----------------
-0-7    | ASCII code point
-8-11   | Foreground color
-12-14  | Background color
-15     | Blink
+| Bit(s) | Value            |
+| ------ | ---------------- |
+| 0-7    | ASCII code point |
+| 8-11   | Foreground color |
+| 12-14  | Background color |
+| 15     | Blink            |
 
 The first byte represents the character that should be printed in the [ASCII encoding]. To be more specific, it isn't exactly ASCII, but a character set named [_code page 437_] with some additional characters and slight modifications. For simplicity, we will proceed to call it an ASCII character in this post.
 
@@ -41,16 +41,16 @@ The first byte represents the character that should be printed in the [ASCII enc
 
 The second byte defines how the character is displayed. The first four bits define the foreground color, the next three bits the background color, and the last bit whether the character should blink. The following colors are available:
 
-Number | Color      | Number + Bright Bit | Bright Color
------- | ---------- | ------------------- | -------------
-0x0    | Black      | 0x8                 | Dark Gray
-0x1    | Blue       | 0x9                 | Light Blue
-0x2    | Green      | 0xa                 | Light Green
-0x3    | Cyan       | 0xb                 | Light Cyan
-0x4    | Red        | 0xc                 | Light Red
-0x5    | Magenta    | 0xd                 | Pink
-0x6    | Brown      | 0xe                 | Yellow
-0x7    | Light Gray | 0xf                 | White
+| Number | Color      | Number + Bright Bit | Bright Color |
+| ------ | ---------- | ------------------- | ------------ |
+| 0x0    | Black      | 0x8                 | Dark Gray    |
+| 0x1    | Blue       | 0x9                 | Light Blue   |
+| 0x2    | Green      | 0xa                 | Light Green  |
+| 0x3    | Cyan       | 0xb                 | Light Cyan   |
+| 0x4    | Red        | 0xc                 | Light Red    |
+| 0x5    | Magenta    | 0xd                 | Pink         |
+| 0x6    | Brown      | 0xe                 | Yellow       |
+| 0x7    | Light Gray | 0xf                 | White        |
 
 Bit 4 is the _bright bit_, which turns, for example, blue into light blue. For the background color, this bit is repurposed as the blink bit.
 
@@ -260,7 +260,7 @@ pub fn print_something() {
 ```
 It first creates a new Writer that points to the VGA buffer at `0xb8000`. The syntax for this might seem a bit strange: First, we cast the integer `0xb8000` as a mutable [raw pointer]. Then we convert it to a mutable reference by dereferencing it (through `*`) and immediately borrowing it again (through `&mut`). This conversion requires an [`unsafe` block], since the compiler can't guarantee that the raw pointer is valid.
 
-[raw pointer]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[raw pointer]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`unsafe` block]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
 
 Then it writes the byte `b'H'` to it. The `b` prefix creates a [byte literal], which represents an ASCII character. By writing the strings `"ello "` and `"Wörld!"`, we test our `write_string` method and the handling of unprintable characters. To see the output, we need to call the `print_something` function from our `_start` function:
@@ -522,7 +522,7 @@ lazy_static! {
 
 However, this `WRITER` is pretty useless since it is immutable. This means that we can't write anything to it (since all the write methods take `&mut self`). One possible solution would be to use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged. There were even proposals to [remove it][remove static mut]. But what are the alternatives? We could try to use an immutable static with a cell type like [RefCell] or even [UnsafeCell] that provides [interior mutability]. But these types aren't [Sync] \(with good reason), so we can't use them in statics.
 
-[mutable static]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[mutable static]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
 [RefCell]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt
 [UnsafeCell]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html
@@ -581,7 +581,7 @@ Note that we only have a single unsafe block in our code, which is needed to cre
 ### A println Macro
 Now that we have a global writer, we can add a `println` macro that can be used from anywhere in the codebase. Rust's [macro syntax] is a bit strange, so we won't try to write a macro from scratch. Instead, we look at the source of the [`println!` macro] in the standard library:
 
-[macro syntax]: https://doc.rust-lang.org/nightly/book/ch19-06-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
+[macro syntax]: https://doc.rust-lang.org/nightly/book/ch20-05-macros.html#declarative-macros-for-general-metaprogramming
 [`println!` macro]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust

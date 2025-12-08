@@ -277,16 +277,16 @@ pub fn _print(args: fmt::Arguments) {
 
 _print 関数は `WRITER` をロックし、`write_fmt` を呼び出し、そして関数の最後で暗黙にロックを解放します。では、`WRITER` がロックされている間に割り込みが発生し、割り込みハンドラもなにかを表示しようとしていると想像してみてください:
 
-時刻 | _start | 割り込みハンドラ
----------|------|------------------
-0 | `println!` を呼び出す     | &nbsp;
-1 | `print` が `WRITER` をロック | &nbsp;
-2 | | **割り込みが発生**、割り込みハンドラが動き出す
-3 | | `println!` を呼び出す |
-4 | | `print` が `WRITER` をロックしようとする (既にロック済み)
-5 | | `print` が `WRITER` をロックしようとする (既にロック済み)
-… | | …
-_(決して起こらない)_ | _`WRITER` のロックを解放する_ |
+| 時刻                 | _start                        | 割り込みハンドラ                                          |
+| -------------------- | ----------------------------- | --------------------------------------------------------- |
+| 0                    | `println!` を呼び出す         | &nbsp;                                                    |
+| 1                    | `print` が `WRITER` をロック  | &nbsp;                                                    |
+| 2                    |                               | **割り込みが発生**、割り込みハンドラが動き出す            |
+| 3                    |                               | `println!` を呼び出す                                     |
+| 4                    |                               | `print` が `WRITER` をロックしようとする (既にロック済み) |
+| 5                    |                               | `print` が `WRITER` をロックしようとする (既にロック済み) |
+| …                    |                               | …                                                         |
+| _(決して起こらない)_ | _`WRITER` のロックを解放する_ |
 
 `WRITER` はロックされているので、割り込みハンドラはそれが解放されるのを待ちます。しかし `_start` 関数は割り込みハンドラから処理が戻らないと実行されることはないので、ロックが解放されることはありません。このためシステム全体がハングしてしまいます。
 
@@ -645,7 +645,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 上記のコードは、0から9の数字キーが押された場合に変換を行い、それ以外のキーは無視します。全てのスキャンコードに対し、[match] 文を使って対応する文字か `None` を割り当てます。そのあと [`if let`] 構文を使ってオプション型の `key` から値を取り出します。パターン部分に `key` という同じ変数名を使うことでそれ以前の宣言を[シャドーイング][shadow]します。これは Rust において `Option` 型から値を取り出すときによく使うパターンです。
 
 [match]: https://doc.rust-lang.org/book/ch06-02-match.html
-[`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
+[`if let`]: https://doc.rust-lang.org/book/ch19-01-all-the-places-for-patterns.html#conditional-if-let-expressions
 [shadow]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
 
 これで数字が表示できるようになりました:

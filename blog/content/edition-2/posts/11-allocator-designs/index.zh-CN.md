@@ -672,7 +672,7 @@ impl LinkedListAllocator {
 此方法使用一个 `current` 变量和一个 [`while let` 循环] 来遍历链表元素。在开始时，`current` 被设置为（虚拟）`head` 节点。在每次迭代中，它都会被更新为当前节点的 `next` 字段（在 `else` 块中）。如果该区域适用于给定大小和对齐方式的分配，该区域会从链表中移除并与 `alloc_start` 地址一起返回。
 
 
-[`while let` loop]: https://doc.rust-lang.org/reference/expressions/loop-expr.html#predicate-pattern-loops
+[`while let` loop]: https://doc.rust-lang.org/reference/expressions/loop-expr.html#while-let-patterns
 
 当 `current.next` 指针变成 `None` 时，循环退出。这意味着我们遍历了整个链表，但没有找到合适的区域进行分配。在这种情况下，我们返回 `None`。内存区域是否合适是由 `alloc_from_region` 函数检查的，它的实现将在稍后展示。
 

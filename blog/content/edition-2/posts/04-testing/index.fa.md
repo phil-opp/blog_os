@@ -273,7 +273,7 @@ test-success-exit-code = 33         # (0x10 << 1) | 1
 تراشه‌های پیاده سازی یک رابط سریال [UART] نامیده می‌شوند. در x86 [مدلهای UART زیادی] وجود دارد، اما خوشبختانه تنها تفاوت آنها ویژگی‌های پیشرفته‌ای است که نیازی به آن‌ها نداریم. UART هایِ رایج امروزه همه با [16550 UART] سازگار هستند، بنابراین ما از آن مدل برای فریم‌ورک تست خود استفاده خواهیم کرد.
 
 [UARTs]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
-[مدلهای UART زیادی]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
+[مدلهای UART زیادی]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#Models
 [16550 UART]: https://en.wikipedia.org/wiki/16550_UART
 
 ما از کریت [`uart_16550`] برای شروع اولیه UART و ارسال داده‌ها از طریق پورت سریال استفاده خواهیم کرد. برای افزودن آن به عنوان یک وابستگی، ما `Cargo.toml` و `main.rs` خود را به روز می‌کنیم:
@@ -540,7 +540,7 @@ where
 ما با اولین چاپِ نام تابع از طریق تابعِ [`any::type_name`]، تابع `run` را پیاده سازی می کنیم. این تابع مستقیماً در کامپایلر پیاده سازی شده و یک رشته توضیح از هر نوع را برمی‌گرداند. برای توابع، نوع آنها نامشان است، بنابراین این دقیقاً همان چیزی است که ما در این مورد می‌خواهیم. کاراکتر `\t` [کاراکتر tab] است، که مقداری ترازبندی‌ به پیام‌های `[ok]` اضافه می‌کند.
 
 [`any::type_name`]: https://doc.rust-lang.org/stable/core/any/fn.type_name.html
-[کاراکتر tab]: https://en.wikipedia.org/wiki/Tab_key#Tab_characters
+[کاراکتر tab]: https://en.wikipedia.org/wiki/Tab_character
 
 پس از چاپ نام تابع، ما از طریق `self ()` تابع تست را فراخوانی می‌کنیم. این فقط به این دلیل کار می‌کند که ما نیاز داریم که `self` تریت `Fn()` را پیاده سازی کند. بعد از بازگشت تابع تست، ما `[ok]` را چاپ می‌کنیم تا نشان دهد که تابع پنیک نکرده است.
 

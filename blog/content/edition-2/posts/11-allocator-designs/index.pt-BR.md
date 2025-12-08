@@ -647,7 +647,7 @@ impl LinkedListAllocator {
 
 O método usa uma variável `current` e um [loop `while let`] para iterar sobre os elementos da lista. No início, `current` é definido como o nó `head` (dummy). Em cada iteração, ele é então atualizado para o campo `next` do nó atual (no bloco `else`). Se a região for adequada para uma alocação com o tamanho e alinhamento fornecidos, a região é removida da lista e retornada junto com o endereço `alloc_start`.
 
-[loop `while let`]: https://doc.rust-lang.org/reference/expressions/loop-expr.html#predicate-pattern-loops
+[loop `while let`]: https://doc.rust-lang.org/reference/expressions/loop-expr.html#while-let-patterns
 
 Quando o ponteiro `current.next` se torna `None`, o loop sai. Isso significa que iteramos sobre toda a lista mas não encontramos nenhuma região adequada para uma alocação. Nesse caso, retornamos `None`. Se uma região é adequada é verificado pela função `alloc_from_region`, cuja implementação será mostrada em um momento.
 

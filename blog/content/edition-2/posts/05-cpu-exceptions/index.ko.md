@@ -49,14 +49,14 @@ x86 아키텍처에는 20가지 정도의 CPU 예외가 존재합니다. 그 중
 예외 발생을 포착하고 대응할 수 있으려면 _인터럽트 서술자 테이블 (Interrupt Descriptor Table; IDT)_ 이 필요합니다.
 이 테이블을 통해 우리는 각각의 CPU 예외를 어떤 예외 처리 함수가 처리할지 지정합니다. 하드웨어에서 이 테이블을 직접 사용하므로 테이블의 형식은 정해진 표준에 따라야 합니다. 테이블의 각 엔트리는 아래와 같은 16 바이트 구조를 따릅니다:
 
-| 타입 | 이름                     | 설명                                                                                                          |
-| ---- | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| u16  | Function Pointer [0:15]  | 예외 처리 함수에 대한 64비트 포인터의 하위 16비트                                                             |
+| 타입 | 이름                     | 설명                                                                                                    |
+| ---- | ------------------------ | ------------------------------------------------------------------------------------------------------- |
+| u16  | Function Pointer [0:15]  | 예외 처리 함수에 대한 64비트 포인터의 하위 16비트                                                       |
 | u16  | GDT selector             | [전역 서술자 테이블 (global descriptor table)][global descriptor table]에서 코드 세그먼트를 선택하는 값 |
-| u16  | Options                  | (표 아래의 설명 참조)                                                                                         |
-| u16  | Function Pointer [16:31] | 예외 처리 함수에 대한 64비트 포인터의 2번째 하위 16비트                                                       |
-| u32  | Function Pointer [32:63] | 예외 처리 함수에 대한 64비트 포인터의 상위 32비트                                                             |
-| u32  | Reserved                 | 사용 보류 중인 영역                                                                                           |
+| u16  | Options                  | (표 아래의 설명 참조)                                                                                   |
+| u16  | Function Pointer [16:31] | 예외 처리 함수에 대한 64비트 포인터의 2번째 하위 16비트                                                 |
+| u32  | Function Pointer [32:63] | 예외 처리 함수에 대한 64비트 포인터의 상위 32비트                                                       |
+| u32  | Reserved                 | 사용 보류 중인 영역                                                                                     |
 
 [global descriptor table]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
@@ -135,7 +135,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 `HandlerFunc`는 함수 타입 `extern "x86-interrupt" fn`의 [타입 별칭][type alias]입니다. `extern` 키워드는 [외부 함수 호출 규약 (foreign calling convention)][foreign calling convention]을 사용하는 함수를 정의할 때 쓰이는데, 주로 C 함수와 상호작용하는 경우에 쓰입니다 (`extern "C" fn`). `x86-interrupt` 함수 호출 규약은 무엇일까요?
 
-[type alias]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[type alias]: https://doc.rust-lang.org/book/ch20-03-advanced-types.html#creating-type-synonyms-with-type-aliases
 [foreign calling convention]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## 인터럽트 호출 규약
@@ -334,7 +334,7 @@ pub fn init_idt() {
 문제는 static 변수의 값은 변경할 수가 없어서, `init` 함수 실행 시 breakpoint 예외에 대응하는 IDT 엔트리를 수정할 수 없습니다.
 대신 `IDT`를 [`static mut`] 변수에 저장해보겠습니다:
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();

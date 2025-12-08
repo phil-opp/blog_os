@@ -562,7 +562,7 @@ where
 Implementamos a função `run` primeiro imprimindo o nome da função usando a função [`any::type_name`]. Esta função é implementada diretamente no compilador e retorna uma descrição em string de cada tipo. Para funções, o tipo é seu nome, então isso é exatamente o que queremos neste caso. O caractere `\t` é o [caractere tab], que adiciona algum alinhamento às mensagens `[ok]`.
 
 [`any::type_name`]: https://doc.rust-lang.org/stable/core/any/fn.type_name.html
-[caractere tab]: https://en.wikipedia.org/wiki/Tab_key#Tab_characters
+[caractere tab]: https://en.wikipedia.org/wiki/Tab_character
 
 Após imprimir o nome da função, invocamos a função de teste através de `self()`. Isso só funciona porque exigimos que `self` implemente a trait `Fn()`. Após a função de teste retornar, imprimimos `[ok]` para indicar que a função não entrou em panic.
 

@@ -129,7 +129,7 @@ pub trait Future {
 
 O [tipo associado] `Output` especifica o tipo do valor assíncrono. Por exemplo, a função `async_read_file` no diagrama acima retornaria uma instância `Future` com `Output` definido como `File`.
 
-[tipo associado]: https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types
+[tipo associado]: https://doc.rust-lang.org/book/ch20-02-advanced-traits.html#associated-types
 
 O método [`poll`] permite verificar se o valor já está disponível. Ele retorna um enum [`Poll`], que se parece com isto:
 
@@ -816,7 +816,7 @@ A struct `Task` é um tipo newtype wrapper em torno de uma future fixada, alocad
 - Como aprendemos na [seção sobre pinning], o tipo `Pin<Box>` garante que um valor não pode ser movido na memória colocando-o no heap e impedindo a criação de referências `&mut` a ele. Isso é importante porque futures gerados por async/await podem ser auto-referenciais, ou seja, conter ponteiros para si mesmos que seriam invalidados quando a future é movida.
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-[_dinamicamente despachados_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
+[_dinamicamente despachados_]: https://doc.rust-lang.org/book/ch18-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [seção sobre pinning]: #pinning
 
 Para permitir a criação de novas structs `Task` a partir de futures, criamos uma função `new`:
@@ -1586,7 +1586,7 @@ Nota do tradutor ([Richard Alves](https://github.com/richarddalves)): Na data de
 
 - Para evitar a sobrecarga de desempenho de criar um waker em cada poll, usamos o mapa `waker_cache` para armazenar o waker para cada tarefa após ter sido criado. Para isso, usamos o método [`BTreeMap::entry`] em combinação com [`Entry::or_insert_with`] para criar um novo waker se ele ainda não existir e então obter uma referência mutável a ele. Para criar um novo waker, clonamos a `task_queue` e a passamos junto com o ID da tarefa para a função `TaskWaker::new` (implementação mostrada abaixo). Como a `task_queue` está encapsulada em um `Arc`, o `clone` apenas incrementa a contagem de referência do valor, mas ainda aponta para a mesma fila alocada em heap. Note que reutilizar wakers assim não é possível para todas as implementações de waker, mas nosso tipo `TaskWaker` permitirá isso.
 
-[_desestruturação_]: https://doc.rust-lang.org/book/ch18-03-pattern-syntax.html#destructuring-to-break-apart-values
+[_desestruturação_]: https://doc.rust-lang.org/book/ch19-03-pattern-syntax.html#destructuring-to-break-apart-values
 [RFC 2229]: https://github.com/rust-lang/rfcs/pull/2229
 [RFC 2229 impl]: https://github.com/rust-lang/rust/issues/53488
 

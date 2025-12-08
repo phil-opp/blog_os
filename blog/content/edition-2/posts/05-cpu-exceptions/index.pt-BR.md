@@ -48,28 +48,28 @@ Para a lista completa de exceções, consulte a [wiki do OSDev][exceptions].
 ### A Tabela de Descritores de Interrupção
 Para capturar e manipular exceções, precisamos configurar uma chamada _Tabela de Descritores de Interrupção_ (IDT - Interrupt Descriptor Table). Nesta tabela, podemos especificar uma função manipuladora para cada exceção de CPU. O hardware usa esta tabela diretamente, então precisamos seguir um formato predefinido. Cada entrada deve ter a seguinte estrutura de 16 bytes:
 
-Tipo| Nome                     | Descrição
-----|--------------------------|-----------------------------------
-u16 | Function Pointer [0:15]  | Os bits inferiores do ponteiro para a função manipuladora.
-u16 | GDT selector             | Seletor de um segmento de código na [tabela de descritores globais].
-u16 | Options                  | (veja abaixo)
-u16 | Function Pointer [16:31] | Os bits do meio do ponteiro para a função manipuladora.
-u32 | Function Pointer [32:63] | Os bits restantes do ponteiro para a função manipuladora.
-u32 | Reserved                 |
+| Tipo | Nome                     | Descrição                                                            |
+| ---- | ------------------------ | -------------------------------------------------------------------- |
+| u16  | Function Pointer [0:15]  | Os bits inferiores do ponteiro para a função manipuladora.           |
+| u16  | GDT selector             | Seletor de um segmento de código na [tabela de descritores globais]. |
+| u16  | Options                  | (veja abaixo)                                                        |
+| u16  | Function Pointer [16:31] | Os bits do meio do ponteiro para a função manipuladora.              |
+| u32  | Function Pointer [32:63] | Os bits restantes do ponteiro para a função manipuladora.            |
+| u32  | Reserved                 |
 
 [tabela de descritores globais]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
 O campo options tem o seguinte formato:
 
-Bits  | Nome                              | Descrição
-------|-----------------------------------|-----------------------------------
-0-2   | Interrupt Stack Table Index       | 0: Não troca stacks, 1-7: Troca para a n-ésima stack na Interrupt Stack Table quando este manipulador é chamado.
-3-7   | Reserved              |
-8     | 0: Interrupt Gate, 1: Trap Gate   | Se este bit é 0, as interrupções são desativadas quando este manipulador é chamado.
-9-11  | must be one                       |
-12    | must be zero                      |
-13‑14 | Descriptor Privilege Level (DPL)  | O nível mínimo de privilégio necessário para chamar este manipulador.
-15    | Present                           |
+| Bits  | Nome                             | Descrição                                                                                                        |
+| ----- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 0-2   | Interrupt Stack Table Index      | 0: Não troca stacks, 1-7: Troca para a n-ésima stack na Interrupt Stack Table quando este manipulador é chamado. |
+| 3-7   | Reserved                         |
+| 8     | 0: Interrupt Gate, 1: Trap Gate  | Se este bit é 0, as interrupções são desativadas quando este manipulador é chamado.                              |
+| 9-11  | must be one                      |
+| 12    | must be zero                     |
+| 13‑14 | Descriptor Privilege Level (DPL) | O nível mínimo de privilégio necessário para chamar este manipulador.                                            |
+| 15    | Present                          |
 
 Cada exceção tem um índice predefinido na IDT. Por exemplo, a exceção invalid opcode tem índice de tabela 6 e a exceção page fault tem índice de tabela 14. Assim, o hardware pode automaticamente carregar a entrada IDT correspondente para cada exceção. A [Tabela de Exceções][exceptions] na wiki do OSDev mostra os índices IDT de todas as exceções na coluna "Vector nr.".
 
@@ -134,7 +134,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 É um [type alias] para um tipo `extern "x86-interrupt" fn`. A palavra-chave `extern` define uma função com uma [convenção de chamada estrangeira] e é frequentemente usada para se comunicar com código C (`extern "C" fn`). Mas o que é a convenção de chamada `x86-interrupt`?
 
-[type alias]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[type alias]: https://doc.rust-lang.org/book/ch20-03-advanced-types.html#creating-type-synonyms-with-type-aliases
 [convenção de chamada estrangeira]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## A Convenção de Chamada de Interrupção
@@ -164,10 +164,10 @@ Em contraste, uma função chamada tem permissão para sobrescrever registradore
 
 No x86_64, a convenção de chamada C especifica os seguintes registradores preservados e scratch:
 
-registradores preservados | registradores scratch
----|---
-`rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11`
-_callee-saved_ | _caller-saved_
+| registradores preservados                       | registradores scratch                                       |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| `rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11` |
+| _callee-saved_                                  | _caller-saved_                                              |
 
 O compilador conhece essas regras, então gera o código de acordo. Por exemplo, a maioria das funções começa com um `push rbp`, que faz backup de `rbp` na pilha (porque é um registrador callee-saved).
 

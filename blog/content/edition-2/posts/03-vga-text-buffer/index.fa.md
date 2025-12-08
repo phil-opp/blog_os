@@ -31,12 +31,12 @@ rtl = true
 ## بافر متن VGA
 برای چاپ یک کاراکتر روی صفحه در حالت متن VGA ، باید آن را در بافر متن سخت افزار VGA بنویسید. بافر متن VGA یک آرایه دو بعدی است که به طور معمول 25 ردیف و 80 ستون دارد که مستقیماً به صفحه نمایش داده(رندر) می شود. هر خانه آرایه یک کاراکتر صفحه نمایش را از طریق قالب زیر توصیف می کند:
 
-Bit(s) | Value
------- | ----------------
-0-7    | ASCII code point
-8-11   | Foreground color
-12-14  | Background color
-15     | Blink
+| Bit(s) | Value            |
+| ------ | ---------------- |
+| 0-7    | ASCII code point |
+| 8-11   | Foreground color |
+| 12-14  | Background color |
+| 15     | Blink            |
 
 اولین بایت کاراکتری در [کدگذاری ASCII] را نشان می دهد که باید چاپ شود. اگر بخواهیم دقیق باشیم ، دقیقاً ASCII نیست ، بلکه مجموعه ای از کاراکترها به نام [_کد صفحه 437_] با برخی کاراکتر های اضافی و تغییرات جزئی است. برای سادگی ، ما در این پست آنرا یک کاراکتر ASCII می نامیم.
 
@@ -45,16 +45,16 @@ Bit(s) | Value
 
 بایت دوم نحوه نمایش کاراکتر را مشخص می کند. چهار بیت اول رنگ پیش زمینه را مشخص می کند ، سه بیت بعدی رنگ پس زمینه و بیت آخر اینکه کاراکتر باید چشمک بزند یا نه. رنگ های زیر موجود است:
 
-Number | Color      | Number + Bright Bit | Bright Color
------- | ---------- | ------------------- | -------------
-0x0    | Black      | 0x8                 | Dark Gray
-0x1    | Blue       | 0x9                 | Light Blue
-0x2    | Green      | 0xa                 | Light Green
-0x3    | Cyan       | 0xb                 | Light Cyan
-0x4    | Red        | 0xc                 | Light Red
-0x5    | Magenta    | 0xd                 | Pink
-0x6    | Brown      | 0xe                 | Yellow
-0x7    | Light Gray | 0xf                 | White
+| Number | Color      | Number + Bright Bit | Bright Color |
+| ------ | ---------- | ------------------- | ------------ |
+| 0x0    | Black      | 0x8                 | Dark Gray    |
+| 0x1    | Blue       | 0x9                 | Light Blue   |
+| 0x2    | Green      | 0xa                 | Light Green  |
+| 0x3    | Cyan       | 0xb                 | Light Cyan   |
+| 0x4    | Red        | 0xc                 | Light Red    |
+| 0x5    | Magenta    | 0xd                 | Pink         |
+| 0x6    | Brown      | 0xe                 | Yellow       |
+| 0x7    | Light Gray | 0xf                 | White        |
 
 بیت 4، بیت روشنایی است ، که به عنوان مثال آبی به آبی روشن تبدیل می‌کند. برای رنگ پس زمینه ، این بیت به عنوان بیت چشمک مورد استفاده قرار می گیرد.
 
@@ -264,7 +264,7 @@ pub fn print_something() {
 ```
 ابتدا یک Writer جدید ایجاد می کند که به بافر VGA در `0xb8000` اشاره دارد. سینتکس این ممکن است کمی عجیب به نظر برسد: اول ، ما عدد صحیح `0xb8000` را به عنوان [اشاره گر خام] قابل تغییر در نظر می گیریم. سپس با dereferencing کردن آن (از طریق "*") و بلافاصله ارجاع مجدد (از طریق `&mut`) آن را به یک مرجع قابل تغییر تبدیل می کنیم. این تبدیل به یک [بلوک `غیرایمن`] احتیاج دارد ، زیرا کامپایلر نمی تواند صحت اشاره‌گر خام را تضمین کند.
 
-[اشاره گر خام]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[اشاره گر خام]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [بلوک `غیرایمن`]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
 
 سپس بایت `b'H'` را روی آن می نویسد. پیشوند `b` یک [بایت لیترال] ایجاد می کند ، که بیانگر یک کاراکتر ASCII است. با نوشتن رشته های `"ello "` و `"Wörld!"` ، ما متد `write_string` و واکنش به کاراکترهای غیر قابل چاپ را آزمایش می کنیم. برای دیدن خروجی ، باید تابع `print_something` را از تابع `_start` فراخوانی کنیم:
@@ -525,7 +525,7 @@ lazy_static! {
 
 با این حال ، این `WRITER` بسیار بی فایده است زیرا غیر قابل تغییر است. این بدان معنی است که ما نمی توانیم چیزی در آن بنویسیم (از آنجا که همه متد های نوشتن `&mut self` را در ورودی میگیرند). یک راه حل ممکن استفاده از [استاتیک قابل تغییر] است. اما پس از آن هر خواندن و نوشتن آن ناامن (unsafe) است زیرا می تواند به راحتی باعث data race و سایر موارد بد باشد. استفاده از `static mut` بسیار نهی شده است ، حتی پیشنهادهایی برای [حذف آن][remove static mut] وجود داشت. اما گزینه های دیگر چیست؟ ما می توانیم سعی کنیم از یک استاتیک تغییرناپذیر با نوع سلول مانند [RefCell] یا حتی [UnsafeCell] استفاده کنیم که [تغییر پذیری داخلی] را فراهم می کند. اما این انواع [Sync] نیستند (با دلیل کافی) ، بنابراین نمی توانیم از آنها در استاتیک استفاده کنیم.
 
-[استاتیک قابل تغییر]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[استاتیک قابل تغییر]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 [remove static mut]: https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437
 [RefCell]: https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt
 [UnsafeCell]: https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html
@@ -584,7 +584,7 @@ pub extern "C" fn _start() -> ! {
 ### یک ماکروی println
 اکنون که یک نویسنده گلوبال داریم ، می توانیم یک ماکرو `println` اضافه کنیم که می تواند از هر کجا در کد استفاده شود. [سینتکس ماکروی] راست کمی عجیب است ، بنابراین ما سعی نمی کنیم ماکرو را از ابتدا بنویسیم. در عوض به سورس [ماکروی `println!`] در کتابخانه استاندارد نگاه می کنیم:
 
-[سینتکس ماکروی]: https://doc.rust-lang.org/nightly/book/ch19-06-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
+[سینتکس ماکروی]: https://doc.rust-lang.org/nightly/book/ch20-05-macros.html#declarative-macros-for-general-metaprogramming
 [ماکروی `println!`]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust

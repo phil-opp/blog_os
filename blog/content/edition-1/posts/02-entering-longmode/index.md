@@ -151,7 +151,7 @@ Don't worry, you don't need to understand the details.
 ### Long Mode check
 Now we can use CPUID to detect whether long mode can be used. I use code from [OSDev][long mode detection] again:
 
-[long mode detection]: https://wiki.osdev.org/Setting_Up_Long_Mode#x86_or_x86-64
+[long mode detection]: wiki.osdev.org/Setting_Up_Long_Mode#Checking_for_long_mode_support
 
 ```nasm
 check_long_mode:
@@ -173,7 +173,7 @@ check_long_mode:
 ```
 Like many low-level things, CPUID is a bit strange. Instead of taking a parameter, the `cpuid` instruction implicitly uses the `eax` register as argument. To test if long mode is available, we need to call `cpuid` with `0x80000001` in `eax`. This loads some information to the `ecx` and `edx` registers. Long mode is supported if the 29th bit in `edx` is set. [Wikipedia][cpuid long mode] has detailed information.
 
-[cpuid long mode]: https://en.wikipedia.org/wiki/CPUID#EAX.3D80000001h:_Extended_Processor_Info_and_Feature_Bits
+[cpuid long mode]: https://en.wikipedia.org/wiki/CPUID#EAX=8000'0001h:_Extended_Processor_Info_and_Feature_Bits
 
 If you look at the assembly above, you'll probably notice that we call `cpuid` twice. The reason is that the CPUID command started with only a few functions and was extended over time. So old processors may not know the `0x80000001` argument at all. To test if they do, we need to invoke `cpuid` with `0x80000000` in `eax` first. It returns the highest supported parameter value in `eax`. If it's at least `0x80000001`, we can test for long mode as described above. Else the CPU is old and doesn't know what long mode is either. In that case, we directly jump to `.no_long_mode` through the `jb` instruction (“jump if below”).
 
@@ -229,20 +229,20 @@ But what happens to bits 48-63 of the 64-bit virtual address? Well, they can't b
 
 An entry in the P4, P3, P2, and P1 tables consists of the page aligned 52-bit _physical_ address of the frame or the next page table and the following bits that can be OR-ed in:
 
-Bit(s)                | Name | Meaning
---------------------- | ------ | ----------------------------------
-0 | present | the page is currently in memory
-1 | writable | it's allowed to write to this page
-2 | user accessible | if not set, only kernel mode code can access this page
-3 | write through caching | writes go directly to memory
-4 | disable cache | no cache is used for this page
-5 | accessed | the CPU sets this bit when this page is used
-6 | dirty | the CPU sets this bit when a write to this page occurs
-7 | huge page/null | must be 0 in P1 and P4, creates a 1GiB page in P3, creates a 2MiB page in P2
-8 | global | page isn't flushed from caches on address space switch (PGE bit of CR4 register must be set)
-9-11 | available | can be used freely by the OS
-52-62 | available | can be used freely by the OS
-63 | no execute | forbid executing code on this page (the NXE bit in the EFER register must be set)
+| Bit(s) | Name                  | Meaning                                                                                      |
+| ------ | --------------------- | -------------------------------------------------------------------------------------------- |
+| 0      | present               | the page is currently in memory                                                              |
+| 1      | writable              | it's allowed to write to this page                                                           |
+| 2      | user accessible       | if not set, only kernel mode code can access this page                                       |
+| 3      | write through caching | writes go directly to memory                                                                 |
+| 4      | disable cache         | no cache is used for this page                                                               |
+| 5      | accessed              | the CPU sets this bit when this page is used                                                 |
+| 6      | dirty                 | the CPU sets this bit when a write to this page occurs                                       |
+| 7      | huge page/null        | must be 0 in P1 and P4, creates a 1GiB page in P3, creates a 2MiB page in P2                 |
+| 8      | global                | page isn't flushed from caches on address space switch (PGE bit of CR4 register must be set) |
+| 9-11   | available             | can be used freely by the OS                                                                 |
+| 52-62  | available             | can be used freely by the OS                                                                 |
+| 63     | no execute            | forbid executing code on this page (the NXE bit in the EFER register must be set)            |
 
 ### Set Up Identity Paging
 When we switch to long mode, paging will be activated automatically. The CPU will then try to read the instruction at the following address, but this address is now a virtual address. So we need to do _identity mapping_, i.e. map a physical address to the same virtual address.
@@ -387,18 +387,18 @@ Today almost everyone uses Paging instead of Segmentation (and so do we). But on
 
 A GDT always starts with a 0-entry and contains an arbitrary number of segment entries afterwards. A 64-bit entry has the following format:
 
-Bit(s)                | Name | Meaning
---------------------- | ------ | ----------------------------------
-0-41 | ignored | ignored in 64-bit mode
-42 | conforming | the current privilege level can be higher than the specified level for code segments (else it must match exactly)
-43 | executable | if set, it's a code segment, else it's a data segment
-44 | descriptor type | should be 1 for code and data segments
-45-46 | privilege | the [ring level]: 0 for kernel, 3 for user
-47 | present | must be 1 for valid selectors
-48-52 | ignored | ignored in 64-bit mode
-53 | 64-bit | should be set for 64-bit code segments
-54 | 32-bit | must be 0 for 64-bit segments
-55-63 | ignored | ignored in 64-bit mode
+| Bit(s) | Name            | Meaning                                                                                                           |
+| ------ | --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 0-41   | ignored         | ignored in 64-bit mode                                                                                            |
+| 42     | conforming      | the current privilege level can be higher than the specified level for code segments (else it must match exactly) |
+| 43     | executable      | if set, it's a code segment, else it's a data segment                                                             |
+| 44     | descriptor type | should be 1 for code and data segments                                                                            |
+| 45-46  | privilege       | the [ring level]: 0 for kernel, 3 for user                                                                        |
+| 47     | present         | must be 1 for valid selectors                                                                                     |
+| 48-52  | ignored         | ignored in 64-bit mode                                                                                            |
+| 53     | 64-bit          | should be set for 64-bit code segments                                                                            |
+| 54     | 32-bit          | must be 0 for 64-bit segments                                                                                     |
+| 55-63  | ignored         | ignored in 64-bit mode                                                                                            |
 
 [ring level]: https://wiki.osdev.org/Security#Rings
 

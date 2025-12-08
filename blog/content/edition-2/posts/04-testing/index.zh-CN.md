@@ -278,7 +278,7 @@ test-success-exit-code = 33         # (0x10 << 1) | 1
 用来实现串行接口的芯片被称为 [UARTs]。在x86上，有[很多UART模型][lots of UART models]，但是幸运的是，它们之间仅有的那些不同之处都是我们用不到的高级功能。目前通用的UARTs都会兼容[16550 UART]，所以我们在我们测试框架里采用该模型。
 
 [UARTs]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
-[lots of UART models]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#UART_models
+[lots of UART models]: https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter#Models
 [16550 UART]: https://en.wikipedia.org/wiki/16550_UART
 
 我们使用 [`uart_16550`] crate来初始化UART，并通过串口来发送数据。为了将该crate添加为依赖，我们需要将 `Cargo.toml` 和 `main.rs` 修改为如下:
@@ -549,7 +549,7 @@ where
 我们实现的 `run` 函数中，首先使用 [`any::type_name`] 输出了函数名，这个函数事实上是被编译器实现的，可以返回任意类型的字符串形式。对于函数而言，其类型的字符串形式就是它的函数名，而函数名也正是我们想要的测试用例名称。至于 `\t` 则代表 [制表符][tab character]，其作用是为后面的 `[ok]` 输出增加一点左边距。
 
 [`any::type_name`]: https://doc.rust-lang.org/stable/core/any/fn.type_name.html
-[tab character]: https://en.wikipedia.org/wiki/Tab_key#Tab_characters
+[tab character]: https://en.wikipedia.org/wiki/Tab_character
 
 输出函数名之后，我们通过 `self()` 调用了测试函数本身，该调用方式属于 `Fn()` trait 独有，如果测试函数顺利执行完毕，则 `[ok]` 也会被输出出来。
 

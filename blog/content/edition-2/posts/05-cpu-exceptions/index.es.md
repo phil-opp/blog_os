@@ -132,7 +132,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 Es un [alias de tipo] para un tipo de `extern "x86-interrupt" fn`. La palabra clave `extern` define una función con una [convención de llamada foránea] y se utiliza a menudo para comunicarse con código C (`extern "C" fn`). Pero, ¿cuál es la convención de llamada `x86-interrupt`?
 
-[alias de tipo]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[alias de tipo]: https://doc.rust-lang.org/book/ch20-03-advanced-types.html#creating-type-synonyms-with-type-aliases
 [convención de llamada foránea]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## La convención de llamada de interrupción
@@ -329,7 +329,7 @@ pub fn init_idt() {
 
 Sin embargo, hay un problema: las estáticas son inmutables, por lo que no podemos modificar la entrada de punto de interrupción desde nuestra función `init`. Podríamos resolver este problema utilizando un [`static mut`]:
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();

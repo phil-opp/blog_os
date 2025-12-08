@@ -280,16 +280,16 @@ pub fn _print(args: fmt::Arguments) {
 
 Ela trava o `WRITER`, chama `write_fmt` nele, e implicitamente o destrava no final da função. Agora imagine que uma interrupção ocorre enquanto o `WRITER` está travado e o manipulador de interrupção tenta imprimir algo também:
 
-Passo de Tempo | _start | interrupt_handler
----------|------|------------------
-0 | chama `println!`      | &nbsp;
-1 | `print` trava `WRITER` | &nbsp;
-2 | | **interrupção ocorre**, manipulador começa a executar
-3 | | chama `println!` |
-4 | | `print` tenta travar `WRITER` (já travado)
-5 | | `print` tenta travar `WRITER` (já travado)
-… | | …
-_nunca_ | _destravar `WRITER`_ |
+| Passo de Tempo | _start                 | interrupt_handler                                     |
+| -------------- | ---------------------- | ----------------------------------------------------- |
+| 0              | chama `println!`       | &nbsp;                                                |
+| 1              | `print` trava `WRITER` | &nbsp;                                                |
+| 2              |                        | **interrupção ocorre**, manipulador começa a executar |
+| 3              |                        | chama `println!`                                      |
+| 4              |                        | `print` tenta travar `WRITER` (já travado)            |
+| 5              |                        | `print` tenta travar `WRITER` (já travado)            |
+| …              |                        | …                                                     |
+| _nunca_        | _destravar `WRITER`_   |
 
 O `WRITER` está travado, então o manipulador de interrupção espera até que se torne livre. Mas isso nunca acontece, porque a função `_start` só continua a executar após o manipulador de interrupção retornar. Assim, o sistema inteiro trava.
 
@@ -646,7 +646,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 O código acima traduz pressionamentos das teclas numéricas 0-9 e ignora todas as outras teclas. Ele usa uma instrução [match] para atribuir um caractere ou `None` a cada scancode. Então usa [`if let`] para desestruturar o `key` opcional. Ao usar o mesmo nome de variável `key` no padrão, [sombreamos] a declaração anterior, que é um padrão comum para desestruturar tipos `Option` em Rust.
 
 [match]: https://doc.rust-lang.org/book/ch06-02-match.html
-[`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
+[`if let`]: https://doc.rust-lang.org/book/ch19-01-all-the-places-for-patterns.html#conditional-if-let-expressions
 [sombreamos]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
 
 Agora podemos escrever números:
