@@ -280,16 +280,16 @@ pub fn _print(args: fmt::Arguments) {
 
 Ela trava o `WRITER`, chama `write_fmt` nele, e implicitamente o destrava no final da função. Agora imagine que uma interrupção ocorre enquanto o `WRITER` está travado e o manipulador de interrupção tenta imprimir algo também:
 
-Passo de Tempo | _start | interrupt_handler
----------|------|------------------
-0 | chama `println!`      | &nbsp;
-1 | `print` trava `WRITER` | &nbsp;
-2 | | **interrupção ocorre**, manipulador começa a executar
-3 | | chama `println!` |
-4 | | `print` tenta travar `WRITER` (já travado)
-5 | | `print` tenta travar `WRITER` (já travado)
-… | | …
-_nunca_ | _destravar `WRITER`_ |
+| Passo de Tempo | _start                 | interrupt_handler                                     |
+| -------------- | ---------------------- | ----------------------------------------------------- |
+| 0              | chama `println!`       | &nbsp;                                                |
+| 1              | `print` trava `WRITER` | &nbsp;                                                |
+| 2              |                        | **interrupção ocorre**, manipulador começa a executar |
+| 3              |                        | chama `println!`                                      |
+| 4              |                        | `print` tenta travar `WRITER` (já travado)            |
+| 5              |                        | `print` tenta travar `WRITER` (já travado)            |
+| …              |                        | …                                                     |
+| _nunca_        | _destravar `WRITER`_   |
 
 O `WRITER` está travado, então o manipulador de interrupção espera até que se torne livre. Mas isso nunca acontece, porque a função `_start` só continua a executar após o manipulador de interrupção retornar. Assim, o sistema inteiro trava.
 
