@@ -274,16 +274,16 @@ pub fn _print(args: fmt::Arguments) {
 
 It locks the `WRITER`, calls `write_fmt` on it, and implicitly unlocks it at the end of the function. Now imagine that an interrupt occurs while the `WRITER` is locked and the interrupt handler tries to print something too:
 
-Timestep | _start | interrupt_handler
----------|------|------------------
-0 | calls `println!`      | &nbsp;
-1 | `print` locks `WRITER` | &nbsp;
-2 | | **interrupt occurs**, handler begins to run
-3 | | calls `println!` |
-4 | | `print` tries to lock `WRITER` (already locked)
-5 | | `print` tries to lock `WRITER` (already locked)
-… | | …
-_never_ | _unlock `WRITER`_ |
+| Timestep | _start                 | interrupt_handler                               |
+| -------- | ---------------------- | ----------------------------------------------- |
+| 0        | calls `println!`       | &nbsp;                                          |
+| 1        | `print` locks `WRITER` | &nbsp;                                          |
+| 2        |                        | **interrupt occurs**, handler begins to run     |
+| 3        |                        | calls `println!`                                |
+| 4        |                        | `print` tries to lock `WRITER` (already locked) |
+| 5        |                        | `print` tries to lock `WRITER` (already locked) |
+| …        |                        | …                                               |
+| _never_  | _unlock `WRITER`_      |
 
 The `WRITER` is locked, so the interrupt handler waits until it becomes free. But this never happens, because the `_start` function only continues to run after the interrupt handler returns. Thus, the entire system hangs.
 

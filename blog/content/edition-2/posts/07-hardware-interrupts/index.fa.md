@@ -278,16 +278,16 @@ pub fn _print(args: fmt::Arguments) {
 
 `WRITER` را قفل می کند، `write_fmt` را روی آن فراخوانی می کند و در انتهای تابع به طور ضمنی قفل آن را باز می کند. حال تصور کنید که در حالی که `WRITER` قفل شده است وقفه رخ دهد و کنترل کننده وقفه نیز سعی کند چیزی را چاپ کند:
 
-Timestep | _start | interrupt_handler
----------|------|------------------
-0 | calls `println!`      | &nbsp;
-1 | `print` locks `WRITER` | &nbsp;
-2 | | **interrupt occurs**, handler begins to run
-3 | | calls `println!` |
-4 | | `print` tries to lock `WRITER` (already locked)
-5 | | `print` tries to lock `WRITER` (already locked)
-… | | …
-_never_ | _unlock `WRITER`_ |
+| Timestep | _start                 | interrupt_handler                               |
+| -------- | ---------------------- | ----------------------------------------------- |
+| 0        | calls `println!`       | &nbsp;                                          |
+| 1        | `print` locks `WRITER` | &nbsp;                                          |
+| 2        |                        | **interrupt occurs**, handler begins to run     |
+| 3        |                        | calls `println!`                                |
+| 4        |                        | `print` tries to lock `WRITER` (already locked) |
+| 5        |                        | `print` tries to lock `WRITER` (already locked) |
+| …        |                        | …                                               |
+| _never_  | _unlock `WRITER`_      |
 
 `WRITER` قفل شده است ، بنابراین کنترل کننده وقفه منتظر می ماند تا آزاد شود. اما این هرگز اتفاق نمی افتد ، زیرا تابع `start_` فقط پس از بازگشت کنترل کننده وقفه ادامه می یابد. بنابراین کل سیستم هنگ است.
 
