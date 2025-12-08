@@ -97,7 +97,7 @@ Vamos passar por um exemplo:
 
 Aqui a função `inner` usa memória heap em vez de variáveis estáticas para armazenar `z`. Primeiro ela aloca um bloco de memória do tamanho necessário, que retorna um [ponteiro bruto] `*mut u32`. Em seguida, usa o método [`ptr::write`] para escrever o array `[1,2,3]` nele. No último passo, usa a função [`offset`] para calcular um ponteiro para o `i`-ésimo elemento e então o retorna. (Note que omitimos alguns casts e blocos unsafe necessários nesta função de exemplo por brevidade.)
 
-[ponteiro bruto]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[ponteiro bruto]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`ptr::write`]: https://doc.rust-lang.org/core/ptr/fn.write.html
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 

@@ -646,7 +646,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 O código acima traduz pressionamentos das teclas numéricas 0-9 e ignora todas as outras teclas. Ele usa uma instrução [match] para atribuir um caractere ou `None` a cada scancode. Então usa [`if let`] para desestruturar o `key` opcional. Ao usar o mesmo nome de variável `key` no padrão, [sombreamos] a declaração anterior, que é um padrão comum para desestruturar tipos `Option` em Rust.
 
 [match]: https://doc.rust-lang.org/book/ch06-02-match.html
-[`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
+[`if let`]: https://doc.rust-lang.org/book/ch19-01-all-the-places-for-patterns.html#conditional-if-let-expressions
 [sombreamos]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
 
 Agora podemos escrever números:

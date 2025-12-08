@@ -264,7 +264,7 @@ pub fn print_something() {
 ```
 Primeiro ele cria um novo Writer que aponta para o buffer VGA em `0xb8000`. A sintaxe para isso pode parecer um pouco estranha: Primeiro, convertemos o inteiro `0xb8000` como um [ponteiro bruto] mutável. Então o convertemos em uma referência mutável ao desreferenciá-lo (através de `*`) e imediatamente emprestar novamente (através de `&mut`). Esta conversão requer um [bloco `unsafe`], pois o compilador não pode garantir que o ponteiro bruto é válido.
 
-[ponteiro bruto]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[ponteiro bruto]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [bloco `unsafe`]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
 
 Então ele escreve o byte `b'H'` nele. O prefixo `b` cria um [byte literal], que representa um caractere ASCII. Ao escrever as strings `"ello "` e `"Wörld!"`, testamos nosso método `write_string` e o tratamento de caracteres não imprimíveis. Para ver a saída, precisamos chamar a função `print_something` da nossa função `_start`:
@@ -585,7 +585,7 @@ Note que temos apenas um bloco unsafe no nosso código, que é necessário para 
 ### Uma Macro println
 Agora que temos um writer global, podemos adicionar uma macro `println` que pode ser usada de qualquer lugar na base de código. A [sintaxe de macro] do Rust é um pouco estranha, então não tentaremos escrever uma macro do zero. Em vez disso, olhamos para o código-fonte da [macro `println!`] na biblioteca padrão:
 
-[sintaxe de macro]: https://doc.rust-lang.org/nightly/book/ch19-06-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
+[sintaxe de macro]: https://doc.rust-lang.org/nightly/book/ch20-05-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
 [macro `println!`]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust

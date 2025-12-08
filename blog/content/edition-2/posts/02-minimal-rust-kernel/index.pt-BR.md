@@ -381,13 +381,13 @@ Primeiro, convertemos o inteiro `0xb8000` em um [ponteiro bruto]. Então [iteram
 [static]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 [byte string]: https://doc.rust-lang.org/reference/tokens.html#byte-string-literals
-[ponteiro bruto]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[ponteiro bruto]: https://doc.rust-lang.org/stable/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
 Note que há um bloco [`unsafe`] em torno de todas as escritas de memória. A razão é que o compilador Rust não pode provar que os ponteiros brutos que criamos são válidos. Eles poderiam apontar para qualquer lugar e levar à corrupção de dados. Ao colocá-los em um bloco `unsafe`, estamos basicamente dizendo ao compilador que temos absoluta certeza de que as operações são válidas. Note que um bloco `unsafe` não desativa as verificações de segurança do Rust. Ele apenas permite que você faça [cinco coisas adicionais].
 
 [`unsafe`]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html
-[cinco coisas adicionais]: https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers
+[cinco coisas adicionais]: https://doc.rust-lang.org/stable/book/ch20-01-unsafe-rust.html#unsafe-superpowers
 
 Quero enfatizar que **esta não é a maneira como queremos fazer as coisas em Rust!** É muito fácil bagunçar ao trabalhar com ponteiros brutos dentro de blocos unsafe. Por exemplo, poderíamos facilmente escrever além do fim do buffer se não tivermos cuidado.
 
