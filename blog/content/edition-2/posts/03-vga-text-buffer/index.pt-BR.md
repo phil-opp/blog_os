@@ -31,12 +31,12 @@ Este blog é desenvolvido abertamente no [GitHub]. Se você tiver algum problema
 ## O Buffer de Texto VGA
 Para imprimir um caractere na tela em modo de texto VGA, é preciso escrevê-lo no buffer de texto do hardware VGA. O buffer de texto VGA é um array bidimensional com tipicamente 25 linhas e 80 colunas, que é renderizado diretamente na tela. Cada entrada do array descreve um único caractere da tela através do seguinte formato:
 
-Bit(s) | Valor
------- | ----------------
-0-7    | Ponto de código ASCII
-8-11   | Cor do primeiro plano
-12-14  | Cor do fundo
-15     | Piscar
+| Bit(s) | Valor                 |
+| ------ | --------------------- |
+| 0-7    | Ponto de código ASCII |
+| 8-11   | Cor do primeiro plano |
+| 12-14  | Cor do fundo          |
+| 15     | Piscar                |
 
 O primeiro byte representa o caractere que deve ser impresso na [codificação ASCII]. Para ser mais específico, não é exatamente ASCII, mas um conjunto de caracteres chamado [_página de código 437_] com alguns caracteres adicionais e pequenas modificações. Para simplificar, continuaremos chamando-o de caractere ASCII neste post.
 
@@ -45,16 +45,16 @@ O primeiro byte representa o caractere que deve ser impresso na [codificação A
 
 O segundo byte define como o caractere é exibido. Os primeiros quatro bits definem a cor do primeiro plano, os próximos três bits a cor do fundo, e o último bit se o caractere deve piscar. As seguintes cores estão disponíveis:
 
-Número | Cor           | Número + Bit Brilhante | Cor Brilhante
------- | ------------- | ---------------------- | --------------
-0x0    | Preto         | 0x8                    | Cinza Escuro
-0x1    | Azul          | 0x9                    | Azul Claro
-0x2    | Verde         | 0xa                    | Verde Claro
-0x3    | Ciano         | 0xb                    | Ciano Claro
-0x4    | Vermelho      | 0xc                    | Vermelho Claro
-0x5    | Magenta       | 0xd                    | Rosa
-0x6    | Marrom        | 0xe                    | Amarelo
-0x7    | Cinza Claro   | 0xf                    | Branco
+| Número | Cor         | Número + Bit Brilhante | Cor Brilhante  |
+| ------ | ----------- | ---------------------- | -------------- |
+| 0x0    | Preto       | 0x8                    | Cinza Escuro   |
+| 0x1    | Azul        | 0x9                    | Azul Claro     |
+| 0x2    | Verde       | 0xa                    | Verde Claro    |
+| 0x3    | Ciano       | 0xb                    | Ciano Claro    |
+| 0x4    | Vermelho    | 0xc                    | Vermelho Claro |
+| 0x5    | Magenta     | 0xd                    | Rosa           |
+| 0x6    | Marrom      | 0xe                    | Amarelo        |
+| 0x7    | Cinza Claro | 0xf                    | Branco         |
 
 O bit 4 é o _bit brilhante_, que transforma, por exemplo, azul em azul claro. Para a cor de fundo, este bit é reaproveitado como o bit de piscar.
 
