@@ -7,12 +7,7 @@ feed_filenames = ["rss.xml"]
 compile_sass = true
 minify_html = false
 
-ignored_content = [
-    "*/README.md",
-    "*/LICENSE-CC-BY-NC",
-    "**/*.ja.md",         # ignora qualquer arquivo terminado em .ja.md
-    "**/*.ja/*.md",       # ignora diretórios "algo.ja" com md dentro, se houver
-]
+ignored_content = ["*/README.md", "*/LICENSE-CC-BY-NC"]
 
 [markdown]
 highlight_code = true
