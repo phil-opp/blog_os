@@ -229,20 +229,20 @@ But what happens to bits 48-63 of the 64-bit virtual address? Well, they can't b
 
 An entry in the P4, P3, P2, and P1 tables consists of the page aligned 52-bit _physical_ address of the frame or the next page table and the following bits that can be OR-ed in:
 
-Bit(s)                | Name | Meaning
---------------------- | ------ | ----------------------------------
-0 | present | the page is currently in memory
-1 | writable | it's allowed to write to this page
-2 | user accessible | if not set, only kernel mode code can access this page
-3 | write through caching | writes go directly to memory
-4 | disable cache | no cache is used for this page
-5 | accessed | the CPU sets this bit when this page is used
-6 | dirty | the CPU sets this bit when a write to this page occurs
-7 | huge page/null | must be 0 in P1 and P4, creates a 1GiB page in P3, creates a 2MiB page in P2
-8 | global | page isn't flushed from caches on address space switch (PGE bit of CR4 register must be set)
-9-11 | available | can be used freely by the OS
-52-62 | available | can be used freely by the OS
-63 | no execute | forbid executing code on this page (the NXE bit in the EFER register must be set)
+| Bit(s) | Name                  | Meaning                                                                                      |
+| ------ | --------------------- | -------------------------------------------------------------------------------------------- |
+| 0      | present               | the page is currently in memory                                                              |
+| 1      | writable              | it's allowed to write to this page                                                           |
+| 2      | user accessible       | if not set, only kernel mode code can access this page                                       |
+| 3      | write through caching | writes go directly to memory                                                                 |
+| 4      | disable cache         | no cache is used for this page                                                               |
+| 5      | accessed              | the CPU sets this bit when this page is used                                                 |
+| 6      | dirty                 | the CPU sets this bit when a write to this page occurs                                       |
+| 7      | huge page/null        | must be 0 in P1 and P4, creates a 1GiB page in P3, creates a 2MiB page in P2                 |
+| 8      | global                | page isn't flushed from caches on address space switch (PGE bit of CR4 register must be set) |
+| 9-11   | available             | can be used freely by the OS                                                                 |
+| 52-62  | available             | can be used freely by the OS                                                                 |
+| 63     | no execute            | forbid executing code on this page (the NXE bit in the EFER register must be set)            |
 
 ### Set Up Identity Paging
 When we switch to long mode, paging will be activated automatically. The CPU will then try to read the instruction at the following address, but this address is now a virtual address. So we need to do _identity mapping_, i.e. map a physical address to the same virtual address.
@@ -387,18 +387,18 @@ Today almost everyone uses Paging instead of Segmentation (and so do we). But on
 
 A GDT always starts with a 0-entry and contains an arbitrary number of segment entries afterwards. A 64-bit entry has the following format:
 
-Bit(s)                | Name | Meaning
---------------------- | ------ | ----------------------------------
-0-41 | ignored | ignored in 64-bit mode
-42 | conforming | the current privilege level can be higher than the specified level for code segments (else it must match exactly)
-43 | executable | if set, it's a code segment, else it's a data segment
-44 | descriptor type | should be 1 for code and data segments
-45-46 | privilege | the [ring level]: 0 for kernel, 3 for user
-47 | present | must be 1 for valid selectors
-48-52 | ignored | ignored in 64-bit mode
-53 | 64-bit | should be set for 64-bit code segments
-54 | 32-bit | must be 0 for 64-bit segments
-55-63 | ignored | ignored in 64-bit mode
+| Bit(s) | Name            | Meaning                                                                                                           |
+| ------ | --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 0-41   | ignored         | ignored in 64-bit mode                                                                                            |
+| 42     | conforming      | the current privilege level can be higher than the specified level for code segments (else it must match exactly) |
+| 43     | executable      | if set, it's a code segment, else it's a data segment                                                             |
+| 44     | descriptor type | should be 1 for code and data segments                                                                            |
+| 45-46  | privilege       | the [ring level]: 0 for kernel, 3 for user                                                                        |
+| 47     | present         | must be 1 for valid selectors                                                                                     |
+| 48-52  | ignored         | ignored in 64-bit mode                                                                                            |
+| 53     | 64-bit          | should be set for 64-bit code segments                                                                            |
+| 54     | 32-bit          | must be 0 for 64-bit segments                                                                                     |
+| 55-63  | ignored         | ignored in 64-bit mode                                                                                            |
 
 [ring level]: https://wiki.osdev.org/Security#Rings
 
