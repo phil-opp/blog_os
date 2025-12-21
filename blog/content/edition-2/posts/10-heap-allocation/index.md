@@ -93,7 +93,7 @@ Let's go through an example:
 
 Here the `inner` function uses heap memory instead of static variables for storing `z`. It first allocates a memory block of the required size, which returns a `*mut u32` [raw pointer]. It then uses the [`ptr::write`] method to write the array `[1,2,3]` to it. In the last step, it uses the [`offset`] function to calculate a pointer to the `i`-th element and then returns it. (Note that we omitted some required casts and unsafe blocks in this example function for brevity.)
 
-[raw pointer]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[raw pointer]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`ptr::write`]: https://doc.rust-lang.org/core/ptr/fn.write.html
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 

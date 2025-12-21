@@ -96,7 +96,7 @@ Pasemos por un ejemplo:
 
 Aquí la función `inner` utiliza memoria del heap en lugar de variables estáticas para almacenar `z`. Primero asigna un bloque de memoria del tamaño requerido, que devuelve un `*mut u32` [puntero bruto]. Luego usa el método [`ptr::write`] para escribir el arreglo `[1,2,3]` en él. En el último paso, utiliza la función [`offset`] para calcular un puntero al elemento `i`-ésimo y luego lo devuelve. (Nota que omitimos algunos casts requeridos y bloques unsafe en esta función de ejemplo por brevedad.)
 
-[puntero bruto]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[puntero bruto]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`ptr::write`]: https://doc.rust-lang.org/core/ptr/fn.write.html
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 

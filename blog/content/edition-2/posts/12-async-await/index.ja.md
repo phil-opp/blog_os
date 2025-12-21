@@ -130,7 +130,7 @@ pub trait Future {
 
 [関連型] `Output` は非同期値の型を指定します。例えば、上の図の `async_read_file` 関数は、`Output` を `File` に設定した `Future` インスタンスを返します。
 
-[関連型]: https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types
+[関連型]: https://doc.rust-lang.org/book/ch20-02-advanced-traits.html#associated-types
 
 [`poll`]メソッドは、その値がすでに利用可能かどうかをチェックすることができます。このメソッドは、以下のような [`Poll`] 列挙体を返します。
 
@@ -818,7 +818,7 @@ pub struct Task {
 - [pinningについて]で学んだように、`Pin<Box>` 型は、値をheap上に配置し、その値への `&mut` 参照の作成を防ぐことで、メモリ内で値が移動できないようにします。これは、async/awaitによって生成されたfutureが自己参照構造体である可能性があるため、重要です。つまり、futureが移動されたときに無効になるような自分自身へのポインタを含む可能性があります。
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
+[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch18-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [pinningについて]: #pinliu-me
 
 future から新しい `Task` 構造体を作成できるように、`new` 関数を作成します:

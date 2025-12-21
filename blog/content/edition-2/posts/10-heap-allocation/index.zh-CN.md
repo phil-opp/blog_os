@@ -96,7 +96,7 @@ fn inner(i: usize) -> &'static u32 {
 
 在此，`inner` 函数使用堆内存而非静态变量来存储 `z`。它首先分配所需大小的内存块，返回一个 `*mut u32` [裸指针][raw pointer]。然后使用 [`ptr::write`] 方法将数组 `[1,2,3]` 写入。最后使用 [`offset`] 函数计算第 `i` 个元素的指针并返回。（为简洁起见，此示例函数省略了部分必需的类型转换和 unsafe 块）
 
-[raw pointer]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[raw pointer]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`ptr::write`]: https://doc.rust-lang.org/core/ptr/fn.write.html
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
@@ -595,9 +595,9 @@ reference count is 1 now](qemu-alloc-showcase.png)
 [`arc`]: https://doc.rust-lang.org/alloc/sync/struct.Arc.html
 [`string`]: https://doc.rust-lang.org/alloc/string/struct.String.html
 [`format!`]: https://doc.rust-lang.org/alloc/macro.format.html
-[`linkedlist`]: https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.htmlLinkedList.html\)
+[`linkedlist`]: https://doc.rust-lang.org/alloc/collections/linked_list/struct.LinkedList.html
 [`vecdeque`]: https://doc.rust-lang.org/alloc/collections/vec_deque/struct.VecDeque.html
-[`binaryheap`]: https://doc.rust-lang.org/alloc/collections/binary_heap/struct.BinaryHeap.htmlBinaryHeap.html\)
+[`binaryheap`]: https://doc.rust-lang.org/alloc/collections/binary_heap/struct.BinaryHeap.html
 [`btreemap`]: https://doc.rust-lang.org/alloc/collections/btree_map/struct.BTreeMap.html
 [`btreeset`]: https://doc.rust-lang.org/alloc/collections/btree_set/struct.BTreeSet.html
 

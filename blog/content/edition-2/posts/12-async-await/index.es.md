@@ -125,7 +125,7 @@ pub trait Future {
 }
 ```
 
-El tipo [asociado](https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types) `Output` especifica el tipo del valor asíncrono. Por ejemplo, la función `async_read_file` en el diagrama anterior devolvería una instancia de `Future` con `Output` configurado a `File`.
+El tipo [asociado](https://doc.rust-lang.org/book/ch20-02-advanced-traits.html#associated-types) `Output` especifica el tipo del valor asíncrono. Por ejemplo, la función `async_read_file` en el diagrama anterior devolvería una instancia de `Future` con `Output` configurado a `File`.
 
 El método [`poll`] permite comprobar si el valor ya está disponible. Devuelve un enum [`Poll`], que se ve de la siguiente manera:
 
@@ -807,7 +807,7 @@ La estructura `Task` es un envoltorio nuevo alrededor de un futuro pinzado, asig
 - Como aprendimos en la [sección sobre pinning], el tipo `Pin<Box>` asegura que un valor no puede moverse en memoria al colocarlo en el heap y prevenir la creación de referencias `&mut` a él. Esto es importante porque los futuros generados por async/await podrían ser auto-referenciales, es decir, contener punteros a sí mismos que se invalidarían cuando el futuro se moviera.
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-[_despachados dinámicamente_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
+[_despachados dinámicamente_]: https://doc.rust-lang.org/book/ch18-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [sección sobre pinning]: #pinning
 
 Para permitir la creación de nuevas estructuras `Task` a partir de futuros, creamos una función `new`:

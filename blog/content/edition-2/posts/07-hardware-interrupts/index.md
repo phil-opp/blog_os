@@ -274,16 +274,16 @@ pub fn _print(args: fmt::Arguments) {
 
 It locks the `WRITER`, calls `write_fmt` on it, and implicitly unlocks it at the end of the function. Now imagine that an interrupt occurs while the `WRITER` is locked and the interrupt handler tries to print something too:
 
-Timestep | _start | interrupt_handler
----------|------|------------------
-0 | calls `println!`      | &nbsp;
-1 | `print` locks `WRITER` | &nbsp;
-2 | | **interrupt occurs**, handler begins to run
-3 | | calls `println!` |
-4 | | `print` tries to lock `WRITER` (already locked)
-5 | | `print` tries to lock `WRITER` (already locked)
-… | | …
-_never_ | _unlock `WRITER`_ |
+| Timestep | _start                 | interrupt_handler                               |
+| -------- | ---------------------- | ----------------------------------------------- |
+| 0        | calls `println!`       | &nbsp;                                          |
+| 1        | `print` locks `WRITER` | &nbsp;                                          |
+| 2        |                        | **interrupt occurs**, handler begins to run     |
+| 3        |                        | calls `println!`                                |
+| 4        |                        | `print` tries to lock `WRITER` (already locked) |
+| 5        |                        | `print` tries to lock `WRITER` (already locked) |
+| …        |                        | …                                               |
+| _never_  | _unlock `WRITER`_      |
 
 The `WRITER` is locked, so the interrupt handler waits until it becomes free. But this never happens, because the `_start` function only continues to run after the interrupt handler returns. Thus, the entire system hangs.
 
@@ -640,7 +640,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 The above code translates keypresses of the number keys 0-9 and ignores all other keys. It uses a [match] statement to assign a character or `None` to each scancode. It then uses [`if let`] to destructure the optional `key`. By using the same variable name `key` in the pattern, we [shadow] the previous declaration, which is a common pattern for destructuring `Option` types in Rust.
 
 [match]: https://doc.rust-lang.org/book/ch06-02-match.html
-[`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
+[`if let`]: https://doc.rust-lang.org/book/ch19-01-all-the-places-for-patterns.html#conditional-if-let-expressions
 [shadow]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
 
 Now we can write numbers:

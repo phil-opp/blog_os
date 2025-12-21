@@ -138,7 +138,7 @@ pub trait Future {
 
 [关联类型][associated type] `Output` 用于指定异步值的类型。例如, 上图中的 `async_read_file` 函数将返回一个 `Future` 实例，其 `Output` 被设置为 `File` 。
 
-[associated type]: https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types
+[associated type]: https://doc.rust-lang.org/book/ch20-02-advanced-traits.html#associated-types
 
 [`poll`] 方法可用于检查值是否已就绪。它返回一个 [`Poll`] 枚举，其定义如下：
 
@@ -826,7 +826,7 @@ pub struct Task {
 * 正如我们在 [固定 相关章节][section about pinning] 中学到的， `Pin<Box>` 类型通过将值放在堆上并组织创建  `&mut`  引用来确保它不会在内存中被移动。这一点很重要，因为由 async/await 生成的 future 可能是自引用的。也就是说会包含指向自己的指针，这些指针会在 future 移动过程中失效。
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
+[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch18-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [section about pinning]: #pinning
 
 为了从 future 创建新的 `Task` 结构体，我们创建了一个 `new` 函数：
@@ -1593,7 +1593,7 @@ impl Executor {
 * 对于每个弹出的任务 ID，我们从 `tasks` map 中获取对应任务的可变引用。由于我们的 `ScancodeStream` 实现在检查任务是否需要进入休眠状态前会先注册唤醒器，可能会出现一个已不存在的任务被唤醒的情况。这种情况下，我们只需忽略这次唤醒并继续处理队列里的下一个 ID。
 * 为了避免每次轮询时创建唤醒器带来的性能开销，我们使用了 `waker_cache` map 用于存储每个任务创建后对应的唤醒器。为此，我们使用 [`BTreeMap::entry`] 方法结合 [`Entry::or_insert_with`] ，来在唤醒器不存在时创建新实例，然后获取其可变引用。为了创建新的唤醒器，我们克隆 `task_queue` 并将其与任务 ID 一同传递给 `TaskWaker::new` 函数（具体实现如下所示）。由于 `task_queue` 被封装在 `Arc` 中，克隆操作仅会增加该值的引用计数，但仍指向同一个堆分配的队列。请注意，并非所有唤醒器的实现都能像这样重复使用，不过我们的 `TaskWaker` 类型可以做到。
 
-[_destructuring_]: https://doc.rust-lang.org/book/ch18-03-pattern-syntax.html#destructuring-to-break-apart-values
+[_destructuring_]: https://doc.rust-lang.org/book/ch19-03-pattern-syntax.html#destructuring-to-break-apart-values
 [RFC 2229]: https://github.com/rust-lang/rfcs/pull/2229
 [RFC 2229 impl]: https://github.com/rust-lang/rust/issues/53488
 

@@ -160,7 +160,7 @@ pub trait Future {
 那個 關聯類型 [`associated type`] `Output` 指定了異步值的類型。
 例如，上面的示例中的 `async_read_file` 函數將返回一個 `Output` 設置為 `File` 的 `Future` 實例。
 
-[associated type]: https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#specifying-placeholder-types-in-trait-definitions-with-associated-types
+[associated type]: https://doc.rust-lang.org/book/ch20-02-advanced-traits.html#associated-types
 
 那個 [`poll`] 方法允許檢查值是否已經可用。它返回一個 [`Poll`] 枚舉，看起來像這樣：
 
@@ -966,7 +966,7 @@ pub struct Task {
 - 正如我們在 釘住操作 部分 [section about pinning] 學到的，`Pin<Box>` 類型通過將值放在堆上並防止創建對它的 `&mut` 引用來確保值在內存中不會被移動。這一點很重要，因為由 async/await 生成的 future 可能是自引用的，即包含指向自己的指針，當 future 被移動時這些指針將失效。
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
-[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
+[_dynamically dispatched_]: https://doc.rust-lang.org/book/ch18-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [section about pinning]: #pinning
 
 爲允許從 future 創建新的 `Task` 結構體，我們創建一個 `new` 函數：
@@ -1836,7 +1836,7 @@ impl Executor {
 
 - 爲避免在每次輪詢時創建喚醒器的性能開銷，我們使用 `waker_cache` map 來存儲每個任務的喚醒器。爲此，我們使用了 [`BTreeMap::entry`] 方法和 [`Entry::or_insert_with`] 來在它不存在時創建一個新的喚醒器，然後獲取一個對它的可變引用。爲創建一個新的喚醒器，我們克隆了 `task_queue`，並將它與任務 ID 一起傳遞給 `TaskWaker::new` 函數（下面展示了實現）。由於 `task_queue` 被包裝在一個 `Arc` 中，`clone` 只增加了值的引用計數，但仍然指向同一個堆分配的隊列。請注意，像這樣重用喚醒器對於所有的喚醒器實現來說都是不可能的，但我們的 `TaskWaker` 類型將允許它。
 
-[_destructuring_]: https://doc.rust-lang.org/book/ch18-03-pattern-syntax.html#destructuring-to-break-apart-values
+[_destructuring_]: https://doc.rust-lang.org/book/ch19-03-pattern-syntax.html#destructuring-to-break-apart-values
 [RFC 2229]: https://github.com/rust-lang/rfcs/pull/2229
 [RFC 2229 impl]: https://github.com/rust-lang/rust/issues/53488
 

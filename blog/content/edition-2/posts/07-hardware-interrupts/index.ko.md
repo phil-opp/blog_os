@@ -645,7 +645,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 위 코드는 0-9의 숫자 키 누름을 인식하고 출력하며, 다른 키는 무시합니다. [match]문을 사용해 각 스캔코드에 문자 또는 `None`을 배정합니다. 그 후 [`if let`]을 사용해 스캔 코드에 배정된 문자 `key`를 추출합니다. 이미 존재하던 변수 `key`와 같은 이름을 패턴에서 사용해 기존 변수의 정의를 [shadow]하는데, 이는 Rust에서 `Option` 타입 안의 값을 추출할 때 자주 사용되는 방식입니다.
 
 [match]: https://doc.rust-lang.org/book/ch06-02-match.html
-[`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
+[`if let`]: https://doc.rust-lang.org/book/ch19-01-all-the-places-for-patterns.html#conditional-if-let-expressions
 [shadow]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
 
 이제 키보드로 숫자를 입력할 수 있습니다.

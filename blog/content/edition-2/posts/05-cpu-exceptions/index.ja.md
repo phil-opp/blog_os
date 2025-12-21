@@ -46,28 +46,28 @@ x86には20種類のCPU例外があります。中でも重要なものは：
 ### 割り込み記述子表
 例外を捕捉し処理するためには、いわゆる割り込み記述子表 (Interrupt Descriptor Table, IDT) を設定しないといけません。この表にそれぞれのCPU例外に対するハンドラ関数を指定することができます。ハードウェアはこの表を直接使うので、決められたフォーマットに従わないといけません。それぞれのエントリは以下の16バイトの構造を持たなければなりません：
 
-型  | 名前                     | 説明
-----|--------------------------|-----------------------------------
-u16 | 関数ポインタ     [0:15]  | ハンドラ関数へのポインタの下位ビット。
-u16 | GDTセレクタ              | [大域記述子表 (Global Descriptor Table)][global descriptor table] におけるコードセグメントのセレクタ。
-u16 | オプション               | （下を参照）
-u16 | 関数ポインタ     [16:31] | ハンドラ関数へのポインタの中位ビット。
-u32 | 関数ポインタ     [32:63] | ハンドラ関数へのポインタの上位ビット。
-u32 | 予約済                   |
+| 型  | 名前                     | 説明                                                                                                   |
+| --- | ------------------------ | ------------------------------------------------------------------------------------------------------ |
+| u16 | 関数ポインタ     [0:15]  | ハンドラ関数へのポインタの下位ビット。                                                                 |
+| u16 | GDTセレクタ              | [大域記述子表 (Global Descriptor Table)][global descriptor table] におけるコードセグメントのセレクタ。 |
+| u16 | オプション               | （下を参照）                                                                                           |
+| u16 | 関数ポインタ     [16:31] | ハンドラ関数へのポインタの中位ビット。                                                                 |
+| u32 | 関数ポインタ     [32:63] | ハンドラ関数へのポインタの上位ビット。                                                                 |
+| u32 | 予約済                   |
 
 [global descriptor table]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
 オプション部は以下のフォーマットになっています：
 
-ビット  | 名前                                                                                           | 説明
---------|------------------------------------------------------------------------------------------------|-------------------------------------
-0-2     | 割り込みスタックテーブルインデックス                                                           | 0ならスタックを変えない。1から7なら、ハンドラが呼ばれたとき、割り込みスタック表のその数字のスタックに変える。
-3-7     | 予約済                                                                                         |
-8       | 0: 割り込みゲート、1: トラップゲート                                                           | 0なら、このハンドラが呼ばれたとき割り込みは無効化される。
-9-11    | 1にしておかないといけない                                                                      |
-12      | 0にしておかないといけない                                                                      |
-13‑14   | <ruby>記述子の特権レベル<rp> (</rp><rt>Descriptor Privilege Level</rt><rp>) </rp></ruby> (DPL) | このハンドラを呼ぶ際に必要になる最低限の特権レベル。
-15      | Present                                                                                        |
+| ビット | 名前                                                                                           | 説明                                                                                                          |
+| ------ | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 0-2    | 割り込みスタックテーブルインデックス                                                           | 0ならスタックを変えない。1から7なら、ハンドラが呼ばれたとき、割り込みスタック表のその数字のスタックに変える。 |
+| 3-7    | 予約済                                                                                         |
+| 8      | 0: 割り込みゲート、1: トラップゲート                                                           | 0なら、このハンドラが呼ばれたとき割り込みは無効化される。                                                     |
+| 9-11   | 1にしておかないといけない                                                                      |
+| 12     | 0にしておかないといけない                                                                      |
+| 13‑14  | <ruby>記述子の特権レベル<rp> (</rp><rt>Descriptor Privilege Level</rt><rp>) </rp></ruby> (DPL) | このハンドラを呼ぶ際に必要になる最低限の特権レベル。                                                          |
+| 15     | Present                                                                                        |
 
 それぞれの例外がIDTの何番目に対応するかは事前に定義されています。例えば、「無効な命令コード」の例外は6番目で、「ページフォルト」例外は14番目です。これにより、ハードウェアがそれぞれの例外に対応するIDTの設定を（特に設定の必要なく）自動的に読み出せるというわけです。OSDev wikiの[「例外表」][exceptions]の "Vector nr." 列に、すべての例外についてIDTの何番目かが記されています。
 
@@ -132,7 +132,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 これは、`extern "x86-interrupt" fn`型への[型エイリアス][type alias]です。`extern`は[外部呼び出し規約][foreign calling convention]に従う関数を定義するのに使われ、おもにC言語のコードと連携したいときに使われます (`extern "C" fn`) 。しかし、`x86-interrupt`呼び出し規約とは何なのでしょう？
 
-[type alias]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[type alias]: https://doc.rust-lang.org/book/ch20-03-advanced-types.html#creating-type-synonyms-with-type-aliases
 [foreign calling convention]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## 例外の呼び出し規約
@@ -162,10 +162,10 @@ preservedレジスタの値は関数呼び出しの前後で変化してはい�
 
 x86_64においては、C言語の呼び出し規約は以下のpreservedレジスタとscratchレジスタを指定します：
 
-preservedレジスタ                               | scratchレジスタ
----                                             | ---
-`rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11`
-_callee-saved_                                  | _caller-saved_
+| preservedレジスタ                               | scratchレジスタ                                             |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| `rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11` |
+| _callee-saved_                                  | _caller-saved_                                              |
 
 コンパイラはこれらのルールを知っているので、それにしたがってコードを生成します。例えば、ほとんどの関数は`push rbp`から始まるのですが、これは`rbp`をスタックにバックアップしているのです（`rbp`はcallee-savedなレジスタであるため）。
 
@@ -329,7 +329,7 @@ pub fn init_idt() {
 
 しかし、問題が発生します：staticは<ruby>不変<rp> (</rp><rt>イミュータブル</rt><rp>) </rp></ruby>なので、`init`関数でエントリを変更することができません。これは[`static mut`]を使って解決できそうです：
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();

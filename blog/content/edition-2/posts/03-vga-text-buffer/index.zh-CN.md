@@ -248,7 +248,7 @@ pub fn print_something() {
 }
 ```
 
-这个函数首先创建一个指向 `0xb8000` 地址VGA缓冲区的 `Writer`。实现这一点，我们需要编写的代码可能看起来有点奇怪：首先，我们把整数 `0xb8000` 强制转换为一个可变的**裸指针**（[raw pointer](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer)）；之后，通过运算符`*`，我们将这个裸指针解引用；最后，我们再通过 `&mut`，再次获得它的可变借用。这些转换需要 **`unsafe` 语句块**（[unsafe block](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html)），因为编译器并不能保证这个裸指针是有效的。
+这个函数首先创建一个指向 `0xb8000` 地址VGA缓冲区的 `Writer`。实现这一点，我们需要编写的代码可能看起来有点奇怪：首先，我们把整数 `0xb8000` 强制转换为一个可变的**裸指针**（[raw pointer](https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer)）；之后，通过运算符`*`，我们将这个裸指针解引用；最后，我们再通过 `&mut`，再次获得它的可变借用。这些转换需要 **`unsafe` 语句块**（[unsafe block](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html)），因为编译器并不能保证这个裸指针是有效的。
 
 然后它将字节 `b'H'` 写入缓冲区内. 前缀 `b` 创建了一个字节常量（[byte literal](https://doc.rust-lang.org/reference/tokens.html#byte-literals)），表示单个 ASCII 码字符；通过尝试写入 `"ello "` 和 `"Wörld!"`，我们可以测试 `write_string` 方法和其后对无法打印字符的处理逻辑。为了观察输出，我们需要在 `_start` 函数中调用 `print_something` 方法：
 
@@ -489,7 +489,7 @@ lazy_static! {
 }
 ```
 
-然而，这个 `WRITER` 可能没有什么用途，因为它目前还是**不可变变量**（immutable variable）：这意味着我们无法向它写入数据，因为所有与写入数据相关的方法都需要实例的可变引用 `&mut self`。一种解决方案是使用**可变静态**（[mutable static](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable)）的变量，但所有对它的读写操作都被规定为不安全的（unsafe）操作，因为这很容易导致数据竞争或发生其它不好的事情——使用 `static mut` 极其不被赞成，甚至有一些提案认为[应该将它删除](https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437)。也有其它的替代方案，比如可以尝试使用比如 [RefCell](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt) 或甚至 [UnsafeCell](https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html) 等类型提供的**内部可变性**（[interior mutability](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html)）；但这些类型都被设计为非同步类型，即不满足 [Sync](https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html) 约束，所以我们不能在静态变量中使用它们。
+然而，这个 `WRITER` 可能没有什么用途，因为它目前还是**不可变变量**（immutable variable）：这意味着我们无法向它写入数据，因为所有与写入数据相关的方法都需要实例的可变引用 `&mut self`。一种解决方案是使用**可变静态**（[mutable static](https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable)）的变量，但所有对它的读写操作都被规定为不安全的（unsafe）操作，因为这很容易导致数据竞争或发生其它不好的事情——使用 `static mut` 极其不被赞成，甚至有一些提案认为[应该将它删除](https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437)。也有其它的替代方案，比如可以尝试使用比如 [RefCell](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt) 或甚至 [UnsafeCell](https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html) 等类型提供的**内部可变性**（[interior mutability](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html)）；但这些类型都被设计为非同步类型，即不满足 [Sync](https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html) 约束，所以我们不能在静态变量中使用它们。
 
 ### spinlock
 
@@ -541,7 +541,7 @@ pub extern "C" fn _start() -> ! {
 
 ### `println!` 宏
 
-现在我们有了一个全局的 `Writer` 实例，我们就可以基于它实现 `println!` 宏，这样它就能被任意地方的代码使用了。Rust 提供的[宏定义语法](https://doc.rust-lang.org/nightly/book/ch19-06-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming)需要时间理解，所以我们将不从零开始编写这个宏。我们先看看标准库中 [`println!` 宏的实现源码](https://doc.rust-lang.org/nightly/std/macro.println!.html)：
+现在我们有了一个全局的 `Writer` 实例，我们就可以基于它实现 `println!` 宏，这样它就能被任意地方的代码使用了。Rust 提供的[宏定义语法](https://doc.rust-lang.org/nightly/book/ch20-05-macros.html#declarative-macros-for-general-metaprogramming)需要时间理解，所以我们将不从零开始编写这个宏。我们先看看标准库中 [`println!` 宏的实现源码](https://doc.rust-lang.org/nightly/std/macro.println!.html)：
 
 ```rust
 #[macro_export]

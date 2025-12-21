@@ -251,7 +251,7 @@ pub fn print_something() {
 ```
 Primero crea un nuevo Writer que apunta al buffer VGA en `0xb8000`. La sintaxis para esto podría parecer un poco extraña: Primero, convertimos el entero `0xb8000` como un [puntero sin procesar] mutable. Luego lo convertimos en una referencia mutable al desreferenciarlo (a través de `*`) y tomarlo prestado inmediatamente (a través de `&mut`). Esta conversión requiere un [bloque `unsafe`], ya que el compilador no puede garantizar que el puntero sin procesar sea válido.
 
-[puntero sin procesar]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[puntero sin procesar]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [bloque `unsafe`]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
 
 Luego escribe el byte `b'H'` en él. El prefijo `b` crea un [literal de byte], que representa un carácter ASCII. Al escribir las cadenas `"ello "` y `"Wörld!"`, probamos nuestro método `write_string` y el manejo de caracteres no imprimibles. Para ver la salida, necesitamos llamar a la función `print_something` desde nuestra función `_start`:

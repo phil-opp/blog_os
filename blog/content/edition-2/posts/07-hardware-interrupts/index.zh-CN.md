@@ -646,7 +646,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 以上代码可以对数字按键0-9进行转义，并忽略其他键位。具体到程序逻辑中，就是使用 [match] 匹配映射数字0-9，对于其他扫描码则返回 `None`，然后使用 [`if let`] 语句对 `key` 进行解构取值，在这个语法中，代码块中的 `key` 会 [遮蔽][shadow] 掉代码块外的同名 `Option` 型变量。
 
 [match]: https://doc.rust-lang.org/book/ch06-02-match.html
-[`if let`]: https://doc.rust-lang.org/book/ch18-01-all-the-places-for-patterns.html#conditional-if-let-expressions
+[`if let`]: https://doc.rust-lang.org/book/ch19-01-all-the-places-for-patterns.html#conditional-if-let-expressions
 [shadow]: https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#shadowing
 
 现在我们就可以向控制台写入数字了：

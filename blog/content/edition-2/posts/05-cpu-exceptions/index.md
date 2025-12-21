@@ -43,28 +43,28 @@ For the full list of exceptions, check out the [OSDev wiki][exceptions].
 ### The Interrupt Descriptor Table
 In order to catch and handle exceptions, we have to set up a so-called _Interrupt Descriptor Table_ (IDT). In this table, we can specify a handler function for each CPU exception. The hardware uses this table directly, so we need to follow a predefined format. Each entry must have the following 16-byte structure:
 
-Type| Name                     | Description
-----|--------------------------|-----------------------------------
-u16 | Function Pointer [0:15]  | The lower bits of the pointer to the handler function.
-u16 | GDT selector             | Selector of a code segment in the [global descriptor table].
-u16 | Options                  | (see below)
-u16 | Function Pointer [16:31] | The middle bits of the pointer to the handler function.
-u32 | Function Pointer [32:63] | The remaining bits of the pointer to the handler function.
-u32 | Reserved                 |
+| Type | Name                     | Description                                                  |
+| ---- | ------------------------ | ------------------------------------------------------------ |
+| u16  | Function Pointer [0:15]  | The lower bits of the pointer to the handler function.       |
+| u16  | GDT selector             | Selector of a code segment in the [global descriptor table]. |
+| u16  | Options                  | (see below)                                                  |
+| u16  | Function Pointer [16:31] | The middle bits of the pointer to the handler function.      |
+| u32  | Function Pointer [32:63] | The remaining bits of the pointer to the handler function.   |
+| u32  | Reserved                 |
 
 [global descriptor table]: https://en.wikipedia.org/wiki/Global_Descriptor_Table
 
 The options field has the following format:
 
-Bits  | Name                              | Description
-------|-----------------------------------|-----------------------------------
-0-2   | Interrupt Stack Table Index       | 0: Don't switch stacks, 1-7: Switch to the n-th stack in the Interrupt Stack Table when this handler is called.
-3-7   | Reserved              |
-8     | 0: Interrupt Gate, 1: Trap Gate   | If this bit is 0, interrupts are disabled when this handler is called.
-9-11  | must be one                       |
-12    | must be zero                      |
-13‑14 | Descriptor Privilege Level (DPL)  | The minimal privilege level required for calling this handler.
-15    | Present                           |
+| Bits  | Name                             | Description                                                                                                     |
+| ----- | -------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 0-2   | Interrupt Stack Table Index      | 0: Don't switch stacks, 1-7: Switch to the n-th stack in the Interrupt Stack Table when this handler is called. |
+| 3-7   | Reserved                         |
+| 8     | 0: Interrupt Gate, 1: Trap Gate  | If this bit is 0, interrupts are disabled when this handler is called.                                          |
+| 9-11  | must be one                      |
+| 12    | must be zero                     |
+| 13‑14 | Descriptor Privilege Level (DPL) | The minimal privilege level required for calling this handler.                                                  |
+| 15    | Present                          |
 
 Each exception has a predefined IDT index. For example, the invalid opcode exception has table index 6 and the page fault exception has table index 14. Thus, the hardware can automatically load the corresponding IDT entry for each exception. The [Exception Table][exceptions] in the OSDev wiki shows the IDT indexes of all exceptions in the “Vector nr.” column.
 
@@ -129,7 +129,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 It's a [type alias] for an `extern "x86-interrupt" fn` type. The `extern` keyword defines a function with a [foreign calling convention] and is often used to communicate with C code (`extern "C" fn`). But what is the `x86-interrupt` calling convention?
 
-[type alias]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+[type alias]: https://doc.rust-lang.org/book/ch20-03-advanced-types.html#creating-type-synonyms-with-type-aliases
 [foreign calling convention]: https://doc.rust-lang.org/nomicon/ffi.html#foreign-calling-conventions
 
 ## The Interrupt Calling Convention
@@ -159,10 +159,10 @@ In contrast, a called function is allowed to overwrite _scratch_ registers witho
 
 On x86_64, the C calling convention specifies the following preserved and scratch registers:
 
-preserved registers | scratch registers
----|---
-`rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11`
-_callee-saved_ | _caller-saved_
+| preserved registers                             | scratch registers                                           |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| `rbp`, `rbx`, `rsp`, `r12`, `r13`, `r14`, `r15` | `rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`, `r9`, `r10`, `r11` |
+| _callee-saved_                                  | _caller-saved_                                              |
 
 The compiler knows these rules, so it generates the code accordingly. For example, most functions begin with a `push rbp`, which backups `rbp` on the stack (because it's a callee-saved register).
 
@@ -327,7 +327,7 @@ pub fn init_idt() {
 
 However, there is a problem: Statics are immutable, so we can't modify the breakpoint entry from our `init` function. We could solve this problem by using a [`static mut`]:
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();
