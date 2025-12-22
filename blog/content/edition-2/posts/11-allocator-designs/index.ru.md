@@ -40,7 +40,10 @@ translators = ["TakiMoysha"]
 
 Ответственность аллокатора - управление доступной памятью в куче. Он должен возвращать неиспользуемую память при вызовах `alloc` и отслеживать память, освобожденную с помощью `dealloc`, чтобы ее можно было использовать повторно. Самое главное, он никогда не должен выделять память, которая уже используется где-то, поскольку это приведет к неопределенному поведению (undefined behavior).
 
-Помимо корректности, существует множество второстепенных целей проектирования. Например, аллокатор должен эффективно использовать доступную память и поддерживать низкий уровень [_фрагментации_]. Кроме того, он должен хорошо работать в приложениях с распараллеливанием задач и масштабироваться до любого количества процессоров. Для максимальной производительности он может даже оптимизировать расположение памяти с учетом кэшей ЦП, чтобы улучшить [локальность кэша] и избежать [false sharing].
+Помимо корректности, существует множество второстепенных целей проектирования. Например, аллокатор должен эффективно использовать доступную память и поддерживать низкий уровень [_фрагментации_]. Кроме того, он должен хорошо работать в приложениях с распараллеливанием задач и масштабироваться до любого количества процессоров. Для максимальной производительности он может даже оптимизировать структуру памяти (memory layout) с учетом кэшей ЦП, чтобы улучшить [локальность кэша] и избежать [false sharing].
+
+<!-- TODO: TERM: memory layout - структура памяти -->
+> примечание: memory layout в русском встречается как "структура памяти", но устоявшегося термина нету, обычно пишут memory layout если это важно для контекста. Под этим понимается размер, выравнивание, начало и конец участка памяти. Описывает то, как аллокатор выделяет память.
 
 [локальность кэша]: https://www.geeksforgeeks.org/locality-of-reference-and-cache-operation-in-cache-memory/
 [_фрагментации_]: https://en.wikipedia.org/wiki/Fragmentation_(computing)
@@ -454,34 +457,34 @@ Error: panicked at 'allocation error: Layout { size_: 8, align_: 8 }', src/lib.r
 
 ## Linked List Allocator
 
-A common trick to keep track of an arbitrary number of free memory areas when implementing allocators is to use these areas themselves as backing storage. This utilizes the fact that the regions are still mapped to a virtual address and backed by a physical frame, but the stored information is not needed anymore. By storing the information about the freed region in the region itself, we can keep track of an unbounded number of freed regions without needing additional memory.
+Одна из распространенных техник для отслеживания свободных областей памяти при реализации аллокаторов - это использование этих самых областей как хранилища. Мы используем факт, что регионы все еще маппяться в виртуальную память и храняться в на физическом фрейме, но хранящаяся информация больше не требуется. Записывая информацию об освобожденном регионе прямо в саму область, мы может отслеживать неограниченное кол-во свободных регионов без необходимости дополнительной памяти.
 
-The most common implementation approach is to construct a single linked list in the freed memory, with each node being a freed memory region:
+Наиболее частый подход к реализации - создание связанного списка (linked list) в освобожденной памяти, где каждый узел представляет собой свободную область памяти:
 
 ![](linked-list-allocation.svg)
 
-Each list node contains two fields: the size of the memory region and a pointer to the next unused memory region. With this approach, we only need a pointer to the first unused region (called `head`) to keep track of all unused regions, regardless of their number. The resulting data structure is often called a [_free list_].
+Каждый узел списка содержит два поля: размер свободного региона и указатель на следующий свободный регион памяти. При таком подходе нам достаточно хранить лишь указатель на первый свободный регион (называемая `head`), чтобы отслеживать все свободные области, независимо от их количиства. Получившаяся структура данных часто называется [cписок свободной памяти][_free list_]
 
 [_free list_]: https://en.wikipedia.org/wiki/Free_list
 
-As you might guess from the name, this is the technique that the `linked_list_allocator` crate uses. Allocators that use this technique are also often called _pool allocators_.
+Как вы, вероятно, уже догадались по названию, именно этот метод используется крейтом `linked_list_allocator`. Аллокаторы, применяющие этот подход, также часто называются _pool-аллокаторы_ (pool allocators)
 
 ### Implementation
 
-In the following, we will create our own simple `LinkedListAllocator` type that uses the above approach for keeping track of freed memory regions. This part of the post isn't required for future posts, so you can skip the implementation details if you like.
+Далее мы создадим свой собственный простой тип `LinkedListAllocator`, который использует вышеупомянутый подход для отслеживания освобожденных областей памяти. Эта часть поста не является обязательной для будущих постов, поэтому вы можете пропустить детали реализации, если хотите.
 
 #### The Allocator Type
 
-We start by creating a private `ListNode` struct in a new `allocator::linked_list` submodule:
+Начнем с создания приватной структуры `ListNode` в новом подмодуле `allocator::linked_list`:
 
 ```rust
-// in src/allocator.rs
+// src/allocator.rs
 
 pub mod linked_list;
 ```
 
 ```rust
-// in src/allocator/linked_list.rs
+// src/allocator/linked_list.rs
 
 struct ListNode {
     size: usize,
@@ -489,15 +492,15 @@ struct ListNode {
 }
 ```
 
-Like in the graphic, a list node has a `size` field and an optional pointer to the next node, represented by the `Option<&'static mut ListNode>` type. The `&'static mut` type semantically describes an [owned] object behind a pointer. Basically, it's a [`Box`] without a destructor that frees the object at the end of the scope.
+Как показано на рисунке, узел списка имеет поле `size` и опциональный указатель на следующий узел как тип `Option<&'static mut ListNode>`. Тип `&'static mut` семантически описывает [владеемый][owned] объект за указателем. По сути, это [`Box`] без деструктора, который освобождает объект в конце области видимости.
 
 [owned]: https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html
 [`Box`]: https://doc.rust-lang.org/alloc/boxed/index.html
 
-We implement the following set of methods for `ListNode`:
+Мы реализуем следующий метод для `ListNode`:
 
 ```rust
-// in src/allocator/linked_list.rs
+// src/allocator/linked_list.rs
 
 impl ListNode {
     const fn new(size: usize) -> Self {
@@ -514,75 +517,77 @@ impl ListNode {
 }
 ```
 
-The type has a simple constructor function named `new` and methods to calculate the start and end addresses of the represented region. We make the `new` function a [const function], which will be required later when constructing a static linked list allocator.
+<!-- !TODO: static linked list allocator = статический односвязный аллокатор -->
+Тип имеет простую функцию-конструктор с именем `new` и методы для вычисления начального и конечного адресов представленной области. Мы делаем функцию `new` [const function], которая понадобится позже при создании статического односвязного аллокатора.
 
 [const function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-With the `ListNode` struct as a building block, we can now create the `LinkedListAllocator` struct:
+Используя структуру `ListNode` в качестве строительного блока, мы можем создать структуру `LinkedListAllocator`:
 
 ```rust
-// in src/allocator/linked_list.rs
+// src/allocator/linked_list.rs
 
 pub struct LinkedListAllocator {
     head: ListNode,
 }
 
 impl LinkedListAllocator {
-    /// Creates an empty LinkedListAllocator.
+    /// создаем пустой LinkedListAllocator.
     pub const fn new() -> Self {
         Self {
             head: ListNode::new(0),
         }
     }
 
-    /// Initialize the allocator with the given heap bounds.
+    /// Инициализируем аллокатор с границами кучи.
     ///
-    /// This function is unsafe because the caller must guarantee that the given
-    /// heap bounds are valid and that the heap is unused. This method must be
-    /// called only once.
+    /// Эта ф-ция unsafe т.к. вызывающий должен гарантировать ,что полученные
+    /// границы кучи будет корректны и куча не используется.
+    /// Этот метод должен вызываться один раз
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         unsafe {
             self.add_free_region(heap_start, heap_size);
         }
     }
 
-    /// Adds the given memory region to the front of the list.
+    /// Добавляет полученную память к концу списка.
     unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
         todo!();
     }
 }
 ```
 
-The struct contains a `head` node that points to the first heap region. We are only interested in the value of the `next` pointer, so we set the `size` to 0 in the `ListNode::new` function. Making `head` a `ListNode` instead of just a `&'static mut ListNode` has the advantage that the implementation of the `alloc` method will be simpler.
+Структура содержит узел `head`, указывающий на первый регион кучи. Нас интересует только значение указателя `next`, поэтому в функции `ListNode::new` мы устанавливаем `size` в 0. То, что `head` является экземпляром `ListNode`, а не просто `&'static mut ListNode`, обладает плюсом в том, что реализация метода `alloc` станет проще.
 
-Like for the bump allocator, the `new` function doesn't initialize the allocator with the heap bounds. In addition to maintaining API compatibility, the reason is that the initialization routine requires writing a node to the heap memory, which can only happen at runtime. The `new` function, however, needs to be a [`const` function] that can be evaluated at compile time because it will be used for initializing the `ALLOCATOR` static. For this reason, we again provide a separate, non-constant `init` method.
+Как и в случае с bump-аллокатором, функция `new` не инициализирует аллокатор с границами кучи. Помимо сохранения совместимости API, причина в том, что процедура инициализации требует записи узла в память кучи, что возможно только во время выполнения. Однако функция `new` должна быть [константой](`const` function), то есть, что бы ее можно было вычислить на этапе компиляции, т.к она будет использоваться для инициализации статической переменной `ALLOCATOR`. По этой причине мы снова предоставляем отдельный, не-константный метод `init`.
+
 
 [`const` function]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
-The `init` method uses an `add_free_region` method, whose implementation will be shown in a moment. For now, we use the [`todo!`] macro to provide a placeholder implementation that always panics.
+Метод `init` использует метод `add_free_region`, реализация которого будет показана через мгновение. Пока что мы используем макрос [`todo!`], он укажет что реализация еще не готова и при достижении будет вызывать панику.
 
 [`todo!`]: https://doc.rust-lang.org/core/macro.todo.html
 
 #### The `add_free_region` Method
 
-The `add_free_region` method provides the fundamental _push_ operation on the linked list. We currently only call this method from `init`, but it will also be the central method in our `dealloc` implementation. Remember, the `dealloc` method is called when an allocated memory region is freed again. To keep track of this freed memory region, we want to push it to the linked list.
+Метод `add_free_region` обеспечивает основную операцию _push_ в связанном списке. В настоящее время мы вызываем этот метод только из `init`, но он также будет важным методом для нашей реализации `dealloc`. Помните, что метод `dealloc` вызывается, при освобождении выделенной области памяти. Чтобы отслеживать этот освобожденный участок, мы хотим добавить его в связанный список.
 
-The implementation of the `add_free_region` method looks like this:
+Рассмотрим реализацию метода `add_free_region`:
 
 ```rust
-// in src/allocator/linked_list.rs
+// src/allocator/linked_list.rs
 
 use super::align_up;
 use core::mem;
 
 impl LinkedListAllocator {
-    /// Adds the given memory region to the front of the list.
+    /// Добавить полученную область памяти к концу списка.
     unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
-        // ensure that the freed region is capable of holding ListNode
+        // проверим, что освобожденная область может хранить ListNode
         assert_eq!(align_up(addr, mem::align_of::<ListNode>()), addr);
         assert!(size >= mem::size_of::<ListNode>());
 
-        // create a new list node and append it at the start of the list
+        // создадим новый узел и добавим его к началу списка
         let mut node = ListNode::new(size);
         node.next = self.head.next.take();
         let node_ptr = addr as *mut ListNode;
@@ -594,81 +599,80 @@ impl LinkedListAllocator {
 }
 ```
 
-The method takes the address and size of a memory region as an argument and adds it to the front of the list. First, it ensures that the given region has the necessary size and alignment for storing a `ListNode`. Then it creates the node and inserts it into the list through the following steps:
+Метод принимает в качестве аргумента адрес и размер области памяти и добавляет ее в начало списка. Сначала он проверяет, что данная область имеет необходимый размер и выравнена для хранения `ListNode`. Затем он создает узел и вставляет его в список, выполняя следующие шаги:
 
 ![](linked-list-allocator-push.svg)
 
-Step 0 shows the state of the heap before `add_free_region` is called. In step 1, the method is called with the memory region marked as `freed` in the graphic. After the initial checks, the method creates a new `node` on its stack with the size of the freed region. It then uses the [`Option::take`] method to set the `next` pointer of the node to the current `head` pointer, thereby resetting the `head` pointer to `None`.
+Шаг 0 показывает состояние кучи перед вызовом `add_free_region`. На шаге 1 метод вызывается с областью памяти, помеченной на рисунке как `freed`. После начальных проверок метод создает новый `node` в своем стеке с размером освобожденной области. Затем он использует метод [`Option::take`], чтобы установить указатель `next` на текущий указатель `head`, тем самым сбрасывая указатель `head` в `None`.
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-In step 2, the method writes the newly created `node` to the beginning of the freed memory region through the [`write`] method. It then points the `head` pointer to the new node. The resulting pointer structure looks a bit chaotic because the freed region is always inserted at the beginning of the list, but if we follow the pointers, we see that each free region is still reachable from the `head` pointer.
+На шаге 2 метод записывает вновь созданный `node` в начало освобожденной области памяти с помощью метода [`write`]. Затем он указатель `head` указывает на новый улез. Результирующая структура указателей выглядит немного хаотично, т.к. освобожденная область всегда вставляется в начало списка, но если мы проследим за указателями, то увидим, что каждая свободная область по-прежнему доступна из указателя `head`.
 
 [`write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
 
 #### The `find_region` Method
 
-The second fundamental operation on a linked list is finding an entry and removing it from the list. This is the central operation needed for implementing the `alloc` method. We implement the operation as a `find_region` method in the following way:
+Вторая основная операция над связанным списком - поиск записи и ее удаление из списка. Это важная операция, необходимая для реализации метода `alloc`. Мы реализуем эту операцию в виде метода `find_region`:
 
 ```rust
-// in src/allocator/linked_list.rs
+// src/allocator/linked_list.rs
 
 impl LinkedListAllocator {
-    /// Looks for a free region with the given size and alignment and removes
-    /// it from the list.
+    /// Смотрим свободную область заданного размера и выравнивания и
+    /// удаляем ее из списка.
     ///
-    /// Returns a tuple of the list node and the start address of the allocation.
+    /// Возвращаем кортеж из списка и начального адреса аллокации.
     fn find_region(&mut self, size: usize, align: usize)
         -> Option<(&'static mut ListNode, usize)>
     {
-        // reference to current list node, updated for each iteration
+        // ссылка на текущий узел, обновляемая при каждой итерации
         let mut current = &mut self.head;
-        // look for a large enough memory region in linked list
+        // поиск достаточно большого участка памяти в связанном списке
         while let Some(ref mut region) = current.next {
             if let Ok(alloc_start) = Self::alloc_from_region(&region, size, align) {
-                // region suitable for allocation -> remove node from list
+                // область подходит для аллокации -> удалить узел из списка
                 let next = region.next.take();
                 let ret = Some((current.next.take().unwrap(), alloc_start));
                 current.next = next;
                 return ret;
             } else {
-                // region not suitable -> continue with next region
+                // облать не подходит ->  перейти к следущей
                 current = current.next.as_mut().unwrap();
             }
         }
 
-        // no suitable region found
+        // подходящей области не найдено
         None
     }
 }
 ```
 
-The method uses a `current` variable and a [`while let` loop] to iterate over the list elements. At the beginning, `current` is set to the (dummy) `head` node. On each iteration, it is then updated to the `next` field of the current node (in the `else` block). If the region is suitable for an allocation with the given size and alignment, the region is removed from the list and returned together with the `alloc_start` address.
+В этом методе используется переменная `current` и цикл [`while let`] для итерации по элементам списка. В начале `current` устанавливается в (фиктивный) узел `head`. При каждой итерации он обновляется до поля `next` текущего узла (в блоке `else`). Если область подходит для выделения с заданным размером и выравниванием, она удаляется из списка и возвращается вместе с адресом `alloc_start`.
 
 [`while let` loop]: https://doc.rust-lang.org/reference/expressions/loop-expr.html#while-let-patterns
 
-When the `current.next` pointer becomes `None`, the loop exits. This means we iterated over the whole list but found no region suitable for an allocation. In that case, we return `None`. Whether a region is suitable is checked by the `alloc_from_region` function, whose implementation will be shown in a moment.
+Когда указатель `current.next` становится `None`, цикл заканчивается. Это означает, что мы прошли весь список, но не нашли подходящей области для аллокации. В этом случае мы возвращаем `None`. Подходит ли область, проверяет функция `alloc_from_region`, реализация которой будет показана чуть позже.
 
-Let's take a more detailed look at how a suitable region is removed from the list:
+Давайте более подробно рассмотрим, как подходящая область удаляется из списка:
 
 ![](linked-list-allocator-remove-region.svg)
 
-Step 0 shows the situation before any pointer adjustments. The `region` and `current` regions and the `region.next` and `current.next` pointers are marked in the graphic. In step 1, both the `region.next` and `current.next` pointers are reset to `None` by using the [`Option::take`] method. The original pointers are stored in local variables called `next` and `ret`.
+Шаг 0 показывает ситуацию до каких-либо корректировок указателей. Области `region` и `current`, а также указатели `region.next` и `current.next` отмечены на графике. На шаге 1 оба указателя `region.next` и `current.next` сбрасываются в `None` используя [`Option::take`]. Исходные указатели хранятся в локальных переменных с именами `next` и `ret`.
 
-In step 2, the `current.next` pointer is set to the local `next` pointer, which is the original `region.next` pointer. The effect is that `current` now directly points to the region after `region`, so that `region` is no longer an element of the linked list. The function then returns the pointer to `region` stored in the local `ret` variable.
+На шаге 2 указатель `current.next` устанавливается на локальный указатель `next`, который является исходным указателем `region.next`. В результате `current` теперь напрямую указывает на область после `region`, так что `region` больше не является элементом связанного списка. Затем функция возвращает указатель на `region`, хранящийся в локальной переменной `ret`.
 
 ##### The `alloc_from_region` Function
 
-The `alloc_from_region` function returns whether a region is suitable for an allocation with a given size and alignment. It is defined like this:
+Функция `alloc_from_region` возвращает значение, указывающее, подходит ли область для выделения памяти заданного размера и выравнивания. Она определена следующим образом:
 
 ```rust
-// in src/allocator/linked_list.rs
+// src/allocator/linked_list.rs
 
 impl LinkedListAllocator {
-    /// Try to use the given region for an allocation with given size and
-    /// alignment.
+    /// попытка использовать регион для выделения памяти заданного размера и выравнивания.
     ///
-    /// Returns the allocation start address on success.
+    /// В случае успеха возвращает начальный адрес выделенной памяти.
     fn alloc_from_region(region: &ListNode, size: usize, align: usize)
         -> Result<usize, ()>
     {
@@ -682,31 +686,31 @@ impl LinkedListAllocator {
 
         let excess_size = region.end_addr() - alloc_end;
         if excess_size > 0 && excess_size < mem::size_of::<ListNode>() {
-            // rest of region too small to hold a ListNode (required because the
-            // allocation splits the region in a used and a free part)
+            // остальная часть области слишком маленькая чтобы хранить listNode
+            // это необходимо, т.к. аллокация делит область на использованную и свободную
             return Err(());
         }
 
-        // region suitable for allocation
+        // область подходит для аллокации
         Ok(alloc_start)
     }
 }
 ```
 
-First, the function calculates the start and end address of a potential allocation, using the `align_up` function we defined earlier and the [`checked_add`] method. If an overflow occurs or if the end address is behind the end address of the region, the allocation doesn't fit in the region and we return an error.
+Сначала функция вычисляет начальный и конечный адрес потенциальной аллокации, используя функцию `align_up`, описанную выше, и метод [`checked_add`]. Если происходит переполнение или конечный адрес находится за конечным адресом области, аллокация не помещается в области, и мы возвращаем ошибку.
 
-The function performs a less obvious check after that. This check is necessary because most of the time an allocation does not fit a suitable region perfectly, so that a part of the region remains usable after the allocation. This part of the region must store its own `ListNode` after the allocation, so it must be large enough to do so. The check verifies exactly that: either the allocation fits perfectly (`excess_size == 0`) or the excess size is large enough to store a `ListNode`.
+После этого функция выполняет менее очевидную проверку. Эта проверка необходима, поскольку в большинстве случаев выделение не вписывается в подходящую область идеально, так что часть области остается доступной для использования после аллокации. Эта часть области должна хранить свой собственный `ListNode` после выделения, поэтому она должна быть достаточно большой для этого. Проверка проверяет именно это: либо аллокация вписывается идеально (`excess_size == 0`), либо избыточный размер достаточно велик для хранения `ListNode`.
 
 #### Implementing `GlobalAlloc`
 
-With the fundamental operations provided by the `add_free_region` and `find_region` methods, we can now finally implement the `GlobalAlloc` trait. As with the bump allocator, we don't implement the trait directly for the `LinkedListAllocator` but only for a wrapped `Locked<LinkedListAllocator>`. The [`Locked` wrapper] adds interior mutability through a spinlock, which allows us to modify the allocator instance even though the `alloc` and `dealloc` methods only take `&self` references.
+С помощью операций, предоставляемых методами `add_free_region` и `find_region`, мы можем реализовать трейт `GlobalAlloc`. Как и в случае с bump-аллокатором, мы не реализуем trait напрямую для `LinkedListAllocator`, а только для обернутого `Locked<LinkedListAllocator>`. Обертка [`Locked`] добавляет внутреннюю мутабельность с помощью спинлока, это позволяет нам изменять сам экземпляр аллокатора, даже если методы `alloc` и `dealloc` принимают только ссылки `&self`.
 
 [`Locked` wrapper]: @/edition-2/posts/11-allocator-designs/index.md#a-locked-wrapper-type
 
-The implementation looks like this:
+Реализация выглядит так:
 
 ```rust
-// in src/allocator/linked_list.rs
+// src/allocator/linked_list.rs
 
 use super::Locked;
 use alloc::alloc::{GlobalAlloc, Layout};
@@ -714,7 +718,7 @@ use core::ptr;
 
 unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        // perform layout adjustments
+        // скорректируем memory layout
         let (size, align) = LinkedListAllocator::size_align(layout);
         let mut allocator = self.lock();
 
@@ -733,7 +737,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        // perform layout adjustments
+        // скорректируем memory layout
         let (size, _) = LinkedListAllocator::size_align(layout);
 
         unsafe { self.lock().add_free_region(ptr as usize, size) }
@@ -741,26 +745,27 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
 }
 ```
 
-Let's start with the `dealloc` method because it is simpler: First, it performs some layout adjustments, which we will explain in a moment. Then, it retrieves a `&mut LinkedListAllocator` reference by calling the [`Mutex::lock`] function on the [`Locked` wrapper]. Lastly, it calls the `add_free_region` function to add the deallocated region to the free list.
+Начнём с метода `dealloc`, поскольку он проще: сначала выполняется корректировка структуры памяти (adjustment memory layout), которую мы объясним чуть позже. Затем вызываем [`Mutex::lock`] обертке [`Locked`] что бы получить ссылку на аллокатор - `&mut LinkedListAllocator`. В завершение вызываем функцию `add_free_region`, чтобы добавить освобождённую область в список свободной памяти (free list).
 
-The `alloc` method is a bit more complex. It starts with the same layout adjustments and also calls the [`Mutex::lock`] function to receive a mutable allocator reference. Then it uses the `find_region` method to find a suitable memory region for the allocation and remove it from the list. If this doesn't succeed and `None` is returned, it returns `null_mut` to signal an error as there is no suitable memory region.
+Метод `alloc` немного сложнее. Он начинается с тех же корректировок структуры и также вызывает [`Mutex::lock`], чтобы получить мутабельную ссылку на аллокатор. Затем он использует метод `find_region`, чтобы найти подходящую область памяти для аллокации и удалить его из списка. Если поиск возвращает None, неуспешен, метод возвращает `null_mut`, сигнализируя об ошибке - подходящей области памяти не найдено.
 
-In the success case, the `find_region` method returns a tuple of the suitable region (no longer in the list) and the start address of the allocation. Using `alloc_start`, the allocation size, and the end address of the region, it calculates the end address of the allocation and the excess size again. If the excess size is not null, it calls `add_free_region` to add the excess size of the memory region back to the free list. Finally, it returns the `alloc_start` address casted as a `*mut u8` pointer.
+В случае успеха метод `find_region` возвращает кортеж из подходящей области (уже удалённого из списка) и начального адреса выделения. Используя `alloc_start`, размер аллокации и конечный адрес региона, он заново вычисляет конечный адрес области и размер излишка. Если излишек не равен нулю, вызывается `add_free_region`, чтобы вернуть оставшуюся часть региона обратно в список свободных блоков. Наконец, метод возвращает `alloc_start`, приведённый к типу `*mut u8`.
+
 
 #### Layout Adjustments
 
-So what are these layout adjustments that we make at the beginning of both `alloc` and `dealloc`? They ensure that each allocated block is capable of storing a `ListNode`. This is important because the memory block is going to be deallocated at some point, where we want to write a `ListNode` to it. If the block is smaller than a `ListNode` or does not have the correct alignment, undefined behavior can occur.
+Так что же это за корректировка структуры памяти (layout adjustment), которые мы делаем в начале как в `alloc`, так и в `dealloc`? Они гарантируют, что каждый выделенный блок способен хранить `ListNode`. Это важно, потому что блок памяти в какой-то момент будет освобожден, и мы хотим записать в него `ListNode`. Если блок меньше, чем `ListNode`, или не имеет правильного выравнивания, может произойти неопределенное поведение (undefined behavior).
 
-The layout adjustments are performed by the `size_align` function, which is defined like this:
+Корректировка структуры выполняются функцией `size_align`, которая определена следующим образом:
 
 ```rust
-// in src/allocator/linked_list.rs
+// src/allocator/linked_list.rs
 
 impl LinkedListAllocator {
-    /// Adjust the given layout so that the resulting allocated memory
-    /// region is also capable of storing a `ListNode`.
+    /// Поправить полученный layout так, что бы в выделенная область памяти
+    /// также могла хранить `ListNode`.
     ///
-    /// Returns the adjusted size and alignment as a (size, align) tuple.
+    /// Возвращает скорректированный размер и выравнивание в виде кортежа (размер, выравнивание).
     fn size_align(layout: Layout) -> (usize, usize) {
         let layout = layout
             .align_to(mem::align_of::<ListNode>())
@@ -772,8 +777,8 @@ impl LinkedListAllocator {
 }
 ```
 
-First, the function uses the [`align_to`] method on the passed [`Layout`] to increase the alignment to the alignment of a `ListNode` if necessary. It then uses the [`pad_to_align`] method to round up the size to a multiple of the alignment to ensure that the start address of the next memory block will have the correct alignment for storing a `ListNode` too.
-In the second step, it uses the [`max`] method to enforce a minimum allocation size of `mem::size_of::<ListNode>`. This way, the `dealloc` function can safely write a `ListNode` to the freed memory block.
+Сначала функция использует метод [`align_to`] на переданном [`Layout`], чтобы при необходимости увеличить выравнивание до выравнивания `ListNode`. Затем используется метод [`pad_to_align`], чтобы округлить размер до кратного выравниванию, чтобы гарантировать, что начальный адрес следующего блока памяти также будет иметь правильное выравнивание для хранения `ListNode`.
+На втором этапе она использует метод [`max`], чтобы обеспечить минимальный размер аллокации `mem::size_of::<ListNode>`. Таким образом, функция `dealloc` может безопасно записать `ListNode` в освобожденный блок памяти.
 
 [`align_to`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.align_to
 [`pad_to_align`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.pad_to_align
@@ -781,10 +786,10 @@ In the second step, it uses the [`max`] method to enforce a minimum allocation s
 
 ### Using it
 
-We can now update the `ALLOCATOR` static in the `allocator` module to use our new `LinkedListAllocator`:
+Теперь мы можем обновить статическую переменную `ALLOCATOR` в модуле `allocator`, чтобы использовать наш новый `LinkedListAllocator`:
 
 ```rust
-// in src/allocator.rs
+// src/allocator.rs
 
 use linked_list::LinkedListAllocator;
 
@@ -793,9 +798,9 @@ static ALLOCATOR: Locked<LinkedListAllocator> =
     Locked::new(LinkedListAllocator::new());
 ```
 
-Since the `init` function behaves the same for the bump and linked list allocators, we don't need to modify the `init` call in `init_heap`.
+Поскольку функция `init` ведет себя одинаково для аллокаторов типа bump и linked list, нам не нужно изменять вызов `init` в `init_heap`.
 
-When we now run our `heap_allocation` tests again, we see that all tests pass now, including the `many_boxes_long_lived` test that failed with the bump allocator:
+Когда мы снова запускаем тесты `heap_allocation`, мы видим, что все тесты проходят успешно, включая тест `many_boxes_long_lived`, который не прошел с bump-аллокатором:
 
 ```
 > cargo test --test heap_allocation
@@ -805,35 +810,35 @@ many_boxes... [ok]
 many_boxes_long_lived... [ok]
 ```
 
-This shows that our linked list allocator is able to reuse freed memory for subsequent allocations.
+Это показывает, что наш аллокатор связанного списка способен повторно использовать освобожденную память для последующих выделений.
 
 ### Discussion
 
-In contrast to the bump allocator, the linked list allocator is much more suitable as a general-purpose allocator, mainly because it is able to directly reuse freed memory. However, it also has some drawbacks. Some of them are only caused by our basic implementation, but there are also fundamental drawbacks of the allocator design itself.
+В отличие от bump-аллокатора, аллокатор со связанным списком гораздо более подходит в качестве универсального аллокатора, главным образом потому, что он может напрямую повторно использовать освобожденную память. Однако у него есть и некоторые недостатки. Некоторые из них вызваны только нашей базовой реализацией, но есть и фундаментальные недостатки самой архитектуры аллокатора.
 
 #### Merging Freed Blocks
 
-The main problem with our implementation is that it only splits the heap into smaller blocks but never merges them back together. Consider this example:
+Основная проблема нашей реализации заключается в том, что она только разбивает кучу на блоки, но никогда не объединяет их обратно. Рассмотрим следующий пример:
 
 ![](linked-list-allocator-fragmentation-on-dealloc.svg)
 
-In the first line, three allocations are created on the heap. Two of them are freed again in line 2 and the third is freed in line 3. Now the complete heap is unused again, but it is still split into four individual blocks. At this point, a large allocation might not be possible anymore because none of the four blocks is large enough. Over time, the process continues, and the heap is split into smaller and smaller blocks. At some point, the heap is so fragmented that even normal sized allocations will fail.
+В первой строке на куче создаются три блока. Два из них снова освобождаются на второй строке, а третье — в третьей. Теперь вся куча снова не используется, но по-прежнему разделена на четыре отдельных блока. На этом этапе большое выделение может быть уже невозможно, поскольку ни один из четырех блоков не является достаточно большим. Со временем процесс продолжается, и куча разбивается на все более мелкие блоки. В какой-то момент куча становится настолько фрагментированной, что даже аллокация памяти нормального размера не удается.
 
-To fix this problem, we need to merge adjacent freed blocks back together. For the above example, this would mean the following:
+Чтобы решить эту проблему, нам нужно объединить соседние освобожденные блоки. Для приведенного выше примера это будет означать следующее:
 
 ![](linked-list-allocator-merge-on-dealloc.svg)
 
-Like before, two of the three allocations are freed in line `2`. Instead of keeping the fragmented heap, we now perform an additional step in line `2a` to merge the two rightmost blocks back together. In line `3`, the third allocation is freed (like before), resulting in a completely unused heap represented by three distinct blocks. In an additional merging step in line `3a`, we then merge the three adjacent blocks back together.
+Как и раньше, два из трех блоков освобождаются в строке `2`. Вместо того, чтобы сохранять фрагментированный кучу, мы теперь выполняем дополнительный шаг в строке `2a`, чтобы снова объединить два крайних правых блока. В строке `3` освобождается третья область (как и раньше), в результате чего получается полностью неиспользуемая куча, представленная тремя отдельными блоками. В дополнительном шаге объединения, на строке `3a`, мы снова объединяем три соседних блока.
 
-The `linked_list_allocator` crate implements this merging strategy in the following way: Instead of inserting freed memory blocks at the beginning of the linked list on `deallocate`, it always keeps the list sorted by start address. This way, merging can be performed directly on the `deallocate` call by examining the addresses and sizes of the two neighboring blocks in the list. Of course, the deallocation operation is slower this way, but it prevents the heap fragmentation we saw above.
+Крейт `linked_list_allocator` реализует эту стратегию слияния следующий образом: вместо вставки освобожденных блоков в начало связанного списка при вызове `deallocate`, он всегда поддерживает список отсортированным по начальному адресу. Благодаря этому слияние можно выполнять непосредственно в процессе вызова `deallocate`, просто проанализировав адреса и размеры двух соседних блоков в списке. Конечно, операция деаллокации в этом случае выполняется медленнее, но это предотвращает фрагментацию кучи, о которой мы говорили выше.
 
 #### Performance
 
-As we learned above, the bump allocator is extremely fast and can be optimized to just a few assembly operations. The linked list allocator performs much worse in this category. The problem is that an allocation request might need to traverse the complete linked list until it finds a suitable block.
+Как мы уже выяснили, bump-аллокатор чрезвычайно быстр и может быть оптимизирован до нескольких ассемблерных инструкций. В этом отношении аллокатор на основе связанного списка работает значительно хуже. Проблема в том, что запрос на аллокацию может потребовать обхода всего связанного списка, пока не будет найден подходящий блок.
 
-Since the list length depends on the number of unused memory blocks, the performance can vary extremely for different programs. A program that only creates a couple of allocations will experience relatively fast allocation performance. For a program that fragments the heap with many allocations, however, the allocation performance will be very bad because the linked list will be very long and mostly contain very small blocks.
+Поскольку длина списка зависит от количества неиспользуемых блоков памяти, производительность может чрезвычайно варьироваться в зависимости от программы. Программа, которая создаёт лишь нескольк блоков, будет демонстрировать относительно высокую производительность аллокаций. Однако для программы, которая сильно фрагментирует кучу множеством мелких блоков, производительность аллокаций окажется крайне низкой — ведь список станет очень длинным и будет в основном состоять из мелких, почти непригодных для повторного использования областей памяти.
 
-It's worth noting that this performance issue isn't a problem caused by our basic implementation but a fundamental problem of the linked list approach. Since allocation performance can be very important for kernel-level code, we explore a third allocator design in the following that trades improved performance for reduced memory utilization.
+Стоит отметить, что эта проблема производительности — не следствие нашей примитивной реализации, а фундаментальное ограничение самого подхода основанного на связанных списках. Поскольку производительность аллокаций имеет критическое значение для кода ядра, в следующем разделе мы рассмотрим третий дизайн аллокатора, который жертвует эффективностью использования памяти ради значительного повышения производительности.
 
 ## Fixed-Size Block Allocator
 
