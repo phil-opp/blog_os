@@ -1,23 +1,22 @@
 +++
-title = "Allocator Designs"
+title = "Архитектуры Аллокаторов"
 weight = 11
 path = "ru/allocator-designs"
 date = 2020-01-20
 
-# !TODO: check links
 [extra]
 chapter = "Memory Management"
-# Please update this when updating the translation !TODO: added based_commit
-translate_based_on_commit = ""
+# Please update this when updating the translation 
+translate_based_on_commit = "eb079d740fb3635e524667f656307097e05ac20d"
 # GitHub usernames of the people that translated this post
 translators = ["TakiMoysha"]
 +++
 
-В этой статье объясняется, как реализовать аллокаторы на куче с нуля. В ней представлены и обсуждаются различные конструкции аллокаторов, включая аллокацию с перемещением, аллокацию связанных списков и аллокацию блоков фиксированного размера. Для каждой из трех конструкций мы создадим базовую реализацию, которую можно использовать для нашего ядра.
+В этом посте объясняется, как реализовать heap-аллокатор с нуля. В статье представлены и обсуждаются различные конструкции аллокаторов, включая bump-аллокатор, linked list allocator и fixed-sized аллокатор. Для каждой из трех конструкций мы создадим базовую реализацию, которую можно использовать для нашего ядра системы.
 
 <!-- more -->
 
-Этот блог открыто разрабатывается на [GitHub]. Если у вас есть какие-либо проблемы или вопросы, пожалуйста, создайте там issue. Вы также можете оставлять комментарии [внизу страницы]. Полный исходный код для этого поста можно найти в ветке [`post-11`][post branch].
+Этот блог открыто разрабатывается на [GitHub]. Если у вас есть какие-либо проблемы или вопросы, пожалуйста, создайте issue. Вы также можете оставлять комментарии [внизу страницы]. Полный исходный код для этого поста можно найти в ветке [`post-11`][post branch].
 
 [GitHub]: https://github.com/phil-opp/blog_os
 [внизу страницы]: #comments
@@ -838,109 +837,111 @@ many_boxes_long_lived... [ok]
 
 Поскольку длина списка зависит от количества неиспользуемых блоков памяти, производительность может чрезвычайно варьироваться в зависимости от программы. Программа, которая создаёт лишь нескольк блоков, будет демонстрировать относительно высокую производительность аллокаций. Однако для программы, которая сильно фрагментирует кучу множеством мелких блоков, производительность аллокаций окажется крайне низкой — ведь список станет очень длинным и будет в основном состоять из мелких, почти непригодных для повторного использования областей памяти.
 
-Стоит отметить, что эта проблема производительности — не следствие нашей примитивной реализации, а фундаментальное ограничение самого подхода основанного на связанных списках. Поскольку производительность аллокаций имеет критическое значение для кода ядра, в следующем разделе мы рассмотрим третий дизайн аллокатора, который жертвует эффективностью использования памяти ради значительного повышения производительности.
+Стоит отметить, что эта проблема производительности — не следствие нашей примитивной реализации, а фундаментальное ограничение самого подхода основанного на связанных списках. Поскольку производительность аллокаций имеет критическое значение для кода ядра, в следующем разделе мы рассмотрим третий тип аллокатора, который жертвует эффективностью использования памяти ради значительного повышения производительности.
 
 ## Fixed-Size Block Allocator
 
-In the following, we present an allocator design that uses fixed-size memory blocks for fulfilling allocation requests. This way, the allocator often returns blocks that are larger than needed for allocations, which results in wasted memory due to [internal fragmentation]. On the other hand, it drastically reduces the time required to find a suitable block (compared to the linked list allocator), resulting in much better allocation performance.
+Далее, мы рассмотрим дизайн аллокатора основанный на распределении блоков памяти фиксированного размера (fixed-size block allocator) для выполнения запросов на выделение памяти. Таким образом, аллокатор часто возвращает блоки, которые больше, чем необходимо для выделения, что приводит к потере памяти из-за [внутренней фрагментации]. С другой стороны, это значительно сокращает время, необходимое для поиска подходящего блока (по сравнению с аллокатором связанного списка), что приводит к значительному улучшению производительности выделения памяти.
+
 
 ### Introduction
 
-The idea behind a _fixed-size block allocator_ is the following: Instead of allocating exactly as much memory as requested, we define a small number of block sizes and round up each allocation to the next block size. For example, with block sizes of 16, 64, and 512 bytes, an allocation of 4 bytes would return a 16-byte block, an allocation of 48 bytes a 64-byte block, and an allocation of 128 bytes a 512-byte block.
+Основная идея _аллокатора блоков фиксированного размера_: вместо того, что бы выделять ровно столько памяти, сколько запрошено, мы определяем небольшое кол-во размеров блоков и округляем каждый блок до следующего размера блока. Например, при размерах 16, 64 и 512 байт выделение 4 байт вернет блок размером 16 байт, выделение 48 байт — блок размером 64 байта, а выделение 128 байт — блок размером 512 байт.
 
-Like the linked list allocator, we keep track of the unused memory by creating a linked list in the unused memory. However, instead of using a single list with different block sizes, we create a separate list for each size class. Each list then only stores blocks of a single size. For example, with block sizes of 16, 64, and 512, there would be three separate linked lists in memory:
+Как и в случае с аллокатором со связанным списком, мы отслеживаем неиспользуемую память, создавая связанный список в неиспользуемой памяти. Однако вместо использования одного списка с разными размерами блоков мы создаем отдельный список для каждого класса размеров. Затем каждый список хранит только блоки одного размера. Например, при размерах блоков 16, 64 и 512 в памяти будет три отдельных связанных списка:
 
 ![](fixed-size-block-example.svg).
 
-Instead of a single `head` pointer, we have the three head pointers `head_16`, `head_64`, and `head_512` that each point to the first unused block of the corresponding size. All nodes in a single list have the same size. For example, the list started by the `head_16` pointer only contains 16-byte blocks. This means that we no longer need to store the size in each list node since it is already specified by the name of the head pointer.
+Вместо одного указателя `head` у нас есть три указателя head `head_16`, `head_64` и `head_512`, каждый из которых указывает на первый неиспользуемый блок соответствующего размера. Все узлы в одном списке имеют одинаковый размер. Например, список, начинающийся с указателя `head_16`, содержит только 16-байтовые блоки. Это означает, что нам больше не нужно хранить размер в каждом узле списка, поскольку он уже указан в имени указателя head.
 
-Since each element in a list has the same size, each list element is equally suitable for an allocation request. This means that we can very efficiently perform an allocation using the following steps:
+Поскольку каждый элемент в списке имеет одинаковый размер, каждый элемент списка одинаково подходит для запроса на выделение памяти. Это означает, что мы можем эффективно аллоцировать память, выполняя шаги:
 
-- Round up the requested allocation size to the next block size. For example, when an allocation of 12 bytes is requested, we would choose the block size of 16 in the above example.
-- Retrieve the head pointer for the list, e.g., for block size 16, we need to use `head_16`.
-- Remove the first block from the list and return it.
+- Округлить запрошенный размер памяти до размера поддерживаемого блока. Например, когда запрашивается выделение 12 байт, мы выберем размер блока 16 в приведенном выше примере.
+- Получить указатель на начало списка - для размера блока 16 для размера блока 16, мы будем использовать `head_16`.
+- Удалить первый блок из списка и вернуть его.
 
-Most notably, we can always return the first element of the list and no longer need to traverse the full list. Thus, allocations are much faster than with the linked list allocator.
+Что особенно важно, мы всегда можем вернуть первый элемент списка и не обходить весь список. Таким образом, аллокация происходит гораздо быстрее, чем с помощью аллокатора связанного списка.
 
 #### Block Sizes and Wasted Memory
 
-Depending on the block sizes, we lose a lot of memory by rounding up. For example, when a 512-byte block is returned for a 128-byte allocation, three-quarters of the allocated memory is unused. By defining reasonable block sizes, it is possible to limit the amount of wasted memory to some degree. For example, when using the powers of 2 (4, 8, 16, 32, 64, 128, …) as block sizes, we can limit the memory waste to half of the allocation size in the worst case and a quarter of the allocation size in the average case.
+В зависимости от размера блоков, мы теряем много памяти из-за округления. Например, для аллокации в 128 байт вернется блок в 512 байт, три четверти выделенной памяти остаются неиспользованными. Определив разумные размеры блоков, можно в некоторой степени ограничить количество потраченной впустую памяти. Например, при использовании степеней числа 2 (4, 8, 16, 32, 64, 128, …) в качестве размеров блоков мы можем ограничить потерю памяти до половины размера выделения в худшем случае и до четверти размера выделения в среднем случае.
 
-It is also common to optimize block sizes based on common allocation sizes in a program. For example, we could additionally add block size 24 to improve memory usage for programs that often perform allocations of 24 bytes. This way, the amount of wasted memory can often be reduced without losing the performance benefits.
+Также часто оптимизируют размеры блоков на основе типичных размеров аллокаций в программе. Например, можно дополнительно добавить размер блока 24, чтобы улучшить использование памяти для программ, которым часто нужны блоки в 24 байта. Таким образом, часто можно уменьшить количество неиспользуемой памяти без потери преимуществ производительности.
 
 #### Deallocation
 
-Much like allocation, deallocation is also very performant. It involves the following steps:
+Подобно аллокации, деаллокация также производительна. Она следует следующим шагам:
 
-- Round up the freed allocation size to the next block size. This is required since the compiler only passes the requested allocation size to `dealloc`, not the size of the block that was returned by `alloc`. By using the same size-adjustment function in both `alloc` and `dealloc`, we can make sure that we always free the correct amount of memory.
-- Retrieve the head pointer for the list.
-- Add the freed block to the front of the list by updating the head pointer.
+- Округление размера освобожденной памяти до размера следующего блока. Это необходимо, поскольку компилятор передает в `dealloc` только запрошенный размер памяти, а не размер блока, возвращенный `alloc`. Используя одну и ту же функцию выравнивания размера в `alloc` и `dealloc`, мы можем быть уверены, что всегда освобождаем правильный объем памяти.
+- Получить указатель на начало списка.
+- Добавить освобожденный блок в начало списка, обновив указатель на начало.
 
-Most notably, no traversal of the list is required for deallocation either. This means that the time required for a `dealloc` call stays the same regardless of the list length.
+Что особенно примечательно, для деаллокации также не требуется проход по списку. Это означает, что время, необходимое для вызова `dealloc`, остается неизменным независимо от длины списка.
 
 #### Fallback Allocator
 
-Given that large allocations (>2&nbsp;KB) are often rare, especially in operating system kernels, it might make sense to fall back to a different allocator for these allocations. For example, we could fall back to a linked list allocator for allocations greater than 2048 bytes in order to reduce memory waste. Since only very few allocations of that size are expected, the linked list would stay small and the (de)allocations would still be reasonably fast.
+Учитывая, что большие аллокации (>2&nbsp;KB) встречаются довольно редко, особенно в ядре операционных систем, для таких блоков может иметь смысл иметь другой аллокатор. Например, мы могли бы использовать аллокатор связанного списка для аллокации размером более 2048 байт, чтобы уменьшить потерю памяти. Поскольку ожидается очень мало блоков такого размера, связанный список останется небольшим, а выделение и освобождение памяти по-прежнему будут достаточно быстрыми.
 
 #### Creating new Blocks
 
-Above, we always assumed that there are always enough blocks of a specific size in the list to fulfill all allocation requests. However, at some point, the linked list for a given block size becomes empty. At this point, there are two ways we can create new unused blocks of a specific size to fulfill an allocation request:
+Выше мы всегда предполагали, что в списке всегда достаточно блоков определенного размера, чтобы удовлетворить все запросы на аллокацию. Однако в какой-то момент связанный список для данного размера блока становится пустым. В этом случае есть два способа создать новые, свободные блоки определенного размера, чтобы удовлетворить запрос на аллокацию:
 
-- Allocate a new block from the fallback allocator (if there is one).
-- Split a larger block from a different list. This best works if block sizes are powers of two. For example, a 32-byte block can be split into two 16-byte blocks.
+<!-- TODO: term -->
+- Выделить новый блок из fallback-аллокатора (если он есть).
+- Взяв блок другой размерности и разделить его. Это лучше всего работает, если размеры блоков являются степенями двойки. Например, 32-байтовый блок можно разделить на два 16-байтовых блока.
 
-For our implementation, we will allocate new blocks from the fallback allocator since the implementation is much simpler.
+Для нашей реализации мы будем выделять новые блоки из fallbakc-аллокатора, поскольку такая реализация гораздо проще.
 
 ### Implementation
 
-Now that we know how a fixed-size block allocator works, we can start our implementation. We won't depend on the implementation of the linked list allocator created in the previous section, so you can follow this part even if you skipped the linked list allocator implementation.
+Теперь, когда мы знаем, как работает фиксированный аллокатор, можем приступить к реализации. Мы не будем полагаться на реализацию аллокатора связанного списка, созданного в предыдущем разделе, поэтому вы можете следовать этой части, даже если пропустили реализацию аллокатора связанного списка.
 
 #### List Node
 
-We start our implementation by creating a `ListNode` type in a new `allocator::fixed_size_block` module:
+Начнем с создания типа `ListNode` в новом модуле `allocator::fixed_size_block`:
 
 ```rust
-// in src/allocator.rs
+// src/allocator.rs
 
 pub mod fixed_size_block;
 ```
 
 ```rust
-// in src/allocator/fixed_size_block.rs
+// src/allocator/fixed_size_block.rs
 
 struct ListNode {
     next: Option<&'static mut ListNode>,
 }
 ```
 
-This type is similar to the `ListNode` type of our [linked list allocator implementation], with the difference that we don't have a `size` field. It isn't needed because every block in a list has the same size with the fixed-size block allocator design.
+Этот тип аналогичен типу `ListNode` нашей [реализации аллокатора связанного списка][linked list allocator implementation], с той разницей, что у нас нет поля `size`. Оно не нужно, поскольку каждый блок в списке имеет одинаковый размер при использовании аллокатора блоков фиксированного размера.
 
 [linked list allocator implementation]: #the-allocator-type
 
 #### Block Sizes
 
-Next, we define a constant `BLOCK_SIZES` slice with the block sizes used for our implementation:
+Далее мы определяем константу `BLOCK_SIZES` с размерами блоков, используемыми в нашей реализации:
 
 ```rust
-// in src/allocator/fixed_size_block.rs
+// src/allocator/fixed_size_block.rs
 
-/// The block sizes to use.
+/// Размеры блоков, которые будут использоваться.
 ///
-/// The sizes must each be power of 2 because they are also used as
-/// the block alignment (alignments must be always powers of 2).
+/// Каждый размер должен быть степенью числа 2, поскольку они используются и для 
+/// выравнивания блоков (оно всегда должно быть степенью числа 2).
 const BLOCK_SIZES: &[usize] = &[8, 16, 32, 64, 128, 256, 512, 1024, 2048];
 ```
 
-As block sizes, we use powers of 2, starting from 8 up to 2048. We don't define any block sizes smaller than 8 because each block must be capable of storing a 64-bit pointer to the next block when freed. For allocations greater than 2048 bytes, we will fall back to a linked list allocator.
+В качестве размеров блоков мы используем степени числа 2, начиная с 8 и заканчивая 2048. Мы не определяем размеры блоков меньше 8, поскольку каждый блок должен быть способен хранить 64-битный указатель на следующий блок при освобождении. Для выделения памяти размером более 2048 байт мы будем использовать аллокатор связанного списка.
 
-To simplify the implementation, we define the size of a block as its required alignment in memory. So a 16-byte block is always aligned on a 16-byte boundary and a 512-byte block is aligned on a 512-byte boundary. Since alignments always need to be powers of 2, this rules out any other block sizes. If we need block sizes that are not powers of 2 in the future, we can still adjust our implementation for this (e.g., by defining a second `BLOCK_ALIGNMENTS` array).
+Чтобы упростить реализацию, мы определяем размер блока как его требуемое выравнивание в памяти. Таким образом, 16-байтовый блок всегда выравнивается по границе 16 байт, а 512-байтовый блок — по границе 512 байт. Поскольку выравнивание всегда должно быть степенью числа 2, это исключает любые другие размеры блоков. Если в будущем нам понадобятся размеры блоков, не являющиеся степенями числа 2, мы все равно сможем адаптировать нашу реализацию для этого (например, определив второй массив `BLOCK_ALIGNMENTS`).
 
 #### The Allocator Type
 
-Using the `ListNode` type and the `BLOCK_SIZES` slice, we can now define our allocator type:
+Используя тип `ListNode` и срез `BLOCK_SIZES`, мы теперь можем определить наш тип аллокатора:
 
 ```rust
-// in src/allocator/fixed_size_block.rs
+// src/allocator/fixed_size_block.rs
 
 pub struct FixedSizeBlockAllocator {
     list_heads: [Option<&'static mut ListNode>; BLOCK_SIZES.len()],
@@ -948,17 +949,17 @@ pub struct FixedSizeBlockAllocator {
 }
 ```
 
-The `list_heads` field is an array of `head` pointers, one for each block size. This is implemented by using the `len()` of the `BLOCK_SIZES` slice as the array length. As a fallback allocator for allocations larger than the largest block size, we use the allocator provided by the `linked_list_allocator`. We could also use the `LinkedListAllocator` we implemented ourselves instead, but it has the disadvantage that it does not [merge freed blocks].
+Поле `list_heads` представляет собой массив указателей `head`, по одному для каждого размера блока. Это реализуется с помощью `len()` от `BLOCK_SIZES` в качестве длины массива. В качестве fallback-аллокатора, для объектов превышающих максимальный размер блока, мы используем аллокатор, предоставляемый `linked_list_allocator`. Мы также могли бы использовать `LinkedListAllocator`, который мы реализовали сами, но он имеет недостаток, заключающийся в том, что он не [объединяет освобожденные блоки][merge freed blocks].
 
 [merge freed blocks]: #merging-freed-blocks
 
-For constructing a `FixedSizeBlockAllocator`, we provide the same `new` and `init` functions that we implemented for the other allocator types too:
+Для построения `FixedSizeBlockAllocator` мы предоставляем те же функции `new` и `init`, которые мы реализовали и для других типов аллокаторов:
 
 ```rust
-// in src/allocator/fixed_size_block.rs
+// src/allocator/fixed_size_block.rs
 
 impl FixedSizeBlockAllocator {
-    /// Creates an empty FixedSizeBlockAllocator.
+    /// Создает пустой FixedSizeBlockAllocator.
     pub const fn new() -> Self {
         const EMPTY: Option<&'static mut ListNode> = None;
         FixedSizeBlockAllocator {
@@ -967,35 +968,35 @@ impl FixedSizeBlockAllocator {
         }
     }
 
-    /// Initialize the allocator with the given heap bounds.
+    /// Инициализирует аллокатор с заданными границами кучи.
     ///
-    /// This function is unsafe because the caller must guarantee that the given
-    /// heap bounds are valid and that the heap is unused. This method must be
-    /// called only once.
+    /// unsafe, т.к. вызывающая сторона должна гарантировать, что заданные
+    /// границы кучи действительны и куча не используется. Этот метод должен быть
+    /// вызван только один раз.
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         unsafe { self.fallback_allocator.init(heap_start, heap_size); }
     }
 }
 ```
 
-The `new` function just initializes the `list_heads` array with empty nodes and creates an [`empty`] linked list allocator as `fallback_allocator`. The `EMPTY` constant is needed to tell the Rust compiler that we want to initialize the array with a constant value. Initializing the array directly as `[None; BLOCK_SIZES.len()]` does not work, because then the compiler requires `Option<&'static mut ListNode>` to implement the `Copy` trait, which it does not. This is a current limitation of the Rust compiler, which might go away in the future.
+Функция `new` просто инициализирует массив `list_heads` пустыми узлами и создает аллокатор связанного списка [`empty`] в качестве `fallback_allocator`. Константа `EMPTY` нужна, чтобы сообщить компилятору Rust, что мы хотим инициализировать массив постоянным значением. Инициализация массива напрямую как `[None; BLOCK_SIZES.len()]` не работает, потому что тогда компилятор требует, чтобы `Option<&'static mut ListNode>` реализовывал трейт `Copy`, чего он не делает. Это текущее ограничение компилятора Rust, которое может исчезнуть в будущем.
 
 [`empty`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.empty
 
-The unsafe `init` function only calls the [`init`] function of the `fallback_allocator` without doing any additional initialization of the `list_heads` array. Instead, we will initialize the lists lazily on `alloc` and `dealloc` calls.
+Небезопасная функция `init` вызывает только функцию [`init`] из `fallback_allocator`, не выполняя дополнительной инициализации массива `list_heads`. Вместо этого мы будем инициализировать списки по мере необходимости при вызовах `alloc` и `dealloc`.
 
 [`init`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.init
 
-For convenience, we also create a private `fallback_alloc` method that allocates using the `fallback_allocator`:
+Для удобства мы также создаем приватный метод `fallback_alloc`, который выполняет аллокацию с помощью `fallback_allocator`:
 
 ```rust
-// in src/allocator/fixed_size_block.rs
+// src/allocator/fixed_size_block.rs
 
 use alloc::alloc::Layout;
 use core::ptr;
 
 impl FixedSizeBlockAllocator {
-    /// Allocates using the fallback allocator.
+    /// Аллокация через fallback-allocator.
     fn fallback_alloc(&mut self, layout: Layout) -> *mut u8 {
         match self.fallback_allocator.allocate_first_fit(layout) {
             Ok(ptr) => ptr.as_ptr(),
@@ -1005,7 +1006,7 @@ impl FixedSizeBlockAllocator {
 }
 ```
 
-The [`Heap`] type of the `linked_list_allocator` crate does not implement [`GlobalAlloc`] (as it's [not possible without locking]). Instead, it provides an [`allocate_first_fit`] method that has a slightly different interface. Instead of returning a `*mut u8` and using a null pointer to signal an error, it returns a `Result<NonNull<u8>, ()>`. The [`NonNull`] type is an abstraction for a raw pointer that is guaranteed to not be a null pointer. By mapping the `Ok` case to the [`NonNull::as_ptr`] method and the `Err` case to a null pointer, we can easily translate this back to a `*mut u8` type.
+Тип [`Heap`] из крейта `linked_list_allocator` не реализует трейт [`GlobalAlloc`] (поскольку это [невозможно без блокировки]). Вместо этого он предоставляет метод [`allocate_first_fit`][not possible without locking] с немного иным интерфейсом. Вместо возврата `*mut u8` и использования нулевого указателя для сигнализации об ошибке, он возвращает `Result<NonNull<u8>, ()>`. Тип [`NonNull`] - это абстракция для сырого указателя (raw pointer), которая гарантирует, что указатель не может быть нулевым. Преобразуя случай `Ok` через метод [`NonNull::as_ptr`] и случай `Err`  в нулевой указатель, мы можем легко преобразовать это обратно в тип `*mut u8`.
 
 [`Heap`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html
 [not possible without locking]: #globalalloc-and-mutability
@@ -1015,21 +1016,21 @@ The [`Heap`] type of the `linked_list_allocator` crate does not implement [`Glob
 
 #### Calculating the List Index
 
-Before we implement the `GlobalAlloc` trait, we define a `list_index` helper function that returns the lowest possible block size for a given [`Layout`]:
+Прежде чем реализовать трейт `GlobalAlloc`, мы определяем вспомогательную функцию `list_index`, которая возвращает минимально возможный размер блока для заданного [`Layout`]:
 
 ```rust
-// in src/allocator/fixed_size_block.rs
+// src/allocator/fixed_size_block.rs
 
-/// Choose an appropriate block size for the given layout.
+/// Выбирает предпочитаемый размер блоков для полученного структуры памяти
 ///
-/// Returns an index into the `BLOCK_SIZES` array.
+/// Возвращает индекс от массива `BLOCK_SIZES`.
 fn list_index(layout: &Layout) -> Option<usize> {
     let required_block_size = layout.size().max(layout.align());
     BLOCK_SIZES.iter().position(|&s| s >= required_block_size)
 }
 ```
 
-The block must have at least the size and alignment required by the given `Layout`. Since we defined that the block size is also its alignment, this means that the `required_block_size` is the [maximum] of the layout's [`size()`] and [`align()`] attributes. To find the next-larger block in the `BLOCK_SIZES` slice, we first use the [`iter()`] method to get an iterator and then the [`position()`] method to find the index of the first block that is at least as large as the `required_block_size`.
+Блок должен иметь как минимум размер и выравнивание, требуемые полученным `Layout`. Поскольку мы определили, что размер блока равен его выравниванию, это означает, что `required_block_size` является [максимальным][maximum] из значениий layout атрибутов [`size()`] и [`align()`]. Чтобы найти следующий по величине блок в срезе `BLOCK_SIZES`, мы сначала используем метод [`iter()`], чтобы получить итератор, а затем метод [`position()`], чтобы найти индекс первого блока, размер которого не меньше `required_block_size`.
 
 [maximum]: https://doc.rust-lang.org/core/cmp/trait.Ord.html#method.max
 [`size()`]: https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.size
@@ -1037,14 +1038,14 @@ The block must have at least the size and alignment required by the given `Layou
 [`iter()`]: https://doc.rust-lang.org/std/primitive.slice.html#method.iter
 [`position()`]:  https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.position
 
-Note that we don't return the block size itself, but the index into the `BLOCK_SIZES` slice. The reason is that we want to use the returned index as an index into the `list_heads` array.
+Обратите внимание, что мы возвращаем не сам размер блока, а индекс в срезе `BLOCK_SIZES`. Причина в том, что мы хотим использовать возвращаемый индекс в качестве индекса в массиве `list_heads`.
 
 #### Implementing `GlobalAlloc`
 
-The last step is to implement the `GlobalAlloc` trait:
+Последний шаг — реализация трейта `GlobalAlloc`:
 
 ```rust
-// in src/allocator/fixed_size_block.rs
+// src/allocator/fixed_size_block.rs
 
 use super::Locked;
 use alloc::alloc::GlobalAlloc;
@@ -1060,14 +1061,14 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
 }
 ```
 
-Like for the other allocators, we don't implement the `GlobalAlloc` trait directly for our allocator type, but use the [`Locked` wrapper] to add synchronized interior mutability. Since the `alloc` and `dealloc` implementations are relatively large, we introduce them one by one in the following.
+Как и в случае с другими аллокаторами, мы не реализуем trait `GlobalAlloc` напрямую для нашего типа аллокатора, а используем [обертку `Locked`][`Locked` wrapper], чтобы добавить синхронизировать внутреннюю мутабельность. Поскольку реализации `alloc` и `dealloc` относительно велики, мы напишем их по очереди ниже.
 
 ##### `alloc`
 
-The implementation of the `alloc` method looks like this:
+Реализация метода `alloc` выглядит следующим образом:
 
 ```rust
-// in `impl` block in src/allocator/fixed_size_block.rs
+// `impl` блок в src/allocator/fixed_size_block.rs
 
 unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
     let mut allocator = self.lock();
@@ -1079,9 +1080,9 @@ unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
                     node as *mut ListNode as *mut u8
                 }
                 None => {
-                    // no block exists in list => allocate new block
+                    // в списке нет блока => выделить новый блок
                     let block_size = BLOCK_SIZES[index];
-                    // only works if all block sizes are a power of 2
+                    // работает только тогда, когда размеры блоков являются степенью числа 2
                     let block_align = block_size;
                     let layout = Layout::from_size_align(block_size, block_align)
                         .unwrap();
@@ -1094,26 +1095,26 @@ unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
 }
 ```
 
-Let's go through it step by step:
+Давайте разберем это шаг за шагом:
 
-First, we use the `Locked::lock` method to get a mutable reference to the wrapped allocator instance. Next, we call the `list_index` function we just defined to calculate the appropriate block size for the given layout and get the corresponding index into the `list_heads` array. If this index is `None`, no block size fits for the allocation, therefore we use the `fallback_allocator` using the `fallback_alloc` function.
+Сначала мы используем метод `Locked::lock`, чтобы получить мутабельную ссылку на объект-обертку аллокатора. Затем мы вызываем только что определённую функцию `list_index`, чтобы вычислить подходящий размер блока для данной компоновки и получить соответствующий индекс в массиве `list_heads`. Если этот индекс равен `None`, то ни один размер блока не подходит для выделения памяти, поэтому мы используем `fallback_allocator` с помощью функции `fallback_alloc`.
 
-If the list index is `Some`, we try to remove the first node in the corresponding list started by `list_heads[index]` using the [`Option::take`] method. If the list is not empty, we enter the `Some(node)` branch of the `match` statement, where we point the head pointer of the list to the successor of the popped `node` (by using [`take`][`Option::take`] again). Finally, we return the popped `node` pointer as a `*mut u8`.
+Если индекс списка равен `Some`, мы пытаемся удалить первый узел в соответствующем списке, начинающемся с `list_heads[index]`, с помощью метода [`Option::take`]. Если список не пустой, мы входим в ветвь `Some(node)` оператора `match`, где устанавливаем указатель head списка на следующий элемент после извлеченного `node` (снова используя [`take`][`Option::take`]). Наконец, мы возвращаем удаленный указатель `node` как `*mut u8`.
 
 [`Option::take`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.take
 
-If the list head is `None`, it indicates that the list of blocks is empty. This means that we need to construct a new block as [described above](#creating-new-blocks). For that, we first get the current block size from the `BLOCK_SIZES` slice and use it as both the size and the alignment for the new block. Then we create a new `Layout` from it and call the `fallback_alloc` method to perform the allocation. The reason for adjusting the layout and alignment is that the block will be added to the block list on deallocation.
+Если заголовок списка равен `None` (список блоков пуст), нам нужно создать новый блок, как [описано выше] (#creating-new-blocks). Для этого мы сначала получаем текущий размер блока из среза `BLOCK_SIZES` и используем его как для размера, так и для выравнивания нового блока. Затем мы создаём из него новый `Layout` и вызываем метод `fallback_alloc` для аллокации. Причина корректировки структуры памяти и выравнивания в том, что блок будет добавлен в список блоков при освобождении памяти.
 
 #### `dealloc`
 
-The implementation of the `dealloc` method looks like this:
+Реализация метода `dealloc` выглядит следующим образом:
 
 ```rust
-// in src/allocator/fixed_size_block.rs
+// src/allocator/fixed_size_block.rs
 
 use core::{mem, ptr::NonNull};
 
-// inside the `unsafe impl GlobalAlloc` block
+// внутри блока `unsafe impl GlobalAlloc`
 
 unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
     let mut allocator = self.lock();
@@ -1122,7 +1123,7 @@ unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
             let new_node = ListNode {
                 next: allocator.list_heads[index].take(),
             };
-            // verify that block has size and alignment required for storing node
+            // Убедитесь, что блок имеет размер и выравнивание, необходимые для хранения узла.
             assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index]);
             assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
             let new_node_ptr = ptr as *mut ListNode;
@@ -1141,26 +1142,26 @@ unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
 }
 ```
 
-Like in `alloc`, we first use the `lock` method to get a mutable allocator reference and then the `list_index` function to get the block list corresponding to the given `Layout`. If the index is `None`, no fitting block size exists in `BLOCK_SIZES`, which indicates that the allocation was created by the fallback allocator. Therefore, we use its [`deallocate`][`Heap::deallocate`] to free the memory again. The method expects a [`NonNull`] instead of a `*mut u8`, so we need to convert the pointer first. (The `unwrap` call only fails when the pointer is null, which should never happen when the compiler calls `dealloc`.)
+Как и в `alloc`, сначала мы используем метод `lock` чтобы получить мутабельную ссылку на аллокатор, а затем ф-цию `list_index` для получения списка блоков, соответствующего заданному `Layout`. Если индекс равен `None`, значит в `BLOCK_SIZES` нет подходящего по размеру блока, а это значит, что аллокация памяти была выполнена fallback-аллокатором. Поэтому мы используем его метод [`deallocate`][`Heap::deallocate`] что бы освободить память обратно. Метод ожидает `NonNull` вместо `*mut u8`, поэтому нам необходимо сначала преобразовать указатель. (Вызов `unwrap` завершается ошибкой только в случае нулевого указателя, что не должно происходить, когда компилятор вызывает `dealloc`.)
 
 [`Heap::deallocate`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.deallocate
 
-If `list_index` returns a block index, we need to add the freed memory block to the list. For that, we first create a new `ListNode` that points to the current list head (by using [`Option::take`] again). Before we write the new node into the freed memory block, we first assert that the current block size specified by `index` has the required size and alignment for storing a `ListNode`. Then we perform the write by converting the given `*mut u8` pointer to a `*mut ListNode` pointer and then calling the unsafe [`write`][`pointer::write`] method on it. The last step is to set the head pointer of the list, which is currently `None` since we called `take` on it, to our newly written `ListNode`. For that, we convert the raw `new_node_ptr` to a mutable reference.
+Если `list_index` возвращает индекс блока, нам нужно добавить освобожденный блок памяти в список. Для этого мы сначала создаем новый `ListNode`, указывающий на текущий заголовок списка (снова используя [`Option::take`]). Прежде чем записывать новый узел в освобожденный блок памяти, мы проверяем, что текущий размер блока, указанный в `index`, имеет требуемый размер и выравнивание для хранения `ListNode`. Затем мы выполняем запись, преобразуя заданный указатель `*mut u8` в указатель `*mut ListNode` и вызывая на нем unsafe метод [`write`][`pointer::write`]. Последний шаг — установить указатель head списка, который в данный момент равен `None`, поскольку мы вызвали `take`, на наш только что записанный `ListNode`. Для этого мы преобразуем исходный `new_node_ptr` в изменяемую ссылку.
 
 [`pointer::write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
 
-There are a few things worth noting:
+Стоит отметить несколько моментов:
 
-- We don't differentiate between blocks allocated from a block list and blocks allocated from the fallback allocator. This means that new blocks created in `alloc` are added to the block list on `dealloc`, thereby increasing the number of blocks of that size.
-- The `alloc` method is the only place where new blocks are created in our implementation. This means that we initially start with empty block lists and only fill these lists lazily when allocations of their block size are performed.
-- We don't need `unsafe` blocks in `alloc` and `dealloc`, even though we perform some `unsafe` operations. The reason is that Rust currently treats the complete body of unsafe functions as one large `unsafe` block. Since using explicit `unsafe` blocks has the advantage that it's obvious which operations are unsafe and which are not, there is a [proposed RFC](https://github.com/rust-lang/rfcs/pull/2585) to change this behavior.
+- Мы не различаем блоки, выделенные из списка блоков, и блоки, выделенные из fallback-аллокатора. Это означает, что новые блоки, созданные в `alloc`, добавляются в список блоков в `dealloc`, тем самым увеличивая количество блоков этого размера.
+- Метод `alloc` — единственное место в нашей реализации, где создаются новые блоки. Это означает, что изначально мы начинаем с пустых списков блоков и заполняем их лениво только при выделении памяти размером с блок.
+- Нам не нужны `unsafe` блоки в `alloc` и `dealloc`, даже несмотря на то, что мы выполняем некоторые небезопасные операции. Причина в том, что Rust в настоящее время рассматривает весь набор небезопасных функций как один большой «небезопасный» блок. Поскольку использование явных блоков `unsafe` имеет то преимущество, что очевидно, какие операции являются небезопасными, а какие нет, существует [предложенный RFC](https://github.com/rust-lang/rfcs/pull/2585), который изменит это поведение.
 
 ### Using it
 
-To use our new `FixedSizeBlockAllocator`, we need to update the `ALLOCATOR` static in the `allocator` module:
+Для использования нашего нового `FixedSizeBlockAllocator` необходимо обновить статическую переменную `ALLOCATOR` в модуле `allocator`:
 
 ```rust
-// in src/allocator.rs
+// src/allocator.rs
 
 use fixed_size_block::FixedSizeBlockAllocator;
 
@@ -1169,9 +1170,9 @@ static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(
     FixedSizeBlockAllocator::new());
 ```
 
-Since the `init` function behaves the same for all allocators we implemented, we don't need to modify the `init` call in `init_heap`.
+Поскольку функция `init` ведет себя одинаково для всех реализованных нами распределителей памяти, нам не нужно изменять вызов `init` в `init_heap`.
 
-When we now run our `heap_allocation` tests again, all tests should still pass:
+Теперь, когда мы снова запустим наши тесты `heap_allocation`, все тесты должны пройти успешно:
 
 ```
 > cargo test --test heap_allocation
@@ -1181,43 +1182,43 @@ many_boxes... [ok]
 many_boxes_long_lived... [ok]
 ```
 
-Our new allocator seems to work!
+Наш новый распределитель, похоже, работает!
 
 ### Discussion
 
-While the fixed-size block approach has much better performance than the linked list approach, it wastes up to half of the memory when using powers of 2 as block sizes. Whether this tradeoff is worth it heavily depends on the application type. For an operating system kernel, where performance is critical, the fixed-size block approach seems to be the better choice.
+Хотя подход с блоками фиксированного размера демонстрирует гораздо лучшую производительность, чем подход со связанным списком, он приводит к потере до половины памяти при использовании степеней двойки в качестве размеров блоков. Целесообразность такого компромисса во многом зависит от типа приложения. Для ядра операционной системы, где производительность имеет решающее значение, подход с блоками фиксированного размера представляется лучшим выбором.
 
-On the implementation side, there are various things that we could improve in our current implementation:
+Что касается реализации, то в нашей текущей версии можно улучшить ряд моментов:
 
-- Instead of only allocating blocks lazily using the fallback allocator, it might be better to pre-fill the lists to improve the performance of initial allocations.
-- To simplify the implementation, we only allowed block sizes that are powers of 2 so that we could also use them as the block alignment. By storing (or calculating) the alignment in a different way, we could also allow arbitrary other block sizes. This way, we could add more block sizes, e.g., for common allocation sizes, in order to minimize the wasted memory.
-- We currently only create new blocks, but never free them again. This results in fragmentation and might eventually result in allocation failure for large allocations. It might make sense to enforce a maximum list length for each block size. When the maximum length is reached, subsequent deallocations are freed using the fallback allocator instead of being added to the list.
-- Instead of falling back to a linked list allocator, we could have a special allocator for allocations greater than 4&nbsp;KiB. The idea is to utilize [paging], which operates on 4&nbsp;KiB pages, to map a continuous block of virtual memory to non-continuous physical frames. This way, fragmentation of unused memory is no longer a problem for large allocations.
-- With such a page allocator, it might make sense to add block sizes up to 4&nbsp;KiB and drop the linked list allocator completely. The main advantages of this would be reduced fragmentation and improved performance predictability, i.e., better worst-case performance.
+- Вместо того чтобы выделять блоки только лениво, используя fallback-аллокатор, возможно, лучше предварительно заполнять списки, чтобы повысить производительность первоначальных аллокаций.
+- Для упрощения реализации мы разрешили только размеры блоков, являющиеся степенями двойки, чтобы мы могли использовать их также в качестве выравнивания блоков. Сохраняя (или вычисляя) выравнивание другим способом, мы могли бы также разрешить произвольные размеры блоков. Таким образом, мы могли бы добавить больше размеров блоков, например, для распространенных размеров выделения памяти, чтобы минимизировать потери памяти.
+- В настоящее время мы только создаем новые блоки, но никогда их не освобождаем. Это приводит к фрагментации и в конечном итоге может привести к сбою выделения памяти при больших аллокациях. Возможно, имеет смысл ввести максимальную длину списка для каждого размера блока. Когда максимальная длина достигается, последующие выделения освобождаются с помощью fallback-аллокатора, а не добавляются в список.
+- Вместо того, чтобы переходить к аллокатору связанного списка, мы могли бы использовать специальный аллокатор для выделения памяти размером более 4&nbsp;КБ. Идея заключается в использовании [страничной организации памяти][paging], которая работает со страницами размером 4&nbsp;КБ, для маппинга непрерывного блока виртуальной памяти на не непрерывные физические фреймы. Таким образом, фрагментация неиспользуемой памяти больше не будет проблемой для аллокаций больших объемов памяти.
+- С таким аллокатором страниц может иметь смысл добавить размеры блоков до 4&nbsp;КБ и полностью отказаться от аллокатора связанных списков. Основными преимуществами этого будут уменьшение фрагментации и улучшение предсказуемости производительности, т. е. лучшая производительность в худшем случае.
 
 [paging]: @/edition-2/posts/08-paging-introduction/index.md
 
-It's important to note that the implementation improvements outlined above are only suggestions. Allocators used in operating system kernels are typically highly optimized for the specific workload of the kernel, which is only possible through extensive profiling.
+Важно отметить, что описанные выше улучшения реализации являются лишь рекомендациями. Алокаторы, используемые в ядрах операционных систем, как правило, высоко оптимизированы для конкретной рабочей нагрузки ядра, что возможно только благодаря тщательному профилированию.
 
 ### Variations
 
-There are also many variations of the fixed-size block allocator design. Two popular examples are the _slab allocator_ and the _buddy allocator_, which are also used in popular kernels such as Linux. In the following, we give a short introduction to these two designs.
+Существует также множество вариаций конструкции фиксированных аллокаторов. Двумя популярными примерами являются аллокатор _slab_ и аллокатор _buddy_, которые также используются в популярных ядрах, таких как Linux. Ниже мы дадим краткое введение в эти две конструкции.
 
 #### Slab Allocator
 
-The idea behind a [slab allocator] is to use block sizes that directly correspond to selected types in the kernel. This way, allocations of those types fit a block size exactly and no memory is wasted. Sometimes, it might be even possible to preinitialize type instances in unused blocks to further improve performance.
+Идея [slab-аллокатора][slab allocator] в использовании размеров блоков, которые напрямую соответствуют выбранным типам в ядре. Таким образом, выделение памяти для этих типов точно соответствует размеру блока, и память не тратится зря. Иногда даже можно предварительно инициализировать экземпляры типов в неиспользуемых блоках, чтобы еще больше повысить производительность.
 
 [slab allocator]: https://en.wikipedia.org/wiki/Slab_allocation
 
-Slab allocation is often combined with other allocators. For example, it can be used together with a fixed-size block allocator to further split an allocated block in order to reduce memory waste. It is also often used to implement an [object pool pattern] on top of a single large allocation.
+Slab-аллокаторы часто сочетаются с другими аллокаторами. Например, его можно использовать вместе с аллокатором блоков фиксированного размера для дальнейшего разделения выделенного блока с целью сокращения потерь памяти. Его также часто используют для реализации паттерна ["объектный пул"][object pool pattern] поверх одного большого выделения.
 
 [object pool pattern]: https://en.wikipedia.org/wiki/Object_pool_pattern
 
 #### Buddy Allocator
 
-Instead of using a linked list to manage freed blocks, the [buddy allocator] design uses a [binary tree] data structure together with power-of-2 block sizes. When a new block of a certain size is required, it splits a larger sized block into two halves, thereby creating two child nodes in the tree. Whenever a block is freed again, its neighbor block in the tree is analyzed. If the neighbor is also free, the two blocks are joined back together to form a block of twice the size.
+Вместо использования связанного списка для управления освобожденными блоками, в конструкции [buddy allocator] используется [бинарное дерево][binary tree] вместе с размерами блоков, кратными 2. Когда требуется новый блок определенного размера, он разделяет блок большего размера на две половины, создавая тем самым два дочерних узла в дереве. Каждый раз, когда блок снова освобождается, анализируется его соседний блок в дереве. Если соседний блок также свободен, два блока снова объединяются, образуя блок в два раза большего размера.
 
-The advantage of this merge process is that [external fragmentation] is reduced so that small freed blocks can be reused for a large allocation. It also does not use a fallback allocator, so the performance is more predictable. The biggest drawback is that only power-of-2 block sizes are possible, which might result in a large amount of wasted memory due to [internal fragmentation]. For this reason, buddy allocators are often combined with a slab allocator to further split an allocated block into multiple smaller blocks.
+Преимущество этого процесса объединения заключается в том, что [внешняя фрагментация][external fragmentation] уменьшается, так что небольшие освобожденные блоки могут быть повторно использованы для большого выделения. Кроме того, он не использует резервный аллокатор, поэтому производительность более предсказуема. Самым большим недостатком является то, что возможны только размеры блоков, кратные 2, что может привести к большому количеству потраченной впустую памяти из-за [внутренней фрагментации][internal fragmentation]. По этой причине аллокаторы типа buddy часто сочетаются с аллокатором типа slab для дальнейшего разделения выделенного блока на несколько меньших блоков.
 
 [buddy allocator]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
 [binary tree]: https://en.wikipedia.org/wiki/Binary_tree
@@ -1227,20 +1228,20 @@ The advantage of this merge process is that [external fragmentation] is reduced 
 
 ## Summary
 
-This post gave an overview of different allocator designs. We learned how to implement a basic [bump allocator], which hands out memory linearly by increasing a single `next` pointer. While bump allocation is very fast, it can only reuse memory after all allocations have been freed. For this reason, it is rarely used as a global allocator.
+В этой статье был представлен обзор различных конструкций аллокаторов. Мы узнали, как реализовать базовый [bump allocator], который распределяет память линейно, увеличивая один указатель `next`. Хотя bump allocation работает очень быстро, он может повторно использовать память только после того, как все выделенные блоки будут освобождены. По этой причине он редко используется в качестве глобального аллокатора.
 
 [bump allocator]: @/edition-2/posts/11-allocator-designs/index.md#bump-allocator
 
-Next, we created a [linked list allocator] that uses the freed memory blocks itself to create a linked list, the so-called [free list]. This list makes it possible to store an arbitrary number of freed blocks of different sizes. While no memory waste occurs, the approach suffers from poor performance because an allocation request might require a complete traversal of the list. Our implementation also suffers from [external fragmentation] because it does not merge adjacent freed blocks back together.
+Затем мы создали [аллокатор связанного списка][linked list allocator], который использует освобожденные блоки памяти для создания связанного списка, так называемого [список свободной памяти][free list]. Этот список позволяет хранить произвольное количество освобожденных блоков разного размера. Хотя при этом не происходит потери памяти, этот подход страдает низкой производительностью, поскольку запрос на выделение памяти может потребовать полного прохождения списка. Наша реализация также страдает от [внешней фрагментации][external fragmentation], поскольку не объединяет соседние освобожденные блоки обратно вместе.
 
 [linked list allocator]: @/edition-2/posts/11-allocator-designs/index.md#linked-list-allocator
 [free list]: https://en.wikipedia.org/wiki/Free_list
 
-To fix the performance problems of the linked list approach, we created a [fixed-size block allocator] that predefines a fixed set of block sizes. For each block size, a separate [free list] exists so that allocations and deallocations only need to insert/pop at the front of the list and are thus very fast. Since each allocation is rounded up to the next larger block size, some memory is wasted due to [internal fragmentation].
+Чтобы устранить проблемы с производительностью, связанные с использованием связанных списков, мы создали [фиксированный аллокатор][fixed-size block allocator], который заранее определяет фиксированный набор размеров блоков. Для каждого размера блока существует отдельный [список свободной памяти][free list], так что для выделения и освобождения памяти достаточно просто вставить/удалить элемент в начале списка, что делает этот процесс очень быстрым. Поскольку каждое выделение округляется до следующего большего размера блока, часть памяти тратится впустую из-за [внутренней фрагментации][internal fragmentation].
 
 [fixed-size block allocator]: @/edition-2/posts/11-allocator-designs/index.md#fixed-size-block-allocator
 
-There are many more allocator designs with different tradeoffs. [Slab allocation] works well to optimize the allocation of common fixed-size structures, but is not applicable in all situations. [Buddy allocation] uses a binary tree to merge freed blocks back together, but wastes a large amount of memory because it only supports power-of-2 block sizes. It's also important to remember that each kernel implementation has a unique workload, so there is no "best" allocator design that fits all cases.
+Существует множество других конструкций аллокаторов с различными компромиссными решениями. [Slab allocation] хорошо подходит для оптимизации распределения общих структур фиксированного размера, но применимо не во всех ситуациях. [Buddy allocation] использует двоичное дерево для объединения освобожденных блоков, но тратит большое количество памяти, поскольку поддерживает только размеры блоков, кратные 2. Также важно помнить, что каждая реализация ядра имеет уникальную рабочую нагрузку, поэтому не существует «лучшей» реализации аллокатора, подходящей для всех случаев.
 
 [Slab allocation]: @/edition-2/posts/11-allocator-designs/index.md#slab-allocator
 [Buddy allocation]: @/edition-2/posts/11-allocator-designs/index.md#buddy-allocator
@@ -1248,7 +1249,7 @@ There are many more allocator designs with different tradeoffs. [Slab allocation
 
 ## What's next?
 
-With this post, we conclude our memory management implementation for now. Next, we will start exploring [_multitasking_], starting with cooperative multitasking in the form of [_async/await_]. In subsequent posts, we will then explore [_threads_], [_multiprocessing_], and [_processes_].
+Этим постом мы на данный момент завершаем реализацию управления памятью. Далее мы начнем изучать [_многозадачность_][_multitasking_], начиная с кооперативной многозадачности в форме [_async/await_][_async/await_]. В последующих постах мы затем рассмотрим [_потоки_][_threads_], [_многопроцессорность_][_multiprocessing_] и [_процессы_][_processes_].
 
 [_multitasking_]: https://en.wikipedia.org/wiki/Computer_multitasking
 [_threads_]: https://en.wikipedia.org/wiki/Thread_(computing)
