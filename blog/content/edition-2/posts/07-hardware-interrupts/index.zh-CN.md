@@ -366,7 +366,7 @@ pub fn _print(args: ::core::fmt::Arguments) {
 
 ## 修复竞态条件
 
-如果你运行 `cargo test` 命令，则会发现`test_println_output` 测试执行失败：
+如果你运行 `cargo test` 命令，则有概率发现`test_println_output` 测试执行失败：
 
 ```
 > cargo test --lib
