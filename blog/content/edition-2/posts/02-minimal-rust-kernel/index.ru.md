@@ -258,10 +258,37 @@ pub extern "C" fn _start() -> ! {
 ```
 > cargo build --target x86_64-blog_os.json
 
+error: `.json` target specs require -Zjson-target-spec
+```
+
+Не получается! Ошибка сообщает нам, что пользовательские спецификации целей JSON являются нестабильной функцией, требующей явной активации. Это связано с тем, что формат файлов JSON целей ещё не считается стабильным, поэтому в будущих версиях Rust могут произойти изменения. Дополнительную информацию см. в [issue отслеживания для пользовательских спецификаций целей JSON][json-target-spec-issue].
+
+[json-target-spec-issue]: https://github.com/rust-lang/rust/issues/151528
+
+### Опция `json-target-spec`
+
+Чтобы включить поддержку пользовательских спецификаций целей JSON, нам нужно создать файл [конфигурации cargo][cargo configuration] по пути `.cargo/config.toml` (папка `.cargo` должна находиться рядом с папкой `src`) со следующим содержимым:
+
+[cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# in .cargo/config.toml
+
+[unstable]
+json-target-spec = true
+```
+
+Это включает нестабильную функцию `json-target-spec`, позволяя нам использовать пользовательские файлы целей JSON.
+
+С этой конфигурацией попробуем собрать снова:
+
+```
+> cargo build --target x86_64-blog_os.json
+
 error[E0463]: can't find crate for `core`
 ```
 
-Не получается! Ошибка сообщает нам, что компилятор Rust больше не может найти [библиотеку `core`][`core` library]. Эта библиотека содержит основные типы Rust, такие как `Result`, `Option` и итераторы, и неявно связана со всеми `no_std` модулями.
+Теперь мы видим другую ошибку! Ошибка сообщает нам, что компилятор Rust больше не может найти [библиотеку `core`][`core` library]. Эта библиотека содержит основные типы Rust, такие как `Result`, `Option` и итераторы, и неявно связана со всеми `no_std` модулями.
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
@@ -274,15 +301,13 @@ error[E0463]: can't find crate for `core`
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust]: #installing-rust-nightly
 
-Чтобы использовать эту функцию, нам нужно создать файл [конфигурации cargo][cargo configuration] по пути `.cargo/config.toml` со следующим содержимым:
-
-[cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
-
+Чтобы использовать эту функцию, нам нужно добавить следующее в файл [конфигурации cargo][cargo configuration] по пути `.cargo/config.toml`:
 
 ```toml
 # in .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std = ["core", "compiler_builtins"]
 ```
 
@@ -321,6 +346,7 @@ build-std = ["core", "compiler_builtins"]
 # in .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std-features = ["compiler-builtins-mem"]
 build-std = ["core", "compiler_builtins"]
 ```

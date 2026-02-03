@@ -254,10 +254,37 @@ pub extern "C" fn _start() -> ! {
 ```
 > cargo build --target x86_64-blog_os.json
 
+error: `.json` target specs require -Zjson-target-spec
+```
+
+失敗しましたね！エラーは、カスタムJSONターゲット仕様は明示的な有効化が必要な不安定機能であると言っています。これは、JSONターゲットファイルのフォーマットがまだ安定と見なされていないため、将来のRustのバージョンで変更される可能性があるからです。詳細は[カスタムJSONターゲット仕様のトラッキングissue][json-target-spec-issue]をご覧ください。
+
+[json-target-spec-issue]: https://github.com/rust-lang/rust/issues/151528
+
+#### `json-target-spec`オプション
+
+カスタムJSONターゲット仕様のサポートを有効にするためには、[cargoの設定][cargo configuration]ファイルを`.cargo/config.toml`に作り（`.cargo`フォルダは`src`フォルダの横に置きます）、次の内容を書きましょう：
+
+[cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# in .cargo/config.toml
+
+[unstable]
+json-target-spec = true
+```
+
+これにより不安定な`json-target-spec`機能が有効になり、カスタムJSONターゲットファイルを使用できるようになります。
+
+この設定を行ったら、もう一度ビルドしてみましょう：
+
+```
+> cargo build --target x86_64-blog_os.json
+
 error[E0463]: can't find crate for `core`
 ```
 
-失敗しましたね！エラーはRustコンパイラが[`core`ライブラリ][`core` library]を見つけられなくなったと言っています。このライブラリは、`Result` や `Option`、イテレータのような基本的なRustの型を持っており、暗黙のうちにすべての`no_std`なクレートにリンクされています。
+今度は別のエラーが出ました！エラーはRustコンパイラが[`core`ライブラリ][`core` library]を見つけられなくなったと言っています。このライブラリは、`Result` や `Option`、イテレータのような基本的なRustの型を持っており、暗黙のうちにすべての`no_std`なクレートにリンクされています。
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
@@ -270,12 +297,13 @@ error[E0463]: can't find crate for `core`
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust compilers]: #installing-rust-nightly
 
-この機能を使うためには、[cargoの設定][cargo configuration]ファイルを`.cargo/config.toml`に作り、次の内容を書きましょう。
+この機能を使うためには、[cargoの設定][cargo configuration]ファイル`.cargo/config.toml`に以下を追加しましょう：
 
 ```toml
 # in .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std = ["core", "compiler_builtins"]
 ```
 
@@ -316,10 +344,12 @@ Rustコンパイラは、すべてのシステムにおいて、特定の組み�
 # in .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std-features = ["compiler-builtins-mem"]
+build-std = ["core", "compiler_builtins"]
 ```
 
-（`compiler-builtins-mem`機能のサポートが追加されたのは[つい最近](https://github.com/rust-lang/rust/pull/77284)なので、`2019-09-30`以降のRust nightlyが必要です。）
+（`compiler-builtins-mem`機能のサポートが追加されたのは[つい最近](https://github.com/rust-lang/rust/pull/77284)なので、`2020-09-30`以降のRust nightlyが必要です。）
 
 このとき、裏で`compiler_builtins`クレートの[`mem`機能][`mem` feature]が有効化されています。これにより、このクレートの[`memcpy`などの実装][`memcpy` etc. implementations]に`#[unsafe(no_mangle)]`アトリビュートが適用され、リンカがこれらを利用できるようになっています。
 

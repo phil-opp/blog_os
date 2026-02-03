@@ -223,10 +223,37 @@ pub extern "C" fn _start() -> ! {
 ```
 > cargo build --target x86_64-blog_os.json
 
+error: `.json` target specs require -Zjson-target-spec
+```
+
+毫不意外的编译失败了，错误信息告诉我们自定义 JSON 目标规范是一个不稳定的功能，需要显式启用。这是因为 JSON 目标文件的格式尚未被认为是稳定的，因此在未来的 Rust 版本中可能会发生变化。有关更多信息，请参阅[自定义 JSON 目标规范的跟踪 issue][json-target-spec-issue]。
+
+[json-target-spec-issue]: https://github.com/rust-lang/rust/issues/151528
+
+#### `json-target-spec` 选项
+
+要启用对自定义 JSON 目标规范的支持，我们需要创建一个 [cargo 配置][cargo configuration] 文件，即 `.cargo/config.toml`（`.cargo` 文件夹应该在 `src` 文件夹旁边），并写入以下语句：
+
+[cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# in .cargo/config.toml
+
+[unstable]
+json-target-spec = true
+```
+
+这会启用不稳定的 `json-target-spec` 功能，允许我们使用自定义的 JSON 目标文件。
+
+有了这个配置后，让我们再次尝试编译：
+
+```
+> cargo build --target x86_64-blog_os.json
+
 error[E0463]: can't find crate for `core` 
 ```
 
-毫不意外的编译失败了，错误信息告诉我们编译器没有找到 [`core`][`core` library] 这个crate，它包含了Rust语言中的部分基础类型，如 `Result`、`Option`、迭代器等等，并且它还会隐式链接到 `no_std` 特性里面。
+现在我们看到了一个不同的错误！错误信息告诉我们编译器没有找到 [`core`][`core` library] 这个crate，它包含了Rust语言中的部分基础类型，如 `Result`、`Option`、迭代器等等，并且它还会隐式链接到 `no_std` 特性里面。
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
@@ -239,12 +266,13 @@ error[E0463]: can't find crate for `core`
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [Nightly Rust compilers]:https://os.phil-opp.com/zh-CN/minimal-rust-kernel/#an-zhuang-nightly-rust
 
-要启用该特性，你需要创建一个 [cargo 配置][cargo configuration] 文件，即 `.cargo/config.toml`，并写入以下语句：
+要启用该特性，你需要在 [cargo 配置][cargo configuration] 文件 `.cargo/config.toml` 中添加以下语句：
 
 ```toml
 # in .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std = ["core", "compiler_builtins"]
 ```
 
@@ -288,6 +316,7 @@ build-std = ["core", "compiler_builtins"]
 # in .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std-features = ["compiler-builtins-mem"]
 build-std = ["core", "compiler_builtins"]
 ```
