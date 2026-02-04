@@ -254,10 +254,37 @@ Agora podemos construir o kernel para nosso novo alvo passando o nome do arquivo
 ```
 > cargo build --target x86_64-blog_os.json
 
+error: `.json` target specs require -Zjson-target-spec
+```
+
+Falha! O erro nos diz que especificações de alvo JSON personalizadas são um recurso instável que requer habilitação explícita. Isso ocorre porque o formato dos arquivos JSON de alvo ainda não é considerado estável, então mudanças podem ocorrer em futuras versões do Rust. Consulte a [issue de rastreamento para especificações de alvo JSON personalizadas][json-target-spec-issue] para mais informações.
+
+[json-target-spec-issue]: https://github.com/rust-lang/rust/issues/151528
+
+#### A Opção `json-target-spec`
+
+Para habilitar o suporte para especificações de alvo JSON personalizadas, precisamos criar um arquivo de [configuração cargo] local em `.cargo/config.toml` (a pasta `.cargo` deve estar ao lado da sua pasta `src`) com o seguinte conteúdo:
+
+[configuração cargo]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# em .cargo/config.toml
+
+[unstable]
+json-target-spec = true
+```
+
+Isso habilita o recurso instável `json-target-spec`, permitindo-nos usar arquivos JSON de alvo personalizados.
+
+Com esta configuração em vigor, vamos tentar construir novamente:
+
+```
+> cargo build --target x86_64-blog_os.json
+
 error[E0463]: can't find crate for `core`
 ```
 
-Falha! O erro nos diz que o compilador Rust não consegue mais encontrar a [biblioteca `core`]. Esta biblioteca contém tipos básicos do Rust como `Result`, `Option` e iteradores, e é implicitamente vinculada a todas as crates `no_std`.
+Agora vemos um erro diferente! O erro nos diz que o compilador Rust não consegue mais encontrar a [biblioteca `core`]. Esta biblioteca contém tipos básicos do Rust como `Result`, `Option` e iteradores, e é implicitamente vinculada a todas as crates `no_std`.
 
 [biblioteca `core`]: https://doc.rust-lang.org/nightly/core/index.html
 
@@ -270,12 +297,13 @@ O problema é que a biblioteca core é distribuída junto com o compilador Rust 
 [recurso `build-std`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [compiladores Rust nightly]: #instalando-o-rust-nightly
 
-Para usar o recurso, precisamos criar um arquivo de [configuração cargo] local em `.cargo/config.toml` (a pasta `.cargo` deve estar ao lado da sua pasta `src`) com o seguinte conteúdo:
+Para usar o recurso, precisamos adicionar o seguinte ao nosso arquivo de [configuração cargo] em `.cargo/config.toml`:
 
 ```toml
 # em .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std = ["core", "compiler_builtins"]
 ```
 
@@ -316,6 +344,7 @@ Felizmente, a crate `compiler_builtins` já contém implementações para todas 
 # em .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std-features = ["compiler-builtins-mem"]
 build-std = ["core", "compiler_builtins"]
 ```

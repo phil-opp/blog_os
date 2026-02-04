@@ -264,10 +264,37 @@ pub extern "C" fn _start() -> ! {
 ```
 > cargo build --target x86_64-blog_os.json
 
+error: `.json` target specs require -Zjson-target-spec
+```
+
+실패하였군요! 이 오류는 커스텀 JSON 타겟 스펙이 명시적인 활성화가 필요한 불안정한 기능이라는 것을 알려줍니다. JSON 타겟 파일의 형식이 아직 안정적으로 간주되지 않기 때문에 미래 Rust 버전에서 변경될 수 있습니다. 자세한 정보는 [커스텀 JSON 타겟 스펙 트래킹 이슈][json-target-spec-issue]를 참조하세요.
+
+[json-target-spec-issue]: https://github.com/rust-lang/rust/issues/151528
+
+#### `json-target-spec` 기능
+
+커스텀 JSON 타겟 스펙 지원을 활성화하려면, [cargo 설정][cargo configuration] 파일 `.cargo/config.toml`을 생성해야 합니다 (`.cargo` 폴더는 `src` 폴더 옆에 위치해야 합니다):
+
+[cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# .cargo/config.toml 에 들어갈 내용
+
+[unstable]
+json-target-spec = true
+```
+
+이를 통해 불안정한 `json-target-spec` 기능이 활성화되어 커스텀 JSON 타겟 파일을 사용할 수 있게 됩니다.
+
+이 설정을 완료한 후, 다시 빌드해 봅시다:
+
+```
+> cargo build --target x86_64-blog_os.json
+
 error[E0463]: can't find crate for `core`
 ```
 
-실패하였군요! 이 오류는 Rust 컴파일러가 더 이상 [`core` 라이브러리][`core` library]를 찾지 못한다는 것을 알려줍니다. 이 라이브러리는 `Result`와 `Option` 그리고 반복자 등 Rust의 기본적인 타입들을 포함하며, 모든 `no_std` 크레이트에 암시적으로 링크됩니다. 
+이제 다른 오류가 발생합니다! 이 오류는 Rust 컴파일러가 더 이상 [`core` 라이브러리][`core` library]를 찾지 못한다는 것을 알려줍니다. 이 라이브러리는 `Result`와 `Option` 그리고 반복자 등 Rust의 기본적인 타입들을 포함하며, 모든 `no_std` 크레이트에 암시적으로 링크됩니다. 
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
@@ -280,12 +307,13 @@ error[E0463]: can't find crate for `core`
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust compilers]: #installing-rust-nightly
 
-해당 기능을 사용하려면, [cargo 설정][cargo configuration] 파일 `.cargo/config.toml`을 아래와 같이 만들어야 합니다:
+해당 기능을 사용하려면, [cargo 설정][cargo configuration] 파일 `.cargo/config.toml`에 아래와 같이 추가해야 합니다:
 
 ```toml
 # .cargo/config.toml 에 들어갈 내용
 
 [unstable]
+json-target-spec = true
 build-std = ["core", "compiler_builtins"]
 ```
 
@@ -326,6 +354,7 @@ Rust 컴파일러는 특정 군의 내장 함수들이 (built-in function) 모�
 # .cargo/config.toml 에 들어갈 내용
 
 [unstable]
+json-target-spec = true
 build-std-features = ["compiler-builtins-mem"]
 build-std = ["core", "compiler_builtins"]
 ```

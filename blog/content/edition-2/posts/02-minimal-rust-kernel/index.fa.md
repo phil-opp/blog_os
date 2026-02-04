@@ -260,10 +260,37 @@ pub extern "C" fn _start() -> ! {
 ```
 > cargo build --target x86_64-blog_os.json
 
+error: `.json` target specs require -Zjson-target-spec
+```
+
+شکست میخورد! این خطا به ما می‌گوید که مشخصات هدف JSON سفارشی یک ویژگی ناپایدار است که نیاز به فعال‌سازی صریح دارد. این به این دلیل است که فرمت فایل‌های هدف JSON هنوز پایدار در نظر گرفته نمی‌شود، بنابراین ممکن است در نسخه‌های آینده Rust تغییر کند. برای اطلاعات بیشتر به [مسئله پیگیری مشخصات هدف JSON سفارشی][json-target-spec-issue] مراجعه کنید.
+
+[json-target-spec-issue]: https://github.com/rust-lang/rust/issues/151528
+
+#### آپشن `json-target-spec`
+
+برای فعال کردن پشتیبانی از مشخصات هدف JSON سفارشی، ما نیاز داریم تا یک فایل [پیکربندی کارگو] در `cargo/config.toml.` (پوشه `cargo.` باید کنار پوشه `src` شما باشد) با محتوای زیر بسازیم:
+
+[پیکربندی کارگو]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# in .cargo/config.toml
+
+[unstable]
+json-target-spec = true
+```
+
+این ویژگی ناپایدار `json-target-spec` را فعال می‌کند و به ما امکان استفاده از فایل‌های هدف JSON سفارشی را می‌دهد.
+
+حالا با این پیکربندی، بیایید دوباره بسازیم:
+
+```
+> cargo build --target x86_64-blog_os.json
+
 error[E0463]: can't find crate for `core`
 ```
 
-شکست میخورد! این خطا به ما می‌گوید که کامپایلر Rust دیگر [کتابخانه `core`] را پیدا نمی‌کند. این کتابخانه شامل انواع اساسی Rust مانند `Result` ، `Option` و iterators است، و به طور ضمنی به همه کریت‌های `no_std` لینک است.
+حالا یک خطای متفاوت می‌بینیم! این خطا به ما می‌گوید که کامپایلر Rust دیگر [کتابخانه `core`] را پیدا نمی‌کند. این کتابخانه شامل انواع اساسی Rust مانند `Result` ، `Option` و iterators است، و به طور ضمنی به همه کریت‌های `no_std` لینک است.
 
 [کتابخانه `core`]: https://doc.rust-lang.org/nightly/core/index.html
 
@@ -276,12 +303,13 @@ error[E0463]: can't find crate for `core`
 [ویژگی `build-std`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [نسخه شبانه کامپایلر Rust]: #installing-rust-nightly
 
-برای استفاده از این ویژگی، ما نیاز داریم تا یک فایل [پیکربندی کارگو] در `cargo/config.toml.` با محتوای زیر بسازیم:
+برای استفاده از این ویژگی، باید موارد زیر را به فایل [پیکربندی کارگو] در `cargo/config.toml.` اضافه کنیم:
 
 ```toml
 # in .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std = ["core", "compiler_builtins"]
 ```
 
@@ -322,7 +350,9 @@ build-std = ["core", "compiler_builtins"]
 # in .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std-features = ["compiler-builtins-mem"]
+build-std = ["core", "compiler_builtins"]
 ```
 پشتیبانی برای ویژگی `compiler-builtins-mem` [به تازگی اضافه شده](https://github.com/rust-lang/rust/pull/77284)، پس حداقل به نسخه‌ شبانه‌ `2020-09-30` نیاز دارید.
 

@@ -256,10 +256,37 @@ Nous pouvons maintenant construire le noyau pour notre nouvelle cible en fournis
 ```
 > cargo build --target x86_64-blog_os.json
 
+error: `.json` target specs require -Zjson-target-spec
+```
+
+Cela échoue! L'erreur nous dit que les spécifications de cibles JSON personnalisées sont une fonctionnalité instable qui nécessite une activation explicite. Cela s'explique par le fait que le format des fichiers JSON de cible n'est pas encore considéré comme stable, donc des modifications pourraient avoir lieu dans les futures versions de Rust. Consultez l'[issue de suivi pour les spécifications de cibles JSON personnalisées][json-target-spec-issue] pour plus d'informations.
+
+[json-target-spec-issue]: https://github.com/rust-lang/rust/issues/151528
+
+#### L'option `json-target-spec`
+
+Pour activer le support des spécifications de cibles JSON personnalisées, nous devons créer un fichier de [configuration cargo][cargo configuration] dans `.cargo/config.toml` (le dossier `.cargo` doit être à côté de votre dossier `src`) avec le contenu suivant:
+
+[cargo configuration]: https://doc.rust-lang.org/cargo/reference/config.html
+
+```toml
+# dans .cargo/config.toml
+
+[unstable]
+json-target-spec = true
+```
+
+Ceci active la fonctionnalité instable `json-target-spec`, nous permettant d'utiliser des fichiers JSON de cible personnalisés.
+
+Avec cette configuration en place, essayons de construire à nouveau:
+
+```
+> cargo build --target x86_64-blog_os.json
+
 error[E0463]: can't find crate for `core`
 ```
 
-Cela échoue! L'erreur nous dit que le compilateur ne trouve plus la [bibliothèque `core`][`core` library]. Cette bibliothèque contient les types de base Rust comme `Result`, `Option`, les itérateurs, et est implicitement liée à toutes les crates `no_std`.
+Maintenant nous voyons une erreur différente! L'erreur nous dit que le compilateur ne trouve plus la [bibliothèque `core`][`core` library]. Cette bibliothèque contient les types de base Rust comme `Result`, `Option`, les itérateurs, et est implicitement liée à toutes les crates `no_std`.
 
 [`core` library]: https://doc.rust-lang.org/nightly/core/index.html
 
@@ -272,12 +299,13 @@ C'est ici que la [fonctionnalité `build-std`][`build-std` feature] de cargo ent
 [`build-std` feature]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#build-std
 [nightly Rust compilers]: #installer-une-version-nocturne-de-rust
 
-Pour utiliser cette fonctionnalité, nous devons créer un fichier de [configuration cargo][cargo configuration] dans `.cargo/config.toml` avec le contenu suivant:
+Pour utiliser cette fonctionnalité, nous devons ajouter ce qui suit à notre fichier de [configuration cargo][cargo configuration] dans `.cargo/config.toml`:
 
 ```toml
 # dans .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std = ["core", "compiler_builtins"]
 ```
 
@@ -318,6 +346,7 @@ Heureusement, la crate `compiler_builtins` contient déjà des implémentations 
 # dans .cargo/config.toml
 
 [unstable]
+json-target-spec = true
 build-std-features = ["compiler-builtins-mem"]
 build-std = ["core", "compiler_builtins"]
 ```
