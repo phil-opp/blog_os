@@ -233,7 +233,7 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[no_mangle] // no modificar el nombre de esta función
+#[unsafe(no_mangle)] // no modificar el nombre de esta función
 pub extern "C" fn _start() -> ! {
     // esta función es el punto de entrada, ya que el enlazador busca una función
     // llamada `_start` por defecto
@@ -326,7 +326,7 @@ Vemos que `cargo build` ahora recompila las bibliotecas `core`, `rustc-std-works
 
 El compilador de Rust asume que un cierto conjunto de funciones integradas está disponible para todos los sistemas. La mayoría de estas funciones son proporcionadas por el crate `compiler_builtins`, que acabamos de recompilar. Sin embargo, hay algunas funciones relacionadas con la memoria en ese crate que no están habilitadas por defecto, ya que normalmente son proporcionadas por la biblioteca C del sistema. Estas funciones incluyen `memset`, que establece todos los bytes de un bloque de memoria a un valor dado, `memcpy`, que copia un bloque de memoria a otro, y `memcmp`, que compara dos bloques de memoria. Aunque no necesitamos estas funciones para compilar nuestro kernel en este momento, serán necesarias tan pronto como agreguemos más código (por ejemplo, al copiar estructuras).
 
-Dado que no podemos vincularnos a la biblioteca C del sistema operativo, necesitamos una forma alternativa de proporcionar estas funciones al compilador. Una posible solución podría ser implementar nuestras propias funciones `memset`, `memcpy`, etc., y aplicarles el atributo `#[no_mangle]` (para evitar el renombramiento automático durante la compilación). Sin embargo, esto es peligroso, ya que el más mínimo error en la implementación de estas funciones podría conducir a un comportamiento indefinido. Por ejemplo, implementar `memcpy` con un bucle `for` podría resultar en una recursión infinita, ya que los bucles `for` llaman implícitamente al método del trait [`IntoIterator::into_iter`], que podría invocar nuevamente a `memcpy`. Por lo tanto, es una buena idea reutilizar implementaciones existentes y bien probadas.
+Dado que no podemos vincularnos a la biblioteca C del sistema operativo, necesitamos una forma alternativa de proporcionar estas funciones al compilador. Una posible solución podría ser implementar nuestras propias funciones `memset`, `memcpy`, etc., y aplicarles el atributo `#[unsafe(no_mangle)]` (para evitar el renombramiento automático durante la compilación). Sin embargo, esto es peligroso, ya que el más mínimo error en la implementación de estas funciones podría conducir a un comportamiento indefinido. Por ejemplo, implementar `memcpy` con un bucle `for` podría resultar en una recursión infinita, ya que los bucles `for` llaman implícitamente al método del trait [`IntoIterator::into_iter`], que podría invocar nuevamente a `memcpy`. Por lo tanto, es una buena idea reutilizar implementaciones existentes y bien probadas.
 
 [`IntoIterator::into_iter`]: https://doc.rust-lang.org/stable/core/iter/trait.IntoIterator.html#tymethod.into_iter
 
@@ -345,7 +345,7 @@ build-std = ["core", "compiler_builtins"]
 
 (El soporte para la característica `compiler-builtins-mem` fue [añadido muy recientemente](https://github.com/rust-lang/rust/pull/77284), por lo que necesitas al menos Rust nightly `2020-09-30` para usarla).
 
-Detrás de escena, esta bandera habilita la [característica `mem`] del crate `compiler_builtins`. El efecto de esto es que el atributo `#[no_mangle]` se aplica a las [implementaciones de `memcpy`, etc.] del crate, lo que las hace disponibles para el enlazador.
+Detrás de escena, esta bandera habilita la [característica `mem`] del crate `compiler_builtins`. El efecto de esto es que el atributo `#[unsafe(no_mangle)]` se aplica a las [implementaciones de `memcpy`, etc.] del crate, lo que las hace disponibles para el enlazador.
 
 [característica `mem`]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/Cargo.toml#L54-L55
 [implementaciones de `memcpy`, etc.]: https://github.com/rust-lang/compiler-builtins/blob/eff506cd49b637f1ab5931625a33cef7e91fbbf6/src/mem.rs#L12-L69
@@ -383,7 +383,7 @@ La implementación se ve así:
 ```rust
 static HELLO: &[u8] = b"Hello World!";
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     let vga_buffer = 0xb8000 as *mut u8;
 
