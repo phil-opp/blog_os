@@ -8,7 +8,7 @@ date = 2018-02-10
 # Please update this when updating the translation
 translation_based_on_commit = "3e87916b6c2ed792d1bdb8c0947906aef9013ac1"
 # GitHub usernames of the people that translated this post
-translators = ["AlexandreMarcq", "alaincao"]
+translators = ["AlexandreMarcq", "alaincao", "richarddalves"]
 +++
 
 La première étape pour créer notre propre noyau de système d'exploitation est de créer un exécutable Rust qui ne relie pas la bibliothèque standard. Cela rend possible l'exécution du code Rust sur la ["bare machine"][machine nue] sans système d'exploitation sous-jacent.
@@ -145,7 +145,7 @@ Le [paramètre `PanicInfo`][PanicInfo] contient le fichier et la ligne où le pa
 
 ## L'Objet de Langage `eh_personality`
 
-Les objets de langage sont des fonctions et des types spéciaux qui sont requis par le compilateur de manière interne. Par exemple, le trait [`Copy`] est un objet de langage qui indique au compilateur quels types possèdent la [sémantique copy][`Copy`]. Quand nous regardons l'[implémentation][copy code] du code, nous pouvons voir qu'il possède l'attribut spécial `#[lang = copy]` qui le définit comme étant un objet de langage.
+Les objets de langage sont des éléments spéciaux (traits, fonctions, types, etc.) qui sont requis par le compilateur de manière interne. Par exemple, le trait [`Copy`] est un objet de langage qui indique au compilateur quels types possèdent la [sémantique copy][`Copy`]. Quand nous regardons l'[implémentation][copy code] du code, nous pouvons voir qu'il possède l'attribut spécial `#[lang = copy]` qui le définit comme étant un objet de langage.
 
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299

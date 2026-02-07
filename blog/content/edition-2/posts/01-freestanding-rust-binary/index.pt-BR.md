@@ -150,7 +150,7 @@ O parâmetro [`PanicInfo`][PanicInfo] contém o arquivo e a linha onde o panic a
 
 ## O Item de Linguagem `eh_personality`
 
-Items de linguagem são funções e tipos especiais necessários internamente pelo compilador. Por exemplo, a trait [`Copy`] é um item de linguagem que diz ao compilador quais tipos têm [_semântica de cópia_][`Copy`]. Quando olhamos para a [implementação][copy code], vemos que tem o atributo especial `#[lang = "copy"]` que o define como um item de linguagem (_Language Item_ em inglês).
+Items de linguagem são elementos especiais (traits, funções, tipos, etc.) necessários internamente pelo compilador. Por exemplo, a trait [`Copy`] é um item de linguagem que diz ao compilador quais tipos têm [_semântica de cópia_][`Copy`]. Quando olhamos para a [implementação][copy code], vemos que tem o atributo especial `#[lang = "copy"]` que o define como um item de linguagem (_Language Item_ em inglês).
 
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
