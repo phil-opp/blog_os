@@ -9,6 +9,7 @@ chapter = "Bare Bones"
 
 # GitHub usernames of the people that translated this post
 translators = ["dobleuber"]
+translation_contributors = ["richarddalves"]
 +++
 
 El primer paso para crear nuestro propio kernel de sistema operativo es crear un ejecutable en Rust que no enlace con la biblioteca estándar. Esto hace posible ejecutar código Rust directamente en el [bare metal] sin un sistema operativo subyacente.
@@ -147,7 +148,7 @@ El [parámetro `PanicInfo`][PanicInfo] contiene el archivo y la línea donde ocu
 
 ## El Elemento de Lenguaje `eh_personality`
 
-Los elementos de lenguaje son funciones y tipos especiales que el compilador requiere internamente. Por ejemplo, el trait [`Copy`] es un elemento de lenguaje que indica al compilador qué tipos tienen [_semántica de copia_][`Copy`]. Si observamos su [implementación][copy code], veremos que tiene el atributo especial `#[lang = "copy"]`, que lo define como un elemento de lenguaje.
+Los elementos de lenguaje son elementos especiales (traits, funciones, tipos, etc.) que el compilador requiere internamente. Por ejemplo, el trait [`Copy`] es un elemento de lenguaje que indica al compilador qué tipos tienen [_semántica de copia_][`Copy`]. Si observamos su [implementación][copy code], veremos que tiene el atributo especial `#[lang = "copy"]`, que lo define como un elemento de lenguaje.
 
 [`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
 [copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
