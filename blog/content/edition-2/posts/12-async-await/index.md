@@ -1687,7 +1687,7 @@ impl Executor {
 }
 ```
 
-This method just calls the `run_ready_tasks` function in a loop. While we could theoretically return from the function when the `tasks` map becomes empty, this would never happen since our `keyboard_task` never finishes, so a simple `loop` should suffice. Since the function never returns, we use the `!` return type to mark the function as [diverging] to the compiler.
+This method just calls the `run_ready_tasks` function in a loop. While we could theoretically return from the function when the `tasks` map becomes empty, this would never happen since our `keyboard::print_keypresses` task never finishes, so a simple `loop` should suffice. Since the function never returns, we use the `!` return type to mark the function as [diverging] to the compiler.
 
 [diverging]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
