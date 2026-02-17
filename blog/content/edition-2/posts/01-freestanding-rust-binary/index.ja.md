@@ -6,9 +6,9 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "6f1f87215892c2be12c6973a6f753c9a25c34b7e"
+translation_based_on_commit = "e6c148d6f47bcf8a34916393deaeb7e8da2d5e2a"
 # GitHub usernames of the people that translated this post
-translators = ["JohnTitor"]
+translators = ["JohnTitor","ic3w1ne"]
 +++
 
 私達自身のオペレーティングシステム(以下、OS)カーネルを作っていく最初のステップは標準ライブラリとリンクしない Rust の実行可能ファイルをつくることです。これにより、基盤となる OS がない[ベアメタル][bare metal]上で Rust のコードを実行することができるようになります。
@@ -522,6 +522,78 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
 これは独立した Rust バイナリの最小の例にすぎないことに注意してください。このバイナリは `_start` 関数が呼び出されたときにスタックが初期化されるなど、さまざまなことを前提としています。**そのため、このようなバイナリを実際に使用するには、より多くの手順が必要となります**。
+
+## `rust-analyzer` を満足させる
+
+[`rust-analyzer`](https://rust-analyzer.github.io/) プロジェクトは、エディタでRustコードのコード補完や「定義へ移動」のサポート（およびその他多くの機能）を提供する優れたツールです。
+`#![no_std]` プロジェクトでも非常によく動作するため、カーネル開発にも使用することをお勧めします！
+
+`rust-analyzer` の [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) 機能（デフォルトで有効）を使用している場合、カーネルの panic 関数に対してエラーが報告されるかもしれません。
+
+```
+found duplicate lang item `panic_impl`
+```
+
+このエラーの理由は、`rust-analyzer` がデフォルトで `cargo check --all-targets` を呼び出すためです。これにより、[テスト](https://doc.rust-lang.org/book/ch11-01-writing-tests.html) モードと[ベンチマーク](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) モードでもバイナリのビルドが試行されます。
+
+<div class="note">
+
+### 「target」の2つの意味
+
+`--all-targets` フラグは `--target` 引数とは完全に無関係です。
+`cargo` における「target」という用語には2つの異なる意味があります。
+
+- `--target` フラグは、`rustc` コンパイラに渡されるべき **[コンパイルターゲット][compile target]** を指定します。これは、私たちのコードを実行するマシンの[ターゲットトリプル][target triple]に設定する必要があります。
+- `--all-targets` フラグは、Cargoの **[パッケージターゲット][package target]** を参照します。Cargoパッケージはライブラリとバイナリを同時に持つことができるため、 crate をどのようにビルドしたいかを指定できます。さらに、Cargoには[サンプル](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples)、[テスト](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests)、[ベンチマーク](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#benchmarks)用のパッケージターゲットもあります。これらのパッケージターゲットは共存できるため、同じ crate をライブラリモードやテストモードなどでビルド/チェックすることができます。
+
+[compile target]: https://doc.rust-lang.org/rustc/targets/index.html
+[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[package target]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html
+
+</div>
+
+デフォルトでは、`cargo check` は _ライブラリ_ と _バイナリ_ のパッケージターゲットのみをビルドします。
+しかし、`rust-analyzer` は [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) が有効な場合、デフォルトですべてのパッケージターゲットをチェックすることを選択します。
+これが、`cargo check` では見られない上記の `lang item` エラーを `rust-analyzer` が報告する理由です。
+`cargo check --all-targets` を実行すると、同じエラーが表示されます。
+
+```
+error[E0152]: found duplicate lang item `panic_impl`
+  --> src/main.rs:13:1
+   |
+13 | / fn panic(_info: &PanicInfo) -> ! {
+14 | |     loop {}
+15 | | }
+   | |_^
+   |
+   = note: the lang item is first defined in crate `std` (which `test` depends on)
+   = note: first definition in `std` loaded from /home/[...]/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-8df6be531efb3fd0.rlib
+   = note: second definition in the local crate (`blog_os`)
+```
+
+最初の `note` は、 panic 言語アイテムがすでに `std` crate で定義されていることを示しています。`std` は `test` crate の依存関係です。
+`test` crate は、[テストモード](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests)で crate をビルドするときに自動的に含まれます。
+これは、ベアメタル上で標準ライブラリをサポートする方法がない、`#![no_std]` カーネルには適していません。
+したがって、このエラーはプロジェクトに関係ないため、安全に無視できます。
+
+このエラーを回避する適切な方法は、`Cargo.toml` でバイナリが `test` モードと `bench` モードでのビルドをサポートしていないことを指定することです。
+これは、`Cargo.toml` に `[[bin]]` セクションを追加して、バイナリの[ビルドを設定](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target)することで行えます。
+
+```toml
+# Cargo.toml 内
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+```
+
+`bin` の周りの二重括弧は間違いではありません。これはTOML形式で、複数回出現できるキーを定義する方法です。
+crate は複数のバイナリを持つことができるため、`[[bin]]` セクションも `Cargo.toml` 内に複数回出現できます。
+これが `name` フィールドが必須である理由でもあり、バイナリの名前と一致させる必要があります（これにより `cargo` はどの設定をどのバイナリに適用すべきかを認識します）。
+
+[`test`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field) フィールドと [`bench`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field) フィールドを `false` に設定することで、テストモードやベンチマークモードでバイナリをビルドしないよう `cargo` に指示します。
+これで `cargo check --all-targets` はエラーをスローしなくなり、`rust-analyzer` の `checkOnSave` も満足するはずです。
 
 ## 次は？
 

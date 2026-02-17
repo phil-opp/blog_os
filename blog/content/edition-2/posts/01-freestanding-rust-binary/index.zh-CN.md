@@ -6,9 +6,9 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
+translation_based_on_commit = "e6c148d6f47bcf8a34916393deaeb7e8da2d5e2a"
 # GitHub usernames of the people that translated this post
-translators = ["luojia65", "Rustin-Liu", "TheBegining", "liuyuran"]
+translators = ["luojia65", "Rustin-Liu", "TheBegining", "liuyuran","ic3w1ne"]
 # GitHub usernames of the people that contributed to this translation
 translation_contributors = ["JiangengDong"]
 +++
@@ -471,6 +471,78 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
 要注意的是，现在我们的代码只是一个 Rust 编写的独立式可执行程序的一个例子。运行这个二进制程序还需要很多准备，比如在 `_start` 函数之前需要一个已经预加载完毕的栈。所以为了真正运行这样的程序，**我们还有很多事情需要做**。
+
+## 让 `rust-analyzer` 愉快工作
+
+[`rust-analyzer`](https://rust-analyzer.github.io/) 项目是一个很好的工具，可以为你的编辑器中的 Rust 代码提供代码补全和"转到定义"支持（以及许多其他功能）。
+它对于 `#![no_std]` 项目也同样出色，所以我推荐在内核开发中使用它！
+
+如果你使用了 `rust-analyzer` 的 [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) 特性（默认开启），它可能会报告我们内核的 panic 函数存在一个错误：
+
+```
+found duplicate lang item `panic_impl`
+```
+
+这个错误的原因是 `rust-analyzer` 默认会调用 `cargo check --all-targets`，这也会导致以[测试](https://doc.rust-lang.org/book/ch11-01-writing-tests.html)和[基准测试](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks)模式构建二进制文件。
+
+<div class="note">
+
+### "Target"的两种含义
+
+`--all-targets` 标志与 `--target` 参数完全无关。
+在 `cargo` 中，"target"这个术语有两种不同的含义：
+
+- `--target` 标志指定了应该传递给 `rustc` 编译器的 **[编译目标][compilation target]**。这应该设置为运行我们代码的机器的[目标三元组][target triple]。
+- `--all-targets` 标志指的是 Cargo 的 **[包目标][package target]**。Cargo 包可以同时是库和二进制文件，因此你可以指定你想要构建 crate 的方式。此外，Cargo 还有用于[示例](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples)、[测试](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests)和[基准测试](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#benchmarks)的包目标。这些包目标可以共存，因此你可以同时在例如库模式或测试模式下构建/检查同一个 crate。
+
+[compilation target]: https://doc.rust-lang.org/rustc/targets/index.html
+[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[package target]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html
+
+</div>
+
+默认情况下，`cargo check` 只构建 _库（library）_ 和 _二进制（binary）_ 包目标。
+然而，当启用 [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) 时，`rust-analyzer` 默认选择检查所有包目标。
+这就是 `rust-analyzer` 报告上述我们在 `cargo check` 中没有看到的`语言项（lang item）`错误的原因。
+如果我们运行 `cargo check --all-targets`，我们也会看到这个错误：
+
+```
+error[E0152]: found duplicate lang item `panic_impl`
+  --> src/main.rs:13:1
+   |
+13 | / fn panic(_info: &PanicInfo) -> ! {
+14 | |     loop {}
+15 | | }
+   | |_^
+   |
+   = note: the lang item is first defined in crate `std` (which `test` depends on)
+   = note: first definition in `std` loaded from /home/[...]/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-8df6be531efb3fd0.rlib
+   = note: second definition in the local crate (`blog_os`)
+```
+
+第一个 `note` 告诉我们 panic 语言项已经在 `std` crate 中定义了，而 `std` 是 `test` crate 的一个依赖项。
+`test` crate 在以[测试模式](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests)构建 crate 时会自动被包含进来。
+这对于我们的 `#![no_std]` 内核来说不合适，因为在裸机上没有办法支持标准库。
+所以这个错误与我们的项目无关，我们可以安全地忽略它。
+
+避免这个错误的正确方法是在我们的 `Cargo.toml` 中指定我们的二进制文件不支持以 `测试（test）` 和 `基准测试（bench）` 模式构建。
+我们可以通过添加一个 `[[bin]]` 部分到 `Cargo.toml` 来[构建配置](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target)我们的二进制文件：
+
+```toml
+# 在 Cargo.toml 中
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+```
+
+`bin` 周围的双括号并非笔误，这是 TOML 格式定义可多次出现的键的方式。
+由于一个 crate 可以有多个二进制文件，`[[bin]]` 部分也可以在 `Cargo.toml` 中出现多次。
+这也是必须有 `name` 字段的原因，它需要与二进制文件的名称匹配（以便 `cargo` 知道哪些设置应该应用于哪个二进制文件）。
+
+通过将 [`test`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field) 和 [`bench`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field) 字段设置为 `false`，我们指示 `cargo` 不要以测试或基准测试模式构建我们的二进制文件。
+现在 `cargo check --all-targets` 应该不会再抛出任何错误了，`rust-analyzer` 的 `checkOnSave` 也应该愉快工作了。
 
 ## 下篇预览
 
