@@ -6,9 +6,9 @@ date = 2019-04-27
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
+translation_based_on_commit = "e6c148d6f47bcf8a34916393deaeb7e8da2d5e2a"
 # GitHub usernames of the people that translated this post
-translators = ["luojia65", "Rustin-Liu", "liuyuran"]
+translators = ["luojia65", "Rustin-Liu", "liuyuran","ic3w1ne"]
 # GitHub usernames of the people that contributed to this translation
 translation_contributors = ["JiangengDong"]
 +++
@@ -38,11 +38,26 @@ translation_contributors = ["JiangengDong"]
 
 ## Rust中的测试
 
-Rust有一个**内置的测试框架**（[built-in test framework]）：无需任何设置就可以进行单元测试，只需要创建一个通过assert来检查结果的函数并在函数的头部加上 `#[test]` 属性即可。然后 `cargo test` 会自动找到并执行你的crate中的所有测试函数。
+Rust有一个**内置的测试框架**（[built-in test framework][built-in test framework]）：无需任何设置就可以进行单元测试，只需要创建一个通过assert来检查结果的函数并在函数的头部加上 `#[test]` 属性即可。然后 `cargo test` 会自动找到并执行你的crate中的所有测试函数。
 
 [built-in test framework]: https://doc.rust-lang.org/book/second-edition/ch11-00-testing.html
 
-不幸的是，对于一个 `no_std` 的应用，比如我们的内核，这就有点复杂了。现在的问题是，Rust的测试框架会隐式的调用内置的[`test`]库，但是这个库依赖于标准库。这也就是说我们的 `#[no_std]` 内核无法使用默认的测试框架。
+为了启用内核二进制文件的测试功能，我们可以在 `Cargo.toml` 中将 `test` 标志设置为 `true`：
+
+```toml
+# 在 Cargo.toml 中
+
+[[bin]]
+name = "blog_os"
+test = true
+bench = false
+```
+
+这个 [`[[bin]]` 配置段](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target) 指定了 `cargo` 应如何编译 `blog_os` 可执行文件。
+其中 `test` 字段用于指定该可执行文件是否支持测试。
+在第一篇文章中，我们为了 [使 `rust-analyzer` 正常](@/edition-2/posts/01-freestanding-rust-binary/index.md#making-rust-analyzer-happy) 将其设置为 `false`，但现在我们需要启用测试，因此将其重新设为 `true`。
+
+不幸的是，对于像内核这样的 `no_std` 应用来说，测试会变得比较复杂。问题在于 Rust 的测试框架隐式地使用了内置的 [`test`][`test`] 库，而这个库依赖于标准库。这意味着我们无法为 `#[no_std]` 内核使用默认的测试框架。
 
 [`test`]: https://doc.rust-lang.org/test/index.html
 

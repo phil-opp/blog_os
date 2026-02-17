@@ -6,9 +6,9 @@ date = 2019-04-27
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "dce5c9825bd4e7ea6c9530e999c9d58f80c585cc"
+translation_based_on_commit = "e6c148d6f47bcf8a34916393deaeb7e8da2d5e2a"
 # GitHub usernames of the people that translated this post
-translators = ["swnakamura", "JohnTitor"]
+translators = ["swnakamura", "JohnTitor","ic3w1ne"]
 +++
 
 この記事では、`no_std`な実行環境における<ruby>単体テスト<rp> (</rp><rt>unit test</rt><rp>) </rp></ruby>と<ruby>結合テスト<rp> (</rp><rt>integration test</rt><rp>) </rp></ruby>について学びます。Rustではカスタムテストフレームワークがサポートされているので、これを使ってカーネルの中でテスト関数を実行します。QEMUの外へとテストの結果を通知するため、QEMUと`bootimage`の様々な機能を使います。
@@ -29,7 +29,6 @@ translators = ["swnakamura", "JohnTitor"]
 この記事は、（古い版の）[単体テスト][_Unit Testing_]と[結合テスト][_Integration Tests_]の記事を置き換えるものです。この記事は、あなたが[最小のカーネル][_A Minimal Rust Kernel_]の記事を2019-04-27以降に読んだことを前提にしています。主に、あなたの`.cargo/config.toml`ファイルが[標準のターゲットを設定して][sets a default target]おり、[ランナー実行ファイルを定義している][defines a runner executable]ことが条件となります。
 
 <div class="note">
-
 **訳注:**  [最小のカーネル][_A Minimal Rust Kernel_]の記事が日本語に翻訳されたのはこの日より後なので、あなたがこのサイトを日本語で閲覧している場合は特に問題はありません。
 
 </div>
@@ -46,7 +45,22 @@ Rustには[テストフレームワークが組み込まれて][built-in test fr
 
 [built-in test framework]: https://doc.rust-jp.rs/book-ja/ch11-00-testing.html
 
-残念なことに、私達のカーネルのような`no_std`のアプリケーションにとっては、テストは少しややこしくなります。問題なのは、Rustのテストフレームワークは組み込みの[`test`]ライブラリを内部で使っており、これは標準ライブラリに依存しているということです。つまり、私達の`#[no_std]`のカーネルには標準のテストフレームワークは使えないのです。
+カーネルバイナリのテストを有効にするには、Cargo.toml の `test` フラグを `true` に設定します：
+
+```toml
+# Cargo.toml 内
+
+[[bin]]
+name = "blog_os"
+test = true
+bench = false
+```
+
+この [`[[bin]]` セクション](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target) は、`cargo` が `blog_os` 実行可能ファイルをどのようにコンパイルするかを指定します。
+`test` フィールドは、この実行可能ファイルに対してテストがサポートされているかどうかを指定します。
+最初の投稿では、[`rust-analyzer` を正常に動作させる](@/edition-2/posts/01-freestanding-rust-binary/index.md#making-rust-analyzer-happy)ために `test = false` に設定しましたが、今回はテストを有効にしたいので、`true` に戻します。
+
+残念なことに、私達のカーネルのような`no_std`のアプリケーションにとっては、テストは少しややこしくなります。問題なのは、Rustのテストフレームワークは組み込みの[`test`][`test`]ライブラリを内部で使っており、これは標準ライブラリに依存しているということです。つまり、私達の`#[no_std]`のカーネルには標準のテストフレームワークは使えないのです。
 
 [`test`]: https://doc.rust-lang.org/test/index.html
 
