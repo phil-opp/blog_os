@@ -6,6 +6,10 @@ date = 2018-02-26
 
 [extra]
 chapter = "Bare Bones"
+# Please update this when updating the translation
+translation_based_on_commit = "211f460251cd332905225c93eb66b1aff9f4aefd"
+# GitHub usernames of the people that translated this post
+translators = ["YaogoGerard"]
 +++
 
 Le [mode texte VGA] est une manière simple d'afficher du texte à l'écran. Dans cet article, nous créons une interface qui rend son utilisation sûre et simple en encapsulant toutes les parties non sûres dans un module séparé. Nous implémentons également le support des [macros de formatage] de Rust.
