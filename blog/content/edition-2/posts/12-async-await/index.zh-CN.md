@@ -65,7 +65,7 @@ translation_contributors = []
 [call stack]: https://en.wikipedia.org/wiki/Call_stack
 [_context switch_]: https://en.wikipedia.org/wiki/Context_switch
 
-由于调用栈可能非常大，操作系统通常会为每个线程设置独立的调用栈，而非在每次任务切换时备份调用栈内容。这样一个拥有自己的栈的任务被称为一个 执行线程 [_thread of execution_] 或简称 线程_thread_。为每个任务使用独立的栈，在上下文切换时就只需保存寄存器内容（包括程序计数器和栈指针）。这种方法最大限度地减少了上下文切换的性能开销，这一点非常重要，因为上下文切换每秒可能发生多达100次。
+由于调用栈可能非常大，操作系统通常会为每个线程设置独立的调用栈，而非在每次任务切换时备份调用栈内容。这样一个拥有自己的栈的任务被称为一个 执行线程 [_thread of execution_] 或简称 _线程thread_。为每个任务使用独立的栈，在上下文切换时就只需保存寄存器内容（包括程序计数器和栈指针）。这种方法最大限度地减少了上下文切换的性能开销，这一点非常重要，因为上下文切换每秒可能发生多达100次。
 
 [_thread of execution_]: https://en.wikipedia.org/wiki/Thread_(computing)
 
@@ -158,7 +158,7 @@ pub enum Poll<T> {
 
 [_pinned_]: https://doc.rust-lang.org/nightly/core/pin/index.html
 
-参数 `cx: &mut Context` 的作用是传递一个[`Waker`] 实例给异步任务，例如文件系统加载。这个 `Waker` 允许异步任务发出信号来表明它已全部或者部分完成，例如文件已从磁盘加载完成。由于主任务知道在 `Future` 就绪时它会收到通知，因此它不需要反复调用 `poll` 方法。我们将在本文后面实现自己的 waker 类型时更详细地解释这个过程。
+参数 `cx: &mut Context` 的作用是传递一个[`Waker`] 实例给异步任务，例如文件系统加载。这个 `Waker` 允许异步任务发出信号来表明它已全部或者部分完成，例如文件已从磁盘加载完成。由于主任务知道它会在 `Future` 就绪时收到通知，因此它不需要反复调用 `poll` 方法进行轮询。我们将在本文后面实现自己的 waker 类型时更详细地解释这个过程。
 
 [`Waker`]: https://doc.rust-lang.org/nightly/core/task/struct.Waker.html
 
@@ -186,7 +186,7 @@ let file_content = loop {
 
 #### Future 组合器
 
-等待的替代方案是使用 future 组合器（future combinators）。Future 组合器是像 `map` 这样的方法，它允许将多个 future 链式组合在一起，类似于 [`Iterator`] trait的方法。 这些组合器不会等待 future 完成，而是返回一个新的 future，该 future 会在 `poll` 时应用映射操作。
+等待的替代方案是使用 future 组合器（future combinators）。Future 组合器是使用 `map` 这样的方法，将多个 future 链式组合在一起，类似于 [`Iterator`] trait的方法。 这些组合器不会等待 future 完成，而是返回一个新的 future，该 future 会在 `poll` 时应用映射操作。
 
 [`Iterator`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html
 
@@ -272,7 +272,7 @@ fn example(min_len: usize) -> impl Future<Output = String> {
 
 ### Async/Await 异步/等待模式
 
-async/await 的设计理念是让程序员编写 _看似_ 普通的同步代码，但由编译器转换为异步代码。它基于 `async` 和 `await` 两个关键字运作。`async` 关键字可用于函数签名中来将一个同步函数转换为返回 future 的异步函数：
+async/await 的设计理念是让程序员编写 _看似普通_ 的同步代码，但由编译器转换为异步代码。它基于 `async` 和 `await` 两个关键字运作。`async` 关键字可用于函数签名中来将一个同步函数转换为返回 future 的异步函数：
 
 ```rust
 async fn foo() -> u32 {
@@ -312,7 +312,7 @@ async fn example(min_len: usize) -> String {
 
 每个状态代表函数执行过程中的不同暂停点。_"Start"_ 和 _"End"_ 状态分别表示函数执行的开端和终止。_"Waiting on foo.txt"_ 状态表示该函数当前正在等待第一个 `async_read_file` 的结果。类似的，_"Waiting on bar.txt"_ 状态表示该函数正在等待第二个 `async_read_file` 的结果。
 
-状态机通过将每次 `poll` 调用作为可能的状态转换来实现 `Future` trait：
+状态机使用 `poll` 调用来触发可能的状态转换，从而实现 `Future` trait：
 
 ![Four states and their transitions: start, waiting on foo.txt, waiting on bar.txt, end](async-state-machine-basic.svg)
 
@@ -465,7 +465,7 @@ ExampleStateMachine::WaitingOnBarTxt(state) => {
 }
 ```
 
-与 `WaitingOnFooTxt` 状态类似，我们首先轮询 `bar_txt_future` 。如果它仍然如果处于 pending 状态，我们退出循环并返回 `Poll::Pending` 。否则，我们可以执行 `example` 函数最后的操作：拼接 `content` 以及 future 的返回值。我们将状态机更新为 `End` 状态，然后返回包装在 `Poll::Ready` 中的结果。
+与 `WaitingOnFooTxt` 状态类似，我们首先轮询 `bar_txt_future` 。如果它仍然处于 pending 状态，我们退出循环并返回 `Poll::Pending` 。否则，我们可以执行 `example` 函数最后的操作：拼接 `content` 以及 future 的返回值。我们将状态机更新为 `End` 状态，然后返回包装在 `Poll::Ready` 中的结果。
 
 最终，`End` 状态的代码如下所示：
 
@@ -477,7 +477,7 @@ ExampleStateMachine::End(_) => {
 
 Futures 在返回 `Poll::Ready` 后不应再次轮询，所以在处于 `End` 状态时发生 `poll` 调用，则直接 panic。
 
-我们现在已经了解了编译器生成的状态机及其对 Future 的实现 _可能_ 的样子。实际上，编译器是以另一种方式生成代码的。（如果你感兴趣的话：这个实现当前基于 [协程][_coroutines_]，但这仅仅是一种实现细节。）
+我们现在已经了解了编译器生成的状态机及其对 Future 的实现 _可能_ 的样子。实际上，编译器是以另一种方式生成代码的。（如果你感兴趣的话：这个实现当前基于 [协程][_coroutines_]，但这仅仅是可行的细节实现之一。）
 
 [_coroutines_]: https://doc.rust-lang.org/stable/unstable-book/language-features/coroutines.html
 
@@ -529,7 +529,7 @@ struct WaitingOnWriteState {
 }
 ```
 
-我们需要同时保存 `array` 数组和 `element` 变量，因为 `element` 对于返回值是必需的，而 `array` 被 `element` 引用。由于 `element` 是一个引用，它存储了一个 _指针_ （即内存地址）指向被引用的元素。这里我们以 `0x1001c` 为例。实际上，它就是 `array` 字段最后一个元素的地址，因此这取决于结构体在内存中的位置。具有这种内部指针的结构体被称为 _自引用结构体_ （_self-referential_ ），因为它们通过其中某个字段引用了自身。
+我们需要同时保存 `array` 数组和 `element` 变量，因为 `element` 对于返回值是必需的，而 `array` 被 `element` 引用。由于 `element` 是一个引用，它存储了一个 _指针_ （即内存地址）指向被引用的元素。这里我们以 `0x1001c` 为例。实际上，它就是 `array` 字段最后一个元素的地址，因此其值取决于结构体在内存中的位置。具有这种内部指针的结构体被称为 _自引用结构体_ （_self-referential_ ），因为它们通过其中某个字段引用了自身。
 
 #### 自引用结构体的问题
 
@@ -541,23 +541,23 @@ struct WaitingOnWriteState {
 
 ![array at 0x10024 with fields 1, 2, and 3; element at address 0x10030, still pointing to 0x1001c, even though the last array element now lives at 0x1002c](self-referential-struct-moved.svg)
 
-我们将结构体稍微移动了一下，现在它从地址 `0x10024` 开始。这种情况可能发生在，例如当我们把结构体作为函数参数传递或将其赋值给不同的栈变量时。问题在于，即使最后一个 `array` 元素已经移动，`element` 字段仍然指向地址 `0x1001c` ，然而实际上该元素现在位于地址 `0x1002c`。因此这个指针变成悬垂指针，导致在下一次 `poll` 调用时出现未定义行为。
+我们将结构体稍微移动了一下，现在它从地址 `0x10024` 开始。这种情况可能发生在当我们把结构体作为函数参数传递时，或将其赋值给不同的栈变量时。问题在于，即使最后一个 `array` 元素已经移动，`element` 字段仍然指向地址 `0x1001c` ，然而实际上该元素现在位于地址 `0x1002c`。因此这个指针变成悬垂指针，导致在下一次 `poll` 调用时出现未定义行为。
 
 #### 可能的解决方案
 
 解决悬垂指针问题有三种基本方法：
 
-* **移动时更新指针：**其理念是每次结构体在内存中移动时都更新内部指针，从而保持有效。遗憾的是，这种方法需要对 Rust 进行大量修改，这可能导致巨大的性能损失。原因是需要某种运行时机制来跟踪所有结构体的字段类型并在每次移动操作时检查是否需要更新指针。
+* **移动时更新指针：** 其理念是每次结构体在内存中移动时都更新内部指针，从而使其保持有效。遗憾的是，这种方法需要对 Rust 进行大量修改。这可能导致巨大的性能损失，因为需要某种运行时机制来跟踪所有结构体的字段类型，并在每次移动操作时检查是否需要更新指针。
 
-* **存储偏移量而非自引用：**为避免更新指针，编译器可以尝试将自引用存储为相对于结构体起始位置的偏移量。例如，上述 `WaitingOnWriteState` 结构体中的 `element` 字段可以存储为一个值为 8 的 `element_offset` 字段，因为引用点指向的数组元素在结构体起始位置之后 8 字节处。由于偏移量结构体被移动时保持不变，没有字段需要更新。这种方法的问题在于需要编译器检测所有自引用。这在编译时无法实现，因为引用的值可能取决于用户输入，因此就又需要一个运行时系统来分析引用并正确创建状态结构体。这不仅会导致运行时开销，还会影响某些编译器优化，从而再次造成较大的性能损失。
+* **存储偏移量而非自引用：** 为避免更新指针，编译器可以尝试将自引用存储为相对于结构体起始位置的偏移量。例如，上述 `WaitingOnWriteState` 结构体中的 `element` 字段可以存储为一个值为 8 的 `element_offset` 字段，因为引用点指向的数组元素在结构体起始位置之后 8 字节处。由于偏移量结构体被移动时保持不变，没有字段需要更新。这种方法的问题在于需要编译器检测所有自引用。这在编译时无法实现，因为引用的值可能取决于用户输入，因此就又需要一个运行时系统来分析引用并正确创建状态结构体。这不仅会导致运行时开销，还会影响某些编译器优化，从而再次造成较大的性能损失。
 
-* **禁止移动结构体：**如上所述，只有在内存中移动结构体时才会出现悬垂指针。通过完全禁止对自引用结构体的移动操作就可以避免这个问题。这种方法的最大优势在于它能够在类型系统层面实现，无需额外的运行时开销。缺点是它将处理可能移动的自引用结构体的责任交给了程序员。
+* **禁止移动结构体：** 如上所述，只有在内存中移动结构体时才会出现悬垂指针。通过完全禁止对自引用结构体的移动操作就可以避免这个问题。这种方法的最大优势在于它能够在类型系统层面实现，无需额外的运行时开销。缺点是它将处理可能移动的自引用结构体的责任交给了程序员。
 
 Rust 选择了第三种解决方案，这源于其提供 _零成本抽象_ 的原则，即抽象不应带来额外的运行时开销。_pinning_ API 正是为此目的而在 [RFC 2349](https://github.com/rust-lang/rfcs/blob/master/text/2349-pin.md) 中提出的。接下来，我们将简要概述这个API，并解释它如何与 async/await 和 futures 协同工作。
 
 #### 堆上的值
 
-第一个观察结果是，[堆分配的][heap-allocated] 值在大多数情况下已经拥有固定的内存地址。它们通过调用 `allocate` 来创建，由一个指针类型比如 `Box<T>` 来引用。虽然可以移动指针类型，但指针所指向的堆值在内存中的地址保持不变，除非调用 `deallocate` 将其释放。
+首先注意到，[堆分配的][heap-allocated] 值在大多数情况下已经拥有固定的内存地址。它们通过调用 `allocate` 来创建，由一个指针类型比如 `Box<T>` 来引用。虽然可以移动指针类型，但指针所指向的堆值在内存中的地址保持不变，除非调用 `deallocate` 将其释放。
 
 [heap-allocated]: @/edition-2/posts/10-heap-allocation/index.md
 
@@ -609,7 +609,7 @@ println!("internal reference: {:p}", stack_value.self_ptr);
 
 #### `Pin<Box<T>>` 与 `Unpin`
 
-固定 pinning API 通过 [`Pin`] 包装类型以及 [`Unpin`] trait 提供了解决 `&mut T` 问题的方案。这些类型背后的理念是，将所有 `Pin` 中能获取包装值的 `&mut` 引用的方法（例如 [`get_mut`][pin-get-mut] 或 [`deref_mut`][pin-deref-mut]) 都限制在 `Unpin` trait 上使用。`Unpin` trait 是一个 [_auto trait_] ，会自动为所有类型实现，除了那些明确选择不实现的类型。通过让自引用结构体不实现 `Unpin`，使得无法（安全地）从 `Pin<Box<T>>` 类型中获取它们的 `&mut T` ，从而保证它们内部的自引用保持有效。
+固定 pinning API 通过 [`Pin`] 包装类型以及 [`Unpin`] trait 提供了解决 `&mut T` 问题的方案。这些类型背后的理念是，将所有 `Pin` 中能获取包装值的 `&mut` 引用的方法（例如 [`get_mut`][pin-get-mut] 或 [`deref_mut`][pin-deref-mut]) 都限制在 `Unpin` trait 上使用。`Unpin` trait 是一个 [_auto trait_] ，会自动为所有类型实现，除了那些明确选择不实现的类型。通过让自引用结构体不实现 `Unpin`，使得我们无法（安全地）从 `Pin<Box<T>>` 类型中获取它们的 `&mut T` ，从而保证它们内部的自引用保持有效。
 
 [`Pin`]: https://doc.rust-lang.org/stable/core/pin/struct.Pin.html
 [`Unpin`]: https://doc.rust-lang.org/nightly/std/marker/trait.Unpin.html
@@ -628,7 +628,7 @@ struct SelfReferential {
 }
 ```
 
-我们通过添加第二个类型为 [`PhantomPinned`] 的 `_pin` 字段来选择退出。该类型是零大小的标记类型，仅用于不实现 `Unpin` trait。根据 [_auto trait_] 的工作原理，当某个字段不是 `Unpin` 时，就足以使整个结构体不实现 `Unpin` trait。
+我们通过添加第二个类型为 [`PhantomPinned`] 的 `_pin` 字段来选择退出。该类型是零大小的标记类型，仅用于防止自动实现 `Unpin` trait。根据 [_auto trait_] 的工作原理，当某个字段不是 `Unpin` 时，就足以使整个结构体不实现 `Unpin` trait。
 
 [`PhantomPinned`]: https://doc.rust-lang.org/nightly/core/marker/struct.PhantomPinned.html
 
@@ -646,7 +646,7 @@ let mut heap_value = Box::pin(SelfReferential {
 
 除了将 `Box::new` 改为 `Box::pin` 外，我们还需要在结构体初始化器中添加新的 `_pin` 字段。由于 `PhantomPinned` 是零大小类型，我们只要有其类型名称即可完成初始化。
 
-当我们现在[尝试运行调整后的示例](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=961b0db194bbe851ff4d0ed08d3bd98a)时，会发现它会报错：
+当我们现在[尝试运行调整后的示例](https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=961b0db194bbe851ff4d0ed08d3bd98a)时，发现它会报错：
 
 ```
 error[E0594]: cannot assign to data in dereference of `Pin<Box<SelfReferential>>`
@@ -686,7 +686,7 @@ unsafe {
 
 [`Pin::as_mut`]: https://doc.rust-lang.org/nightly/core/pin/struct.Pin.html#method.as_mut
 
-现在剩下的唯一错误就是 `mem::replace` 上的预期错误了。记住，这个操作试图将堆分配的值移动到栈上，这会破坏存储在 `self_ptr` 字段的自引用。通过选择不实现 `Unpin` 并采用 `Pin<Box<T>>` ，我们可以在编译器阻止此类操作并安全地处理自引用结构体。正如我们所看到的，编译器（目前）还无法证明创建自引用是安全的，因此我们需要使用 unsafe 代码块自行验证其正确性。
+现在剩下的唯一错误就是 `mem::replace` 上的预期错误了。这个操作试图将堆分配的值移动到栈上，这会破坏存储在 `self_ptr` 字段的自引用。通过阻止自动实现 `Unpin` 并采用 `Pin<Box<T>>` ，我们可以让编译器阻止此类操作并安全地处理自引用结构体。正如我们所看到的，编译器（目前）还无法证明创建自引用是安全的，因此我们需要使用 unsafe 代码块自行验证其正确性。
 
 #### 栈上的Pinning与 `Pin<&mut T>`
 
@@ -703,7 +703,7 @@ unsafe {
 
 #### Pinning 与 Futures
 
-正如我们在这篇文章中已经看到的，[`Future::poll`] 方法通过 `Pin<&mut Self>` 参数的形式使用固定：
+正如我们之前所见，[`Future::poll`] 方法通过 `Pin<&mut Self>` 参数的形式使用固定：
 
 [`Future::poll`]: https://doc.rust-lang.org/nightly/core/future/trait.Future.html#tymethod.poll
 
@@ -711,15 +711,15 @@ unsafe {
 fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 ```
 
-该方法采用 `self: Pin<&mut Self>` 而非普通的 `&mut self` 的原因是，通过 async/await 创建的 future 实例通常是自引用的，如我们[之前][self-ref-async-await]所见的那样。将 `Self` 包装进 `Pin` 并让编译器为 async/await 生成的自引用 future 不实现 `Unpin` ，可以确保在 `poll` 调用之间这些 future 在内存中不会被移动。这确保了所有内部引用仍然有效。
+该方法采用 `self: Pin<&mut Self>` 而非普通的 `&mut self` 的原因是，通过 async/await 创建的 future 实例通常是自引用的，如我们[之前][self-ref-async-await]所见的那样。将 `Self` 包装进 `Pin` 并让编译器阻止 async/await 生成的自引用 future 实现 `Unpin` ，可以确保在 `poll` 调用之间这些 future 在内存中不会被移动。这确保了所有内部引用仍然有效。
 
 [self-ref-async-await]: @/edition-2/posts/12-async-await/index.md#self-referential-structs
 
-值得注意的是，在首次调用 `poll` 前移动 future 是安全的。这是由于 future 有惰性，在首次被轮询前不会执行任何操作。刚生成的状态机处于 `start` 状态，因此仅包含函数参数而不包含内部引用。为了调用 `poll` ，调用者必须先将 future 包装到 `Pin` 中，这确保了 future 在内存中不再能被移动。由于栈固定（stack pinning）更难实现，我建议在这种情况下始终结合使用 [`Box::pin`] 和 [`Pin::as_mut`]。
+值得注意的是，在首次调用 `poll` 前移动 future 是安全的。这是由于 future 有惰性，在首次被轮询前不会执行任何操作。刚生成的状态机处于 `start` 状态，因此仅包含函数参数而不包含内部引用。为了调用 `poll` ，调用者必须先将 future 包装到 `Pin` 中，这确保了 future 在内存中不再被移动。由于栈固定（stack pinning）更难实现，我建议在这种情况下始终结合使用 [`Box::pin`] 和 [`Pin::as_mut`]。
 
 [`futures`]: https://docs.rs/futures/0.3.4/futures/
 
-如果你有兴趣了解如何安全地使用栈固定（pinning）技术自行实现一个 future 组合器函数，可以参考 `futures` crate 中相对简短的 [map 组合器 方法的源代码][map-src] 以及 pin 文档中关于 [projections and structural pinning] 的章节。
+如果你有兴趣了解如何安全地使用栈固定技术自行实现一个 future 组合器函数，可以参考 `futures` crate 中相对简短的 [map 组合器 方法的源代码][map-src] 以及 pin 文档中关于 [projections and structural pinning] 的章节。
 
 [map-src]: https://docs.rs/futures-util/0.3.4/src/futures_util/future/future/map.rs.html
 [projections and structural pinning]: https://doc.rust-lang.org/stable/std/pin/index.html#projections-and-structural-pinning
@@ -728,11 +728,11 @@ fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 
 使用 async/await 可以以完全异步的方式更符合人体工程学地处理 futures。然而，正如我们之前所学，futures 在被轮询前不会执行任何操作。这意味着我们必须在某时刻调用 `poll` ，否则异步代码永远不会执行。
 
-对于单个 future，我们总是可以像[上面描述](#等待 Future 就绪)的那样使用循环手动等待每个future。然而，这种方法效率非常低下，对于创建大量 futures 的程序来说不太实用。解决这个问题最常见的方法是定义一个全局的执行器  _executor_ ，它负责轮询系统中所有的 future 直到它们全部完成。
+对于单个 future，我们总是可以像[上面描述](#deng-dai-future-jiu-xu)的那样使用循环手动等待每个future。然而，这种方法效率非常低下，对于创建大量 futures 的程序来说不太实用。解决这个问题最常见的方法是定义一个全局的执行器  _executor_ ，它负责轮询系统中所有的 future，直到它们全部完成。
 
 #### Executors 执行器
 
-执行器的目的是允许将 future 作为独立任务生成，通常通过某种 `spawn` 方法。然后，执行器负责轮询所有 future 直到它们完成。集中管理所有 future 的最大优势在于，当某个 future 返回 `Poll::Pending` 时，执行器可以立即切换到另一个 future。这样，异步操作就能并行运行，使得 CPU 保持忙碌状态。
+执行器通常通过某种 `spawn` 方法，将 future 作为独立任务生成。然后，执行器负责轮询所有 future 直到它们完成。集中管理所有 future 的最大优势在于，当某个 future 返回 `Poll::Pending` 时，执行器可以立即切换到另一个 future。这样，异步操作就能并行运行，使得 CPU 保持忙碌状态。
 
 许多执行器实现还能充分利用多核 CPU 系统的优势。它们会创建一个 [线程池][thread pool] ，在有足够多任务时能够利用所有核心资源，并采用诸如 [工作窃取][work stealing] 等技术来平衡各核心之间的负载。还有一些特殊的、适用于嵌入式系统的执行器实现，针对低延迟和内存占用进行优化。
 
@@ -743,7 +743,7 @@ fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output>
 
 #### Wakers 唤醒器
 
-waker API 的核心思想是：每次调用 `poll` 时都会传入一个特殊的 `Waker` 类型, 封装在 [`Context`] 类型中。这个 `Waker` 类型由执行器创建，可被异步任务用来通知其已完成或者部分完成的状态。因此，执行器无需对之前返回 `Poll::Pending` 的 future 重复调用 `poll` ，直到收到对应 waker 的通知。
+waker API 的核心思想是：每次调用 `poll` 时都会传入一个特殊的 `Waker` 类型, 封装在 [`Context`] 类型中。这个 `Waker` 类型由执行器创建，异步任务用它来通知其状态，比如已完成或者部分完成。因此，执行器无需对之前返回 `Poll::Pending` 的 future 重复调用 `poll`，直到它收到对应 waker 的通知。
 
 [`Context`]: https://doc.rust-lang.org/nightly/core/task/struct.Context.html
 
@@ -755,15 +755,15 @@ async fn write_file() {
 }
 ```
 
-此函数会异步地将字符串 "Hello" 写入 `foo.txt` 文件。由于硬盘写入需要一定时间，首次轮询这个 future 时很可能会返回 `Poll::Pending` 。硬盘驱动器会在内部存储传递给 `poll` 调用的 `Waker` ，并在文件写入磁盘时使用它来通知执行器。这样，执行器在收到唤醒通知之前就无需浪费任何时间来尝试轮询该 future。
+此函数会异步地将字符串 "Hello" 写入 `foo.txt` 文件。由于硬盘写入需要一定时间，首次轮询这个 future 时很可能会返回 `Poll::Pending` 。硬盘驱动器会在内部存储传递给 `poll` 调用的 `Waker` ，并在文件写入磁盘时使用它来通知执行器。这样，执行器在收到唤醒通知之前就无需浪费时间尝试轮询该 future。
 
 在这篇文章的实现部分，我们将通过创建一个支持 waker 的自定义执行器来了解 `Waker` 类型的具体工作原理。
 
 ### 协作式多任务处理?
 
-在这篇文章的开头，我们讨论了抢占式和协作式多任务处理。抢占式多任务依赖操作系统强制切换运行中的任务，而协作式多任务则要求任务通过定期执行 _yield_  操作主动放弃 CPU 控制权。协作式方法的最大优势在于任务能够自行保存状态，从而实现更高效的上下文切换，并允许任务间共享同一个调用栈。
+在这篇文章的开头，我们讨论了抢占式和协作式多任务处理。抢占式多任务依赖操作系统强制切换运行中的任务，而协作式多任务则要求任务定期执行 _yield_  操作来主动放弃 CPU 控制权。协作式方法的最大优势在于任务能够自行保存状态，从而实现更高效的上下文切换，并且还允许任务间共享同一个调用栈。
 
-虽然可能不太明显，但 futures 和 async/await 实际上是一种协作式多任务模式的实现：
+虽然可能不太明显，但 futures 和 async/await 实际上是协作式多任务模式的一种实现：
 
 * 每个添加到执行器的 future 本质上都是协作式任务。
 * 相对于使用显式的 yield 操作符，future 通过 `Poll::Pending`（或在最后  `Poll::Ready`）放弃 CPU 核心的控制权。
@@ -773,11 +773,11 @@ async fn write_file() {
   * 仅保存继续执行所需的最小状态。
   * 由于 `poll` 方法在返回时会释放调用栈，这同一个栈可以用于轮询其他 future。
 
-我们看到 future 和 async/await 完美契合协作式多任务模式；它们只不过使用了一些不同的术语。因此在下文中，术语 "任务 task" 和 "future" 可以互换使用。
+我们发现 future 和 async/await 完美契合协作式多任务模式，无非是使用的术语不同。因此在下文中，术语 "任务/task" 和 "future" 可以互换使用。
 
 ## 实现
 
-既然我们已经理解了基于 future 和 async/await 的协作式多任务在 Rust 中是如何工作的，现在就该为我们的内核添加对它们的支持了。由于 `Future` trait 是 `core` 库的一部分，而 async/await 是语言本身的特性，我们无需特别处理就能在我们的 `#![no_std]` 内核中使用它。唯一的要求是我们至少需要使用 `2020-03-25` 之后的 Rust nightly 版本，因为在此之前async/await 还不适用于 `no_std` 。
+既然我们已经理解了基于 future 和 async/await 的协作式多任务在 Rust 中是如何工作的，现在就该为我们的内核添加对它们的支持了。由于 `Future` trait 是 `core` 库的一部分，而 async/await 是语言本身的特性，我们无需特别处理就能在我们的 `#![no_std]` 内核中使用它。唯一的要求是我们至少需要使用 `2020-03-25` 之后的 Rust nightly 版本，因为在此之前 async/await 还不适用于 `no_std` 。
 
 只要使用足够新的 nightly 版本，我们就可以在 `main.rs` 中开始使用 async/await：
 
@@ -796,11 +796,11 @@ async fn example_task() {
 
 `async_number` 函数是一个异步函数 `async fn`，因此编译器会将其转换为一个实现了 `Future` 的状态机。由于该函数仅返回 `42`，最终生成的 future 将直接在第一次 `poll` 调用时返回 `Poll::Ready(42)` 。与 `async_number` 类似，`example_task` 函数也是一个 `async fn`。它会等待（awaits）`async_number` 返回的数字，然后使用 `println` 宏打印该数字。
 
-要运行 `example_task` 返回的 future，我们需要对其调用 `poll` 直到它通过返回 `Poll::Ready` 来告知它已经完成。为此，我们需要创建一个简单的执行器类型。
+要运行 `example_task` 返回的 future，我们需要对其调用 `poll` 直到它通过返回 `Poll::Ready` 告知它已经完成。为此，我们需要创建一个简单的执行器类型。
 
 ### Task 模块
 
-在开始实现执行器之前，我们先创建一个包含 `Task` 类型的新 `task` 模块：
+在开始实现执行器之前，我们先创建一个包含 `Task` 类型的 `task` 模块：
 
 ```rust
 // in src/lib.rs
@@ -819,17 +819,17 @@ pub struct Task {
 }
 ```
 
-`Task` 结构体是一个针对已固定、堆分配且动态分发并以空类型 `()` 作为输出的 future 而设计的新包装器。让我们详细了解一下：
+`Task` 结构体是一个针对已固定、堆分配且动态分发并以空类型 `()` 作为输出的 future 而设计的包装器。让我们详细了解一下：
 
-* 我们要求与任务关联的 future 返回 `()`。这意味着任务不会返回任何结果，它们的运行会产生一些效果，例如，我们上面定义的 `example_task` 函数没有返回值，但它会向屏幕打印一些东西。
-* `dyn` 关键字表示我们在 `Box` 中存储了一个 [_trait object_] 。这意味着 future 上的方法是 [动态分发_dynamically dispatched_][_dynamically dispatched_] 的，这使得不同类型的 future 能够存储在 `Task` 类型中。这一占很重要，因为每个 `async fn` 都有自己的类型，而我们希望能够创建多种不同的任务。
-* 正如我们在 [固定 相关章节][section about pinning] 中学到的， `Pin<Box>` 类型通过将值放在堆上并组织创建  `&mut`  引用来确保它不会在内存中被移动。这一点很重要，因为由 async/await 生成的 future 可能是自引用的。也就是说会包含指向自己的指针，这些指针会在 future 移动过程中失效。
+* 我们要求与任务关联的 future 返回 `()`。这意味着任务不会返回任何结果，但它们的运行会产生一些效果，例如，我们上面定义的 `example_task` 函数没有返回值，但它会向屏幕打印一些东西。
+* `dyn` 关键字表示我们在 `Box` 中存储了一个 [_trait object_] 。这意味着 future 上的方法是 [ _动态分发 dynamically dispatched_ ][_dynamically dispatched_] 的，这使得不同类型的 future 能够存储在 `Task` 类型中。这一点很重要，因为每个 `async fn` 都有自己的类型，而我们希望能够创建多种不同的任务。
+* 正如我们在 [固定 相关章节][section about pinning] 中学到的，`Pin<Box>` 类型通过将值放在堆上并阻止创建  `&mut`  引用来确保它不会在内存中被移动。这一点很重要，因为由 async/await 生成的 future 可能是自引用的，也就是说会包含指向自己的指针，这些指针会在 future 移动过程中失效。
 
 [_trait object_]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
 [_dynamically dispatched_]: https://doc.rust-lang.org/book/ch18-02-trait-objects.html#trait-objects-perform-dynamic-dispatch
 [section about pinning]: #pinning
 
-为了从 future 创建新的 `Task` 结构体，我们创建了一个 `new` 函数：
+为了从 future 创建新的 `Task` 结构体，我们创建一个 `new` 函数：
 
 ```rust
 // in src/task/mod.rs
@@ -901,7 +901,7 @@ impl SimpleExecutor {
 
 #### 假的唤醒器（Dummy Waker）
 
-为了调用 `poll` 方法，我们需要创建一个 `Context` 类型，它封装了一个 `Waker` 类型。为了简单起见，我们将首先创建一个什么都不做的假 waker。为此，我们需要创建一个 [`RawWaker`] 实例，它定义了不同 `Waker` 方法的实现，然后使用 [`Waker::from_raw`] 函数将其转换为 `Waker`：
+为了调用 `poll` 方法，我们需要创建一个 `Context` 类型，它封装了一个 `Waker` 类型。简单起见，我们首先创建一个什么都不做的假 waker。为此，我们需要创建一个 [`RawWaker`] 实例，它定义了不同 `Waker` 方法的实现，然后使用 [`Waker::from_raw`] 函数将其转换为 `Waker`：
 
 [`RawWaker`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html
 [`Waker::from_raw`]: https://doc.rust-lang.org/stable/core/task/struct.Waker.html#method.from_raw
@@ -932,7 +932,7 @@ fn dummy_waker() -> Waker {
 [`RawWakerVTable`]: https://doc.rust-lang.org/stable/core/task/struct.RawWakerVTable.html
 [`RawWaker::new`]: https://doc.rust-lang.org/stable/core/task/struct.RawWaker.html#method.new
 
-通常， `RawWaker` 是为某个堆分配的、被包装在 [`Box`] 或者 [`Arc`] 类型中的结构体创建的。对于这类类型，可以使用诸如 [`Box::into_raw`] 这样的方法来将  `Box<T>` 转换为 `*const T` 指针。随后该指针可被转换为匿名的  `*const ()` 指针并传递给 `RawWaker::new`。由于每个虚表函数都接收相同的 `*const ()` 作为参数，这些函数可以安全地将指针转换回 `Box<T>` 或者 `&T` 来操作。可以想象，这个过程极其危险，很容易导致未定义行为。因此，除非必要，不建议手动创建 `RawWaker` 。
+通常， `RawWaker` 是为某个堆分配的、被包装在 [`Box`] 或者 [`Arc`] 类型中的结构体创建的。对于这类类型，可以使用诸如 [`Box::into_raw`] 这样的方法来将  `Box<T>` 转换为 `*const T` 指针。随后该指针可被转换为匿名的  `*const ()` 指针并传递给 `RawWaker::new`。由于每个虚表函数都接收相同的 `*const ()` 作为参数，这些函数可以安全地将指针转换回 `Box<T>` 或者 `&T` 来操作。可以想象，这个过程极其危险，很容易导致未定义行为。因此，除非必要，不建议手动创建 `RawWaker`。
 
 [`Box`]: https://doc.rust-lang.org/stable/alloc/boxed/struct.Box.html
 [`Arc`]: https://doc.rust-lang.org/stable/alloc/sync/struct.Arc.html
@@ -940,7 +940,7 @@ fn dummy_waker() -> Waker {
 
 ##### 一个假的 `RawWaker`（A Dummy `RawWaker`）
 
-虽然不建议手动创建 `RawWaker` ，但目前尚无其他方式来创建一个什么都不做的假 `Waker` 。幸运的是，正因为什么都不做，实现 `dummy_raw_waker` 函数显得相对安全一点：
+虽然不建议手动创建 `RawWaker`，但目前尚无其他方式来创建一个什么都不做的假 `Waker`。幸运的是，正因为什么都不做，实现 `dummy_raw_waker` 函数显得相对安全一点：
 
 ```rust
 // in src/task/simple_executor.rs
@@ -958,7 +958,7 @@ fn dummy_raw_waker() -> RawWaker {
 }
 ```
 
-首先，我们定义两个名为 `no_op` 和 `clone` 的内部函数。`no_op` 函数接收一个 `*const ()` 指针且不执行任何操作。 `clone` 函数同样接收一个 `*const ()` 指针并通过再次调用 `dummy_raw_waker` 返回一个新的 `RawWaker`。我们使用这两个函数来创建一个最简的 `RawWakerVTable`：`clone` 函数用于克隆操作，而 `no_op` 函数则用于所有其他操作。由于这个 `RawWaker` 不做任何实际工作，因此从 `clone` 返回一个新的 `RawWaker` 而非克隆它本身也没关系。
+首先，我们定义两个名为 `no_op` 和 `clone` 的内部函数。`no_op` 函数接收一个 `*const ()` 指针且不执行任何操作。`clone` 函数同样接收一个 `*const ()` 指针并通过再次调用 `dummy_raw_waker` 返回一个新的 `RawWaker`。我们使用这两个函数来创建一个最简的 `RawWakerVTable`：`clone` 函数用于克隆操作，而 `no_op` 函数则用于所有其他操作。由于这个 `RawWaker` 不做任何实际工作，因此从 `clone` 返回一个新的 `RawWaker` 而非克隆它本身也没关系。
 
 创建完 `vtable` 后，我们使用 `RawWaker::new` 函数来创建 `RawWaker`。被传递的 `*const ()` 无关紧要，因为 vtable 中没有任何一个函数使用它。因此，我们只需传递一个空指针。
 
@@ -1055,7 +1055,7 @@ async fn example_task() {
 
 该队列的一个简单实现可以是受互斥锁保护的 `VecDeque`。然而，在中断处理程序中使用互斥锁并不是个好主意，因为这很容易导致死锁。例如，在键盘任务将队列锁定时用户按下按键，中断处理程序会尝试再次获取锁并无限期挂起。此方法的另一个问题是 `VecDeque` 在快满时会通过执行新的堆分配来自动增加其容量。这可能导致再次出现死锁，因为我们的分配器内部也使用了互斥锁。进一步的问题在于，由于堆内存已碎片化，堆内存分配可能失败或耗费相当长的时间。
 
-为了避免这些问题，我们需要一种在 `push` 时无需互斥锁或内存分配的队列实现。这类队列可通过使用无锁（lock-free）[原子操作][atomic operations] 压入或者弹出元素来实现。这样，就可以创建只需要 `&self` 引用，无需互斥锁就可以使用的 `push` 和 `pop` 操作。为避免在 `push` 时分配内存，我们可以使用一个预分配的固定大小的缓冲区。虽然这会导致队列变得有界（即有最大长度），但是实践中通常可以定义出一个合理的上界，所以这不是啥大问题。
+为了避免这些问题，我们需要一种在 `push` 时无需互斥锁或内存分配的队列实现。这类队列可通过使用无锁（lock-free）[原子操作][atomic operations] 压入或者弹出元素来实现。这样，就可以创建只需要 `&self` 引用，无需互斥锁就可以使用的 `push` 和 `pop` 操作。为避免在 `push` 时分配内存，我们可以使用一个预分配的固定大小的缓冲区。虽然这会导致队列变得有界（即有最大长度），但是实践中通常可以定义出一个合理的上界，所以这没有大问题。
 
 [atomic operations]: https://doc.rust-lang.org/core/sync/atomic/index.html
 
@@ -1195,7 +1195,7 @@ impl ScancodeStream {
 
 `_private` 字段的目的是防止从模块外部构造该结构体。这使得 `new` 函数成为构造该类型的唯一方式。在函数中，我们首先尝试初始化 `SCANCODE_QUEUE` 静态变量。如果它已被初始化，我们会触发 panic 以确保只能创建一个 `ScancodeStream` 实例。
 
-为了使扫描码可用于异步任务，下一步是实现一个类似 `poll` （`poll`-like）的方法。该方法尝试从队列中弹出下一个扫描码。虽然这听起来像是我们应该为我们的类型实现 `Future` trait，但实际上并非如此。问题在于 `Future` trait 仅抽象单个异步值，并期望在返回 `Poll::Ready` 后不再被调用。然而，我们的扫描码队列包含多个异步值，因此可以持续轮询它。
+为了使扫描码可用于异步任务，下一步是实现一个类似 `poll`（`poll`-like）的方法。该方法尝试从队列中弹出下一个扫描码。虽然这听起来像是我们应该为我们的类型实现 `Future` trait，但实际上并非如此。问题在于 `Future` trait 仅抽象单个异步值，并期望在返回 `Poll::Ready` 后不再被调用。然而，我们的扫描码队列包含多个异步值，因此可以持续轮询它。
 
 ##### `Stream` Trait
 
@@ -1217,7 +1217,7 @@ pub trait Stream {
 * 相关类型命名为 `Item` 而非 `Output`。
 * `Stream` trait 没有定义返回 `Poll<Self::Item>` 的 `poll` 方法，而是定义了返回 `Poll<Option<Self::Item>>` 的 `poll_next` 方法（注意多出的 `Option` 包装）。
 
-还存在语义上的差异：可以重复调用 `poll_next` ，直到它返回 `Poll::Ready(None)` 表示 stream 已结束。在这方面，该方法类似于 [`Iterator::next`] 方法，后者同样在最后一个值之后返回 `None` 。
+还存在语义上的差异：可以重复调用 `poll_next`，直到它返回 `Poll::Ready(None)` 表示 stream 已结束。在这方面，该方法类似于 [`Iterator::next`] 方法，后者同样在最后一个值之后返回 `None`。
 
 [`Iterator::next`]: https://doc.rust-lang.org/stable/core/iter/trait.Iterator.html#tymethod.next
 
@@ -1257,7 +1257,7 @@ impl Stream for ScancodeStream {
 }
 ```
 
-我们首先使用 [`OnceCell::try_get`] 方法来获取已初始化的扫描码队列的引用。 由于我们在 `new` 函数中已经初始化了队列，这不应当会失败，因此可以安全地使用 `expect` 方法在未初始化时触发 panic。接着，我们使用[`ArrayQueue::pop`] 方法尝试从队列中获取下一个元素。如果成功，我们返回封装在 `Poll::Ready(Some(…))` 的扫描码。若失败则表明队列为空，此时我们返回 `Poll::Pending`。
+我们首先使用 [`OnceCell::try_get`] 方法来获取已初始化的扫描码队列的引用。由于我们在 `new` 函数中已经初始化了队列，这不应当会失败，因此可以安全地使用 `expect` 方法在未初始化时触发 panic。接着，我们使用[`ArrayQueue::pop`]方法尝试从队列中获取下一个元素。如果成功，我们返回封装在 `Poll::Ready(Some(…))` 的扫描码。若失败则表明队列为空，此时我们返回 `Poll::Pending`。
 
 [`ArrayQueue::pop`]: https://docs.rs/crossbeam/0.7.3/crossbeam/queue/struct.ArrayQueue.html#method.pop
 
@@ -1269,7 +1269,7 @@ impl Stream for ScancodeStream {
 
 ##### AtomicWaker
 
-要为我们的 `ScancodeStream` 实现 `Waker` 通知，我们需要一个可以在两次轮询调用之间存储 `Waker` 的位置。我们不能将其作为字段存储在 `ScancodeStream` 中，因为它需要能从 `add_scancode` 函数访问。解决方案是使用 `futures-util` crate 提供的 [`AtomicWaker`] 类型的静态变量。就像 `ArrayQueue` 类型，该类型基于原子指令，可以安全地存储在 `static`  中并支持并发修改。
+要为我们的 `ScancodeStream` 实现 `Waker` 通知，我们需要一个可以在两次轮询调用之间存储 `Waker` 的位置。我们不能将其作为字段存储在 `ScancodeStream` 中，因为它需要能从 `add_scancode` 函数中访问。解决方案是使用 `futures-util` crate 提供的 [`AtomicWaker`] 类型的静态变量。就像 `ArrayQueue` 类型，该类型基于原子指令，可以安全地存储在 `static`  中并支持并发修改。
 
 [`AtomicWaker`]: https://docs.rs/futures-util/0.3.4/futures_util/task/struct.AtomicWaker.html
 
@@ -1283,11 +1283,11 @@ use futures_util::task::AtomicWaker;
 static WAKER: AtomicWaker = AtomicWaker::new();
 ```
 
-这个想法是让 `poll_next` 实现将当前的 waker 存储在这个静态变量中，而 `add_scancode` 函数在有新扫描码加入队列时对其执行 `wake` 函数。
+这个想法是让 `poll_next` 将当前的 waker 存储在此静态变量中，而 `add_scancode` 函数在有新扫描码加入队列时对其执行 `wake` 函数。
 
 ##### 存储 Waker
 
-由 `poll`/`poll_next` 定义的规则要求当任务返回 `Poll::Pending` 时，为传过来的 `Waker` 注册一个唤醒动作（wakeup）。让我们修改 `poll_next` 实现以满足这一要求：
+`poll`/`poll_next` 的定义要求当任务返回 `Poll::Pending` 时，为传过来的 `Waker` 注册一个唤醒动作（wakeup）。让我们修改 `poll_next` 的实现以满足这一要求：
 
 ```rust
 // in src/task/keyboard.rs
@@ -1321,12 +1321,12 @@ impl Stream for ScancodeStream {
 
 如果首次调用 `queue.pop()` 未成功，意味着队列可能为空。只是“可能”，是因为中断处理程序可能在检查之后立即异步地填充了队列。由于这种竞态条件可能在下次检查时再次发生，我们需要在第二次检查之前将 `Waker` 注册到 `WAKER` 静态变量中。这样，虽然在返回 `Poll::Pending` 之前有可能会收到唤醒动作，但可以确保在检查之后每一个压入的扫描码都能收到唤醒动作。
 
-在通过 [`AtomicWaker::register`] 函数注册传入的 `Context` 中包含的 `Waker` 后，我们第二次尝试从队列中弹出。如果现在成功，我们返回 `Poll::Ready`。同时我们使用 [`AtomicWaker::take`] 再次移除已注册的 waker，因为不再需要唤醒通知。当 `queue.pop()` 第二次失败时，我们会像之前一样返回 `Poll::Pending` ，但这次会附带一个已注册的唤醒动作。
+在通过 [`AtomicWaker::register`] 函数注册传入的 `Context` 中包含的 `Waker` 后，我们第二次尝试从队列中 pop。如果现在成功，我们返回 `Poll::Ready`。同时我们使用 [`AtomicWaker::take`] 再次移除已注册的 waker，因为不再需要唤醒通知。当 `queue.pop()` 第二次失败时，我们会像之前一样返回 `Poll::Pending`，但这次会附带一个已注册的唤醒动作。
 
 [`AtomicWaker::register`]: https://docs.rs/futures-util/0.3.4/futures_util/task/struct.AtomicWaker.html#method.register
 [`AtomicWaker::take`]: https://docs.rs/futures/0.3.4/futures/task/struct.AtomicWaker.html#method.take
 
-需要注意的是，对于尚未返回 `Poll::Pending` 的任务，有两种方式可能触发唤醒。一种方式是前面提到的竞态条件，当唤醒在返回 `Poll::Pending` 之前时立即发生。另一种情况是当注册唤醒器后队列不再为空，此时会返回 `Poll::Ready` 。由于这些虚假的唤醒无法避免，执行器需要能够正确处理它们。
+需要注意的是，对于尚未返回 `Poll::Pending` 的任务，有两种方式可能触发唤醒。一种方式是前面提到的竞态条件，当唤醒在返回 `Poll::Pending` 之前时立即发生。另一种情况是当注册 waker 后队列不再为空，此时会返回 `Poll::Ready` 。由于这些虚假的唤醒无法避免，执行器需要能够正确处理它们。
 
 ##### 唤醒存储的唤醒器
 
@@ -1352,7 +1352,7 @@ pub(crate) fn add_scancode(scancode: u8) {
 
 [`wake`]: https://doc.rust-lang.org/stable/core/task/struct.Waker.html#method.wake
 
-关键点在于我们必须只在推入队列之后再调用 `wake` ，否则任务可能会在队列仍为空时过早被唤醒。这种情况可能发生在例如一个多线程执行器在不同的 CPU 核心上并发启动被唤醒的任务时。虽然我们现在还没添加线程支持，但之后我们会实现，并且不希望出问题。
+关键点在于我们必须只在推入队列之后再调用 `wake` ，否则任务可能会在队列仍为空时过早被唤醒。这种情况可能发生在例如一个多线程执行器在不同的 CPU 核心上并发启动被唤醒的任务时。虽然我们现在还没添加线程支持，但之后我们会实现它，并且不希望出问题。
 
 #### 键盘任务
 
@@ -1415,7 +1415,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 ![QEMU printing ".....H...e...l...l..o..... ...W..o..r....l...d...!"](qemu-keyboard-output.gif)
 
-如果你留意观察电脑的 CPU 使用率，就会发现 `QEMU` 进程现在持续占用 CPU 资源。这是因为我们的 `SimpleExecutor` 在一个循环中反复轮询任务。因此即使我们没有在键盘上按下任何键，执行器也会持续调用 `print_keypresses` 任务的 `poll` 方法，即使该任务此时无法取得任何进展并且会返回 `Poll::Pending` 。
+如果你留意观察电脑的 CPU 使用率，就会发现 `QEMU` 进程现在持续占用 CPU 资源。这是因为我们的 `SimpleExecutor` 在一个循环中反复轮询任务。因此就算我们没有在键盘上按下任何键，执行器也会持续调用 `print_keypresses` 任务的 `poll` 方法，即使该任务此时无法取得任何进展并且会返回 `Poll::Pending` 。
 
 ### 支持 Waker 的 Executor
 
@@ -1516,7 +1516,7 @@ impl Executor {
 
 `task_queue` 字段是一个存储任务 ID 的 `ArrayQueue` 类型，被封装在 [`Arc`] 类型中以实现引用计数（_reference counting_）。引用计数可以实现在多个所有者之间共享所有权。它通过在堆上分配值并统计其活跃的引用来实现。当活跃引用数量降至零时，该值将被不再需要，可以释放。
 
-我们给 `task_queue` 使用 `Arc<ArrayQueue>` 类型，因为它将在执行器和唤醒器之间共享。其设计思路是唤醒器将被唤醒任务的 ID 推送到队列中。执行器位于队列的接收端，通过 ID 从 `tasks` map 中检索被唤醒的任务，然后运行它们。选择固定大小队列而非无界队列（例如 [`SegQueue`]）的原因是在往其中推入数据时，中断处理程序不应该进行内存分配。
+我们给 `task_queue` 使用 `Arc<ArrayQueue>` 类型，因为它将在执行器和唤醒器之间共享。其设计思路是唤醒器将被唤醒任务的 ID 推送到队列中。执行器位于队列的接收端，通过 ID 从 `tasks` map 中检索被唤醒的任务，然后运行它们。选择固定大小队列而非无界队列（例如 [`SegQueue`]）的原因是，在往其中推入数据时，中断处理程序不应该进行内存分配。
 
 除了 `task_queue` 和 `tasks` map 外，`Executor` 类型还有一个 `waker_cache` 字段，同样为 map。该 map 会在任务创建后缓存其 `Waker`，原因有二：首先，它通过为同一任务的多次唤醒复用同一个唤醒器来提高性能，而不是每次都创建新的唤醒器。其次，它确保引用计数的唤醒器不会在中断处理程序中被释放，因为这可能导致死锁（下文将对此进行更详细的说明）。
 
@@ -1527,7 +1527,7 @@ impl Executor {
 
 #### 生成任务
 
-对于 `SimpleExecutor`，我们针对 `Executor` 类型提供了 `spawn` 方法，用于添加给定的任务添加到 `tasks` map 中，并通过将其 ID 推送到 `task_queue` 来立即唤醒它：
+对于 `SimpleExecutor`，我们针对 `Executor` 类型提供了 `spawn` 方法，用于将给定的任务添加到 `tasks` map 中，并通过将其 ID 推送到 `task_queue` 来立即唤醒它：
 
 ```rust
 // in src/task/executor.rs
@@ -1547,7 +1547,7 @@ impl Executor {
 
 #### 运行任务
 
-要执行 `task_queue` 中的所有任务，我们创建私有的 `run_ready_tasks` 方法：
+要执行 `task_queue` 中的所有任务，我们创建私有的 `run_ready_tasks` 函数：
 
 ```rust
 // in src/task/executor.rs
@@ -1805,10 +1805,10 @@ impl Executor {
 
 我们的执行器现在能够高效地运行任务。它利用唤醒通知机制来避免轮询等待中的任务，并在当前无工作可做时让 CPU 进入休眠状态。不过，我们的执行器仍相当基础，还有许多扩展其功能的可能性：
 
-* **调度：**对于我们的 `task_queue`，我们目前使用 `VecDeque` 类型来实现 FIFO 策略，这也经常被称作 Round Robin 调度。该策略可能并非对所有工作负载都最高效。例如，在某些情况下，优先处理对延迟敏感的任务或执行大量 I/O 操作的任务会更高效。详情请参阅 [_Operating Systems: Three Easy Pieces_] 中的 [scheduling chapter] 章节或者 [Wikipedia article on scheduling][scheduling-wiki] 。
-* **任务生成：**当前我们的 `Executor::spawn` 方法需要 `&mut self` 引用，因此在调用 `run` 方法后就不再可用。为解决这个问题，我们可以创建一个 `Spawner` 类型，它与执行器共享一些队列，并允许从任务自身创建新的任务。这些队列可以直接用 `task_queue` ，或者用一个单独的队列，让执行器在循环中不断检查。
-* **利用线程：**目前我们尚未支持线程功能，但将在下一篇文章中添加该功能。这将允许在不同线程中启动多个执行器实例。这种方法的优势在于，由于其他任务可以并发运行，因此可以减少长时间运行的任务造成的延迟。该方法还能充分利用多核 CPU 的处理能力。
-* **负载均衡：**在添加线程支持时，了解如何在多个执行器之间分配任务以确保所有 CPU 核心都得到利用变得至关重要。实现这一点的常用技术是 [工作窃取][_work stealing_]。
+* **调度：** 对于我们的 `task_queue`，我们目前使用 `VecDeque` 类型来实现 FIFO 策略，这也经常被称作 Round Robin 调度。该策略可能并非对所有工作负载都最高效。例如，在某些情况下，优先处理对延迟敏感的任务或执行大量 I/O 操作的任务会更高效。详情请参阅 [_Operating Systems: Three Easy Pieces_] 中的 [scheduling chapter] 章节或者 [Wikipedia article on scheduling][scheduling-wiki] 。
+* **任务生成：** 当前我们的 `Executor::spawn` 方法需要 `&mut self` 引用，因此在调用 `run` 方法后就不再可用。为解决这个问题，我们可以创建一个 `Spawner` 类型，它与执行器共享一些队列，并允许从任务自身创建新的任务。这些队列可以直接用 `task_queue`，或者用一个单独的队列，让执行器在循环中不断检查。
+* **利用线程：** 目前我们尚未支持线程功能，但将在下一篇文章中添加该功能。这将允许在不同线程中启动多个执行器实例。这种方法的优势在于，由于其他任务可以并发运行，因此可以减少长时间运行的任务造成的延迟。该方法还能充分利用多核 CPU 的处理能力。
+* **负载均衡：** 在添加线程支持时，了解如何在多个执行器之间分配任务以确保所有 CPU 核心都得到利用变得至关重要。实现这一点的常用技术是 [工作窃取][_work stealing_]。
 
 [scheduling chapter]: http://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched.pdf
 [_Operating Systems: Three Easy Pieces_]: http://pages.cs.wisc.edu/~remzi/OSTEP/
