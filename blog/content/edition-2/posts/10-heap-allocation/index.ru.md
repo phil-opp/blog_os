@@ -1,7 +1,7 @@
 +++
-title = "Heap Allocation"
+title = "Аллокация в Куче"
 weight = 10
-path = "heap-allocation"
+path = "ru/heap-allocation"
 date = 2019-06-26
 
 [extra]
@@ -10,6 +10,7 @@ chapter = "Memory Management"
 translate_based_on_commit = "4f524ff4167c91cf789632d8d53ce1c9c56ae714"
 # GitHub usernames of the people that translated this post
 translators = ["TakiMoysha"]
+
 +++
 
 В этой статье мы добавим поддержку аллокаций памяти в куче для нашего ядра. Сначала мы рассмотрим как работает динамическая память и покажем как механизм проверки заимствований (borrow checker) предотвращает распространённые ошибки при работе с выделением памяти. Затем напишем базовый интерфейс аллокаций на Rust, создадим область памяти на куче и настроим крейт-аллокатор. К концу публикации все типы аллокаций и коллекций из встроенного крейта `alloc` станут доступны нашему ядру.
