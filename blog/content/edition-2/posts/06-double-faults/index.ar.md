@@ -5,6 +5,8 @@ path = "ar/double-fault-exceptions"
 date  = 2018-06-18
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "9753695744854686a6b80012c89b0d850a44b4b0"
 chapter = "Interrupts"
 
 # GitHub usernames of the people that translated this post
@@ -19,7 +21,7 @@ rtl = true
 هذا المدونة مطوّرة بشكل مفتوح على [GitHub]. إذا كان لديك أي مشاكل أو أسئلة، يرجى فتح issue هناك. يمكنك أيضًا ترك تعليقات [في الأسفل].  يمكن العثور على الكود المصدري الكامل لهذا المقال في فرع [`post-06`][post branch].
 
 [GitHub]: https://github.com/phil-opp/blog_os
-[at the bottom]: #comments
+[في الأسفل]: #comments
 <!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-06
 

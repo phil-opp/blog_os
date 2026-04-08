@@ -5,7 +5,9 @@ path = "ar/async-await"
 date = 2020-03-27
 
 [extra]
-chapter = "تعدد المهام"
+# Please update this when updating the translation
+translation_based_on_commit = "eb079d740fb3635e524667f656307097e05ac20d"
+chapter = "Multitasking"
 
 # GitHub usernames of the people that translated this post
 translators = ["mindfreq"]
@@ -19,7 +21,7 @@ rtl = true
 هذا المدونة مطوّرة بشكل مفتوح على [GitHub]. إذا كان لديك أي مشاكل أو أسئلة، يرجى فتح issue هناك. يمكنك أيضًا ترك تعليقات [في الأسفل]. يمكن العثور على الكود المصدري الكامل لهذا المقال في فرع [`post-12`][post branch].
 
 [GitHub]: https://github.com/phil-opp/blog_os
-[at the bottom]: #comments
+[في الأسفل]: #comments
 <!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-12
 

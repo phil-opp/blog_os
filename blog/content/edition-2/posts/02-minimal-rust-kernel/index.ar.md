@@ -5,6 +5,8 @@ path = "ar/minimal-rust-kernel"
 date = 2018-02-10
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "9a1da09262e252a29d73405cfa9c424cab793da8"
 chapter = "Bare Bones"
 # GitHub usernames of the people that translated this post
 translators = ["mindfreq"]
@@ -20,7 +22,7 @@ rtl = true
 هذا المدونة مطوّرة بشكل مفتوح على [GitHub]. إذا كان لديك أي مشاكل أو أسئلة، يرجى فتح issue هناك. يمكنك أيضًا ترك تعليقات [في الأسفل]. يمكن العثور على الكود المصدري الكامل لهذا المقال في فرع [`post-02`][post branch].
 
 [GitHub]: https://github.com/phil-opp/blog_os
-[at the bottom]: #comments
+[في الأسفل]: #comments
 <!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-02
 

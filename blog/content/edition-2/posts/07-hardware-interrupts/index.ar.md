@@ -5,6 +5,8 @@ path = "ar/hardware-interrupts"
 date = 2018-10-22
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "211f460251cd332905225c93eb66b1aff9f4aefd"
 chapter = "Interrupts"
 
 # GitHub usernames of the people that translated this post
@@ -19,7 +21,7 @@ rtl = true
 هذا المدونة مطوّرة بشكل مفتوح على [GitHub]. إذا كان لديك أي مشاكل أو أسئلة، يرجى فتح issue هناك. يمكنك أيضًا ترك تعليقات [في الأسفل].  يمكن العثور على الكود المصدري الكامل لهذا المقال في فرع [`post-07`][post branch].
 
 [GitHub]: https://github.com/phil-opp/blog_os
-[at the bottom]: #comments
+[في الأسفل]: #comments
 <!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
 [post branch]: https://github.com/phil-opp/blog_os/tree/post-07
 
