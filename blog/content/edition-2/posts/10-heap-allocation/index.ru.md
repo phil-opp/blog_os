@@ -7,7 +7,7 @@ date = 2019-06-26
 [extra]
 chapter = "Memory Management"
 # Please update this when updating the translation 
-translate_based_on_commit = "4f524ff4167c91cf789632d8d53ce1c9c56ae714"
+translation_based_on_commit = "4f524ff4167c91cf789632d8d53ce1c9c56ae714"
 # GitHub usernames of the people that translated this post
 translators = ["TakiMoysha"]
 
@@ -751,7 +751,7 @@ many_boxes... [ok]
 
 Все три теста успешно прошли! Вы также можете вызвать `cargo test` (без аргумента `--test`), чтобы запустить все юнит- и интеграционные тесты.
 
-## Summary
+## Итоги
 
 Этот пост дал введение в динамическую память и объяснил, почему и где она необходима. Мы увидели, как механизм проверки заимствований Rust предотвращает распространённые уязвимости, и изучили работу API аллокации Rust.
 
