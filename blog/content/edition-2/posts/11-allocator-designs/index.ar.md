@@ -7,7 +7,7 @@ date = 2020-01-20
 [extra]
 # Please update this when updating the translation
 translation_based_on_commit = "211f460251cd332905225c93eb66b1aff9f4aefd"
-chapter = "إدارة الذاكرة"
+chapter = "Memory Management"
 
 # GitHub usernames of the people that translated this post
 translators = ["mindfreq"]
