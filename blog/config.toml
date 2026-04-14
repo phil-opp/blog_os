@@ -44,6 +44,7 @@ languages = [
     "ko",
     "pt-BR",
     "ru",
+    "tr",
     "zh-CN",
     "zh-TW",
 ]
@@ -315,4 +316,29 @@ support_me = """
 """
 comment_note = """
 Teve algum problema, quer deixar um feedback ou discutir mais ideias? Fique à vontade para deixar um comentário aqui! Por favor, use o inglês e siga o <a href="https://www.rust-lang.org/policies/code-of-conduct">código de conduta</a> do Rust. Este tópico de comentários está diretamente vinculado a uma <a href="_discussion_url_"><em>discussão no GitHub</em></a>, então você também pode comentar lá se preferir.
+"""
+
+# Turkish
+[languages.tr]
+title = "Rust ile İşletim Sistemi Yazıyoruz"
+description = "Bu blog serisi, Rust programlama diliyle küçük bir işletim sistemi oluşturmaktadır. Her yazı küçük bir rehber niteliğinde olup gerekli tüm kodu içermektedir."
+[languages.tr.translations]
+lang_name = "Türkçe"
+toc = "İçindekiler"
+all_posts = "« Tüm Yazılar"
+comments = "Yorumlar"
+comments_notice = "Mümkünse yorumlarınızı İngilizce bırakınız."
+readmore = "devamını&nbsp;oku&nbsp;»"
+not_translated = "(Bu yazı henüz çevrilmedi.)"
+translated_content = "Çevrilmiş İçerik:"
+translated_content_notice = "Bu, <strong><a href=\"_original.permalink_\">_original.title_</a></strong> adlı gönderinin topluluk tarafından yapılmış bir çevirisidir. Eksik, güncel olmayan veya hata içeriyor olabilir. Lütfen herhangi bir sorunu bildirin!"
+translated_by = "Translation by"
+translation_contributors = "Katkıda bulunanlar"
+word_separator = "ve"
+support_me = """
+<h2>Beni Destekle</h2>
+<p>Bu blogu ve ilişkili kütüphaneleri oluşturmak ve sürdürmek çok emek gerektiriyor, ve bunu yapmaktan gerçekten zevk alıyorum. Beni destekleyerek yeni içerik, yeni özellikler ve sürekli bakım için daha fazla zaman ayırmama olanak tanıyorsunuz. Beni desteklemenin en iyi yolu <a href="https://github.com/sponsors/phil-opp"><em>GitHub'da sponsor olmak</em></a>. Teşekkürler!</p>
+"""
+comment_note = """
+Bir sorunuz mu var, geri bildirim paylaşmak veya fikirlerinizi tartışmak mı istiyorsunuz? Buraya yorum bırakmaktan çekinmeyin! Lütfen İngilizce kullanın ve Rust'ın <a href="https://www.rust-lang.org/policies/code-of-conduct">davranış kurallarına</a> uyun. Bu yorum dizisi doğrudan <a href="_discussion_url_"><em>GitHub'daki bir tartışmaya</em></a> bağlıdır, dolayısıyla isterseniz oraya da yorum yapabilirsiniz.
 """
