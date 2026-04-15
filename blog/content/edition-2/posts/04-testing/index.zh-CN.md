@@ -304,10 +304,12 @@ test-success-exit-code = 33         # (0x10 << 1) | 1
 # in Cargo.toml
 
 [dependencies]
-uart_16550 = "0.2.0"
+uart_16550 = "0.6.0"
 ```
 
-`uart_16550` crate包含了一个代表UART寄存器的 `SerialPort` 结构体，但是我们仍然需要自己来创建一个相应的实例。我们使用以下代码来创建一个新的串口模块 `serial`:
+`uart_16550` crate包含了一个 [`Uart16550Tty`](https://docs.rs/uart_16550/latest/uart_16550/struct.Uart16550Tty.html) 类型，它以 [TTY](https://en.wikipedia.org/wiki/Teleprinter) 模式初始化 UART，使我们能够轻松地发送文本。
+
+让我们在新的 `serial` 模块中使用这个类型:
 
 ```rust
 // in src/main.rs
@@ -318,22 +320,20 @@ mod serial;
 ```rust
 // in src/serial.rs
 
-use uart_16550::SerialPort;
+use uart_16550::{Config, Uart16550Tty, backend::PioBackend};
 use spin::Mutex;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref SERIAL1: Mutex<SerialPort> = {
-        let mut serial_port = unsafe { SerialPort::new(0x3F8) };
-        serial_port.init();
-        Mutex::new(serial_port)
-    };
+    pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
+        Uart16550Tty::new_port(0x3F8, Config::default()).expect("failed to initialize UART")
+    });
 }
 ```
 
-就像[VGA文本缓冲区][vga lazy-static]一样，我们使用 `lazy_static` 和一个自旋锁来创建一个 `static` writer实例。通过使用 `lazy_static` ，我们可以保证 `init` 方法只会在该示例第一次被使用使被调用。
+就像[VGA文本缓冲区][vga lazy-static]一样，我们使用 `lazy_static` 和一个自旋锁来创建一个 `static` writer实例。通过使用 `lazy_static` ，我们可以保证 UART 只会在第一次被使用时初始化。
 
-和 `isa-debug-exit` 设备一样，UART也是通过I/O端口进行编程的。由于UART相对来讲更加复杂，它使用多个I/O端口来对不同的设备寄存器进行编程。`unsafe` 的 `SerialPort::new` 函数需要UART的第一个I/O端口的地址作为参数，从该地址中可以计算出所有所需端口的地址。我们传递的端口地址为 `0x3F8` ，该地址是第一个串行接口的标准端口号。
+和 `isa-debug-exit` 设备一样，UART也是通过I/O端口进行编程的，这由 [`PioBackend`](https://docs.rs/uart_16550/latest/uart_16550/backend/struct.PioBackend.html) 参数表示。由于UART相对来讲更加复杂，它使用多个I/O端口来对不同的设备寄存器进行编程。`unsafe` 的 `Uart16550Tty::new_port` 函数需要UART的第一个I/O端口的地址作为参数，从该地址中可以计算出所有所需端口的地址。我们传递的端口地址为 `0x3F8` ，该地址是第一个串行接口的标准端口号。
 
 [vga lazy-static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
@@ -366,7 +366,7 @@ macro_rules! serial_println {
 }
 ```
 
-该实现和我们此前的 `print` 和 `println` 宏的实现非常类似。 由于 `SerialPort` 类型已经实现了 [`fmt::Write`] trait，所以我们不需要提供我们自己的实现了。
+该实现和我们此前的 `print` 和 `println` 宏的实现非常类似。 由于 `Uart16550Tty` 类型已经实现了 [`fmt::Write`] trait，所以我们不需要提供我们自己的实现了。
 
 [`fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 

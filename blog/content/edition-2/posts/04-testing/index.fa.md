@@ -284,10 +284,12 @@ test-success-exit-code = 33         # (0x10 << 1) | 1
 # in Cargo.toml
 
 [dependencies]
-uart_16550 = "0.2.0"
+uart_16550 = "0.6.0"
 ```
 
-کریت `uart_16550` حاوی ساختار `SerialPort` است که نمایانگر ثبات‌های UART است، اما ما هنوز هم باید نمونه‌ای از آن را خودمان بسازیم. برای آن ما یک ماژول `‌serial` جدید با محتوای زیر ایجاد می‌کنیم:
+کریت `uart_16550` حاوی نوع [`Uart16550Tty`](https://docs.rs/uart_16550/latest/uart_16550/struct.Uart16550Tty.html) است که UART را در حالت [TTY](https://en.wikipedia.org/wiki/Teleprinter) راه‌اندازی می‌کند و به ما اجازه می‌دهد تا متن را به راحتی ارسال کنیم.
+
+بیایید از این نوع در یک ماژول `serial` جدید استفاده کنیم:
 
 ```rust
 // in src/main.rs
@@ -298,22 +300,20 @@ mod serial;
 ```rust
 // in src/serial.rs
 
-use uart_16550::SerialPort;
+use uart_16550::{Config, Uart16550Tty, backend::PioBackend};
 use spin::Mutex;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref SERIAL1: Mutex<SerialPort> = {
-        let mut serial_port = unsafe { SerialPort::new(0x3F8) };
-        serial_port.init();
-        Mutex::new(serial_port)
-    };
+    pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
+        Uart16550Tty::new_port(0x3F8, Config::default()).expect("failed to initialize UART")
+    });
 }
 ```
 
-مانند [بافر متن VGA] [vga lazy-static]، ما از `lazy_static` و یک spinlock برای ایجاد یک نمونه نویسنده `static` استفاده می‌کنیم. با استفاده از `lazy_static` می‌توان اطمینان حاصل کرد که متد `init` در اولین استفاده دقیقاً یک بار فراخوانی می‌شود.
+مانند [بافر متن VGA] [vga lazy-static]، ما از `lazy_static` و یک spinlock برای ایجاد یک نمونه نویسنده `static` استفاده می‌کنیم. با استفاده از `lazy_static` می‌توان اطمینان حاصل کرد که UART در اولین استفاده دقیقاً یک بار مقداردهی اولیه می‌شود.
 
-مانند دستگاه `isa-debug-exit`، UART با استفاده از پورت I/O برنامه نویسی می‌شود. از آنجا که UART پیچیده‌تر است، از چندین پورت I/O برای برنامه نویسی رجیسترهای مختلف دستگاه استفاده می‌کند. تابع ناامن `SerialPort::new` انتظار دارد که آدرس اولین پورت I/O از UART به عنوان آرگومان باشد، که از آن می‌تواند آدرس تمام پورت‌های مورد نیاز را محاسبه کند. ما در حال عبور دادنِ آدرس پورت `0x3F8` هستیم که شماره پورت استاندارد برای اولین رابط سریال است.
+مانند دستگاه `isa-debug-exit`، UART با استفاده از پورت I/O برنامه نویسی می‌شود، که این موضوع توسط پارامتر [`PioBackend`](https://docs.rs/uart_16550/latest/uart_16550/backend/struct.PioBackend.html) نشان داده می‌شود. از آنجا که UART پیچیده‌تر است، از چندین پورت I/O برای برنامه نویسی رجیسترهای مختلف دستگاه استفاده می‌کند. تابع ناامن `Uart16550Tty::new_port` انتظار دارد که آدرس اولین پورت I/O از UART به عنوان آرگومان باشد، که از آن می‌تواند آدرس تمام پورت‌های مورد نیاز را محاسبه کند. ما در حال عبور دادنِ آدرس پورت `0x3F8` هستیم که شماره پورت استاندارد برای اولین رابط سریال است.
 
 [vga lazy-static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
@@ -344,7 +344,7 @@ macro_rules! serial_println {
 }
 ```
 
-پیاده سازی بسیار شبیه به پیاده سازی ماکروهای `print` و` println` است. از آنجا که نوع `SerialPort` تِرِیت [`fmt::Write`] را پیاده سازی می‌کند، نیازی نیست این پیاده سازی را خودمان انجام دهیم.
+پیاده سازی بسیار شبیه به پیاده سازی ماکروهای `print` و` println` است. از آنجا که نوع `Uart16550Tty` تِرِیت [`fmt::Write`] را پیاده سازی می‌کند، نیازی نیست این پیاده سازی را خودمان انجام دهیم.
 
 [`fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 

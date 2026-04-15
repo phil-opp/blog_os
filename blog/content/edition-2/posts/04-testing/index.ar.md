@@ -307,10 +307,12 @@ test-success-exit-code = 33         # (0x10 << 1) | 1
 # in Cargo.toml
 
 [dependencies]
-uart_16550 = "0.2.0"
+uart_16550 = "0.6.0"
 ```
 
-تحتوي مكتبة `uart_16550` على struct `SerialPort` يمثل سجلات UART، لكننا لا نزال نحتاج إلى إنشاء instance منها بأنفسنا. لذلك، ننشئ module `serial` جديدًا بالمحتوى التالي:
+تحتوي مكتبة `uart_16550` على نوع [`Uart16550Tty`](https://docs.rs/uart_16550/latest/uart_16550/struct.Uart16550Tty.html) يهيئ UART في وضع [TTY](https://en.wikipedia.org/wiki/Teleprinter)، مما يتيح لنا إرسال النصوص بسهولة.
+
+لنستخدم هذا النوع في module `serial` جديد:
 
 ```rust
 // in src/main.rs
@@ -321,22 +323,20 @@ mod serial;
 ```rust
 // in src/serial.rs
 
-use uart_16550::SerialPort;
+use uart_16550::{Config, Uart16550Tty, backend::PioBackend};
 use spin::Mutex;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref SERIAL1: Mutex<SerialPort> = {
-        let mut serial_port = unsafe { SerialPort::new(0x3F8) };
-        serial_port.init();
-        Mutex::new(serial_port)
-    };
+    pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
+        Uart16550Tty::new_port(0x3F8, Config::default()).expect("failed to initialize UART")
+    });
 }
 ```
 
-مثل [VGA text buffer][vga lazy-static]، نستخدم `lazy_static` و spinlock لإنشاء instance `static` writer. باستخدام `lazy_static` نضمن أن دالة `init` تُستدعى مرة واحدة فقط عند أول استخدام.
+مثل [VGA text buffer][vga lazy-static]، نستخدم `lazy_static` و spinlock لإنشاء instance `static` writer. باستخدام `lazy_static` نضمن أن UART تُهيَّأ مرة واحدة فقط عند أول استخدام.
 
-مثل جهاز `isa-debug-exit`، يُبرمج UART باستخدام port I/O. بما أن UART أكثر تعقيدًا، يستخدم عدة I/O ports لبرمجة سجلات الجهاز المختلفة. الدالة غير الآمنة `SerialPort::new` تتوقع عنوان أول I/O port لـ UART كوسيطة، من خلاله يمكن حساب عناوين جميع ports المطلوبة. نمرر عنوان port `0x3F8`، وهو رقم port القياسي لأول واجهة serial.
+مثل جهاز `isa-debug-exit`، يُبرمج UART باستخدام port I/O، وهو ما يشير إليه parameter [`PioBackend`](https://docs.rs/uart_16550/latest/uart_16550/backend/struct.PioBackend.html). بما أن UART أكثر تعقيدًا، يستخدم عدة I/O ports لبرمجة سجلات الجهاز المختلفة. الدالة غير الآمنة `Uart16550Tty::new_port` تتوقع عنوان أول I/O port لـ UART كوسيطة، من خلاله يمكن حساب عناوين جميع ports المطلوبة. نمرر عنوان port `0x3F8`، وهو رقم port القياسي لأول واجهة serial.
 
 [vga lazy-static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
@@ -369,7 +369,7 @@ macro_rules! serial_println {
 }
 ```
 
-التنفيذ مشابه جدًا لتنفيذ macros `print` و `println` الخاصة بنا. بما أن نوع `SerialPort` ينفذ بالفعل trait [`fmt::Write`]، لا نحتاج إلى توفير تنفيذنا الخاص.
+التنفيذ مشابه جدًا لتنفيذ macros `print` و `println` الخاصة بنا. بما أن نوع `Uart16550Tty` ينفذ بالفعل trait [`fmt::Write`]، لا نحتاج إلى توفير تنفيذنا الخاص.
 
 [`fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
