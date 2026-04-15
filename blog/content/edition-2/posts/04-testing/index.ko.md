@@ -293,10 +293,12 @@ test_runner는 이제 테스트 결과를 출력한 후 QEMU를 자동으로 종
 # in Cargo.toml
 
 [dependencies]
-uart_16550 = "0.2.0"
+uart_16550 = "0.6.0"
 ```
 
-`uart_16550` 크레이트는 UART 레지스터를 나타내는 `SerialPort` 구조체 타입을 제공합니다. 이 구조체 타입의 인스턴스를 생성하기 위해 아래와 같이 새 모듈 `serial`을 작성합니다.
+`uart_16550` 크레이트는 UART를 [TTY](https://en.wikipedia.org/wiki/Teleprinter) 모드로 초기화하는 [`Uart16550Tty`](https://docs.rs/uart_16550/latest/uart_16550/struct.Uart16550Tty.html) 타입을 제공하여, 텍스트를 쉽게 전송할 수 있게 해줍니다.
+
+이 타입을 새 모듈 `serial`에서 사용해 봅시다:
 
 ```rust
 // in src/main.rs
@@ -307,22 +309,20 @@ mod serial;
 ```rust
 // in src/serial.rs
 
-use uart_16550::SerialPort;
+use uart_16550::{Config, Uart16550Tty, backend::PioBackend};
 use spin::Mutex;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref SERIAL1: Mutex<SerialPort> = {
-        let mut serial_port = unsafe { SerialPort::new(0x3F8) };
-        serial_port.init();
-        Mutex::new(serial_port)
-    };
+    pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
+        Uart16550Tty::new_port(0x3F8, Config::default()).expect("failed to initialize UART")
+    });
 }
 ```
 
-[VGA 텍스트 버퍼][vga lazy-static]를 구현할 때와 마찬가지로 `lazy_static` 매크로와 스핀 락을 사용해 정적 변수 `SERIAL1`을 생성했습니다. `lazy_static`을 사용함으로써 `SERIAL1`이 최초로 사용되는 시점에 단 한 번만 `init` 함수가 호출됩니다.
+[VGA 텍스트 버퍼][vga lazy-static]를 구현할 때와 마찬가지로 `lazy_static` 매크로와 스핀 락을 사용해 정적 변수 `SERIAL1`을 생성했습니다. `lazy_static`을 사용함으로써 `SERIAL1`이 최초로 사용되는 시점에 UART가 단 한 번만 초기화됩니다.
 
-`isa-debug-exit` 장치와 마찬가지로 UART 또한 포트 입출력을 통해 프로그래밍 됩니다. UART는 좀 더 복잡해서 장치의 레지스터 여러 개를 이용하기 위해 여러 개의 입출력 포트를 사용합니다. unsafe 함수 `SerialPort::new`는 첫 번째 입출력 포트의 주소를 인자로 받고 그것을 통해 필요한 모든 포트들의 주소들을 알아냅니다. 첫 번째 시리얼 통신 인터페이스의 표준 포트 번호인 `0x3F8`을 인자로 전달합니다.
+`isa-debug-exit` 장치와 마찬가지로 UART 또한 포트 입출력을 통해 프로그래밍 되며, 이는 [`PioBackend`](https://docs.rs/uart_16550/latest/uart_16550/backend/struct.PioBackend.html) 매개변수로 표현됩니다. UART는 좀 더 복잡해서 장치의 레지스터 여러 개를 이용하기 위해 여러 개의 입출력 포트를 사용합니다. unsafe 함수 `Uart16550Tty::new_port`는 첫 번째 입출력 포트의 주소를 인자로 받고 그것을 통해 필요한 모든 포트들의 주소들을 알아냅니다. 첫 번째 시리얼 통신 인터페이스의 표준 포트 번호인 `0x3F8`을 인자로 전달합니다.
 
 [vga lazy-static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
@@ -355,7 +355,7 @@ macro_rules! serial_println {
 }
 ```
 
-구현은 이전 포스트에서 작성했던 `print` 및 `println` 매크로와 매우 유사합니다. `SerialPort` 타입은 이미 [`fmt::Write`] 트레이트를 구현하기에 우리가 새로 구현할 필요가 없습니다.
+구현은 이전 포스트에서 작성했던 `print` 및 `println` 매크로와 매우 유사합니다. `Uart16550Tty` 타입은 이미 [`fmt::Write`] 트레이트를 구현하기에 우리가 새로 구현할 필요가 없습니다.
 
 [`fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 

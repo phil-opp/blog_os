@@ -303,10 +303,12 @@ test-success-exit-code = 33         # (0x10 << 1) | 1
 # in Cargo.toml
 
 [dependencies]
-uart_16550 = "0.2.0"
+uart_16550 = "0.6.0"
 ```
 
-`uart_16550`クレートにはUARTレジスタを表現する`SerialPort`構造体が含まれていますが、これのインスタンスは私達自身で作らなくてはいけません。そのため、以下の内容で新しい`serial`モジュールを作りましょう：
+`uart_16550`クレートには、UARTを[TTY](https://en.wikipedia.org/wiki/Teleprinter)モードで初期化する[`Uart16550Tty`](https://docs.rs/uart_16550/latest/uart_16550/struct.Uart16550Tty.html)型が含まれており、これによりテキストを簡単に送信できます。
+
+この型を新しい`serial`モジュールで使ってみましょう：
 
 ```rust
 // in src/main.rs
@@ -317,22 +319,20 @@ mod serial;
 ```rust
 // in src/serial.rs
 
-use uart_16550::SerialPort;
+use uart_16550::{Config, Uart16550Tty, backend::PioBackend};
 use spin::Mutex;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref SERIAL1: Mutex<SerialPort> = {
-        let mut serial_port = unsafe { SerialPort::new(0x3F8) };
-        serial_port.init();
-        Mutex::new(serial_port)
-    };
+    pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
+        Uart16550Tty::new_port(0x3F8, Config::default()).expect("failed to initialize UART")
+    });
 }
 ```
 
-[VGAテキストバッファ][vga lazy-static]のときのように、`lazy_static`とスピンロックを使って`static`なwriterインスタンスを作ります。`lazy_static`を使うことで、`init`メソッドが初回使用時にのみ呼び出されることを保証できます。
+[VGAテキストバッファ][vga lazy-static]のときのように、`lazy_static`とスピンロックを使って`static`なwriterインスタンスを作ります。`lazy_static`を使うことで、UARTが初回使用時にのみ初期化されることを保証できます。
 
-`isa-debug-exit`デバイスのときと同じように、UARTはport I/Oを使ってプログラムされています。UARTはより複雑で、様々なデバイスレジスタ群をプログラムするために複数のI/Oポートを使います。unsafeな`SerialPort::new`関数はUARTの最初のI/Oポートを引数とします。この引数から、すべての必要なポートのアドレスを計算することができます。ポートアドレス`0x3F8`を渡していますが、これは最初のシリアルインターフェースの標準のポート番号です。
+`isa-debug-exit`デバイスのときと同じように、UARTはport I/Oを使ってプログラムされており、それは[`PioBackend`](https://docs.rs/uart_16550/latest/uart_16550/backend/struct.PioBackend.html)パラメータによって示されています。UARTはより複雑で、様々なデバイスレジスタ群をプログラムするために複数のI/Oポートを使います。unsafeな`Uart16550Tty::new_port`関数はUARTの最初のI/Oポートを引数とします。この引数から、すべての必要なポートのアドレスを計算することができます。ポートアドレス`0x3F8`を渡していますが、これは最初のシリアルインターフェースの標準のポート番号です。
 
 [vga lazy-static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
@@ -363,7 +363,7 @@ macro_rules! serial_println {
 }
 ```
 
-この実装は私達の`print`および`println`マクロとよく似ています。`SerialPort`型はすでに[`fmt::Write`]トレイトを実装しているので、自前の実装を提供する必要はありません。
+この実装は私達の`print`および`println`マクロとよく似ています。`Uart16550Tty`型はすでに[`fmt::Write`]トレイトを実装しているので、自前の実装を提供する必要はありません。
 
 [`fmt::Write`]: https://doc.rust-lang.org/nightly/core/fmt/trait.Write.html
 
