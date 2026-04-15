@@ -306,7 +306,8 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
-        Uart16550Tty::new_port(0x3F8, Config::default()).expect("failed to initialize UART")
+        Uart16550Tty::new_port(0x3F8, Config::default())
+            .expect("failed to initialize UART")
     });
 }
 ```
