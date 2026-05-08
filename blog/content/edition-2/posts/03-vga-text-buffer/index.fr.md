@@ -568,7 +568,7 @@ Pour utiliser un mutex tournant, nous pouvons ajouter la [crate spin] comme dép
 ```toml
 # dans Cargo.toml
 [dependencies]
-spin = "0.5.2"
+ spin = "0.10.0"
 ```
 
 Ensuite, nous pouvons utiliser le mutex tournant pour ajouter une [mutabilité intérieure] sûre à notre `WRITER` statique :
