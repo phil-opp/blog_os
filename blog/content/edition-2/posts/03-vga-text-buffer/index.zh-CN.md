@@ -459,34 +459,29 @@ error[E0017]: references in statics may only refer to immutable values
 
 ### 延迟初始化
 
-使用非常函数初始化静态变量是 Rust 程序员普遍遇到的问题。幸运的是，有一个叫做 [lazy_static](https://docs.rs/lazy_static/1.0.1/lazy_static/) 的包提供了一个很棒的解决方案：它提供了名为 `lazy_static!` 的宏，定义了一个**延迟初始化**（lazily initialized）的静态变量；这个变量的值将在第一次使用时计算，而非在编译时计算。这时，变量的初始化过程将在运行时执行，任意的初始化代码——无论简单或复杂——都是能够使用的。
+使用非常函数初始化静态变量是 Rust 程序员普遍遇到的问题。幸运的是，[spin 包](https://crates.io/crates/spin) 提供的 [`Lazy`](https://docs.rs/spin/latest/spin/lazy/struct.Lazy.html) 类型提供了一个很棒的解决方案：它会在第一次访问静态变量时再完成初始化，而不是在编译时计算它的值。因此，初始化过程发生在运行时，任意复杂的初始化代码都是可以使用的。
 
-现在，我们将 `lazy_static` 包导入到我们的项目：
+现在，我们将 `spin` 包导入到我们的项目：
 
 ```toml
 # in Cargo.toml
 
-[dependencies.lazy_static]
-version = "1.0"
-features = ["spin_no_std"]
+[dependencies]
+spin = "0.10.0"
 ```
 
-在这里，由于程序不连接标准库，我们需要启用 `spin_no_std` 特性。
-
-使用 `lazy_static` 我们就可以定义一个不出问题的 `WRITER` 变量：
+使用 `Lazy` 我们就可以定义一个不出问题的 `WRITER` 变量：
 
 ```rust
 // in src/vga_buffer.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    pub static ref WRITER: Writer = Writer {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
-}
+pub static WRITER: Lazy<Writer> = Lazy::new(|| Writer {
+    column_position: 0,
+    color_code: ColorCode::new(Color::Yellow, Color::Black),
+    buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+});
 ```
 
 然而，这个 `WRITER` 可能没有什么用途，因为它目前还是**不可变变量**（immutable variable）：这意味着我们无法向它写入数据，因为所有与写入数据相关的方法都需要实例的可变引用 `&mut self`。一种解决方案是使用**可变静态**（[mutable static](https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable)）的变量，但所有对它的读写操作都被规定为不安全的（unsafe）操作，因为这很容易导致数据竞争或发生其它不好的事情——使用 `static mut` 极其不被赞成，甚至有一些提案认为[应该将它删除](https://internals.rust-lang.org/t/pre-rfc-remove-static-mut/1437)。也有其它的替代方案，比如可以尝试使用比如 [RefCell](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html#keeping-track-of-borrows-at-runtime-with-refcellt) 或甚至 [UnsafeCell](https://doc.rust-lang.org/nightly/core/cell/struct.UnsafeCell.html) 等类型提供的**内部可变性**（[interior mutability](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html)）；但这些类型都被设计为非同步类型，即不满足 [Sync](https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html) 约束，所以我们不能在静态变量中使用它们。
@@ -495,28 +490,18 @@ lazy_static! {
 
 要定义同步的内部可变性，我们往往使用标准库提供的互斥锁类 [Mutex](https://doc.rust-lang.org/nightly/std/sync/struct.Mutex.html)，它通过提供当资源被占用时将线程**阻塞**（block）的**互斥条件**（mutual exclusion）实现这一点；但我们初步的内核代码还没有线程和阻塞的概念，我们将不能使用这个类。不过，我们还有一种较为基础的互斥锁实现方式——**自旋锁**（[spinlock](https://en.wikipedia.org/wiki/Spinlock)）。自旋锁并不会调用阻塞逻辑，而是在一个小的无限循环中反复尝试获得这个锁，也因此会一直占用 CPU 时间，直到互斥锁被它的占用者释放。
 
-为了使用自旋互斥锁，我们添加 [spin包](https://crates.io/crates/spin) 到项目的依赖项列表：
-
-```toml
-# in Cargo.toml
-[dependencies]
-spin = "0.5.2"
-```
-
-现在，我们能够使用自旋的互斥锁，为我们的 `WRITER` 类实现安全的[内部可变性](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html)：
+既然我们已经依赖了 [spin包](https://crates.io/crates/spin)，现在就可以使用它提供的自旋互斥锁，为我们的 `WRITER` 类实现安全的[内部可变性](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html)：
 
 ```rust
 // in src/vga_buffer.rs
 
-use spin::Mutex;
+use spin::{Lazy, Mutex};
 ...
-lazy_static! {
-    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
+pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    });
-}
+    }));
 ```
 
 现在我们可以删除 `print_something` 函数，尝试直接在 `_start` 函数中打印字符：
@@ -645,7 +630,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 这篇文章中，我们学习了 VGA 字符缓冲区的结构，以及如何在 `0xb8000` 的内存映射地址访问它。我们将所有的不安全操作包装为一个 Rust 模块，以便在外界安全地访问它。
 
-我们也发现了——感谢便于使用的 cargo——在 Rust 中使用第三方提供的包是及其容易的。我们添加的两个依赖项，`lazy_static` 和 `spin`，都在操作系统开发中及其有用；我们将在未来的文章中多次使用它们。
+我们也发现了——感谢便于使用的 cargo——在 Rust 中使用第三方提供的包是及其容易的。我们添加的 `spin` 依赖项在操作系统开发中及其有用；我们将在未来的文章中多次使用它。
 
 ## 下篇预告
 

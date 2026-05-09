@@ -348,31 +348,29 @@ pub fn init_idt() {
 [بلوک `unsafe`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### Lazy Statics به نجات ما می‌آیند
-خوشبختانه ماکرو `lazy_static` وجود دارد. ماکرو به جای ارزیابی یک `static` در زمان کامپایل ، مقداردهی اولیه آن را هنگام اولین ارجاع به آن انجام می دهد. بنابراین، می توانیم تقریباً همه کاری را در بلوک مقداردهی اولیه انجام دهیم و حتی قادر به خواندن مقادیر زمان اجرا هستیم.
+خوشبختانه نوع `spin::Lazy` وجود دارد. این نوع به جای ارزیابی یک `static` در زمان کامپایل ، مقداردهی اولیه آن را هنگام اولین ارجاع به آن انجام می دهد. بنابراین، می توانیم تقریباً همه کاری را در بلوک مقداردهی اولیه انجام دهیم و حتی قادر به خواندن مقادیر زمان اجرا هستیم.
 
-ما قبلاً کرت `lazy_static` را وارد کردیم وقتی [یک انتزاع برای بافر متن VGA ایجاد کردیم][vga text buffer lazy static]. بنابراین می توانیم مستقیماً از ماکرو `!lazy_static` برای ایجاد IDT استاتیک استفاده کنیم:
+ما قبلاً کرت `spin` را وارد کردیم وقتی [یک انتزاع برای بافر متن VGA ایجاد کردیم][vga text buffer lazy static]. بنابراین می توانیم مستقیماً از `Lazy` برای ایجاد IDT استاتیک استفاده کنیم:
 
 [vga text buffer lazy static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
 ```rust
 // in src/interrupts.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt
-    };
-}
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt
+});
 
 pub fn init_idt() {
     IDT.load();
 }
 ```
 
-توجه داشته باشید که چگونه این راه حل به هیچ بلوک `unsafe` نیاز ندارد. ماکرو `!lazy_static` از `unsafe` در پشت صحنه استفاده می کند ، اما در یک رابط امن به ما داده می شود.
+توجه داشته باشید که چگونه این راه حل به هیچ بلوک `unsafe` نیاز ندارد. `Lazy` از `unsafe` در پشت صحنه استفاده می کند ، اما در یک رابط امن به ما داده می شود.
 
 ### اجرای آن
 

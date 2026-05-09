@@ -272,17 +272,17 @@ Bit(s) | Name | Meaning
 ```rust
 // in src/interrupts.rs
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
+use spin::Lazy;
 
-        […]
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
 
-        idt.page_fault.set_handler_fn(page_fault_handler); // new
+    […]
 
-        idt
-    };
-}
+    idt.page_fault.set_handler_fn(page_fault_handler); // new
+
+    idt
+});
 
 use x86_64::structures::idt::PageFaultErrorCode;
 use crate::hlt_loop;

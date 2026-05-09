@@ -498,7 +498,7 @@ error[E0017]: references in statics may only refer to immutable values
 [`const` functions]: https://doc.rust-lang.org/reference/const_eval.html#const-functions
 
 ### <ruby>怠けた<rp> (</rp><rt>Lazy</rt><rp>) </rp></ruby>静的変数
-定数でない関数で一度だけ静的変数を初期化したい、というのはRustにおいてよくある問題です。嬉しいことに、[lazy_static]というクレートにすでに良い解決方法が存在します。このクレートは、初期化が後回しにされる`static`を定義する`lazy_static!`マクロを提供します。その値をコンパイル時に計算する代わりに、この`static`は最初にアクセスされたときに初めて初期化します。したがって、初期化は実行時に起こるので、どんなに複雑な初期化プログラムも可能ということです。
+定数でない関数で一度だけ静的変数を初期化したい、というのはRustにおいてよくある問題です。嬉しいことに、[spinクレート](https://crates.io/crates/spin)の [`Lazy`](https://docs.rs/spin/latest/spin/lazy/struct.Lazy.html) 型にすでに良い解決方法が存在します。コンパイル時に`static`の値を計算する代わりに、`Lazy`は最初にアクセスされたときに初めて初期化を行います。したがって、初期化は実行時に起こるので、どんなに複雑な初期化プログラムも可能ということです。
 
 <div class="note">
 
@@ -506,34 +506,27 @@ error[E0017]: references in statics may only refer to immutable values
 
 </div>
 
-[lazy_static]: https://docs.rs/lazy_static/1.0.1/lazy_static/
-
-私達のプロジェクトに`lazy_static`クレートを追加しましょう：
+私達のプロジェクトに`spin`クレートを追加しましょう：
 
 ```toml
 # in Cargo.toml
 
-[dependencies.lazy_static]
-version = "1.0"
-features = ["spin_no_std"]
+[dependencies]
+spin = "0.10.0"
 ```
 
-標準ライブラリをリンクしないので、`spin_no_std`機能が必要です。
-
-`lazy_static`を使えば、静的な`WRITER`が問題なく定義できます：
+`Lazy`を使えば、静的な`WRITER`が問題なく定義できます：
 
 ```rust
 // in src/vga_buffer.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    pub static ref WRITER: Writer = Writer {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
-}
+pub static WRITER: Lazy<Writer> = Lazy::new(|| Writer {
+    column_position: 0,
+    color_code: ColorCode::new(Color::Yellow, Color::Black),
+    buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+});
 ```
 
 しかし、この`WRITER`は<ruby>不変<rp> (</rp><rt>immutable</rt><rp>) </rp></ruby>なので、全く使い物になりません。なぜならこれは、この`WRITER`に何も書き込めないということを意味するからです（私達のすべての書き込みメソッドは`&mut self`を取るからです）。ひとつの解決策には、[<ruby>可変<rp> (</rp><rt>mutable</rt><rp>) </rp></ruby>で静的な変数][mutable static]を使うということがあります。しかし、そうすると、あらゆる読み書きが容易にデータ競合やその他の良くないことを引き起こしてしまうので、それらがすべてunsafeになってしまいます。`static mut`を使うことも、[それを削除しようという提案][remove static mut]すらあることを考えると、できる限り避けたいです。しかし他に方法はあるのでしょうか？不変静的変数を[RefCell]や、果ては[UnsafeCell]のような、[<ruby>内部可変性<rp> (</rp><rt>interior mutability</rt><rp>) </rp></ruby>][interior mutability]を提供するcell型と一緒に使うという事も考えられます。しかし、それらの型は（ちゃんとした理由があって）[Sync]ではないので、静的変数で使うことはできません。
@@ -551,30 +544,20 @@ lazy_static! {
 [Mutex]: https://doc.rust-lang.org/nightly/std/sync/struct.Mutex.html
 [spinlock]: https://ja.wikipedia.org/wiki/スピンロック
 
-スピンロックによるmutexを使うには、[spinクレート][spin crate]への依存を追加すればよいです：
-
 [spin crate]: https://crates.io/crates/spin
 
-```toml
-# in Cargo.toml
-[dependencies]
-spin = "0.5.2"
-```
-
-すると、スピンを使ったMutexを使うことができ、静的な`WRITER`に安全な[内部可変性][interior mutability]を追加できます。
+すでに[spinクレート][spin crate]に依存しているので、そのスピンMutexを使って、静的な`WRITER`に安全な[内部可変性][interior mutability]を追加できます。
 
 ```rust
 // in src/vga_buffer.rs
 
-use spin::Mutex;
+use spin::{Lazy, Mutex};
 ...
-lazy_static! {
-    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
+pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    });
-}
+    }));
 ```
 `print_something`関数を消して、`_start`関数から直接出力しましょう：
 
@@ -708,7 +691,7 @@ fn panic(info: &PanicInfo) -> ! {
 ## まとめ
 この記事では、VGAテキストバッファの構造と、どのようにすれば`0xb8000`番地におけるメモリマッピングを通じてそれに書き込みを行えるかを学びました。このメモリマップされたバッファへの書き込みというunsafeな操作をカプセル化し、安全で便利なインターフェースを外部に提供するRustモジュールを作りました。
 
-また、cargoのおかげでサードパーティのライブラリへの依存関係を簡単に追加できることも分かりました。`lazy_static`と`spin`という2つの依存先は、OS開発においてとても便利であり、今後の記事においても使っていきます。
+また、cargoのおかげでサードパーティのライブラリへの依存関係を簡単に追加できることも分かりました。`spin`という依存先は、OS開発においてとても便利であり、今後の記事においても使っていきます。
 
 ## 次は？
 次の記事ではRustに組み込まれている単体テストフレームワークをセットアップする方法を説明します。その後、この記事のVGAバッファモジュールに対する基本的な単体テストを作ります。

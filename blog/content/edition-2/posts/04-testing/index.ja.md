@@ -321,17 +321,15 @@ mod serial;
 
 use uart_16550::{Config, Uart16550Tty, backend::PioBackend};
 use spin::Mutex;
-use lazy_static::lazy_static;
+use spin::{Lazy, Mutex};
 
-lazy_static! {
-    pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
+pub static SERIAL1: Lazy<Mutex<Uart16550Tty<PioBackend>>> = Lazy::new(|| Mutex::new(unsafe {
         Uart16550Tty::new_port(0x3F8, Config::default())
             .expect("failed to initialize UART")
-    });
-}
+    }));
 ```
 
-[VGAテキストバッファ][vga lazy-static]のときのように、`lazy_static`とスピンロックを使って`static`なwriterインスタンスを作ります。`lazy_static`を使うことで、UARTが初回使用時にのみ初期化されることを保証できます。
+[VGAテキストバッファ][vga lazy-static]のときのように、`spin::Lazy`とスピンロックを使って`static`なwriterインスタンスを作ります。`Lazy`を使うことで、UARTが初回使用時にのみ初期化されることを保証できます。
 
 `isa-debug-exit`デバイスのときと同じように、UARTはport I/Oを使ってプログラムされており、それは[`PioBackend`](https://docs.rs/uart_16550/latest/uart_16550/backend/struct.PioBackend.html)パラメータによって示されています。UARTはより複雑で、様々なデバイスレジスタ群をプログラムするために複数のI/Oポートを使います。unsafeな`Uart16550Tty::new_port`関数はUARTの最初のI/Oポートを引数とします。この引数から、すべての必要なポートのアドレスを計算することができます。ポートアドレス`0x3F8`を渡していますが、これは最初のシリアルインターフェースの標準のポート番号です。
 

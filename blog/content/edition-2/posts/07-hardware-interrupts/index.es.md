@@ -190,18 +190,17 @@ Ahora podemos agregar una función de manejador para la interrupción del tempor
 // en src/interrupts.rs
 
 use crate::print;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        […]
-        idt[InterruptIndex::Temporizador.as_usize()]
-            .set_handler_fn(timer_interrupt_handler); // nuevo
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    […]
+    idt[InterruptIndex::Temporizador.as_usize()]
+        .set_handler_fn(timer_interrupt_handler); // nuevo
 
-        idt
-    };
-}
+    idt
+});
 
 extern "x86-interrupt" fn timer_interrupt_handler(
     _stack_frame: InterruptStackFrame)
@@ -528,18 +527,16 @@ pub enum InterruptIndex {
     Teclado, // nuevo
 }
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        […]
-        // nuevo
-        idt[InterruptIndex::Teclado.as_usize()]
-            .set_handler_fn(keyboard_interrupt_handler);
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    […]
+    // nuevo
+    idt[InterruptIndex::Teclado.as_usize()]
+        .set_handler_fn(keyboard_interrupt_handler);
 
-        idt
-    };
-}
+    idt
+});
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: InterruptStackFrame)
@@ -670,15 +667,15 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: InterruptStackFrame)
 {
     use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
-    use spin::Mutex;
+    use spin::{Lazy, Mutex};
     use x86_64::instructions::port::Port;
 
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(ScancodeSet1::new(),
-                layouts::Us104Key, HandleControl::Ignore)
-            );
-    }
+    static KEYBOARD: Lazy<Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>>> =
+        Lazy::new(|| Mutex::new(Keyboard::new(
+            ScancodeSet1::new(),
+            layouts::Us104Key,
+            HandleControl::Ignore,
+        )));
 
     let mut keyboard = KEYBOARD.lock();
     let mut port = Port::new(0x60);
@@ -700,7 +697,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-Usamos la macro `lazy_static` para crear un objeto estático [`Keyboard`] protegido por un Mutex. Inicializamos el `Keyboard` con un diseño de teclado estadounidense y el conjunto de scancode 1. El parámetro [`HandleControl`] permite mapear `ctrl+[a-z]` a los caracteres Unicode `U+0001` a `U+001A`. No queremos hacer eso, así que usamos la opción `Ignore` para manejar el `ctrl` como teclas normales.
+Usamos `Lazy` para crear un objeto estático [`Keyboard`] protegido por un Mutex. Inicializamos el `Keyboard` con un diseño de teclado estadounidense y el conjunto de scancode 1. El parámetro [`HandleControl`] permite mapear `ctrl+[a-z]` a los caracteres Unicode `U+0001` a `U+001A`. No queremos hacer eso, así que usamos la opción `Ignore` para manejar el `ctrl` como teclas normales.
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 

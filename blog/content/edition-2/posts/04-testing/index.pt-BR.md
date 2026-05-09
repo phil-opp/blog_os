@@ -320,17 +320,15 @@ mod serial;
 
 use uart_16550::{Config, Uart16550Tty, backend::PioBackend};
 use spin::Mutex;
-use lazy_static::lazy_static;
+use spin::{Lazy, Mutex};
 
-lazy_static! {
-    pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
+pub static SERIAL1: Lazy<Mutex<Uart16550Tty<PioBackend>>> = Lazy::new(|| Mutex::new(unsafe {
         Uart16550Tty::new_port(0x3F8, Config::default())
             .expect("failed to initialize UART")
-    });
-}
+    }));
 ```
 
-Como com o [buffer de texto VGA][vga lazy-static], usamos `lazy_static` e um spinlock para criar uma instância writer `static`. Ao usar `lazy_static` podemos garantir que o UART seja inicializado exatamente uma vez em seu primeiro uso.
+Como com o [buffer de texto VGA][vga lazy-static], usamos `spin::Lazy` e um spinlock para criar uma instância writer `static`. Ao usar `Lazy` podemos garantir que o UART seja inicializado exatamente uma vez em seu primeiro uso.
 
 Como o dispositivo `isa-debug-exit`, o UART é programado usando I/O de porta, o que é indicado pelo parâmetro [`PioBackend`](https://docs.rs/uart_16550/latest/uart_16550/backend/struct.PioBackend.html). Como o UART é mais complexo, ele usa múltiplas portas I/O para programar diferentes registradores do dispositivo. A função unsafe `Uart16550Tty::new_port` espera o endereço da primeira porta I/O do UART como argumento, a partir do qual ela pode calcular os endereços de todas as portas necessárias. Estamos passando o endereço de porta `0x3F8`, que é o número de porta padrão para a primeira interface serial.
 
