@@ -270,17 +270,17 @@ Intentemos causar un fallo de página accediendo a alguna memoria fuera de nuest
 ```rust
 // en src/interrupts.rs
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
+use spin::Lazy;
 
-        […]
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
 
-        idt.page_fault.set_handler_fn(page_fault_handler); // nuevo
+    […]
 
-        idt
-    };
-}
+    idt.page_fault.set_handler_fn(page_fault_handler); // nuevo
+
+    idt
+});
 
 use x86_64::structures::idt::PageFaultErrorCode;
 use crate::hlt_loop;

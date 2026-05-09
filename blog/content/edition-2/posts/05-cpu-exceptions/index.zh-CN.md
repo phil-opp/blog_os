@@ -349,31 +349,29 @@ pub fn init_idt() {
 [`unsafe` block]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### 懒加载拯救世界
-好在还有 `lazy_static` 宏可以用，区别于普通 `static` 变量在编译器求值，这个宏可以使代码块内的 `static` 变量在第一次取值时求值。所以，我们完全可以把初始化代码写在变量定义的代码块里，同时也不影响后续的取值。
+好在还有 `spin::Lazy` 可以用，区别于普通 `static` 变量在编译器求值，它会在第一次取值时完成初始化。所以，我们完全可以把初始化代码写在变量定义的代码块里，同时也不影响后续的取值。
 
-在 [创建VGA字符缓冲的单例][vga text buffer lazy static] 时我们已经引入了 `lazy_static` crate，所以我们可以直接使用 `lazy_static!` 来创建IDT：
+在 [创建VGA字符缓冲的单例][vga text buffer lazy static] 时我们已经引入了 `spin` crate，所以我们可以直接使用 `Lazy` 来创建IDT：
 
 [vga text buffer lazy static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
 ```rust
 // in src/interrupts.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt
-    };
-}
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt
+});
 
 pub fn init_idt() {
     IDT.load();
 }
 ```
 
-现在碍眼的 `unsafe` 代码块成功被去掉了，尽管 `lazy_static!` 的内部依然使用了 `unsafe` 代码块，但是至少它已经抽象为了一个安全接口。
+现在碍眼的 `unsafe` 代码块成功被去掉了，尽管 `Lazy` 的内部依然使用了 `unsafe` 代码块，但是至少它已经抽象为了一个安全接口。
 
 ### 跑起来
 

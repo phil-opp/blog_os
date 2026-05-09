@@ -76,14 +76,12 @@ pub extern "C" fn _start() -> ! {
 ```rust
 // in src/interrupts.rs
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt.double_fault.set_handler_fn(double_fault_handler); // 새롭게 추가함
-        idt
-    };
-}
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt.double_fault.set_handler_fn(double_fault_handler); // 새롭게 추가함
+    idt
+});
 
 // 새롭게 추가함
 extern "x86-interrupt" fn double_fault_handler(
@@ -246,29 +244,27 @@ pub mod gdt;
 
 // in src/gdt.rs
 
+use spin::Lazy;
 use x86_64::VirtAddr;
 use x86_64::structures::tss::TaskStateSegment;
-use lazy_static::lazy_static;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
-lazy_static! {
-    static ref TSS: TaskStateSegment = {
-        let mut tss = TaskStateSegment::new();
-        tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
-            const STACK_SIZE: usize = 4096 * 5;
-            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+static TSS: Lazy<TaskStateSegment> = Lazy::new(|| {
+    let mut tss = TaskStateSegment::new();
+    tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
+        const STACK_SIZE: usize = 4096 * 5;
+        static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
-            let stack_start = VirtAddr::from_ptr(&raw const STACK);
-            let stack_end = stack_start + STACK_SIZE;
-            stack_end
-        };
-        tss
+        let stack_start = VirtAddr::from_ptr(&raw const STACK);
+        let stack_end = stack_start + STACK_SIZE;
+        stack_end
     };
-}
+    tss
+});
 ```
 
-Rust의 const evaluator가 위와 같은 TSS의 초기화를 컴파일 중에 진행하지 못해서 `lazy_static`을 사용합니다. IST의 0번째 엔트리가 더블 폴트 스택이 되도록 정합니다 (꼭 0번째일 필요는 없음). 그다음 더블 폴트 스택의 최상단 주소를 IST의 0번째 엔트리에 저장합니다. 스택의 최상단 주소를 저장하는 이유는 x86 시스템에서 스택은 높은 주소에서 출발해 낮은 주소 영역 쪽으로 성장하기 때문입니다.
+Rust의 const evaluator가 위와 같은 TSS의 초기화를 컴파일 중에 진행하지 못해서 `Lazy`를 사용합니다. IST의 0번째 엔트리가 더블 폴트 스택이 되도록 정합니다 (꼭 0번째일 필요는 없음). 그다음 더블 폴트 스택의 최상단 주소를 IST의 0번째 엔트리에 저장합니다. 스택의 최상단 주소를 저장하는 이유는 x86 시스템에서 스택은 높은 주소에서 출발해 낮은 주소 영역 쪽으로 성장하기 때문입니다.
 
 우리가 아직 커널에 메모리 관리 (memory management) 기능을 구현하지 않아서 스택을 할당할 정규적인 방법이 없습니다.
 임시방편으로 `static mut` 배열을 스택 메모리인 것처럼 사용할 것입니다.
@@ -299,17 +295,15 @@ static 변수 `TSS`의 세그먼트를 포함하는 static `GDT`를 만듭니다
 
 use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor};
 
-lazy_static! {
-    static ref GDT: GlobalDescriptorTable = {
-        let mut gdt = GlobalDescriptorTable::new();
-        gdt.add_entry(Descriptor::kernel_code_segment());
-        gdt.add_entry(Descriptor::tss_segment(&TSS));
-        gdt
-    };
-}
+static GDT: Lazy<GlobalDescriptorTable> = Lazy::new(|| {
+    let mut gdt = GlobalDescriptorTable::new();
+    gdt.add_entry(Descriptor::kernel_code_segment());
+    gdt.add_entry(Descriptor::tss_segment(&TSS));
+    gdt
+});
 ```
 
-이전처럼 `lazy_static`을 사용했습니다. 코드 세그먼트와 TSS 세그먼트를 포함하는 GDT를 만듭니다.
+이전처럼 `Lazy`를 사용했습니다. 코드 세그먼트와 TSS 세그먼트를 포함하는 GDT를 만듭니다.
 
 #### GDT 불러오기
 
@@ -349,14 +343,12 @@ pub fn init() {
 
 use x86_64::structures::gdt::SegmentSelector;
 
-lazy_static! {
-    static ref GDT: (GlobalDescriptorTable, Selectors) = {
-        let mut gdt = GlobalDescriptorTable::new();
-        let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
-        let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
-        (gdt, Selectors { code_selector, tss_selector })
-    };
-}
+static GDT: Lazy<(GlobalDescriptorTable, Selectors)> = Lazy::new(|| {
+    let mut gdt = GlobalDescriptorTable::new();
+    let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
+    let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
+    (gdt, Selectors { code_selector, tss_selector })
+});
 
 struct Selectors {
     code_selector: SegmentSelector,
@@ -392,19 +384,18 @@ pub fn init() {
 // in src/interrupts.rs
 
 use crate::gdt;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        unsafe {
-            idt.double_fault.set_handler_fn(double_fault_handler)
-                .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX); // 새롭게 추가함
-        }
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    unsafe {
+        idt.double_fault.set_handler_fn(double_fault_handler)
+            .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX); // 새롭게 추가함
+    }
 
-        idt
-    };
-}
+    idt
+});
 ```
 
 `set_stack_index`가 unsafe 함수인 이유는, 이 함수를 호출하는 측에서 인덱스가 유효하고 다른 예외 처리 시 사용 중이지 않다는 것을 보장해야 하기 때문입니다.
@@ -500,21 +491,19 @@ fn stack_overflow() {
 ```rust
 // in tests/stack_overflow.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 use x86_64::structures::idt::InterruptDescriptorTable;
 
-lazy_static! {
-    static ref TEST_IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        unsafe {
-            idt.double_fault
-                .set_handler_fn(test_double_fault_handler)
-                .set_stack_index(blog_os::gdt::DOUBLE_FAULT_IST_INDEX);
-        }
+static TEST_IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    unsafe {
+        idt.double_fault
+            .set_handler_fn(test_double_fault_handler)
+            .set_stack_index(blog_os::gdt::DOUBLE_FAULT_IST_INDEX);
+    }
 
-        idt
-    };
-}
+    idt
+});
 
 pub fn init_test_idt() {
     TEST_IDT.load();

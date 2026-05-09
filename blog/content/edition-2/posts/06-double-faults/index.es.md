@@ -74,14 +74,12 @@ Un doble fallo es una excepción normal con un código de error, por lo que pode
 ```rust
 // en src/interrupts.rs
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt.double_fault.set_handler_fn(double_fault_handler); // nuevo
-        idt
-    };
-}
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt.double_fault.set_handler_fn(double_fault_handler); // nuevo
+    idt
+});
 
 // nuevo
 extern "x86-interrupt" fn double_fault_handler(
@@ -244,29 +242,27 @@ pub mod gdt;
 
 // en src/gdt.rs
 
+use spin::Lazy;
 use x86_64::VirtAddr;
 use x86_64::structures::tss::TaskStateSegment;
-use lazy_static::lazy_static;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
-lazy_static! {
-    static ref TSS: TaskStateSegment = {
-        let mut tss = TaskStateSegment::new();
-        tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
-            const STACK_SIZE: usize = 4096 * 5;
-            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+static TSS: Lazy<TaskStateSegment> = Lazy::new(|| {
+    let mut tss = TaskStateSegment::new();
+    tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
+        const STACK_SIZE: usize = 4096 * 5;
+        static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
-            let stack_end = stack_start + STACK_SIZE;
-            stack_end
-        };
-        tss
+        let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
+        let stack_end = stack_start + STACK_SIZE;
+        stack_end
     };
-}
+    tss
+});
 ```
 
-Usamos `lazy_static` porque el evaluador de const de Rust aún no es lo suficientemente potente como para hacer esta inicialización en tiempo de compilación. Definimos que la entrada 0 de la IST es la pila de doble fallo (cualquier otro índice de IST también funcionaría). Luego, escribimos la dirección superior de una pila de doble fallo en la entrada 0. Escribimos la dirección superior porque las pilas en `x86` crecen hacia abajo, es decir, de direcciones altas a bajas.
+Usamos `Lazy` porque el evaluador de const de Rust aún no es lo suficientemente potente como para hacer esta inicialización en tiempo de compilación. Definimos que la entrada 0 de la IST es la pila de doble fallo (cualquier otro índice de IST también funcionaría). Luego, escribimos la dirección superior de una pila de doble fallo en la entrada 0. Escribimos la dirección superior porque las pilas en `x86` crecen hacia abajo, es decir, de direcciones altas a bajas.
 
 No hemos implementado la gestión de memoria aún, así que no tenemos una forma adecuada de asignar una nueva pila. En su lugar, usamos un array `static mut` como almacenamiento de pila por ahora. El `unsafe` es requerido porque el compilador no puede garantizar la ausencia de condiciones de carrera cuando se accede a estáticos mutables. Es importante que sea un `static mut` y no un `static` inmutable, porque de lo contrario el cargador de arranque lo mapeará a una página de solo lectura. Reemplazaremos esto con una asignación de pila adecuada en una publicación posterior, entonces el `unsafe` ya no será necesario en este lugar.
 
@@ -295,17 +291,15 @@ Creemos una GDT estática que incluya un segmento para nuestra TSS estática:
 
 use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor};
 
-lazy_static! {
-    static ref GDT: GlobalDescriptorTable = {
-        let mut gdt = GlobalDescriptorTable::new();
-        gdt.add_entry(Descriptor::kernel_code_segment());
-        gdt.add_entry(Descriptor::tss_segment(&TSS));
-        gdt
-    };
-}
+static GDT: Lazy<GlobalDescriptorTable> = Lazy::new(|| {
+    let mut gdt = GlobalDescriptorTable::new();
+    gdt.add_entry(Descriptor::kernel_code_segment());
+    gdt.add_entry(Descriptor::tss_segment(&TSS));
+    gdt
+});
 ```
 
-Como antes, usamos `lazy_static` de nuevo. Creamos una nueva GDT con un segmento de código y un segmento de TSS.
+Como antes, usamos `Lazy` de nuevo. Creamos una nueva GDT con un segmento de código y un segmento de TSS.
 
 #### Cargando la GDT
 
@@ -345,14 +339,12 @@ Para los dos primeros pasos, necesitamos acceso a las variables `code_selector` 
 
 use x86_64::structures::gdt::SegmentSelector;
 
-lazy_static! {
-    static ref GDT: (GlobalDescriptorTable, Selectors) = {
-        let mut gdt = GlobalDescriptorTable::new();
-        let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
-        let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
-        (gdt, Selectors { code_selector, tss_selector })
-    };
-}
+static GDT: Lazy<(GlobalDescriptorTable, Selectors)> = Lazy::new(|| {
+    let mut gdt = GlobalDescriptorTable::new();
+    let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
+    let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
+    (gdt, Selectors { code_selector, tss_selector })
+});
 
 struct Selectors {
     code_selector: SegmentSelector,
@@ -388,19 +380,18 @@ Ahora que hemos cargado una TSS válida y una tabla de pila de interrupciones, p
 // en src/interrupts.rs
 
 use crate::gdt;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        unsafe {
-            idt.double_fault.set_handler_fn(double_fault_handler)
-                .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX); // nuevo
-        }
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    unsafe {
+        idt.double_fault.set_handler_fn(double_fault_handler)
+            .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX); // nuevo
+    }
 
-        idt
-    };
-}
+    idt
+});
 ```
 
 El método `set_stack_index` es inseguro porque el llamador debe asegurarse de que el índice utilizado es válido y no ya está usado para otra excepción.
@@ -494,21 +485,19 @@ Como se mencionó anteriormente, la prueba necesita su propia IDT con un control
 ```rust
 // en tests/stack_overflow.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 use x86_64::structures::idt::InterruptDescriptorTable;
 
-lazy_static! {
-    static ref TEST_IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        unsafe {
-            idt.double_fault
-                .set_handler_fn(test_double_fault_handler)
-                .set_stack_index(blog_os::gdt::DOUBLE_FAULT_IST_INDEX);
-        }
+static TEST_IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    unsafe {
+        idt.double_fault
+            .set_handler_fn(test_double_fault_handler)
+            .set_stack_index(blog_os::gdt::DOUBLE_FAULT_IST_INDEX);
+    }
 
-        idt
-    };
-}
+    idt
+});
 
 pub fn init_test_idt() {
     TEST_IDT.load();

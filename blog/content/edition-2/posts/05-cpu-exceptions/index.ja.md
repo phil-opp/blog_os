@@ -347,30 +347,28 @@ pub fn init_idt() {
 [`unsafe` block]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### Lazy Staticsにおまかせ
-幸いにも、例の`lazy_static`マクロが存在します。このマクロは`static`をコンパイル時に評価する代わりに、最初に参照されたときに初期化を行います。このため、初期化時にはほとんどすべてのことができ、実行時にのみ決定する値を読み込むこともできます。
+幸いにも、`spin::Lazy` 型が存在します。これは`static`をコンパイル時に評価する代わりに、最初に参照されたときに初期化を行います。このため、初期化時にはほとんどすべてのことができ、実行時にのみ決定する値を読み込むこともできます。
 
-[VGAテキストバッファの抽象化をした][vga text buffer lazy static]ときに、すでに`lazy_static`クレートはインポートしました。そのため、すぐに`lazy_static!`マクロを使って静的なIDTを作ることができます。
+[VGAテキストバッファの抽象化をした][vga text buffer lazy static]ときに、すでに`spin`クレートはインポートしました。そのため、すぐに`Lazy`を使って静的なIDTを作ることができます。
 
 [vga text buffer lazy static]: @/edition-2/posts/03-vga-text-buffer/index.ja.md#dai-keta-lazy-jing-de-bian-shu
 ```rust
 // in src/interrupts.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt
-    };
-}
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt
+});
 
 pub fn init_idt() {
     IDT.load();
 }
 ```
 
-この方法では`unsafe`ブロックが必要ないことに注目してください。`lazy_static!`マクロはその内部で`unsafe`を使ってはいるのですが、これは安全なインターフェースの中に抽象化されているのです。
+この方法では`unsafe`ブロックが必要ないことに注目してください。`Lazy`はその内部で`unsafe`を使ってはいるのですが、これは安全なインターフェースの中に抽象化されているのです。
 
 ### 実行する
 

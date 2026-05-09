@@ -351,31 +351,29 @@ pub fn init_idt() {
 [`unsafe` block]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### Lazy Statics to the Rescue
-لحسن الحظ، يوجد macro `lazy_static`. بدلاً من تقييم `static` وقت التجميع، ينفذ macro التهيئة عند أول إشارة إلى `static`. بذلك، يمكننا فعل كل شيء تقريبًا في كتلة التهيئة وحتى قراءة قيم وقت التشغيل.
+لحسن الحظ، يوجد النوع `spin::Lazy`. بدلًا من تقييم `static` وقت التجميع، ينفذ التهيئة عند أول إشارة إلى `static`. بذلك، يمكننا فعل كل شيء تقريبًا في كتلة التهيئة وحتى قراءة قيم وقت التشغيل.
 
-لقد استوردنا بالفعل مكتبة `lazy_static` عندما [أنشأنا تجريدًا لـ VGA text buffer][vga text buffer lazy static]. لذلك يمكننا استخدام macro `lazy_static!` مباشرة لإنشاء static IDT:
+لقد استوردنا بالفعل مكتبة `spin` عندما [أنشأنا تجريدًا لـ VGA text buffer][vga text buffer lazy static]. لذلك يمكننا استخدام `Lazy` مباشرة لإنشاء static IDT:
 
 [vga text buffer lazy static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
 ```rust
 // in src/interrupts.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt
-    };
-}
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt
+});
 
 pub fn init_idt() {
     IDT.load();
 }
 ```
 
-لاحظ كيف لا تتطلب هذه الحل أي كتل `unsafe`. يستخدم macro `lazy_static!` `unsafe` خلف الكواليس، لكنه يُتجسد في واجهة آمنة.
+لاحظ كيف لا يتطلب هذا الحل أي كتل `unsafe`. يستخدم `Lazy` ‏`unsafe` خلف الكواليس، لكنه مُجرد داخل واجهة آمنة.
 
 ### التشغيل
 

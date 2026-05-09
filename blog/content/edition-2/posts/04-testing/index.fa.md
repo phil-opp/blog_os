@@ -302,17 +302,15 @@ mod serial;
 
 use uart_16550::{Config, Uart16550Tty, backend::PioBackend};
 use spin::Mutex;
-use lazy_static::lazy_static;
+use spin::{Lazy, Mutex};
 
-lazy_static! {
-    pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
+pub static SERIAL1: Lazy<Mutex<Uart16550Tty<PioBackend>>> = Lazy::new(|| Mutex::new(unsafe {
         Uart16550Tty::new_port(0x3F8, Config::default())
             .expect("failed to initialize UART")
-    });
-}
+    }));
 ```
 
-مانند [بافر متن VGA] [vga lazy-static]، ما از `lazy_static` و یک spinlock برای ایجاد یک نمونه نویسنده `static` استفاده می‌کنیم. با استفاده از `lazy_static` می‌توان اطمینان حاصل کرد که UART در اولین استفاده دقیقاً یک بار مقداردهی اولیه می‌شود.
+مانند [بافر متن VGA] [vga lazy-static]، ما از `spin::Lazy` و یک spinlock برای ایجاد یک نمونه نویسنده `static` استفاده می‌کنیم. با استفاده از `Lazy` می‌توان اطمینان حاصل کرد که UART در اولین استفاده دقیقاً یک بار مقداردهی اولیه می‌شود.
 
 مانند دستگاه `isa-debug-exit`، UART با استفاده از پورت I/O برنامه نویسی می‌شود، که این موضوع توسط پارامتر [`PioBackend`](https://docs.rs/uart_16550/latest/uart_16550/backend/struct.PioBackend.html) نشان داده می‌شود. از آنجا که UART پیچیده‌تر است، از چندین پورت I/O برای برنامه نویسی رجیسترهای مختلف دستگاه استفاده می‌کند. تابع ناامن `Uart16550Tty::new_port` انتظار دارد که آدرس اولین پورت I/O از UART به عنوان آرگومان باشد، که از آن می‌تواند آدرس تمام پورت‌های مورد نیاز را محاسبه کند. ما در حال عبور دادنِ آدرس پورت `0x3F8` هستیم که شماره پورت استاندارد برای اولین رابط سریال است.
 

@@ -490,36 +490,29 @@ error[E0017]: references in statics may only refer to immutable values
 [`const` functions]: https://doc.rust-lang.org/reference/const_eval.html#const-functions
 
 ### 정적 변수의 초기화 지연
-Rust 개발을 하다 보면 const가 아닌 함수를 이용해 1회에 한해 정적 변수의 값을 설정해야 하는 상황이 자주 발생합니다. [lazy_static] 크레이트의 `lazy_static!` 매크로를 이용하면, 정적 변수의 값을 컴파일 시간에 결정하지 않고 초기화 시점을 해당 프로그램 실행 중 변수에 대한 접근이 처음 일어나는 시점까지 미룰 수 있습니다. 즉, 정적 변수 초기화가 프로그램 실행 시간에 진행되기에 초기 값을 계산할 때 const가 아닌 복잡한 함수들을 사용할 수 있습니다.
+Rust 개발을 하다 보면 const가 아닌 함수를 이용해 1회에 한해 정적 변수의 값을 설정해야 하는 상황이 자주 발생합니다. 다행히 [spin 크레이트](https://crates.io/crates/spin)의 [`Lazy`](https://docs.rs/spin/latest/spin/lazy/struct.Lazy.html) 타입을 이용하면, 정적 변수의 값을 컴파일 시간에 결정하지 않고 초기화 시점을 해당 프로그램 실행 중 변수에 대한 접근이 처음 일어나는 시점까지 미룰 수 있습니다. 즉, 정적 변수 초기화가 프로그램 실행 시간에 진행되기에 초기 값을 계산할 때 const가 아닌 복잡한 함수들을 사용할 수 있습니다.
 
-[lazy_static]: https://docs.rs/lazy_static/1.0.1/lazy_static/
-
-프로젝트 의존 라이브러리로서 `lazy_static` 크레이트를 추가해줍니다:
+프로젝트 의존 라이브러리로서 `spin` 크레이트를 추가해줍니다:
 
 ```toml
 # in Cargo.toml
 
-[dependencies.lazy_static]
-version = "1.0"
-features = ["spin_no_std"]
+[dependencies]
+spin = "0.10.0"
 ```
 
-우리는 러스트 표준 라이브러리를 링크하지 않기에 `spin_no_std` 기능이 필요합니다.
-
-`lazy_static` 크레이트 덕분에 이제 오류 없이 `WRITER`를 정의할 수 있습니다:
+`Lazy` 덕분에 이제 오류 없이 `WRITER`를 정의할 수 있습니다:
 
 ```rust
 // in src/vga_buffer.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    pub static ref WRITER: Writer = Writer {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
-}
+pub static WRITER: Lazy<Writer> = Lazy::new(|| Writer {
+    column_position: 0,
+    color_code: ColorCode::new(Color::Yellow, Color::Black),
+    buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+});
 ```
 
 현재 `WRITER`는 immutable (읽기 가능, 쓰기 불가능) 하여 실질적인 쓸모가 없습니다. 모든 쓰기 함수들은 첫 인자로 `&mut self`를 받기 때문에 `WRITER`로 어떤 쓰기 작업도 할 수가 없습니다. 이에 대한 해결책으로 [mutable static]은 어떨까요? 이 선택지를 고른다면 모든 읽기 및 쓰기 작업이 데이터 레이스 (data race) 및 기타 위험에 노출되기에 안전을 보장할 수 없게 됩니다. Rust에서 `static mut`는 웬만하면 사용하지 않도록 권장되며, 심지어 [Rust 언어에서 완전히 `static mut`를 제거하자는 제안][remove static mut]이 나오기도 했습니다. 이것 이외에도 대안이 있을까요? [내부 가변성 (interior mutability)][interior mutability]을 제공하는 [RefCell] 혹은 [UnsafeCell] 을 통해 immutable한 정적 변수를 만드는 것은 어떨까요? 이 타입들은 중요한 이유로 [Sync] 트레이트를 구현하지 않기에 정적 변수를 선언할 때에는 사용할 수 없습니다.
@@ -537,30 +530,20 @@ lazy_static! {
 [Mutex]: https://doc.rust-lang.org/nightly/std/sync/struct.Mutex.html
 [spinlock]: https://en.wikipedia.org/wiki/Spinlock
 
-스핀 락을 사용하기 위해 [spin 크레이트][spin crate] 를 의존 크레이트 목록에 추가합니다:
-
 [spin crate]: https://crates.io/crates/spin
 
-```toml
-# in Cargo.toml
-[dependencies]
-spin = "0.5.2"
-```
-
-이제 스핀 락을 이용해 전역 변수 `WRITER`에 안전하게 [내부 가변성 (interior mutability)][interior mutability] 을 구현할 수 있습니다:
+이미 [spin 크레이트][spin crate] 에 의존하고 있으므로, 이제 스핀 락을 이용해 전역 변수 `WRITER`에 안전하게 [내부 가변성 (interior mutability)][interior mutability] 을 구현할 수 있습니다:
 
 ```rust
 // in src/vga_buffer.rs
 
-use spin::Mutex;
+use spin::{Lazy, Mutex};
 ...
-lazy_static! {
-    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
+pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    });
-}
+    }));
 ```
 `print_something` 함수를 삭제하고 `_start` 함수에서 직접 메시지를 출력할 수 있습니다:
 
@@ -696,7 +679,7 @@ fn panic(info: &PanicInfo) -> ! {
 이 포스트에서는 VGA 텍스트 버퍼의 구조 및 메모리 주소 `0xb8000`로의 메모리 매핑을 통해 어떻게 VGA 텍스트 버퍼에 쓰기 작업을 할 수 있는지에 대해 다뤘습니다. 또한 메모리 매핑 된 버퍼에 대한 쓰기 기능 (안전하지 않은 작업)을 안전하고 편리한 인터페이스로 제공하는 Rust 모듈을 작성했습니다.
 
 또한 cargo를 이용하여 의존 크레이트를 추가하는 것이 얼마나 쉬운지 직접 확인해볼 수 있었습니다.
-이번 포스트에서 추가한 의존 크레이트 `lazy_static`과 `spin`은 운영체제 개발에 매우 유용하기에 이후 포스트에서도 자주 사용할 것입니다.
+이번 포스트에서 추가한 의존 크레이트 `spin`은 운영체제 개발에 매우 유용하기에 이후 포스트에서도 자주 사용할 것입니다.
 
 ## 다음 단계는 무엇일까요?
 다음 포스트에서는 Rust의 자체 유닛 테스트 프레임워크를 설정하는 법에 대해 설명할 것입니다. 그리고 나서 이번 포스트에서 작성한 VGA 버퍼 모듈을 위한 기본적인 유닛 테스트들을 작성할 것입니다.
