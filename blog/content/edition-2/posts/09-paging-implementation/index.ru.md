@@ -880,7 +880,7 @@ impl BootInfoFrameAllocator {
     ///
     /// Эта функция unsafe, т.к вызывающий должен гарантировать, что
 	/// переданная память является допустимой. Основное требование что бы все фреймы
-	/// помеченные как `UNSABLE` действительно неиспользовались.
+	/// помеченные как `UNSAFE` действительно неиспользовались.
 	pub unsafe fn init(memory_map: &'static MemoryMap) -> Self {
         BootInfoFrameAllocator {
             memory_map,
