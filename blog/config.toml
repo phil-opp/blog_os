@@ -44,6 +44,7 @@ languages = [
     "ko",
     "pt-BR",
     "ru",
+    "tr",
     "zh-CN",
     "zh-TW",
 ]
@@ -247,24 +248,24 @@ Do you have a problem, want to share feedback, or discuss further ideas? Feel fr
 [languages.ar]
 title = "Writing an OS in Rust"
 [languages.ar.translations]
-lang_name = "Arabic"
-toc = "Table of Contents"
-all_posts = "« All Posts"
-comments = "Comments"
-comments_notice = "Please leave your comments in English if possible."
-readmore = "read&nbsp;more&nbsp;»"
-not_translated = "(This post is not translated yet.)"
-translated_content = "Translated Content:"
-translated_content_notice = "This is a community translation of the <strong><a href=\"_original.permalink_\">_original.title_</a></strong> post. It might be incomplete, outdated or contain errors. Please report any issues!"
-translated_by = "Translation by"
-translation_contributors = "With contributions from"
-word_separator = "and"
+lang_name = "العربية"
+toc = "جدول المحتويات"
+all_posts = "« كل المقالات"
+comments = "التعليقات"
+comments_notice = "يفضل كتابة التعليقات باللغة الإنجليزية إن أمكن."
+readmore = "اقرأ المزيد »"
+not_translated = "(لم تُترجم هذه المقالة بعد.)"
+translated_content = "المحتوى المترجم:"
+translated_content_notice = "هذه ترجمة مجتمعية لمقالة <strong><a href=\"_original.permalink_\">_original.title_</a></strong>. قد تكون غير مكتملة أو قديمة أو تحتوي على أخطاء. يرجى الإبلاغ عن أي مشاكل!"
+translated_by = "ترجمة بواسطة"
+translation_contributors = "بالتعاون مع"
+word_separator = "و"
 support_me = """
-<h2>Support Me</h2>
-<p>Creating and maintaining this blog and the associated libraries is a lot of work, but I really enjoy doing it. By supporting me, you allow me to invest more time in new content, new features, and continuous maintenance. The best way to support me is to <a href="https://github.com/sponsors/phil-opp"><em>sponsor me on GitHub</em></a>. Thank you!</p>
+<h2>ادعمني</h2>
+<p>إنشاء وصيانة هذه المدونة والمكتبات المرتبطة بها يتطلب جهدًا كبيرًا، لكنني أستمتع حقًا بذلك. بدعمك لي، يمكنني تخصيص وقت أكثر لإنشاء محتوى جديد وميزات جديدة والصيانة المستمرة. أفضل طريقة لدعمي هي <a href="https://github.com/sponsors/phil-opp"><em>رعايتي على GitHub</em></a>. شكرًا لك!</p>
 """
 comment_note = """
-Do you have a problem, want to share feedback, or discuss further ideas? Feel free to leave a comment here! Please stick to English and follow Rust's <a href="https://www.rust-lang.org/policies/code-of-conduct">code of conduct</a>. This comment thread directly maps to a <a href="_discussion_url_"><em>discussion on GitHub</em></a>, so you can also comment there if you prefer.
+هل لديك مشكلة، أو تريد مشاركة ملاحظات، أو مناقشة أفكار إضافية؟ لا تتردد في ترك تعليق هنا! يرجى الالتزام باللغة الإنجليزية واتباع <a href="https://www.rust-lang.org/policies/code-of-conduct">مدونة سلوك Rust</a>. يتم ربط هذا الخيط من التعليقات مباشرة بـ <a href="_discussion_url_"><em>نقاش على GitHub</em></a>، لذا يمكنك التعليق هناك أيضًا إذا أردت.
 """
 
 # Spanish
@@ -315,4 +316,29 @@ support_me = """
 """
 comment_note = """
 Teve algum problema, quer deixar um feedback ou discutir mais ideias? Fique à vontade para deixar um comentário aqui! Por favor, use o inglês e siga o <a href="https://www.rust-lang.org/policies/code-of-conduct">código de conduta</a> do Rust. Este tópico de comentários está diretamente vinculado a uma <a href="_discussion_url_"><em>discussão no GitHub</em></a>, então você também pode comentar lá se preferir.
+"""
+
+# Turkish
+[languages.tr]
+title = "Rust ile İşletim Sistemi Yazıyoruz"
+description = "Bu blog serisi, Rust programlama diliyle küçük bir işletim sistemi oluşturmaktadır. Her yazı küçük bir rehber niteliğinde olup gerekli tüm kodu içermektedir."
+[languages.tr.translations]
+lang_name = "Türkçe"
+toc = "İçindekiler"
+all_posts = "« Tüm Yazılar"
+comments = "Yorumlar"
+comments_notice = "Mümkünse yorumlarınızı İngilizce bırakınız."
+readmore = "devamını&nbsp;oku&nbsp;»"
+not_translated = "(Bu yazı henüz çevrilmedi.)"
+translated_content = "Çevrilmiş İçerik:"
+translated_content_notice = "Bu, <strong><a href=\"_original.permalink_\">_original.title_</a></strong> adlı gönderinin topluluk tarafından yapılmış bir çevirisidir. Eksik, güncel olmayan veya hata içeriyor olabilir. Lütfen herhangi bir sorunu bildirin!"
+translated_by = "Translation by"
+translation_contributors = "Katkıda bulunanlar"
+word_separator = "ve"
+support_me = """
+<h2>Beni Destekle</h2>
+<p>Bu blogu ve ilişkili kütüphaneleri oluşturmak ve sürdürmek çok emek gerektiriyor, ve bunu yapmaktan gerçekten zevk alıyorum. Beni destekleyerek yeni içerik, yeni özellikler ve sürekli bakım için daha fazla zaman ayırmama olanak tanıyorsunuz. Beni desteklemenin en iyi yolu <a href="https://github.com/sponsors/phil-opp"><em>GitHub'da sponsor olmak</em></a>. Teşekkürler!</p>
+"""
+comment_note = """
+Bir sorunuz mu var, geri bildirim paylaşmak veya fikirlerinizi tartışmak mı istiyorsunuz? Buraya yorum bırakmaktan çekinmeyin! Lütfen İngilizce kullanın ve Rust'ın <a href="https://www.rust-lang.org/policies/code-of-conduct">davranış kurallarına</a> uyun. Bu yorum dizisi doğrudan <a href="_discussion_url_"><em>GitHub'daki bir tartışmaya</em></a> bağlıdır, dolayısıyla isterseniz oraya da yorum yapabilirsiniz.
 """
