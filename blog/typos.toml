@@ -4,6 +4,7 @@ extend-exclude = [
     "*.fr.md",
     "*.es.md",
     "*.pt-BR.md",
+    "*.tr.md",
     "blog/config.toml",
 ]
 
