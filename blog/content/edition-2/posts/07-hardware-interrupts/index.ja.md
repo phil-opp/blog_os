@@ -675,12 +675,12 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     use spin::Mutex;
     use x86_64::instructions::port::Port;
 
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(ScancodeSet1::new(),
-                layouts::Us104Key, HandleControl::Ignore)
-            );
-    }
+    static KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
+        Mutex::new(Keyboard::new(
+            ScancodeSet1::new(),
+            layouts::Us104Key,
+            HandleControl::Ignore,
+        ));
 
     let mut keyboard = KEYBOARD.lock();
     let mut port = Port::new(0x60);
@@ -702,7 +702,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-ミューテックスで保護された静的な [`Keyboard`] オブジェクトを作るために `lazy_static` マクロを使います。`Keyboard` は、レイアウトを US キーボードに、スキャンコードセットは1として初期化を行います。[`HandleControl`] パラメタは、`ctrl+[a-z]` を Unicode 文字の `U+0001` から `U+001A` にマッピングさせることができます。この機能は使いたくないので、`Ignore` オプションを使い `ctrl` キーを通常のキーと同様に扱います。
+ミューテックスで保護された静的な [`Keyboard`] オブジェクトを作ります。`Keyboard::new` と `ScancodeSet1::new` は `const fn` なので、`KEYBOARD` という static はコンパイル時に初期化でき、ここでは `lazy_static` マクロは必要ありません。`Keyboard` は、レイアウトを US キーボードに、スキャンコードセットは1として初期化を行います。[`HandleControl`] パラメタは、`ctrl+[a-z]` を Unicode 文字の `U+0001` から `U+001A` にマッピングさせることができます。この機能は使いたくないので、`Ignore` オプションを使い `ctrl` キーを通常のキーと同様に扱います。
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 

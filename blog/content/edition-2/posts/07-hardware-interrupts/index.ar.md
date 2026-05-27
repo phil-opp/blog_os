@@ -677,12 +677,12 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     use spin::Mutex;
     use x86_64::instructions::port::Port;
 
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(ScancodeSet1::new(),
-                layouts::Us104Key, HandleControl::Ignore)
-            );
-    }
+    static KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
+        Mutex::new(Keyboard::new(
+            ScancodeSet1::new(),
+            layouts::Us104Key,
+            HandleControl::Ignore,
+        ));
 
     let mut keyboard = KEYBOARD.lock();
     let mut port = Port::new(0x60);
@@ -704,7 +704,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-نستخدم macro `lazy_static` لإنشاء object [`Keyboard`] ثابت محمي بـ Mutex. نُهيئة `Keyboard` بـ US keyboard layout و scancode set 1. parameter [`HandleControl`] يسمح بتعيين `ctrl+[a-z]` إلى Unicode characters `U+0001` إلى `U+001A`. لا نريد فعل ذلك، لذلك نستخدم خيار `Ignore` للتعامل مع `ctrl` كمفاتيح عادية.
+نُنشئ object [`Keyboard`] ثابت محمي بـ Mutex. وبما أن الدالتين `Keyboard::new` و `ScancodeSet1::new` هما `const fn`، يمكن تهيئة الـ static المسمى `KEYBOARD` في وقت الترجمة (compile time)، لذلك لا نحتاج إلى macro `lazy_static` هنا. نُهيئة `Keyboard` بـ US keyboard layout و scancode set 1. parameter [`HandleControl`] يسمح بتعيين `ctrl+[a-z]` إلى Unicode characters `U+0001` إلى `U+001A`. لا نريد فعل ذلك، لذلك نستخدم خيار `Ignore` للتعامل مع `ctrl` كمفاتيح عادية.
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 

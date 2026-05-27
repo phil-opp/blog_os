@@ -675,12 +675,12 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     use spin::Mutex;
     use x86_64::instructions::port::Port;
 
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(ScancodeSet1::new(),
-                layouts::Us104Key, HandleControl::Ignore)
-            );
-    }
+    static KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
+        Mutex::new(Keyboard::new(
+            ScancodeSet1::new(),
+            layouts::Us104Key,
+            HandleControl::Ignore,
+        ));
 
     let mut keyboard = KEYBOARD.lock();
     let mut port = Port::new(0x60);
@@ -702,7 +702,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-`lazy_static` 매크로를 사용해 Mutex로 감싼 [`Keyboard`] 타입의 static 오브젝트를 얻습니다. `Keyboard`가 미국 키보드 레이아웃과 1번 스캔코드 셋을 사용하도록 초기화합니다. [`HandleControl`] 매개변수를 사용하면 `ctrl+[a-z]` 키 입력을 유니코드 `U+0001`에서 `U+001A`까지 값에 대응시킬 수 있습니다. 우리는 그렇게 하지 않기 위해 해당 매개변수에 `Ignore` 옵션을 주고 `ctrl` 키를 일반 키로서 취급합니다.
+Mutex로 감싼 [`Keyboard`] 타입의 static 오브젝트를 만듭니다. `Keyboard::new`와 `ScancodeSet1::new`가 `const fn`이기 때문에 `KEYBOARD` static을 컴파일 타임에 초기화할 수 있어, 여기서는 `lazy_static` 매크로가 필요하지 않습니다. `Keyboard`가 미국 키보드 레이아웃과 1번 스캔코드 셋을 사용하도록 초기화합니다. [`HandleControl`] 매개변수를 사용하면 `ctrl+[a-z]` 키 입력을 유니코드 `U+0001`에서 `U+001A`까지 값에 대응시킬 수 있습니다. 우리는 그렇게 하지 않기 위해 해당 매개변수에 `Ignore` 옵션을 주고 `ctrl` 키를 일반 키로서 취급합니다.
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 
