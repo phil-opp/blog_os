@@ -311,17 +311,15 @@ mod serial;
 
 use uart_16550::{Config, Uart16550Tty, backend::PioBackend};
 use spin::Mutex;
-use lazy_static::lazy_static;
+use spin::{Lazy, Mutex};
 
-lazy_static! {
-    pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
+pub static SERIAL1: Lazy<Mutex<Uart16550Tty<PioBackend>>> = Lazy::new(|| Mutex::new(unsafe {
         Uart16550Tty::new_port(0x3F8, Config::default())
             .expect("failed to initialize UART")
-    });
-}
+    }));
 ```
 
-[VGA 텍스트 버퍼][vga lazy-static]를 구현할 때와 마찬가지로 `lazy_static` 매크로와 스핀 락을 사용해 정적 변수 `SERIAL1`을 생성했습니다. `lazy_static`을 사용함으로써 `SERIAL1`이 최초로 사용되는 시점에 UART가 단 한 번만 초기화됩니다.
+[VGA 텍스트 버퍼][vga lazy-static]를 구현할 때와 마찬가지로 `spin::Lazy`와 스핀 락을 사용해 정적 변수 `SERIAL1`을 생성했습니다. `Lazy`를 사용함으로써 `SERIAL1`이 최초로 사용되는 시점에 UART가 단 한 번만 초기화됩니다.
 
 `isa-debug-exit` 장치와 마찬가지로 UART 또한 포트 입출력을 통해 프로그래밍 되며, 이는 [`PioBackend`](https://docs.rs/uart_16550/latest/uart_16550/backend/struct.PioBackend.html) 매개변수로 표현됩니다. UART는 좀 더 복잡해서 장치의 레지스터 여러 개를 이용하기 위해 여러 개의 입출력 포트를 사용합니다. unsafe 함수 `Uart16550Tty::new_port`는 첫 번째 입출력 포트의 주소를 인자로 받고 그것을 통해 필요한 모든 포트들의 주소들을 알아냅니다. 첫 번째 시리얼 통신 인터페이스의 표준 포트 번호인 `0x3F8`을 인자로 전달합니다.
 

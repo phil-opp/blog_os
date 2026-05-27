@@ -345,31 +345,29 @@ This variant compiles without errors but it's far from idiomatic. `static mut`s 
 [`unsafe` block]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### Lazy Statics to the Rescue
-Fortunately, the `lazy_static` macro exists. Instead of evaluating a `static` at compile time, the macro performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values.
+Fortunately, the `spin::Lazy` type exists. Instead of evaluating a `static` at compile time, it performs the initialization when the `static` is referenced the first time. Thus, we can do almost everything in the initialization block and are even able to read runtime values.
 
-We already imported the `lazy_static` crate when we [created an abstraction for the VGA text buffer][vga text buffer lazy static]. So we can directly use the `lazy_static!` macro to create our static IDT:
+We already imported the `spin` crate when we [created an abstraction for the VGA text buffer][vga text buffer lazy static]. So we can directly use `Lazy` to create our static IDT:
 
 [vga text buffer lazy static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
 ```rust
 // in src/interrupts.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt
-    };
-}
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt
+});
 
 pub fn init_idt() {
     IDT.load();
 }
 ```
 
-Note how this solution requires no `unsafe` blocks. The `lazy_static!` macro does use `unsafe` behind the scenes, but it is abstracted away in a safe interface.
+Note how this solution requires no `unsafe` blocks. `Lazy` does use `unsafe` behind the scenes, but it is abstracted away in a safe interface.
 
 ### Running it
 

@@ -271,17 +271,17 @@ Vamos tentar causar um page fault acessando alguma memória fora do nosso kernel
 ```rust
 // em src/interrupts.rs
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
+use spin::Lazy;
 
-        […]
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
 
-        idt.page_fault.set_handler_fn(page_fault_handler); // novo
+    […]
 
-        idt
-    };
-}
+    idt.page_fault.set_handler_fn(page_fault_handler); // novo
+
+    idt
+});
 
 use x86_64::structures::idt::PageFaultErrorCode;
 use crate::hlt_loop;

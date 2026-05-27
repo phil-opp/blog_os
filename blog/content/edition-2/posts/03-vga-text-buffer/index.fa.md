@@ -491,36 +491,29 @@ error[E0017]: references in statics may only refer to immutable values
 [`const` functions]: https://doc.rust-lang.org/reference/const_eval.html#const-functions
 
 ### استاتیک‌های تنبل (Lazy Statics)
-یکبار مقداردهی اولیه استاتیک‌ها با توابع غیر ثابت یک مشکل رایج در راست است. خوشبختانه ، در حال حاضر راه حل خوبی در کرتی به نام [lazy_static] وجود دارد. این کرت ماکرو `lazy_static!` را فراهم می کند که یک `استاتیک` را با تنبلی مقدار‌دهی اولیه می کند. به جای محاسبه مقدار آن در زمان کامپایل ، `استاتیک` به تنبلی هنگام اولین دسترسی به آن، خود را مقداردهی اولیه می‌کند. بنابراین ، مقداردهی اولیه در زمان اجرا اتفاق می افتد تا کد مقدار دهی اولیه  پیچیده و دلخواه امکان پذیر باشد.
+یکبار مقداردهی اولیه استاتیک‌ها با توابع غیر ثابت یک مشکل رایج در راست است. خوشبختانه ، نوع [`Lazy`](https://docs.rs/spin/latest/spin/lazy/struct.Lazy.html) از [کرت spin](https://crates.io/crates/spin) راه حل خوبی فراهم می‌کند. به جای محاسبه مقدار یک `استاتیک` در زمان کامپایل ، `Lazy` آن را هنگام اولین دسترسی مقداردهی اولیه می‌کند. بنابراین ، مقداردهی اولیه در زمان اجرا اتفاق می افتد تا کد مقدار دهی اولیه  پیچیده و دلخواه امکان پذیر باشد.
 
-[lazy_static]: https://docs.rs/lazy_static/1.0.1/lazy_static/
-
-بیایید کرت `lazy_static` را به پروژه خود اضافه کنیم:
+بیایید کرت `spin` را به پروژه خود اضافه کنیم:
 
 ```toml
 # in Cargo.toml
 
-[dependencies.lazy_static]
-version = "1.0"
-features = ["spin_no_std"]
+[dependencies]
+spin = "0.10.0"
 ```
 
-ما به ویژگی `spin_no_std` نیاز داریم ، زیرا به کتابخانه استاندارد پیوند نمی دهیم.
-
-با استفاده از `lazy_static` ، می توانیم WRITER ثابت خود را بدون مشکل تعریف کنیم:
+با استفاده از `Lazy` ، می توانیم WRITER ثابت خود را بدون مشکل تعریف کنیم:
 
 ```rust
 // in src/vga_buffer.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    pub static ref WRITER: Writer = Writer {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
-}
+pub static WRITER: Lazy<Writer> = Lazy::new(|| Writer {
+    column_position: 0,
+    color_code: ColorCode::new(Color::Yellow, Color::Black),
+    buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+});
 ```
 
 با این حال ، این `WRITER` بسیار بی فایده است زیرا غیر قابل تغییر است. این بدان معنی است که ما نمی توانیم چیزی در آن بنویسیم (از آنجا که همه متد های نوشتن `&mut self` را در ورودی میگیرند). یک راه حل ممکن استفاده از [استاتیک قابل تغییر] است. اما پس از آن هر خواندن و نوشتن آن ناامن (unsafe) است زیرا می تواند به راحتی باعث data race و سایر موارد بد باشد. استفاده از `static mut` بسیار نهی شده است ، حتی پیشنهادهایی برای [حذف آن][remove static mut] وجود داشت. اما گزینه های دیگر چیست؟ ما می توانیم سعی کنیم از یک استاتیک تغییرناپذیر با نوع سلول مانند [RefCell] یا حتی [UnsafeCell] استفاده کنیم که [تغییر پذیری داخلی] را فراهم می کند. اما این انواع [Sync] نیستند (با دلیل کافی) ، بنابراین نمی توانیم از آنها در استاتیک استفاده کنیم.
@@ -538,30 +531,20 @@ lazy_static! {
 [Mutex]: https://doc.rust-lang.org/nightly/std/sync/struct.Mutex.html
 [spinlock]: https://en.wikipedia.org/wiki/Spinlock
 
-برای استفاده از spinning mutex ، می توانیم [کرت spin] را به عنوان یک وابستگی اضافه کنیم:
-
 [کرت spin]: https://crates.io/crates/spin
 
-```toml
-# in Cargo.toml
-[dependencies]
-spin = "0.5.2"
-```
-
-سپس می توانیم از spinning Mutex برای افزودن [تغییر پذیری داخلی] امن به `WRITER` استاتیک خود استفاده کنیم:
+از آنجا که هم‌اکنون به [کرت spin] وابسته هستیم، می‌توانیم از spinning Mutex آن برای افزودن [تغییر پذیری داخلی] امن به `WRITER` استاتیک خود استفاده کنیم:
 
 ```rust
 // in src/vga_buffer.rs
 
-use spin::Mutex;
+use spin::{Lazy, Mutex};
 ...
-lazy_static! {
-    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
+pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    });
-}
+    }));
 ```
 اکنون می توانیم تابع `print_something` را حذف کرده و مستقیماً از تابع`_start` خود چاپ کنیم:
 
@@ -696,7 +679,7 @@ fn panic(info: &PanicInfo) -> ! {
 ## خلاصه
 در این پست با ساختار بافر متن VGA و نحوه نوشتن آن از طریق نگاشت حافظه در آدرس `0xb8000` آشنا شدیم. ما یک ماژول راست ایجاد کردیم که عدم امنیت نوشتن را در این بافر نگاشت حافظه شده را محصور می کند و یک رابط امن و راحت به خارج ارائه می دهد.
 
-همچنین دیدیم که به لطف کارگو ، اضافه کردن وابستگی به کتابخانه های دیگران چقدر آسان است. دو وابستگی که اضافه کردیم ، `lazy_static` و`spin` ، در توسعه سیستم عامل بسیار مفید هستند و ما در پست های بعدی از آنها در مکان های بیشتری استفاده خواهیم کرد.
+همچنین دیدیم که به لطف کارگو ، اضافه کردن وابستگی به کتابخانه های دیگران چقدر آسان است. وابستگی `spin` در توسعه سیستم عامل بسیار مفید است و ما در پست های بعدی از آن در مکان های بیشتری استفاده خواهیم کرد.
 
 ## بعدی چیست؟
 در پست بعدی نحوه راه اندازی چارچوب تست واحد (Unit Test) راست توضیح داده شده است. سپس از این پست چند تست واحد اساسی برای ماژول بافر VGA ایجاد خواهیم کرد.

@@ -513,36 +513,29 @@ error[E0017]: references in statics may only refer to immutable values
 
 ### Lazy Statics
 
-التهيئة لمرة واحدة للمتغيرات الثابتة بدوال غير const مشكلة شائعة في Rust. لحسن الحظ، يوجد بالفعل حل جيد في crate يُسمى [lazy_static]. يوفر هذا الـcrate ماكرو `lazy_static!` الذي يعرّف `static` يتهيأ بشكل كسول. بدلاً من حساب قيمته في وقت التجميع، يتهيأ الـ`static` بشكل كسول عند الوصول إليه للمرة الأولى. وبالتالي، تحدث التهيئة في وقت التشغيل، لذا يمكن استخدام كود تهيئة معقد تعقيداً اعتباطياً.
+التهيئة لمرة واحدة للمتغيرات الثابتة بدوال غير const مشكلة شائعة في Rust. لحسن الحظ، يوفر النوع [`Lazy`](https://docs.rs/spin/latest/spin/lazy/struct.Lazy.html) من [crate الـspin](https://crates.io/crates/spin) حلاً جيدًا. بدلاً من حساب قيمة `static` وقت التجميع، يقوم `Lazy` بتهيئته عند الوصول إليه للمرة الأولى. وبالتالي، تحدث التهيئة في وقت التشغيل، لذا يمكن استخدام كود تهيئة معقد تعقيداً اعتباطياً.
 
-[lazy_static]: https://docs.rs/lazy_static/1.0.1/lazy_static/
-
-لنضيف crate الـ`lazy_static` إلى مشروعنا:
+لنضيف crate الـ`spin` إلى مشروعنا:
 
 ```toml
 # in Cargo.toml
 
-[dependencies.lazy_static]
-version = "1.0"
-features = ["spin_no_std"]
+[dependencies]
+spin = "0.10.0"
 ```
 
-نحتاج إلى ميزة `spin_no_std`، لأننا لا نربط المكتبة القياسية.
-
-مع `lazy_static`، يمكننا تعريف `WRITER` الثابت بدون مشاكل:
+مع `Lazy`، يمكننا تعريف `WRITER` الثابت بدون مشاكل:
 
 ```rust
 // in src/vga_buffer.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    pub static ref WRITER: Writer = Writer {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
-}
+pub static WRITER: Lazy<Writer> = Lazy::new(|| Writer {
+    column_position: 0,
+    color_code: ColorCode::new(Color::Yellow, Color::Black),
+    buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+});
 ```
 
 ومع ذلك، هذا `WRITER` عديم الفائدة إلى حد ما لأنه غير قابل للتعديل. هذا يعني أننا لا نستطيع كتابة أي شيء فيه (نظراً لأن جميع دوال الكتابة تأخذ `&mut self`). أحد الحلول الممكنة سيكون استخدام [static قابل للتعديل][mutable static]. لكن عندها كل قراءة وكتابة فيه ستكون غير آمنة لأنها يمكن أن تُدخل بسهولة سباقات البيانات (data races) وأشياء سيئة أخرى. استخدام `static mut` مثبَّط بشدة. كان هناك حتى مقترحات [لإزالته][remove static mut]. لكن ما هي البدائل؟ يمكننا محاولة استخدام static غير قابل للتعديل مع نوع cell مثل [RefCell] أو حتى [UnsafeCell] الذي يوفر [قابلية التعديل الداخلية][interior mutability]. لكن هذه الأنواع ليست [Sync] (لسبب وجيه)، لذا لا يمكننا استخدامها في المتغيرات الثابتة.
@@ -561,30 +554,20 @@ lazy_static! {
 [Mutex]: https://doc.rust-lang.org/nightly/std/sync/struct.Mutex.html
 [الـspinlock]: https://en.wikipedia.org/wiki/Spinlock
 
-لاستخدام spinning mutex، يمكننا إضافة [crate الـspin][spin crate] كتبعية:
-
 [spin crate]: https://crates.io/crates/spin
 
-```toml
-# in Cargo.toml
-[dependencies]
-spin = "0.5.2"
-```
-
-ثم يمكننا استخدام spinning mutex لإضافة [قابلية تعديل داخلية][interior mutability] آمنة إلى `WRITER` الثابت:
+وبما أننا نعتمد بالفعل على [crate الـspin][spin crate]، يمكننا استخدام spinning mutex الخاص به لإضافة [قابلية تعديل داخلية][interior mutability] آمنة إلى `WRITER` الثابت:
 
 ```rust
 // in src/vga_buffer.rs
 
-use spin::Mutex;
+use spin::{Lazy, Mutex};
 ...
-lazy_static! {
-    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
+pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    });
-}
+    }));
 ```
 
 الآن يمكننا حذف دالة `print_something` والطباعة مباشرةً من دالة `_start`:
@@ -725,7 +708,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 في هذا المنشور، تعلمنا عن بنية مخزن نص VGA وكيف يمكن الكتابة إليه من خلال تعيين الذاكرة على العنوان `0xb8000`. أنشأنا وحدة Rust تُغلِّف عدم الأمان في الكتابة إلى هذا المخزن المرتبط بالذاكرة وتقدم واجهة آمنة ومريحة للخارج.
 
-بفضل cargo، رأينا أيضاً مدى سهولة إضافة تبعيات على مكتبات طرف ثالث. التبعيتان اللتان أضفناهما، `lazy_static` و`spin`، مفيدتان جداً في تطوير أنظمة التشغيل وسنستخدمهما في المزيد من الأماكن في المنشورات المستقبلية.
+بفضل cargo، رأينا أيضاً مدى سهولة إضافة تبعيات على مكتبات طرف ثالث. التبعية `spin` مفيدة جداً في تطوير أنظمة التشغيل وسنستخدمها في المزيد من الأماكن في المنشورات المستقبلية.
 
 ## What's next?
 

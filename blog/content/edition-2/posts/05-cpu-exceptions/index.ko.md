@@ -352,31 +352,29 @@ pub fn init_idt() {
 [`unsafe` block]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### 초기화 지연이 가능한 Static 변수 (Lazy Statics)
-다행히 `lazy_static` 매크로를 사용하면 `static` 변수의 초기화를 컴파일 도중이 아니라 프로그램 실행 중 해당 변수가 처음 읽어지는 시점에 일어나게 할 수 있습니다. 따라서 프로그램 실행 시간에 다른 변수의 값을 읽어오는 등 거의 모든 작업을 변수 초기화 블록 안에서 제약 없이 진행할 수 있습니다.
+다행히 `spin::Lazy` 타입을 사용하면 `static` 변수의 초기화를 컴파일 도중이 아니라 프로그램 실행 중 해당 변수가 처음 읽어지는 시점에 일어나게 할 수 있습니다. 따라서 프로그램 실행 시간에 다른 변수의 값을 읽어오는 등 거의 모든 작업을 변수 초기화 블록 안에서 제약 없이 진행할 수 있습니다.
 
-이전에 [VGA 텍스트 버퍼에 대한 추상 인터페이스][vga text buffer lazy static]를 구현 시 의존 크레이트 목록에 `lazy_static`을 이미 추가했습니다. `lazy_static!` 매크로를 바로 사용하여 static 타입의 IDT를 생성합니다:
+이전에 [VGA 텍스트 버퍼에 대한 추상 인터페이스][vga text buffer lazy static]를 구현 시 의존 크레이트 목록에 `spin`을 이미 추가했습니다. `Lazy`를 바로 사용하여 static 타입의 IDT를 생성합니다:
 
 [vga text buffer lazy static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
 ```rust
 // in src/interrupts.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt
-    };
-}
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt
+});
 
 pub fn init_idt() {
     IDT.load();
 }
 ```
 
-이 코드에서는 `unsafe` 블록이 필요하지 않습니다. `lazy_static!` 매크로의 내부 구현에서는 `unsafe`가 사용되지만, 안전한 추상 인터페이스 덕분에 `unsafe`가 외부로 드러나지 않습니다.
+이 코드에서는 `unsafe` 블록이 필요하지 않습니다. `Lazy`의 내부 구현에서는 `unsafe`가 사용되지만, 안전한 추상 인터페이스 덕분에 `unsafe`가 외부로 드러나지 않습니다.
 
 ### 실행하기
 

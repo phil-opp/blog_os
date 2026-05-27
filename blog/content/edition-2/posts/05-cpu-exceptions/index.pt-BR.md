@@ -350,31 +350,29 @@ Esta variante compila sem erros, mas está longe de ser idiomática. `static mut
 [bloco `unsafe`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### Lazy Statics ao Resgate
-Felizmente, a macro `lazy_static` existe. Em vez de avaliar uma `static` em tempo de compilação, a macro realiza a inicialização quando a `static` é referenciada pela primeira vez. Assim, podemos fazer quase tudo no bloco de inicialização e somos até capazes de ler valores de tempo de execução.
+Felizmente, o tipo `spin::Lazy` existe. Em vez de avaliar uma `static` em tempo de compilação, ele realiza a inicialização quando a `static` é referenciada pela primeira vez. Assim, podemos fazer quase tudo no bloco de inicialização e somos até capazes de ler valores de tempo de execução.
 
-Já importamos a crate `lazy_static` quando [criamos uma abstração para o buffer de texto VGA][vga text buffer lazy static]. Então podemos usar diretamente a macro `lazy_static!` para criar nossa IDT estática:
+Já importamos a crate `spin` quando [criamos uma abstração para o buffer de texto VGA][vga text buffer lazy static]. Então podemos usar diretamente `Lazy` para criar nossa IDT estática:
 
 [vga text buffer lazy static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
 ```rust
 // em src/interrupts.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt
-    };
-}
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt
+});
 
 pub fn init_idt() {
     IDT.load();
 }
 ```
 
-Note como esta solução não requer blocos `unsafe`. A macro `lazy_static!` usa `unsafe` por trás dos panos, mas é abstraída em uma interface segura.
+Note como esta solução não requer blocos `unsafe`. `Lazy` usa `unsafe` por trás dos panos, mas é abstraído em uma interface segura.
 
 ### Executando
 

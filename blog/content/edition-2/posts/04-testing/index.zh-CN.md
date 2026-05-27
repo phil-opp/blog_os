@@ -322,17 +322,15 @@ mod serial;
 
 use uart_16550::{Config, Uart16550Tty, backend::PioBackend};
 use spin::Mutex;
-use lazy_static::lazy_static;
+use spin::{Lazy, Mutex};
 
-lazy_static! {
-    pub static ref SERIAL1: Mutex<Uart16550Tty<PioBackend>> = Mutex::new(unsafe {
+pub static SERIAL1: Lazy<Mutex<Uart16550Tty<PioBackend>>> = Lazy::new(|| Mutex::new(unsafe {
         Uart16550Tty::new_port(0x3F8, Config::default())
             .expect("failed to initialize UART")
-    });
-}
+    }));
 ```
 
-就像[VGA文本缓冲区][vga lazy-static]一样，我们使用 `lazy_static` 和一个自旋锁来创建一个 `static` writer实例。通过使用 `lazy_static` ，我们可以保证 UART 只会在第一次被使用时初始化。
+就像[VGA文本缓冲区][vga lazy-static]一样，我们使用 `spin::Lazy` 和一个自旋锁来创建一个 `static` writer实例。通过使用 `Lazy` ，我们可以保证 UART 只会在第一次被使用时初始化。
 
 和 `isa-debug-exit` 设备一样，UART也是通过I/O端口进行编程的，这由 [`PioBackend`](https://docs.rs/uart_16550/latest/uart_16550/backend/struct.PioBackend.html) 参数表示。由于UART相对来讲更加复杂，它使用多个I/O端口来对不同的设备寄存器进行编程。`unsafe` 的 `Uart16550Tty::new_port` 函数需要UART的第一个I/O端口的地址作为参数，从该地址中可以计算出所有所需端口的地址。我们传递的端口地址为 `0x3F8` ，该地址是第一个串行接口的标准端口号。
 

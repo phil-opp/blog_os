@@ -347,31 +347,29 @@ Esta variante se compila sin errores, pero está lejos de ser idiomática. Las v
 [`unsafe`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#unsafe-superpowers
 
 #### Las estáticas perezosas al rescate
-Afortunadamente, existe el macro `lazy_static`. En lugar de evaluar una `static` en tiempo de compilación, el macro realiza la inicialización de cuando la `static` es referenciada por primera vez. Por lo tanto, podemos hacer casi todo en el bloque de inicialización e incluso ser capaces de leer valores en tiempo de ejecución.
+Afortunadamente, existe el tipo `spin::Lazy`. En lugar de evaluar una `static` en tiempo de compilación, realiza la inicialización cuando la `static` es referenciada por primera vez. Por lo tanto, podemos hacer casi todo en el bloque de inicialización e incluso ser capaces de leer valores en tiempo de ejecución.
 
-Ya importamos el crate `lazy_static` cuando [creamos una abstracción para el búfer de texto VGA][vga text buffer lazy static]. Así que podemos utilizar directamente el macro `lazy_static!` para crear nuestra IDT estática:
+Ya importamos el crate `spin` cuando [creamos una abstracción para el búfer de texto VGA][vga text buffer lazy static]. Así que podemos utilizar directamente `Lazy` para crear nuestra IDT estática:
 
 [vga text buffer lazy static]: @/edition-2/posts/03-vga-text-buffer/index.md#lazy-statics
 
 ```rust
 // en src/interrupts.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt
-    };
-}
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt
+});
 
 pub fn init_idt() {
     IDT.load();
 }
 ```
 
-Tenga en cuenta cómo esta solución no requiere bloques `unsafe`. El macro `lazy_static!` utiliza `unsafe` detrás de escena, pero está abstraído en una interfaz segura.
+Tenga en cuenta cómo esta solución no requiere bloques `unsafe`. `Lazy` utiliza `unsafe` detrás de escena, pero está abstraído en una interfaz segura.
 
 ### Ejecutándolo
 

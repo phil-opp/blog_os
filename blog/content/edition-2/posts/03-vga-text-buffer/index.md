@@ -488,36 +488,31 @@ The issue with `ColorCode::new` would be solvable by using [`const` functions], 
 [`const` functions]: https://doc.rust-lang.org/reference/const_eval.html#const-functions
 
 ### Lazy Statics
-The one-time initialization of statics with non-const functions is a common problem in Rust. Fortunately, there already exists a good solution in a crate named [lazy_static]. This crate provides a `lazy_static!` macro that defines a lazily initialized `static`. Instead of computing its value at compile time, the `static` lazily initializes itself when accessed for the first time. Thus, the initialization happens at runtime, so arbitrarily complex initialization code is possible.
+The one-time initialization of statics with non-const functions is a common problem in Rust. Fortunately, the [`Lazy`] type from the [spin crate] provides a good solution. Instead of computing a `static`'s value at compile time, `Lazy` initializes it when it is accessed for the first time. Thus, the initialization happens at runtime, so arbitrarily complex initialization code is possible.
 
-[lazy_static]: https://docs.rs/lazy_static/1.0.1/lazy_static/
+[`Lazy`]: https://docs.rs/spin/latest/spin/lazy/struct.Lazy.html
 
-Let's add the `lazy_static` crate to our project:
+Let's add the [spin crate] to our project:
 
 ```toml
 # in Cargo.toml
 
-[dependencies.lazy_static]
-version = "1.0"
-features = ["spin_no_std"]
+[dependencies]
+spin = "0.10.0"
 ```
 
-We need the `spin_no_std` feature, since we don't link the standard library.
-
-With `lazy_static`, we can define our static `WRITER` without problems:
+With `Lazy`, we can define our static `WRITER` without problems:
 
 ```rust
 // in src/vga_buffer.rs
 
-use lazy_static::lazy_static;
+use spin::Lazy;
 
-lazy_static! {
-    pub static ref WRITER: Writer = Writer {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
-}
+pub static WRITER: Lazy<Writer> = Lazy::new(|| Writer {
+    column_position: 0,
+    color_code: ColorCode::new(Color::Yellow, Color::Black),
+    buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+});
 ```
 
 However, this `WRITER` is pretty useless since it is immutable. This means that we can't write anything to it (since all the write methods take `&mut self`). One possible solution would be to use a [mutable static]. But then every read and write to it would be unsafe since it could easily introduce data races and other bad things. Using `static mut` is highly discouraged. There were even proposals to [remove it][remove static mut]. But what are the alternatives? We could try to use an immutable static with a cell type like [RefCell] or even [UnsafeCell] that provides [interior mutability]. But these types aren't [Sync] \(with good reason), so we can't use them in statics.
@@ -535,30 +530,20 @@ To get synchronized interior mutability, users of the standard library can use [
 [Mutex]: https://doc.rust-lang.org/nightly/std/sync/struct.Mutex.html
 [spinlock]: https://en.wikipedia.org/wiki/Spinlock
 
-To use a spinning mutex, we can add the [spin crate] as a dependency:
-
 [spin crate]: https://crates.io/crates/spin
 
-```toml
-# in Cargo.toml
-[dependencies]
-spin = "0.5.2"
-```
-
-Then we can use the spinning mutex to add safe [interior mutability] to our static `WRITER`:
+Since we already depend on the [spin crate], we can use its spinning mutex to add safe [interior mutability] to our static `WRITER`:
 
 ```rust
 // in src/vga_buffer.rs
 
-use spin::Mutex;
+use spin::{Lazy, Mutex};
 ...
-lazy_static! {
-    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
+pub static WRITER: Lazy<Mutex<Writer>> = Lazy::new(|| Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    });
-}
+    }));
 ```
 Now we can delete the `print_something` function and print directly from our `_start` function:
 
@@ -693,7 +678,7 @@ So we know not only that a panic has occurred, but also the panic message and wh
 ## Summary
 In this post, we learned about the structure of the VGA text buffer and how it can be written through the memory mapping at address `0xb8000`. We created a Rust module that encapsulates the unsafety of writing to this memory-mapped buffer and presents a safe and convenient interface to the outside.
 
-Thanks to cargo, we also saw how easy it is to add dependencies on third-party libraries. The two dependencies that we added, `lazy_static` and `spin`, are very useful in OS development and we will use them in more places in future posts.
+Thanks to cargo, we also saw how easy it is to add dependencies on third-party libraries. The `spin` crate is very useful in OS development and we will use it in more places in future posts.
 
 ## What's next?
 The next post explains how to set up Rust's built-in unit test framework. We will then create some basic unit tests for the VGA buffer module from this post.

@@ -190,18 +190,17 @@ Rust の enum は [C 言語ライクな enum][C-like enum] であるため、各
 // in src/interrupts.rs
 
 use crate::print;
+use spin::Lazy;
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        […]
-        idt[InterruptIndex::Timer.as_usize()]
-            .set_handler_fn(timer_interrupt_handler); // new
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    […]
+    idt[InterruptIndex::Timer.as_usize()]
+        .set_handler_fn(timer_interrupt_handler); // new
 
-        idt
-    };
-}
+    idt
+});
 
 extern "x86-interrupt" fn timer_interrupt_handler(
     _stack_frame: InterruptStackFrame)
@@ -528,18 +527,16 @@ pub enum InterruptIndex {
     Keyboard, // new
 }
 
-lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        […]
-        // new
-        idt[InterruptIndex::Keyboard.as_usize()]
-            .set_handler_fn(keyboard_interrupt_handler);
+static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    […]
+    // new
+    idt[InterruptIndex::Keyboard.as_usize()]
+        .set_handler_fn(keyboard_interrupt_handler);
 
-        idt
-    };
-}
+    idt
+});
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: InterruptStackFrame)
@@ -672,15 +669,15 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     _stack_frame: InterruptStackFrame)
 {
     use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
-    use spin::Mutex;
+    use spin::{Lazy, Mutex};
     use x86_64::instructions::port::Port;
 
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(ScancodeSet1::new(),
-                layouts::Us104Key, HandleControl::Ignore)
-            );
-    }
+    static KEYBOARD: Lazy<Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>>> =
+        Lazy::new(|| Mutex::new(Keyboard::new(
+            ScancodeSet1::new(),
+            layouts::Us104Key,
+            HandleControl::Ignore,
+        )));
 
     let mut keyboard = KEYBOARD.lock();
     let mut port = Port::new(0x60);
@@ -702,7 +699,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-ミューテックスで保護された静的な [`Keyboard`] オブジェクトを作るために `lazy_static` マクロを使います。`Keyboard` は、レイアウトを US キーボードに、スキャンコードセットは1として初期化を行います。[`HandleControl`] パラメタは、`ctrl+[a-z]` を Unicode 文字の `U+0001` から `U+001A` にマッピングさせることができます。この機能は使いたくないので、`Ignore` オプションを使い `ctrl` キーを通常のキーと同様に扱います。
+ミューテックスで保護された静的な [`Keyboard`] オブジェクトを作るために `Lazy` を使います。`Keyboard` は、レイアウトを US キーボードに、スキャンコードセットは1として初期化を行います。[`HandleControl`] パラメタは、`ctrl+[a-z]` を Unicode 文字の `U+0001` から `U+001A` にマッピングさせることができます。この機能は使いたくないので、`Ignore` オプションを使い `ctrl` キーを通常のキーと同様に扱います。
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 
