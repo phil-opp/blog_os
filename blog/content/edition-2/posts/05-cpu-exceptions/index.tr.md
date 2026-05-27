@@ -206,7 +206,7 @@ Yani _interrupt stack frame_ şöyle görünür:
 [`InterruptStackFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptStackFrame.html
 
 ### Perde Arkası
-`x86-interrupt` çağırma kuralı, exception işleme sürecinin neredeyse tüm dağınık ayrıntılarını gizleyen güçlü bir soyutlamadır. Ancak bazen perde arkasında ne olduğunu bilmek yararlıdır. İşte `x86-interrupt` çağırma kuralının halletğiği şeylerin kısa bir özeti:
+`x86-interrupt` çağırma kuralı, exception işleme sürecinin neredeyse tüm dağınık ayrıntılarını gizleyen güçlü bir soyutlamadır. Ancak bazen perde arkasında ne olduğunu bilmek yararlıdır. İşte `x86-interrupt` çağırma kuralının hallettiği şeylerin kısa bir özeti:
 
 - **Argümanları almak**: Çoğu çağırma kuralı, argümanların register'larda geçirilmesini bekler. Bu, exception handler'lar için mümkün değildir, çünkü register değerlerini stack'e yedeklemeden önce hiçbirinin üzerine yazmamalıyız. Bunun yerine, `x86-interrupt` çağırma kuralı, argümanların belirli bir ofsette zaten stack'te bulunduğunun farkındadır.
 - **`iretq` kullanarak geri dönmek**: Interrupt stack frame, normal fonksiyon çağrılarının stack frame'lerinden tamamen farklı olduğundan, handler fonksiyonlarından normal `ret` komutuyla geri dönemeyiz. Bu yüzden bunun yerine `iretq` komutunun kullanılması gerekir.
