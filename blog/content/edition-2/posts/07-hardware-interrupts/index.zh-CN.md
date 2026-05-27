@@ -676,12 +676,12 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     use spin::Mutex;
     use x86_64::instructions::port::Port;
 
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(ScancodeSet1::new(),
-                layouts::Us104Key, HandleControl::Ignore)
-            );
-    }
+    static KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
+        Mutex::new(Keyboard::new(
+            ScancodeSet1::new(),
+            layouts::Us104Key,
+            HandleControl::Ignore,
+        ));
 
     let mut keyboard = KEYBOARD.lock();
     let mut port = Port::new(0x60);
@@ -703,7 +703,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-首先我们使用 `lazy_static` 宏创建一个受到Mutex同步锁保护的 [`Keyboard`] 对象，初始化参数为美式键盘布局以及Set-1。至于 [`HandleControl`]，它可以设定为将 `ctrl+[a-z]` 映射为Unicode字符 `U+0001` 至 `U+001A`，但我们不想这样，所以使用了 `Ignore` 选项让 `ctrl` 仅仅表现为一个正常键位。
+首先我们创建一个受到Mutex同步锁保护的 [`Keyboard`] 对象，初始化参数为美式键盘布局以及Set-1。由于 `Keyboard::new` 和 `ScancodeSet1::new` 都是 `const fn`，`KEYBOARD` 这个 static 可以在编译期初始化，因此这里不再需要 `lazy_static` 宏。至于 [`HandleControl`]，它可以设定为将 `ctrl+[a-z]` 映射为Unicode字符 `U+0001` 至 `U+001A`，但我们不想这样，所以使用了 `Ignore` 选项让 `ctrl` 仅仅表现为一个正常键位。
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 

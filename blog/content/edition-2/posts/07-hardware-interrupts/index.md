@@ -670,12 +670,12 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     use spin::Mutex;
     use x86_64::instructions::port::Port;
 
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(ScancodeSet1::new(),
-                layouts::Us104Key, HandleControl::Ignore)
-            );
-    }
+    static KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
+        Mutex::new(Keyboard::new(
+            ScancodeSet1::new(),
+            layouts::Us104Key,
+            HandleControl::Ignore,
+        ));
 
     let mut keyboard = KEYBOARD.lock();
     let mut port = Port::new(0x60);
@@ -697,7 +697,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-We use the `lazy_static` macro to create a static [`Keyboard`] object protected by a Mutex. We initialize the `Keyboard` with a US keyboard layout and the scancode set 1. The [`HandleControl`] parameter allows to map `ctrl+[a-z]` to the Unicode characters `U+0001` through `U+001A`. We don't want to do that, so we use the `Ignore` option to handle the `ctrl` like normal keys.
+We create a static [`Keyboard`] object protected by a Mutex. Since the `Keyboard::new` and `ScancodeSet1::new` constructors are `const fn`s, the `KEYBOARD` static can be initialized at compile time, so we don't need the `lazy_static` macro here. We initialize the `Keyboard` with a US keyboard layout and the scancode set 1. The [`HandleControl`] parameter allows to map `ctrl+[a-z]` to the Unicode characters `U+0001` through `U+001A`. We don't want to do that, so we use the `Ignore` option to handle the `ctrl` like normal keys.
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 
