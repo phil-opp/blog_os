@@ -114,10 +114,16 @@ fn main() {}
 ```
 > cargo build
 error: `#[panic_handler]` function required, but not found
-error: language item required, but not found: `eh_personality`
+error: unwinding panics are not supported without std
 ```
 
-Maintenant le compilateur a besoin d'une fonction `#[panic_handler]` et d'un _objet de langage_.
+Maintenant le compilateur a besoin d'une fonction `#[panic_handler]` et se plaint que le _déroulement_ (unwinding) n'est pas possible sans la bibliothèque standard. Nous examinons ces deux erreurs dans les sections suivantes.
+
+<div class="note">
+
+Sur les anciennes chaînes d'outils Rust, la seconde erreur s'affiche plutôt sous la forme `language item required, but not found: eh_personality`, qui a la même cause que l'erreur `unwinding panics are not supported without std`.
+
+</div>
 
 ## Implémentation de Panic
 
@@ -143,16 +149,15 @@ Le [paramètre `PanicInfo`][PanicInfo] contient le fichier et la ligne où le pa
 [fonction divergente]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [type “never”]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-## L'Objet de Langage `eh_personality`
+## Déroulement
 
-Les objets de langage sont des éléments spéciaux (traits, fonctions, types, etc.) qui sont requis par le compilateur de manière interne. Par exemple, le trait [`Copy`] est un objet de langage qui indique au compilateur quels types possèdent la [sémantique copy][`Copy`]. Quand nous regardons l'[implémentation][copy code] du code, nous pouvons voir qu'il possède l'attribut spécial `#[lang = copy]` qui le définit comme étant un objet de langage.
+Par défaut, Rust utilise le [déroulement de pile] pour exécuter les destructeurs de chaque variable vivante sur la pile en cas de [panic]. Cela assure que toute la mémoire utilisée est libérée et permet au fil d'exécution parent d'attraper la panic et de continuer l'exécution. Le déroulement toutefois est un processus compliqué et nécessite des bibliothèques spécifiques à l'OS (par exemple [libunwind] pour Linux ou [gestion structurée des erreurs] pour Windows), qui requièrent la bibliothèque standard de Rust. La conséquence est que nous ne pouvons pas utiliser le déroulement pour notre noyau de système d'exploitation `no_std`.
 
-[`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
-[copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
+<div class="note">
 
-Bien qu'il soit possible de fournir des implémentations personnalisées des objets de langage, cela ne devrait être fait qu'en dernier recours. La raison est que les objets de langages sont des détails d'implémentation très instables et qui ne sont même pas vérifiés au niveau de leur type (donc le compilateur ne vérifie même pas qu'une fonction possède les bons types d'arguments). Heureusement, il y a une manière plus robuste de corriger l'erreur d'objet de langage ci-dessus.
+L'erreur `language item required, but not found: eh_personality` sur les anciennes chaînes d'outils Rust renvoie elle aussi au déroulement. L'[objet de langage `eh_personality`] marque la fonction qui doit être utilisée pour l'implémentation du déroulement de pile. Les objets de langage sont des éléments spéciaux (traits, fonctions, types, etc.) qui sont requis par le compilateur de manière interne. Sur les chaînes d'outils Rust plus récentes, le message d'erreur a été amélioré pour éviter de mentionner ce détail d'implémentation.
 
-L'[objet de langage `eh_personality`] marque une fonction qui est utilisée pour l'implémentation du [déroulement de pile]. Par défaut, Rust utilise le déroulement de pile pour exécuter les destructeurs de chaque variable vivante sur la pile en cas de [panic]. Cela assure que toute la mémoire utilisée est libérée et permet au fil d'exécution parent d'attraper la panic et de continuer l'exécution. Le déroulement toutefois est un processus compliqué et nécessite des bibliothèques spécifiques à l'OS ([libunwind] pour Linux ou [gestion structurée des erreurs] pour Windows), nous ne voulons donc pas l'utiliser pour notre système d'exploitation.
+</div>
 
 [objet de langage `eh_personality`]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
 [déroulement de pile]: https://docs.microsoft.com/fr-fr/cpp/cpp/exceptions-and-stack-unwinding-in-cpp?view=msvc-160
@@ -171,22 +176,26 @@ panic = "abort"
 panic = "abort"
 ```
 
-Cela configure la stratégie de panic à `abort` pour le profil `dev` (utilisé pour `cargo build`) et le profil `release` (utilisé pour `cargo build --release`). Maintenant l'objet de langage `eh_personality` ne devrait plus être requis. 
+Cela configure la stratégie de panic à `abort` pour le profil `dev` (utilisé pour `cargo build`) et le profil `release` (utilisé pour `cargo build --release`). Maintenant l'erreur `unwinding panics are not supported without std` devrait être corrigée. 
 
 [interrompre après un panic]: https://github.com/rust-lang/rust/pull/32900
 
-Nous avons dorénavant corrigé les deux erreurs ci-dessus. Toutefois, si nous essayons de compiler, une autre erreur apparaît :
+Si nous essayons de compiler maintenant, une nouvelle erreur apparaît :
 
 ```
 > cargo build
-error: requires `start` lang_item
+error: using `fn main` requires the standard library
 ```
 
-L'objet de langage `start` manque à notre programme. Il définit le point d'entrée.
+<div class="note">
 
-## L'attribut `start`
+Les anciennes chaînes d'outils Rust signalent plutôt cette erreur sous la forme `error: requires start lang_item`. L'objet de langage `start` définit le point d'entrée sous-jacent qui appelle ensuite la fonction `main`. Cette erreur a donc la même cause que l'erreur ``using `fn main` requires the standard library`` sur les chaînes d'outils plus récentes.
 
-On pourrait penser que la fonction `main` est la première fonction appelée lorsqu'un programme est exécuté. Toutefois, la plupart des langages ont un [environnement d'exécution] qui est responsable des tâches telles que le ramassage des miettes (ex: dans Java) ou les fils d'exécution logiciel (ex: les goroutines dans Go). Cet environnement doit être appelé avant `main` puisqu'il a besoin de s'initialiser.
+</div>
+
+## Point d'Entrée
+
+On pourrait penser que la fonction `main` est le "point d'entrée" du programme, c'est-à-dire la première fonction appelée lorsqu'un programme est exécuté. Toutefois, la plupart des langages ont un [environnement d'exécution] qui est responsable des tâches telles que le ramassage des miettes (ex: dans Java) ou les fils d'exécution logiciel (ex: les goroutines dans Go). Cet environnement doit être appelé avant `main` puisqu'il a besoin de s'initialiser.
 
 [environnement d'exécution]: https://fr.wikipedia.org/wiki/Environnement_d%27ex%C3%A9cution
 
@@ -194,7 +203,7 @@ Dans un exécutable Rust classique qui relie la bibliothèque standard, l'exécu
 
 [rt::lang_start]: https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73
 
-Notre exécutable autoporté n'a pas accès à l'environnement d'exécution de Rust ni à `crt0`. Nous avons donc besoin de définir notre propre point d'entrée. Implémenter l'objet de langage `start` n'aiderait pas car nous aurions toujours besoin de `crt0`. Nous avons plutôt besoin de réécrire le point d'entrée de `crt0` directement.
+Notre exécutable autoporté n'a pas accès à l'environnement d'exécution de Rust ni à `crt0`. Nous avons donc besoin de définir notre propre point d'entrée et nous ne pouvons pas simplement définir une fonction `main`.
 
 ### Réécrire le Point d'Entrée
 

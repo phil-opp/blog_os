@@ -118,10 +118,16 @@ fn main() {}
 ```
 > cargo build
 error: `#[panic_handler]` function required, but not found
-error: language item required, but not found: `eh_personality`
+error: unwinding panics are not supported without std
 ```
 
-Derleyici bir `#[panic_handler]` fonksiyonunu ve bir _dil öğesini (language item)_ bulamıyor.
+Artık derleyici bir `#[panic_handler]` fonksiyonunu bulamıyor ve _unwinding_'in standart kütüphane olmadan mümkün olmadığından şikâyet ediyor. Her iki hataya da aşağıdaki bölümlerde bakacağız.
+
+<div class="note">
+
+Eski Rust toolchain'lerinde ikinci hata bunun yerine `language item required, but not found: eh_personality` şeklinde görünür; bu, `unwinding panics are not supported without std` hatasıyla aynı nedene sahiptir.
+
+</div>
 
 ## Panic Implementasyonu
 
@@ -147,16 +153,15 @@ fn panic(_info: &PanicInfo) -> ! {
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-## `eh_personality` Dil Öğesi
+## Unwinding
 
-Dil öğeleri (language items), derleyicinin dahili olarak ihtiyaç duyduğu özel öğelerdir (trait'ler, fonksiyonlar, tipler vb.). Örneğin [`Copy`] trait'i, hangi tiplerin [_copy semantiğine_][`Copy`] sahip olduğunu derleyiciye bildiren bir dil öğesidir. [Uygulamasına][copy code] baktığımızda, onu bir dil öğesi olarak tanımlayan özel `#[lang = "copy"]` özniteliğine sahip olduğunu görürüz.
+Rust, bir [panic] durumunda canlı olan tüm stack değişkenlerinin destructor'larını çalıştırmak için varsayılan olarak [stack unwinding] kullanır. Bu, kullanılan tüm belleğin serbest bırakılmasını sağlar ve üst thread'in panic'i yakalayıp çalışmaya devam etmesine olanak tanır. Ancak unwinding karmaşık bir süreçtir ve bazı OS'a özgü kütüphaneler gerektirir (örneğin Linux'ta [libunwind] veya Windows'ta [structured exception handling]); bunlar da Rust standart kütüphanesini gerektirir. Bunun sonucu olarak, `no_std` işletim sistemi kernel'imiz için unwinding kullanamayız.
 
-[`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
-[copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
+<div class="note">
 
-Dil öğelerinin özel uygulamalarını sağlamak mümkün olsa da, bu yalnızca son çare olarak yapılmalıdır. Bunun nedeni, dil öğelerinin son derece kararsız uygulama detayları olması ve tip denetiminden bile geçmemesidir (yani derleyici, bir fonksiyonun doğru argüman tiplerine sahip olup olmadığını dahi kontrol etmez). Neyse ki, yukarıdaki dil öğesi hatasını düzeltmenin daha kararlı bir yolu var.
+Eski Rust toolchain'lerindeki `language item required, but not found: eh_personality` hatası da unwinding'e işaret eder. [`eh_personality` dil öğesi][`eh_personality` language item], stack unwinding uygulamak için kullanılması gereken fonksiyonu işaretler. Dil öğeleri (language items), derleyicinin dahili olarak ihtiyaç duyduğu özel öğelerdir (trait'ler, fonksiyonlar, tipler vb.). Yeni Rust toolchain'lerinde, bu uygulama detayından bahsetmekten kaçınmak için hata mesajı iyileştirildi.
 
-[`eh_personality` dil öğesi][`eh_personality` language item], [stack unwinding] uygulamak için kullanılan bir fonksiyonu işaretler. Rust varsayılan olarak, bir [panic] durumunda canlı olan tüm stack değişkenlerinin destructor'larını çalıştırmak için unwinding kullanır. Bu, kullanılan tüm belleğin serbest bırakılmasını sağlar ve üst thread'in panic'i yakalayıp çalışmaya devam etmesine olanak tanır. Ancak unwinding karmaşık bir süreçtir ve bazı OS'a özgü kütüphaneler gerektirir (örneğin Linux'ta [libunwind] veya Windows'ta [structured exception handling]), bu yüzden onu işletim sistemimiz için kullanmak istemiyoruz.
+</div>
 
 [`eh_personality` language item]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
@@ -175,22 +180,26 @@ panic = "abort"
 panic = "abort"
 ```
 
-Bu, hem (`cargo build` için kullanılan) `dev` profili hem de (`cargo build --release` için kullanılan) `release` profili için panic stratejisini `abort` olarak ayarlar. Artık `eh_personality` dil öğesinin gerekmemesi gerekir.
+Bu, hem (`cargo build` için kullanılan) `dev` profili hem de (`cargo build --release` için kullanılan) `release` profili için panic stratejisini `abort` olarak ayarlar. Artık `unwinding panics are not supported without std` hatası düzelmiş olmalı.
 
 [abort on panic]: https://github.com/rust-lang/rust/pull/32900
 
-Şimdi yukarıdaki hataların her ikisini de düzelttik. Ancak şimdi derlemeye çalışırsak, başka bir hata oluşur:
+Şimdi derlemeye çalışırsak, yeni bir hata oluşur:
 
 ```
 > cargo build
-error: requires `start` lang_item
+error: using `fn main` requires the standard library
 ```
 
-Programımızda, giriş noktasını tanımlayan `start` dil öğesi eksik.
+<div class="note">
 
-## `start` Özniteliği
+Eski Rust toolchain'leri bunu bunun yerine `error: requires start lang_item` olarak bildirir. `start` dil öğesi, daha sonra `main` fonksiyonunu çağıran alttaki giriş noktasını tanımlar. Dolayısıyla bu hata, yeni toolchain'lerdeki ``using `fn main` requires the standard library`` hatasıyla aynı nedene sahiptir.
 
-`main` fonksiyonunun, bir programı çalıştırdığınızda çağrılan ilk fonksiyon olduğu düşünülebilir. Ancak çoğu dilin, çöp toplama (örneğin Java'da) veya yazılımsal thread'ler (örneğin Go'daki goroutine'ler) gibi şeylerden sorumlu bir [runtime sistemi][runtime system] vardır. Bu runtime'ın `main`'den önce çağrılması gerekir, çünkü kendisini başlatması gerekir.
+</div>
+
+## Giriş Noktası
+
+`main` fonksiyonunun, programın "giriş noktası" (entry point), yani bir programı çalıştırdığınızda çağrılan ilk fonksiyon olduğu düşünülebilir. Ancak çoğu dilin, çöp toplama (örneğin Java'da) veya yazılımsal thread'ler (örneğin Go'daki goroutine'ler) gibi şeylerden sorumlu bir [runtime sistemi][runtime system] vardır. Bu runtime'ın `main`'den önce çağrılması gerekir, çünkü kendisini başlatması gerekir.
 
 [runtime system]: https://en.wikipedia.org/wiki/Runtime_system
 
@@ -198,7 +207,7 @@ Standart kütüphaneyi bağlayan tipik bir Rust ikili dosyasında yürütme, bir
 
 [rt::lang_start]: https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73
 
-Bağımsız çalıştırılabilir dosyamızın Rust runtime'ına ve `crt0`'a erişimi yoktur, bu yüzden kendi giriş noktamızı tanımlamamız gerekir. `start` dil öğesini uygulamak yardımcı olmaz, çünkü o da hâlâ `crt0`'ı gerektirir. Bunun yerine, doğrudan `crt0` giriş noktasının üzerine yazmamız gerekir.
+Bağımsız çalıştırılabilir dosyamızın Rust runtime'ına ve `crt0`'a erişimi yoktur, bu yüzden kendi giriş noktamızı tanımlamamız gerekir ve yalnızca bir `main` fonksiyonu tanımlayamayız.
 
 ### Giriş Noktasının Üzerine Yazmak
 Rust derleyicisine normal giriş noktası zincirini kullanmak istemediğimizi bildirmek için `#![no_main]` özniteliğini ekliyoruz.

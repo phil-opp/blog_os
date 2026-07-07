@@ -118,10 +118,16 @@ fn main() {}
 ```
 > cargo build
 error: `#[panic_handler]` function required, but not found
-error: language item required, but not found: `eh_personality`
+error: unwinding panics are not supported without std
 ```
 
-الآن يفتقد المترجم إلى دالة `#[panic_handler]` و_عنصر اللغة_ (language item).
+الآن يفتقد المترجم إلى دالة `#[panic_handler]` ويشتكي من أن _الفك_ (unwinding) غير ممكن بدون المكتبة القياسية. سننظر في كلا الخطأين في الأقسام التالية.
+
+<div class="note">
+
+في سلاسل أدوات Rust الأقدم، يظهر الخطأ الثاني بدلاً من ذلك كـ `language item required, but not found: eh_personality`، والذي له نفس سبب خطأ `unwinding panics are not supported without std`.
+
+</div>
 
 ## تنفيذ Panic
 
@@ -147,16 +153,15 @@ fn panic(_info: &PanicInfo) -> ! {
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [`!`]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-## عنصر اللغة `eh_personality`
+## الفك
 
-عناصر اللغة هي عناصر خاصة (سمات ودوال وأنواع وما إلى ذلك) مطلوبة داخليًا من قِبَل المترجم. على سبيل المثال، سمة [`Copy`] هي عنصر لغة يخبر المترجم بالأنواع التي لها [_دلالات النسخ_][`Copy`]. عند النظر إلى [التنفيذ][copy code]، نرى أنه يحتوي على السمة الخاصة `#[lang = "copy"]` التي تعرّفه كعنصر لغة.
+يستخدم Rust [فك تسلسل المكدس][stack unwinding] بشكل افتراضي لتشغيل المدمِّرات لجميع متغيرات المكدس الحية في حالة حدوث [panic]. هذا يضمن تحرير جميع الذاكرة المستخدمة ويسمح للخيط الرئيسي بالتقاط الـ panic ومواصلة التنفيذ. ومع ذلك، فإن الفك عملية معقدة وتتطلب بعض المكتبات الخاصة بنظام التشغيل (مثل [libunwind] على Linux أو [معالجة الاستثناءات المنظمة][structured exception handling] على Windows)، والتي تتطلب مكتبة Rust القياسية. والنتيجة هي أننا لا نستطيع استخدام الفك لنواة نظام التشغيل `no_std` الخاصة بنا.
 
-[`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
-[copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
+<div class="note">
 
-في حين أن توفير تنفيذات مخصصة لعناصر اللغة ممكن، إلا أنه يجب القيام بذلك فقط كملاذ أخير. والسبب هو أن عناصر اللغة هي تفاصيل تنفيذ غير مستقرة للغاية ولا يتم التحقق من أنواعها حتى (أي أن المترجم لا يتحقق حتى مما إذا كانت الدالة تحتوي على أنواع الوسيطات الصحيحة). لحسن الحظ، هناك طريقة أكثر استقرارًا لإصلاح خطأ عنصر اللغة أعلاه.
+خطأ `language item required, but not found: eh_personality` في سلاسل أدوات Rust الأقدم يشير أيضًا إلى الفك. يُميِّز [عنصر اللغة `eh_personality`][`eh_personality` language item] الدالة التي يجب استخدامها لتنفيذ فك تسلسل المكدس. عناصر اللغة هي عناصر خاصة (سمات ودوال وأنواع وما إلى ذلك) مطلوبة داخليًا من قِبَل المترجم. في سلاسل أدوات Rust الأحدث، تم تحسين رسالة الخطأ لتجنب ذكر تفصيل التنفيذ هذا.
 
-يُميِّز [عنصر اللغة `eh_personality`][`eh_personality` language item] دالة تُستخدم لتنفيذ [فك تسلسل المكدس][stack unwinding]. بشكل افتراضي، يستخدم Rust الفك لتشغيل المدمِّرات لجميع متغيرات المكدس الحية في حالة حدوث [panic]. هذا يضمن تحرير جميع الذاكرة المستخدمة ويسمح للخيط الرئيسي بالتقاط الـ panic ومواصلة التنفيذ. ومع ذلك، فإن الفك عملية معقدة وتتطلب بعض المكتبات الخاصة بنظام التشغيل (مثل [libunwind] على Linux أو [معالجة الاستثناءات المنظمة][structured exception handling] على Windows)، لذا لا نريد استخدامها لنظام التشغيل الخاص بنا.
+</div>
 
 [`eh_personality` language item]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
@@ -175,22 +180,26 @@ panic = "abort"
 panic = "abort"
 ```
 
-يضبط هذا استراتيجية الـ panic على `abort` لكل من ملف التعريف `dev` (المستخدم لـ `cargo build`) وملف التعريف `release` (المستخدم لـ `cargo build --release`). الآن لم يعد عنصر اللغة `eh_personality` مطلوبًا.
+يضبط هذا استراتيجية الـ panic على `abort` لكل من ملف التعريف `dev` (المستخدم لـ `cargo build`) وملف التعريف `release` (المستخدم لـ `cargo build --release`). الآن يجب أن يكون خطأ `unwinding panics are not supported without std` قد أُصلح.
 
 [abort on panic]: https://github.com/rust-lang/rust/pull/32900
 
-الآن أصلحنا كلا الخطأين أعلاه. ومع ذلك، إذا حاولنا تجميعه الآن، يحدث خطأ آخر:
+إذا حاولنا تجميعه الآن، يحدث خطأ جديد:
 
 ```
 > cargo build
-error: requires `start` lang_item
+error: using `fn main` requires the standard library
 ```
 
-يفتقر برنامجنا إلى عنصر اللغة `start`، الذي يعرّف نقطة الدخول.
+<div class="note">
 
-## سمة `start`
+تُبلِّغ سلاسل أدوات Rust الأقدم عن هذا كـ `error: requires start lang_item` بدلاً من ذلك. يعرّف عنصر اللغة `start` نقطة الدخول الأساسية التي تستدعي دالة `main` لاحقًا. لذا فإن هذا الخطأ له نفس سبب خطأ ``using `fn main` requires the standard library`` في سلاسل الأدوات الأحدث.
 
-قد يظن المرء أن دالة `main` هي أول دالة تُستدعى عند تشغيل برنامج. ومع ذلك، فإن معظم اللغات لديها [نظام وقت تشغيل][runtime system] مسؤول عن أشياء مثل جمع القمامة (مثلاً في Java) أو خيوط البرمجيات (مثلاً goroutines في Go). يحتاج وقت التشغيل هذا إلى الاستدعاء قبل `main`، لأنه يحتاج إلى تهيئة نفسه.
+</div>
+
+## نقطة الدخول
+
+قد يظن المرء أن دالة `main` هي "نقطة الدخول" للبرنامج، أي أول دالة تُستدعى عند تشغيل برنامج. ومع ذلك، فإن معظم اللغات لديها [نظام وقت تشغيل][runtime system] مسؤول عن أشياء مثل جمع القمامة (مثلاً في Java) أو خيوط البرمجيات (مثلاً goroutines في Go). يحتاج وقت التشغيل هذا إلى الاستدعاء قبل `main`، لأنه يحتاج إلى تهيئة نفسه.
 
 [runtime system]: https://en.wikipedia.org/wiki/Runtime_system
 
@@ -198,7 +207,7 @@ error: requires `start` lang_item
 
 [rt::lang_start]: https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73
 
-لا يمتلك ملفنا القابل للتنفيذ المستقل وصولاً إلى وقت تشغيل Rust و`crt0`، لذا نحتاج إلى تعريف نقطة الدخول الخاصة بنا. تنفيذ عنصر اللغة `start` لن يساعد، لأنه سيتطلب `crt0` أيضًا. بدلاً من ذلك، نحتاج إلى الكتابة فوق نقطة دخول `crt0` مباشرةً.
+لا يمتلك ملفنا القابل للتنفيذ المستقل وصولاً إلى وقت تشغيل Rust و`crt0`، لذا نحتاج إلى تعريف نقطة الدخول الخاصة بنا ولا يمكننا فقط تعريف دالة `main`.
 
 ### الكتابة فوق نقطة الدخول
 

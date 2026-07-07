@@ -119,10 +119,16 @@ fn main() {}
 ```
 > cargo build
 error: `#[panic_handler]` function required, but not found
-error: language item required, but not found: `eh_personality`
+error: unwinding panics are not supported without std
 ```
 
-Agora o compilador está pedindo uma função `#[panic_handler]` e um _item de linguagem_.
+Agora o compilador está sentindo falta de uma função `#[panic_handler]` e reclama que o _unwinding_ não é possível sem a biblioteca padrão. Analisamos ambos os erros nas seções a seguir.
+
+<div class="note">
+
+Em toolchains Rust mais antigos, o segundo erro é `language item required, but not found: eh_personality`, que tem a mesma causa do erro `unwinding panics are not supported without std`.
+
+</div>
 
 ##  Implementação de Panic
 
@@ -148,16 +154,15 @@ O parâmetro [`PanicInfo`][PanicInfo] contém o arquivo e a linha onde o panic a
 [função divergente]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [tipo “never”]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-## O Item de Linguagem `eh_personality`
+## Unwinding
 
-Items de linguagem são elementos especiais (traits, funções, tipos, etc.) necessários internamente pelo compilador. Por exemplo, a trait [`Copy`] é um item de linguagem que diz ao compilador quais tipos têm [_semântica de cópia_][`Copy`]. Quando olhamos para a [implementação][copy code], vemos que tem o atributo especial `#[lang = "copy"]` que o define como um item de linguagem (_Language Item_ em inglês).
+Rust usa [stack unwinding] por padrão para executar os destructores de todas as variáveis vivas da stack em caso de [panic]. Isso garante que toda memória usada seja liberada e permite que a thread pai capture o panic e continue a execução. Unwinding, no entanto, é um processo complicado e requer algumas bibliotecas específicas do SO (por exemplo, [libunwind] no Linux ou [tratamento estruturado de exceção] no Windows), que dependem da biblioteca padrão do Rust. A consequência é que não podemos usar unwinding para nosso kernel de sistema operacional `no_std`.
 
-[`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
-[copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
+<div class="note">
 
-Enquanto é possível fornecer implementações customizadas de items de linguagem, isso deve ser feito apenas como último recurso. A razão é que items de linguagem são detalhes de implementação altamente instáveis e nem mesmo verificados de tipo (então o compilador não verifica se uma função tem os tipos de argumento corretos). Felizmente, há uma forma mais estável de corrigir o erro de item de linguagem acima.
+O erro `language item required, but not found: eh_personality` em toolchains Rust mais antigos também aponta para o unwinding. O [item de linguagem `eh_personality`] marca a função que deve ser usada para implementar o stack unwinding. Items de linguagem são elementos especiais (traits, funções, tipos, etc.) necessários internamente pelo compilador. Em toolchains Rust mais novos, a mensagem de erro foi melhorada para evitar mencionar esse detalhe de implementação.
 
-O [item de linguagem `eh_personality`] marca uma função que é usada para implementar [stack unwinding]. Por padrão, Rust usa unwinding para executar os destructores de todas as variáveis da stack vivas em caso de [panic]. Isso garante que toda memória usada seja liberada e permite que a thread pai capture o panic e continue a execução. Unwinding, no entanto, é um processo complicado e requer algumas bibliotecas específicas do SO (por exemplo, [libunwind] no Linux ou [tratamento estruturado de exceção] no Windows), então não queremos usá-lo para nosso sistema operacional.
+</div>
 
 [item de linguagem `eh_personality`]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
@@ -176,22 +181,26 @@ panic = "abort"
 panic = "abort"
 ```
 
-Isso define a estratégia de panic para `abort` tanto para o perfil `dev` (usado para `cargo build`) quanto para o perfil `release` (usado para `cargo build --release`). Agora o item de linguagem `eh_personality` não deve mais ser necessário.
+Isso define a estratégia de panic para `abort` tanto para o perfil `dev` (usado para `cargo build`) quanto para o perfil `release` (usado para `cargo build --release`). Agora o erro `unwinding panics are not supported without std` deve estar corrigido.
 
 [abortar no panic]: https://github.com/rust-lang/rust/pull/32900
 
-Agora corrigimos ambos os erros acima. No entanto, se tentarmos compilar agora, outro erro ocorre:
+Se tentarmos compilar agora, um novo erro ocorre:
 
 ```
 > cargo build
-error: requires `start` lang_item
+error: using `fn main` requires the standard library
 ```
 
-Está faltando o item de linguagem `start` no nosso programa, que define o ponto de entrada.
+<div class="note">
 
-## O Atributo `start`
+Toolchains Rust mais antigos relatam isso como `error: requires start lang_item`. O item de linguagem `start` define o ponto de entrada subjacente que chama a função `main` mais tarde. Portanto, esse erro tem a mesma causa do erro ``using `fn main` requires the standard library`` em toolchains mais novos.
 
-Alguém pode pensar que a função `main` é a primeira função chamada quando você executa um programa. No entanto, a maioria das linguagens tem um [sistema de runtime], que é responsável por coisas como coleta de lixo (por exemplo, em Java) ou threads de software (por exemplo, goroutines em Go). Este runtime precisa ser chamado antes de `main`, já que ele precisa se inicializar a si mesmo.
+</div>
+
+## Ponto de Entrada
+
+Alguém pode pensar que a função `main` é o "ponto de entrada" do programa, ou seja, a primeira função chamada quando você executa um programa. No entanto, a maioria das linguagens tem um [sistema de runtime], que é responsável por coisas como coleta de lixo (por exemplo, em Java) ou threads de software (por exemplo, goroutines em Go). Este runtime precisa ser chamado antes de `main`, já que ele precisa se inicializar a si mesmo.
 
 [sistema de runtime]: https://en.wikipedia.org/wiki/Runtime_system
 
@@ -199,7 +208,7 @@ Em um binário Rust típico que vincula a biblioteca padrão, a execução come�
 
 [rt::lang_start]: https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73
 
-Nosso executável independente não tem acesso ao runtime Rust e ao `crt0`, então precisamos definir nosso próprio ponto de entrada. Implementar o item de linguagem `start` não ajudaria, já que ainda exigiria `crt0`. Em vez disso, precisamos sobrescrever diretamente o ponto de entrada `crt0`.
+Nosso executável independente não tem acesso ao runtime Rust e ao `crt0`, então precisamos definir nosso próprio ponto de entrada e não podemos simplesmente definir uma função `main`.
 
 ### Sobrescrevendo o Ponto de Entrada (Entry Point)
 Para dizer ao compilador Rust que não queremos usar a cadeia normal de ponto de entrada, adicionamos o atributo `#![no_main]`.
