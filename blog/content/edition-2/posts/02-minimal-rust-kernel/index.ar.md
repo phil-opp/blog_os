@@ -195,10 +195,10 @@ rtl = true
 لمزيد من المعلومات، راجع مقالتنا حول [تعطيل SIMD][disabling SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
 
 ```json
-"rustc-abi": "x86-softfloat"
+"rustc-abi": "softfloat"
 ```
 
-بما أننا نريد استخدام ميزة `soft-float`، نحتاج أيضًا إلى إخبار مترجم Rust `rustc` أننا نريد استخدام ABI المقابل. يمكننا ذلك عن طريق تعيين حقل `rustc-abi` إلى `x86-softfloat`.
+بما أننا نريد استخدام ميزة `soft-float`، نحتاج أيضًا إلى إخبار مترجم Rust `rustc` أننا نريد استخدام ABI المقابل. يمكننا ذلك عن طريق تعيين حقل `rustc-abi` إلى `softfloat`.
 
 #### دمج كل شيء
 ملف مواصفات الهدف الخاص بنا يبدو الآن كالتالي:
@@ -218,7 +218,7 @@ rtl = true
     "panic-strategy": "abort",
     "disable-redzone": true,
     "features": "-mmx,-sse,+soft-float",
-    "rustc-abi": "x86-softfloat"
+    "rustc-abi": "softfloat"
 }
 ```
 

@@ -195,10 +195,10 @@ Un problème avec la désactivation de SIMD est que les opérations sur les nomb
 Pour plus d'informations, voir notre article sur la [désactivation de SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
 
 ```json
-"rustc-abi": "x86-softfloat"
+"rustc-abi": "softfloat"
 ```
 
-As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `rustc-abi` field to `x86-softfloat`.
+As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `rustc-abi` field to `softfloat`.
 
 #### Assembler le tout
 Notre fichier de spécification de cible ressemble maintenant à ceci :
@@ -218,7 +218,7 @@ Notre fichier de spécification de cible ressemble maintenant à ceci :
     "panic-strategy": "abort",
     "disable-redzone": true,
     "features": "-mmx,-sse,+soft-float",
-    "rustc-abi": "x86-softfloat"
+    "rustc-abi": "softfloat"
 }
 ```
 

@@ -196,10 +196,10 @@ SIMD'yi devre dışı bırakmanın bir sorunu, `x86_64`'te kayan nokta işlemler
 Daha fazla bilgi için [SIMD'yi devre dışı bırakma](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.tr.md) hakkındaki yazımıza bakın.
 
 ```json
-"rustc-abi": "x86-softfloat"
+"rustc-abi": "softfloat"
 ```
 
-`soft-float` özelliğini kullanmak istediğimiz için, Rust derleyicisi `rustc`'ye de ilgili ABI'yi kullanmak istediğimizi söylememiz gerekir. Bunu, `rustc-abi` alanını `x86-softfloat` olarak ayarlayarak yapabiliriz.
+`soft-float` özelliğini kullanmak istediğimiz için, Rust derleyicisi `rustc`'ye de ilgili ABI'yi kullanmak istediğimizi söylememiz gerekir. Bunu, `rustc-abi` alanını `softfloat` olarak ayarlayarak yapabiliriz.
 
 #### Hepsini Bir Araya Getirmek
 Hedef belirtim dosyamız artık şöyle görünüyor:
@@ -219,7 +219,7 @@ Hedef belirtim dosyamız artık şöyle görünüyor:
     "panic-strategy": "abort",
     "disable-redzone": true,
     "features": "-mmx,-sse,+soft-float",
-    "rustc-abi": "x86-softfloat"
+    "rustc-abi": "softfloat"
 }
 ```
 

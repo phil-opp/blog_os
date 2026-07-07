@@ -193,10 +193,10 @@ Um problema com desabilitar SIMD é que operações de ponto flutuante em `x86_6
 Para mais informações, veja nosso post sobre [desabilitando SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
 
 ```json
-"rustc-abi": "x86-softfloat"
+"rustc-abi": "softfloat"
 ```
 
-Como queremos usar o recurso `soft-float`, também precisamos dizer ao compilador Rust `rustc` que queremos usar a ABI correspondente. Podemos fazer isso definindo o campo `rustc-abi` para `x86-softfloat`.
+Como queremos usar o recurso `soft-float`, também precisamos dizer ao compilador Rust `rustc` que queremos usar a ABI correspondente. Podemos fazer isso definindo o campo `rustc-abi` para `softfloat`.
 
 #### Juntando Tudo
 Nosso arquivo de especificação de alvo agora se parece com isto:
@@ -216,7 +216,7 @@ Nosso arquivo de especificação de alvo agora se parece com isto:
     "panic-strategy": "abort",
     "disable-redzone": true,
     "features": "-mmx,-sse,+soft-float",
-    "rustc-abi": "x86-softfloat"
+    "rustc-abi": "softfloat"
 }
 ```
 
