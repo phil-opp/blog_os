@@ -100,10 +100,16 @@ fn main() {}
 ```
 > cargo build
 error: `#[panic_handler]` function required, but not found
-error: language item required, but not found: `eh_personality`
+error: unwinding panics are not supported without std
 ```
 
-现在我们发现，编译器缺少一个 `#[panic_handler]` 函数和一个**语言项**（language item）。
+现在编译器缺少一个 `#[panic_handler]` 函数，并且报告在没有标准库的情况下无法进行**栈展开**（unwinding）。我们将在下面的小节中分别讨论这两个错误。
+
+<div class="note">
+
+在较旧的 Rust 工具链上，第二个错误显示为 `language item required, but not found: eh_personality`，它与 `unwinding panics are not supported without std` 错误的原因相同。
+
+</div>
 
 ## 实现 panic 处理函数
 
@@ -125,13 +131,15 @@ fn panic(_info: &PanicInfo) -> ! {
 
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 
-## eh_personality 语言项
+## 栈展开
 
-语言项是一些编译器需求的特殊函数或类型。举例来说，Rust 的 [Copy](https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html) trait 是一个这样的语言项，告诉编译器哪些类型需要遵循**复制语义**（[copy semantics](https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html)）——当我们查找 `Copy` trait 的[实现](https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299)时，我们会发现，一个特殊的 `#[lang = "copy"]` 属性将它定义为了一个语言项，达到与编译器联系的目的。
+在默认情况下，当 panic 发生时，Rust 会使用**栈展开**（[stack unwinding](https://www.bogotobogo.com/cplusplus/stackunwinding.php)）来运行栈上所有活跃变量的**析构函数**（destructor）。这确保了所有使用的内存都被释放，并允许调用程序的**父进程**（parent thread）捕获 panic 并继续运行。但是，栈展开是一个复杂的过程，通常需要一些依赖于操作系统的库（如 Linux 的 [libunwind](https://www.nongnu.org/libunwind/) 或 Windows 的**结构化异常处理**（[structured exception handling, SEH](https://docs.microsoft.com/en-us/windows/win32/debug/structured-exception-handling))），而这些库都需要 Rust 的标准库。因此，我们无法在自己的 `no_std` 操作系统内核中使用栈展开。
 
-我们可以自己实现语言项，但这是下下策：目前来看，语言项是高度不稳定的语言细节实现，它们不会经过编译期类型检查（所以编译器甚至不确保它们的参数类型是否正确）。幸运的是，我们有更稳定的方式，来修复上面的语言项错误。
+<div class="note">
 
-`eh_personality` 语言项标记的函数，将被用于实现**栈展开**（[stack unwinding](https://www.bogotobogo.com/cplusplus/stackunwinding.php)）。在使用标准库的情况下，当 panic 发生时，Rust 将使用栈展开，来运行在栈上所有活跃的变量的**析构函数**（destructor）——这确保了所有使用的内存都被释放，允许调用程序的**父进程**（parent thread）捕获 panic，处理并继续运行。但是，栈展开是一个复杂的过程，如 Linux 的 [libunwind](https://www.nongnu.org/libunwind/) 或 Windows 的**结构化异常处理**（[structured exception handling, SEH](https://docs.microsoft.com/en-us/windows/win32/debug/structured-exception-handling)），通常需要依赖于操作系统的库；所以我们不在自己编写的操作系统中使用它。
+在较旧的 Rust 工具链上，`language item required, but not found: eh_personality` 错误同样指向栈展开。`eh_personality` 语言项标记的函数将被用于实现栈展开。语言项是一些编译器内部需求的特殊项（trait、函数、类型等）。在较新的 Rust 工具链上，该错误信息经过改进，不再提及这一实现细节。
+
+</div>
 
 ### 禁用栈展开
 
@@ -145,24 +153,28 @@ panic = "abort"
 panic = "abort"
 ```
 
-这些选项能将 **dev 配置**（dev profile）和 **release 配置**（release profile）的 panic 策略设为 `abort`。`dev` 配置适用于 `cargo build`，而 `release` 配置适用于 `cargo build --release`。现在编译器应该不再要求我们提供 `eh_personality` 语言项实现。
+这些选项能将 **dev 配置**（dev profile）和 **release 配置**（release profile）的 panic 策略设为 `abort`。`dev` 配置适用于 `cargo build`，而 `release` 配置适用于 `cargo build --release`。现在 `unwinding panics are not supported without std` 错误应该被修复了。
 
-现在我们已经修复了出现的两个错误，可以开始编译了。然而，尝试编译运行后，一个新的错误出现了：
+如果我们现在尝试编译，会出现一个新的错误：
 
 ```bash
 > cargo build
-error: requires `start` lang_item
+error: using `fn main` requires the standard library
 ```
 
-## start 语言项
+<div class="note">
 
-这里，我们的程序遗失了 `start` 语言项，它将定义一个程序的**入口点**（entry point）。
+在较旧的 Rust 工具链上，该错误显示为 `error: requires start lang_item`。`start` 语言项定义了底层的入口点，它随后会调用 `main` 函数。因此，这个错误与较新工具链上的 ``using `fn main` requires the standard library`` 错误原因相同。
 
-我们通常会认为，当运行一个程序时，首先被调用的是 `main` 函数。但是，大多数语言都拥有一个**运行时系统**（[runtime system](https://en.wikipedia.org/wiki/Runtime_system)），它通常为**垃圾回收**（garbage collection）或**绿色线程**（software threads，或 green threads）服务，如 Java 的 GC 或 Go 语言的协程（goroutine）；这个运行时系统需要在 main 函数前启动，因为它需要让程序初始化。
+</div>
+
+## 入口点
+
+我们可能会认为 `main` 函数是程序的“入口点”（entry point），即运行程序时第一个被调用的函数。但是，大多数语言都拥有一个**运行时系统**（[runtime system](https://en.wikipedia.org/wiki/Runtime_system)），它通常为**垃圾回收**（garbage collection）或**绿色线程**（software threads，或 green threads）服务，如 Java 的 GC 或 Go 语言的协程（goroutine）；这个运行时系统需要在 main 函数前启动，因为它需要让程序初始化。
 
 在一个典型的使用标准库的 Rust 程序中，程序运行是从一个名为 `crt0` 的运行时库开始的。`crt0` 意为 C runtime zero，它能建立一个适合运行 C 语言程序的环境，这包含了栈的创建和可执行程序参数的传入。在这之后，这个运行时库会调用 [Rust 的运行时入口点](https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73)，这个入口点被称作 **start语言项**（"start" language item）。Rust 只拥有一个极小的运行时，它被设计为拥有较少的功能，如爆栈检测和打印**栈轨迹**（stack trace）。这之后，这个运行时将会调用 main 函数。
 
-我们的独立式可执行程序并不能访问 Rust 运行时或 `crt0` 库，所以我们需要定义自己的入口点。只实现一个 `start` 语言项并不能帮助我们，因为这之后程序依然要求 `crt0` 库。所以，我们要做的是，直接重写整个 `crt0` 库和它定义的入口点。
+我们的独立式可执行程序并不能访问 Rust 运行时和 `crt0` 库，所以我们需要定义自己的入口点，而不能仅仅定义一个 `main` 函数。
 
 ### 重写入口点
 

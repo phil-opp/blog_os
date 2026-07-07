@@ -117,10 +117,16 @@ fn main() {}
 ```bash
 > cargo build
 error: `#[panic_handler]` function required, but not found
-error: language item required, but not found: `eh_personality`
+error: unwinding panics are not supported without std
 ```
 
-この状態では `#[panic_handler]` 関数と `language item` がないというエラーが発生します。
+コンパイラは `#[panic_handler]` 関数がないことに加え、標準ライブラリなしでは _アンワインド_ ができないと訴えています。これら2つのエラーについては、以下のセクションで見ていきます。
+
+<div class="note">
+
+古い Rust ツールチェインでは、2つ目のエラーは代わりに `language item required, but not found: eh_personality` と表示されます。これは `unwinding panics are not supported without std` エラーと同じ原因によるものです。
+
+</div>
 
 ## Panic の実装
 
@@ -145,16 +151,15 @@ fn panic(_info: &PanicInfo) -> ! {
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-## `eh_personality` Language Item
+## アンワインド
 
-language item はコンパイラによって内部的に必要とされる特別な関数や型です。例えば、[`Copy`] トレイトはどの型が[コピーセマンティクス][`Copy`]を持っているかをコンパイラに伝える language item です。[実装][copy code]を見てみると、 language item として定義されている特別な `#[lang = "copy"]` attribute を持っていることが分かります。
+Rust はデフォルトで、[パニック]が発生した場合にすべての生きているスタック変数のデストラクタを実行するために[スタックアンワインド][stack unwinding]を使用します。これにより、使用されている全てのメモリが確実に解放され、親スレッドはパニックを検知して実行を継続できます。しかしアンワインドは複雑な処理であり、いくつかの OS 特有のライブラリ(例えば、Linux では [libunwind]、Windows では[構造化例外][structured exception handling])を必要とし、それらは Rust の標準ライブラリを必要とします。その結果、私達の `no_std` な OS カーネルではアンワインドを使うことができません。
 
-[`Copy`]: https://doc.rust-lang.org/nightly/core/marker/trait.Copy.html
-[copy code]: https://github.com/rust-lang/rust/blob/485397e49a02a3b7ff77c17e4a3f16c653925cb3/src/libcore/marker.rs#L296-L299
+<div class="note">
 
-独自に language item を実装することもできますが、これは最終手段として行われるべきでしょう。というのも、language item は非常に不安定な実装であり型検査も行われないからです(なので、コンパイラは関数が正しい引数の型を取っているかさえ検査しません)。幸い、上記の language item のエラーを修正するためのより安定した方法があります。
+古い Rust ツールチェインで発生する `language item required, but not found: eh_personality` エラーもアンワインドを指し示しています。[`eh_personality` language item] はスタックアンワインドを実装するために使われる関数を定義します。language item はコンパイラによって内部的に必要とされる特別なアイテム(トレイトや関数、型など)です。新しい Rust ツールチェインでは、この実装の詳細に言及しないようにエラーメッセージが改善されました。
 
-[`eh_personality` language item] は[スタックアンワインド][stack unwinding] を実装するための関数を定義します。デフォルトでは、パニックが起きた場合には Rust はアンワインドを使用してすべてのスタックにある変数のデストラクタを実行します。これにより、使用されている全てのメモリが確実に解放され、親スレッドはパニックを検知して実行を継続できます。しかしアンワインドは複雑であり、いくつかの OS 特有のライブラリ(例えば、Linux では [libunwind] 、Windows では[構造化例外][structured exception handling])を必要とするので、私達の OS には使いたくありません。
+</div>
 
 [`eh_personality` language item]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
@@ -173,22 +178,26 @@ panic = "abort"
 panic = "abort"
 ```
 
-これは dev プロファイル(`cargo build` に使用される)と release プロファイル(`cargo build --release` に使用される)の両方でパニックで中止するようにするための設定です。これで `eh_personality` language item が不要になりました。
+これは dev プロファイル(`cargo build` に使用される)と release プロファイル(`cargo build --release` に使用される)の両方でパニック戦略を `abort` に設定するものです。これで `unwinding panics are not supported without std` エラーは修正されるはずです。
 
 [abort on panic]: https://github.com/rust-lang/rust/pull/32900
 
-これで上の2つのエラーを修正しました。しかし、コンパイルしようとすると別のエラーが発生します:
+ここでコンパイルしようとすると、新たなエラーが発生します:
 
 ```bash
 > cargo build
-error: requires `start` lang_item
+error: using `fn main` requires the standard library
 ```
 
-私達のプログラムにはエントリポイントを定義する `start` language item がありません。
+<div class="note">
 
-## `start` attribute
+古い Rust ツールチェインでは、このエラーは代わりに `error: requires start lang_item` と表示されます。`start` language item は、後に `main` 関数を呼び出す基盤となるエントリポイントを定義します。したがって、このエラーは新しいツールチェインで発生する ``using `fn main` requires the standard library`` エラーと同じ原因によるものです。
 
-`main` 関数はプログラムを実行したときに最初に呼び出される関数であると思うかもしれません。しかし、ほとんどの言語には[ランタイムシステム][runtime system]があり、これはガベージコレクション(Java など)やソフトウェアスレッド(Go のゴルーチン)などを処理します。ランタイムは自身を初期化する必要があるため、`main` 関数の前に呼び出す必要があります。これにはスタック領域の作成と正しいレジスタへの引数の配置が含まれます。
+</div>
+
+## エントリポイント
+
+`main` 関数はプログラムの「エントリポイント」、すなわちプログラムを実行したときに最初に呼び出される関数であると思うかもしれません。しかし、ほとんどの言語には[ランタイムシステム][runtime system]があり、これはガベージコレクション(Java など)やソフトウェアスレッド(Go のゴルーチン)などを処理します。ランタイムは自身を初期化する必要があるため、`main` 関数の前に呼び出す必要があります。これにはスタック領域の作成と正しいレジスタへの引数の配置が含まれます。
 
 [runtime system]: https://en.wikipedia.org/wiki/Runtime_system
 
@@ -196,7 +205,7 @@ error: requires `start` lang_item
 
 [rt::lang_start]: https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73
 
-私達のフリースタンディングな実行可能ファイルは今のところ Rust ランタイムと `crt0` へアクセスできません。なので、私達は自身でエントリポイントを定義する必要があります。`start` language item を実装することは `crt0` を必要とするのでここではできません。代わりに `crt0` エントリポイントを直接上書きしなければなりません。
+私達のフリースタンディングな実行可能ファイルは Rust ランタイムと `crt0` へアクセスできません。なので、私達は自身でエントリポイントを定義する必要があり、単に `main` 関数を定義するだけではいけません。
 
 ### エントリポイントの上書き
 

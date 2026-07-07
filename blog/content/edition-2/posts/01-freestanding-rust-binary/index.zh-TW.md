@@ -118,10 +118,16 @@ fn main() {}
 ```
 > cargo build
 error: `#[panic_handler]` function required, but not found
-error: language item required, but not found: `eh_personality`
+error: unwinding panics are not supported without std
 ```
 
-現在編譯器告訴我們缺少 `#[panic_handler]` 函式以及 _language item_。
+現在編譯器缺少 `#[panic_handler]` 函式，並且抱怨在沒有標準函式庫的情況下無法進行 _unwinding_。我們會在接下來的段落中探討這兩個錯誤。
+
+<div class="note">
+
+在較舊的 Rust 工具鏈上，第二個錯誤訊息會顯示為 `language item required, but not found: eh_personality`，其成因與 `unwinding panics are not supported without std` 錯誤相同。
+
+</div>
 
 ## 實作 panic 處理函式
 
@@ -147,15 +153,18 @@ fn panic(_info: &PanicInfo) -> ! {
 [diverging function]: https://doc.rust-lang.org/1.30.0/book/first-edition/functions.html#diverging-functions
 [“never” type]: https://doc.rust-lang.org/nightly/std/primitive.never.html
 
-## eh_personality Language Item
+## 堆疊回溯
 
-Language item 是一些編譯器需求的特殊函式或類型。舉例來說，Rust 的 [`Copy`] trait 就是一個 language item，告訴編譯器哪些類型擁有[_複製的語意_][`Copy`]。當我們搜尋 `Copy` trait 的[實作][copy code]時，我們會發現一個特殊的 `#[lang = "copy"]` 屬性將它定義為一個 language item。
+在預設情況下當 [panic] 發生時，Rust 會使用[堆疊回溯][stack unwinding]來執行所有存在堆疊上變數的解構子（destructor）。這確保所有使用的記憶體都被釋放，並讓 parent thread 獲取 panic 資訊並繼續運行。但是堆疊回溯是一個複雜的過程，通常會需要一些 OS 特定的函式庫（例如 Linux 的 [libunwind] 或 Windows 的 [structured exception handling]），而這些函式庫需要 Rust 的標準函式庫。所以我們無法在 `no_std` 的作業系統核心中使用堆疊回溯。
 
-我們可以自己實現 language item，但這只應是最後的手段。因為 language item 屬於非常不穩定的實作細節，而且不會做類型檢查（所以編譯器甚至不會確保它們的參數類型是否正確）。幸運的是，我們有更穩定的方式來修復上面關於 language item 的錯誤。
+<div class="note">
 
-`eh_personality` language item 標記的函式將被用於實作[堆疊回溯][stack unwinding]。在預設情況下當 panic 發生時，Rust 會使用堆疊回溯來執行所有存在堆疊上變數的解構子（destructor）。這確保所有使用的記憶體都被釋放，並讓 parent thread 獲取 panic 資訊並繼續運行。但是堆疊回溯是一個複雜的過程，通常會需要一些 OS 的函式庫如 Linux 的 [libunwind] 或 Windows 的 [structured exception handling]。所以我們並不希望在我們的作業系統中使用它。
+在較舊的 Rust 工具鏈上出現的 `language item required, but not found: eh_personality` 錯誤同樣指向堆疊回溯。[`eh_personality` language item] 標記的函式將被用於實作堆疊回溯。Language item 是一些編譯器內部需求的特殊項目（trait、函式、類型等）。在較新的 Rust 工具鏈上，此錯誤訊息已被改進，以避免提及這項實作細節。
+
+</div>
 
 [stack unwinding]: https://www.bogotobogo.com/cplusplus/stackunwinding.php
+[`eh_personality` language item]: https://github.com/rust-lang/rust/blob/edb368491551a77d77a48446d4ee88b35490c565/src/libpanic_unwind/gcc.rs#L11-L45
 [libunwind]: https://www.nongnu.org/libunwind/
 [structured exception handling]: https://docs.microsoft.com/en-us/windows/win32/debug/structured-exception-handling
 
@@ -171,22 +180,26 @@ panic = "abort"
 panic = "abort"
 ```
 
-這些選項能將　`dev` 設置（用於 `cargo build`）和 `release` 設置（用於 `cargo build --release`）的 panic 策略設為 `abort`。現在編譯器不會再要求我們提供 `eh_personality` language item。
+這些選項能將　`dev` 設置（用於 `cargo build`）和 `release` 設置（用於 `cargo build --release`）的 panic 策略設為 `abort`。現在 `unwinding panics are not supported without std` 錯誤應該就能修復了。
 
 [abort on panic]: https://github.com/rust-lang/rust/pull/32900
 
-現在我們已經修復了上面的錯誤，但是如果我們嘗試編譯的話，又會出現一個新的錯誤：
+如果我們現在嘗試編譯的話，會出現一個新的錯誤：
 
 ```
 > cargo build
-error: requires `start` lang_item
+error: using `fn main` requires the standard library
 ```
 
-我們的程式缺少 `start` 這個用來定義入口點（entry point）的 language item。
+<div class="note">
 
-## `start` 屬性
+較舊的 Rust 工具鏈會將此錯誤回報為 `error: requires start lang_item`。`start` language item 定義了底層的入口點，而它稍後會呼叫 `main` 函式。所以此錯誤與較新工具鏈上的 ``using `fn main` requires the standard library`` 錯誤成因相同。
 
-我們通常會認為執行一個程式時，首先被呼叫的是 `main` 函式。但是大多數語言都擁有一個[執行時系統][runtime system]，它通常負責垃圾回收（garbage collection）像是 Java 或軟體執行緒（software threads）像是 Go 的 goroutines。這個執行時系統需要在 main 函式前啟動，因為它需要讓先進行初始化。
+</div>
+
+## 入口點（Entry Point）
+
+我們可能會認為 `main` 函式是程式的「入口點（entry point）」，也就是執行程式時首先被呼叫的函式。但是大多數語言都擁有一個[執行時系統][runtime system]，它通常負責垃圾回收（garbage collection）像是 Java 或軟體執行緒（software threads）像是 Go 的 goroutines。這個執行時系統需要在 main 函式前啟動，因為它需要讓先進行初始化。
 
 [runtime system]: https://en.wikipedia.org/wiki/Runtime_system
 
@@ -194,7 +207,7 @@ error: requires `start` lang_item
 
 [rt::lang_start]: https://github.com/rust-lang/rust/blob/bb4d1491466d8239a7a5fd68bd605e3276e97afb/src/libstd/rt.rs#L32-L73
 
-我們的獨立式可執行檔並沒有辦法存取 Rust 執行時系統或 `crt0`，所以我們需要定義自己的入口點。實作 `start` language item 並沒有用，因為這樣還是會需要 `crt0`。所以我們要做的是直接覆寫 `crt0` 的入口點。
+我們的獨立式可執行檔並沒有辦法存取 Rust 執行時系統或 `crt0`，所以我們需要定義自己的入口點，而不能只定義一個 `main` 函式。
 
 ### 重寫入口點
 
