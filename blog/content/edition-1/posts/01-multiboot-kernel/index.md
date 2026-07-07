@@ -55,7 +55,7 @@ end tag       | (u16, u16, u32) | `(0, 0, 8)`
 
 Converted to a x86 assembly file it looks like this (Intel syntax):
 
-```nasm
+```asm
 section .multiboot_header
 header_start:
     dd 0xe85250d6                ; magic number (multiboot 2)
@@ -92,7 +92,7 @@ We can already _assemble_ this file (which I called `multiboot_header.asm`) usin
 ## The Boot Code
 To boot our kernel, we must add some code that the bootloader can call. Let's create a file named `boot.asm`:
 
-```nasm
+```asm
 global start
 
 section .text
@@ -137,7 +137,7 @@ To create the ELF _executable_, we need to [link] the object files together. We 
 [link]: https://en.wikipedia.org/wiki/Linker_(computing)
 [linker script]: https://sourceware.org/binutils/docs/ld/Scripts.html
 
-```ld
+```
 ENTRY(start)
 
 SECTIONS {
@@ -262,7 +262,7 @@ Right now we need to execute 4 commands in the right order every time we change 
 ```
 The Makefile looks like this (indented with tabs instead of spaces):
 
-```Makefile
+```make
 arch ?= x86_64
 kernel := build/kernel-$(arch).bin
 iso := build/os-$(arch).iso

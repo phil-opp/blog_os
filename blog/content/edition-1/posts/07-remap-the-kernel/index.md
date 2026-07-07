@@ -1030,7 +1030,7 @@ The decision to place the kernel stack right above the page tables was already u
 
 [silent stack overflow]: @/edition-1/posts/06-page-tables/index.md
 
-```nasm
+```asm
 ; in src/arch/x86_64/boot.asm
 
 section .bss

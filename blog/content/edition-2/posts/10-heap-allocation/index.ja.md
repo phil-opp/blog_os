@@ -488,7 +488,7 @@ pub fn init_heap(
 [`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
 [question mark operator]: https://doc.rust-jp.rs/book-ja/ch09-02-recoverable-errors-with-result.html#%E3%82%A8%E3%83%A9%E3%83%BC%E5%A7%94%E8%AD%B2%E3%81%AE%E3%82%B7%E3%83%A7%E3%83%BC%E3%83%88%E3%82%AB%E3%83%83%E3%83%88-%E6%BC%94%E7%AE%97%E5%AD%90
 [`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[_translation lookaside buffer_]: @/edition-2/posts/08-paging-introduction/index.ja.md#toransuresiyonrutukuasaidobatuhua
+[_translation lookaside buffer_]: @/edition-2/posts/08-paging-introduction/index.ja.md#toransuresiyon-rutukuasaido-batuhua
 [`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 
 最後のステップは、この関数を`kernel_main`から呼び出すことです：

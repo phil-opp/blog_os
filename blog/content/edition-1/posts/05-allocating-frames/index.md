@@ -37,7 +37,7 @@ First, we need to pass this pointer to our kernel as an argument to `rust_main`.
 
 So to pass the pointer to our kernel, we need to move it to `rdi` before calling the kernel. Since we're not using the `rdi`/`edi` register in our bootstrap code, we can simply set the `edi` register right after booting (in `boot.asm`):
 
-```nasm
+```asm
 start:
     mov esp, stack_top
     mov edi, ebx       ; Move Multiboot info pointer to edi
