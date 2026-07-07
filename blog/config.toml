@@ -77,7 +77,7 @@ Do you have a problem, want to share feedback, or discuss further ideas? Feel fr
 title = "Writing an OS in Rust"
 description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.zh-CN.translations]
-lang_name = "Chinese (simplified)"
+lang_name = "中文（简体）"
 toc = "目录"
 all_posts = "« 所有文章"
 comments = "评论"
@@ -102,7 +102,7 @@ comment_note = """
 title = "Writing an OS in Rust"
 description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.zh-TW.translations]
-lang_name = "Chinese (traditional)"
+lang_name = "中文（繁體）"
 toc = "目錄"
 all_posts = "« 所有文章"
 comments = "評論"
@@ -127,7 +127,7 @@ Do you have a problem, want to share feedback, or discuss further ideas? Feel fr
 title = "Writing an OS in Rust"
 description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.ja.translations]
-lang_name = "Japanese"
+lang_name = "日本語"
 toc = "目次"
 all_posts = "« すべての記事へ"
 comments = "コメント"
@@ -152,7 +152,7 @@ Do you have a problem, want to share feedback, or discuss further ideas? Feel fr
 title = "Writing an OS in Rust"
 description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.fa.translations]
-lang_name = "Persian"
+lang_name = "فارسی"
 toc = "فهرست مطالب"
 all_posts = "« همه پست‌ها"
 comments = "نظرات"
@@ -177,7 +177,7 @@ Do you have a problem, want to share feedback, or discuss further ideas? Feel fr
 title = "Writing an OS in Rust"
 description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.ru.translations]
-lang_name = "Russian"
+lang_name = "Русский"
 toc = "Содержание"
 all_posts = "« Все посты"
 comments = "Комментарии"
@@ -202,7 +202,7 @@ Do you have a problem, want to share feedback, or discuss further ideas? Feel fr
 title = "Writing an OS in Rust"
 description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.fr.translations]
-lang_name = "French"
+lang_name = "Français"
 toc = "Table des matières"
 all_posts = "« Tous les articles"
 comments = "Commentaires"
@@ -227,7 +227,7 @@ Do you have a problem, want to share feedback, or discuss further ideas? Feel fr
 title = "Writing an OS in Rust"
 description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.ko.translations]
-lang_name = "Korean"
+lang_name = "한국어"
 toc = "목차"
 all_posts = "« 모든 게시글"
 comments = "댓글"
@@ -275,7 +275,7 @@ comment_note = """
 title = "Writing an OS in Rust"
 description = "This blog series creates a small operating system in the Rust programming language. Each post is a small tutorial and includes all needed code."
 [languages.es.translations]
-lang_name = "Spanish"
+lang_name = "Español"
 toc = "Tabla de Contenidos"
 all_posts = "« Todos los Posts"
 comments = "Comentarios"
