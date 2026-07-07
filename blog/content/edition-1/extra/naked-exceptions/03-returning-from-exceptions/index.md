@@ -714,7 +714,7 @@ The CPU and the exception handler overwrite the data in red zone. But this data 
 ### Adjusting our Exception Handler?
 The problem is that the [System V ABI] demands that the red zone _“shall not be modified by signal or interrupt handlers.”_ Our current exception handlers do not respect this. We could try to fix it by subtracting 128 from the stack pointer before pushing anything:
 
-```nasm
+```asm
 sub rsp, 128
 save_scratch_registers()
 ...

@@ -258,7 +258,7 @@ Of course recursive mapping has some disadvantages, too. It occupies a P4 entry 
 ### Implementation
 To map the P4 table recursively, we just need to point the 511th entry to the table itself. Of course we could do it in Rust, but it would require some fiddling with unsafe pointers. It's easier to just add some lines to our boot assembly:
 
-```nasm
+```asm
 mov eax, p4_table
 or eax, 0b11 ; present + writable
 mov [p4_table + 511 * 8], eax

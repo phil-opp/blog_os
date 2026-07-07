@@ -195,7 +195,7 @@ Calling the main handler is a bit more complicated, since we need to pass the ar
 
 Translated to assembly, it looks like this:
 
-```nasm
+```asm
 mov rdi, rsp
 call divide_by_zero_handler
 ```

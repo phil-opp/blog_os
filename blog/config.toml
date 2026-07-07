@@ -10,9 +10,11 @@ minify_html = false
 ignored_content = ["*/README.md", "*/LICENSE-CC-BY-NC"]
 
 [markdown]
-highlight_code = true
-highlight_theme = "visual-studio-dark"
 smart_punctuation = true
+
+[markdown.highlighting]
+theme = "dark-plus"
+error_on_missing_language = true
 
 [link_checker]
 skip_prefixes = [

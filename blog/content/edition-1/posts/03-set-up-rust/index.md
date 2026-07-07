@@ -268,7 +268,7 @@ But now `xargo build` is executed on every `make`, even if no source file was ch
 ### Calling Rust
 Now we can call the main method in `long_mode_start`:
 
-```nasm
+```asm
 bits 64
 long_mode_start:
     ...

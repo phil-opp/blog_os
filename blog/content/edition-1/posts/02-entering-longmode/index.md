@@ -26,7 +26,7 @@ I tried to explain everything in detail and to keep the code as simple as possib
 ## Some Tests
 To avoid bugs and strange errors on old CPUs we should check if the processor supports every needed feature. If not, the kernel should abort and display an error message. To handle errors easily, we create an error procedure in `boot.asm`. It prints a rudimentary `ERR: X` message, where X is an error code letter, and hangs:
 
-```nasm
+```asm
 ; Prints `ERR: ` and the given error code to screen and hangs.
 ; parameter: error code (in ascii) in al
 error:
@@ -52,7 +52,7 @@ Now we can add some check _functions_. A function is just a normal label with an
 ### Creating a Stack
 To create stack memory we reserve some bytes at the end of our `boot.asm`:
 
-```nasm
+```asm
 ...
 section .bss
 stack_bottom:
@@ -65,7 +65,7 @@ A stack doesn't need to be initialized because we will `pop` only when we `pushe
 
 To use the new stack, we update the stack pointer register right after `start`:
 
-```nasm
+```asm
 global start
 
 section .text
@@ -83,7 +83,7 @@ Now we have a valid stack pointer and are able to call functions. The following 
 ### Multiboot check
 We rely on some Multiboot features in the next posts. To make sure the kernel was really loaded by a Multiboot compliant bootloader, we can check the `eax` register. According to the Multiboot specification ([PDF][Multiboot specification]), the bootloader must write the magic value `0x36d76289` to it before loading a kernel. To verify that we can add a simple function:
 
-```nasm
+```asm
 check_multiboot:
     cmp eax, 0x36d76289
     jne .no_multiboot
@@ -105,7 +105,7 @@ In `no_multiboot`, we use the `jmp` (“jump”) instruction to jump to our erro
 [CPUID]: https://wiki.osdev.org/CPUID
 [CPUID detection]: https://wiki.osdev.org/Setting_Up_Long_Mode#Detection_of_CPUID
 
-```nasm
+```asm
 check_cpuid:
     ; Check if CPUID is supported by attempting to flip the ID bit (bit 21)
     ; in the FLAGS register. If we can flip it, CPUID is available.
@@ -153,7 +153,7 @@ Now we can use CPUID to detect whether long mode can be used. I use code from [O
 
 [long mode detection]: wiki.osdev.org/Setting_Up_Long_Mode#Checking_for_long_mode_support
 
-```nasm
+```asm
 check_long_mode:
     ; test if extended processor info in available
     mov eax, 0x80000000    ; implicit argument for cpuid
@@ -180,7 +180,7 @@ If you look at the assembly above, you'll probably notice that we call `cpuid` t
 ### Putting it together
 We just call these check functions right after start:
 
-```nasm
+```asm
 global start
 
 section .text
@@ -255,7 +255,7 @@ To identity map the first gigabyte of our kernel with 512 2MiB pages, we need on
 
 We can add these two tables at the beginning[^page_table_alignment] of the `.bss` section:
 
-```nasm
+```asm
 ...
 
 section .bss
@@ -274,7 +274,7 @@ The `resb` command reserves the specified amount of bytes without initializing t
 
 When GRUB creates the `.bss` section in memory, it will initialize it to `0`. So the `p4_table` is already valid (it contains 512 non-present entries) but not very useful. To be able to map 2MiB pages, we need to link P4's first entry to the `p3_table` and P3's first entry to the the `p2_table`:
 
-```nasm
+```asm
 set_up_page_tables:
     ; map first P4 entry to P3 table
     mov eax, p3_table
@@ -293,7 +293,7 @@ We just set the present and writable bits (`0b11` is a binary number) in the ali
 
 Now we need to map P2's first entry to a huge page starting at 0, P2's second entry to a huge page starting at 2MiB, P2's third entry to a huge page starting at 4MiB, and so on. It's time for our first (and only) assembly loop:
 
-```nasm
+```asm
 set_up_page_tables:
     ...
     ; map each P2 entry to a huge 2MiB page
@@ -330,7 +330,7 @@ To enable paging and enter long mode, we need to do the following:
 
 The assembly function looks like this (some boring bit-moving to various registers):
 
-```nasm
+```asm
 enable_paging:
     ; load P4 to cr3 register (cpu uses this to access the P4 table)
     mov eax, p4_table
@@ -358,7 +358,7 @@ The `or eax, 1 << X` is a common pattern. It sets the bit `X` in the eax registe
 
 Finally we need to call our new functions in `start`:
 
-```nasm
+```asm
 ...
 start:
     mov esp, stack_top
@@ -404,7 +404,7 @@ A GDT always starts with a 0-entry and contains an arbitrary number of segment e
 
 We need one code segment, a data segment is not necessary in 64-bit mode. Code segments have the following bits set: _descriptor type_, _present_, _executable_ and the _64-bit_ flag. Translated to assembly the long mode GDT looks like this:
 
-```nasm
+```asm
 section .rodata
 gdt64:
     dq 0 ; zero entry
@@ -415,7 +415,7 @@ We chose the `.rodata` section here because it's initialized read-only data. The
 ### Loading the GDT
 To load our new 64-bit GDT, we have to tell the CPU its address and length. We do this by passing the memory location of a special pointer structure to the `lgdt` (load GDT) instruction. The pointer structure looks like this:
 
-```nasm
+```asm
 gdt64:
     dq 0 ; zero entry
     dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; code segment
@@ -427,7 +427,7 @@ The first 2 bytes specify the (GDT length - 1). The `$` is a special symbol that
 
 Now we can load the GDT in `start`:
 
-```nasm
+```asm
 start:
     ...
     call enable_paging
@@ -440,7 +440,7 @@ start:
 ```
 When you still see the green `OK`, everything went fine and the new GDT is loaded. But we still can't execute 64-bit code: The code selector register `cs` still has the values from the old GDT. To update it, we need to load it with the GDT offset (in bytes) of the desired segment. In our case the code segment starts at byte 8 of the GDT, but we don't want to hardcode that 8 (in case we modify our GDT later). Instead, we add a `.code` label to our GDT, that calculates the offset directly from the GDT:
 
-```nasm
+```asm
 section .rodata
 gdt64:
     dq 0 ; zero entry
@@ -455,7 +455,7 @@ We can't just use a normal label here, since we need the table _offset_. We calc
 
 In order to finally enter the true 64-bit mode, we need to load `cs` with `gdt64.code`. But we can't do it through `mov`. The only way to reload the code selector is a _far jump_ or a _far return_. These instructions work like a normal jump/return but change the code selector. We use a far jump to a long mode label:
 
-```nasm
+```asm
 global start
 extern long_mode_start
 ...
@@ -470,7 +470,7 @@ The actual `long_mode_start` label is defined as `extern`, so it's part of anoth
 
 I put the 64-bit code into a new file to separate it from the 32-bit code, thereby we can't call the (now invalid) 32-bit code accidentally. The new file (I named it `long_mode_init.asm`) looks like this:
 
-```nasm
+```asm
 global long_mode_start
 
 section .text
@@ -497,7 +497,7 @@ Above, we reloaded the code segment register `cs` with the new GDT offset. Howev
 
 To avoid future problems, we reload all data segment registers with null:
 
-```nasm
+```asm
 long_mode_start:
     ; load 0 into all data segment registers
     mov ax, 0
