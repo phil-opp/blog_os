@@ -195,10 +195,10 @@ Cargo поддерживает различные целевые системы 
 Для получения дополнительной информации см. наш пост об [отключении SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.ru.md).
 
 ```json
-"rustc-abi": "x86-softfloat"
+"rustc-abi": "softfloat"
 ```
 
-As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `rustc-abi` field to `x86-softfloat`.
+As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `rustc-abi` field to `softfloat`.
 
 #### Соединяем все вместе
 
@@ -219,7 +219,7 @@ As we want to use the `soft-float` feature, we also need to tell the Rust compil
   "panic-strategy": "abort",
   "disable-redzone": true,
   "features": "-mmx,-sse,+soft-float",
-  "rustc-abi": "x86-softfloat"
+  "rustc-abi": "softfloat"
 }
 ```
 
