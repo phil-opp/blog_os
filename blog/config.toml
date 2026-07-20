@@ -23,6 +23,11 @@ skip_prefixes = [
     "https://developer.apple.com/library/archive/qa/qa1118/_index.html", # results in a 401 (I don't know why)
     "https://github.com",                                                # rate limiting often leads to "Error 429 Too Many Requests"
     "https://www.linkedin.com/",                                         # seems to send invalid HTTP status codes
+    "https://wiki.osdev.org/",                                           # Cloudflare blocks datacenter IPs (CI) with 403, regardless of user-agent
+    "https://forum.osdev.org/",                                          # Cloudflare blocks datacenter IPs (CI) with 403, regardless of user-agent
+    "https://developer.arm.com/",                                        # Akamai blocks datacenter IPs (CI) with 403, regardless of user-agent
+    "https://en.cppreference.com/",                                      # Cloudflare blocks datacenter IPs (CI) with 403 (reachable from other networks)
+    "https://gitter.im/",                                                # 301-redirects to a JS app that cannot be link-checked
 ]
 skip_anchor_prefixes = [
     "https://github.com/",                            # see https://github.com/getzola/zola/issues/805

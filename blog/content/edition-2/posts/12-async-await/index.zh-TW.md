@@ -1678,8 +1678,8 @@ impl TaskId {
 這意味着即使 `TaskId::new` 方法並行調用，每個 ID 都只返回一次。[`Ordering`] 參數定義了編譯器是否允許重新排列指令流中的 `fetch_add` 操作。
 由於我們只需要 ID 是唯一的，這種情況下最弱的要求 `Relaxed` 排序就足夠了。
 
-[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
-[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
+[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/type.AtomicU64.html
+[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.Atomic.html#method.fetch_add
 [`Ordering`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
 
 現在我們可以通過添加一個額外的 `id` 字段來擴展我們的 `Task` 類型：

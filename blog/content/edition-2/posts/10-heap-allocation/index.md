@@ -140,7 +140,7 @@ Instead of letting the programmer manually call `allocate` and `deallocate`, the
 This pattern has the strange name [_resource acquisition is initialization_] (or _RAII_ for short). It originated in C++, where it is used to implement a similar abstraction type called [`std::unique_ptr`].
 
 [_resource acquisition is initialization_]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-[`std::unique_ptr`]: https://en.cppreference.com/w/cpp/memory/unique_ptr
+[`std::unique_ptr`]: https://en.cppreference.com/cpp/memory/unique_ptr
 
 Such a type alone does not suffice to prevent all use-after-free bugs since programmers can still hold on to references after the `Box` goes out of scope and the corresponding heap memory slot is deallocated:
 

@@ -1451,8 +1451,8 @@ impl TaskId {
 
 该函数使用了一个静态的 `NEXT_ID` 变量，其类型为 [`AtomicU64`] 以确保每个 ID 都仅被赋值一次。[`fetch_add`] 方法会原子性地增加该值并在单个原子操作中返回先前值。这意味着即使当 `TaskId::new` 方法被并行调用，每个 ID 都只被返回一次。[`Ordering`] 参数决定是否允许编译器在指令流中重新排列 `fetch_add` 操作。由于我们仅要求 ID 唯一，因此在此情况下，具有最弱要求的 `Relaxed` 排序就足够了。
 
-[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
-[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
+[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/type.AtomicU64.html
+[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.Atomic.html#method.fetch_add
 [`Ordering`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
 
 我们现在可以为 `Task` 类型扩展一个额外的 `id` 字段：

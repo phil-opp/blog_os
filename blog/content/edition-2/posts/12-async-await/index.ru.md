@@ -1443,8 +1443,8 @@ impl TaskId {
 
 Функция использует статическую переменную `NEXT_ID` типа [`AtomicU64`], чтобы гарантировать, что каждый идентификатор присваивается только один раз. Метод [`fetch_add`] атомарно увеличивает значение и возвращает предыдущее за одну атомарную операцию. Это значит, что даже когда метод `TaskId::new` вызывается параллельно, каждый идентификатор возвращается ровно один раз. Параметр [`Ordering`] определяет, может ли компилятор переупорядочить операцию `fetch_add` в стриме инструкций. Поскольку мы только требуем, чтобы идентификатор был уникальным, в этом случае достаточно использования упорядочивание `Relaxed` с самыми слабыми требованиями.
 
-[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
-[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
+[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/type.AtomicU64.html
+[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.Atomic.html#method.fetch_add
 [`Ordering`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
 
 Теперь мы можем расширить наш тип `Task`, добавив поле `id`:

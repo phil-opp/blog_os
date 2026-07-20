@@ -1446,8 +1446,8 @@ impl TaskId {
 
 この関数は、各IDが一度だけ割り当てられることを保証するために、[`AtomicU64`]型の静的な`NEXT_ID`変数を使用します。[`fetch_add`]メソッドは、1回のアトミックな操作で、値を増やし更に前の値を返します。つまり、`TaskId::new` メソッドが並列に呼ばれた場合でも、すべてのIDが一度だけ返されることになります。[`Ordering`]パラメータは、コンパイラが命令ストリームにおける`fetch_add`操作の順序を変更することを許可するかどうかを定義します。ここではIDが一意であることだけを要求しているので、最も弱い要求を持つ`Relaxed`という順序づけで十分です。
 
-[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
-[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
+[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/type.AtomicU64.html
+[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.Atomic.html#method.fetch_add
 [`Ordering`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
 
 これで、`Task` 型に `id` フィールドを追加して拡張することができます:

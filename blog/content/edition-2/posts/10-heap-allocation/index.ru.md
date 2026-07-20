@@ -144,7 +144,7 @@ Rust подходит к решению этой проблемы иначе: о
 Этот паттерн имеет странное название [_resource acquisition is initialization_] (или сокращенно _RAII_). Он появился в C++, где используется для реализации аналогичного абстрактного типа под названием [`std::unique_ptr`].
 
 [_resource acquisition is initialization_]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-[`std::unique_ptr`]: https://en.cppreference.com/w/cpp/memory/unique_ptr
+[`std::unique_ptr`]: https://en.cppreference.com/cpp/memory/unique_ptr
 
 Одного лишь такого типа недостаточно для предотвращения всех ошибок use-after-free, поскольку программисты все еще могут удерживать ссылки после того, как `Box` выйдет из области видимости и соответствующий слот памяти в куче будет освобожден:
 

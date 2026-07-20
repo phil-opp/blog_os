@@ -143,7 +143,7 @@ En lugar de permitir que el programador llame manualmente a `allocate` y `deallo
 Este patrón tiene el extraño nombre [_la adquisición de recursos es inicialización_] (o _RAII_ para abreviar). Se originó en C++, donde se utiliza para implementar un tipo de abstracción similar llamado [`std::unique_ptr`].
 
 [_la adquisición de recursos es inicialización_]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-[`std::unique_ptr`]: https://en.cppreference.com/w/cpp/memory/unique_ptr
+[`std::unique_ptr`]: https://en.cppreference.com/cpp/memory/unique_ptr
 
 Tal tipo por sí solo no es suficiente para prevenir todos los errores de uso después de liberar, ya que los programadores aún pueden mantener referencias después de que el `Box` sale del alcance y la correspondencia de memoria del heap se libera:
 
