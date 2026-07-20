@@ -82,18 +82,18 @@ The configuration happens by writing special values to the command and data port
 
 To add the crate as a dependency, we add the following to our project:
 
-[`pic8259`]: https://docs.rs/pic8259/0.10.1/pic8259/
+[`pic8259`]: https://docs.rs/pic8259/0.11.0/pic8259/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pic8259 = "0.10.1"
+pic8259 = "0.11.0"
 ```
 
 The main abstraction provided by the crate is the [`ChainedPics`] struct that represents the primary/secondary PIC layout we saw above. It is designed to be used in the following way:
 
-[`ChainedPics`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html
+[`ChainedPics`]: https://docs.rs/pic8259/0.11.0/pic8259/struct.ChainedPics.html
 
 ```rust
 // in src/interrupts.rs
@@ -126,7 +126,7 @@ pub fn init() {
 
 We use the [`initialize`] function to perform the PIC initialization. Like the `ChainedPics::new` function, this function is also unsafe because it can cause undefined behavior if the PIC is misconfigured.
 
-[`initialize`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html#method.initialize
+[`initialize`]: https://docs.rs/pic8259/0.11.0/pic8259/struct.ChainedPics.html#method.initialize
 
 If all goes well, we should continue to see the "It did not crash" message when executing `cargo run`.
 
@@ -170,10 +170,6 @@ impl InterruptIndex {
     fn as_u8(self) -> u8 {
         self as u8
     }
-
-    fn as_usize(self) -> usize {
-        usize::from(self.as_u8())
-    }
 }
 ```
 
@@ -193,7 +189,7 @@ lazy_static! {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
-        idt[InterruptIndex::Timer.as_usize()]
+        idt[InterruptIndex::Timer.as_u8()]
             .set_handler_fn(timer_interrupt_handler); // new
 
         idt
@@ -209,7 +205,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 Our `timer_interrupt_handler` has the same signature as our exception handlers, because the CPU reacts identically to exceptions and external interrupts (the only difference is that some exceptions push an error code). The [`InterruptDescriptorTable`] struct implements the [`IndexMut`] trait, so we can access individual entries through array indexing syntax.
 
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
 In our timer interrupt handler, we print a dot to the screen. As the timer interrupt happens periodically, we would expect to see a dot appearing on each timer tick. However, when we run it, we see that only a single dot is printed:
@@ -334,7 +330,7 @@ pub fn _print(args: fmt::Arguments) {
 
 The [`without_interrupts`] function takes a [closure] and executes it in an interrupt-free environment. We use it to ensure that no interrupt can occur as long as the `Mutex` is locked. When we run our kernel now, we see that it keeps running without hanging. (We still don't notice any dots, but this is because they're scrolling by too fast. Try to slow down the printing, e.g., by putting a `for _ in 0..10000 {}` inside the loop.)
 
-[`without_interrupts`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.without_interrupts.html
+[`without_interrupts`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
 
 We can apply the same change to our serial printing function to ensure that no deadlocks occur with it either:
@@ -531,7 +527,7 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
         // new
-        idt[InterruptIndex::Keyboard.as_usize()]
+        idt[InterruptIndex::Keyboard.as_u8()]
             .set_handler_fn(keyboard_interrupt_handler);
 
         idt
@@ -581,7 +577,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 We use the [`Port`] type of the `x86_64` crate to read a byte from the keyboard's data port. This byte is called the [_scancode_] and it represents the key press/release. We don't do anything with the scancode yet, other than print it to the screen:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
 
 ![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)

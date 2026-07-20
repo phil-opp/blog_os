@@ -230,7 +230,7 @@ The _Privilege Stack Table_ is used by the CPU when the privilege level changes.
 ### Creating a TSS
 Let's create a new TSS that contains a separate double fault stack in its interrupt stack table. For that, we need a TSS struct. Fortunately, the `x86_64` crate already contains a [`TaskStateSegment` struct] that we can use.
 
-[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
+[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.15.5/x86_64/structures/tss/struct.TaskStateSegment.html
 
 We create the TSS in a new `gdt` module (the name will make sense later):
 
@@ -255,7 +255,7 @@ lazy_static! {
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
             let stack_start = VirtAddr::from_ptr(&raw const STACK);
-            let stack_end = stack_start + STACK_SIZE;
+            let stack_end = stack_start + STACK_SIZE as u64;
             stack_end
         };
         tss
@@ -295,8 +295,8 @@ use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor};
 lazy_static! {
     static ref GDT: GlobalDescriptorTable = {
         let mut gdt = GlobalDescriptorTable::new();
-        gdt.add_entry(Descriptor::kernel_code_segment());
-        gdt.add_entry(Descriptor::tss_segment(&TSS));
+        gdt.append(Descriptor::kernel_code_segment());
+        gdt.append(Descriptor::tss_segment(&TSS));
         gdt
     };
 }
@@ -345,8 +345,8 @@ use x86_64::structures::gdt::SegmentSelector;
 lazy_static! {
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
-        let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
-        let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
+        let code_selector = gdt.append(Descriptor::kernel_code_segment());
+        let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
         (gdt, Selectors { code_selector, tss_selector })
     };
 }
@@ -376,8 +376,8 @@ pub fn init() {
 
 We reload the code segment register using [`CS::set_reg`] and load the TSS using [`load_tss`]. The functions are marked as `unsafe`, so we need an `unsafe` block to invoke them. The reason is that it might be possible to break memory safety by loading invalid selectors.
 
-[`CS::set_reg`]: https://docs.rs/x86_64/0.14.5/x86_64/instructions/segmentation/struct.CS.html#method.set_reg
-[`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
+[`CS::set_reg`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/segmentation/struct.CS.html#method.set_reg
+[`load_tss`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/tables/fn.load_tss.html
 
 Now that we have loaded a valid TSS and interrupt stack table, we can set the stack index for our double fault handler in the IDT:
 
