@@ -7,6 +7,10 @@ date = 2019-04-27
 [extra]
 chapter = "Bare Bones"
 comments_search_term = 1009
+# Please update this when updating the translation
+translation_based_on_commit = "933d825489c556a2e831bb76af86d0de83c0709a"
+# GitHub usernames of the people that translated this post
+translators = ["YaogoGerard"]
 +++
 
 Cet article explore les tests unitaires et les tests d'intégration dans les exécutables `no_std`. Nous utiliserons le support de Rust pour les frameworks de test personnalisés afin d'exécuter des fonctions de test à l'intérieur de notre noyau. Pour transmettre les résultats hors de QEMU, nous utiliserons différentes fonctionnalités de QEMU ainsi que l'outil `bootimage`.
