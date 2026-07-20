@@ -908,45 +908,107 @@ Antes de implementar el rasgo `FrameAllocator`, agregamos un método auxiliar qu
 use bootloader::bootinfo::MemoryRegionType;
 
 impl BootInfoFrameAllocator {
-   
+    /// Devuelve un iterador sobre los marcos utilizables especificados en el mapa de memoria.
+    fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
+        // obtener las regiones utilizables del mapa de memoria
+        let regions = self.memory_map.iter();
+        let usable_regions = regions
+            .filter(|r| r.region_type == MemoryRegionType::Usable);
+        // mapear cada región a su rango de direcciones
+        let addr_ranges = usable_regions
+            .map(|r| r.range.start_addr()..r.range.end_addr());
+        // transformar a un iterador de direcciones de inicio de marco
+        let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
+        // crear tipos `PhysFrame` a partir de las direcciones de inicio
+        frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
+    }
+}
 ```
 
-Follow these instructions to make the following change to my code document.
+Esta función usa métodos combinadores de iteradores para transformar el `MemoryMap` inicial en un iterador de marcos físicos utilizables:
 
-Instruction: Reemplazar "artículo" por "publicación" para mantener consistencia en la terminología
+- Primero, llamamos al método `iter` para convertir el mapa de memoria en un iterador de [`MemoryRegion`]s.
+- Luego usamos el método [`filter`] para omitir cualquier región reservada o no disponible de otra manera. El bootloader actualiza el mapa de memoria para todos los mapeos que crea, así que los marcos que utiliza nuestro núcleo (código, datos o pila) o para almacenar la información de arranque ya están marcados como `InUse` o similar. Por lo tanto, podemos estar seguros de que los marcos `Usable` no se usan en otro lugar.
+- Después, usamos el combinador [`map`] y la [sintaxis de rango] de Rust para transformar nuestro iterador de regiones de memoria en un iterador de rangos de direcciones.
+- A continuación, usamos [`flat_map`] para transformar los rangos de direcciones en un iterador de direcciones de inicio de marco, eligiendo cada 4096ª dirección usando [`step_by`]. Dado que 4096 bytes (= 4&nbsp;KiB) es el tamaño de página, obtenemos la dirección de inicio de cada marco. El bootloader alinea a página todas las áreas de memoria utilizables, así que no necesitamos ningún código de alineación o redondeo aquí. Al usar [`flat_map`] en lugar de `map`, obtenemos un `Iterator<Item = u64>` en lugar de un `Iterator<Item = Iterator<Item = u64>>`.
+- Finalmente, convertimos las direcciones de inicio a tipos `PhysFrame` para construir un `Iterator<Item = PhysFrame>`.
 
-Code Edit:
+[`MemoryRegion`]: https://docs.rs/bootloader/0.6.4/bootloader/bootinfo/struct.MemoryRegion.html
+[`filter`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.filter
+[`map`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.map
+[sintaxis de rango]: https://doc.rust-lang.org/core/ops/struct.Range.html
+[`step_by`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.step_by
+[`flat_map`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.flat_map
+
+El tipo de retorno de la función usa la característica [`impl Trait`]. De esta manera, podemos especificar que devolvemos algún tipo que implementa el rasgo [`Iterator`] con tipo de elemento `PhysFrame`, pero no necesitamos nombrar el tipo de retorno concreto. Esto es importante aquí porque _no podemos_ nombrar el tipo concreto, ya que depende de tipos de clausura innombrables.
+
+[`impl Trait`]: https://doc.rust-lang.org/book/ch10-02-traits.html#returning-types-that-implement-traits
+[`Iterator`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html
+
+#### Implementando el Rasgo `FrameAllocator`
+
+Ahora podemos implementar el rasgo `FrameAllocator`:
+
+```rust
+// en src/memory.rs
+
+unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
+        let frame = self.usable_frames().nth(self.next);
+        self.next += 1;
+        frame
+    }
+}
 ```
-{{ ... }}
-Esta publicación muestra cómo implementar soporte para paginación en nuestro núcleo. Primero explora diferentes técnicas para hacer accesibles los marcos de la tabla de páginas físicas al núcleo y discute sus respectivas ventajas y desventajas. Luego implementa una función de traducción de direcciones y una función para crear un nuevo mapeo.
 
-<!-- more -->
+Primero usamos el método `usable_frames` para obtener un iterador de marcos utilizables del mapa de memoria. Luego, usamos la función [`Iterator::nth`] para obtener el marco con índice `self.next` (omitiendo así `(self.next - 1)` marcos). Antes de devolver ese marco, incrementamos `self.next` en uno para que devolvamos el marco siguiente en la próxima llamada.
 
-Este blog se desarrolla abiertamente en [GitHub]. Si tienes algún problema o pregunta, abre un problema allí. También puedes dejar comentarios [al final]. El código fuente completo de esta publicación se puede encontrar en la rama [`post-09`][post branch].
+[`Iterator::nth`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.nth
 
-[GitHub]: https://github.com/phil-opp/blog_os
-[al final]: #comments
-<!-- fix for zola anchor checker (target is in template): <a id="comments"> -->
-[post branch]: https://github.com/phil-opp/blog_os/tree/post-09
+Esta implementación no es del todo óptima, ya que recrea el asignador `usable_frame` en cada asignación. Sería mejor almacenar directamente el iterador como un campo de la struct. Entonces no necesitaríamos el método `nth` y podríamos simplemente llamar a [`next`] en cada asignación. El problema con este enfoque es que actualmente no es posible almacenar un tipo `impl Trait` en un campo de una struct. Podría funcionar algún día cuando los [_tipos existenciales con nombre_] estén completamente implementados.
 
-<!-- toc -->
+[`next`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#tymethod.next
+[_tipos existenciales con nombre_]: https://github.com/rust-lang/rfcs/pull/2071
 
-## Introducción
+#### Usando el `BootInfoFrameAllocator`
 
-La [publicación anterior] dio una introducción al concepto de paginación. Motivó la paginación comparándola con la segmentación, explicó cómo funcionan la paginación y las tablas de páginas, y luego introdujo el diseño de tabla de páginas de 4 niveles de `x86_64`.
-{{ ... }}
+Ahora podemos modificar nuestra función `kernel_main` para pasar una instancia de `BootInfoFrameAllocator` en lugar de un `EmptyFrameAllocator`:
+
+```rust
+// en src/main.rs
+
+fn kernel_main(boot_info: &'static BootInfo) -> ! {
+    use blog_os::memory::BootInfoFrameAllocator;
+    […]
+    let mut frame_allocator = unsafe {
+        BootInfoFrameAllocator::init(&boot_info.memory_map)
+    };
+    […]
+}
 ```
 
-Follow these instructions to make the following change to my code document.
+Con el asignador de marcos de la información de arranque, el mapeo tiene éxito y vemos el _"¡Nuevo!"_ en negro sobre blanco en la pantalla nuevamente. Detrás de escena, el método `map_to` crea las tablas de páginas faltantes de la siguiente manera:
 
-Instruction: Reemplazar las instancias restantes de "artículo" por "publicación"
+- Usa el `frame_allocator` pasado para asignar un marco no utilizado.
+- Pone a cero el marco para crear una nueva tabla de páginas vacía.
+- Mapea la entrada de la tabla de nivel superior a ese marco.
+- Continúa con el siguiente nivel de tabla.
 
-Code Edit:
-```
-{{ ... }}
-La [publicación anterior] dio una introducción al concepto de paginación. Motivó la paginación comparándola con la segmentación, explicó cómo funcionan la paginación y las tablas de páginas, y luego introdujo el diseño de tabla de páginas de 4 niveles de `x86_64`. Descubrimos que el bootloader (cargador de arranque) ya configuró una jerarquía de tablas de páginas para nuestro núcleo, lo que significa que nuestro núcleo ya se ejecuta en direcciones virtuales. Esto mejora la seguridad, ya que los accesos ilegales a la memoria causan excepciones de falta de página en lugar de modificar la memoria física arbitraria.
+Aunque nuestra función `create_example_mapping` es solo un código de ejemplo, ahora podemos crear nuevos mapeos para páginas arbitrarias. Esto será esencial para asignar memoria o implementar multithreading en publicaciones futuras.
 
-[publicación anterior]: @/edition-2/posts/08-paging-introduction/index.md
+En este punto, deberíamos eliminar nuevamente la función `create_example_mapping` para evitar invocar accidentalmente comportamiento indefinido, como se explicó [arriba](#una-funcion-create-example-mapping).
 
-La publicación terminó con el problema de que [no podemos acceder a las tablas de páginas desde nuestro núcleo][end of previous post] porque se almacenan en la memoria física y nuestro núcleo ya se ejecuta en direcciones virtuales. Esta publicación explora diferentes enfoques para hacer los marcos de la tabla de páginas accesibles a nuestro núcleo. Discutiremos las ventajas y desventajas de cada enfoque y luego decidiremos un enfoque para nuestro núcleo.
-{{ ... }}
+## Resumen
+
+En esta publicación aprendimos sobre diferentes técnicas para acceder a los marcos físicos de las tablas de páginas, incluyendo el mapeo de identidad, el mapeo de la memoria física completa, el mapeo temporal y las tablas de páginas recursivas. Elegimos mapear la memoria física completa ya que es simple, portátil y poderoso.
+
+No podemos mapear la memoria física desde nuestro núcleo sin acceso a las tablas de páginas, así que necesitamos soporte del bootloader. La crate `bootloader` permite crear el mapeo requerido a través de características opcionales de la crate de cargo. Pasa la información requerida a nuestro núcleo en forma de un argumento `&BootInfo` a nuestra función de punto de entrada.
+
+Para nuestra implementación, primero recorrimos manualmente las tablas de páginas para implementar una función de traducción, y luego usamos el tipo `MappedPageTable` de la crate `x86_64`. También aprendimos cómo crear nuevos mapeos en la tabla de páginas y cómo crear el `FrameAllocator` necesario sobre el mapa de memoria pasado por el bootloader.
+
+## ¿Qué sigue?
+
+La siguiente publicación creará una región de memoria de montículo (heap) para nuestro núcleo, lo que nos permitirá [asignar memoria] y usar varios [tipos de colecciones].
+
+[asignar memoria]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html
+[tipos de colecciones]: https://doc.rust-lang.org/alloc/collections/index.html
