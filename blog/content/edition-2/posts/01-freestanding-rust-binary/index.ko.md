@@ -614,11 +614,11 @@ bench = false
 이것이 필수 항목인 `name` 필드가 존재하는 이유이기도 한데, 이 필드는 실행 파일의 이름과 일치해야 합니다 (그래야 `cargo`가 어떤 설정을 어떤 실행 파일에 적용해야 하는지 알 수 있습니다).
 
 [`test`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field) 및 [`bench`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field) 필드를 `false`로 설정하면, `cargo`에게 우리의 실행 파일을 테스트나 벤치마크 모드로 빌드하지 말라고 지시하게 됩니다.
-이제 `cargo check --all-targets`는 더 이상 어떤 오류도 발생시키지 않아야 하며, `rust-analyzer`의 `checkOnSave` 구현도 만족할 것입니다.
+이제 `cargo check --all-targets`는 더 이상 어떤 오류도 발생시키지 않아야 하며, `rust-analyzer`의 `checkOnSave`에서도 더 이상 오류가 발생하지 않을 것입니다.
 
 ## 다음 단계는 무엇일까요?
 
-[다음 포스트][next post]에서는 우리의 freestanding 실행 파일을 최소한의 기능을 갖춘 운영체제 커널로 만드는 과정을 단게별로 설명할 것입니다.
+[다음 포스트][next post]에서는 우리의 freestanding 실행 파일을 최소한의 기능을 갖춘 운영체제 커널로 만드는 과정을 단계별로 설명할 것입니다.
 예시로 커스텀 시스템 환경을 설정하는 방법, 우리의 실행 파일을 부트로더와 합치는 방법, 그리고 화면에 메세지를 출력하는 방법 등에 대해 다루겠습니다.
 
 [next post]: @/edition-2/posts/02-minimal-rust-kernel/index.md
