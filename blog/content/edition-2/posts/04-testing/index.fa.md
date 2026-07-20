@@ -6,10 +6,11 @@ date = 2019-04-27
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "d007af4811469b974f7abb988dd9c9d1373b55f0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["hamidrezakp", "MHBahrampour"]
 rtl = true
+comments_search_term = 1009
 +++
 
 این پست به بررسی تست‌های واحد (ترجمه: unit) و یکپارچه (ترجمه: integration) در فایل‌های اجرایی ‌`no_std` می‌پردازد. ما از پشتیبانی Rust برای فریم‌ورک تست‌های سفارشی استفاده می‌کنیم تا توابع تست را درون کرنل‌مان اجرا کنیم. برای گزارش کردن نتایج خارج از QEMU، از ویژگی‌های مختلف QEMU و ابزار `bootimage` استفاده می‌کنیم.
@@ -39,9 +40,24 @@ rtl = true
 
 زبان Rust یک [فریم‌ورک تست توکار] دارد که قادر به اجرای تست‌های واحد بدون نیاز به تنظیم هر چیزی است. فقط کافی است تابعی ایجاد کنید که برخی نتایج را از طریق اَسرشن‌ها (کلمه: assertions) بررسی کند و صفت `#[test]` را به هدر تابع (ترجمه: function header) اضافه کنید. سپس `cargo test` به طور خودکار تمام تابع‌های تست کریت شما را پیدا و اجرا می‌کند.
 
-[فریم‌ورک تست توکار]: https://doc.rust-lang.org/book/second-edition/ch11-00-testing.html
+[فریم‌ورک تست توکار]: https://doc.rust-lang.org/book/ch11-00-testing.html
 
-متأسفانه برای برنامه‌های `no_std` مانند هسته ما کمی پیچیده‌تر است. مسئله این است که فریم‌ورک تست Rust به طور ضمنی از کتابخانه [`test`] داخلی استفاده می‌کند که به کتابخانه استاندارد وابسته‌ است. این بدان معناست که ما نمی‌توانیم از فریم‌ورک تست پیشفرض برای هسته `#[no_std]` خود استفاده کنیم.
+برای فعال کردن تست برای فایل اجرایی هسته‌مان، می‌توانیم پرچم `test` را در Cargo.toml روی `true` تنظیم کنیم:
+
+```toml
+# in Cargo.toml
+
+[[bin]]
+name = "blog_os"
+test = true
+bench = false
+```
+
+این [بخش `[[bin]]`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target) مشخص می‌کند که `cargo` چگونه باید فایل اجرایی `blog_os` ما را کامپایل کند.
+فیلد `test` مشخص می‌کند که آیا تست برای این فایل اجرایی پشتیبانی می‌شود یا خیر.
+ما در پست اول `test = false` را تنظیم کردیم تا [`rust-analyzer` را راضی کنیم](@/edition-2/posts/01-freestanding-rust-binary/index.md#making-rust-analyzer-happy)، اما اکنون می‌خواهیم تست را فعال کنیم، بنابراین آن را دوباره روی `true` تنظیم می‌کنیم.
+
+متأسفانه، تست کردن برای برنامه‌های `no_std` مانند هسته ما کمی پیچیده‌تر است. مسئله این است که فریم‌ورک تست Rust به طور ضمنی از کتابخانه [`test`] داخلی استفاده می‌کند که به کتابخانه استاندارد وابسته‌ است. این بدان معناست که ما نمی‌توانیم از فریم‌ورک تست پیشفرض برای هسته `#[no_std]` خود استفاده کنیم.
 
 [`test`]: https://doc.rust-lang.org/test/index.html
 
@@ -94,7 +110,7 @@ pub fn test_runner(tests: &[&dyn Fn()]) {
 
 <div class = "warning">
 
-**یادداشت:** درحال حاضر یک باگ در کارگو وجود دارد که در برخی موارد وقتی از `cargo test` استفاده می‌کنیم ما را به سمت خطای “duplicate lang item” می‌برد. زمانی رخ می‌دهد که شما `panic = "abort"` را برای یک پروفایل در `Cargo.toml` تنظیم کرده‌اید. سعی کنید آن را حذف کنید، سپس `cargo test` باید به درستی کار کند. برای اطلاعات بیشتر [ایشوی کارگو](https://github.com/rust-lang/cargo/issues/7359) را ببینید.
+**یادداشت:** درحال حاضر یک باگ در کارگو وجود دارد که در برخی موارد وقتی از `cargo test` استفاده می‌کنیم ما را به سمت خطای “duplicate lang item” می‌برد. زمانی رخ می‌دهد که شما `panic = "abort"` را برای یک پروفایل در `Cargo.toml` تنظیم کرده‌اید. سعی کنید آن را حذف کنید، سپس `cargo test` باید به درستی کار کند. در غیر این صورت، اگر این کار جواب نداد، `panic-abort-tests = true` را به بخش `[unstable]` فایل `.cargo/config.toml` خود اضافه کنید. برای اطلاعات بیشتر [ایشوی کارگو](https://github.com/rust-lang/cargo/issues/7359) را ببینید.
 
 </div>
 
@@ -167,7 +183,7 @@ test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 
 در مقابل، port-mapped I/O از یک گذرگاه I/O جداگانه برای ارتباط استفاده می‌کند. هر قسمت جانبی متصل دارای یک یا چند شماره پورت است. برای برقراری ارتباط با چنین پورت I/O، دستورالعمل‌های CPU خاصی وجود دارد که `in` و `out` نامیده می‌شوند، که یک عدد پورت و یک بایت داده را می‌گیرند (همچنین این دستورات تغییراتی دارند که اجازه می دهد یک `u16` یا `u32` ارسال کنید).
 
-دستگاه‌های `isa-debug-exit` از port-mapped I/O استفاده می‌کنند. پارامتر `iobase` مشخص می‌کند که دستگاه باید در کدام آدرس پورت قرار بگیرد (`0xf4` یک پورت [معمولاً استفاده نشده][list of x86 I/O ports] در گذرگاه IO x86 است) و `iosize` اندازه پورت را مشخص می‌کند (`0x04` یعنی چهار بایت).
+دستگاه `isa-debug-exit` از port-mapped I/O استفاده می‌کند. پارامتر `iobase` مشخص می‌کند که دستگاه باید در کدام آدرس پورت قرار بگیرد (`0xf4` یک پورت [معمولاً استفاده نشده][list of x86 I/O ports] در گذرگاه IO x86 است) و `iosize` اندازه پورت را مشخص می‌کند (`0x04` یعنی چهار بایت).
 
 [list of x86 I/O ports]: https://wiki.osdev.org/I/O_Ports#The_list
 
@@ -179,18 +195,18 @@ test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 
 به جای فراخوانی دستی دستورالعمل های اسمبلی `in` و `out`، ما از انتزاعات ارائه شده توسط کریت [`x86_64`] استفاده می‌کنیم. برای افزودن یک وابستگی به آن کریت، آن را به بخش `dependencies` در `Cargo.toml` اضافه می‌کنیم:
 
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.14.2"
+x86_64 = "0.15.5"
 ```
 
 اکنون می‌توانیم از نوع [`Port`] ارائه شده توسط کریت برای ایجاد عملکرد `exit_qemu` استفاده کنیم:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 
 ```rust
 // in src/main.rs
@@ -219,6 +235,8 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 اکنون می توانیم `test_runner` خود را به روز کنیم تا پس از اتمام تست‌ها از QEMU خارج شویم:
 
 ```rust
+// in src/main.rs
+
 fn test_runner(tests: &[&dyn Fn()]) {
     println!("Running {} tests", tests.len());
     for test in tests {
@@ -251,6 +269,8 @@ error: test failed, to rerun pass '--bin blog_os'
 برای کار در این مورد، `bootimage` یک کلید پیکربندی `test-success-exit-code` ارائه می‌دهد که یک کد خروجی مشخص را به کد خروجی `0` مپ می‌کند:
 
 ```toml
+# in Cargo.toml
+
 [package.metadata.bootimage]
 test-args = […]
 test-success-exit-code = 33         # (0x10 << 1) | 1
@@ -321,6 +341,8 @@ lazy_static! {
 برای اینکه پورت سریال به راحتی قابل استفاده باشد، ماکروهای `serial_print!` و `serial_println!` را اضافه می‌کنیم:
 
 ```rust
+// in src/serial.rs
+
 #[doc(hidden)]
 pub fn _print(args: ::core::fmt::Arguments) {
     use core::fmt::Write;
@@ -412,6 +434,8 @@ trivial assertion... [ok]
 [conditional compilation]: https://doc.rust-lang.org/1.30.0/book/first-edition/conditional-compilation.html
 
 ```rust
+// in src/main.rs
+
 // our existing panic handler
 #[cfg(not(test))] // new attribute
 #[panic_handler]
@@ -551,7 +575,7 @@ where
 // in src/main.rs
 
 #[cfg(test)]
-pub fn test_runner(tests: &[&dyn Testable]) {
+pub fn test_runner(tests: &[&dyn Testable]) { // new
     serial_println!("Running {} tests", tests.len());
     for test in tests {
         test.run(); // new
@@ -679,7 +703,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 [`unimplemented`]: https://doc.rust-lang.org/core/macro.unimplemented.html
 
-اگر در این مرحله `cargo test` را انجام دهید، یک حلقه بی‌پایان خواهید گرفت زیرا رسیدگی کننده پنیک دارای حلقه بی‌پایان است. برای خروج از QEMU باید از میانبر صفحه کلید `Ctrl + c` استفاده کنید.
+اگر در این مرحله `cargo test` را انجام دهید، یک حلقه بی‌پایان خواهید گرفت زیرا رسیدگی کننده پنیک دارای حلقه بی‌پایان است. برای خروج از QEMU باید از میانبر صفحه کلید `ctrl+c` استفاده کنید.
 
 ### ساخت یک کتابخانه
 
@@ -694,8 +718,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 مانند `main.rs` ،`lib.rs` یک فایل خاص است که به طور خودکار توسط کارگو شناسایی می‌شود. کتابخانه یک واحد تلفیقی جداگانه است، بنابراین باید ویژگی `#![no_std]` را دوباره مشخص کنیم.
 
-برای اینکه کتابخانه‌مان با `cargo test` کار کند، باید توابع و صفت‌های تست را نیز اضافه کنیم:
-To make our library work with `cargo test`, we need to also add the test functions and attributes:
+برای اینکه کتابخانه‌مان با `cargo test` کار کند، باید توابع و صفت‌های تست را نیز از `main.rs` به `lib.rs` منتقل کنیم:
 
 ```rust
 // in src/lib.rs
@@ -752,7 +775,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-برای اینکه `test_runner` را در دسترس ‌تست‌های یکپارچه و فایل‌های اجرایی قرار دهیم، صفت `cfg(test)` را روی آن اعمال نمی‌کنیم و عمومی نمی‌کنیم. ما همچنین پیاده سازی رسیدگی کننده پنیک خود را به یک تابع عمومی `test_panic_handler` تبدیل می‌کنیم، به طوری که برای اجرایی‌ها نیز در دسترس باشد.
+برای اینکه `test_runner` را در دسترس فایل‌های اجرایی و تست‌های یکپارچه قرار دهیم، آن را عمومی می‌کنیم و صفت `cfg(test)` را روی آن اعمال نمی‌کنیم. ما همچنین پیاده سازی رسیدگی کننده پنیک خود را به یک تابع عمومی `test_panic_handler` تبدیل می‌کنیم، به طوری که برای اجرایی‌ها نیز در دسترس باشد.
 
 از آن‌جا که `lib.rs` به طور مستقل از` main.rs` ما تست می‌شود، هنگام کامپایل کتابخانه در حالت تست، باید یک نقطه شروع `_start` و یک رسیدگی کننده پنیک اضافه کنیم. با استفاده از صفت کریت [`cfg_attr`]، در این حالت ویژگی`no_main` را به طور مشروط فعال می‌کنیم.
 
@@ -795,7 +818,7 @@ pub mod vga_buffer;
 اکنون می توانیم `main.rs` خود را برای استفاده از کتابخانه به روز کنیم:
 
 ```rust
-// src/main.rs
+// in src/main.rs
 
 #![no_std]
 #![no_main]
@@ -837,7 +860,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 ### تمام کردن تست یکپارچه
 
-مانند `src/main.rs`، اجرایی` test/basic_boot.rs` می‌تواند انواع مختلفی را از کتابخانه جدید ما وارد کند. که این امکان را به ما می‌دهد تا اجزای گمشده را برای تکمیل آزمایش وارد کنیم.
+مانند `src/main.rs`، اجرایی` test/basic_boot.rs` می‌تواند انواع مختلفی را از کتابخانه جدید ما وارد کند. که این امکان را به ما می‌دهد تا اجزای گمشده را برای تکمیل آزمایش وارد کنیم:
 
 ```rust
 // in tests/basic_boot.rs
@@ -850,7 +873,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 ```
 
-ما به جای پیاده سازی مجدد اجرا کننده تست، از تابع `test_runner` در کتابخانه خود استفاده می‌کنیم. برای رسیدگی کننده `panic`، ما تابع `blog_os::test_panic_handler` را مانند آن‌چه در `main.rs` انجام دادیم، فراخوانی می‌کنیم.
+ما به جای پیاده سازی مجدد اجرا کننده تست، با تغییر دادن صفت `#![test_runner(crate::test_runner)]` به `#![test_runner(blog_os::test_runner)]`، از تابع `test_runner` کتابخانه خود استفاده می‌کنیم. سپس دیگر به تابع خرد (stub) `test_runner` در `basic_boot.rs` نیازی نداریم، بنابراین می‌توانیم آن را حذف کنیم. برای رسیدگی کننده `panic`، ما تابع `blog_os::test_panic_handler` را مانند آن‌چه در `main.rs` انجام دادیم، فراخوانی می‌کنیم.
 
 اکنون `cargo test` مجدداً به طور معمول وجود دارد. وقتی آن را اجرا می‌کنید ، می‌بینید که تست‌های `lib.rs`، `main.rs` و `basic_boot.rs` ما را به طور جداگانه و یکی پس از دیگری ایجاد و اجرا می‌کند. برای تست‌های یکپارچه `main.rs` و `basic_boot`، متن "Running 0 tests" را نشان می‌دهد زیرا این فایل‌ها هیچ تابعی با حاشیه نویسی `#[test_case]` ندارد.
 

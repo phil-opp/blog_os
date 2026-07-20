@@ -3,6 +3,10 @@ title = "Disable the Red Zone"
 weight = 1
 path = "zh-CN/red-zone"
 template = "edition-2/extra.html"
+
+[extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 +++
 
 [红区][red zone] 是 [System V ABI] 提供的一种优化技术，它使得函数可以在不修改栈指针的前提下，临时使用其栈帧下方的128个字节。

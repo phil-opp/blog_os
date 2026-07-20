@@ -6,7 +6,7 @@ date = 2019-06-26
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "afeed7477bb19a29d94a96b8b0620fd241b0d55f"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["swnakamura", "garasubo"]
 +++
@@ -35,13 +35,13 @@ translators = ["swnakamura", "garasubo"]
 [call stack]: https://ja.wikipedia.org/wiki/%E3%82%B3%E3%83%BC%E3%83%AB%E3%82%B9%E3%82%BF%E3%83%83%E3%82%AF
 [stack data structure]: https://ja.wikipedia.org/wiki/%E3%82%B9%E3%82%BF%E3%83%83%E3%82%AF
 
-![outer()とinner(i: usize)関数。両方が局所変数を持っています。outerはinner(1)を呼びます。コールスタックには順に以下の領域があります：outerの局所変数、引数i=1、リターンアドレス、そしてinnerの局所変数。](call-stack.svg)
+![`outer()`関数と`inner(i: usize)`関数。`outer`は`inner(1)`を呼び出します。両方が局所変数を持っています。コールスタックには順に以下の領域があります：outerの局所変数、引数`i = 1`、リターンアドレス、そしてinnerの局所変数。](call-stack.svg)
 
 上の例は、`outer`関数が`inner`関数を呼び出した後のコールスタックを示しています。コールスタックは`outer`の局所変数を先に持っていることが分かります。`inner`を呼び出すと、パラメータ`1`とこの関数のリターンアドレスがプッシュされます。そこで制御は`inner`へと移り、`inner`は自身の局所変数をプッシュします。
 
 `inner`関数がリターンすると、コールスタックのこの関数に対応する部分がポップされ、`outer`の局所変数のみが残ります：
 
-![outerの局所変数しか持っていないコールスタック](call-stack-return.svg)
+![`outer`の局所変数しか持っていないコールスタック](call-stack-return.svg)
 
 `inner`関数の局所変数はリターンまでしか生存していないことが分かります。Rustコンパイラはこの<ruby>生存期間<rp> (</rp><rt>ライフタイム</rt><rp>) </rp></ruby>を強制し、私たちが値を長く使いすぎてしまうとエラーを投げます。例えば、局所変数への参照を返そうとしたときがそうです：
 
@@ -96,13 +96,13 @@ fn inner(i: usize) -> &'static u32 {
 
 ここで`inner`関数は`z`を格納するために静的変数ではなくヒープメモリを使っています。まず要求されたサイズのメモリブロックを割り当て、`*mut u32`の[生ポインタ][raw pointer]を受け取ります。その後で[`ptr::write`]メソッドを使ってこれに配列`[1,2,3]`を書き込みます。最後のステップとして、[`offset`]関数を使って`i`番目の要素へのポインタを計算しそれを返します（簡単のため、必要なキャストやunsafeブロックをいくつか省略しました）。
 
-[raw pointer]: https://doc.rust-jp.rs/book-ja/ch19-01-unsafe-rust.html#%E7%94%9F%E3%83%9D%E3%82%A4%E3%83%B3%E3%82%BF%E3%82%92%E5%8F%82%E7%85%A7%E5%A4%96%E3%81%97%E3%81%99%E3%82%8B
+[raw pointer]: https://doc.rust-jp.rs/book-ja/ch20-01-unsafe-rust.html#%E7%94%9F%E3%83%9D%E3%82%A4%E3%83%B3%E3%82%BF%E3%82%92%E5%8F%82%E7%85%A7%E5%A4%96%E3%81%97%E3%81%99%E3%82%8B
 [`ptr::write`]: https://doc.rust-lang.org/core/ptr/fn.write.html
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
 割り当てられたメモリは`deallocate`の呼び出しによって明示的に解放されるまで生存します。したがって、返されたポインタは、`inner`がリターンしコールスタックの対応する部分が破棄された後も有効です。スタティックメモリと比較したときのヒープメモリの長所は、解放（`outer`内の`deallocate`呼び出しでまさにこれを行っています）後に再利用できるということです。この呼び出しの後、状況は以下のようになります。
 
-![コールスタックはouterの局所変数を持っており、ヒープはz[0]とz[2]を持っているが、z[1]はもう持っていない。](call-stack-heap-freed.svg)
+![コールスタックは`outer`の局所変数を持っており、ヒープは`z[0]`と`z[2]`を持っているが、`z[1]`はもう持っていない。](call-stack-heap-freed.svg)
 
 `z[1]`スロットが解放され、次の`allocate`呼び出しで再利用できることが分かります。しかし、`z[0]`と`z[2]`は永久にdeallocateされず、したがって永久に解放されないことも分かります。このようなバグは**メモリリーク**と呼ばれており、しばしばプログラムの過剰なメモリ消費を引き起こします（`inner`をループで何度も呼び出したらどんなことになるか、想像してみてください）。これ自体良くないことに思われるかもしれませんが、動的割り当てはもっと危険性の高いバグを発生させうるのです。
 
@@ -113,7 +113,7 @@ fn inner(i: usize) -> &'static u32 {
 - もし変数に対して`deallocate`を呼んだ後にも間違ってそれを使い続けたら、いわゆる<ruby>use-after-free<rp> (</rp><rt>メモリ解放後に使用</rt><rp>) </rp></ruby>脆弱性が発生します。このようなバグは未定義動作を引き起こし、しばしば攻撃者が任意コードを実行するのに利用されます。
 - 間違ってある変数を二度解放したら、<ruby>double-free<rp> (</rp><rt>二重解放</rt><rp>) </rp></ruby>脆弱性が発生します。これが問題になるのは、最初の`deallocate`呼び出しの後に同じ場所にallocateされた別の割り当てを解放してしまうかもしれないからです。従って、これもまたuse-after-free脆弱性につながりかねません。
 
-これらの脆弱性は広く知られているため、回避する方法も解明されているはずだとお思いになるかもしれません。しかし答えはいいえで、このような脆弱性は未だ散見され、例えば最近でも任意コード実行を許す[Linuxのuse-after-free脆弱性][linux vulnerability]が存在しました。このことは、最高のプログラマーであっても、複雑なプロジェクトにおいて常に正しく動的メモリを扱えはしないということを示しています。
+これらの脆弱性は広く知られているため、回避する方法も今や解明されているはずだとお思いになるかもしれません。しかし答えはいいえで、このような脆弱性は未だ散見されます。例えば、任意コード実行を許した[Linuxのuse-after-free脆弱性][linux vulnerability]（2019年）が存在しました。`use-after-free linux {今年の年号}`のようなウェブ検索をすれば、おそらくいつでも結果が見つかるでしょう。このことは、最高のプログラマーであっても、複雑なプロジェクトにおいて常に正しく動的メモリを扱えはしないということを示しています。
 
 [linux vulnerability]: https://securityboulevard.com/2019/02/linux-use-after-free-vulnerability-found-in-linux-2-6-through-4-20-11/
 
@@ -224,7 +224,7 @@ extern crate alloc;
 
 [unstable]
 build-std = ["core", "compiler_builtins", "alloc"]
-````
+```
 
 これでコンパイラは`alloc`クレートを再コンパイルして私たちのカーネルにインクルードしてくれます。
 
@@ -235,18 +235,11 @@ error: no global memory allocator found but one is required; link to std or add
        #[global_allocator] to a static item that implements the GlobalAlloc trait.
 （エラー：グローバルメモリアロケータが見つかりませんが、一つ必要です。
 　stdをリンクするか、GlobalAllocトレイトを実装する静的な要素に#[global_allocator]を付けてください。）
-
-error: `#[alloc_error_handler]` function required, but not found
-（エラー：`#[alloc_error_handler]`関数が必要ですが、見つかりません）
 ```
 
-最初のエラーは、`alloc`クレートが、ヒープアロケータという`allocate`と`deallocate`関数を提供するオブジェクトを必要とするために発生します。Rustにおいては、ヒープアロケータ（の満たすべき性質）は[`GlobalAlloc`]トレイトによって記述されており、エラーメッセージでもそのことについて触れられています。クレートのヒープアロケータを設定するためには、`#[global_allocator]`属性を`GlobalAlloc`トレイトを実装する何らかの`static`変数に適用する必要があります。
-
-二つ目のエラーは、（主にメモリが不足している場合）`allocate`の呼び出しが失敗しうるために発生します。私たちのプログラムはこのケースに対処できるようになっている必要があり、そのために使われる関数が`#[alloc_error_handler]`なのです。
+このエラーは、`alloc`クレートが、ヒープアロケータという`allocate`と`deallocate`関数を提供するオブジェクトを必要とするために発生します。Rustにおいては、ヒープアロケータ（の満たすべき性質）は[`GlobalAlloc`]トレイトによって記述されており、エラーメッセージでもそのことについて触れられています。クレートのヒープアロケータを設定するためには、`#[global_allocator]`属性を`GlobalAlloc`トレイトを実装する何らかの`static`変数に適用する必要があります。
 
 [`GlobalAlloc`]: https://doc.rust-lang.org/alloc/alloc/trait.GlobalAlloc.html
-
-次のセクションでこのトレイトと属性について説明します。
 
 ### `GlobalAlloc`トレイト
 
@@ -342,32 +335,7 @@ static ALLOCATOR: Dummy = Dummy;
 
 `Dummy`アロケータは[サイズがゼロの型][zero sized type]なので、初期化式でフィールドを指定する必要はありません。
 
-これをコンパイルしようとすると、最初のエラーは消えているはずです。残っている二つ目のエラーを修正しましょう：
-
-```
-error: `#[alloc_error_handler]` function required, but not found
-```
-
-### `#[alloc_error_handler]`属性
-
-`GlobalAlloc`トレイトについて議論したときに学んだように、`alloc`関数はヌルポインタを返すことによって割り当てエラーを示します。ここで生じる疑問は、そのように割り当てが失敗したときRustランタイムはどう対処するべきなのかということです。ここで`#[alloc_error_handler]`属性の出番です。この属性は、パニックが起こったときにパニックハンドラが呼ばれるのと同じように、割り当てエラーが起こったときに呼ばれる関数を指定するのです。
-
-コンパイルエラーを修正するためにそのような関数を追加してみましょう：
-
-```rust
-// in src/lib.rs
-
-#![feature(alloc_error_handler)] // ファイルの先頭に書く
-
-#[alloc_error_handler]
-fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
-    panic!("allocation error: {:?}", layout)
-}
-```
-
-`alloc_error_handler`関数はまだunstableなので、feature gateによってこれを有効化する必要があります。この関数は引数を一つ取ります：割り当てエラーが起こったとき`alloc`関数に渡されていた`Layout`のインスタンスです。割り当ての失敗を解決するためにできることはないので、`Layout`インスタンスを含めたメッセージを表示してただpanicすることにしましょう。
-
-この関数を追加したことで、コンパイルエラーは修正されたはずです。これで`alloc`のアロケーション・コレクション型を使えるようになりました。例えば、[`Box`]を使ってヒープに値を割り当てることができます：
+この静的変数によって、コンパイルエラーは修正されたはずです。これで`alloc`のアロケーション・コレクション型を使えるようになりました。例えば、[`Box`]を使ってヒープに値を割り当てることができます：
 
 [`Box`]: https://doc.rust-lang.org/alloc/boxed/struct.Box.html
 
@@ -393,11 +361,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 `main.rs`においても`extern crate alloc`文を指定する必要があることに注意してください。`lib.rs`と`main.rs`は別のクレートとして取り扱われているためです。しかしながら、グローバルアロケータはプロジェクト内のすべてのクレートに適用されるため、`#[global_allocator]`静的変数をもう一つ作る必要はありません。実際、別のクレートで新しいアロケータを指定するとエラーになります。
 
-上のコードを実行すると、`alloc_error_handler`関数が呼ばれるのが分かります：
+上のコードを実行すると、パニックが起こるのが分かります：
 
 ![QEMUが"panicked at `allocation error: Layout { size_: 4, align_: 4 }, src/lib.rs:89:5"と出力している。](qemu-dummy-output.png)
 
-`Box::new`関数は暗黙のうちにグローバルアロケータの`alloc`関数を呼び出すため、エラーハンドラが呼ばれました。私たちのダミーアロケータは常にヌルポインタを返すので、あらゆる割り当てが失敗するのです。これを修正するためには、使用可能なメモリを実際に返すアロケータを作る必要があります。
+`Box::new`関数は暗黙のうちにグローバルアロケータの`alloc`関数を呼び出すため、パニックが起こりました。私たちのダミーアロケータは常にヌルポインタを返すので、あらゆる割り当てが失敗するのです。これを修正するためには、使用可能なメモリを実際に返すアロケータを作る必要があります。
 
 ## Creating a Kernel Heap
 
@@ -414,7 +382,7 @@ pub const HEAP_START: usize = 0x_4444_4444_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
 ```
 
-今のところヒープの大きさは100 KiBとします。将来より多くの領域が必要になったら大きくすれば良いです。
+今のところヒープの大きさは100&nbsp;KiBとします。将来より多くの領域が必要になったら大きくすれば良いです。
 
 今このヒープ領域を使おうとすると、仮想メモリ領域が物理メモリにまだ対応付けられていないためページフォルトが発生します。これを解決するために、[ページング入門][_"Paging Implementation"_]の記事で導入した[`Mapper` API]を使ってヒープページを対応付ける関数`init_heap`を作ります：
 
@@ -437,7 +405,7 @@ pub fn init_heap(
 ) -> Result<(), MapToError<Size4KiB>> {
     let page_range = {
         let heap_start = VirtAddr::new(HEAP_START as u64);
-        let heap_end = heap_start + HEAP_SIZE - 1u64;
+        let heap_end = heap_start + HEAP_SIZE as u64 - 1u64;
         let heap_start_page = Page::containing_address(heap_start);
         let heap_end_page = Page::containing_address(heap_end);
         Page::range_inclusive(heap_start_page, heap_end_page)
@@ -459,12 +427,12 @@ pub fn init_heap(
 
 この関数は[`Mapper`]と[`FrameAllocator`]への可変参照を取ります。これらはどちらも[`Size4KiB`]をジェネリックパラメータとすることで4KiBページのみに制限しています。この関数の戻り値は[`Result`]で、成功ヴァリアントが`()`、失敗ヴァリアントが（[`Mapper::map_to`]メソッドによって失敗時に返されるエラー型である）[`MapToError`]です。この関数における主なエラーの原因は`map_to`メソッドであるため、このエラー型を流用するのは理にかなっています。
 
-[`Mapper`]:https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html
-[`Size4KiB`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/enum.Size4KiB.html
+[`Mapper`]:https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html
+[`Size4KiB`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/enum.Size4KiB.html
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
-[`MapToError`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html
-[`Mapper::map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
+[`MapToError`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/enum.MapToError.html
+[`Mapper::map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
 
 実装内容は以下の二つに分けられます：
 
@@ -478,18 +446,18 @@ pub fn init_heap(
 
 	- [`Mapper::map_to`]メソッドを使ってアクティブなページテーブルに対応付けを作成します。このメソッドは失敗しうるので、同様に[`?`演算子][question mark operator]を使ってエラーを呼び出し元に受け渡します。成功時には、このメソッドは[`MapperFlush`]インスタンスを返しますが、これを使って[`flush`]メソッドを呼ぶことで[**トランスレーション・ルックアサイド・バッファ**][_translation lookaside buffer_]を更新することができます。
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
-[`Page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html
-[`containing_address`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html#method.containing_address
-[`Page::range_inclusive`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
-[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
+[`VirtAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.VirtAddr.html
+[`Page`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html
+[`containing_address`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html#method.containing_address
+[`Page::range_inclusive`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
+[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
 [`None`]: https://doc.rust-lang.org/core/option/enum.Option.html#variant.None
-[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
+[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
 [`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
 [question mark operator]: https://doc.rust-jp.rs/book-ja/ch09-02-recoverable-errors-with-result.html#%E3%82%A8%E3%83%A9%E3%83%BC%E5%A7%94%E8%AD%B2%E3%81%AE%E3%82%B7%E3%83%A7%E3%83%BC%E3%83%88%E3%82%AB%E3%83%83%E3%83%88-%E6%BC%94%E7%AE%97%E5%AD%90
-[`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`MapperFlush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
 [_translation lookaside buffer_]: @/edition-2/posts/08-paging-introduction/index.ja.md#toransuresiyon-rutukuasaido-batuhua
-[`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`flush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 
 最後のステップは、この関数を`kernel_main`から呼び出すことです：
 

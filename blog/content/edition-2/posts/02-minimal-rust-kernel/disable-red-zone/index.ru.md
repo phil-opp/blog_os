@@ -3,6 +3,10 @@ title = "Отключение красной зоны"
 weight = 1
 path = "ru/red-zone"
 template = "edition-2/extra.html"
+
+[extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 +++
 
 [Красная зона][red zone] &mdash; это оптимизация [System V ABI], которая позволяет функциям временно использовать 128 байт ниже своего стекового кадра без корректировки указателя стека:

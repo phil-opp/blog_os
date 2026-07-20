@@ -3,6 +3,10 @@ title = "Disable SIMD"
 weight = 2
 path = "zh-CN/disable-simd"
 template = "edition-2/extra.html"
+
+[extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 +++
 
 [单指令多数据][Single Instruction Multiple Data (SIMD)] 指令允许在一个操作符（比如加法）内传入多组数据，以此加速程序执行速度。`x86_64` 架构支持多种SIMD标准：

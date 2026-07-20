@@ -6,7 +6,7 @@ date  = 2018-02-26
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "bd6fbcb1c36705b2c474d7fcee387bfea1210851"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["luojia65", "Rustin-Liu"]
 # GitHub usernames of the people that contributed to this translation
@@ -284,6 +284,7 @@ pub extern "C" fn _start() -> ! {
 volatile = "0.2.6"
 ```
 
+请务必指定 `volatile` 的版本为 `0.2.6`。这个包的更新版本与本文的代码并不兼容。
 `0.2.6` 表示一个**语义版本号**（[semantic version number](https://semver.org/)），在 cargo 文档的[《指定依赖项》章节](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html)可以找到与它相关的使用指南。
 
 现在，我们使用它来完成 VGA 缓冲区的 volatile 写入操作。我们将 `Buffer` 类型的定义修改为下列代码：
@@ -314,7 +315,7 @@ impl Writer {
 
                 self.buffer.chars[row][col].write(ScreenChar {
                     ascii_character: byte,
-                    color_code: color_code,
+                    color_code,
                 });
                 ...
             }
@@ -607,7 +608,7 @@ pub fn _print(args: fmt::Arguments) {
 // in src/main.rs
 
 #[unsafe(no_mangle)]
-pub extern "C" fn _start() {
+pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
     loop {}

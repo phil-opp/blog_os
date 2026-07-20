@@ -5,6 +5,8 @@ path = "es/implementacion-de-paginacion"
 date = 2019-03-14
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Gestión de la Memoria"
 
 # GitHub usernames of the people that translated this post
@@ -127,17 +129,17 @@ Al permitir que la CPU siga esta entrada en una traducción, no llega a una tabl
 
 Al seguir la entrada recursiva una o múltiples veces antes de comenzar la traducción real, podemos efectivamente acortar el número de niveles que la CPU recorre. Por ejemplo, si seguimos la entrada recursiva una vez y luego procedemos a la tabla de nivel 3, la CPU piensa que la tabla de nivel 3 es una tabla de nivel 2. Siguiendo, trata la tabla de nivel 2 como una tabla de nivel 1 y la tabla de nivel 1 como el marco mapeado. Esto significa que ahora podemos leer y escribir la tabla de nivel 1 porque la CPU piensa que es el marco mapeado. El gráfico a continuación ilustra los cinco pasos de traducción:
 
-![El ejemplo anterior de jerarquía de páginas de 4 niveles con 5 flechas: "Paso 0" de CR4 a la tabla de nivel 4, "Paso 1" de la tabla de nivel 4 a la tabla de nivel 4, "Paso 2" de la tabla de nivel 4 a la tabla de nivel 3, "Paso 3" de la tabla de nivel 3 a la tabla de nivel 2, y "Paso 4" de la tabla de nivel 2 a la tabla de nivel 1.](recursive-page-table-access-level-1.png)
+![El ejemplo anterior de jerarquía de páginas de 4 niveles con 5 flechas: "Paso 0" de CR3 a la tabla de nivel 4, "Paso 1" de la tabla de nivel 4 a la tabla de nivel 4, "Paso 2" de la tabla de nivel 4 a la tabla de nivel 3, "Paso 3" de la tabla de nivel 3 a la tabla de nivel 2, y "Paso 4" de la tabla de nivel 2 a la tabla de nivel 1.](recursive-page-table-access-level-1.png)
 
 De manera similar, podemos seguir la entrada recursiva dos veces antes de comenzar la traducción para reducir el número de niveles recorridos a dos:
 
-![La misma jerarquía de páginas de 4 niveles con las siguientes 4 flechas: "Paso 0" de CR4 a la tabla de nivel 4, "Pasos 1&2" de la tabla de nivel 4 a la tabla de nivel 4, "Paso 3" de la tabla de nivel 4 a la tabla de nivel 3, y "Paso 4" de la tabla de nivel 3 a la tabla de nivel 2.](recursive-page-table-access-level-2.png)
+![La misma jerarquía de páginas de 4 niveles con las siguientes 4 flechas: "Paso 0" de CR3 a la tabla de nivel 4, "Pasos 1&2" de la tabla de nivel 4 a la tabla de nivel 4, "Paso 3" de la tabla de nivel 4 a la tabla de nivel 3, y "Paso 4" de la tabla de nivel 3 a la tabla de nivel 2.](recursive-page-table-access-level-2.png)
 
 Sigamos paso a paso: Primero, la CPU sigue la entrada recursiva en la tabla de nivel 4 y piensa que llega a una tabla de nivel 3. Luego sigue la entrada recursiva nuevamente y piensa que llega a una tabla de nivel 2. Pero en realidad, todavía está en la tabla de nivel 4. Cuando la CPU ahora sigue una entrada diferente, aterriza en una tabla de nivel 3, pero piensa que ya está en una tabla de nivel 1. Así que mientras la siguiente entrada apunta a una tabla de nivel 2, la CPU piensa que apunta al marco mapeado, lo que nos permite leer y escribir la tabla de nivel 2.
 
 Acceder a las tablas de niveles 3 y 4 funciona de la misma manera. Para acceder a la tabla de nivel 3, seguimos la entrada recursiva tres veces, engañando a la CPU para que piense que ya está en una tabla de nivel 1. Luego seguimos otra entrada y llegamos a una tabla de nivel 3, que la CPU trata como un marco mapeado. Para acceder a la tabla de nivel 4 misma, simplemente seguimos la entrada recursiva cuatro veces hasta que la CPU trate la tabla de nivel 4 como el marco mapeado (en azul en el gráfico a continuación).
 
-![La misma jerarquía de páginas de 4 niveles con las siguientes 3 flechas: "Paso 0" de CR4 a la tabla de nivel 4, "Pasos 1,2,3" de la tabla de nivel 4 a la tabla de nivel 4, y "Paso 4" de la tabla de nivel 4 a la tabla de nivel 3. En azul, la alternativa "Pasos 1,2,3,4" flecha de la tabla de nivel 4 a la tabla de nivel 4.](recursive-page-table-access-level-3.png)
+![La misma jerarquía de páginas de 4 niveles con las siguientes 3 flechas: "Paso 0" de CR3 a la tabla de nivel 4, "Pasos 1,2,3" de la tabla de nivel 4 a la tabla de nivel 4, y "Paso 4" de la tabla de nivel 4 a la tabla de nivel 3. En azul, la alternativa "Pasos 1,2,3,4" flecha de la tabla de nivel 4 a la tabla de nivel 4.](recursive-page-table-access-level-3.png)
 
 Puede llevar un tiempo asimilar el concepto, pero funciona bastante bien en la práctica.
 
@@ -223,7 +225,7 @@ El código anterior asume que la última entrada de nivel 4 con índice `0o777` 
 
 Alternativamente, para realizar las operaciones bit a bit manualmente, puedes usar el tipo [`RecursivePageTable`] de la crate `x86_64`, que proporciona abstracciones seguras para varias operaciones de la tabla de páginas. Por ejemplo, el siguiente código muestra cómo traducir una dirección virtual a su dirección física mapeada:
 
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 ```rust
 // en src/memory.rs
@@ -304,7 +306,7 @@ El bootloader pasa la struct `BootInfo` a nuestro núcleo en forma de un argumen
 
 use bootloader::BootInfo;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start(boot_info: &'static BootInfo) -> ! { // nuevo argumento
     […]
 }
@@ -402,13 +404,11 @@ pub unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
     let virt = physical_memory_offset + phys.as_u64();
     let page_table_ptr: *mut PageTable = virt.as_mut_ptr();
 
-    &mut *page_table_ptr // inseguro
+    unsafe { &mut *page_table_ptr }
 }
 ```
 
 Primero, leemos el marco físico de la tabla de nivel 4 activa desde el registro `CR3`. Luego tomamos su dirección de inicio física, la convertimos a un `u64`, y le agregamos el `physical_memory_offset` para obtener la dirección virtual donde se mapea la tabla de páginas. Finalmente, convertimos la dirección virtual a un puntero crudo `*mut PageTable` a través del método `as_mut_ptr` y luego creamos de manera insegura una referencia `&mut PageTable` a partir de ello. Creamos una referencia `&mut` en lugar de una `&` porque más adelante mutaremos las tablas de páginas en esta publicación.
-
-No necesitamos usar un bloque inseguro aquí porque Rust trata el cuerpo completo de una `unsafe fn` como un gran bloque inseguro. Esto hace que nuestro código sea más peligroso ya que podríamos accidentalmente introducir una operación insegura en líneas anteriores sin darnos cuenta. También dificulta mucho más encontrar operaciones inseguras entre operaciones seguras. Hay un [RFC](https://github.com/rust-lang/rfcs/pull/2585) para cambiar este comportamiento.
 
 Ahora podemos usar esta función para imprimir las entradas de la tabla de nivel 4:
 
@@ -442,7 +442,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 Primero, convertimos el `physical_memory_offset` de la struct `BootInfo` a un [`VirtAddr`] y lo pasamos a la función `active_level_4_table`. Luego, usamos la función `iter` para iterar sobre las entradas de las tablas de páginas y el combinador [`enumerate`] para agregar un índice `i` a cada elemento. Solo imprimimos entradas no vacías porque todas las 512 entradas no cabrían en la pantalla.
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
+[`VirtAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.VirtAddr.html
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
 Cuando lo ejecutamos, vemos el siguiente resultado:
@@ -555,7 +555,7 @@ La struct `VirtAddr` ya proporciona métodos para calcular los índices en las t
 
 Dentro del bucle, nuevamente usamos el `physical_memory_offset` para convertir el marco en una referencia de tabla de páginas. Luego leemos la entrada de la tabla de páginas actual y usamos la función [`PageTableEntry::frame`] para recuperar el marco mapeado. Si la entrada no está mapeada a un marco, regresamos `None`. Si la entrada mapea una página enorme de 2&nbsp;MiB o 1&nbsp;GiB, hacemos panic por ahora.
 
-[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
+[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
 Probemos nuestra función de traducción traduciendo algunas direcciones:
 
@@ -610,18 +610,18 @@ En la base de la abstracción hay dos rasgos que definen varias funciones de map
 - El rasgo [`Mapper`] es genérico sobre el tamaño de la página y proporciona funciones que operan sobre páginas. Ejemplos son [`translate_page`], que traduce una página dada a un marco del mismo tamaño, y [`map_to`], que crea un nuevo mapeo en la tabla de páginas.
 - El rasgo [`Translate`] proporciona funciones que trabajan con múltiples tamaños de páginas, como [`translate_addr`] o el general [`translate`].
 
-[`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
-[`translate_page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
-[`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
-[`Translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html
-[`translate_addr`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
-[`translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
+[`Mapper`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html
+[`translate_page`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
+[`map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
+[`Translate`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html
+[`translate_addr`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
+[`translate`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
 
 Los rasgos solo definen la interfaz, no proporcionan ninguna implementación. La crate `x86_64` actualmente proporciona tres tipos que implementan los rasgos con diferentes requisitos. El tipo [`OffsetPageTable`] asume que toda la memoria física está mapeada en el espacio de direcciones virtuales en un desplazamiento dado. El [`MappedPageTable`] es un poco más flexible: solo requiere que cada marco de tabla de páginas esté mapeado al espacio de direcciones virtuales en una dirección calculable. Finalmente, el tipo [`RecursivePageTable`] se puede usar para acceder a los marcos de tablas de páginas a través de [tablas de páginas recursivas](#tablas-de-paginas-recursivas).
 
-[`OffsetPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
-[`MappedPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MappedPageTable.html
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`OffsetPageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
+[`MappedPageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 En nuestro caso, el bootloader mapea toda la memoria física a una dirección virtual especificada por la variable `physical_memory_offset`, así que podemos usar el tipo `OffsetPageTable`. Para inicializarlo, creamos una nueva función `init` en nuestro módulo `memory`:
 
@@ -635,8 +635,10 @@ use x86_64::structures::paging::OffsetPageTable;
 /// `physical_memory_offset`. Además, esta función debe ser solo llamada una vez
 /// para evitar aliasing de referencias `&mut` (lo que es comportamiento indefinido).
 pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static> {
-    let level_4_table = active_level_4_table(physical_memory_offset);
-    OffsetPageTable::new(level_4_table, physical_memory_offset)
+    unsafe {
+        let level_4_table = active_level_4_table(physical_memory_offset);
+        OffsetPageTable::new(level_4_table, physical_memory_offset)
+    }
 }
 
 // hacer privada
@@ -647,7 +649,7 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
 
 La función toma el `physical_memory_offset` como argumento y devuelve una nueva instancia de `OffsetPageTable`. Con un `'static` de duración. Esto significa que la instancia permanece válida durante todo el tiempo de ejecución de nuestro núcleo. En el cuerpo de la función, primero llamamos a la función `active_level_4_table` para recuperar una referencia mutable a la tabla de nivel 4 de la tabla de páginas. Luego invocamos la función [`OffsetPageTable::new`] con esta referencia. Como segundo parámetro, la función `new` espera la dirección virtual donde comienza el mapeo de memoria física, que está dada en la variable `physical_memory_offset`.
 
-[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
+[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
 
 La función `active_level_4_table` solo debe ser llamada desde la función `init` de ahora en adelante porque podría llevar fácilmente a referencias mutuas aliased si se llama múltiples veces, lo que podría causar comportamiento indefinido. Por esta razón, hacemos que la función sea privada al eliminar el especificador `pub`.
 
@@ -698,8 +700,8 @@ Hasta ahora, solo vimos las tablas de páginas sin modificar nada. Cambiemos eso
 
 Usaremos la función [`map_to`] del rasgo [`Mapper`] para nuestra implementación, así que echemos un vistazo a esa función primero. La documentación nos dice que toma cuatro argumentos: la página que queremos mapear, el marco al que la página debe ser mapeada, un conjunto de banderas para la entrada de la tabla de páginas y un `frame_allocator`. El `frame_allocator` es necesario porque mapear la página dada podría requerir crear tablas de páginas adicionales, que necesitan marcos no utilizados como almacenamiento de respaldo.
 
-[`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
-[`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html
+[`map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
+[`Mapper`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.Mapper.html
 
 #### Una Función `create_example_mapping`
 
@@ -738,8 +740,8 @@ Además de la `page` que debe ser mapeada, la función espera una referencia mut
 
 [impl-trait-arg]: https://doc.rust-lang.org/book/ch10-02-traits.html#traits-as-parameters
 [genérico]: https://doc.rust-lang.org/book/ch10-00-generics.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html
-[`PageSize`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/trait.PageSize.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html
+[`PageSize`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/trait.PageSize.html
 
 El método [`map_to`] es inseguro porque el llamador debe garantizar que el marco no esté ya en uso. La razón de esto es que mapear el mismo marco dos veces podría resultar en un comportamiento indefinido, por ejemplo, cuando dos referencias diferentes `&mut` apuntan a la misma ubicación de memoria física. En nuestro caso, reutilizamos el marco del búfer de texto VGA, que ya está mapeado, por lo que rompemos la condición requerida. Sin embargo, la función `create_example_mapping` es solo una función de prueba temporal y se eliminará después de esta publicación, así que está bien. Para recordarnos sobre la inseguridad, ponemos un comentario `FIXME` en la línea.
 
@@ -751,8 +753,8 @@ La función [`map_to`] puede fallar, así que devuelve un [`Result`]. Dado que e
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
-[`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`MapperFlush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`flush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 [must_use]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
 #### Un `FrameAllocator` Dummy

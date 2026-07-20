@@ -3,6 +3,10 @@ title = "SIMD 해제하기"
 weight = 2
 path = "ko/disable-simd"
 template = "edition-2/extra.html"
+
+[extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 +++
 
 [Single Instruction Multiple Data (SIMD)] 명령어들은 여러 데이터 word에 동시에 덧셈 등의 작업을 실행할 수 있으며, 이를 통해 프로그램의 실행 시간을 상당히 단축할 수 있습니다. `x86_64` 아키텍처는 다양한 SIMD 표준들을 지원합니다:

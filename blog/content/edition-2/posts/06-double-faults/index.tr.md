@@ -8,7 +8,7 @@ date  = 2018-06-18
 chapter = "Interrupts"
 
 # Please update this when updating the translation
-translation_based_on_commit = "9753695744854686a6b80012c89b0d850a44b4b0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["rhotav"]
@@ -236,7 +236,7 @@ _Privilege Stack Table_, ayrıcalık seviyesi değiştiğinde CPU tarafından ku
 ### Bir TSS Oluşturmak
 Interrupt stack table'ında ayrı bir double fault stack'i içeren yeni bir TSS oluşturalım. Bunun için bir TSS struct'ına ihtiyacımız var. Neyse ki, `x86_64` crate'i kullanabileceğimiz bir [`TaskStateSegment` struct'ını][`TaskStateSegment` struct] zaten içeriyor.
 
-[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
+[`TaskStateSegment` struct]: https://docs.rs/x86_64/0.15.5/x86_64/structures/tss/struct.TaskStateSegment.html
 
 TSS'yi yeni bir `gdt` modülünde oluşturuyoruz (bu ad daha sonra anlam kazanacak):
 
@@ -261,7 +261,7 @@ lazy_static! {
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
             let stack_start = VirtAddr::from_ptr(&raw const STACK);
-            let stack_end = stack_start + STACK_SIZE;
+            let stack_end = stack_start + STACK_SIZE as u64;
             stack_end
         };
         tss
@@ -301,8 +301,8 @@ use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor};
 lazy_static! {
     static ref GDT: GlobalDescriptorTable = {
         let mut gdt = GlobalDescriptorTable::new();
-        gdt.add_entry(Descriptor::kernel_code_segment());
-        gdt.add_entry(Descriptor::tss_segment(&TSS));
+        gdt.append(Descriptor::kernel_code_segment());
+        gdt.append(Descriptor::tss_segment(&TSS));
         gdt
     };
 }
@@ -351,8 +351,8 @@ use x86_64::structures::gdt::SegmentSelector;
 lazy_static! {
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
-        let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
-        let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
+        let code_selector = gdt.append(Descriptor::kernel_code_segment());
+        let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
         (gdt, Selectors { code_selector, tss_selector })
     };
 }
@@ -382,8 +382,8 @@ pub fn init() {
 
 Kod segmenti register'ını [`CS::set_reg`] kullanarak yeniden yüklüyor ve TSS'yi [`load_tss`] kullanarak yüklüyoruz. Fonksiyonlar `unsafe` olarak işaretlenmiştir, bu yüzden onları çağırmak için bir `unsafe` bloğuna ihtiyacımız var. Bunun nedeni, geçersiz seçiciler yükleyerek bellek güvenliğini bozmanın mümkün olabilmesidir.
 
-[`CS::set_reg`]: https://docs.rs/x86_64/0.14.5/x86_64/instructions/segmentation/struct.CS.html#method.set_reg
-[`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
+[`CS::set_reg`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/segmentation/struct.CS.html#method.set_reg
+[`load_tss`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/tables/fn.load_tss.html
 
 Artık geçerli bir TSS ve interrupt stack table yüklediğimize göre, IDT'de double fault handler'ımız için stack indeksini ayarlayabiliriz:
 

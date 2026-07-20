@@ -8,7 +8,7 @@ date = 2019-01-14
 chapter = "Memory Management"
 
 # Please update this when updating the translation
-translation_based_on_commit = "9753695744854686a6b80012c89b0d850a44b4b0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["rhotav"]
@@ -240,8 +240,8 @@ Mevcut bayraklara daha yakından bakalım:
 
 `x86_64` crate'i [sayfa tabloları][page tables] ve [girdileri][entries] için tipler sağlar, bu yüzden bu yapıları kendimiz oluşturmamıza gerek yok.
 
-[page tables]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTable.html
-[entries]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
+[page tables]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTable.html
+[entries]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
 ### Translation Lookaside Buffer {#the-translation-lookaside-buffer}
 
@@ -250,7 +250,7 @@ Mevcut bayraklara daha yakından bakalım:
 Diğer CPU önbelleklerinin aksine, TLB tamamen şeffaf değildir ve sayfa tablolarının içeriği değiştiğinde çevirileri güncellemez veya kaldırmaz. Bu, kernel'in bir sayfa tablosunu her değiştirdiğinde TLB'yi elle güncellemesi gerektiği anlamına gelir. Bunu yapmak için, belirtilen sayfanın çevirisini TLB'den kaldıran [`invlpg`] ("invalidate page") adı verilen özel bir CPU komutu vardır; böylece çeviri bir sonraki erişimde sayfa tablosundan yeniden yüklenir. TLB, bir adres alanı değişimini taklit eden `CR3` register'ı yeniden yüklenerek de tamamen temizlenebilir (flush). `x86_64` crate'i, her iki varyant için de [`tlb` modülünde][`tlb` module] Rust fonksiyonları sağlar.
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
-[`tlb` module]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tlb/index.html
+[`tlb` module]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/tlb/index.html
 
 Her sayfa tablosu değişikliğinde TLB'yi temizlemeyi (flush) hatırlamak önemlidir; çünkü aksi takdirde CPU eski çeviriyi kullanmaya devam edebilir, bu da hata ayıklaması çok zor olan belirsiz (non-deterministic) hatalara yol açabilir.
 
@@ -305,8 +305,8 @@ extern "x86-interrupt" fn page_fault_handler(
 [`CR2`] register'ı, bir page fault'ta CPU tarafından otomatik olarak ayarlanır ve page fault'a neden olan erişilen sanal adresi içerir. Onu okuyup yazdırmak için `x86_64` crate'inin [`Cr2::read`] fonksiyonunu kullanıyoruz. [`PageFaultErrorCode`] tipi, page fault'a neden olan bellek erişiminin türü hakkında, örneğin bunun bir okuma mı yoksa yazma işlemi tarafından mı oluştuğu gibi, daha fazla bilgi sağlar. Bu nedenle onu da yazdırıyoruz. Page fault'u çözmeden çalıştırmaya devam edemeyiz, bu yüzden sonunda bir [`hlt_loop`]'a giriyoruz.
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
-[`Cr2::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr2.html#method.read
-[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
+[`Cr2::read`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr2.html#method.read
+[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
 [`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.tr.md#the-hlt-instruction
 
@@ -340,7 +340,7 @@ Onu çalıştırdığımızda, page fault handler'ımızın çağrıldığını 
 
 `CR2` register'ı gerçekten de erişmeye çalıştığımız adres olan `0xdeadbeaf`'i içeriyor. Hata kodu, [`CAUSED_BY_WRITE`] aracılığıyla bize fault'un bir yazma işlemi gerçekleştirilmeye çalışılırken meydana geldiğini söylüyor. [Ayarlı _olmayan_ bitler][`PageFaultErrorCode`] aracılığıyla bize daha fazlasını da söylüyor. Örneğin, `PROTECTION_VIOLATION` bayrağının ayarlı olmaması, page fault'un hedef sayfa mevcut olmadığı için meydana geldiği anlamına gelir.
 
-[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
+[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
 
 Mevcut komut işaretçisinin `0x2031b2` olduğunu görüyoruz, bu yüzden bu adresin bir kod sayfasına işaret ettiğini biliyoruz. Kod sayfaları bootloader tarafından salt okunur eşlenir, bu yüzden bu adresten okumak çalışır, ancak yazmak bir page fault'a neden olur. Bunu, `0xdeadbeaf` işaretçisini `0x2031b2` olarak değiştirerek deneyebilirsiniz:
 
@@ -364,7 +364,7 @@ Son satırı yorum satırı haline getirerek, okuma erişiminin çalıştığın
 
 _"read worked"_ mesajının yazdırıldığını görüyoruz; bu da okuma işleminin herhangi bir hataya neden olmadığını gösteriyor. Ancak _"write worked"_ mesajı yerine bir page fault meydana geliyor. Bu sefer [`CAUSED_BY_WRITE`] bayrağına ek olarak [`PROTECTION_VIOLATION`] bayrağı da ayarlanmış; bu da sayfanın mevcut olduğunu, ancak işleme onda izin verilmediğini gösteriyor. Bu durumda, kod sayfaları salt okunur eşlendiği için sayfaya yazmaya izin verilmiyor.
 
-[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
+[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
 ### Sayfa Tablolarına Erişmek {#accessing-the-page-tables}
 
@@ -390,9 +390,9 @@ pub extern "C" fn _start() -> ! {
 
 `x86_64`'ün [`Cr3::read`] fonksiyonu, şu anda aktif olan seviye 4 sayfa tablosunu `CR3` register'ından döndürür. Bir [`PhysFrame`] ve bir [`Cr3Flags`] tipinden oluşan bir tuple döndürür. Yalnızca frame ile ilgilendiğimiz için, tuple'ın ikinci elemanını yok sayıyoruz.
 
-[`Cr3::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3.html#method.read
-[`PhysFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/frame/struct.PhysFrame.html
-[`Cr3Flags`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3Flags.html
+[`Cr3::read`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr3.html#method.read
+[`PhysFrame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/frame/struct.PhysFrame.html
+[`Cr3Flags`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr3Flags.html
 
 Onu çalıştırdığımızda, aşağıdaki çıktıyı görüyoruz:
 
@@ -402,7 +402,7 @@ Level 4 page table at: PhysAddr(0x1000)
 
 Yani şu anda aktif olan seviye 4 sayfa tablosu, [`PhysAddr`] sarmalayıcı tipinin belirttiği gibi, _fiziksel_ bellekte `0x1000` adresinde saklanıyor. Şimdi soru şu: bu tabloya kernel'imizden nasıl erişebiliriz?
 
-[`PhysAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.PhysAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.PhysAddr.html
 
 Paging aktifken fiziksel belleğe doğrudan erişmek mümkün değildir, çünkü aksi takdirde programlar bellek korumasını kolayca atlayıp diğer programların belleğine erişebilirdi. Yani tabloya erişmenin tek yolu, `0x1000` adresindeki fiziksel frame'e eşlenmiş bir sanal sayfa aracılığıyladır. Sayfa tablosu frame'leri için eşlemeler oluşturma sorunu genel bir sorundur, çünkü kernel'in sayfa tablolarına düzenli olarak erişmesi gerekir; örneğin yeni bir thread için bir stack ayırırken.
 

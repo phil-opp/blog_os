@@ -6,7 +6,7 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "c689ecf810f8e93f6b2fb3c4e1e8b89b8a0998eb"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["TheMimiCodes", "maximevaillancourt"]
 # GitHub usernames of the people that contributed to this translation
@@ -198,7 +198,7 @@ Pour plus d'informations, voir notre article sur la [désactivation de SIMD](@/e
 "rustc-abi": "softfloat"
 ```
 
-As we want to use the `soft-float` feature, we also need to tell the Rust compiler `rustc` that we want to use the corresponding ABI. We can do that by setting the `rustc-abi` field to `softfloat`.
+Comme nous voulons utiliser la fonctionnalité `soft-float`, nous devons aussi indiquer au compilateur Rust `rustc` que nous voulons utiliser l'ABI correspondante. Nous pouvons faire cela en définissant le champ `rustc-abi` à `softfloat`.
 
 #### Assembler le tout
 Notre fichier de spécification de cible ressemble maintenant à ceci :
@@ -223,7 +223,7 @@ Notre fichier de spécification de cible ressemble maintenant à ceci :
 ```
 
 ### Construction de notre noyau
-Compiler pour notre nouvelle cible utilisera les conventions Linux (je ne suis pas trop certain pourquoi; j'assume que c'est simplement le comportement par défaut de LLVM). Cela signifie que nos avons besoin d'un point d'entrée nommé `_start` comme décrit dans [l'article précédent][previous post]:
+Compiler pour notre nouvelle cible utilisera les conventions Linux, puisque le linker-flavor ld.lld indique à llvm de compiler avec le drapeau `-flavor gnu` (pour plus d'options de lieur, voir [la documentation de rustc](https://doc.rust-lang.org/rustc/codegen-options/index.html#linker-flavor)). Cela signifie que nos avons besoin d'un point d'entrée nommé `_start` comme décrit dans [l'article précédent][previous post]:
 
 [previous post]: @/edition-2/posts/01-freestanding-rust-binary/index.fr.md
 
@@ -444,14 +444,16 @@ Plutôt que d'écrire notre propre bootloader, ce qui est un projet en soi, nous
 # dans Cargo.toml
 
 [dependencies]
-bootloader = "0.9.8"
+bootloader = "0.9"
 ```
+
+**Note :** Cet article est uniquement compatible avec `bootloader v0.9`. Les versions plus récentes utilisent un système de construction différent et provoqueront des erreurs de compilation si vous suivez cet article.
 
 Ajouter le bootloader comme dépendance n'est pas suffisant pour réellement créer une image de disque amorçable. Le problème est que nous devons lier notre noyau avec le bootloader après la compilation, mais cargo ne supporte pas les [scripts post-build][post-build scripts].
 
 [post-build scripts]: https://github.com/rust-lang/cargo/issues/545
 
-Pour résoudre ce problème, nous avons créé un outil nommé `bootimage` qui compile d'abord le noyau et le bootloader, et les lie ensuite ensemble pour créer une image de disque amorçable. Pour installer cet outil, exécutez la commande suivante dans votre terminal:
+Pour résoudre ce problème, nous avons créé un outil nommé `bootimage` qui compile d'abord le noyau et le bootloader, et les lie ensuite ensemble pour créer une image de disque amorçable. Pour installer cet outil, rendez-vous dans votre dossier personnel (ou tout autre dossier en dehors de votre projet cargo) et exécutez la commande suivante dans votre terminal:
 
 ```
 cargo install bootimage
@@ -459,7 +461,7 @@ cargo install bootimage
 
 Pour exécuter `bootimage` et construire le bootloader, vous devez avoir la composante rustup `llvm-tools-preview` installée. Vous pouvez l'installer en exécutant `rustup component add llvm-tools-preview`.
 
-Après avoir installé `bootimage` et ajouté la composante `llvm-tools-preview`, nous pouvons créer une image de disque amorçable en exécutant:
+Après avoir installé `bootimage` et ajouté la composante `llvm-tools-preview`, vous pouvez créer une image de disque amorçable en retournant dans le dossier de votre projet cargo et en exécutant:
 
 ```
 > cargo bootimage
@@ -490,7 +492,6 @@ Nous pouvons maintenant lancer l'image disque dans une machine virtuelle. Pour l
 
 ```
 > qemu-system-x86_64 -drive format=raw,file=target/x86_64-blog_os/debug/bootimage-blog_os.bin
-warning: TCG doesn't support requested feature: CPUID.01H:ECX.vmx [bit 5]
 ```
 
 Ceci ouvre une fenêtre séparée qui devrait ressembler à cela:

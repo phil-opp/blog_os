@@ -6,7 +6,7 @@ date = 2018-10-22
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "211f460251cd332905225c93eb66b1aff9f4aefd"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Interrupts"
 
 # GitHub usernames of the people that translated this post
@@ -88,18 +88,18 @@ Secondary ATA ----> |____________|   Parallel Port 1----> |____________|
 
 لإضافة المكتبة كـ dependency، نضيف ما يلي إلى مشروعنا:
 
-[`pic8259`]: https://docs.rs/pic8259/0.10.1/pic8259/
+[`pic8259`]: https://docs.rs/pic8259/0.11.0/pic8259/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pic8259 = "0.10.1"
+pic8259 = "0.11.0"
 ```
 
 التجريد الرئيسي الذي توفره المكتبة هو struct [`ChainedPics`] الذي يمثل تخطيط primary/secondary PIC الذي رأيناه أعلاه. مصمم للاستخدام بالطريقة التالية:
 
-[`ChainedPics`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html
+[`ChainedPics`]: https://docs.rs/pic8259/0.11.0/pic8259/struct.ChainedPics.html
 
 ```rust
 // in src/interrupts.rs
@@ -132,7 +132,7 @@ pub fn init() {
 
 نستخدم دالة [`initialize`] لتنفيذ تهيئة PIC. مثل دالة `ChainedPics::new`، هذه الدالة أيضًا غير آمنة لأنها قد تسبب undefined behavior إذا كان PIC مُكوّنًا بشكل خاطئ.
 
-[`initialize`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html#method.initialize
+[`initialize`]: https://docs.rs/pic8259/0.11.0/pic8259/struct.ChainedPics.html#method.initialize
 
 إذا سار كل شيء على ما يرام، يجب أن نستمر في رؤية رسالة "It did not crash" عند تنفيذ `cargo run`.
 
@@ -176,10 +176,6 @@ impl InterruptIndex {
     fn as_u8(self) -> u8 {
         self as u8
     }
-
-    fn as_usize(self) -> usize {
-        usize::from(self.as_u8())
-    }
 }
 ```
 
@@ -199,7 +195,7 @@ lazy_static! {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
-        idt[InterruptIndex::Timer.as_usize()]
+        idt[InterruptIndex::Timer.as_u8()]
             .set_handler_fn(timer_interrupt_handler); // new
 
         idt
@@ -215,7 +211,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 دالة `timer_interrupt_handler` لها نفس التوقيع كـ exception handlers، لأن وحدة المعالجة المركزية تتفاعل بشكل متطابق مع exceptions و external interrupts (الفرق الوحيد هو أن بعض exceptions تدفع error code). struct [`InterruptDescriptorTable`] ينفذ trait [`IndexMut`]، لذلك يمكننا الوصول إلى entries فردية عبر array indexing syntax.
 
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
 في timer interrupt handler، نطبع نقطة على الشاشة. بما أن timer interrupt يحدث بشكل دوري، نتوقع رؤية نقطة تظهر عند كل tick timer. ومع ذلك، عندما نشغّله، نرى أن نقطة واحدة فقط تُطبع:
@@ -340,7 +336,7 @@ pub fn _print(args: fmt::Arguments) {
 
 دالة [`without_interrupts`] تأخذ [closure] وتنفذه في بيئة خالية من المقاطعات. نستخدمها لضمان عدم حدوث interrupt طالما `Mutex` مقفل. عندما نشغّل نواتنا الآن، نرى أنها تستمر في العمل دون توقف. (لا نزال لا نلاحظ أي نقاط، لكن هذا لأنها تمر بسرعة كبيرة جدًا. حاول إبطاء الطباعة، مثلاً بوضع `for _ in 0..10000 {}` داخل loop.)
 
-[`without_interrupts`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.without_interrupts.html
+[`without_interrupts`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
 
 يمكننا تطبيق نفس التغيير على دالة serial printing لضمان عدم حدوث deadlocks معها أيضًا:
@@ -537,7 +533,7 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
         // new
-        idt[InterruptIndex::Keyboard.as_usize()]
+        idt[InterruptIndex::Keyboard.as_u8()]
             .set_handler_fn(keyboard_interrupt_handler);
 
         idt
@@ -587,7 +583,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 نستخدم نوع [`Port`] من مكتبة `x86_64` لقراءة بايت من data port للوحة المفاتيح. هذا البايت يسمى [_scancode_] ويمثل ضغط/إطلاق المفتاح. لا نفعل أي شيء بالـ scancode بعد، سوى طباعته على الشاشة:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
 
 ![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)

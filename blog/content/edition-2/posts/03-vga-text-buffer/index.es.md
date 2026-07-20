@@ -5,6 +5,8 @@ path = "es/modo-texto-vga"
 date  = 2018-02-26
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Fundamentos"
 
 # GitHub usernames of the people that translated this post
@@ -259,7 +261,7 @@ Luego escribe el byte `b'H'` en él. El prefijo `b` crea un [literal de byte], q
 ```rust
 // en src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     vga_buffer::print_something();
 

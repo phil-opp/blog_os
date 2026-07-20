@@ -6,7 +6,7 @@ date = 2019-01-14
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "096c044b4f3697e91d8e30a2e817e567d0ef21a2"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["liuyuran"]
 # GitHub usernames of the people that contributed to this translation
@@ -243,8 +243,8 @@ pub struct PageTable {
 
 `x86_64` crate 为我们提供了 [page tables] 的结构封装，以及其内部条目 [entries]，所以我们无需自己实现具体的结构。
 
-[page tables]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTable.html
-[entries]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
+[page tables]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTable.html
+[entries]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
 ### 地址转换后备缓冲区（TLB）
 
@@ -253,7 +253,7 @@ pub struct PageTable {
 不同于CPU缓存，TLB并非是完全对外透明的，它在页表变化时并不会自动更新或删除被缓存的结果。这也就是说，内核需要在页表发生变化时，自己来处理TLB的更新。针对这个需要，CPU也提供了一个用于从TLB删除特定页的缓存的指令 [`invlpg`] （“invalidate page”），调用该指令之后，下次访问该页就会重新生成缓存。不过还有一个更彻底的办法，通过手动写入 `CR3` 寄存器可以制造出模拟地址空间切换的效果，TLB也会被完全刷新。`x86_64` crate 中的 [`tlb` module] 提供了上面的两种手段，并封装了对应的函数。
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
-[`tlb` module]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tlb/index.html
+[`tlb` module]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/tlb/index.html
 
 请注意，在修改页表之后，同步修改TLB是十分十分重要的事情，不然CPU可能会返回一个错误的物理地址，因为这种原因造成的bug是非常难以追踪和调试的。
 
@@ -308,8 +308,8 @@ extern "x86-interrupt" fn page_fault_handler(
 [`CR2`] 寄存器会在 page fault 发生时，被CPU自动写入导致异常的虚拟地址，我们可以用 `x86_64` crate 提供的 [`Cr2::read`] 函数来读取并打印该寄存器。[`PageFaultErrorCode`] 类型为我们提供了内存访问型异常的具体信息，比如究竟是因为读取还是写入操作，我们同样将其打印出来。并且不要忘记，在显式结束异常处理前，程序是不会恢复运行的，所以要在最后调用 [`hlt_loop`] 函数。
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
-[`Cr2::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr2.html#method.read
-[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
+[`Cr2::read`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr2.html#method.read
+[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
 [`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.md#the-hlt-instruction
 
@@ -343,7 +343,7 @@ pub extern "C" fn _start() -> ! {
 
 `CR2` 确实保存了导致异常的虚拟地址 `0xdeadbeaf`，而错误码 [`CAUSED_BY_WRITE`] 也说明了导致异常的操作是写入。甚至于可以通过 [未设置的比特位][`PageFaultErrorCode`] 看出更多的信息，例如 `PROTECTION_VIOLATION` 未被设置说明目标页根本就不存在。
 
-[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
+[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
 
 并且我们可以看到当前指令指针是 `0x2031b2`，根据上文的知识，我们知道它应该属于一个代码页。而代码页被bootloader设定为只读权限，所以读取是正常的，但写入就会触发 page fault 异常。比如你可以试着将上面代码中的 `0xdeadbeaf` 换成 `0x2031b2`：
 
@@ -367,7 +367,7 @@ println!("write worked");
 
 我们可以看到 _"read worked"_ 这条日志，说明读操作没有出问题，而 _"write worked"_ 这条日志则没有被打印，起而代之的是一个异常日志。这一次 [`PROTECTION_VIOLATION`] 标志位的 [`CAUSED_BY_WRITE`] 比特位被设置，说明异常正是被非法写入操作引发的，因为我们之前为该页设置了只读权限。
 
-[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
+[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
 ### 访问页表
 
@@ -392,9 +392,9 @@ pub extern "C" fn _start() -> ! {
 ```
 `x86_64` crate 中的 [`Cr3::read`] 函数可以返回 `CR3` 寄存器中的当前使用的4级页表，它返回的是 [`PhysFrame`] 和 [`Cr3Flags`] 两个类型组成的元组结构。不过此时我们只关心页帧信息，所以第二个元素暂且不管。
 
-[`Cr3::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3.html#method.read
-[`PhysFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/frame/struct.PhysFrame.html
-[`Cr3Flags`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3Flags.html
+[`Cr3::read`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr3.html#method.read
+[`PhysFrame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/frame/struct.PhysFrame.html
+[`Cr3Flags`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr3Flags.html
 
 然后我们会看到如下输出：
 
@@ -404,7 +404,7 @@ Level 4 page table at: PhysAddr(0x1000)
 
 所以当前的4级页表存储在 _物理地址_ `0x1000` 处，而且地址的外层数据结构是 [`PhysAddr`]，那么问题来了：我们如何在内核中直接访问这个页表？
 
-[`PhysAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.PhysAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.PhysAddr.html
 
 当分页功能启用时，直接访问物理内存是被禁止的，否则程序就可以很轻易的侵入其他程序的内存，所以唯一的途径就是通过某些手段构建一个指向 `0x1000` 的虚拟页。那么问题就变成了如何手动创建页映射，但其实该功能在很多地方都会用到，例如内核在创建新的线程时需要额外创建栈，同样需要用到该功能。
 

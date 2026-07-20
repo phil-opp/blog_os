@@ -6,7 +6,7 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "c1af4e31b14e562826029999b9ab1dce86396b93"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["JOE1994", "Quqqu"]
 +++
@@ -540,6 +540,81 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
 주의할 것은 이것이 정말 최소한의 freestanding Rust 실행 파일이라는 것입니다. 실행 파일은 여러 가지 조건들을 가정하는데, 그 예로 실행파일 동작 시 `_start` 함수가 호출될 때 스택이 초기화되어 있을 것을 가정합니다. **이 freestanding 실행 파일을 이용해 실제로 유용한 작업을 처리하려면 아직 더 많은 코드 구현이 필요합니다**.
+
+## `rust-analyzer` 만족시키기
+
+[`rust-analyzer`](https://rust-analyzer.github.io/) 프로젝트는 편집기에서 Rust 코드에 대한 코드 자동완성과 "정의로 이동 (go to definition)" 기능 (그 외 다양한 기능들)을 제공하는 훌륭한 도구입니다.
+`#![no_std]` 프로젝트에서도 아주 잘 동작하기에, 커널 개발에도 사용하시길 추천드립니다!
+
+`rust-analyzer`의 [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) 기능 (기본적으로 활성화됨)을 사용 중이라면, 우리 커널의 panic 함수에 대해 아래와 같은 오류를 보고할 수 있습니다:
+
+```
+found duplicate lang item `panic_impl`
+```
+
+이 오류가 발생하는 이유는 `rust-analyzer`가 기본적으로 `cargo check --all-targets`를 실행하는데, 이 명령어가 실행 파일을 [테스트][test] 및 [벤치마크][benchmark] 모드로도 빌드하려고 시도하기 때문입니다.
+
+[test]: https://doc.rust-lang.org/book/ch11-01-writing-tests.html
+[benchmark]: https://doc.rust-lang.org/rustc/tests/index.html#benchmarks
+
+<div class="note">
+
+### "target"의 두 가지 의미
+
+`--all-targets` 플래그는 `--target` 인자와 전혀 관련이 없습니다.
+`cargo`에서 "target"이라는 용어에는 서로 다른 두 가지 의미가 있습니다:
+
+- `--target` 플래그는 `rustc` 컴파일러에 전달할 **[_컴파일 대상 (compilation target)_][_compilation target_]**을 지정합니다. 이는 우리의 코드를 실행할 기기의 [target triple]로 설정해야 합니다.
+- `--all-targets` 플래그는 Cargo의 **[_패키지 대상 (package target)_][_package target_]**을 가리킵니다. Cargo 패키지는 라이브러리인 동시에 실행 파일일 수 있으므로, 크레이트를 어떤 방식으로 빌드할지 지정할 수 있습니다. 또한 Cargo는 [예제](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples), [테스트](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests), [벤치마크](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#benchmarks)를 위한 패키지 대상도 가지고 있습니다. 이러한 패키지 대상들은 공존할 수 있으므로, 동일한 크레이트를 예를 들어 라이브러리 모드나 테스트 모드로 빌드/검사할 수 있습니다.
+
+[_compilation target_]: https://doc.rust-lang.org/rustc/targets/index.html
+[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[_package target_]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html
+
+</div>
+
+기본적으로 `cargo check`는 _라이브러리_와 _실행 파일_ 패키지 대상만 빌드합니다.
+하지만 `rust-analyzer`는 [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave)가 활성화되어 있을 때 기본적으로 모든 패키지 대상을 검사하도록 선택합니다.
+이것이 `cargo check`에서는 보이지 않던 위의 `lang item` 오류를 `rust-analyzer`가 보고하는 이유입니다.
+`cargo check --all-targets`를 실행하면 우리도 그 오류를 볼 수 있습니다:
+
+```
+error[E0152]: found duplicate lang item `panic_impl`
+  --> src/main.rs:13:1
+   |
+13 | / fn panic(_info: &PanicInfo) -> ! {
+14 | |     loop {}
+15 | | }
+   | |_^
+   |
+   = note: the lang item is first defined in crate `std` (which `test` depends on)
+   = note: first definition in `std` loaded from /home/[...]/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-8df6be531efb3fd0.rlib
+   = note: second definition in the local crate (`blog_os`)
+```
+
+첫 번째 `note`는 panic language item이 이미 `std` 크레이트에 정의되어 있으며, 이 크레이트가 `test` 크레이트의 의존성이라는 것을 알려줍니다.
+`test` 크레이트는 크레이트를 [테스트 모드](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests)로 빌드할 때 자동으로 포함됩니다.
+이는 bare metal에서 표준 라이브러리를 지원할 방법이 없는 우리의 `#![no_std]` 커널에게는 의미가 없습니다.
+따라서 이 오류는 우리 프로젝트와 관련이 없으므로 안전하게 무시할 수 있습니다.
+
+이 오류를 피하는 올바른 방법은 우리의 실행 파일이 `test` 및 `bench` 모드로 빌드되는 것을 지원하지 않는다고 `Cargo.toml`에 명시하는 것입니다.
+`Cargo.toml`에 `[[bin]]` 섹션을 추가하여 실행 파일의 [빌드를 설정](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target)함으로써 이를 수행할 수 있습니다:
+
+```toml
+# in Cargo.toml
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+```
+
+`bin` 주위의 이중 대괄호는 실수가 아니라, TOML 형식에서 여러 번 나타날 수 있는 키를 정의하는 방식입니다.
+크레이트는 여러 개의 실행 파일을 가질 수 있으므로, `[[bin]]` 섹션도 `Cargo.toml`에 여러 번 나타날 수 있습니다.
+이것이 필수 항목인 `name` 필드가 존재하는 이유이기도 한데, 이 필드는 실행 파일의 이름과 일치해야 합니다 (그래야 `cargo`가 어떤 설정을 어떤 실행 파일에 적용해야 하는지 알 수 있습니다).
+
+[`test`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field) 및 [`bench`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field) 필드를 `false`로 설정하면, `cargo`에게 우리의 실행 파일을 테스트나 벤치마크 모드로 빌드하지 말라고 지시하게 됩니다.
+이제 `cargo check --all-targets`는 더 이상 어떤 오류도 발생시키지 않아야 하며, `rust-analyzer`의 `checkOnSave` 구현도 만족할 것입니다.
 
 ## 다음 단계는 무엇일까요?
 

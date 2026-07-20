@@ -6,7 +6,7 @@ date = 2019-03-14
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "32f629fb2dc193db0dc0657338bd0ddec5914f05"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Memory Management"
 
 # GitHub usernames of the people that translated this post
@@ -130,17 +130,17 @@ level 1 table في هذا الرسم تتحكم في أول 2&nbsp;KiB من مس
 
 باتباع recursive entry مرة أو مرات متعددة قبل بدء الترجمة الفعلية، يمكننا تقصير عدد المستويات التي يمر عليها وحدة المعالجة المركزية. على سبيل المثال، إذا اتبعنا recursive entry مرة ثم proceed إلى level 3 table، تعتقد وحدة المعالجة المركزية أن level 3 table هي level 2 table. بالمزيد، تتعامل مع level 2 table كـ level 1 table و level 1 table كـ frame المُعيّنة. هذا يعني أننا الآن نستطيع قراءة وكتابة level 1 page table لأن وحدة المعالجة المركزية تعتقد أنها frame المُعيّنة. الرسم أدناه يوضح خطوات الترجمة الخمسة:
 
-![The above example 4-level page hierarchy with 5 arrows: "Step 0" from CR4 to level 4 table, "Step 1" from level 4 table to level 4 table, "Step 2" from level 4 table to level 3 table, "Step 3" from level 3 table to level 2 table, and "Step 4" from level 2 table to level 1 table.](recursive-page-table-access-level-1.png)
+![The above example 4-level page hierarchy with 5 arrows: "Step 0" from CR3 to level 4 table, "Step 1" from level 4 table to level 4 table, "Step 2" from level 4 table to level 3 table, "Step 3" from level 3 table to level 2 table, and "Step 4" from level 2 table to level 1 table.](recursive-page-table-access-level-1.png)
 
 بالمثل، يمكننا اتباع recursive entry مرتين قبل بدء الترجمة لتقليل عدد المستويات المُمر عليها إلى اثنين:
 
-![The same 4-level page hierarchy with the following 4 arrows: "Step 0" from CR4 to level 4 table, "Steps 1&2" from level 4 table to level 4 table, "Step 3" from level 4 table to level 3 table, and "Step 4" from level 3 table to level 2 table.](recursive-page-table-access-level-2.png)
+![The same 4-level page hierarchy with the following 4 arrows: "Step 0" from CR3 to level 4 table, "Steps 1&2" from level 4 table to level 4 table, "Step 3" from level 4 table to level 3 table, and "Step 4" from level 3 table to level 2 table.](recursive-page-table-access-level-2.png)
 
 لنمر عبرها خطوة بخطوة: أولاً، تتبع وحدة المعالجة المركزية recursive entry على level 4 table وتصل إلى level 3 table. ثم تتبع recursive entry مرة أخرى وتصل إلى level 2 table. لكن في الواقع، لا تزال على level 4 table. عندما تتبع وحدة المعالجة المركزية entry مختلفة الآن، تهبط على level 3 table لكنها تعتقد أنها على level 1 table. لذلك بينما entry التالية تشير إلى level 2 table، تعتقد وحدة المعالجة المركزية أنها تشير إلى frame المُعيّنة، الذي يسمح لنا بقراءة وكتابة level 2 table.
 
 الوصول إلى tables للمستويين 3 و 4 يعمل بنفس الطريقة. للوصول إلى level 3 table، نتبع recursive entry ثلاث مرات، نخدع وحدة المعالجة المركزية لتظن أنها على level 1 table. ثم نتبع entry أخرى ونصل إلى level 3 table، التي تتعامل معها وحدة المعالجة المركزية كـ frame المُعيّنة. للوصول إلى level 4 table نفسها، نتبع recursive entry أربع مرات حتى تعامل وحدة المعالجة المركزية level 4 table نفسها كـ frame المُعيّنة (باللون الأزرق في الرسم أدناه).
 
-![The same 4-level page hierarchy with the following 3 arrows: "Step 0" from CR4 to level 4 table, "Steps 1,2,3" from level 4 table to level 4 table, and "Step 4" from level 4 table to level 3 table. In blue, the alternative "Steps 1,2,3,4" arrow from level 4 table to level 4 table.](recursive-page-table-access-level-3.png)
+![The same 4-level page hierarchy with the following 3 arrows: "Step 0" from CR3 to level 4 table, "Steps 1,2,3" from level 4 table to level 4 table, and "Step 4" from level 4 table to level 3 table. In blue, the alternative "Steps 1,2,3,4" arrow from level 4 table to level 4 table.](recursive-page-table-access-level-3.png)
 
 قد يستغرق بعض الوقت لفهم المفهوم، لكنه يعمل بشكل جيد في الممارسة العملية.
 
@@ -226,7 +226,7 @@ let level_1_table_addr =
 
 بدلاً من تنفيذ عمليات bitwise يدويًا، يمكنك استخدام نوع [`RecursivePageTable`] من مكتبة `x86_64`، الذي يوفر تجريدات آمنة لعمليات page table مختلفة. على سبيل المثال، الكود أدناه يُظهر كيفية ترجمة عنوان افتراضي إلى عنوانه الفزيائي المُعيّن:
 
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 ```rust
 // in src/memory.rs
@@ -443,7 +443,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 أولاً، نحول `physical_memory_offset` من struct `BootInfo` إلى [`VirtAddr`] ونمررها إلى دالة `active_level_4_table`. ثم نستخدم دالة `iter` للمرور على page table entries و combinator [`enumerate`] لإضافة فهرس `i` إضافيًا لكل عنصر. نطبع فقط entries غير الفارغة لأن جميع 512 entries لن تتسع على الشاشة.
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
+[`VirtAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.VirtAddr.html
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
 عندما نشغّله، نرى الإخراج التالي:
@@ -556,7 +556,7 @@ struct `VirtAddr` يوفر بالفعل دوال لحساب الفهارس في 
 
 داخل loop، نستخدم مرة أخرى `physical_memory_offset` لتحويل frame إلى page table reference. ثم نقرأ entry لـ page table الحالية ونستخدم دالة [`PageTableEntry::frame`] لاسترداد frame المُعيّنة. إذا لم تكن entry مُعيّنة إلى frame، نُعيد `None`. إذا كانت entry تُعيّن صفحة 2&nbsp;MiB أو 1&nbsp;GiB ضخمة، نُ panic الآن.
 
-[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
+[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
 لنختبر دالة الترجمة بترجمة بعض العناوين:
 
@@ -611,18 +611,18 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 - trait [`Mapper`] عام على حجم page ويوفر دوال تعمل على pages. أمثلة [`translate_page`]، التي تترجم page معينة إلى frame بنفس الحجم، و [`map_to`]، التي تُنشئ تعيينًا جديدًا في page table.
 - trait [`Translate`] يوفر دوال تعمل مع أحجام page متعددة، مثل [`translate_addr`] أو [`translate`] العام.
 
-[`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
-[`translate_page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
-[`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
-[`Translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html
-[`translate_addr`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
-[`translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
+[`Mapper`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html
+[`translate_page`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
+[`map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
+[`Translate`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html
+[`translate_addr`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
+[`translate`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
 
 الـ traits تحدد فقط الواجهة، لا تقدم أي تنفيذ. توفر مكتبة `x86_64` حاليًا ثلاثة أنواع تنفذ الـ traits بمتطلبات مختلفة. نوع [`OffsetPageTable`] يفترض أن الذاكرة الفيزيائية بالكامل مُعيّنة إلى مساحة العنونة الافتراضية عند offset ما. [`MappedPageTable`] أكثر مرونة بعض الشيء: يحتاج فقط إلى أن كل page table frame مُعيّنة إلى مساحة العنونة الافتراضية عند عنوان قابل للحساب. أخيرًا، يمكن استخدام نوع [`RecursivePageTable`] للوصول إلى page table frames عبر [recursive page tables](#recursive-page-tables).
 
-[`OffsetPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
-[`MappedPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MappedPageTable.html
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`OffsetPageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
+[`MappedPageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 في حالتنا، يُعيّن bootloader الذاكرة الفيزيائية بالكامل عند عنوان افتراضي محدد بمتغير `physical_memory_offset`، لذلك يمكننا استخدام نوع `OffsetPageTable`. لتهيئته، نُنشئ دالة `init` جديدة في module `memory`:
 
@@ -650,7 +650,7 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
 
 الدالة تأخذ `physical_memory_offset` كوسيطة وتعيد instance `OffsetPageTable` جديدة بـ lifetime `'static`. هذا يعني أن instance تبقى صالحة طوال فترة تشغيل نواتنا. في body الدالة، نستدعي أولاً دالة `active_level_4_table` لاسترداد mutable reference إلى level 4 page table. ثم نستدعي دالة [`OffsetPageTable::new`] بهذا المرجع. كوسيطة ثانية، تتوقع دالة `new` العنوان الافتراضي حيث يبدأ تعيين الذاكرة الفيزيائية، المُعطى في متغير `physical_memory_offset`.
 
-[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
+[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
 
 يجب استدعاء دالة `active_level_4_table` فقط من دالة `init` من الآن فصاعدًا لأنها يمكن أن تؤدي بسهولة إلى aliased mutable references عند استدعائها مرات متعددة، الذي قد يسبب undefined behavior. لهذا السبب، نجعل الدالة خاصة بإزالة specifier `pub`.
 
@@ -701,8 +701,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 سنستخدم دالة [`map_to`] من trait [`Mapper`] لتنفيذنا، لذلك لننظر إليها أولاً. التوثيق يخبرنا أنها تأخذ أربع وسيطات: page التي نريد تعيينها، frame التي يجب تعيين page إليها، مجموعة flags لـ page table entry، و `frame_allocator`. frame allocator مطلوب لأن تعيين page المحددة قد يحتاج إنشاء page tables إضافية، التي تحتاج frames غير مستخدمة كـ backing storage.
 
-[`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
-[`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html
+[`map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
+[`Mapper`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.Mapper.html
 
 #### A `create_example_mapping` Function
 
@@ -741,8 +741,8 @@ pub fn create_example_mapping(
 
 [impl-trait-arg]: https://doc.rust-lang.org/book/ch10-02-traits.html#traits-as-parameters
 [generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html
-[`PageSize`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/trait.PageSize.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html
+[`PageSize`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/trait.PageSize.html
 
 دالة [`map_to`] غير آمنة لأن المستدعي يجب أن يضمن أن frame غير مستخدمة بالفعل. السبب هو أن تعيين نفس frame مرتين قد يؤدي إلى undefined behavior، على سبيل المثال عندما يشير `&mut` referenceان مختلفان إلى نفس موقع الذاكرة الفيزيائية. في حالتنا، نعيد استخدام VGA text buffer frame، المُعيّنة بالفعل، لذلك نكسر الشرط المطلوب. ومع ذلك، دالة `create_example_mapping` هي فقط دالة اختبار مؤقتة وستُزال بعد هذا المقال، لذلك لا بأس. لتذكيرنا بعدم الأمان، نضع تعليق `FIXME` على السطر.
 

@@ -5,6 +5,8 @@ path = "es/double-fault-exceptions"
 date  = 2018-06-18
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Interrupciones"
 
 # GitHub usernames of the people that translated this post
@@ -37,7 +39,7 @@ Provocamos un doble fallo al activar una excepción para la cual no hemos defini
 ```rust
 // en src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -170,7 +172,7 @@ Así que la CPU intenta llamar al _controlador de doble fallo_ ahora. Sin embarg
 ```rust
 // en src/main.rs
 
-#[no_mangle] // no mangles el nombre de esta función
+#[unsafe(no_mangle)] // no mangles el nombre de esta función
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
@@ -233,7 +235,7 @@ La _Tabla de Pilas de Privilegio_ es usada por la CPU cuando cambia el nivel de 
 ### Creando una TSS
 Creemos una nueva TSS que contenga una pila de doble fallo separada en su tabla de pila de interrupciones. Para ello, necesitamos una estructura TSS. Afortunadamente, la crate `x86_64` ya contiene una [`struct TaskStateSegment`] que podemos usar.
 
-[`struct TaskStateSegment`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
+[`struct TaskStateSegment`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/tss/struct.TaskStateSegment.html
 
 Creamos la TSS en un nuevo módulo `gdt` (el nombre tendrá sentido más adelante):
 
@@ -257,8 +259,8 @@ lazy_static! {
             const STACK_SIZE: usize = 4096 * 5;
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
-            let stack_end = stack_start + STACK_SIZE;
+            let stack_start = VirtAddr::from_ptr(&raw const STACK);
+            let stack_end = stack_start + STACK_SIZE as u64;
             stack_end
         };
         tss
@@ -268,7 +270,7 @@ lazy_static! {
 
 Usamos `lazy_static` porque el evaluador de const de Rust aún no es lo suficientemente potente como para hacer esta inicialización en tiempo de compilación. Definimos que la entrada 0 de la IST es la pila de doble fallo (cualquier otro índice de IST también funcionaría). Luego, escribimos la dirección superior de una pila de doble fallo en la entrada 0. Escribimos la dirección superior porque las pilas en `x86` crecen hacia abajo, es decir, de direcciones altas a bajas.
 
-No hemos implementado la gestión de memoria aún, así que no tenemos una forma adecuada de asignar una nueva pila. En su lugar, usamos un array `static mut` como almacenamiento de pila por ahora. El `unsafe` es requerido porque el compilador no puede garantizar la ausencia de condiciones de carrera cuando se accede a estáticos mutables. Es importante que sea un `static mut` y no un `static` inmutable, porque de lo contrario el cargador de arranque lo mapeará a una página de solo lectura. Reemplazaremos esto con una asignación de pila adecuada en una publicación posterior, entonces el `unsafe` ya no será necesario en este lugar.
+No hemos implementado la gestión de memoria aún, así que no tenemos una forma adecuada de asignar una nueva pila. En su lugar, usamos un array `static mut` como almacenamiento de pila por ahora. Es importante que sea un `static mut` y no un `static` inmutable, porque de lo contrario el cargador de arranque lo mapeará a una página de solo lectura. Reemplazaremos esto con una asignación de pila adecuada en una publicación posterior.
 
 Ten en cuenta que esta pila de doble fallo no tiene página de guardia que proteja contra el desbordamiento de pila. Esto significa que no deberíamos hacer nada intensivo en pila en nuestro controlador de doble fallo porque un desbordamiento de pila podría corromper la memoria debajo de la pila.
 
@@ -298,8 +300,8 @@ use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor};
 lazy_static! {
     static ref GDT: GlobalDescriptorTable = {
         let mut gdt = GlobalDescriptorTable::new();
-        gdt.add_entry(Descriptor::kernel_code_segment());
-        gdt.add_entry(Descriptor::tss_segment(&TSS));
+        gdt.append(Descriptor::kernel_code_segment());
+        gdt.append(Descriptor::tss_segment(&TSS));
         gdt
     };
 }
@@ -348,8 +350,8 @@ use x86_64::structures::gdt::SegmentSelector;
 lazy_static! {
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
-        let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
-        let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
+        let code_selector = gdt.append(Descriptor::kernel_code_segment());
+        let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
         (gdt, Selectors { code_selector, tss_selector })
     };
 }
@@ -379,8 +381,8 @@ pub fn init() {
 
 Recargamos el registro de segmento de código usando [`CS::set_reg`] y cargamos la TSS usando [`load_tss`]. Las funciones están marcadas como `unsafe`, así que necesitamos un bloque `unsafe` para invocarlas. La razón es que podría ser posible romper la seguridad de la memoria al cargar selectores inválidos.
 
-[`CS::set_reg`]: https://docs.rs/x86_64/0.14.5/x86_64/instructions/segmentation/struct.CS.html#method.set_reg
-[`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
+[`CS::set_reg`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/segmentation/struct.CS.html#method.set_reg
+[`load_tss`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/tables/fn.load_tss.html
 
 Ahora que hemos cargado una TSS válida y una tabla de pila de interrupciones, podemos establecer el índice de pila para nuestro controlador de doble fallo en la IDT:
 
@@ -425,7 +427,7 @@ Comencemos con un esqueleto mínimo:
 
 use core::panic::PanicInfo;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     unimplemented!();
 }
@@ -459,7 +461,7 @@ La implementación de la función `_start` se ve así:
 
 use blog_os::serial_print;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     serial_print!("stack_overflow::stack_overflow...\t");
 

@@ -8,7 +8,7 @@ date = 2018-10-22
 chapter = "Interrupts"
 
 # Please update this when updating the translation
-translation_based_on_commit = "211f460251cd332905225c93eb66b1aff9f4aefd"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["rhotav"]
@@ -88,18 +88,18 @@ Yapılandırma, PIC'lerin komut ve veri portlarına özel değerler yazılarak g
 
 Crate'i bir bağımlılık olarak eklemek için, projemize aşağıdakini ekliyoruz:
 
-[`pic8259`]: https://docs.rs/pic8259/0.10.1/pic8259/
+[`pic8259`]: https://docs.rs/pic8259/0.11.0/pic8259/
 
 ```toml
 # Cargo.toml içinde
 
 [dependencies]
-pic8259 = "0.10.1"
+pic8259 = "0.11.0"
 ```
 
 Crate'in sağladığı ana soyutlama, yukarıda gördüğümüz birincil/ikincil PIC düzenini temsil eden [`ChainedPics`] struct'ıdır. Aşağıdaki şekilde kullanılmak üzere tasarlanmıştır:
 
-[`ChainedPics`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html
+[`ChainedPics`]: https://docs.rs/pic8259/0.11.0/pic8259/struct.ChainedPics.html
 
 ```rust
 // src/interrupts.rs içinde
@@ -132,7 +132,7 @@ pub fn init() {
 
 PIC başlatmasını gerçekleştirmek için [`initialize`] fonksiyonunu kullanıyoruz. `ChainedPics::new` fonksiyonu gibi, bu fonksiyon da unsafe'tir; çünkü PIC yanlış yapılandırılırsa tanımsız davranışa neden olabilir.
 
-[`initialize`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html#method.initialize
+[`initialize`]: https://docs.rs/pic8259/0.11.0/pic8259/struct.ChainedPics.html#method.initialize
 
 Her şey yolunda giderse, `cargo run` çalıştırdığımızda "It did not crash" mesajını görmeye devam etmeliyiz.
 
@@ -176,10 +176,6 @@ impl InterruptIndex {
     fn as_u8(self) -> u8 {
         self as u8
     }
-
-    fn as_usize(self) -> usize {
-        usize::from(self.as_u8())
-    }
 }
 ```
 
@@ -199,7 +195,7 @@ lazy_static! {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
-        idt[InterruptIndex::Timer.as_usize()]
+        idt[InterruptIndex::Timer.as_u8()]
             .set_handler_fn(timer_interrupt_handler); // yeni
 
         idt
@@ -215,7 +211,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 `timer_interrupt_handler`'ımız, exception handler'larımızla aynı imzaya sahiptir; çünkü CPU exception'lara ve harici interrupt'lara aynı şekilde tepki verir (tek fark, bazı exception'ların bir hata kodu push'lamasıdır). [`InterruptDescriptorTable`] struct'ı [`IndexMut`] trait'ini uygular, bu yüzden tek tek girdilere dizi indeksleme söz dizimi aracılığıyla erişebiliriz.
 
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
 Timer interrupt handler'ımızda, ekrana bir nokta yazdırıyoruz. Timer interrupt'ı periyodik olarak gerçekleştiği için, her timer tıkında bir nokta belirmesini bekleriz. Ancak onu çalıştırdığımızda, yalnızca tek bir noktanın yazdırıldığını görüyoruz:
@@ -340,7 +336,7 @@ pub fn _print(args: fmt::Arguments) {
 
 [`without_interrupts`] fonksiyonu bir [closure] alır ve onu interrupt'sız bir ortamda çalıştırır. Onu, `Mutex` kilitli olduğu sürece hiçbir interrupt'ın meydana gelememesini sağlamak için kullanıyoruz. Kernel'imizi şimdi çalıştırdığımızda, asılı kalmadan çalışmaya devam ettiğini görüyoruz. (Hâlâ herhangi bir nokta fark etmiyoruz, ancak bunun nedeni çok hızlı kaymalarıdır. Yazdırmayı yavaşlatmayı deneyin; örneğin döngünün içine bir `for _ in 0..10000 {}` koyarak.)
 
-[`without_interrupts`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.without_interrupts.html
+[`without_interrupts`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
 
 Aynı değişikliği, onunla da deadlock'ların oluşmamasını sağlamak için seri yazdırma fonksiyonumuza da uygulayabiliriz:
@@ -537,7 +533,7 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
         // yeni
-        idt[InterruptIndex::Keyboard.as_usize()]
+        idt[InterruptIndex::Keyboard.as_u8()]
             .set_handler_fn(keyboard_interrupt_handler);
 
         idt
@@ -587,7 +583,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 Klavyenin veri portundan bir bayt okumak için `x86_64` crate'inin [`Port`] tipini kullanıyoruz. Bu bayta [_scancode_] denir ve tuş basışını/bırakışını temsil eder. Scancode ile şimdilik, onu ekrana yazdırmak dışında bir şey yapmıyoruz:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
 
 ![Tuşlara basıldığında ekrana scancode'ları yazdıran QEMU](qemu-printing-scancodes.gif)
@@ -676,12 +672,12 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
     use spin::Mutex;
     use x86_64::instructions::port::Port;
 
-    lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
-            Mutex::new(Keyboard::new(ScancodeSet1::new(),
-                layouts::Us104Key, HandleControl::Ignore)
-            );
-    }
+    static KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
+        Mutex::new(Keyboard::new(
+            ScancodeSet1::new(),
+            layouts::Us104Key,
+            HandleControl::Ignore,
+        ));
 
     let mut keyboard = KEYBOARD.lock();
     let mut port = Port::new(0x60);
@@ -703,7 +699,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 }
 ```
 
-Bir Mutex tarafından korunan statik bir [`Keyboard`] nesnesi oluşturmak için `lazy_static` makrosunu kullanıyoruz. `Keyboard`'u bir ABD klavye düzeni ve scancode seti 1 ile başlatıyoruz. [`HandleControl`] parametresi, `ctrl+[a-z]`'yi `U+0001`'den `U+001A`'ya kadar Unicode karakterlerine eşlemeye olanak tanır. Bunu yapmak istemiyoruz, bu yüzden `ctrl`'yi normal tuşlar gibi ele almak için `Ignore` seçeneğini kullanıyoruz.
+Bir Mutex tarafından korunan statik bir [`Keyboard`] nesnesi oluşturuyoruz. `Keyboard::new` ve `ScancodeSet1::new` yapıcıları `const fn` olduğundan, `KEYBOARD` statik'i derleme zamanında başlatılabilir; bu yüzden burada `lazy_static` makrosuna ihtiyacımız yok. `Keyboard`'u bir ABD klavye düzeni ve scancode seti 1 ile başlatıyoruz. [`HandleControl`] parametresi, `ctrl+[a-z]`'yi `U+0001`'den `U+001A`'ya kadar Unicode karakterlerine eşlemeye olanak tanır. Bunu yapmak istemiyoruz, bu yüzden `ctrl`'yi normal tuşlar gibi ele almak için `Ignore` seçeneğini kullanıyoruz.
 
 [`HandleControl`]: https://docs.rs/pc-keyboard/0.7.0/pc_keyboard/enum.HandleControl.html
 

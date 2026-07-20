@@ -7,7 +7,7 @@ date = 2019-03-14
 [extra]
 chapter = "Memory Management"
 # Please update this when updating the translation 
-translation_based_on_commit = "b435e98ab73df6503286202b6ed60e0a06d8e1d0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["TakiMoysha"]
 +++
@@ -225,7 +225,7 @@ let level_1_table_addr =
 
 В качестве альтернативы выполнению побитовых операций вручную можно использовать тип [`RecursivePageTable`] из крейта `x86_64`, который предоставляет безопасные абстракции для различных операций со таблицами страниц. Например, приведенный ниже код показывает, как преобразовать виртуальный адрес в его отображенный физический адрес:
 
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 ```rust
 // src/memory.rs
@@ -442,7 +442,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 Сначала мы преобразуем `physical_memory_offset` структуры `BootInfo` в [`VirtAddr`] и передаём его в функцию `active_level_4_table`. Затем мы используем функцию `iter` для перебора записей таблицы страниц и комбинатор [`enumerate`], чтобы дополнительно добавить индекс `i` к каждому элементу. Мы выводим только непустые записи, так как все 512 записей не поместились бы на экране.
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
+[`VirtAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.VirtAddr.html
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
 При запуске мы видим следующий вывод:
@@ -557,7 +557,7 @@ fn translate_addr_inner(addr: VirtAddr, physical_memory_offset: VirtAddr)
 
 Внутри цикла мы снова используем `physical_memory_offset` для преобразования адреса фрейма в ссылку на таблицу страниц. Затем мы считываем запись текущей таблицы страниц и используем функцию [`PageTableEntry::frame`] для извлечения сопоставленного фрейма. Если запись не сопоставлена с фреймом, мы возвращаем `None`. Если запись сопоставляет огромную страницу размером 2&nbsp;МБ или 1&nbsp;ГБ, мы пока что вызываем панику.
 
-[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
+[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
 Давайте проверим нашу функцию перевода, переведя несколько адресов:
 
@@ -612,18 +612,18 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 - Трейт [`Mapper`] является общим для любого размера страницы и предоставляет функции, которые работают со страницами. Примерами являются [`translate_page`], который преобразует заданную страницу в фрейм того же размера, и [`map_to`], который создает новое отображение в таблице страниц.
 - Трейт [`Translate`] предоставляет функции, работающие с несколькими размерами страниц, такие как [`translate_addr`] или общий [`translate`].
 
-[`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
-[`translate_page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
-[`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
-[`Translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html
-[`translate_addr`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
-[`translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
+[`Mapper`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html
+[`translate_page`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
+[`map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
+[`Translate`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html
+[`translate_addr`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
+[`translate`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
 
 Трейты определяют только интерфейс, но не предоставляют никакой реализации. В настоящее время крейт `x86_64` предоставляет три типа, реализующих эти трейты с различными требованиями. Тип [`OffsetPageTable`] предполагает, что вся физическая память отображается в виртуальное адресное пространство с некоторым смещением. Тип [`MappedPageTable`] немного более гибкий: он требует только того, чтобы каждый фрейм таблицы страниц был отображён в виртуальное адресное пространство по вычисляемому адресу. Наконец, тип [`RecursivePageTable`] можно использовать для доступа к фреймам таблицы страниц через [рекурсивные таблицы страниц](#recursive-page-tables).
 
-[`OffsetPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
-[`MappedPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MappedPageTable.html
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`OffsetPageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
+[`MappedPageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 В нашем случае загрузчик отображает всю физическую память на виртуальный адрес, указанный переменной `physical_memory_offset`, поэтому мы можем использовать тип `OffsetPageTable`. Чтобы инициализировать его, мы создаём новую функцию `init` в нашем модуле `memory`:
 
@@ -651,7 +651,7 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
 
 Функция принимает в качестве аргумента `physical_memory_offset` и возвращает новый экземпляр `OffsetPageTable` со сроком жизни `'static`. Это означает, что экземпляр остается действительным на протяжении всего времени работы нашего ядра. В теле функции мы сначала вызываем функцию `active_level_4_table`, чтобы получить изменяемую ссылку на таблицу страниц 4-го уровня. Затем мы вызываем функцию [`OffsetPageTable::new`] с этой ссылкой. В качестве второго параметра функция `new` ожидает виртуальный адрес, по которому начинается отображение физической памяти, который задается в переменной `physical_memory_offset`.
 
-[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
+[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
 
 Отныне функцию `active_level_4_table` следует вызывать только из функции `init`, поскольку при многократном вызове она может легко привести к появлению одноименных изменяемых ссылок, что может вызвать непредсказуемое поведение. По этой причине мы делаем функцию приватной, удаляя спецификатор `pub`.
 
@@ -702,8 +702,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 Для нашей реализации мы будем использовать [`map_to`] из трейта [`Mapper`], давайте рассмотрим эту функцию. В документации сказано, что она принимает четыре аргумента: страницу, которую мы хотим сопоставить, фрейм, к которому должна быть сопоставлена страница, набор флагов для записи в таблице страниц и `frame_allocator`. Фрейм-аллокатор нужен потому что для сопоставления полученной страницы может потребоваться создать дополнительные таблицы страниц, которым нужны неиспользуемые фреймы в качестве резервного хранилища.
 
-[`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
-[`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html
+[`map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
+[`Mapper`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.Mapper.html
 
 #### Функция `create_example_mapping` {#a-create-example-mapping-function}
 
@@ -742,8 +742,8 @@ pub fn create_example_mapping(
 
 [impl-trait-arg]: https://doc.rust-lang.org/book/ch10-02-traits.html#traits-as-parameters
 [дженерик]: https://doc.rust-lang.org/book/ch10-00-generics.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html
-[`PageSize`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/trait.PageSize.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html
+[`PageSize`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/trait.PageSize.html
 
 Метод [`map_to`] является небезопасным, потому что вызывающий должен убедиться, что передаваемый фрейм еще не используется. Причина в том, что двукратное сопоставление одного и того же фрейма может привести к непредсказуемому поведению, например, когда две разные ссылки `&mut` указывают на одну и ту же физическую ячейку памяти. В нашем случае мы повторно используем фрейм текстового буфера VGA, который уже сопоставлен, поэтому мы нарушаем требуемое условие. Однако функция `create_example_mapping` является лишь временной тестовой функцией и будет удалена после публикации этого поста, поэтому это допустимо. Чтобы напомнить себе об unsafe, мы поместили комментарий `FIXME` в эту строку.
 
@@ -755,8 +755,8 @@ pub fn create_example_mapping(
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
-[`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`MapperFlush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`flush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 [must_use]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
 #### Фиктивный `FrameAllocator`

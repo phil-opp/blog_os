@@ -6,7 +6,7 @@ date  = 2018-06-17
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "a081faf3cced9aeb0521052ba91b74a1c408dcff"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["hamidrezakp", "MHBahrampour"]
 rtl = true
@@ -90,7 +90,7 @@ rtl = true
 
 به جای ایجاد نوع IDT خود ، از [ساختمان `InterruptDescriptorTable`] کرت `x86_64` استفاده خواهیم کرد که به این شکل است:
 
-[ساختمان `InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[ساختمان `InterruptDescriptorTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 
 ``` rust
 #[repr(C)]
@@ -121,10 +121,10 @@ pub struct InterruptDescriptorTable {
 
 فیلدها از نوع [`<idt::Entry<F`] هستند ، این ساختمانی است که فیلد های یک عنصر IDT را نشان می دهد (به جدول بالا مراجعه کنید). پارامتر نوع `F`، نوع تابع کنترل کننده مورد انتظار را تعریف می کند. می بینیم که برخی از عناصر به یک [`HandlerFunc`] و برخی دیگر به [`HandlerFuncWithErrCode`] نیاز دارند. خطای صفحه حتی نوع خاص خود را دارد: [`PageFaultHandlerFunc`].
 
-[`<idt::Entry<F`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.Entry.html
-[`HandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFunc.html
-[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
-[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.PageFaultHandlerFunc.html
+[`<idt::Entry<F`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.Entry.html
+[`HandlerFunc`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/type.HandlerFunc.html
+[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
+[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/type.PageFaultHandlerFunc.html
 
 بیایید ابتدا به نوع `HandlerFunc` نگاه کنیم:
 
@@ -185,9 +185,10 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 با این وجود، برای کنترل کننده های استثنا و وقفه، ذخیره آدرس برگشت در پشته کافی نیست، زیرا کنترل کننده های وقفه غالباً در context دیگری اجرا می شوند (نشانگر پشته ، پرچم های پردازنده و غیره). در عوض، پردازنده در صورت وقفه مراحل زیر را انجام می دهد:
 
+0. **ذخیره اشاره‌گر قدیمی پشته**: پردازنده مقادیر ثبات اشاره‌گر پشته (`rsp`) و سگمنت پشته (`ss`) را می‌خواند و آنها را در یک بافر داخلی به خاطر می‌سپارد.
 1. **تراز کردن اشاره‌گر پشته**: در هر دستورالعمل امکان رخ دادن وقفه وجود دارد، بنابراین اشاره‌گر پشته نیز می تواند هر مقداری داشته باشد. با این حال ، برخی از دستورالعمل های پردازنده (به عنوان مثال برخی از دستورالعمل های SSE) نیاز دارند که اشاره‌گر پشته در مرز 16 بایت تراز شود ، بنابراین پردازنده درست پس از وقفه چنین ترازی را انجام می دهد.
 2. **تعویض پشته‌ها** (در بعضی موارد): تعویض پشته زمانی اتفاق می افتد که سطح امتیاز پردازنده (CPU privilege level) تغییر می کند، به عنوان مثال وقتی یک استثنا در یک برنامه حالت کاربر رخ می دهد. همچنین می توان تعویض پشته را برای وقفه های خاص با استفاده از به اصطلاح _Interrupt Stack Table_ پیکربندی کرد (در پست بعدی توضیح داده شده).
-3. **پوش کردن اشاره‌گر قدیمی پشته**: پردازنده مقادیر اشاره‌گر پشته (`rsp`) و سگمنت پشته (`ss`) را در زمان وقوع وقفه (قبل از تراز کردن) پوش می‌کند. این امکان را فراهم می کند تا هنگام بازگشت از کنترل کننده وقفه ، اشاره‌گر اصلی پشته بازیابی شود.
+3. **پوش کردن اشاره‌گر قدیمی پشته**: پردازنده مقادیر `rsp` و `ss` را از مرحله 0 به پشته پوش می‌کند. این امکان را فراهم می کند تا هنگام بازگشت از کنترل کننده وقفه ، اشاره‌گر اصلی پشته بازیابی شود.
 4. **پوش کردن و به‌روزرسانی ثبات `RFLAGS`**: ثبات [`RFLAGS`] شامل بیت های مختلف کنترل و وضعیت است. در هنگام وقوع وقفه ، پردازنده برخی از بیت‌ها را تغییر می‌دهد و مقدار قدیمی را پوش می‌کند.
 5. **پوش کردن اشاره‌گر دستورالعمل**: قبل از پرش به تابع کنترل کننده وقفه ، پردازنده اشاره‌گر دستورالعمل (`rip`) و سگمنت کد (`cs`) را پوش می‌کند. این مشابه با پوش کردن آدرس برگشت یک تابع عادی است.
 6. ** پوش کردن کد خطا** (برای برخی استثناها): برای برخی از استثنا های خاص مانند خطاهای صفحه ، پردازنده یک کد خطا را پوش می‌کند که علت استثنا را توصیف می کند.
@@ -201,7 +202,7 @@ type HandlerFunc = extern "x86-interrupt" fn(_: InterruptStackFrame);
 
 در کرت `x86_64` ، فریم پشته وقفه توسط ساختمان [`InterruptStackFrame`] نشان داده می شود. این ساختمان به عنوان `&mut` به کنترل کننده وقفه منتقل می شود و می تواند برای دریافت اطلاعات بیشتر در مورد علت استثنا استفاده شود. ساختمان بدون فیلد کد خطا است ، زیرا فقط برخی از استثناها کد خطا را پوش می‌کنند. این استثناها از نوع تابع جداگانه [`HandlerFuncWithErrCode`] استفاده می‌کنند ، که دارای یک آرگومان اضافی `error_code` است.
 
-[`InterruptStackFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptStackFrame.html
+[`InterruptStackFrame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptStackFrame.html
 
 ### پشت صحنه
 قرارداد فراخوانی `x86-interrupt` یک انتزاع قدرتمند است که تقریباً تمام جزئیات پیچیده فرآیند مدیریت استثناها را پنهان می کند. با این حال ، گاهی اوقات مفید است که بدانیم پشت پرده چه اتفاقی می افتد. در اینجا یک مرور کوتاه از مواردی که قرارداد فراخوانی `x86-interrupt` انجام می‌دهد را می‌بینید:
@@ -283,7 +284,7 @@ error[E0658]: x86-interrupt ABI is experimental and subject to change (see issue
 برای اینکه پردازنده از جدول توصیف کننده وقفه جدید ما استفاده کند ، باید آن را با استفاده از دستورالعمل [`lidt`] بارگیری کنیم. ساختمان `InterruptDescriptorTable` از کرت ` x86_64` متد [`load`][InterruptDescriptorTable::load] را برای این کار فراهم می کند. بیایید سعی کنیم از آن استفاده کنیم:
 
 [`lidt`]: https://www.felixcloutier.com/x86/lgdt:lidt
-[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
+[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
 
 ```rust
 // in src/interrupts.rs
@@ -462,7 +463,7 @@ blog_os::interrupts::test_breakpoint_exception...	[ok]
 قرارداد فراخوانی `x86-interrupt` و نوع [`InterruptDescriptorTable`] روند مدیریت استثناها را نسبتاً سر راست و بدون درد ساخته‌اند. اگر این برای شما بسیار جادویی بود و دوست دارید تمام جزئیات مهم مدیریت استثنا را بیاموزید، برای شما هم مطالبی داریم: مجموعه ["مدیریت استثناها با توابع برهنه"] ما، نحوه مدیریت استثنا‌ها بدون قرارداد فراخوانی`x86-interrupt` را نشان می دهد و همچنین نوع IDT خاص خود را ایجاد می کند. از نظر تاریخی، این پست‌ها مهمترین پست‌های مدیریت استثناها قبل از وجود قرارداد فراخوانی `x86-interrupt` و کرت `x86_64` بودند. توجه داشته باشید که این پست‌ها بر اساس [نسخه اول] این وبلاگ هستند و ممکن است قدیمی باشند.
 
 ["مدیریت استثناها با توابع برهنه"]: @/edition-1/extra/naked-exceptions/_index.md
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [نسخه اول]: @/edition-1/_index.md
 
 ## مرحله بعدی چیست؟

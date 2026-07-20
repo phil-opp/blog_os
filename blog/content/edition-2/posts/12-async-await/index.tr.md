@@ -8,7 +8,7 @@ date = 2020-03-27
 chapter = "Multitasking"
 
 # Please update this when updating the translation
-translation_based_on_commit = "eb079d740fb3635e524667f656307097e05ac20d"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["rhotav"]
@@ -1751,8 +1751,8 @@ impl Executor {
 
 `sleep_if_idle`'ı, `task_queue` boşalana kadar döngüye giren `run_ready_tasks`'tan hemen sonra çağırdığımızdan, kuyruğu tekrar kontrol etmek gereksiz görünebilir. Ancak, `run_ready_tasks` döndükten hemen sonra bir donanım interrupt'ı meydana gelebilir, bu yüzden `sleep_if_idle` fonksiyonu çağrıldığında kuyrukta yeni bir görev olabilir. Yalnızca kuyruk hâlâ boşsa, [`x86_64`] crate'inin sağladığı [`instructions::hlt`] sarmalayıcı fonksiyonu aracılığıyla `hlt` komutunu yürüterek CPU'yu uykuya yatırıyoruz.
 
-[`instructions::hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/fn.hlt.html
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/index.html
+[`instructions::hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/fn.hlt.html
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/index.html
 
 Ne yazık ki, bu uygulamada hâlâ ince bir race condition var. Interrupt'lar asenkron olduğundan ve herhangi bir zamanda gerçekleşebileceğinden, bir interrupt'ın tam olarak `is_empty` kontrolü ile `hlt` çağrısı arasında gerçekleşmesi mümkündür:
 
@@ -1767,7 +1767,7 @@ Bu interrupt `task_queue`'ya push'larsa, artık hazır bir görev olmasına rağ
 
 Cevap, kontrolden önce CPU'da interrupt'ları devre dışı bırakmak ve onları `hlt` komutuyla birlikte atomik olarak tekrar etkinleştirmektir. Bu sayede, aradaki tüm interrupt'lar `hlt` komutundan sonraya ertelenir, böylece hiçbir uyandırma kaçırılmaz. Bu yaklaşımı uygulamak için, [`x86_64`] crate'inin sağladığı [`interrupts::enable_and_hlt`][`enable_and_hlt`] fonksiyonunu kullanabiliriz.
 
-[`enable_and_hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
+[`enable_and_hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
 `sleep_if_idle` fonksiyonumuzun güncellenmiş uygulaması şöyle görünür:
 

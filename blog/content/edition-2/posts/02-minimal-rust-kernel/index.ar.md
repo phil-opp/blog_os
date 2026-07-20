@@ -6,7 +6,7 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "9a1da09262e252a29d73405cfa9c424cab793da8"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Bare Bones"
 # GitHub usernames of the people that translated this post
 translators = ["mindfreq"]

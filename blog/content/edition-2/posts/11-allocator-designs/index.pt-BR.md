@@ -7,7 +7,7 @@ date = 2020-01-20
 [extra]
 chapter = "Gerenciamento de Memória"
 # Please update this when updating the translation
-translation_based_on_commit = "c0fc0bed9e8b8459dde80a71f4f89f578cb5ddfb"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["richarddalves"]
 +++

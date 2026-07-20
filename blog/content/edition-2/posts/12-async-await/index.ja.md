@@ -6,7 +6,7 @@ date = 2020-03-27
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "bf4f88107966c7ab1327c3cdc0ebfbd76bad5c5f"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the authors of this translation
 translators = ["kahirokunn", "garasubo", "sozysozbot", "swnakamura"]
 # GitHub usernames of the people that contributed to this translation
@@ -916,7 +916,7 @@ fn dummy_waker() -> Waker {
 
 ##### `RawWaker`
 
-[`RawWaker`] 型では、プログラマが [_virtual method table_] (_vtable_) を明示的に定義する必要があります。このテーブルは、`RawWaker` がクローンされたり、起こされたり、ドロップされたりしたときに呼び出されるべき関数を指定します。このvtableのレイアウトは[`RawWakerVTable`]という型で定義されています。各関数は、基本的には（例えばヒープ上に確保された）構造体への**型消去された** `&self` ポインタである `*const ()` 引数を受け取ります。通常の参照ではなく `*const ()` ポインタを使う理由は、`RawWaker` の型は非ジェネリックであるべきで、かつ任意の型をサポートする必要があるからです。関数に渡されるポインタの値は [`RawWaker::new`] に渡される `data` ポインタです。
+[`RawWaker`] 型では、プログラマが [_virtual method table_] (_vtable_) を明示的に定義する必要があります。このテーブルは、`RawWaker` がクローンされたり、起こされたり、ドロップされたりしたときに呼び出されるべき関数を指定します。このvtableのレイアウトは[`RawWakerVTable`]という型で定義されています。各関数は `*const ()` 引数を受け取ります。これはある値への**型消去された**ポインタです。通常の参照ではなく `*const ()` ポインタを使う理由は、`RawWaker` の型は非ジェネリックであるべきで、かつ任意の型をサポートする必要があるからです。このポインタは、[`RawWaker::new`] の `data` 引数に入れることで提供されます。`RawWaker::new` は単に `RawWaker` を初期化するだけです。`Waker` はその後、この `RawWaker` を使って `data` を引数として vtable の関数を呼び出します。
 
 [_virtual method table_]: https://en.wikipedia.org/wiki/Virtual_method_table
 [`RawWakerVTable`]: https://doc.rust-lang.org/stable/core/task/struct.RawWakerVTable.html
@@ -1041,7 +1041,7 @@ async fn example_task() {
 
 バックグラウンドタスクに作業を委ねるための一般的な方式は、ある種のキューを作成することです。割り込みハンドラは仕事の一単位をキューにpushし、バックグラウンドタスクはキュー内の仕事を処理します。この考え方を今回のキーボード割込みに適用すると、割込みハンドラはキーボードからスキャンコードを読み取って、それをキューにpushし終わり次第、returnするということになります。キーボードタスクは、キューの反対側に位置し、pushされた各スキャンコードを解釈して処理します:
 
-![Scancode queue with 8 slots on the top. Keyboard interrupt handler on the bottom left with a "push scancode" arrow to the left of the queue. Keyboard task on the bottom right with a "pop scancode" queue coming from the right side of the queue.](scancode-queue.svg)
+![Scancode queue with 8 slots on the top. Keyboard interrupt handler on the bottom left with a "push scancode" arrow to the left of the queue. Keyboard task on the bottom right with a "pop scancode" arrow coming from the right side of the queue.](scancode-queue.svg)
 
 そのキューを簡単に実装したものとしてmutexでラップした [`VecDeque`]が使えるかもしれません。しかし、割り込みハンドラにmutexを使用することは、デッドロックにつながりやすいため、あまり良いアイデアではありません。例えば、キーボードタスクがキューをロックしているときにユーザがキーを押すと、割込みハンドラは再度ロックを取得しようとして、無期限にハングアップしてしまいます。この方法のもう一つの問題点は、`VecDeque`が満杯になったときに新しいヒープの割り当てを行うことで、自動的に容量を増やしてしまうことです。これは、私達のアロケータが内部でmutexを使用しているため、これまたデッドロックを引き起こす可能性があります。さらに、ヒープが断片化されていると、ヒープの割り当てに失敗したり、かなりの時間がかかったりするという問題もあります。
 
@@ -1062,12 +1062,12 @@ async fn example_task() {
 # in Cargo.toml
 
 [dependencies.crossbeam-queue]
-version = "0.2.1"
+version = "0.3.11"
 default-features = false
 features = ["alloc"]
 ```
 
-デフォルトでは、クレートは標準ライブラリに依存しています。`no_std`互換にするためには、そのデフォルト機能を無効にして、代わりに`alloc`機能を有効にする必要があります<span class="gray">（メインの `crossbeam` クレートに依存しても、ここでは動作しないことに注意してください。なぜなら、`no_std` に対する `queue` モジュールのエクスポートがないからです。これを修正するために [pull request](https://github.com/crossbeam-rs/crossbeam/pull/480) を提出しましたが、まだ crates.io でリリースされていませんでした）</span>。
+デフォルトでは、クレートは標準ライブラリに依存しています。`no_std`互換にするためには、そのデフォルト機能を無効にして、代わりに`alloc`機能を有効にする必要があります<span class="gray">（なお、`crossbeam-queue` クレートを再エクスポートしているメインの `crossbeam` クレートの方に依存関係を追加することもできますが、この場合は依存関係の数が増え、コンパイル時間が長くなります）</span>。
 
 ##### キューの実装
 
@@ -1243,8 +1243,8 @@ impl Stream for ScancodeStream {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<u8>> {
         let queue = SCANCODE_QUEUE.try_get().expect("not initialized");
         match queue.pop() {
-            Ok(scancode) => Poll::Ready(Some(scancode)),
-            Err(crossbeam_queue::PopError) => Poll::Pending,
+            Some(scancode) => Poll::Ready(Some(scancode)),
+            None => Poll::Pending,
         }
     }
 }
@@ -1295,17 +1295,17 @@ impl Stream for ScancodeStream {
             //      "スキャンコードキューが初期化されていない"
 
         // 近道
-        if let Ok(scancode) = queue.pop() {
+        if let Some(scancode) = queue.pop() {
             return Poll::Ready(Some(scancode));
         }
 
         WAKER.register(&cx.waker());
         match queue.pop() {
-            Ok(scancode) => {
+            Some(scancode) => {
                 WAKER.take();
                 Poll::Ready(Some(scancode))
             }
-            Err(crossbeam_queue::PopError) => Poll::Pending,
+            None => Poll::Pending,
         }
     }
 }
@@ -1559,7 +1559,7 @@ impl Executor {
             waker_cache,
         } = self;
 
-        while let Ok(task_id) = task_queue.pop() {
+        while let Some(task_id) = task_queue.pop() {
             let task = match tasks.get_mut(&task_id) {
                 Some(task) => task,
                 None => continue, // タスクはもう存在しない
@@ -1700,7 +1700,7 @@ impl Executor {
 }
 ```
 
-このメソッドは `run_ready_tasks` 関数の呼び出しをループするだけです。理論的には、`tasks`マップが空になったときにこの関数からリターンすることもできますが、`keyboard_task`が終了しないのでそれは起こらず、よって単純な`loop`で十分です。この関数は決してリターンしませんので、`!`という戻り値の型を使って、コンパイラにこの関数が[発散する (diverging) ][diverging]ことを示します。
+このメソッドは `run_ready_tasks` 関数の呼び出しをループするだけです。理論的には、`tasks`マップが空になったときにこの関数からリターンすることもできますが、`keyboard::print_keypresses`タスクが終了しないのでそれは起こらず、よって単純な`loop`で十分です。この関数は決してリターンしませんので、`!`という戻り値の型を使って、コンパイラにこの関数が[発散する (diverging) ][diverging]ことを示します。
 
 [diverging]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
@@ -1758,8 +1758,8 @@ impl Executor {
 
 `sleep_if_idle`は、`task_queue`が空になるまでループする`run_ready_tasks`の直後に呼び出されるので、キューを再度チェックする必要はないと思われるかもしれません。しかし、`run_ready_tasks` がリターンしてきた直後にハードウェア割り込みが発生する可能性があるため、`sleep_if_idle` 関数が呼ばれた時点ではキューに新しいタスクがあるかもしれません。キューがまだ空であった場合のみ、[`x86_64`]クレートが提供する[`instructions::hlt`]ラッパー関数を介して`hlt`命令を実行することで、CPUをスリープさせます。
 
-[`instructions::hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/fn.hlt.html
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/index.html
+[`instructions::hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/fn.hlt.html
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/index.html
 
 残念ながら、この実装には微妙な競合状態が残っています。割り込みは非同期であり、いつでも発生する可能性があるため、`is_empty` のチェックと `hlt` の呼び出しの間に割り込みが発生する可能性があります:
 
@@ -1774,7 +1774,7 @@ if self.task_queue.is_empty() {
 
 その答えは、チェックの前にCPUの割り込みを無効にし、`hlt`命令と一緒にアトミックに再度有効にすることです。この方法では、その間に発生するすべての割り込みが `hlt` 命令の後に遅延されるため、wakeupが失敗することはありません。この方法を実装するには、[`x86_64`]クレートが提供する[`interrupts::enable_and_hlt`][`enable_and_hlt`]関数を使用します。
 
-[`enable_and_hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
+[`enable_and_hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
 更新された `sleep_if_idle` 関数の実装は次のようになります:
 

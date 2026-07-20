@@ -9,7 +9,7 @@ chapter = "Bare Bones"
 comments_search_term = 1009
 
 # Please update this when updating the translation
-translation_based_on_commit = "f4ae48bc95d9658bd32de85a57a9f82871ceeaa5"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["rhotav"]
@@ -197,18 +197,18 @@ Buna karşılık, porta eşlenmiş G/Ç iletişim için ayrı bir G/Ç veri yolu
 
 `in` ve `out` assembly komutlarını elle çağırmak yerine, [`x86_64`] crate'inin sağladığı soyutlamaları kullanıyoruz. Bu crate'e bir bağımlılık eklemek için, onu `Cargo.toml` dosyamızdaki `dependencies` bölümüne ekliyoruz:
 
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/
 
 ```toml
 # Cargo.toml içinde
 
 [dependencies]
-x86_64 = "0.14.2"
+x86_64 = "0.15.5"
 ```
 
 Artık bir `exit_qemu` fonksiyonu oluşturmak için crate'in sağladığı [`Port`] tipini kullanabiliriz:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 
 ```rust
 // src/main.rs içinde

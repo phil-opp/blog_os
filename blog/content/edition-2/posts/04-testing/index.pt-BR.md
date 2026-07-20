@@ -8,7 +8,7 @@ date = 2019-04-27
 chapter = "O Básico"
 comments_search_term = 1009
 # Please update this when updating the translation
-translation_based_on_commit = "33b7979468235b8637584e91e4c599cef37d9687"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["richarddalves"]
 +++
@@ -193,18 +193,18 @@ A funcionalidade do dispositivo `isa-debug-exit` é muito simples. Quando um `va
 
 Em vez de invocar manualmente as instruções assembly `in` e `out`, usamos as abstrações fornecidas pela crate [`x86_64`]. Para adicionar uma dependência nessa crate, a adicionamos à seção `dependencies` no nosso `Cargo.toml`:
 
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/
 
 ```toml
 # em Cargo.toml
 
 [dependencies]
-x86_64 = "0.14.2"
+x86_64 = "0.15.5"
 ```
 
 Agora podemos usar o tipo [`Port`] fornecido pela crate para criar uma função `exit_qemu`:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 
 ```rust
 // em src/main.rs

@@ -5,6 +5,8 @@ path = "es/heap-allocation"
 date = 2019-06-26
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Gestión de Memoria"
 
 # GitHub usernames of the people that translated this post
@@ -167,6 +169,7 @@ error[E0597]: `z[_]` no vive lo suficiente
 2 |     let x = {
   |         - préstamo almacenado más tarde aquí
 3 |         let z = Box::new([1,2,3]);
+  |             - vinculación `z` declarada aquí
 4 |         &z[1]
   |         ^^^^^ valor prestado no vive lo suficiente
 5 |     }; // z sale del alcance y se llama a `deallocate`
@@ -394,7 +397,7 @@ pub fn init_heap(
 ) -> Result<(), MapToError<Size4KiB>> {
     let page_range = {
         let heap_start = VirtAddr::new(HEAP_START as u64);
-        let heap_end = heap_start + HEAP_SIZE - 1u64;
+        let heap_end = heap_start + HEAP_SIZE as u64 - 1u64;
         let heap_start_page = Page::containing_address(heap_start);
         let heap_end_page = Page::containing_address(heap_end);
         Page::range_inclusive(heap_start_page, heap_end_page)
@@ -416,12 +419,12 @@ pub fn init_heap(
 
 La función toma referencias mutables a una instancia [`Mapper`] y a una instancia [`FrameAllocator`], ambas limitadas a páginas de 4&nbsp;KiB usando [`Size4KiB`] como parámetro genérico. El valor de retorno de la función es un [`Result`] con el tipo unidad `()` como variante de éxito y un [`MapToError`] como variante de error, que es el tipo de error devuelto por el método [`Mapper::map_to`]. Reutilizar el tipo de error tiene sentido aquí porque el método `map_to` es la principal fuente de errores en esta función.
 
-[`Mapper`]:https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html
-[`Size4KiB`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/enum.Size4KiB.html
+[`Mapper`]:https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html
+[`Size4KiB`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/enum.Size4KiB.html
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
-[`MapToError`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html
-[`Mapper::map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
+[`MapToError`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/enum.MapToError.html
+[`Mapper::map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
 
 La implementación se puede dividir en dos partes:
 
@@ -435,18 +438,18 @@ La implementación se puede dividir en dos partes:
 
     - Usamos el método [`Mapper::map_to`] para crear el mapeo en la tabla de páginas activa. El método puede fallar, así que usamos el [operador de signo de interrogación] otra vez para avanzar el error al llamador. En caso de éxito, el método devuelve una instancia de [`MapperFlush`] que podemos usar para actualizar el [_buffer de traducción de direcciones_] utilizando el método [`flush`].
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
-[`Page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html
-[`containing_address`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html#method.containing_address
-[`Page::range_inclusive`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
-[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
+[`VirtAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.VirtAddr.html
+[`Page`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html
+[`containing_address`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html#method.containing_address
+[`Page::range_inclusive`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
+[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
 [`None`]: https://doc.rust-lang.org/core/option/enum.Option.html#variant.None
-[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
+[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
 [`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
 [operador de signo de interrogación]: https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html
-[`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`MapperFlush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
 [_buffer de traducción de direcciones_]: @/edition-2/posts/08-paging-introduction/index.md#the-translation-lookaside-buffer
-[`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`flush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 
 El último paso es llamar a esta función desde nuestro `kernel_main`:
 
