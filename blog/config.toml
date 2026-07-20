@@ -26,6 +26,7 @@ skip_prefixes = [
     "https://wiki.osdev.org/",                                           # Cloudflare blocks datacenter IPs (CI) with 403, regardless of user-agent
     "https://forum.osdev.org/",                                          # Cloudflare blocks datacenter IPs (CI) with 403, regardless of user-agent
     "https://developer.arm.com/",                                        # Akamai blocks datacenter IPs (CI) with 403, regardless of user-agent
+    "https://en.cppreference.com/",                                      # Cloudflare blocks datacenter IPs (CI) with 403 (reachable from other networks)
     "https://gitter.im/",                                                # 301-redirects to a JS app that cannot be link-checked
 ]
 skip_anchor_prefixes = [
