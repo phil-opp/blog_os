@@ -456,7 +456,7 @@ pub fn init(boot_info: &BootInformation) {
 ```
 That's it. Now our `memory::init` function can only be called once. The macro works by creating a static [AtomicBool] named `CALLED`, which is initialized to `false`. When the macro is invoked, it checks the value of `CALLED` and sets it to `true`. If the value was already `true` before, the macro panics.
 
-[AtomicBool]: https://doc.rust-lang.org/nightly/core/sync/atomic/struct.AtomicBool.html
+[AtomicBool]: https://doc.rust-lang.org/nightly/core/sync/atomic/type.AtomicBool.html
 
 ### Mapping the Heap
 Now we're ready to map the heap pages. In order to do it, we need access to the `ActivePageTable` or `Mapper` instance (see the [page table] and [kernel remapping] posts). For that we return it from the `paging::remap_the_kernel` function:

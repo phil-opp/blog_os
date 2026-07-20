@@ -1440,8 +1440,8 @@ impl TaskId {
 
 تستخدم الدالة متغير `NEXT_ID` ثابت من نوع [`AtomicU64`] لضمان أن كل ID يُعيّن مرة واحدة فقط. دالة [`fetch_add`] تزيد القيمة بشكل ذري وتُرجع القيمة السابقة في عملية ذرية واحدة. هذا يعني أنه حتى إذا تم استدعاء دالة `TaskId::new` بالتوازي، يُرجع كل ID مرة واحدة بالضبط. معامل [`Ordering`] يحدد ما إذا كان يُسمح للمترجم بإعادة ترتيب عملية `fetch_add` في تسلسل التعليمات. بما أننا نطلب فقط أن يكون ID فريدًا، فإن ترتيب `Relaxed` بأضعف المتطلبات يكفي في هذه الحالة.
 
-[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
-[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
+[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/type.AtomicU64.html
+[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.Atomic.html#method.fetch_add
 [`Ordering`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
 
 يمكننا الآن توسيع نوع `Task` بحقل `id` إضافي:

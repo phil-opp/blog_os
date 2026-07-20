@@ -1440,8 +1440,8 @@ impl TaskId {
 
 A função usa uma variável estática `NEXT_ID` do tipo [`AtomicU64`] para garantir que cada ID seja atribuído apenas uma vez. O método [`fetch_add`] incrementa atomicamente o valor e retorna o valor anterior em uma operação atômica. Isso significa que mesmo quando o método `TaskId::new` é chamado em paralelo, cada ID é retornado exatamente uma vez. O parâmetro [`Ordering`] define se o compilador tem permissão para reordenar a operação `fetch_add` no fluxo de instruções. Como apenas requeremos que o ID seja único, a ordenação `Relaxed` com os requisitos mais fracos é suficiente neste caso.
 
-[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
-[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
+[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/type.AtomicU64.html
+[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.Atomic.html#method.fetch_add
 [`Ordering`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
 
 Agora podemos estender nosso tipo `Task` com um campo `id` adicional:

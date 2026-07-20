@@ -1440,8 +1440,8 @@ impl TaskId {
 
 Fonksiyon, her ID'nin yalnızca bir kez atanmasını sağlamak için [`AtomicU64`] tipinde statik bir `NEXT_ID` değişkeni kullanır. [`fetch_add`] metodu, değeri atomik olarak artırır ve önceki değeri tek bir atomik işlemde döndürür. Bu, `TaskId::new` metodu paralel olarak çağrıldığında bile her ID'nin tam olarak bir kez döndürüldüğü anlamına gelir. [`Ordering`] parametresi, derleyicinin `fetch_add` işlemini komut akışında yeniden sıralamasına izin verilip verilmediğini tanımlar. Yalnızca ID'nin benzersiz olmasını gerektirdiğimizden, en zayıf gereksinimlere sahip `Relaxed` sıralaması bu durumda yeterlidir.
 
-[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html
-[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.AtomicU64.html#method.fetch_add
+[`AtomicU64`]: https://doc.rust-lang.org/core/sync/atomic/type.AtomicU64.html
+[`fetch_add`]: https://doc.rust-lang.org/core/sync/atomic/struct.Atomic.html#method.fetch_add
 [`Ordering`]: https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html
 
 Artık `Task` tipimizi ek bir `id` alanıyla genişletebiliriz:

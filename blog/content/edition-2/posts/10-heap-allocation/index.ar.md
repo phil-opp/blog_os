@@ -146,7 +146,7 @@ local و static variables قويتان معًا وتمكنان معظم حالا
 هذا النمط له اسم غريب [_resource acquisition is initialization_] (أو _RAII_ باختصار). نشأ في C++، حيث يُستخدم لتنفيذ نوع تجريد مشابه يسمى [`std::unique_ptr`].
 
 [_resource acquisition is initialization_]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-[`std::unique_ptr`]: https://en.cppreference.com/w/cpp/memory/unique_ptr
+[`std::unique_ptr`]: https://en.cppreference.com/cpp/memory/unique_ptr
 
 مثل هذا النوع وحده لا يكفي لمنع جميع use-after-free bugs لأن المبرمجين لا يزالون بإمكانهم الاحتفاظ بمراجع بعد خروج `Box` من النطاق وتحرير ذاكرة heap المقابلة:
 

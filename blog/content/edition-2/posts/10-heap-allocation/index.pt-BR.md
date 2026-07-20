@@ -144,7 +144,7 @@ Em vez de deixar o programador chamar `allocate` e `deallocate` manualmente, a b
 Esse padrão tem o nome estranho [_aquisição de recurso é inicialização_] (ou _RAII_ abreviado). Ele se originou em C++, onde é usado para implementar um tipo de abstração similar chamado [`std::unique_ptr`].
 
 [_aquisição de recurso é inicialização_]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-[`std::unique_ptr`]: https://en.cppreference.com/w/cpp/memory/unique_ptr
+[`std::unique_ptr`]: https://en.cppreference.com/cpp/memory/unique_ptr
 
 Tal tipo sozinho não é suficiente para prevenir todos os bugs use-after-free, já que programadores ainda podem manter referências depois que o `Box` sai do escopo e o slot de memória heap correspondente é desalocado:
 

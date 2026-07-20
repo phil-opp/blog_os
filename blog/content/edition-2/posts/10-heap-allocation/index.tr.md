@@ -146,7 +146,7 @@ Programcının `allocate` ve `deallocate`'i elle çağırmasına izin vermek yer
 Bu örüntünün [_kaynak edinme başlatmadır (resource acquisition is initialization)_] (ya da kısaca _RAII_) gibi tuhaf bir adı vardır. C++'ta ortaya çıkmıştır; orada [`std::unique_ptr`] adı verilen benzer bir soyutlama tipini uygulamak için kullanılır.
 
 [_kaynak edinme başlatmadır (resource acquisition is initialization)_]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
-[`std::unique_ptr`]: https://en.cppreference.com/w/cpp/memory/unique_ptr
+[`std::unique_ptr`]: https://en.cppreference.com/cpp/memory/unique_ptr
 
 Böyle bir tip tek başına tüm use-after-free hatalarını önlemeye yetmez, çünkü programcılar `Box` kapsam dışına çıktıktan ve karşılık gelen heap bellek yuvası deallocate edildikten sonra hâlâ referanslara tutunabilir:
 
