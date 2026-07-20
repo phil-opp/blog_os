@@ -1221,21 +1221,21 @@ La ventaja de este proceso de fusión es que se reduce la [fragmentación extern
 
 Este post dio una visión general de diferentes diseños de allocadores. Aprendimos cómo implementar un [allocador de bump] básico, que reparte memoria linealmente incrementando un único puntero `next`. Si bien la asignación por bump es muy rápida, solo puede reutilizar memoria después de que todas las asignaciones hayan sido liberadas. Por esta razón, rara vez se usa como allocador global.
 
-[allocador de bump]: @/edition-2/posts/11-allocator-designs/index.md#allocador-de-bump
+[allocador de bump]: @/edition-2/posts/11-allocator-designs/index.md#bump-allocator
 
 A continuación, creamos un [allocador de lista enlazada] que utiliza los propios bloques de memoria liberados para crear una lista enlazada, la llamada [lista libre]. Esta lista hace posible almacenar un número arbitrario de bloques liberados de diferentes tamaños. Si bien no se produce desperdicio de memoria, el enfoque sufre de bajo rendimiento porque una solicitud de asignación podría requerir un recorrido completo de la lista. Nuestra implementación también sufre de [fragmentación externa] porque no fusiona de nuevo los bloques liberados adyacentes.
 
-[allocador de lista enlazada]: @/edition-2/posts/11-allocator-designs/index.md#allocador-de-lista-enlazada
+[allocador de lista enlazada]: @/edition-2/posts/11-allocator-designs/index.md#linked-list-allocator
 [lista libre]: https://en.wikipedia.org/wiki/Free_list
 
 Para solucionar los problemas de rendimiento del enfoque de lista enlazada, creamos un [allocador de bloques de tamaño fijo] que predefine un conjunto fijo de tamaños de bloque. Para cada tamaño de bloque, existe una [lista libre] separada, de modo que las asignaciones y desasignaciones solo necesitan insertar/extraer al frente de la lista y, por lo tanto, son muy rápidas. Dado que cada asignación se redondea al siguiente tamaño de bloque mayor, se desperdicia algo de memoria debido a la [fragmentación interna].
 
-[allocador de bloques de tamaño fijo]: @/edition-2/posts/11-allocator-designs/index.md#allocador-de-bloques-de-tamaño-fijo
+[allocador de bloques de tamaño fijo]: @/edition-2/posts/11-allocator-designs/index.md#fixed-size-block-allocator
 
 Hay muchos más diseños de allocadores con diferentes compromisos. La [asignación slab] funciona bien para optimizar la asignación de estructuras comunes de tamaño fijo, pero no es aplicable en todas las situaciones. La [asignación buddy] usa un árbol binario para fusionar de nuevo los bloques liberados, pero desperdicia una gran cantidad de memoria porque solo admite tamaños de bloque potencia de 2. También es importante recordar que cada implementación de núcleo tiene una carga de trabajo única, por lo que no existe un diseño de allocador "mejor" que se ajuste a todos los casos.
 
-[asignación slab]: @/edition-2/posts/11-allocator-designs/index.md#allocador-slab
-[asignación buddy]: @/edition-2/posts/11-allocator-designs/index.md#allocador-buddy
+[asignación slab]: @/edition-2/posts/11-allocator-designs/index.md#slab-allocator
+[asignación buddy]: @/edition-2/posts/11-allocator-designs/index.md#buddy-allocator
 
 
 ## ¿Qué sigue?
