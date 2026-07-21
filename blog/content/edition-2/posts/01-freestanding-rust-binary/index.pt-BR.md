@@ -8,7 +8,7 @@ date = 2018-02-10
 chapter = "O Básico"
 
 # Please update this when updating the translation
-translation_based_on_commit = "624f0b7663daca1ce67f297f1c450420fbb4d040"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["richarddalves"]

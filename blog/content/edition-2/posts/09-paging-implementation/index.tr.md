@@ -8,7 +8,7 @@ date = 2019-03-14
 chapter = "Memory Management"
 
 # Please update this when updating the translation
-translation_based_on_commit = "32f629fb2dc193db0dc0657338bd0ddec5914f05"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["rhotav"]
@@ -130,17 +130,17 @@ CPU bir çeviride bu girdiyi takip ettiğinde, bir seviye 3 tablosuna değil, yi
 
 Gerçek çeviriye başlamadan önce özyinelemeli girdiyi bir veya birden çok kez takip ederek, CPU'nun dolaştığı seviye sayısını etkili bir şekilde kısaltabiliriz. Örneğin, özyinelemeli girdiyi bir kez takip edip ardından seviye 3 tablosuna geçersek, CPU seviye 3 tablosunun bir seviye 2 tablosu olduğunu düşünür. Daha ileri gidildiğinde, seviye 2 tablosunu bir seviye 1 tablosu ve seviye 1 tablosunu eşlenmiş frame olarak ele alır. Bu, artık seviye 1 sayfa tablosunu okuyup yazabileceğimiz anlamına gelir; çünkü CPU onun eşlenmiş frame olduğunu düşünür. Aşağıdaki grafik beş çeviri adımını gösterir:
 
-![Yukarıdaki örnek 4 seviyeli sayfa hiyerarşisi, 5 okla: CR4'ten seviye 4 tablosuna "Adım 0", seviye 4 tablosundan seviye 4 tablosuna "Adım 1", seviye 4 tablosundan seviye 3 tablosuna "Adım 2", seviye 3 tablosundan seviye 2 tablosuna "Adım 3" ve seviye 2 tablosundan seviye 1 tablosuna "Adım 4".](recursive-page-table-access-level-1.png)
+![Yukarıdaki örnek 4 seviyeli sayfa hiyerarşisi, 5 okla: CR3'ten seviye 4 tablosuna "Adım 0", seviye 4 tablosundan seviye 4 tablosuna "Adım 1", seviye 4 tablosundan seviye 3 tablosuna "Adım 2", seviye 3 tablosundan seviye 2 tablosuna "Adım 3" ve seviye 2 tablosundan seviye 1 tablosuna "Adım 4".](recursive-page-table-access-level-1.png)
 
 Benzer şekilde, dolaşılan seviye sayısını ikiye düşürmek için çeviriye başlamadan önce özyinelemeli girdiyi iki kez takip edebiliriz:
 
-![Aynı 4 seviyeli sayfa hiyerarşisi, şu 4 okla: CR4'ten seviye 4 tablosuna "Adım 0", seviye 4 tablosundan seviye 4 tablosuna "Adım 1&2", seviye 4 tablosundan seviye 3 tablosuna "Adım 3" ve seviye 3 tablosundan seviye 2 tablosuna "Adım 4".](recursive-page-table-access-level-2.png)
+![Aynı 4 seviyeli sayfa hiyerarşisi, şu 4 okla: CR3'ten seviye 4 tablosuna "Adım 0", seviye 4 tablosundan seviye 4 tablosuna "Adım 1&2", seviye 4 tablosundan seviye 3 tablosuna "Adım 3" ve seviye 3 tablosundan seviye 2 tablosuna "Adım 4".](recursive-page-table-access-level-2.png)
 
 Adım adım gidelim: İlk olarak, CPU seviye 4 tablosundaki özyinelemeli girdiyi takip eder ve bir seviye 3 tablosuna ulaştığını düşünür. Ardından özyinelemeli girdiyi tekrar takip eder ve bir seviye 2 tablosuna ulaştığını düşünür. Ama gerçekte hâlâ seviye 4 tablosundadır. CPU şimdi farklı bir girdiyi takip ettiğinde, bir seviye 3 tablosuna iner, ancak zaten bir seviye 1 tablosunda olduğunu düşünür. Yani sonraki girdi bir seviye 2 tablosuna işaret ederken, CPU onun eşlenmiş frame'e işaret ettiğini düşünür; bu da seviye 2 tablosunu okuyup yazmamıza olanak tanır.
 
 Seviye 3 ve 4 tablolarına erişim aynı şekilde çalışır. Seviye 3 tablosuna erişmek için, özyinelemeli girdiyi üç kez takip ederiz ve CPU'yu zaten bir seviye 1 tablosunda olduğunu düşünmesi için kandırırız. Ardından başka bir girdiyi takip eder ve CPU'nun eşlenmiş frame olarak ele aldığı bir seviye 3 tablosuna ulaşırız. Seviye 4 tablosunun kendisine erişmek için, CPU seviye 4 tablosunun kendisini eşlenmiş frame olarak ele alana kadar özyinelemeli girdiyi yalnızca dört kez takip ederiz (aşağıdaki grafikte mavi renkte).
 
-![Aynı 4 seviyeli sayfa hiyerarşisi, şu 3 okla: CR4'ten seviye 4 tablosuna "Adım 0", seviye 4 tablosundan seviye 4 tablosuna "Adım 1,2,3" ve seviye 4 tablosundan seviye 3 tablosuna "Adım 4". Mavi renkte, seviye 4 tablosundan seviye 4 tablosuna alternatif "Adım 1,2,3,4" oku.](recursive-page-table-access-level-3.png)
+![Aynı 4 seviyeli sayfa hiyerarşisi, şu 3 okla: CR3'ten seviye 4 tablosuna "Adım 0", seviye 4 tablosundan seviye 4 tablosuna "Adım 1,2,3" ve seviye 4 tablosundan seviye 3 tablosuna "Adım 4". Mavi renkte, seviye 4 tablosundan seviye 4 tablosuna alternatif "Adım 1,2,3,4" oku.](recursive-page-table-access-level-3.png)
 
 Bu kavramı kafanızda oturtmak biraz zaman alabilir, ama pratikte oldukça iyi çalışır.
 
@@ -226,7 +226,7 @@ Yukarıdaki kod, `0o777` (511) indeksli son seviye 4 girdisinin özyinelemeli ol
 
 Bit düzeyinde işlemleri elle gerçekleştirmeye alternatif olarak, çeşitli sayfa tablosu işlemleri için güvenli soyutlamalar sağlayan `x86_64` crate'inin [`RecursivePageTable`] tipini kullanabilirsiniz. Örneğin, aşağıdaki kod bir sanal adresin eşlenmiş fiziksel adresine nasıl çevrileceğini gösterir:
 
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 ```rust
 // src/memory.rs içinde
@@ -444,7 +444,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 İlk olarak, `BootInfo` struct'ının `physical_memory_offset`'ini bir [`VirtAddr`]'e dönüştürüyor ve onu `active_level_4_table` fonksiyonuna geçiriyoruz. Ardından, sayfa tablosu girdileri üzerinde iterasyon yapmak için `iter` fonksiyonunu ve her elemana ek olarak bir `i` indeksi eklemek için [`enumerate`] kombinatörünü kullanıyoruz. Yalnızca boş olmayan girdileri yazdırıyoruz, çünkü 512 girdinin hepsi ekrana sığmazdı.
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
+[`VirtAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.VirtAddr.html
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
 Onu çalıştırdığımızda, aşağıdaki çıktıyı görüyoruz:
@@ -558,7 +558,7 @@ fn translate_addr_inner(addr: VirtAddr, physical_memory_offset: VirtAddr)
 
 Döngünün içinde, frame'i bir sayfa tablosu referansına dönüştürmek için yine `physical_memory_offset`'i kullanıyoruz. Ardından mevcut sayfa tablosunun girdisini okuyor ve eşlenmiş frame'i almak için [`PageTableEntry::frame`] fonksiyonunu kullanıyoruz. Girdi bir frame'e eşlenmemişse, `None` döndürürüz. Girdi bir huge 2&nbsp;MiB veya 1&nbsp;GiB sayfa eşliyorsa, şimdilik panic yaparız.
 
-[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
+[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
 Çeviri fonksiyonumuzu bazı adresleri çevirerek test edelim:
 
@@ -613,18 +613,18 @@ Soyutlamanın temelinde, çeşitli sayfa tablosu eşleme fonksiyonlarını tanı
 - [`Mapper`] trait'i sayfa boyutu üzerinde generic'tir ve sayfalar üzerinde çalışan fonksiyonlar sağlar. Örnekler, verilen bir sayfayı aynı boyutta bir frame'e çeviren [`translate_page`] ve sayfa tablosunda yeni bir eşleme oluşturan [`map_to`]'dur.
 - [`Translate`] trait'i, birden çok sayfa boyutuyla çalışan fonksiyonlar sağlar; örneğin [`translate_addr`] veya genel [`translate`].
 
-[`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
-[`translate_page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
-[`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
-[`Translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html
-[`translate_addr`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
-[`translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
+[`Mapper`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html
+[`translate_page`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
+[`map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
+[`Translate`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html
+[`translate_addr`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
+[`translate`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
 
 Trait'ler yalnızca arayüzü tanımlar, herhangi bir uygulama sağlamazlar. `x86_64` crate'i şu anda trait'leri farklı gereksinimlerle uygulayan üç tip sağlar. [`OffsetPageTable`] tipi, tüm fiziksel belleğin sanal adres alanına bir ofsette eşlendiğini varsayar. [`MappedPageTable`] biraz daha esnektir: Yalnızca her sayfa tablosu frame'inin sanal adres alanına hesaplanabilir bir adreste eşlenmesini gerektirir. Son olarak, [`RecursivePageTable`] tipi, sayfa tablosu frame'lerine [özyinelemeli sayfa tabloları](#recursive-page-tables) aracılığıyla erişmek için kullanılabilir.
 
-[`OffsetPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
-[`MappedPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MappedPageTable.html
-[`RecursivePageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`OffsetPageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
+[`MappedPageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html
+[`RecursivePageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 Bizim durumumuzda, bootloader tüm fiziksel belleği `physical_memory_offset` değişkeni tarafından belirtilen bir sanal adreste eşler, bu yüzden `OffsetPageTable` tipini kullanabiliriz. Onu başlatmak için, `memory` modülümüzde yeni bir `init` fonksiyonu oluşturuyoruz:
 
@@ -652,7 +652,7 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
 
 Fonksiyon, `physical_memory_offset`'i bir argüman olarak alır ve `'static` ömrüne sahip yeni bir `OffsetPageTable` örneği döndürür. Bu, örneğin kernel'imizin tüm çalışma süresi boyunca geçerli kaldığı anlamına gelir. Fonksiyon gövdesinde, önce seviye 4 sayfa tablosuna değiştirilebilir bir referans almak için `active_level_4_table` fonksiyonunu çağırıyoruz. Ardından bu referansla [`OffsetPageTable::new`] fonksiyonunu çağırıyoruz. İkinci parametre olarak, `new` fonksiyonu fiziksel belleğin eşlemesinin başladığı sanal adresi bekler; bu da `physical_memory_offset` değişkeninde verilir.
 
-[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
+[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
 
 `active_level_4_table` fonksiyonu, birden çok kez çağrıldığında kolayca takma adlanmış değiştirilebilir referanslara yol açabileceği ve bu da tanımsız davranışa neden olabileceği için bundan sonra yalnızca `init` fonksiyonundan çağrılmalıdır. Bu nedenle, `pub` belirtecini kaldırarak fonksiyonu özel yapıyoruz.
 
@@ -703,8 +703,8 @@ Bu noktada, artık `memory::translate_addr` ve `memory::translate_addr_inner` fo
 
 Uygulamamız için [`Mapper`] trait'inin [`map_to`] fonksiyonunu kullanacağız, bu yüzden önce o fonksiyona bir göz atalım. Belgeler bize onun dört argüman aldığını söylüyor: eşlemek istediğimiz sayfa, sayfanın eşlenmesi gereken frame, sayfa tablosu girdisi için bir bayrak kümesi ve bir `frame_allocator`. Frame allocator gereklidir, çünkü verilen sayfayı eşlemek ek sayfa tabloları oluşturmayı gerektirebilir; bunlar da destek deposu (backing storage) olarak kullanılmamış frame'lere ihtiyaç duyar.
 
-[`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
-[`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html
+[`map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
+[`Mapper`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.Mapper.html
 
 #### Bir `create_example_mapping` Fonksiyonu {#a-create-example-mapping-function}
 
@@ -743,8 +743,8 @@ Eşlenmesi gereken `page`'e ek olarak, fonksiyon bir `OffsetPageTable` örneğin
 
 [impl-trait-arg]: https://doc.rust-lang.org/book/ch10-02-traits.html#traits-as-parameters
 [generic]: https://doc.rust-lang.org/book/ch10-00-generics.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html
-[`PageSize`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/trait.PageSize.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html
+[`PageSize`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/trait.PageSize.html
 
 [`map_to`] metodu unsafe'tir, çünkü çağıranın frame'in zaten kullanımda olmadığından emin olması gerekir. Bunun nedeni, aynı frame'i iki kez eşlemenin tanımsız davranışa yol açabilmesidir; örneğin iki farklı `&mut` referansı aynı fiziksel bellek konumuna işaret ettiğinde. Bizim durumumuzda, zaten eşlenmiş olan VGA metin arabelleği frame'ini yeniden kullanıyoruz, bu yüzden gereken koşulu çiğniyoruz. Ancak, `create_example_mapping` fonksiyonu yalnızca geçici bir test fonksiyonudur ve bu yazıdan sonra kaldırılacaktır, bu yüzden sorun değil. Güvensizliği bize hatırlatmak için satıra bir `FIXME` yorumu koyuyoruz.
 
@@ -756,8 +756,8 @@ Eşlenmesi gereken `page`'e ek olarak, fonksiyon bir `OffsetPageTable` örneğin
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
-[`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`MapperFlush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`flush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 [must_use]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
 #### Sahte (dummy) Bir `FrameAllocator`

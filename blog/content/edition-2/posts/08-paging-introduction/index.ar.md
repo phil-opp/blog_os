@@ -6,7 +6,7 @@ date = 2019-01-14
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "9753695744854686a6b80012c89b0d850a44b4b0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Memory Management"
 
 # GitHub usernames of the people that translated this post
@@ -240,8 +240,8 @@ Bit(s) | Name | Meaning
 
 توفر مكتبة `x86_64` أنواعًا لـ [page tables] و [entries] الخاصة بها، لذلك لا نحتاج إلى إنشاء هذه الهياكل بأنفسنا.
 
-[page tables]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTable.html
-[entries]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
+[page tables]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTable.html
+[entries]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
 ### The Translation Lookaside Buffer
 
@@ -250,7 +250,7 @@ Bit(s) | Name | Meaning
 على عكس caches الأخرى لـ وحدة المعالجة المركزية، ليس TLB transparent بالكامل ولا يحدّث أو يزيل الترجمات عندما تتغير محتويات page tables. هذا يعني أن النواة يجب أن تحدّث TLB يدويًا whenever تعديل page table. لذلك، هناك تعليمة CPU خاصة تسمى [`invlpg`] ("invalidate page") التي تزيل الترجمة للصفحة المحددة من TLB، حتى تُحمّل مرة أخرى من page table عند الوصول التالي. يمكن أيضًا مسح TLB completely بإعادة تحميل register `CR3`، الذي يحاكي تبديل مساحة العنونة. توفر مكتبة `x86_64` دوال Rust لكلا الخيارين في [`tlb` module].
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
-[`tlb` module]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tlb/index.html
+[`tlb` module]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/tlb/index.html
 
 من المهم تذكر مسح TLB عند كل تعديل page table لأن وحدة المعالجة المركزية قد تستمر في استخدام الترجمة القديمة، الذي قد يؤدي إلى bugs non-deterministic صعبة جدًا في التصحيح.
 
@@ -305,8 +305,8 @@ extern "x86-interrupt" fn page_fault_handler(
 register [`CR2`] يُعيّن تلقائيًا من قبل وحدة المعالجة المركزية عند page fault ويحتوي على العنوان الافتراضي الذي تسبب في page fault. نستخدم دالة [`Cr2::read`] من مكتبة `x86_64` لقراءة وطباعته. نوع [`PageFaultErrorCode`] يوفر مزيدًا من المعلومات حول نوع الوصول للذاكرة الذي تسبب في page fault، على سبيل المثال، ما إذا كان بسبب عملية قراءة أو كتابة. لهذا السبب، نطبعه أيضًا. لا نستطيع استئناف التنفيذ دون حل page fault، لذلك ندخل [`hlt_loop`] في النهاية.
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
-[`Cr2::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr2.html#method.read
-[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
+[`Cr2::read`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr2.html#method.read
+[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
 [`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.md#the-hlt-instruction
 
@@ -340,7 +340,7 @@ pub extern "C" fn _start() -> ! {
 
 register `CR2` يحتوي بالفعل على `0xdeadbeaf`، العنوان الذي حاولنا الوصول إليه. error code يخبرنا عبر [`CAUSED_BY_WRITE`] أن fault حدث أثناء محاولة تنفيذ عملية كتابة. يخبرنا حتى أكثر عبر [البتات التي _ليست_ مُعيّنة][`PageFaultErrorCode`]. على سبيل المثال، حقيقة أن flag `PROTECTION_VIOLATION` غير مُعيّنة تعني أن page fault حدث لأن الصفحة المستهدفة لم تكن موجودة.
 
-[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
+[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
 
 نرى أن instruction pointer الحالي هو `0x2031b2`، لذلك نعرف أن هذا العنوان يشير إلى code page. code pages مُعيّنة read-only من قبل bootloader، لذلك القراءة من هذا العنوان تعمل لكن الكتابة تسبب page fault. يمكنك تجربة هذا بتغيير المؤشر `0xdeadbeaf` إلى `0x2031b2`:
 
@@ -364,7 +364,7 @@ println!("write worked");
 
 نرى أن رسالة _"read worked"_ مطبوعة، التي تشير إلى أن read operation لم تسبب أي أخطاء. ومع ذلك، بدلاً من رسالة _"write worked"_، تحدث page fault. هذه المرة flag [`PROTECTION_VIOLATION`] مُعيّنة بالإضافة إلى flag [`CAUSED_BY_WRITE`]، التي تشير إلى أن الصفحة كانت موجودة، لكن العملية لم تكن مسموحة عليها. في هذه الحالة، الكتابة إلى الصفحة غير مسموحة لأن code pages مُعيّنة read-only.
 
-[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
+[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
 ### Accessing the Page Tables
 
@@ -390,9 +390,9 @@ pub extern "C" fn _start() -> ! {
 
 دالة [`Cr3::read`] من `x86_64` تُعيد level 4 page table النشطة حاليًا من register `CR3`. تُعيد tuple من نوع [`PhysFrame`] ونوع [`Cr3Flags`]. نحن مهتمون فقط بالframe، لذلك نتجاهل العنصر الثاني من tuple.
 
-[`Cr3::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3.html#method.read
-[`PhysFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/frame/struct.PhysFrame.html
-[`Cr3Flags`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3Flags.html
+[`Cr3::read`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr3.html#method.read
+[`PhysFrame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/frame/struct.PhysFrame.html
+[`Cr3Flags`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr3Flags.html
 
 عندما نشغّله، نرى الإخراج التالي:
 
@@ -402,7 +402,7 @@ Level 4 page table at: PhysAddr(0x1000)
 
 level 4 page table النشطة حاليًا مخزنة في العنوان `0x1000` في الذاكرة _الفزيائية_، كما يشير نوع wrapper [`PhysAddr`]. السؤال الآن: كيف نصل إلى هذه table من نواتنا؟
 
-[`PhysAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.PhysAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.PhysAddr.html
 
 الوصول إلى الذاكرة الفزيائية مباشرة غير ممكن عندما يكون paging مُفعّل، لأن البرامج يمكنها بسهولة تجاوز حماية الذاكرة والوصول إلى ذاكرة برامج أخرى. لذلك الطريقة الوحيدة للوصول إلى table هي عبر بعض virtual page المُعيّنة إلى physical frame في العنوان `0x1000`. مشكلة إنشاء تعيينات لـ page table frames هي مشكلة عامة لأن النواة تحتاج إلى الوصول إلى page tables بشكل منتظم، على سبيل المثال، عند تخصيص stack لـ thread جديد.
 

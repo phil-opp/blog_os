@@ -5,6 +5,8 @@ path = "es/testing"
 date = 2019-04-27
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Fundamentos"
 comments_search_term = 1009
 
@@ -41,7 +43,22 @@ Rust tiene un [marco de prueba incorporado] que es capaz de ejecutar pruebas uni
 
 [marco de prueba incorporado]: https://doc.rust-lang.org/book/ch11-00-testing.html
 
-Desafortunadamente, es un poco más complicado para aplicaciones `no_std` como nuestro núcleo. El problema es que el marco de prueba de Rust utiliza implícitamente la biblioteca incorporada [`test`], que depende de la biblioteca estándar. Esto significa que no podemos usar el marco de prueba predeterminado para nuestro núcleo `#[no_std]`.
+Para habilitar las pruebas para el binario de nuestro núcleo, podemos establecer la bandera `test` en `true` en el Cargo.toml:
+
+```toml
+# en Cargo.toml
+
+[[bin]]
+name = "blog_os"
+test = true
+bench = false
+```
+
+Esta [sección `[[bin]]`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target) especifica cómo debe compilar `cargo` nuestro ejecutable `blog_os`.
+El campo `test` especifica si las pruebas están soportadas para este ejecutable.
+Establecimos `test = false` en la primera publicación para [hacer feliz a `rust-analyzer`](@/edition-2/posts/01-freestanding-rust-binary/index.md#making-rust-analyzer-happy), pero ahora queremos habilitar las pruebas, así que lo volvemos a establecer en `true`.
+
+Desafortunadamente, las pruebas son un poco más complicadas para aplicaciones `no_std` como nuestro núcleo. El problema es que el marco de prueba de Rust utiliza implícitamente la biblioteca incorporada [`test`], que depende de la biblioteca estándar. Esto significa que no podemos usar el marco de prueba predeterminado para nuestro núcleo `#[no_std]`.
 
 [`test`]: https://doc.rust-lang.org/test/index.html
 
@@ -105,7 +122,7 @@ Para solucionarlo, primero necesitamos cambiar el nombre de la función generada
 
 #![reexport_test_harness_main = "test_main"]
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("¡Hola Mundo{}!", "!");
 
@@ -179,18 +196,18 @@ La funcionalidad del dispositivo `isa-debug-exit` es muy simple. Cuando se escri
 
 En lugar de invocar manualmente las instrucciones de ensamblaje `in` y `out`, utilizamos las abstracciones provistas por la crate [`x86_64`]. Para añadir una dependencia en esa crate, la añadimos a la sección de `dependencies` en nuestro `Cargo.toml`:
 
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/
 
 ```toml
 # en Cargo.toml
 
 [dependencies]
-x86_64 = "0.14.2"
+x86_64 = "0.15.5"
 ```
 
 Ahora podemos usar el tipo [`Port`] proporcionado por la crate para crear una función `exit_qemu`:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 
 ```rust
 // en src/main.rs
@@ -663,7 +680,7 @@ Todas las pruebas de integración son sus propios ejecutables y completamente se
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // no modificar el nombre de esta función
+#[unsafe(no_mangle)] // no modificar el nombre de esta función
 pub extern "C" fn _start() -> ! {
     test_main();
 
@@ -745,7 +762,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 
 /// Punto de entrada para `cargo test`
 #[cfg(test)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     test_main();
     loop {}
@@ -811,7 +828,7 @@ Ahora podemos actualizar nuestro `main.rs` para usar la biblioteca:
 use core::panic::PanicInfo;
 use blog_os::println;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("¡Hola Mundo{}!", "!");
 
@@ -922,7 +939,7 @@ Esta prueba aún está incompleta ya que no define una función `_start` ni ning
 #![test_runner(test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     test_main();
 
@@ -989,7 +1006,7 @@ Ahora simplificamos enormemente nuestra prueba `should_panic` al eliminar el có
 use core::panic::PanicInfo;
 use blog_os::{exit_qemu, serial_print, serial_println, QemuExitCode};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     should_fail();
     serial_println!("[la prueba no falló]");

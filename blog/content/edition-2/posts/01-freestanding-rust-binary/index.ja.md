@@ -6,7 +6,7 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "e6c148d6f47bcf8a34916393deaeb7e8da2d5e2a"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["JohnTitor","ic3w1ne"]
 +++

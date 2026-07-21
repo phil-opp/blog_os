@@ -6,7 +6,7 @@ date = 2018-10-22
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "81d4f49f153eb5f390681f5c13018dd2aa6be0b1"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["shimomura1004", "swnakamura"]
 +++
@@ -85,18 +85,18 @@ PIC のデフォルト設定では、0から15の割り込みベクタ番号を 
 
 クレートを依存関係を追加するため、以下の内容をプロジェクトに追加します:
 
-[`pic8259`]: https://docs.rs/pic8259/0.10.1/pic8259/
+[`pic8259`]: https://docs.rs/pic8259/0.11.0/pic8259/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-pic8259 = "0.10.1"
+pic8259 = "0.11.0"
 ```
 
 このクレートが提供する主な抽象化は、上で見たようなプライマリとセカンダリの PIC からなるレイアウトを表わす [`ChainedPics`] 構造体です。これは以下のように使うように設計されています:
 
-[`ChainedPics`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html
+[`ChainedPics`]: https://docs.rs/pic8259/0.11.0/pic8259/struct.ChainedPics.html
 
 ```rust
 // in src/interrupts.rs
@@ -129,7 +129,7 @@ pub fn init() {
 
 PIC の初期化を行うために [`initialize`] 関数を使います。`ChainedPics::new` 関数と同じように、PIC を間違って設定すると未定義動作となるため、この関数も unsafe になります。
 
-[`initialize`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html#method.initialize
+[`initialize`]: https://docs.rs/pic8259/0.11.0/pic8259/struct.ChainedPics.html#method.initialize
 
 すべてうまくいけば、`cargo run` を実行すると "It did not crash" というメッセージが引き続き表示されるはずです。
 
@@ -173,10 +173,6 @@ impl InterruptIndex {
     fn as_u8(self) -> u8 {
         self as u8
     }
-
-    fn as_usize(self) -> usize {
-        usize::from(self.as_u8())
-    }
 }
 ```
 
@@ -196,7 +192,7 @@ lazy_static! {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
-        idt[InterruptIndex::Timer.as_usize()]
+        idt[InterruptIndex::Timer.as_u8()]
             .set_handler_fn(timer_interrupt_handler); // new
 
         idt
@@ -212,7 +208,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 CPU は例外に対しても外部割り込みに対しても同じように反応するため、我々が定義した `timer_interrupt_handler` は例外ハンドラと同じシグニチャを持っています (唯一の違いは、一部の例外はエラーコードをプッシュすることです)。[`InterruptDescriptorTable`] 構造体は [`IndexMut`] トレイトを実装しているので、配列の添字記法でそれぞれのエントリにアクセスすることができます。
 
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
 我々のタイマ割り込みハンドラでは画面にドットを表示します。タイマ割り込みは定期的に発生するので、タイマティックのたびに新たなドットが現れるだろうと思うでしょう。しかし実行してみると、ドットはひとつしか表示されません:
@@ -337,7 +333,7 @@ pub fn _print(args: fmt::Arguments) {
 
 [`without_interrupts`] 関数は[クロージャ][closure]を引数に取り、これを割り込みが発生しない状態で実行します。これを使えば `Mutex` がロックされている間は割り込みが発生しないことを保証できます。このように修正したカーネルを実行すると、今度はハングせずに実行が続きます。(ドットがないように見えますが、これはスクロールが速すぎるためです。例えば `for _ in 0..10000 {}` をループ内で実行するなどで表示速度を遅くしてみてください。)
 
-[`without_interrupts`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.without_interrupts.html
+[`without_interrupts`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
 
 シリアル出力関数でもデッドロックが起きないことを保証するために、同等の変更を加えます:
@@ -534,7 +530,7 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
         // new
-        idt[InterruptIndex::Keyboard.as_usize()]
+        idt[InterruptIndex::Keyboard.as_u8()]
             .set_handler_fn(keyboard_interrupt_handler);
 
         idt
@@ -585,7 +581,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 キーボードのデータポートから1バイトのデータを読み取るため、`x86_64` クレートに含まれる [`Port`] 型を使います。この1バイトは[スキャンコード][_scancode_]と呼ばれ、キーのプレス/リリースの状態を表します。今のところはスキャンコードを画面に表示する以外にはなにもしません:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 [_scancode_]: https://ja.wikipedia.org/wiki/%E3%82%B9%E3%82%AD%E3%83%A3%E3%83%B3%E3%82%B3%E3%83%BC%E3%83%89
 
 ![QEMU printing scancodes to the screen when keys are pressed](qemu-printing-scancodes.gif)

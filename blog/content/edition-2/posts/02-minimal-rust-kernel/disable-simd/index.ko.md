@@ -3,9 +3,13 @@ title = "SIMD 해제하기"
 weight = 2
 path = "ko/disable-simd"
 template = "edition-2/extra.html"
+
+[extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 +++
 
-[Single Instruction Multiple Data (SIMD)] 명령어들은 여러 데이터 word에 동시에 덧셈 등의 작업을 실행할 수 있으며, 이를 통해 프로그램의 실행 시간을 상당히 단축할 수 있습니다. `x86_64` 아키텍처는 다양한 SIMD 표준들을 지원합니다:
+[Single Instruction Multiple Data (SIMD)] 명령어들은 여러 데이터 워드에 동시에 덧셈 등의 작업을 실행할 수 있으며, 이를 통해 프로그램의 실행 시간을 상당히 단축할 수 있습니다. `x86_64` 아키텍처는 다양한 SIMD 명령어 집합을 지원합니다:
 
 [Single Instruction Multiple Data (SIMD)]: https://en.wikipedia.org/wiki/SIMD
 
@@ -20,7 +24,7 @@ template = "edition-2/extra.html"
 [SSE]: https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions
 [AVX]: https://en.wikipedia.org/wiki/Advanced_Vector_Extensions
 
-이러한 SIMD 표준들을 사용하면 프로그램 실행 속도를 많이 향상할 수 있는 경우가 많습니다. 우수한 컴파일러는 [자동 벡터화 (auto-vectorization)][auto-vectorization]이라는 과정을 통해 일반적인 반복문을 SIMD 코드로 변환할 수 있습니다.
+이러한 SIMD 명령어 집합을 사용하면 프로그램 실행 속도를 많이 향상할 수 있는 경우가 많습니다. 우수한 컴파일러는 [자동 벡터화 (auto-vectorization)][auto-vectorization]이라는 과정을 통해 일반적인 반복문을 SIMD 코드로 변환할 수 있습니다.
 
 [auto-vectorization]: https://en.wikipedia.org/wiki/Automatic_vectorization
 

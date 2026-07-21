@@ -3,9 +3,13 @@ title = "Red Zone 기능 해제하기"
 weight = 1
 path = "ko/red-zone"
 template = "edition-2/extra.html"
+
+[extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 +++
 
-[red zone]은 [System V ABI]에서 사용 가능한 최적화 기법으로, 스택 포인터를 변경하지 않은 채로 함수들이 임시적으로 스택 프레임 아래의 128 바이트 공간을 사용할 수 있게 해줍니다:
+[red zone]은 [System V ABI]에서 사용 가능한 최적화 기법으로, 스택 포인터를 변경하지 않은 채로 함수들이 임시적으로 스택 포인터 아래의 128 바이트 공간을 사용할 수 있게 해줍니다:
 
 [red zone]: https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64#the-red-zone
 [System V ABI]: https://wiki.osdev.org/System_V_ABI

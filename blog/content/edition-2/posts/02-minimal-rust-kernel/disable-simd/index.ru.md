@@ -3,6 +3,10 @@ title = "Отключение SIMD"
 weight = 2
 path = "ru/disable-simd"
 template = "edition-2/extra.html"
+
+[extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 +++
 
 Инструкции [Single Instruction Multiple Data (SIMD)] способны выполнять операцию (например, сложение) одновременно над несколькими словами данных, что может значительно ускорить работу программ. Архитектура `x86_64` поддерживает различные стандарты SIMD:

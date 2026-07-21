@@ -7,7 +7,7 @@ date = 2018-06-17
 [extra]
 chapter = "Interrupções"
 # Please update this when updating the translation
-translation_based_on_commit = "9753695744854686a6b80012c89b0d850a44b4b0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["richarddalves"]
@@ -90,7 +90,7 @@ Não se preocupe com os passos 4 e 5 por enquanto; aprenderemos sobre a tabela d
 ## Um Tipo IDT
 Em vez de criar nosso próprio tipo IDT, usaremos a [struct `InterruptDescriptorTable`] da crate `x86_64`, que se parece com isto:
 
-[struct `InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[struct `InterruptDescriptorTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 
 ``` rust
 #[repr(C)]
@@ -121,10 +121,10 @@ pub struct InterruptDescriptorTable {
 
 Os campos têm o tipo [`idt::Entry<F>`], que é uma struct que representa os campos de uma entrada IDT (veja a tabela acima). O parâmetro de tipo `F` define o tipo de função manipuladora esperado. Vemos que algumas entradas requerem uma [`HandlerFunc`] e algumas entradas requerem uma [`HandlerFuncWithErrCode`]. O page fault tem até seu próprio tipo especial: [`PageFaultHandlerFunc`].
 
-[`idt::Entry<F>`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.Entry.html
-[`HandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFunc.html
-[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
-[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.PageFaultHandlerFunc.html
+[`idt::Entry<F>`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.Entry.html
+[`HandlerFunc`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/type.HandlerFunc.html
+[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
+[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/type.PageFaultHandlerFunc.html
 
 Vamos olhar primeiro para o tipo `HandlerFunc`:
 
@@ -202,7 +202,7 @@ Então o _interrupt stack frame_ se parece com isto:
 
 Na crate `x86_64`, o interrupt stack frame é representado pela struct [`InterruptStackFrame`]. Ela é passada para manipuladores de interrupção como `&mut` e pode ser usada para recuperar informações adicionais sobre a causa da exceção. A struct não contém campo de código de erro, já que apenas algumas exceções empurram um código de erro. Essas exceções usam o tipo de função [`HandlerFuncWithErrCode`] separado, que tem um argumento adicional `error_code`.
 
-[`InterruptStackFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptStackFrame.html
+[`InterruptStackFrame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptStackFrame.html
 
 ### Por Trás das Cortinas
 A convenção de chamada `x86-interrupt` é uma abstração poderosa que esconde quase todos os detalhes confusos do processo de manipulação de exceção. No entanto, às vezes é útil saber o que está acontecendo por trás das cortinas. Aqui está uma breve visão geral das coisas das quais a convenção de chamada `x86-interrupt` cuida:
@@ -284,7 +284,7 @@ Este erro ocorre porque a convenção de chamada `x86-interrupt` ainda é instá
 Para que a CPU use nossa nova tabela de descritores de interrupção, precisamos carregá-la usando a instrução [`lidt`]. A struct `InterruptDescriptorTable` da crate `x86_64` fornece um método [`load`][InterruptDescriptorTable::load] para isso. Vamos tentar usá-lo:
 
 [`lidt`]: https://www.felixcloutier.com/x86/lgdt:lidt
-[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
+[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
 
 ```rust
 // em src/interrupts.rs
@@ -332,7 +332,7 @@ pub fn init_idt() {
 
 No entanto, há um problema: Statics são imutáveis, então não podemos modificar a entrada de breakpoint da nossa função `init`. Poderíamos resolver este problema usando uma [`static mut`]:
 
-[`static mut`]: https://doc.rust-lang.org/1.30.0/book/second-edition/ch19-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
+[`static mut`]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#accessing-or-modifying-a-mutable-static-variable
 
 ```rust
 static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();
@@ -464,7 +464,7 @@ blog_os::interrupts::test_breakpoint_exception...	[ok]
 A convenção de chamada `x86-interrupt` e o tipo [`InterruptDescriptorTable`] tornaram o processo de manipulação de exceção relativamente simples e indolor. Se isso foi muita mágica para você e você gostaria de aprender todos os detalhes sórdidos da manipulação de exceção, nós temos você coberto: Nossa série ["Manipulando Exceções com Funções Nuas"] mostra como manipular exceções sem a convenção de chamada `x86-interrupt` e também cria seu próprio tipo IDT. Historicamente, essas postagens eram as principais postagens de manipulação de exceção antes que a convenção de chamada `x86-interrupt` e a crate `x86_64` existissem. Note que essas postagens são baseadas na [primeira edição] deste blog e podem estar desatualizadas.
 
 ["Manipulando Exceções com Funções Nuas"]: @/edition-1/extra/naked-exceptions/_index.md
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [primeira edição]: @/edition-1/_index.md
 
 ## O Que Vem a Seguir?

@@ -6,7 +6,7 @@ date  = 2018-02-26
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "1c9b5edd6a5a667e282ca56d6103d3ff1fd7cfcb"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["JOE1994", "Quqqu"]
 +++
@@ -659,7 +659,7 @@ pub fn _print(args: fmt::Arguments) {
 // in src/main.rs
 
 #[unsafe(no_mangle)]
-pub extern "C" fn _start() {
+pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
     loop {}

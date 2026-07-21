@@ -6,7 +6,7 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "24d04e0e39a3395ecdce795bab0963cb6afe1bfd"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["wusyong"]
 # GitHub usernames of the people that contributed to this translation
@@ -235,7 +235,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-我們使用 `no_mangle` 屬性來停用[名稱重整][name mangling]，確保 Rust 編譯器輸出的函式名稱會是 `_start`。沒有這個屬性的話，編譯器會產生符號像是 `_ZN3blog_os4_start7hb173fedf945531caE` 來讓每個函式的名稱都是獨一無二的。我們會需要這項屬性的原因是因為我們接下來希望連結器能夠呼叫入口點函式的名稱。
+我們使用 `#[unsafe(no_mangle)]` 屬性來停用[名稱重整][name mangling]，確保 Rust 編譯器輸出的函式名稱會是 `_start`。沒有這個屬性的話，編譯器會產生符號像是 `_ZN3blog_os4_start7hb173fedf945531caE` 來讓每個函式的名稱都是獨一無二的。我們會需要這項屬性的原因是因為我們接下來希望連結器能夠呼叫入口點函式的名稱。
 
 我們還將函式標記為 `extern "C"` 來告訴編譯器這個函式應當使用 [C 的呼叫慣例][C calling convention]，而不是 Rust 的呼叫慣例。而函式名稱選用 `_start` 的原因是因為這是大多數系統的預設入口點名稱。
 
@@ -439,10 +439,10 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 
 #### 統一建構命令
 
-現在我們得依據主機平台來使用不同的建構命令，這樣感覺不是很理想。我們可以建立個檔案 `.cargo/config` 來解決，裡面會包含平台相關的引數：
+現在我們得依據主機平台來使用不同的建構命令，這樣感覺不是很理想。我們可以建立個檔案 `.cargo/config.toml` 來解決，裡面會包含平台相關的引數：
 
 ```toml
-# in .cargo/config
+# in .cargo/config.toml
 
 [target.'cfg(target_os = "linux")']
 rustflags = ["-C", "link-arg=-nostartfiles"]
@@ -454,7 +454,7 @@ rustflags = ["-C", "link-args=/ENTRY:_start /SUBSYSTEM:console"]
 rustflags = ["-C", "link-args=-e __start -static -nostartfiles"]
 ```
 
-`rustflags` 包含的引數會自動加到 `rustc` 如果條件符合的話。想了解更多關於 `.cargo/config` 的資訊請參考[官方文件][official documentation](https://doc.rust-lang.org/cargo/reference/config.html)。
+`rustflags` 包含的引數會自動加到 `rustc` 如果條件符合的話。想了解更多關於 `.cargo/config.toml` 的資訊請參考[官方文件][official documentation](https://doc.rust-lang.org/cargo/reference/config.html)。
 
 這樣一來我們就能同時在三個平台只用 `cargo build` 來建立了。
 
@@ -527,6 +527,91 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
 注意這只是最小的 Rust 獨立執行檔範例，它還是會依賴一些事情，像是當 `_start` 函式呼叫時堆疊已經初始化完畢。**所以如果想真的使用這樣的執行檔的話還需要更多步驟。**
+
+## 讓 `rust-analyzer` 開心
+
+[`rust-analyzer`](https://rust-analyzer.github.io/) 專案是一個很棒的工具，能為你編輯器裡的 Rust 程式碼提供程式碼自動補全和「跳至定義」的支援（以及許多其他功能）。
+它在 `#![no_std]` 專案上也運作得非常好，所以我推薦在核心開發時使用它！
+
+如果你正在使用 `rust-analyzer` 的 [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) 功能（預設啟用），它可能會針對我們核心的 panic 函式回報一個錯誤：
+
+```
+found duplicate lang item `panic_impl`
+```
+
+這個錯誤的原因是 `rust-analyzer` 預設會呼叫 `cargo check --all-targets`，這也會嘗試以[測試][test]和[基準測試][benchmark]模式建構二進制檔。
+
+[test]: https://doc.rust-lang.org/book/ch11-01-writing-tests.html
+[benchmark]: https://doc.rust-lang.org/rustc/tests/index.html#benchmarks
+
+<div class="note">
+
+### 「target」的兩種含義
+
+`--all-targets` 選項與 `--target` 引數完全無關。
+在 `cargo` 中，「target」這個術語有兩種不同的含義：
+
+- `--target` 選項指定應傳給 `rustc` 編譯器的**[_編譯目標（compilation target）_][_compilation target_]**。這應該設為要執行我們程式碼的機器的 [target triple]。
+- `--all-targets` 選項所指的是 Cargo 的**[_套件目標（package target）_][_package target_]**。Cargo 套件可以同時是函式庫和二進制檔，所以你可以指定想以哪種方式建構你的 crate。此外，Cargo 也有針對[範例][examples]、[測試][tests-target]和[基準測試][benchmarks-target]的套件目標。這些套件目標可以共存，所以你可以用例如函式庫或測試模式建構／檢查同一個 crate。
+
+[_compilation target_]: https://doc.rust-lang.org/rustc/targets/index.html
+[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[_package target_]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html
+[examples]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples
+[tests-target]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests
+[benchmarks-target]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html#benchmarks
+
+</div>
+
+在預設情況下，`cargo check` 只會建構_函式庫_和_二進制檔_套件目標。
+然而，當 [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) 啟用時，`rust-analyzer` 選擇預設檢查所有套件目標。
+這就是為什麼 `rust-analyzer` 會回報上述那個我們在 `cargo check` 中看不到的 `lang item` 錯誤。
+如果我們執行 `cargo check --all-targets`，也會看到這個錯誤：
+
+```
+error[E0152]: found duplicate lang item `panic_impl`
+  --> src/main.rs:13:1
+   |
+13 | / fn panic(_info: &PanicInfo) -> ! {
+14 | |     loop {}
+15 | | }
+   | |_^
+   |
+   = note: the lang item is first defined in crate `std` (which `test` depends on)
+   = note: first definition in `std` loaded from /home/[...]/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-8df6be531efb3fd0.rlib
+   = note: second definition in the local crate (`blog_os`)
+```
+
+第一個 `note` 告訴我們 panic language item 已經在 `std` crate 中定義過了，而 `std` 是 `test` crate 的依賴。
+`test` crate 在以[測試模式][test mode]建構 crate 時會自動被包含進來。
+這對我們的 `#![no_std]` 核心來說沒有意義，因為在裸機上沒有辦法支援標準函式庫。
+所以這個錯誤與我們的專案無關，我們可以安全地忽略它。
+
+[test mode]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests
+
+避免這個錯誤的正確方式是在我們的 `Cargo.toml` 中指定我們的二進制檔不支援以 `test` 和 `bench` 模式建構。
+我們可以在 `Cargo.toml` 中加入一個 `[[bin]]` 區段來[設定建構][configure the build]我們的二進制檔：
+
+[configure the build]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target
+
+```toml
+# in Cargo.toml
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+```
+
+`bin` 兩側的雙層方括號並不是筆誤，這是 TOML 格式用來定義可以出現多次的鍵的方式。
+由於一個 crate 可以有多個二進制檔，`[[bin]]` 區段在 `Cargo.toml` 中也可以出現多次。
+這也是為什麼 `name` 欄位是必需的，它需要與二進制檔的名稱相符（好讓 `cargo` 知道哪些設定該套用到哪個二進制檔）。
+
+透過將 [`test`][test-field] 和 [`bench`][bench-field] 欄位設為 `false`，我們指示 `cargo` 不要以測試或基準測試模式建構我們的二進制檔。
+現在 `cargo check --all-targets` 應該不會再拋出任何錯誤了，而 `rust-analyzer` 的 `checkOnSave` 實作也應該會很開心。
+
+[test-field]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field
+[bench-field]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field
 
 ## 接下來呢？
 

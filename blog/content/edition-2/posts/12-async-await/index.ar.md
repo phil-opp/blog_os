@@ -6,7 +6,7 @@ date = 2020-03-27
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "eb079d740fb3635e524667f656307097e05ac20d"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Multitasking"
 
 # GitHub usernames of the people that translated this post
@@ -1749,8 +1749,8 @@ impl Executor {
 
 بما أننا نستدعي `sleep_if_idle` مباشرة بعد `run_ready_tasks`، الذي يدور حتى تصبح `task_queue` فارغة، قد يبدو التحقق من قائمة الانتظار مرة أخرى غير ضروري. مع ذلك، قد تحدث مقاطعة عتاد مباشرة بعد رجوع `run_ready_tasks`، لذا قد تكون هناك مهمة جديدة في قائمة الانتظار عند استدعاء دالة `sleep_if_idle`. فقط إذا كانت قائمة الانتظار لا تزال فارغة، نضع CPU في وضع السكون بتنفيذ تعليمة `hlt` عبر دالة wrapper [`instructions::hlt`] المقدمة من crate [`x86_64`].
 
-[`instructions::hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/fn.hlt.html
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/index.html
+[`instructions::hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/fn.hlt.html
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/index.html
 
 للأسف، لا تزال هناك race condition دقيقة في هذا التنفيذ. بما أن المقاطعات غير متزامنة ويمكن أن تحدث في أي وقت، من الممكن أن تحدث مقاطعة مباشرة بين فحص `is_empty` واستدعاء `hlt`:
 
@@ -1765,7 +1765,7 @@ if self.task_queue.is_empty() {
 
 الإجابة هي تعطيل المقاطعات على CPU قبل الفحص وتمكينها بشكل ذري مع تعليمة `hlt` مرة أخرى. بهذه الطريقة، جميع المقاطعات التي تحدث في ما بينها تُؤجل بعد تعليمة `hlt` بحيث لا تُفوت أي wake-ups. لتنفيذ هذا النهج، يمكننا استخدام دالة [`interrupts::enable_and_hlt`][`enable_and_hlt`] المقدمة من crate [`x86_64`].
 
-[`enable_and_hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
+[`enable_and_hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
 التنفيذ المحدّث لدالة `sleep_if_idle` يبدو هكذا:
 

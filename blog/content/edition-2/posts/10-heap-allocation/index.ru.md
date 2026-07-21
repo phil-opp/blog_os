@@ -7,7 +7,7 @@ date = 2019-06-26
 [extra]
 chapter = "Memory Management"
 # Please update this when updating the translation 
-translation_based_on_commit = "4f524ff4167c91cf789632d8d53ce1c9c56ae714"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["TakiMoysha"]
 
@@ -396,7 +396,7 @@ pub fn init_heap(
 ) -> Result<(), MapToError<Size4KiB>> {
     let page_range = {
         let heap_start = VirtAddr::new(HEAP_START as u64);
-        let heap_end = heap_start + HEAP_SIZE - 1u64;
+        let heap_end = heap_start + HEAP_SIZE as u64 - 1u64;
         let heap_start_page = Page::containing_address(heap_start);
         let heap_end_page = Page::containing_address(heap_end);
         Page::range_inclusive(heap_start_page, heap_end_page)
@@ -418,12 +418,12 @@ pub fn init_heap(
 
 Функция принимает мутабельные ссылки на экземпляр [`Mapper`] и [`FrameAllocator`], оба ограниченные страницами размером в 4&nbsp;Кб с использованием параметра общего типа [`Size4KiB`]. Функции возвращают [`Result`] с типом `()` для успешной операции и [`MapToError`] метода [`Mapper::map_to`] для ошибки. Повторное использование типа ошибок здесь имеет смысл, поскольку метод `map_to` является основным источником ошибок в этой функции.
 
-[`Mapper`]:https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html
-[`Size4KiB`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/enum.Size4KiB.html
+[`Mapper`]:https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html
+[`Size4KiB`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/enum.Size4KiB.html
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
-[`MapToError`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html
-[`Mapper::map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
+[`MapToError`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/enum.MapToError.html
+[`Mapper::map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
 
 Реализацию можно разбить на две части:
 
@@ -436,18 +436,18 @@ pub fn init_heap(
 
     - Для создания маппинга в таблице активных страниц мы используем метод [`Mapper::map_to`]. Этот метод может завершиться с ошибкой, поэтому мы снова используем [оператор "вопрос"][question mark operator], чтобы передать ошибку вызывающему коду. В случае успешного выполнения метод возвращает экземпляр [`MapperFlush`], который мы можем использовать для обновления [буфера ассоциативной трансляции][_translation lookaside buffer_] с помощью метода [`flush`].
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
-[`Page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html
-[`containing_address`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html#method.containing_address
-[`Page::range_inclusive`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
-[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
+[`VirtAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.VirtAddr.html
+[`Page`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html
+[`containing_address`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html#method.containing_address
+[`Page::range_inclusive`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
+[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
 [`None`]: https://doc.rust-lang.org/core/option/enum.Option.html#variant.None
-[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
+[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
 [`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
 [question mark operator]: https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html
-[`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`MapperFlush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
 [_translation lookaside buffer_]: @/edition-2/posts/08-paging-introduction/index.md#the-translation-lookaside-buffer
-[`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`flush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 
 Финальным шагом является вызов этой функции из нашего `kernel_main`:
 

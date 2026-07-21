@@ -7,7 +7,7 @@ date = 2019-01-14
 [extra]
 chapter = "Memory Management"
 # Please update this when updating the translation 
-translation_based_on_commit = "b435e98ab73df6503286202b6ed60e0a06d8e1d0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["TakiMoysha"]
 +++
@@ -236,8 +236,8 @@ pub struct PageTable {
 
 Крейт `x86_64` предоставляет типы для [таблиц страниц] и их [записей], поэтому нам не нужно создавать эти структуры самостоятельно.
 
-[таблиц страниц]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTable.html
-[записей]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
+[таблиц страниц]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTable.html
+[записей]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
 ### Буфер Предварительного Просмотра Преобразований
 
@@ -246,7 +246,7 @@ pub struct PageTable {
 В отличие от других кэшей процессора, TLB не является полностью прозрачным и не обновляет или удаляет преобразования при изменении содержимого таблиц страниц. Это означает, что ядро должно вручную обновлять TLB при каждом изменении таблицы страниц. Для этого существует специальная инструкция процессора под названием [`invlpg`] ("invalidate page"), которая удаляет преобразование для указанной страницы из TLB, чтобы при следующем доступе оно было загружено заново из таблицы страниц. TLB также можно полностью очистить, перезагрузив регистр `CR3`, что имитирует переключение адресного пространства. Крейт `x86_64` предоставляет функции Rust для обоих вариантов в модуле [`tlb`].
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
-[`tlb`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tlb/index.html
+[`tlb`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/tlb/index.html
 
 Важно не забывать очищать TLB при каждом изменении таблицы страниц, поскольку в противном случае процессор может продолжать использовать старое преобразование, что может привести к непредсказуемым ошибкам, которые очень сложно устранить.
 
@@ -301,8 +301,8 @@ extern "x86-interrupt" fn page_fault_handler(
 Регистр [`CR2`] автоматически устанавливается процессором при возникновении ошибки страницы и содержит виртуальный адрес, доступ к которому вызвал эту ошибку. Мы используем функцию [`Cr2::read`] из библиотеки `x86_64` для чтения и вывода этого значения. Тип [`PageFaultErrorCode`] предоставляет дополнительную информацию о типе доступа к памяти, вызвавшем ошибку страницы, например, была ли она вызвана операцией чтения или записи. По этой причине мы также выводим его на экран. Мы не можем продолжить выполнение без устранения ошибки страницы, поэтому в конце входим в цикл [`hlt_loop`].
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
-[`Cr2::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr2.html#method.read
-[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
+[`Cr2::read`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr2.html#method.read
+[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.md#the-hlt-instruction
 
 Теперь мы можем попробовать получить доступ к памяти за пределами нашего ядра:
@@ -335,7 +335,7 @@ pub extern "C" fn _start() -> ! {
 
 Регистр `CR2` действительно содержит значение `0xdeadbeaf` - адрес, к которому мы пытались получить доступ. Код ошибки сообщает нам через [`CAUSED_BY_WRITE`], что сбой произошел при попытке выполнить операцию записи. Он сообщает нам еще больше через [биты, которые _не_ установлены][`PageFaultErrorCode`]. Например, тот факт, что флаг `PROTECTION_VIOLATION` не установлен, означает, что сбой страницы произошел из-за отсутствия целевой страницы.
 
-[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
+[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
 
 Мы видим, что текущий указатель инструкции равен `0x2031b2`, поэтому знаем, что этот адрес указывает на страницу кода. Страницы кода сопоставляются загрузчиком в режиме «только для чтения», поэтому чтение с этого адреса работает, а запись приводит к ошибке страницы. Вы можете проверить это, изменив значение указателя `0xdeadbeaf` на `0x2031b2`:
 
@@ -359,7 +359,7 @@ println!("write worked");
 
 Мы видим, что выводится сообщение _"read worked"_, что указывает на то, что операция чтения не вызвала никаких ошибок. Однако вместо сообщения _"write worked"_ возникает ошибка страницы. На этот раз флаг [`PROTECTION_VIOLATION`] установлен в дополнение к флагу [`CAUSED_BY_WRITE`], что указывает на то, что страница присутствовала, но операция с ней была запрещена. В данном случае запись на страницу запрещена, поскольку страницы кодов отображаются как доступные только для чтения.
 
-[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
+[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
 ### Доступ к Таблицам Страниц {#accessing-the-page-tables}
 
@@ -385,9 +385,9 @@ pub extern "C" fn _start() -> ! {
 
 Функция [`Cr3::read`] архитектуры `x86_64` возвращает текущую активную таблицу страниц 4-го уровня из регистра `CR3`. Она возвращает кортеж, состоящий из элементов типов [`PhysFrame`] и [`Cr3Flags`]. Нас интересует только фрейм, поэтому мы игнорируем второй элемент кортежа.
 
-[`Cr3::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3.html#method.read
-[`PhysFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/frame/struct.PhysFrame.html
-[`Cr3Flags`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3Flags.html
+[`Cr3::read`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr3.html#method.read
+[`PhysFrame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/frame/struct.PhysFrame.html
+[`Cr3Flags`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr3Flags.html
 
 При запуске мы видим следующий вывод:
 
@@ -397,7 +397,7 @@ Level 4 page table at: PhysAddr(0x1000)
 
 Итак, текущая активная таблица страниц 4-го уровня хранится по адресу `0x1000` в _физической_ памяти, как указывает тип-обёртка [`PhysAddr`]. Теперь возникает вопрос: как мы можем получить доступ к этой таблице из нашего ядра?
 
-[`PhysAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.PhysAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.PhysAddr.html
 
 Прямой доступ к физической памяти невозможен при включенной страничной организации памяти, поскольку в противном случае программы могли бы легко обойти механизмы защиты памяти и получить доступ к памяти других программ. Поэтому единственный способ доступа к таблице через виртуальную страницу, отображенную на физический фрейм по адресу `0x1000`. Проблема создания отображений для фреймов таблицы страниц общая, поскольку ядру необходимо регулярно обращаться к таблицам страниц, например, при выделении стека для нового потока.
 

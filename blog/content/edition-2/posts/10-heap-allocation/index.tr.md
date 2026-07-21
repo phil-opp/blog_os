@@ -8,7 +8,7 @@ date = 2019-06-26
 chapter = "Memory Management"
 
 # Please update this when updating the translation
-translation_based_on_commit = "211f460251cd332905225c93eb66b1aff9f4aefd"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["rhotav"]
@@ -400,7 +400,7 @@ pub fn init_heap(
 ) -> Result<(), MapToError<Size4KiB>> {
     let page_range = {
         let heap_start = VirtAddr::new(HEAP_START as u64);
-        let heap_end = heap_start + HEAP_SIZE - 1u64;
+        let heap_end = heap_start + HEAP_SIZE as u64 - 1u64;
         let heap_start_page = Page::containing_address(heap_start);
         let heap_end_page = Page::containing_address(heap_end);
         Page::range_inclusive(heap_start_page, heap_end_page)
@@ -422,12 +422,12 @@ pub fn init_heap(
 
 Fonksiyon, generic parametre olarak [`Size4KiB`] kullanılarak her ikisi de 4&nbsp;KiB sayfalarla sınırlanmış bir [`Mapper`] ve bir [`FrameAllocator`] örneğine değiştirilebilir referanslar alır. Fonksiyonun dönüş değeri, başarı varyantı olarak birim tipi `()` ve hata varyantı olarak bir [`MapToError`] içeren bir [`Result`]'tur; bu da [`Mapper::map_to`] metodunun döndürdüğü hata tipidir. Hata tipini yeniden kullanmak burada mantıklıdır, çünkü `map_to` metodu bu fonksiyondaki ana hata kaynağıdır.
 
-[`Mapper`]:https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html
-[`Size4KiB`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/enum.Size4KiB.html
+[`Mapper`]:https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html
+[`Size4KiB`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/enum.Size4KiB.html
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
-[`MapToError`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html
-[`Mapper::map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
+[`MapToError`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/enum.MapToError.html
+[`Mapper::map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
 
 Uygulama iki kısma ayrılabilir:
 
@@ -441,18 +441,18 @@ Uygulama iki kısma ayrılabilir:
 
     - Aktif sayfa tablosunda eşlemeyi oluşturmak için [`Mapper::map_to`] metodunu kullanıyoruz. Metot başarısız olabilir, bu yüzden hatayı çağırana iletmek için yine [soru işareti operatörünü][question mark operator] kullanıyoruz. Başarı durumunda, metot bir [`MapperFlush`] örneği döndürür; bunu [`flush`] metodunu kullanarak [_translation lookaside buffer_]'ı güncellemek için kullanabiliriz.
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
-[`Page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html
-[`containing_address`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html#method.containing_address
-[`Page::range_inclusive`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
-[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
+[`VirtAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.VirtAddr.html
+[`Page`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html
+[`containing_address`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html#method.containing_address
+[`Page::range_inclusive`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
+[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
 [`None`]: https://doc.rust-lang.org/core/option/enum.Option.html#variant.None
-[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
+[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
 [`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
 [question mark operator]: https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html
-[`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`MapperFlush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
 [_translation lookaside buffer_]: @/edition-2/posts/08-paging-introduction/index.tr.md#the-translation-lookaside-buffer
-[`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`flush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 
 Son adım, bu fonksiyonu `kernel_main`'imizden çağırmaktır:
 

@@ -6,7 +6,7 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "3e87916b6c2ed792d1bdb8c0947906aef9013ac1"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["AlexandreMarcq", "alaincao", "richarddalves"]
 +++
@@ -524,6 +524,78 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
 À noter que ceci est juste un exemple minimal d'un exécutable Rust autoporté. Cet exécutable s'attend à de nombreuses choses, comme par exemple le fait qu'une pile soit initialisée lorsque la fonction `_start` est appelée. **Donc pour une réelle utilisation d'un tel exécutable, davantages d'étapes sont requises.**
+
+## Satisfaire `rust-analyzer`
+
+Le projet [`rust-analyzer`](https://rust-analyzer.github.io/) est un excellent moyen d'obtenir la complétion de code et le support de l'« aller à la définition » (ainsi que de nombreuses autres fonctionnalités) pour le code Rust dans votre éditeur.
+Il fonctionne également très bien pour les projets `#![no_std]`, je recommande donc de l'utiliser pour le développement de noyau !
+
+Si vous utilisez la fonctionnalité [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) de `rust-analyzer` (activée par défaut), il se peut qu'il signale une erreur pour la fonction de panic de notre noyau :
+
+```
+found duplicate lang item `panic_impl`
+```
+
+La raison de cette erreur est que `rust-analyzer` invoque `cargo check --all-targets` par défaut, ce qui essaie aussi de compiler l'exécutable en mode [test](https://doc.rust-lang.org/book/ch11-01-writing-tests.html) et [benchmark](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks).
+
+<div class="note">
+
+### Les deux sens du mot « target »
+
+Le flag `--all-targets` n'a aucun rapport avec l'argument `--target`.
+Le terme « target » a deux sens différents dans `cargo` :
+
+- Le flag `--target` spécifie la **[_cible de compilation_]** qui doit être passée au compilateur `rustc`. Elle doit être configurée avec le [triplé cible][target triple] de la machine qui doit exécuter notre code.
+- Le flag `--all-targets` fait référence à la **[_cible de paquet_]** de Cargo. Les paquets Cargo peuvent être à la fois une bibliothèque et un exécutable, vous pouvez donc spécifier de quelle manière vous souhaitez compiler votre crate. De plus, Cargo possède aussi des cibles de paquet pour les [exemples](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples), les [tests](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests) et les [benchmarks](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#benchmarks). Ces cibles de paquet peuvent coexister, vous pouvez donc compiler/vérifier la même crate par exemple en mode bibliothèque ou test.
+
+[_cible de compilation_]: https://doc.rust-lang.org/rustc/targets/index.html
+[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[_cible de paquet_]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html
+
+</div>
+
+Par défaut, `cargo check` ne compile que les cibles de paquet _bibliothèque_ et _exécutable_.
+Toutefois, `rust-analyzer` choisit de vérifier toutes les cibles de paquet par défaut lorsque [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) est activé.
+C'est la raison pour laquelle `rust-analyzer` signale l'erreur `lang item` ci-dessus que nous ne voyons pas avec `cargo check`.
+Si nous lançons `cargo check --all-targets`, nous voyons l'erreur aussi :
+
+```
+error[E0152]: found duplicate lang item `panic_impl`
+  --> src/main.rs:13:1
+   |
+13 | / fn panic(_info: &PanicInfo) -> ! {
+14 | |     loop {}
+15 | | }
+   | |_^
+   |
+   = note: the lang item is first defined in crate `std` (which `test` depends on)
+   = note: first definition in `std` loaded from /home/[...]/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-8df6be531efb3fd0.rlib
+   = note: second definition in the local crate (`blog_os`)
+```
+
+Le premier `note` nous indique que l'objet de langage panic est déjà défini dans la crate `std`, qui est une dépendance de la crate `test`.
+La crate `test` est automatiquement incluse lors de la compilation d'une crate en [mode test](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests).
+Cela n'a pas de sens pour notre noyau `#![no_std]` car il n'y a aucun moyen de supporter la bibliothèque standard sur bare metal.
+Cette erreur n'est donc pas pertinente pour notre projet et nous pouvons l'ignorer sans risque.
+
+La bonne manière d'éviter cette erreur est de spécifier dans notre `Cargo.toml` que notre exécutable ne supporte pas la compilation en mode `test` et `bench`.
+Nous pouvons faire cela en ajoutant une section `[[bin]]` à notre `Cargo.toml` pour [configurer la compilation](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target) de notre exécutable :
+
+```toml
+# in Cargo.toml
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+```
+
+Les doubles crochets autour de `bin` ne sont pas une erreur, c'est la manière dont le format TOML définit les clés qui peuvent apparaître plusieurs fois.
+Comme une crate peut avoir plusieurs exécutables, la section `[[bin]]` peut elle aussi apparaître plusieurs fois dans le `Cargo.toml`.
+C'est aussi la raison du champ obligatoire `name`, qui doit correspondre au nom de l'exécutable (pour que `cargo` sache quels réglages doivent être appliqués à quel exécutable).
+
+En configurant les champs [`test`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field) et [`bench`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field) à `false`, nous indiquons à `cargo` de ne pas compiler notre exécutable en mode test ou benchmark.
+Maintenant `cargo check --all-targets` ne devrait plus lever d'erreur, et l'implémentation de `checkOnSave` de `rust-analyzer` devrait être satisfaite elle aussi.
 
 ## Et ensuite ?
 

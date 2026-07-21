@@ -5,6 +5,8 @@ path = "ru/freestanding-rust-binary"
 date = 2018-02-10
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 translators = ["MrZloHex"]
 +++
 
@@ -54,7 +56,7 @@ translators = ["MrZloHex"]
 Мы начнем с создания нового проекта cargo. Самый простой способ сделать это &mdash; через командную строку:
 
 ```
-cargo new blog_os --bin -- edition 2024
+cargo new blog_os --bin --edition 2024
 ```
 
 Я назвал этот проект `blog_os`, но вы можете назвать как вам угодно. Флаг `--bin` указывает на то, что мы хотим создать исполняемый файл (а не библиотеку), а флаг `--edition 2024` указывает, что мы хотим использовать [редакцию Rust 2024][edition] для нашего крейта. После выполнения команды cargo создаст каталог со следующей структурой:
@@ -523,6 +525,78 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
 Обратите внимание, что это лишь минимальный пример независимого бинарного файла Rust. Этот бинарник ожидает различных вещей, например, инициализацию стека при вызове функции `_start`. **Поэтому для любого реального использования такого бинарного файла потребуется совершить еще больше действий**.
+
+## Как порадовать `rust-analyzer`
+
+Проект [`rust-analyzer`](https://rust-analyzer.github.io/) &mdash; это отличный способ получить автодополнение кода и поддержку "перехода к определению" (а также множество других возможностей) для Rust-кода в вашем редакторе.
+Он очень хорошо работает и для `#![no_std]`-проектов, поэтому я рекомендую использовать его при разработке ядра!
+
+Если вы используете возможность [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) в `rust-analyzer` (включена по умолчанию), она может сообщать об ошибке для функции обработчика паники нашего ядра:
+
+```
+found duplicate lang item `panic_impl`
+```
+
+Причина этой ошибки в том, что `rust-analyzer` по умолчанию вызывает `cargo check --all-targets`, который также пытается собрать бинарный файл в режиме [тестов](https://doc.rust-lang.org/book/ch11-01-writing-tests.html) и [бенчмарков](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks).
+
+<div class="note">
+
+### Два значения слова "target"
+
+Флаг `--all-targets` совершенно не связан с аргументом `--target`.
+У термина "target" в `cargo` есть два разных значения:
+
+- Флаг `--target` задаёт **[_цель компиляции (compilation target)_][_compilation target_]**, которая передаётся компилятору `rustc`. Он должен быть установлен в [тройку (target triple)][target triple] машины, на которой будет запускаться наш код.
+- Флаг `--all-targets` ссылается на **[_цель пакета (package target)_][_package target_]** Cargo. Пакеты Cargo могут быть одновременно и библиотекой, и бинарным файлом, поэтому вы можете указать, каким образом собирать ваш крейт. Кроме того, у Cargo также есть цели пакета для [примеров](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples), [тестов](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests) и [бенчмарков](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#benchmarks). Эти цели пакета могут сосуществовать, поэтому вы можете собирать/проверять один и тот же крейт, например, в режиме библиотеки или теста.
+
+[_compilation target_]: https://doc.rust-lang.org/rustc/targets/index.html
+[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[_package target_]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html
+
+</div>
+
+По умолчанию `cargo check` собирает только цели пакета _library_ и _binary_.
+Однако `rust-analyzer` по умолчанию проверяет все цели пакета, когда включена возможность [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave).
+Именно поэтому `rust-analyzer` сообщает о приведённой выше ошибке `lang item`, которую мы не видим при `cargo check`.
+Если мы запустим `cargo check --all-targets`, мы тоже увидим эту ошибку:
+
+```
+error[E0152]: found duplicate lang item `panic_impl`
+  --> src/main.rs:13:1
+   |
+13 | / fn panic(_info: &PanicInfo) -> ! {
+14 | |     loop {}
+15 | | }
+   | |_^
+   |
+   = note: the lang item is first defined in crate `std` (which `test` depends on)
+   = note: first definition in `std` loaded from /home/[...]/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-8df6be531efb3fd0.rlib
+   = note: second definition in the local crate (`blog_os`)
+```
+
+Первое `note` сообщает нам, что элемент языка паники уже определён в крейте `std`, который является зависимостью крейта `test`.
+Крейт `test` автоматически подключается при сборке крейта в [режиме тестов](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests).
+Это не имеет смысла для нашего `#![no_std]`-ядра, так как поддержать стандартную библиотеку на голом железе невозможно.
+Поэтому эта ошибка не относится к нашему проекту, и мы можем спокойно её проигнорировать.
+
+Правильный способ избежать этой ошибки &mdash; указать в нашем `Cargo.toml`, что наш бинарный файл не поддерживает сборку в режимах `test` и `bench`.
+Мы можем сделать это, добавив секцию `[[bin]]` в наш `Cargo.toml`, чтобы [настроить сборку](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target) нашего бинарного файла:
+
+```toml
+# in Cargo.toml
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+```
+
+Двойные скобки вокруг `bin` &mdash; это не ошибка, именно так формат TOML определяет ключи, которые могут встречаться несколько раз.
+Поскольку крейт может иметь несколько бинарных файлов, секция `[[bin]]` тоже может встречаться в `Cargo.toml` несколько раз.
+Это также причина обязательного поля `name`, которое должно совпадать с именем бинарного файла (чтобы `cargo` знал, какие настройки к какому бинарному файлу применять).
+
+Установив поля [`test`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field) и [`bench` ](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field) в `false`, мы указываем `cargo` не собирать наш бинарный файл в режиме теста или бенчмарка.
+Теперь `cargo check --all-targets` не должен больше выдавать никаких ошибок, и реализация `checkOnSave` в `rust-analyzer` тоже должна быть довольна.
 
 ## Что дальше?
 

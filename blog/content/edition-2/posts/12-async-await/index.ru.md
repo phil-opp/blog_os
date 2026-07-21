@@ -7,7 +7,7 @@ date = 2020-03-27
 [extra]
 chapter = "Multitasking"
 # Please update this when updating the translation
-translation_based_on_commit = "b2e12433b94a39d2437c2a472a3fd7cc4c22edab"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["TakiMoysha"]
 
@@ -646,7 +646,7 @@ error[E0594]: cannot assign to data in dereference of `Pin<Box<SelfReferential>>
 10 |     heap_value.self_ptr = ptr;
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^ cannot assign
    |
-   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `std::pin::Pin<std::boxed::Box<SelfReferential>>`
+   = help: trait `DerefMut` is required to modify through a dereference, but it is not implemented for `Pin<Box<SelfReferential>>`
 
 error[E0596]: cannot borrow data in dereference of `Pin<Box<SelfReferential>>` as mutable
   --> src/main.rs:16:36
@@ -1754,8 +1754,8 @@ impl Executor {
 
 Поскольку мы вызываем `sleep_if_idle` сразу после `run_ready_tasks`, который циклично выполняется до тех пор, пока `task_queue` не станет пустой, проверка очереди может показаться ненужной. Однако аппаратное прерывание может произойти сразу после того, как `run_ready_tasks` возвращает, поэтому в момент вызова функции `sleep_if_idle` может оказаться новая задача в очереди. Только если очередь всё ещё пуста, мы ставим процессор в спящий режим, выполняя инструкцию `hlt` через обёрточную функцию [`instructions::hlt`], предоставляемую библиотекой [`x86_64`].
 
-[`instructions::hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/fn.hlt.html
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/index.html
+[`instructions::hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/fn.hlt.html
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/index.html
 
 К сожалению, в этой реализации всё ещё присутствует небольшой race condition. Т.к. прерывания асинхронные и могут происходить в любое время, возможно, что прерывание произойдёт сразу между проверкой `is_empty` и вызовом `hlt`:
 
@@ -1770,7 +1770,7 @@ if self.task_queue.is_empty() {
 
 Ответ заключается в том, чтобы отключить прерывания на процессоре перед проверкой и атомарно включить их снова вместе с инструкцией `hlt`. Таким образом, все прерывания, которые происходят между этими действиями, будут отложены после инструкции `hlt`, чтобы не пропустить никаких пробуждений. Для реализации этого подхода мы можем использовать функцию [`interrupts::enable_and_hlt`][`enable_and_hlt`], предоставляемую библиотекой [`x86_64`].
 
-[`enable_and_hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
+[`enable_and_hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
 Обновлённая реализация нашей функции `sleep_if_idle` выглядит следующим образом:
 

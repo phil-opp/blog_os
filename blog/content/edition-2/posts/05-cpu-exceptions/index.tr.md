@@ -8,7 +8,7 @@ date  = 2018-06-17
 chapter = "Interrupts"
 
 # Please update this when updating the translation
-translation_based_on_commit = "211f460251cd332905225c93eb66b1aff9f4aefd"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["rhotav"]
@@ -91,7 +91,7 @@ Bir exception meydana geldiğinde, CPU kabaca şunları yapar:
 ## Bir IDT Tipi
 Kendi IDT tipimizi oluşturmak yerine, `x86_64` crate'inin şöyle görünen [`InterruptDescriptorTable` struct'ını][`InterruptDescriptorTable` struct] kullanacağız:
 
-[`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable` struct]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 
 ```rust
 #[repr(C)]
@@ -122,10 +122,10 @@ pub struct InterruptDescriptorTable {
 
 Alanlar, bir IDT girdisinin alanlarını temsil eden bir struct olan [`idt::Entry<F>`] tipine sahiptir (yukarıdaki tabloya bakın). Tip parametresi `F`, beklenen handler fonksiyon tipini tanımlar. Bazı girdilerin bir [`HandlerFunc`], bazı girdilerin ise bir [`HandlerFuncWithErrCode`] gerektirdiğini görüyoruz. Page fault'un kendine ait özel bir tipi bile var: [`PageFaultHandlerFunc`].
 
-[`idt::Entry<F>`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.Entry.html
-[`HandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFunc.html
-[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
-[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/type.PageFaultHandlerFunc.html
+[`idt::Entry<F>`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.Entry.html
+[`HandlerFunc`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/type.HandlerFunc.html
+[`HandlerFuncWithErrCode`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/type.HandlerFuncWithErrCode.html
+[`PageFaultHandlerFunc`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/type.PageFaultHandlerFunc.html
 
 Önce `HandlerFunc` tipine bakalım:
 
@@ -203,7 +203,7 @@ Yani _interrupt stack frame_ şöyle görünür:
 
 `x86_64` crate'inde, interrupt stack frame [`InterruptStackFrame`] struct'ı ile temsil edilir. Interrupt handler'larına `&mut` olarak geçirilir ve exception'ın nedeni hakkında ek bilgi almak için kullanılabilir. Yalnızca birkaç exception bir hata kodu push'ladığından, struct'ta hata kodu alanı yoktur. Bu exception'lar, ek bir `error_code` argümanına sahip olan ayrı [`HandlerFuncWithErrCode`] fonksiyon tipini kullanır.
 
-[`InterruptStackFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptStackFrame.html
+[`InterruptStackFrame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptStackFrame.html
 
 ### Perde Arkası
 `x86-interrupt` çağırma kuralı, exception işleme sürecinin neredeyse tüm dağınık ayrıntılarını gizleyen güçlü bir soyutlamadır. Ancak bazen perde arkasında ne olduğunu bilmek yararlıdır. İşte `x86-interrupt` çağırma kuralının hallettiği şeylerin kısa bir özeti:
@@ -285,7 +285,7 @@ Bu hata, `x86-interrupt` çağırma kuralının hâlâ kararsız olması nedeniy
 CPU'nun yeni interrupt descriptor table'ımızı kullanabilmesi için, onu [`lidt`] komutunu kullanarak yüklememiz gerekir. `x86_64` crate'inin `InterruptDescriptorTable` struct'ı bunun için bir [`load`][InterruptDescriptorTable::load] metodu sağlar. Onu kullanmayı deneyelim:
 
 [`lidt`]: https://www.felixcloutier.com/x86/lgdt:lidt
-[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
+[InterruptDescriptorTable::load]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html#method.load
 
 ```rust
 // src/interrupts.rs içinde
@@ -465,7 +465,7 @@ blog_os::interrupts::test_breakpoint_exception...	[ok]
 `x86-interrupt` çağırma kuralı ve [`InterruptDescriptorTable`] tipi, exception işleme sürecini nispeten basit ve sancısız hale getirdi. Bu sizin için fazla sihir olduysa ve exception işlemenin tüm kanlı ayrıntılarını öğrenmek istiyorsanız, sizi düşündük: [“Naked Fonksiyonlarla Exception İşleme”][“Handling Exceptions with Naked Functions”] dizimiz, exception'ların `x86-interrupt` çağırma kuralı olmadan nasıl işleneceğini gösterir ve ayrıca kendi IDT tipini oluşturur. Tarihsel olarak, bu yazılar `x86-interrupt` çağırma kuralı ve `x86_64` crate'i var olmadan önceki ana exception işleme yazılarıydı. Bu yazıların bu blogun [birinci sürümüne][first edition] dayandığını ve güncel olmayabileceğini unutmayın.
 
 [“Handling Exceptions with Naked Functions”]: @/edition-1/extra/naked-exceptions/_index.md
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [first edition]: @/edition-1/_index.md
 
 ## Sırada ne var?

@@ -5,6 +5,8 @@ path = "es/freestanding-rust-binary"
 date = 2018-02-10
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Bare Bones"
 
 # GitHub usernames of the people that translated this post
@@ -229,13 +231,13 @@ fn panic(_info: &PanicInfo) -> ! {
 Podrás notar que eliminamos la función `main`. La razón es que una función `main` no tiene sentido sin un sistema de tiempo de ejecución subyacente que la invoque. En su lugar, estamos sobrescribiendo el punto de entrada del sistema operativo con nuestra propia función `_start`:
 
 ```rust
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     loop {}
 }
 ```
 
-Al usar el atributo `#[no_mangle]`, deshabilitamos el [name mangling] para asegurarnos de que el compilador de Rust realmente genere una función con el nombre `_start`. Sin este atributo, el compilador generaría un símbolo críptico como `_ZN3blog_os4_start7hb173fedf945531caE` para dar un nombre único a cada función. Este atributo es necesario porque necesitamos informar al enlazador el nombre de la función de punto de entrada en el siguiente paso.
+Al usar el atributo `#[unsafe(no_mangle)]`, deshabilitamos el [name mangling] para asegurarnos de que el compilador de Rust realmente genere una función con el nombre `_start`. Sin este atributo, el compilador generaría un símbolo críptico como `_ZN3blog_os4_start7hb173fedf945531caE` para dar un nombre único a cada función. Este atributo es necesario porque necesitamos informar al enlazador el nombre de la función de punto de entrada en el siguiente paso.
 
 También debemos marcar la función como `extern "C"` para indicar al compilador que debe usar la [convención de llamadas en C][C calling convention] para esta función (en lugar de la convención de llamadas de Rust, que no está especificada). El motivo para nombrar la función `_start` es que este es el nombre predeterminado del punto de entrada en la mayoría de los sistemas.
 
@@ -475,7 +477,7 @@ Un binario mínimo autónomo en Rust se ve así:
 
 use core::panic::PanicInfo;
 
-#[no_mangle] // no modificar el nombre de esta función
+#[unsafe(no_mangle)] // no modificar el nombre de esta función
 pub extern "C" fn _start() -> ! {
     // esta función es el punto de entrada, ya que el enlazador busca una función
     // llamada `_start` por defecto
@@ -524,6 +526,78 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
 Ten en cuenta que este es solo un ejemplo mínimo de un binario autónomo en Rust. Este binario espera varias cosas, por ejemplo, que una pila esté inicializada cuando se llama a la función `_start`. **Por lo tanto, para cualquier uso real de un binario como este, se requieren más pasos**.
+
+## Haciendo feliz a `rust-analyzer`
+
+El proyecto [`rust-analyzer`](https://rust-analyzer.github.io/) es una excelente forma de obtener autocompletado de código y soporte para "ir a la definición" (y muchas otras funcionalidades) para código Rust en tu editor.
+Funciona muy bien también para proyectos `#![no_std]`, ¡así que recomiendo usarlo para el desarrollo de kernels!
+
+Si estás usando la funcionalidad [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) de `rust-analyzer` (habilitada por defecto), podría reportar un error para la función de panic de nuestro kernel:
+
+```
+found duplicate lang item `panic_impl`
+```
+
+La razón de este error es que `rust-analyzer` invoca `cargo check --all-targets` por defecto, lo que también intenta compilar el binario en modo [test](https://doc.rust-lang.org/book/ch11-01-writing-tests.html) y [benchmark](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks).
+
+<div class="note">
+
+### Los dos significados de "target"
+
+La bandera `--all-targets` no tiene ninguna relación con el argumento `--target`.
+Hay dos significados diferentes del término "target" en `cargo`:
+
+- La bandera `--target` especifica el **[_target de compilación_][_compilation target_]** que debe pasarse al compilador `rustc`. Este debe establecerse en el [target triple] de la máquina que ejecutará nuestro código.
+- La bandera `--all-targets` hace referencia al **[_target de paquete_][_package target_]** de Cargo. Los paquetes de Cargo pueden ser una biblioteca y un binario al mismo tiempo, por lo que puedes especificar de qué manera deseas construir tu crate. Además, Cargo también tiene targets de paquete para [ejemplos](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples), [pruebas](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests) y [benchmarks](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#benchmarks). Estos targets de paquete pueden coexistir, por lo que puedes construir/verificar el mismo crate en, por ejemplo, modo biblioteca o modo prueba.
+
+[_compilation target_]: https://doc.rust-lang.org/rustc/targets/index.html
+[target triple]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[_package target_]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html
+
+</div>
+
+Por defecto, `cargo check` solo construye los targets de paquete _library_ y _binary_.
+Sin embargo, `rust-analyzer` opta por verificar todos los targets de paquete por defecto cuando [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) está habilitado.
+Esta es la razón por la que `rust-analyzer` reporta el error de `lang item` anterior que no vemos con `cargo check`.
+Si ejecutamos `cargo check --all-targets`, también vemos el error:
+
+```
+error[E0152]: found duplicate lang item `panic_impl`
+  --> src/main.rs:13:1
+   |
+13 | / fn panic(_info: &PanicInfo) -> ! {
+14 | |     loop {}
+15 | | }
+   | |_^
+   |
+   = note: the lang item is first defined in crate `std` (which `test` depends on)
+   = note: first definition in `std` loaded from /home/[...]/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-8df6be531efb3fd0.rlib
+   = note: second definition in the local crate (`blog_os`)
+```
+
+El primer `note` nos dice que el lang item de panic ya está definido en el crate `std`, que es una dependencia del crate `test`.
+El crate `test` se incluye automáticamente al construir un crate en [modo test](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests).
+Esto no tiene sentido para nuestro kernel `#![no_std]`, ya que no hay forma de dar soporte a la biblioteca estándar en bare metal.
+Por lo tanto, este error no es relevante para nuestro proyecto y podemos ignorarlo con seguridad.
+
+La forma correcta de evitar este error es especificar en nuestro `Cargo.toml` que nuestro binario no admite la construcción en los modos `test` y `bench`.
+Podemos hacerlo agregando una sección `[[bin]]` a nuestro `Cargo.toml` para [configurar la construcción](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target) de nuestro binario:
+
+```toml
+# en Cargo.toml
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+```
+
+Los corchetes dobles alrededor de `bin` no son un error, así es como el formato TOML define claves que pueden aparecer varias veces.
+Dado que un crate puede tener múltiples binarios, la sección `[[bin]]` también puede aparecer varias veces en el `Cargo.toml`.
+Esta es también la razón del campo obligatorio `name`, que debe coincidir con el nombre del binario (para que `cargo` sepa qué configuración debe aplicarse a qué binario).
+
+Al establecer los campos [`test`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field) y [`bench` ](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field) en `false`, indicamos a `cargo` que no construya nuestro binario en modo test o benchmark.
+Ahora `cargo check --all-targets` no debería arrojar ningún error, y la implementación de `checkOnSave` de `rust-analyzer` también debería estar feliz.
 
 ## ¿Qué sigue?
 

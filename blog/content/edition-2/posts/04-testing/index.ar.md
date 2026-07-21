@@ -6,7 +6,7 @@ date = 2019-04-27
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "211f460251cd332905225c93eb66b1aff9f4aefd"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Bare Bones"
 comments_search_term = 1009
 # GitHub usernames of the people that translated this post
@@ -198,18 +198,18 @@ test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 
 بدلاً من استدعاء تعليمات assembly `in` و `out` يدويًا، نستخدم التجريدات التي توفرها مكتبة [`x86_64`]. لإضافة dependency على تلك المكتبة، نضيفها إلى قسم `dependencies` في `Cargo.toml`:
 
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.14.2"
+x86_64 = "0.15.5"
 ```
 
 الآن يمكننا استخدام النوع [`Port`] الذي توفره المكتبة لإنشاء دالة `exit_qemu`:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 
 ```rust
 // in src/main.rs

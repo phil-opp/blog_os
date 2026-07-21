@@ -7,7 +7,7 @@ date = 2018-06-18
 [extra]
 chapter = "Interrupções"
 # Please update this when updating the translation
-translation_based_on_commit = "9753695744854686a6b80012c89b0d850a44b4b0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["richarddalves"]
@@ -235,7 +235,7 @@ A _Privilege Stack Table_ é usada pela CPU quando o nível de privilégio muda.
 ### Criando uma TSS
 Vamos criar uma nova TSS que contém uma pilha de double fault separada em sua interrupt stack table. Para isso, precisamos de uma struct TSS. Felizmente, a crate `x86_64` já contém uma [struct `TaskStateSegment`] que podemos usar.
 
-[struct `TaskStateSegment`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
+[struct `TaskStateSegment`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/tss/struct.TaskStateSegment.html
 
 Criamos a TSS em um novo módulo `gdt` (o nome fará sentido mais tarde):
 
@@ -260,7 +260,7 @@ lazy_static! {
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
             let stack_start = VirtAddr::from_ptr(&raw const STACK);
-            let stack_end = stack_start + STACK_SIZE;
+            let stack_end = stack_start + STACK_SIZE as u64;
             stack_end
         };
         tss
@@ -300,8 +300,8 @@ use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor};
 lazy_static! {
     static ref GDT: GlobalDescriptorTable = {
         let mut gdt = GlobalDescriptorTable::new();
-        gdt.add_entry(Descriptor::kernel_code_segment());
-        gdt.add_entry(Descriptor::tss_segment(&TSS));
+        gdt.append(Descriptor::kernel_code_segment());
+        gdt.append(Descriptor::tss_segment(&TSS));
         gdt
     };
 }
@@ -350,8 +350,8 @@ use x86_64::structures::gdt::SegmentSelector;
 lazy_static! {
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
-        let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
-        let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
+        let code_selector = gdt.append(Descriptor::kernel_code_segment());
+        let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
         (gdt, Selectors { code_selector, tss_selector })
     };
 }
@@ -381,8 +381,8 @@ pub fn init() {
 
 Recarregamos o registrador de segmento de código usando [`CS::set_reg`] e carregamos a TSS usando [`load_tss`]. As funções são marcadas como `unsafe`, então precisamos de um bloco `unsafe` para invocá-las. A razão é que pode ser possível quebrar a segurança de memória carregando seletores inválidos.
 
-[`CS::set_reg`]: https://docs.rs/x86_64/0.14.5/x86_64/instructions/segmentation/struct.CS.html#method.set_reg
-[`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
+[`CS::set_reg`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/segmentation/struct.CS.html#method.set_reg
+[`load_tss`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/tables/fn.load_tss.html
 
 Agora que carregamos uma TSS e interrupt stack table válidas, podemos definir o índice de pilha para nosso manipulador de double fault na IDT:
 

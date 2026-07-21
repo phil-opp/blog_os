@@ -5,6 +5,8 @@ path = "es/allocator-designs"
 date = 2020-01-20
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Gestión de Memoria"
 
 # GitHub usernames of the people that translated this post
@@ -510,7 +512,7 @@ impl ListNode {
 }
 ```
 
-El tipo tiene una función constructora simple llamada `new` y métodos para calcular las direcciones de inicio y final de la región representada. Hacemos que la función `new` sea una [función const], que será necesaria más tarde al construir un allocador de lista enlazada estática. Ten en cuenta que cualquier uso de referencias mutables en funciones const (incluido el establecimiento del campo `next` en `None`) sigue siendo inestable. Para que compile, necesitamos agregar **`#![feature(const_mut_refs)]`** en la parte superior de nuestro `lib.rs`.
+El tipo tiene una función constructora simple llamada `new` y métodos para calcular las direcciones de inicio y final de la región representada. Hacemos que la función `new` sea una [función const], que será necesaria más tarde al construir un allocador de lista enlazada estática.
 
 [función const]: https://doc.rust-lang.org/reference/items/functions.html#const-functions
 
@@ -537,7 +539,9 @@ impl LinkedListAllocator {
     /// límites de heap dados son válidos y que el heap está sin usar. Este método debe ser
     /// llamado solo una vez.
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
-        self.add_free_region(heap_start, heap_size);
+        unsafe {
+            self.add_free_region(heap_start, heap_size);
+        }
     }
 
     /// Agrega la región de memoria dada al inicio de la lista.
@@ -580,8 +584,10 @@ impl LinkedListAllocator {
         let mut node = ListNode::new(size);
         node.next = self.head.next.take();
         let node_ptr = addr as *mut ListNode;
-        node_ptr.write(node);
-        self.head.next = Some(&mut *node_ptr)
+        unsafe {
+            node_ptr.write(node);
+            self.head.next = Some(&mut *node_ptr)
+        }
     }
 }
 ```
@@ -713,7 +719,9 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
             let alloc_end = alloc_start.checked_add(size).expect("overflow");
             let excess_size = region.end_addr() - alloc_end;
             if excess_size > 0 {
-                allocator.add_free_region(alloc_end, excess_size);
+                unsafe {
+                    allocator.add_free_region(alloc_end, excess_size);
+                }
             }
             alloc_start as *mut u8
         } else {
@@ -725,7 +733,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
         // realizar ajustes de layout
         let (size, _) = LinkedListAllocator::size_align(layout);
 
-        self.lock().add_free_region(ptr as usize, size)
+        unsafe { self.lock().add_free_region(ptr as usize, size) }
     }
 }
 ```
@@ -957,7 +965,7 @@ impl FixedSizeBlockAllocator {
     /// límites de heap dados son válidos y que el heap está sin usar. Este método debe ser
     /// llamado solo una vez.
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
-        self.fallback_allocator.init(heap_start, heap_size);
+        unsafe { self.fallback_allocator.init(heap_start, heap_size); }
     }
 }
 ```
@@ -965,8 +973,6 @@ impl FixedSizeBlockAllocator {
 La función `new` solo inicializa el arreglo `list_heads` con nodos vacíos y crea un allocador de lista enlazada [`empty`] como `fallback_allocator`. La constante `EMPTY` es necesaria para decirle al compilador de Rust que queremos inicializar el arreglo con un valor constante. Inicializar el arreglo directamente como `[None; BLOCK_SIZES.len()]` no funciona, porque entonces el compilador requiere que `Option<&'static mut ListNode>` implemente el trait `Copy`, lo que no hace. Esta es una limitación actual del compilador de Rust, que podría desaparecer en el futuro.
 
 [`empty`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.empty
-
-Si aún no lo has hecho para la implementación del `LinkedListAllocator`, también necesitas agregar **`#![feature(const_mut_refs)]`** en la parte superior de tu `lib.rs`. La razón es que cualquier uso de tipos de referencia mutables en funciones const sigue siendo inestable, incluido el tipo de elemento de referencia `Option<&'static mut ListNode>` del campo `list_heads` (incluso si lo establecemos en `None`).
 
 La función insegura `init` solo llama a la función [`init`] del `fallback_allocator` sin realizar ninguna inicialización adicional del arreglo `list_heads`. En su lugar, lo inicializaremos de manera perezosa en las llamadas a `alloc` y `dealloc`.
 

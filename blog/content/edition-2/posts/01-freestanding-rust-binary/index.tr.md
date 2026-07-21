@@ -8,7 +8,7 @@ date = 2018-02-10
 chapter = "Bare Bones"
 
 # Please update this when updating the translation
-translation_based_on_commit = "cf117267301e2876f6cffe54db0597184a6d82a0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["rhotav"]

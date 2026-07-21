@@ -6,7 +6,7 @@ date  = 2018-06-18
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "3ac829171218156c07ce9a27186fee58e3a5521e"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["hamidrezakp", "MHBahrampour"]
 rtl = true
@@ -242,7 +242,7 @@ I/O Map Base Address | `u16`
 
 بیایید یک TSS جدید ایجاد کنیم که شامل یک پشته خطای دوگانه جداگانه در جدول پشته وقفه خود باشد. برای این منظور ما به یک ساختار TSS نیاز داریم. خوشبختانه کریت `x86_64` از قبل حاوی [ساختار `TaskStateSegment`] است که می‌توانیم از آن استفاده کنیم.
 
-[ساختار `TaskStateSegment`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/tss/struct.TaskStateSegment.html
+[ساختار `TaskStateSegment`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/tss/struct.TaskStateSegment.html
 
 ما TSS را در یک ماژول جدید به نام `gdt` ایجاد می‌کنیم (نام این ماژول بعداً برای‌تان معنا پیدا می‌کند):
 
@@ -267,7 +267,7 @@ lazy_static! {
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
             let stack_start = VirtAddr::from_ptr(&raw const STACK);
-            let stack_end = stack_start + STACK_SIZE;
+            let stack_end = stack_start + STACK_SIZE as u64;
             stack_end
         };
         tss
@@ -312,8 +312,8 @@ use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor};
 lazy_static! {
     static ref GDT: GlobalDescriptorTable = {
         let mut gdt = GlobalDescriptorTable::new();
-        gdt.add_entry(Descriptor::kernel_code_segment());
-        gdt.add_entry(Descriptor::tss_segment(&TSS));
+        gdt.append(Descriptor::kernel_code_segment());
+        gdt.append(Descriptor::tss_segment(&TSS));
         gdt
     };
 }
@@ -362,8 +362,8 @@ use x86_64::structures::gdt::SegmentSelector;
 lazy_static! {
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
-        let code_selector = gdt.add_entry(Descriptor::kernel_code_segment());
-        let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
+        let code_selector = gdt.append(Descriptor::kernel_code_segment());
+        let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
         (gdt, Selectors { code_selector, tss_selector })
     };
 }
@@ -380,21 +380,21 @@ struct Selectors {
 // in src/gdt.rs
 
 pub fn init() {
-    use x86_64::instructions::segmentation::set_cs;
     use x86_64::instructions::tables::load_tss;
-
+    use x86_64::instructions::segmentation::{CS, Segment};
+    
     GDT.0.load();
     unsafe {
-        set_cs(GDT.1.code_selector);
+        CS::set_reg(GDT.1.code_selector);
         load_tss(GDT.1.tss_selector);
     }
 }
 ```
 
-ما با استفاده از [`set_cs`] ثبات کد سگمنت را بارگذاری مجدد می‌کنیم و برای بارگذاری TSS با از [`load_tss`] استفاده می‌کنیم. توابع به عنوان `unsafe` علامت گذاری شده‌اند، بنابراین برای فراخوانی آن‌ها به یک بلوک `unsafe` نیاز داریم. چون ممکن است با بارگذاری انتخاب‌گرهای نامعتبر، ایمنی حافظه از بین برود.
+ما با استفاده از [`CS::set_reg`] ثبات کد سگمنت را بارگذاری مجدد می‌کنیم و برای بارگذاری TSS با از [`load_tss`] استفاده می‌کنیم. توابع به عنوان `unsafe` علامت گذاری شده‌اند، بنابراین برای فراخوانی آن‌ها به یک بلوک `unsafe` نیاز داریم. چون ممکن است با بارگذاری انتخاب‌گرهای نامعتبر، ایمنی حافظه از بین برود.
 
-[`set_cs`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/segmentation/fn.set_cs.html
-[`load_tss`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tables/fn.load_tss.html
+[`CS::set_reg`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/segmentation/struct.CS.html#method.set_reg
+[`load_tss`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/tables/fn.load_tss.html
 
 اکنون که یک TSS معتبر و جدول پشته‌ وقفه را بارگذاری کردیم، می‌توانیم اندیس پشته را برای کنترل کننده خطای دوگانه در IDT تنظیم کنیم:
 

@@ -5,6 +5,8 @@ path = "es/hardware-interrupts"
 date = 2018-10-22
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Interrupciones"
 
 # GitHub usernames of the people that translated this post
@@ -85,18 +87,18 @@ La configuración se realiza escribiendo valores especiales en los puertos de co
 
 Para agregar la crate como una dependencia, agregamos lo siguiente a nuestro proyecto:
 
-[`pic8259`]: https://docs.rs/pic8259/0.10.1/pic8259/
+[`pic8259`]: https://docs.rs/pic8259/0.11.0/pic8259/
 
 ```toml
 # en Cargo.toml
 
 [dependencies]
-pic8259 = "0.10.1"
+pic8259 = "0.11.0"
 ```
 
 La principal abstracción proporcionada por la crate es la estructura [`ChainedPics`] que representa la disposición primario/secundario del PIC que vimos arriba. Está diseñada para ser utilizada de la siguiente manera:
 
-[`ChainedPics`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html
+[`ChainedPics`]: https://docs.rs/pic8259/0.11.0/pic8259/struct.ChainedPics.html
 
 ```rust
 // en src/interrupts.rs
@@ -129,7 +131,7 @@ pub fn init() {
 
 Usamos la función [`initialize`] para realizar la inicialización del PIC. Al igual que la función `ChainedPics::new`, esta función también es insegura porque puede causar un comportamiento indefinido si el PIC está mal configurado.
 
-[`initialize`]: https://docs.rs/pic8259/0.10.1/pic8259/struct.ChainedPics.html#method.initialize
+[`initialize`]: https://docs.rs/pic8259/0.11.0/pic8259/struct.ChainedPics.html#method.initialize
 
 Si todo va bien, deberíamos seguir viendo el mensaje "¡No se ha bloqueado!" al ejecutar `cargo run`.
 
@@ -173,10 +175,6 @@ impl InterruptIndex {
     fn as_u8(self) -> u8 {
         self as u8
     }
-
-    fn as_usize(self) -> usize {
-        usize::from(self.as_u8())
-    }
 }
 ```
 
@@ -196,7 +194,7 @@ lazy_static! {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
-        idt[InterruptIndex::Temporizador.as_usize()]
+        idt[InterruptIndex::Temporizador.as_u8()]
             .set_handler_fn(timer_interrupt_handler); // nuevo
 
         idt
@@ -212,7 +210,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(
 
 Nuestro `timer_interrupt_handler` tiene la misma firma que nuestros manejadores de excepciones, porque la CPU reacciona de manera idéntica a las excepciones y a las interrupciones externas (la única diferencia es que algunas excepciones empujan un código de error). La estructura [`InterruptDescriptorTable`] implementa el rasgo [`IndexMut`], por lo que podemos acceder a entradas individuales a través de la sintaxis de indexación de arrays.
 
-[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.InterruptDescriptorTable.html
+[`InterruptDescriptorTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.InterruptDescriptorTable.html
 [`IndexMut`]: https://doc.rust-lang.org/core/ops/trait.IndexMut.html
 
 En nuestro manejador de interrupciones del temporizador, imprimimos un punto en la pantalla. Como la interrupción del temporizador ocurre periódicamente, esperaríamos ver un punto apareciendo en cada tick del temporizador. Sin embargo, cuando lo ejecutamos, vemos que solo se imprime un solo punto:
@@ -297,7 +295,7 @@ Podemos provocar fácilmente un bloqueo mutuo así en nuestro kernel imprimiendo
 ```rust
 // en src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     […]
     loop {
@@ -337,7 +335,7 @@ pub fn _print(args: fmt::Arguments) {
 
 La función [`without_interrupts`] toma un [closure] y lo ejecuta en un entorno sin interrupciones. La usamos para asegurarnos de que no se produzca ninguna interrupción mientras el `Mutex` esté bloqueado. Cuando ejecutamos nuestro kernel ahora, vemos que sigue funcionando sin colgarse. (Todavía no notamos ningún punto, pero esto es porque están deslizándose demasiado rápido. Intenta ralentizar la impresión, por ejemplo, poniendo un `for _ in 0..10000 {}` dentro del bucle).
 
-[`without_interrupts`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.without_interrupts.html
+[`without_interrupts`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.without_interrupts.html
 [closure]: https://doc.rust-lang.org/book/ch13-01-closures.html
 
 Podemos aplicar el mismo cambio a nuestra función de impresión serial para asegurarnos de que tampoco ocurran bloqueos mutuos con ella:
@@ -460,7 +458,7 @@ Ahora podemos utilizar este `hlt_loop` en lugar de los bucles infinitos en nuest
 ```rust
 // en src/main.rs
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     […]
 
@@ -485,7 +483,7 @@ Actualicemos también nuestro `lib.rs`:
 
 /// Punto de entrada para `cargo test`
 #[cfg(test)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     init();
     test_main();
@@ -534,7 +532,7 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         […]
         // nuevo
-        idt[InterruptIndex::Teclado.as_usize()]
+        idt[InterruptIndex::Teclado.as_u8()]
             .set_handler_fn(keyboard_interrupt_handler);
 
         idt
@@ -584,7 +582,7 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(
 
 Usamos el tipo [`Port`] de la crate `x86_64` para leer un byte del puerto de datos del teclado. Este byte se llama [_scancode_] y representa la pulsación/liberación de la tecla. Aún no hacemos nada con el scancode, excepto imprimirlo en la pantalla:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 [_scancode_]: https://en.wikipedia.org/wiki/Scancode
 
 ![QEMU imprimiendo scancodes en la pantalla cuando se presionan teclas](qemu-printing-scancodes.gif)

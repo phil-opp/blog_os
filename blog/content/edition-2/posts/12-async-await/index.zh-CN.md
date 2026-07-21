@@ -9,7 +9,7 @@ chapter = "Multitasking"
 
 # Please update this when updating the translation
 
-translation_based_on_commit = "67b3ac65dc735e0e109c2fb23ca18a536b84dc0d"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 
@@ -1702,7 +1702,7 @@ impl Executor {
 }
 ```
 
-该方法只需循环调用 `run_ready_tasks` 函数。虽然理论上我们可以在 `tasks` map 为空时从函数返回，但由于我们的 `keyboard_task` 永远不会完成，这种情况永远不会发生，因此一个简单的 `loop` 循环就足够了。由于该函数永远不会返回，我们使用 `!` 返回类型将函数标记为发散。
+该方法只需循环调用 `run_ready_tasks` 函数。虽然理论上我们可以在 `tasks` map 为空时从函数返回，但由于我们的 `keyboard::print_keypresses` 任务永远不会完成，这种情况永远不会发生，因此一个简单的 `loop` 循环就足够了。由于该函数永远不会返回，我们使用 `!` 返回类型将函数标记为发散。
 
 [diverging]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
@@ -1760,8 +1760,8 @@ impl Executor {
 
 由于我们在 `run_ready_tasks` 之后直接调用了 `sleep_if_idle` ，而该函数会循环执行直到 `task_queue` 为空，再次检查队列可能显得多余。然而，硬件中断可能在 `run_ready_tasks` 返回后立即发生，因此在调用 `sleep_if_idle` 函数时可能会有新任务进入队列。仅当队列仍为空时，我们才会使用 [`x86_64`] crate 提供的 [`instructions::hlt`] 包装函数来执行 `hlt` 指令使 CPU 进入休眠。
 
-[`instructions::hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/fn.hlt.html
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/index.html
+[`instructions::hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/fn.hlt.html
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/index.html
 
 遗憾的是，这个实现中仍存在一个微妙的竞态条件。由于中断是异步的且可能在任何时刻发生，有可能在 `is_empty` 检查与 `hlt` 调用之间恰好发生中断：
 
@@ -1776,7 +1776,7 @@ if self.task_queue.is_empty() {
 
 答案是在检查前禁用 CPU 中断，并在之后与 `hlt` 指令一起原子性地重新启用中断。这样，中间发生的所有中断都会被延迟到执行 `hlt` 指令后，确保不会错过任何唤醒动作。为实现这一方法，我们可以使用 [`x86_64`] crate 提供的 [`interrupts::enable_and_hlt`][`enable_and_hlt`] 函数。
 
-[`enable_and_hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
+[`enable_and_hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
 更新后的 `sleep_if_idle` 函数实现如下：
 

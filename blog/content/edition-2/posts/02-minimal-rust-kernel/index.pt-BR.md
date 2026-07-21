@@ -7,7 +7,7 @@ date = 2018-02-10
 [extra]
 chapter = "O Básico"
 # Please update this when updating the translation
-translation_based_on_commit = "95d4fbd54c6b0e5a874981558c0cc1fe85d31606"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["richarddalves"]
 +++
@@ -284,7 +284,7 @@ Com esta configuração em vigor, vamos tentar construir novamente:
 error[E0463]: can't find crate for `core`
 ```
 
-Agora vemos um erro diferente! O erro nos diz que o compilador Rust não consegue mais encontrar a [biblioteca `core`]. Esta biblioteca contém tipos básicos do Rust como `Result`, `Option` e iteradores, e é implicitamente vinculada a todas as crates `no_std`.
+Ainda falha, mas com um novo erro. O erro nos diz que o compilador Rust não encontra a [biblioteca `core`]. Esta biblioteca contém tipos básicos do Rust como `Result`, `Option` e iteradores, e é implicitamente vinculada a todas as crates `no_std`.
 
 [biblioteca `core`]: https://doc.rust-lang.org/nightly/core/index.html
 
@@ -410,7 +410,7 @@ Primeiro, convertemos o inteiro `0xb8000` em um [ponteiro bruto]. Então [iteram
 [static]: https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html#the-static-lifetime
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 [byte string]: https://doc.rust-lang.org/reference/tokens.html#byte-string-literals
-[ponteiro bruto]: https://doc.rust-lang.org/stable/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
+[ponteiro bruto]: https://doc.rust-lang.org/book/ch20-01-unsafe-rust.html#dereferencing-a-raw-pointer
 [`offset`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
 
 Note que há um bloco [`unsafe`] em torno de todas as escritas de memória. A razão é que o compilador Rust não pode provar que os ponteiros brutos que criamos são válidos. Eles poderiam apontar para qualquer lugar e levar à corrupção de dados. Ao colocá-los em um bloco `unsafe`, estamos basicamente dizendo ao compilador que temos absoluta certeza de que as operações são válidas. Note que um bloco `unsafe` não desativa as verificações de segurança do Rust. Ele apenas permite que você faça [cinco coisas adicionais].

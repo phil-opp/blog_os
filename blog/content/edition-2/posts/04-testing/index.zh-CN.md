@@ -6,7 +6,7 @@ date = 2019-04-27
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "e6c148d6f47bcf8a34916393deaeb7e8da2d5e2a"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["luojia65", "Rustin-Liu", "liuyuran","ic3w1ne"]
 # GitHub usernames of the people that contributed to this translation
@@ -195,18 +195,18 @@ test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 
 这里我们使用 [`x86_64`] crate提供的抽象，而不是手动调用 `in` 或 `out` 指令。为了添加对该crate的依赖，我们可以将其添加到我们的 `Cargo.toml`中的 `dependencies` 小节中去:
 
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/
 
 ```toml
 # in Cargo.toml
 
 [dependencies]
-x86_64 = "0.14.2"
+x86_64 = "0.15.5"
 ```
 
 现在我们可以使用crate中提供的 [`Port`] 类型来创建一个 `exit_qemu` 函数了:
 
-[`Port`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/port/struct.Port.html
+[`Port`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/port/type.Port.html
 
 ```rust
 // in src/main.rs

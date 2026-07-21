@@ -6,7 +6,7 @@ date = 2018-02-10
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "80136cc0474ae8d2da04f391b5281cfcda068c1a"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["hamidrezakp", "MHBahrampour"]
 rtl = true
@@ -234,7 +234,7 @@ pub extern "C" fn _start() -> ! {
 }
 ```
 
-با استفاده از ویژگی `[no_mangle]#` ما [name mangling] را غیرفعال می کنیم تا اطمینان حاصل کنیم که کامپایلر راست تابعی با نام `start_` را خروجی می‌دهد. بدون این ویژگی، کامپایلر برخی از نمادهای رمزنگاری شده `ZN3blog_os4_start7hb173fedf945531caE_` را تولید می‌کند تا به هر تابع یک نام منحصر به فرد بدهد. این ویژگی لازم است زیرا در مرحله بعدی باید نام تایع نقطه ورود را به لینکر (کلمه: linker) بگوییم.
+با استفاده از ویژگی `[unsafe(no_mangle)]#` ما [name mangling] را غیرفعال می کنیم تا اطمینان حاصل کنیم که کامپایلر راست تابعی با نام `start_` را خروجی می‌دهد. بدون این ویژگی، کامپایلر برخی از نمادهای رمزنگاری شده `ZN3blog_os4_start7hb173fedf945531caE_` را تولید می‌کند تا به هر تابع یک نام منحصر به فرد بدهد. این ویژگی لازم است زیرا در مرحله بعدی باید نام تایع نقطه ورود را به لینکر (کلمه: linker) بگوییم.
 
 ما همچنین باید تابع را به عنوان `"extern "C` علامت‌گذاری کنیم تا به کامپایلر بگوییم که باید از [قرارداد فراخوانی C] برای این تابع استفاده کند (به جای قرارداد مشخص نشده فراخوانی راست). دلیل نامگذاری تابع `start_` این است که این نام نقطه پیش‌فرض ورودی برای اکثر سیستم‌ها است.
 
@@ -527,6 +527,78 @@ cargo rustc -- -C link-args="-e __start -static -nostartfiles"
 ```
 
 توجه داشته باشید که این فقط یک نمونه حداقلی از باینری مستقل راست است. این باینری انتظار چیزهای مختلفی را دارد، به عنوان مثال با فراخوانی تابع `start_` یک پشته مقداردهی اولیه می‌شود. **بنابراین برای هر گونه استفاده واقعی از چنین باینری، مراحل بیشتری لازم است**.
+
+## خشنود کردن `rust-analyzer`
+
+پروژه [`rust-analyzer`](https://rust-analyzer.github.io/) راه بسیار خوبی برای دستیابی به تکمیل خودکار کد و پشتیبانی «رفتن به تعریف» (و بسیاری ویژگی‌های دیگر) برای کد راست در ویرایشگر شماست.
+این ابزار برای پروژه‌های `#![no_std]` هم واقعاً خوب کار می‌کند، بنابراین استفاده از آن را برای توسعه هسته توصیه می‌کنم!
+
+اگر از ویژگی [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) در `rust-analyzer` استفاده می‌کنید (که به طور پیش‌فرض فعال است)، ممکن است برای تابع پنیک هسته ما خطایی گزارش کند:
+
+```
+found duplicate lang item `panic_impl`
+```
+
+دلیل این خطا این است که `rust-analyzer` به طور پیش‌فرض `cargo check --all-targets` را فراخوانی می‌کند، که همچنین سعی می‌کند باینری را در حالت [تست](https://doc.rust-lang.org/book/ch11-01-writing-tests.html) و [بنچمارک](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) بسازد.
+
+<div class="note">
+
+### دو معنای «target»
+
+پرچم `--all-targets` کاملاً بی‌ارتباط با آرگومان `--target` است.
+اصطلاح «target» در `cargo` دو معنای متفاوت دارد:
+
+- پرچم `--target` **[_هدف کامپایل_]** را که باید به کامپایلر `rustc` داده شود، مشخص می‌کند. این باید روی [سه‌گانه هدف] ماشینی که قرار است کد ما را اجرا کند تنظیم شود.
+- پرچم `--all-targets` به **[_هدف پکیج_]** کارگو اشاره دارد. پکیج‌های کارگو می‌توانند همزمان یک کتابخانه و یک باینری باشند، بنابراین می‌توانید مشخص کنید که می‌خواهید کریت خود را به چه صورت بسازید. علاوه بر این، کارگو هدف‌های پکیج برای [مثال‌ها](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples)، [تست‌ها](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests) و [بنچمارک‌ها](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#benchmarks) نیز دارد. این هدف‌های پکیج می‌توانند همزیستی داشته باشند، بنابراین می‌توانید همان کریت را مثلاً در حالت کتابخانه یا تست بسازید/بررسی کنید.
+
+[_هدف کامپایل_]: https://doc.rust-lang.org/rustc/targets/index.html
+[سه‌گانه هدف]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[_هدف پکیج_]: https://doc.rust-lang.org/cargo/reference/cargo-targets.html
+
+</div>
+
+به طور پیش‌فرض، `cargo check` فقط هدف‌های پکیج _کتابخانه_ و _باینری_ را می‌سازد.
+با این حال، `rust-analyzer` هنگامی که [`checkOnSave`](https://rust-analyzer.github.io/book/configuration.html#checkOnSave) فعال باشد، به طور پیش‌فرض همه هدف‌های پکیج را بررسی می‌کند.
+این دلیلی است که چرا `rust-analyzer` خطای `lang item` بالا را گزارش می‌کند که در `cargo check` نمی‌بینیم.
+اگر `cargo check --all-targets` را اجرا کنیم، ما هم آن خطا را می‌بینیم:
+
+```
+error[E0152]: found duplicate lang item `panic_impl`
+  --> src/main.rs:13:1
+   |
+13 | / fn panic(_info: &PanicInfo) -> ! {
+14 | |     loop {}
+15 | | }
+   | |_^
+   |
+   = note: the lang item is first defined in crate `std` (which `test` depends on)
+   = note: first definition in `std` loaded from /home/[...]/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-8df6be531efb3fd0.rlib
+   = note: second definition in the local crate (`blog_os`)
+```
+
+اولین `note` به ما می‌گوید که آیتم زبان پنیک از قبل در کریت `std` تعریف شده است، که یک وابستگی کریت `test` است.
+کریت `test` هنگام ساخت یک کریت در [حالت تست](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#tests) به طور خودکار اضافه می‌شود.
+این برای هسته `#![no_std]` ما معنایی ندارد، زیرا هیچ راهی برای پشتیبانی از کتابخانه استاندارد روی bare metal وجود ندارد.
+بنابراین این خطا به پروژه ما مربوط نیست و می‌توانیم با خیال راحت آن را نادیده بگیریم.
+
+روش درست برای جلوگیری از این خطا این است که در `Cargo.toml` خود مشخص کنیم که باینری ما از ساخت در حالت‌های `test` و `bench` پشتیبانی نمی‌کند.
+می‌توانیم این کار را با افزودن یک بخش `[[bin]]` به `Cargo.toml` خود برای [پیکربندی ساخت](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#configuring-a-target) باینری‌مان انجام دهیم:
+
+```toml
+# in Cargo.toml
+
+[[bin]]
+name = "blog_os"
+test = false
+bench = false
+```
+
+براکت‌های دوتایی اطراف `bin` اشتباه نیستند، این روشی است که فرمت TOML کلیدهایی را که می‌توانند چند بار ظاهر شوند تعریف می‌کند.
+از آن‌جا که یک کریت می‌تواند چندین باینری داشته باشد، بخش `[[bin]]` هم می‌تواند چند بار در `Cargo.toml` ظاهر شود.
+این همچنین دلیل اجباری بودن فیلد `name` است، که باید با نام باینری مطابقت داشته باشد (تا `cargo` بداند کدام تنظیمات باید روی کدام باینری اعمال شود).
+
+با تنظیم فیلدهای [`test`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-test-field) و [`bench`](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#the-bench-field) روی `false`، به `cargo` دستور می‌دهیم که باینری ما را در حالت تست یا بنچمارک نسازد.
+اکنون `cargo check --all-targets` دیگر نباید هیچ خطایی بدهد، و پیاده‌سازی `checkOnSave` در `rust-analyzer` هم باید خشنود باشد.
 
 ## بعدی چیست؟
 

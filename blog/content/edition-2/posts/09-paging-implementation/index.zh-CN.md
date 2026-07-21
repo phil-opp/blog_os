@@ -6,7 +6,7 @@ date = 2019-03-14
 
 [extra]
 # Please update this when updating the translation
-translation_based_on_commit = "e56c635c13b61f052089ea6365be8422b5b28d15"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["weijiew"]
 # GitHub usernames of the people that contributed to this translation
@@ -134,17 +134,17 @@ translation_contributors = ["liuyuran"]
 
 在我们开始实际翻译之前，通过跟随递归条目一次或多次，我们可以有效地缩短CPU所穿越的层数。例如，如果我们跟随递归条目一次，然后进入第3级表，CPU会认为第3级表是第2级表。再往前走，它把第2级表当作第1级表，把第1级表当作映射的框架。这意味着我们现在可以读写第1级页表了，因为CPU认为它是映射的帧。下面的图形说明了这五个转换步骤。
 
-![上述例子中的4级页面层次结构有5个箭头。从CR4到4级表的 "第0步"，从4级表到4级表的 "第1步"，从4级表到3级表的 "第2步"，从3级表到2级表的 "第3步"，以及从2级表到1级表的 "第4步"。](recursive-page-table-access-level-1.png)
+![上述例子中的4级页面层次结构有5个箭头。从CR3到4级表的 "第0步"，从4级表到4级表的 "第1步"，从4级表到3级表的 "第2步"，从3级表到2级表的 "第3步"，以及从2级表到1级表的 "第4步"。](recursive-page-table-access-level-1.png)
 
 同样地，我们可以在开始翻译之前，先跟随递归条目两次，将遍历的层数减少到两个。
 
-![同样的4级页面层次结构，有以下4个箭头。从CR4到4级表的 "第0步"，从4级表到4级表的 "第1&2步"，从4级表到3级表的 "第3步"，以及从3级表到2级表的 "第4步"。](recursive-page-table-access-level-2.png)
+![同样的4级页面层次结构，有以下4个箭头。从CR3到4级表的 "第0步"，从4级表到4级表的 "第1&2步"，从4级表到3级表的 "第3步"，以及从3级表到2级表的 "第4步"。](recursive-page-table-access-level-2.png)
 
 让我们一步一步地看下去。首先，CPU跟踪4级表的递归条目，认为它到达了3级表。然后，它再次跟踪递归条目，认为它到达了2级表。但实际上，它仍然是在第4级表中。当CPU现在跟随一个不同的条目时，它到达了一个3级表，但认为它已经在1级表上。因此，当下一个条目指向第2级表时，CPU认为它指向了映射的框架，这使得我们能够读写第2级表。
 
 访问第3级和第4级表的方法是一样的。为了访问第3级表，我们沿着递归条目走了三次，诱使CPU认为它已经在第1级表上了。然后我们跟随另一个条目，到达第3级表，CPU将其视为一个映射的框架。对于访问第4级表本身，我们只需跟随递归条目四次，直到CPU将第4级表本身视为映射的框架（在下面的图形中为蓝色）。
 
-![同样的4级页面层次结构，有以下3个箭头。从CR4到4级表的 "步骤0"，从4级表到4级表的 "步骤1,2,3"，以及从4级表到3级表的 "步骤4"。蓝色的是替代的 "步骤1,2,3,4 "箭头，从4级表到4级表。](recursive-page-table-access-level-3.png)
+![同样的4级页面层次结构，有以下3个箭头。从CR3到4级表的 "步骤0"，从4级表到4级表的 "步骤1,2,3"，以及从4级表到3级表的 "步骤4"。蓝色的是替代的 "步骤1,2,3,4 "箭头，从4级表到4级表。](recursive-page-table-access-level-3.png)
 
 可能需要一些时间来理解这个概念，但在实践中效果相当好。
 
@@ -230,7 +230,7 @@ let level_1_table_addr =
 
 除了手工进行位操作外，你可以使用`x86_64`板块的[`递归页表`]类型，它为各种页表操作提供安全的抽象。例如，下面的代码显示了如何将一个虚拟地址转换为其映射的物理地址。
 
-[`递归页表`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`递归页表`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 ```rust
 // in src/memory.rs
@@ -447,7 +447,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 首先，我们将 "BootInfo" 结构的 "physical_memory_offset "转换为 [`VirtAddr`]，并将其传递给 `active_level_4_table` 函数。然后我们使用`iter`函数来迭代页表条目，并使用[`enumerate`]组合器为每个元素增加一个索引`i`。我们只打印非空的条目，因为所有512个条目在屏幕上是放不下的。
 
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
+[`VirtAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.VirtAddr.html
 [`enumerate`]: https://doc.rust-lang.org/core/iter/trait.Iterator.html#method.enumerate
 
 当我们运行它时，我们看到以下输出。
@@ -557,7 +557,7 @@ fn translate_addr_inner(addr: VirtAddr, physical_memory_offset: VirtAddr)
 
 在这个循环中，我们再次使用`physical_memory_offset`将帧转换为页表引用。然后我们读取当前页表的条目，并使用[`PageTableEntry::frame`]函数来检索映射的框架。如果该条目没有映射到一个框架，我们返回`None`。如果该条目映射了一个巨大的2&nbsp;MiB或1&nbsp;GiB页面，我们就暂时慌了。
 
-[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
+[`PageTableEntry::frame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html#method.frame
 
 让我们通过翻译一些地址来测试我们的翻译功能。
 
@@ -612,18 +612,18 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 - [`Mapper`] 特质在页面大小上是通用的，并提供对页面进行操作的函数。例如[`translate_page`]，它将一个给定的页面翻译成相同大小的框架，以及[`map_to`]，它在页面表中创建一个新的映射。
 - [`Translate`]特性提供了与多个页面大小有关的函数，如[`translate_addr`]或一般[`translate`]。
 
-[`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
-[`translate_page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
-[`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
-[`Translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html
-[`translate_addr`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
-[`translate`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
+[`Mapper`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html
+[`translate_page`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#tymethod.translate_page
+[`map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
+[`Translate`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html
+[`translate_addr`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html#method.translate_addr
+[`translate`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Translate.html#tymethod.translate
 
 特质只定义接口，不提供任何实现。`x86_64`板块目前提供了三种类型来实现不同要求的特征。[`OffsetPageTable`] 类型假设完整的物理内存被映射到虚拟地址空间的某个偏移处。[`MappedPageTable`]更灵活一些。它只要求每个页表帧在一个可计算的地址处被映射到虚拟地址空间。最后，[`递归页表`]类型可以用来通过[递归页表](#di-gui-ye-biao)访问页表框架。
 
-[`OffsetPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
-[`MappedPageTable`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MappedPageTable.html
-[`递归页表`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
+[`OffsetPageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html
+[`MappedPageTable`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MappedPageTable.html
+[`递归页表`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.RecursivePageTable.html
 
 在我们的例子中，bootloader在`physical_memory_offset`变量指定的虚拟地址上映射完整的物理内存，所以我们可以使用`OffsetPageTable`类型。为了初始化它，我们在`memory`模块中创建一个新的`init`函数。
 
@@ -650,7 +650,7 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
 
 该函数接受 "physical_memory_offset "作为参数，并返回一个新的 "OffsetPageTable "实例，该实例具有 "静态 "寿命。这意味着该实例在我们内核的整个运行时间内保持有效。在函数体中，我们首先调用 "active_level_4_table "函数来获取4级页表的可变引用。然后我们用这个引用调用[`OffsetPageTable::new`] 函数。作为第二个参数，`new`函数希望得到物理内存映射开始的虚拟地址，该地址在`physical_memory_offset`变量中给出。
 
-[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
+[`OffsetPageTable::new`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.OffsetPageTable.html#method.new
 
 从现在开始，`active_level_4_table`函数只能从`init`函数中调用，因为它在多次调用时很容易导致别名的可变引用，这可能导致未定义的行为。出于这个原因，我们通过删除`pub`指定符使该函数成为私有的。
 
@@ -701,8 +701,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 我们将使用[`Mapper`]特性的[`map_to`]函数来实现，所以让我们先看一下这个函数。文档告诉我们，它需要四个参数：我们想要映射的页面，该页面应该被映射到的框架，一组页面表项的标志，以及一个`frame_allocator`。之所以需要框架分配器，是因为映射给定的页面可能需要创建额外的页表，而页表需要未使用的框架作为后备存储。
 
-[`map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
-[`Mapper`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.Mapper.html
+[`map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.Mapper.html#tymethod.map_to
+[`Mapper`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.Mapper.html
 
 ####  create_example_mapping 函数
 
@@ -741,8 +741,8 @@ pub fn create_example_mapping(
 
 [impl-trait-arg]: https://doc.rust-lang.org/book/ch10-02-traits.html#traits-as-parameters
 [通用]: https://doc.rust-lang.org/book/ch10-00-generics.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html
-[`PageSize`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/trait.PageSize.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html
+[`PageSize`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/trait.PageSize.html
 
 [`map_to`]方法是不安全的，因为调用者必须确保该帧没有被使用。原因是两次映射同一帧可能导致未定义的行为，例如当两个不同的`&mut`引用指向同一物理内存位置时。在我们的例子中，我们重新使用了已经被映射的VGA文本缓冲区帧，所以我们打破了所需的条件。然而，`create_example_mapping`函数只是一个临时的测试函数，在这篇文章之后会被删除，所以它是可以的。为了提醒我们不安全，我们在这行上加了一个`FIXME`注释。
 
@@ -754,8 +754,8 @@ pub fn create_example_mapping(
 
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
 [`expect`]: https://doc.rust-lang.org/core/result/enum.Result.html#method.expect
-[`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
-[`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`MapperFlush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`flush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 [must_use]: https://doc.rust-lang.org/std/result/#results-must-be-used
 
 #### 一个假的  `FrameAllocator`

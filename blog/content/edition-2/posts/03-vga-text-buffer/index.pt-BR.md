@@ -7,7 +7,7 @@ date  = 2018-02-26
 [extra]
 chapter = "O Básico"
 # Please update this when updating the translation
-translation_based_on_commit = "9753695744854686a6b80012c89b0d850a44b4b0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["richarddalves"]
 +++
@@ -585,7 +585,7 @@ Note que temos apenas um bloco unsafe no nosso código, que é necessário para 
 ### Uma Macro println
 Agora que temos um writer global, podemos adicionar uma macro `println` que pode ser usada de qualquer lugar na base de código. A [sintaxe de macro] do Rust é um pouco estranha, então não tentaremos escrever uma macro do zero. Em vez disso, olhamos para o código-fonte da [macro `println!`] na biblioteca padrão:
 
-[sintaxe de macro]: https://doc.rust-lang.org/nightly/book/ch20-05-macros.html#declarative-macros-with-macro_rules-for-general-metaprogramming
+[sintaxe de macro]: https://doc.rust-lang.org/nightly/book/ch20-05-macros.html#declarative-macros-for-general-metaprogramming
 [macro `println!`]: https://doc.rust-lang.org/nightly/std/macro.println!.html
 
 ```rust

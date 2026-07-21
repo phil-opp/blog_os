@@ -7,7 +7,7 @@ date = 2019-01-14
 [extra]
 chapter = "Gerenciamento de Memória"
 # Please update this when updating the translation
-translation_based_on_commit = "9753695744854686a6b80012c89b0d850a44b4b0"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 
 # GitHub usernames of the people that translated this post
 translators = ["richarddalves"]
@@ -238,8 +238,8 @@ Vamos olhar mais de perto as flags disponíveis:
 
 A crate `x86_64` fornece tipos para [tabelas de página] e suas [entradas], então não precisamos criar essas estruturas nós mesmos.
 
-[tabelas de página]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTable.html
-[entradas]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page_table/struct.PageTableEntry.html
+[tabelas de página]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTable.html
+[entradas]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page_table/struct.PageTableEntry.html
 
 ### O Translation Lookaside Buffer
 
@@ -248,7 +248,7 @@ Uma tabela de página de 4 níveis torna a tradução de endereços virtuais car
 Ao contrário dos outros caches da CPU, o TLB não é totalmente transparente e não atualiza ou remove traduções quando o conteúdo das tabelas de página muda. Isso significa que o kernel deve atualizar manualmente o TLB sempre que modifica uma tabela de página. Para fazer isso, há uma instrução especial da CPU chamada [`invlpg`] ("invalidate page") que remove a tradução para a página especificada do TLB, para que seja carregada novamente da tabela de página no próximo acesso. O TLB também pode ser completamente esvaziado recarregando o registrador `CR3`, que simula uma troca de espaço de endereço. A crate `x86_64` fornece funções Rust para ambas as variantes no [módulo `tlb`].
 
 [`invlpg`]: https://www.felixcloutier.com/x86/INVLPG.html
-[módulo `tlb`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/tlb/index.html
+[módulo `tlb`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/tlb/index.html
 
 É importante lembrar de esvaziar o TLB em cada modificação de tabela de página porque caso contrário a CPU pode continuar usando a tradução antiga, o que pode levar a bugs não-determinísticos que são muito difíceis de depurar.
 
@@ -303,8 +303,8 @@ extern "x86-interrupt" fn page_fault_handler(
 O registrador [`CR2`] é automaticamente definido pela CPU em um page fault e contém o endereço virtual acessado que causou o page fault. Usamos a função [`Cr2::read`] da crate `x86_64` para lê-lo e imprimi-lo. O tipo [`PageFaultErrorCode`] fornece mais informações sobre o tipo de acesso à memória que causou o page fault, por exemplo, se foi causado por uma operação de leitura ou escrita. Por esta razão, também o imprimimos. Não podemos continuar a execução sem resolver o page fault, então entramos em um [`hlt_loop`] no final.
 
 [`CR2`]: https://en.wikipedia.org/wiki/Control_register#CR2
-[`Cr2::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr2.html#method.read
-[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html
+[`Cr2::read`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr2.html#method.read
+[`PageFaultErrorCode`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html
 [LLVM bug]: https://github.com/rust-lang/rust/issues/57270
 [`hlt_loop`]: @/edition-2/posts/07-hardware-interrupts/index.md#the-hlt-instruction
 
@@ -338,7 +338,7 @@ Quando o executamos, vemos que nosso manipulador de page fault é chamado:
 
 O registrador `CR2` de fato contém `0xdeadbeaf`, o endereço que tentamos acessar. O código de erro nos diz através do [`CAUSED_BY_WRITE`] que a falha ocorreu ao tentar realizar uma operação de escrita. Ele nos diz ainda mais através dos [bits que _não_ estão definidos][`PageFaultErrorCode`]. Por exemplo, o fato de que a flag `PROTECTION_VIOLATION` não está definida significa que o page fault ocorreu porque a página alvo não estava presente.
 
-[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
+[`CAUSED_BY_WRITE`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.CAUSED_BY_WRITE
 
 Vemos que o ponteiro de instrução atual é `0x2031b2`, então sabemos que este endereço aponta para uma página de código. Páginas de código são mapeadas como somente leitura pelo bootloader, então ler deste endereço funciona mas escrever causa um page fault. Você pode tentar isso mudando o ponteiro `0xdeadbeaf` para `0x2031b2`:
 
@@ -362,7 +362,7 @@ Ao comentar a última linha, vemos que o acesso de leitura funciona, mas o acess
 
 Vemos que a mensagem _"leitura funcionou"_ é impressa, o que indica que a operação de leitura não causou nenhum erro. No entanto, em vez da mensagem _"escrita funcionou"_, ocorre um page fault. Desta vez a flag [`PROTECTION_VIOLATION`] está definida além da flag [`CAUSED_BY_WRITE`], o que indica que a página estava presente, mas a operação não era permitida nela. Neste caso, escritas na página não são permitidas já que páginas de código são mapeadas como somente leitura.
 
-[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
+[`PROTECTION_VIOLATION`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/idt/struct.PageFaultErrorCode.html#associatedconstant.PROTECTION_VIOLATION
 
 ### Acessando as Tabelas de Página
 
@@ -388,9 +388,9 @@ pub extern "C" fn _start() -> ! {
 
 A função [`Cr3::read`] da crate `x86_64` retorna a tabela de página de nível 4 atualmente ativa do registrador `CR3`. Ela retorna uma tupla de um tipo [`PhysFrame`] e um tipo [`Cr3Flags`]. Estamos interessados apenas no frame, então ignoramos o segundo elemento da tupla.
 
-[`Cr3::read`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3.html#method.read
-[`PhysFrame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/frame/struct.PhysFrame.html
-[`Cr3Flags`]: https://docs.rs/x86_64/0.14.2/x86_64/registers/control/struct.Cr3Flags.html
+[`Cr3::read`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr3.html#method.read
+[`PhysFrame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/frame/struct.PhysFrame.html
+[`Cr3Flags`]: https://docs.rs/x86_64/0.15.5/x86_64/registers/control/struct.Cr3Flags.html
 
 Quando o executamos, vemos a seguinte saída:
 
@@ -400,7 +400,7 @@ Tabela de página de nível 4 em: PhysAddr(0x1000)
 
 Então a tabela de página de nível 4 atualmente ativa está armazenada no endereço `0x1000` na memória _física_, como indicado pelo tipo wrapper [`PhysAddr`]. A questão agora é: como podemos acessar esta tabela do nosso kernel?
 
-[`PhysAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.PhysAddr.html
+[`PhysAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.PhysAddr.html
 
 Acessar memória física diretamente não é possível quando paginação está ativa, já que programas poderiam facilmente contornar a proteção de memória e acessar a memória de outros programas caso contrário. Então a única forma de acessar a tabela é através de alguma página virtual que está mapeada para o frame físico no endereço `0x1000`. Este problema de criar mapeamentos para frames de tabela de página é um problema geral, já que o kernel precisa acessar as tabelas de página regularmente, por exemplo, ao alocar uma pilha para uma nova thread.
 

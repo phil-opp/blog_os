@@ -7,7 +7,7 @@ date = 2020-03-27
 [extra]
 chapter = "Multitasking"
 # Please update this when updating the translation
-translation_based_on_commit = "1ba06fe61c39c1379bd768060c21040b62ff3f0b"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["richarddalves"]
 +++
@@ -1695,7 +1695,7 @@ impl Executor {
 }
 ```
 
-Este método apenas chama a função `run_ready_tasks` em um loop. Embora teoricamente pudéssemos retornar da função quando o mapa `tasks` se torna vazio, isso nunca aconteceria já que nossa `keyboard_task` nunca termina, então um simples `loop` deve ser suficiente. Como a função nunca retorna, usamos o tipo de retorno `!` para marcar a função como [divergente] para o compilador.
+Este método apenas chama a função `run_ready_tasks` em um loop. Embora teoricamente pudéssemos retornar da função quando o mapa `tasks` se torna vazio, isso nunca aconteceria já que nossa tarefa `keyboard::print_keypresses` nunca termina, então um simples `loop` deve ser suficiente. Como a função nunca retorna, usamos o tipo de retorno `!` para marcar a função como [divergente] para o compilador.
 
 [divergente]: https://doc.rust-lang.org/stable/rust-by-example/fn/diverging.html
 
@@ -1753,8 +1753,8 @@ impl Executor {
 
 Como chamamos `sleep_if_idle` diretamente após `run_ready_tasks`, que faz loop até a `task_queue` se tornar vazia, verificar a fila novamente pode parecer desnecessário. No entanto, uma interrupção de hardware pode ocorrer diretamente após `run_ready_tasks` retornar, então pode haver uma nova tarefa na fila no momento em que a função `sleep_if_idle` é chamada. Apenas se a fila ainda estiver vazia, colocamos a CPU para dormir executando a instrução `hlt` através da função wrapper [`instructions::hlt`] fornecida pela crate [`x86_64`].
 
-[`instructions::hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/fn.hlt.html
-[`x86_64`]: https://docs.rs/x86_64/0.14.2/x86_64/index.html
+[`instructions::hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/fn.hlt.html
+[`x86_64`]: https://docs.rs/x86_64/0.15.5/x86_64/index.html
 
 Infelizmente, ainda há uma condição de corrida sutil nesta implementação. Como interrupções são assíncronas e podem acontecer a qualquer momento, é possível que uma interrupção aconteça logo entre a verificação `is_empty` e a chamada para `hlt`:
 
@@ -1769,7 +1769,7 @@ Caso esta interrupção empurre para a `task_queue`, colocamos a CPU para dormir
 
 A resposta é desabilitar interrupções na CPU antes da verificação e atomicamente habilitá-las novamente junto com a instrução `hlt`. Desta forma, todas as interrupções que acontecem no meio são atrasadas após a instrução `hlt` para que nenhum acordar seja perdido. Para implementar esta abordagem, podemos usar a função [`interrupts::enable_and_hlt`][`enable_and_hlt`] fornecida pela crate [`x86_64`].
 
-[`enable_and_hlt`]: https://docs.rs/x86_64/0.14.2/x86_64/instructions/interrupts/fn.enable_and_hlt.html
+[`enable_and_hlt`]: https://docs.rs/x86_64/0.15.5/x86_64/instructions/interrupts/fn.enable_and_hlt.html
 
 A implementação atualizada de nossa função `sleep_if_idle` parece com isto:
 

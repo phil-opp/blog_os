@@ -5,6 +5,8 @@ path = "es/minimal-rust-kernel"
 date = 2018-02-10
 
 [extra]
+# Please update this when updating the translation
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 chapter = "Bare Bones"
 
 # GitHub usernames of the people that translated this post
@@ -192,6 +194,12 @@ Un problema al deshabilitar SIMD es que las operaciones de punto flotante en `x8
 
 Para más información, consulta nuestro artículo sobre [cómo deshabilitar SIMD](@/edition-2/posts/02-minimal-rust-kernel/disable-simd/index.md).
 
+```json
+"rustc-abi": "softfloat"
+```
+
+Como queremos usar la característica `soft-float`, también necesitamos indicarle al compilador de Rust `rustc` que queremos usar el ABI correspondiente. Podemos hacerlo estableciendo el campo `rustc-abi` en `softfloat`.
+
 #### Juntándolo Todo
 Nuestro archivo de especificación de objetivo ahora se ve así:
 
@@ -210,7 +218,8 @@ Nuestro archivo de especificación de objetivo ahora se ve así:
     "linker": "rust-lld",
     "panic-strategy": "abort",
     "disable-redzone": true,
-    "features": "-mmx,-sse,+soft-float"
+    "features": "-mmx,-sse,+soft-float",
+    "rustc-abi": "softfloat"
 }
 ```
 
@@ -278,7 +287,7 @@ Con esta configuración en su lugar, intentemos construir nuevamente:
 error[E0463]: can't find crate for `core`
 ```
 
-¡Ahora vemos un error diferente! El error nos indica que el compilador de Rust ya no encuentra la [biblioteca `core`]. Esta biblioteca contiene tipos básicos de Rust como `Result`, `Option` e iteradores, y se vincula implícitamente a todos los crates con `no_std`.
+Todavía falla, pero con un nuevo error. El error nos indica que el compilador de Rust no encuentra la [biblioteca `core`]. Esta biblioteca contiene tipos básicos de Rust como `Result`, `Option` e iteradores, y se vincula implícitamente a todos los crates con `no_std`.
 
 [biblioteca `core`]: https://doc.rust-lang.org/nightly/core/index.html
 

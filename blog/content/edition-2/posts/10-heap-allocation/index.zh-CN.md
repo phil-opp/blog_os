@@ -7,7 +7,7 @@ date = 2019-06-26
 [extra]
 chapter = "Memory Management"
 # Please update this when updating the translation
-translation_based_on_commit = "2edf0221a34e3dbfd45cf5d45309689accb14e50"
+translation_based_on_commit = "1132d7a3835dc6c0b3fd8f6b45c9295a9bc1f837"
 # GitHub usernames of the people that translated this post
 translators = ["Liuliuliu7"]
 # GitHub usernames of the people that contributed to this translation
@@ -386,7 +386,7 @@ pub fn init_heap(
 ) -> Result<(), MapToError<Size4KiB>> {
     let page_range = {
         let heap_start = VirtAddr::new(HEAP_START as u64);
-        let heap_end = heap_start + HEAP_SIZE - 1u64;
+        let heap_end = heap_start + HEAP_SIZE as u64 - 1u64;
         let heap_start_page = Page::containing_address(heap_start);
         let heap_end_page = Page::containing_address(heap_end);
         Page::range_inclusive(heap_start_page, heap_end_page)
@@ -407,12 +407,12 @@ pub fn init_heap(
 ```
 该函数接受对 [`Mapper`] 和 [`FrameAllocator`] 实例的可变引用，两者都通过使用 [`Size4KiB`] 作为泛型参数限制为 4&nbsp;KiB 页面。函数的返回值是一个 [`Result`]，成功返回单元类型 `()`，失败返回[`MapToError`]，这是 [`Mapper::map_to`] 方法返回的错误类型。在这里重用错误类型是有意义的，因为 `map_to` 方法是此函数的主要错误来源。
 
-[`Mapper`]:https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html
-[`FrameAllocator`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html
-[`Size4KiB`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/enum.Size4KiB.html
+[`Mapper`]:https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html
+[`FrameAllocator`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html
+[`Size4KiB`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/enum.Size4KiB.html
 [`Result`]: https://doc.rust-lang.org/core/result/enum.Result.html
-[`MapToError`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html
-[`Mapper::map_to`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
+[`MapToError`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/enum.MapToError.html
+[`Mapper::map_to`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/trait.Mapper.html#method.map_to
 
 实现可分为两个部分：
 
@@ -426,18 +426,18 @@ pub fn init_heap(
 
     - 使用 [`Mapper::map_to`] 方法在活动页面表中创建映射。该方法可能失败，因此我们再次使用[问号操作符][question mark operator]将错误转发给调用者。成功时，该方法返回一个 [`MapperFlush`] 实例，我们可以使用其 [`flush`] 方法更新[_转换后备缓冲区_][_translation lookaside buffer_]（简称TLB）。
 
-[`VirtAddr`]: https://docs.rs/x86_64/0.14.2/x86_64/addr/struct.VirtAddr.html
-[`Page`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html
-[`containing_address`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html#method.containing_address
-[`Page::range_inclusive`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
-[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
+[`VirtAddr`]: https://docs.rs/x86_64/0.15.5/x86_64/addr/struct.VirtAddr.html
+[`Page`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html
+[`containing_address`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html#method.containing_address
+[`Page::range_inclusive`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/page/struct.Page.html#method.range_inclusive
+[`FrameAllocator::allocate_frame`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/trait.FrameAllocator.html#tymethod.allocate_frame
 [`None`]: https://doc.rust-lang.org/core/option/enum.Option.html#variant.None
-[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
+[`MapToError::FrameAllocationFailed`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/enum.MapToError.html#variant.FrameAllocationFailed
 [`Option::ok_or`]: https://doc.rust-lang.org/core/option/enum.Option.html#method.ok_or
 [question mark operator]: https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html
-[`MapperFlush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html
+[`MapperFlush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html
 [_translation lookaside buffer_]: @/edition-2/posts/08-paging-introduction/index.md#the-translation-lookaside-buffer
-[`flush`]: https://docs.rs/x86_64/0.14.2/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
+[`flush`]: https://docs.rs/x86_64/0.15.5/x86_64/structures/paging/mapper/struct.MapperFlush.html#method.flush
 
 最后一步是在 `kernel_main` 中调用此函数：
 
