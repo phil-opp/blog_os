@@ -1103,4 +1103,147 @@ La implementación del método `dealloc` se ve así:
 ```rust
 // en src/allocator/fixed_size_block.rs
 
-use core::{mem, ptr::
+use core::{mem, ptr::NonNull};
+
+// dentro del bloque `unsafe impl GlobalAlloc`
+
+unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+    let mut allocator = self.lock();
+    match list_index(&layout) {
+        Some(index) => {
+            let new_node = ListNode {
+                next: allocator.list_heads[index].take(),
+            };
+            // verificar que el bloque tenga el tamaño y la alineación requeridos para almacenar el nodo
+            assert!(mem::size_of::<ListNode>() <= BLOCK_SIZES[index]);
+            assert!(mem::align_of::<ListNode>() <= BLOCK_SIZES[index]);
+            let new_node_ptr = ptr as *mut ListNode;
+            unsafe {
+                new_node_ptr.write(new_node);
+                allocator.list_heads[index] = Some(&mut *new_node_ptr);
+            }
+        }
+        None => {
+            let ptr = NonNull::new(ptr).unwrap();
+            unsafe {
+                allocator.fallback_allocator.deallocate(ptr, layout);
+            }
+        }
+    }
+}
+```
+
+Al igual que en `alloc`, primero utilizamos el método `lock` para obtener una referencia mutable al allocador y luego la función `list_index` para obtener la lista de bloques correspondiente al `Layout` dado. Si el índice es `None`, no existe un tamaño de bloque adecuado en `BLOCK_SIZES`, lo que indica que la asignación fue creada por el allocador de respaldo. Por lo tanto, usamos su [`deallocate`][`Heap::deallocate`] para liberar la memoria de nuevo. El método espera un [`NonNull`] en lugar de un `*mut u8`, así que primero necesitamos convertir el puntero. (La llamada a `unwrap` solo falla cuando el puntero es null, lo que nunca debería ocurrir cuando el compilador llama a `dealloc`.)
+
+[`Heap::deallocate`]: https://docs.rs/linked_list_allocator/0.9.0/linked_list_allocator/struct.Heap.html#method.deallocate
+
+Si `list_index` devuelve un índice de bloque, necesitamos agregar el bloque de memoria liberado a la lista. Para ello, primero creamos un nuevo `ListNode` que apunta a la cabeza actual de la lista (utilizando [`Option::take`] de nuevo). Antes de escribir el nuevo nodo en el bloque de memoria liberado, primero verificamos que el tamaño de bloque actual especificado por `index` tenga el tamaño y la alineación requeridos para almacenar un `ListNode`. Luego realizamos la escritura convirtiendo el puntero `*mut u8` dado a un puntero `*mut ListNode` y llamando al método unsafe [`write`][`pointer::write`] sobre él. El último paso es establecer el puntero de cabeza de la lista, que actualmente es `None` porque llamamos a `take` sobre él, a nuestro `ListNode` recién escrito. Para ello, convertimos el `new_node_ptr` crudo en una referencia mutable.
+
+[`pointer::write`]: https://doc.rust-lang.org/std/primitive.pointer.html#method.write
+
+Hay algunas cosas que vale la pena señalar:
+
+- No diferenciamos entre bloques asignados desde una lista de bloques y bloques asignados desde el allocador de respaldo. Esto significa que los nuevos bloques creados en `alloc` se agregan a la lista de bloques en `dealloc`, aumentando así el número de bloques de ese tamaño.
+- El método `alloc` es el único lugar donde se crean nuevos bloques en nuestra implementación. Esto significa que inicialmente comenzamos con listas de bloques vacías y solo llenamos estas listas de forma perezosa cuando se realizan asignaciones de su tamaño de bloque.
+- No necesitamos bloques `unsafe` en `alloc` y `dealloc`, aunque realizamos algunas operaciones `unsafe`. La razón es que Rust actualmente trata el cuerpo completo de las funciones unsafe como un gran bloque `unsafe`. Dado que usar bloques `unsafe` explícitos tiene la ventaja de que es obvio qué operaciones son unsafe y cuáles no, existe una [RFC propuesta](https://github.com/rust-lang/rfcs/pull/2585) para cambiar este comportamiento.
+
+### Usándolo
+
+Para usar nuestro nuevo `FixedSizeBlockAllocator`, necesitamos actualizar el static `ALLOCATOR` en el módulo `allocator`:
+
+```rust
+// en src/allocator.rs
+
+use fixed_size_block::FixedSizeBlockAllocator;
+
+#[global_allocator]
+static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(
+    FixedSizeBlockAllocator::new());
+```
+
+Dado que la función `init` se comporta igual para todos los allocadores que implementamos, no necesitamos modificar la llamada a `init` en `init_heap`.
+
+Cuando ahora ejecutamos nuestras pruebas `heap_allocation` de nuevo, todas las pruebas deberían seguir pasando:
+
+```
+> cargo test --test heap_allocation
+simple_allocation... [ok]
+large_vec... [ok]
+many_boxes... [ok]
+many_boxes_long_lived... [ok]
+```
+
+¡Nuestro nuevo allocador parece funcionar!
+
+### Discusión
+
+Si bien el enfoque de bloques de tamaño fijo tiene un rendimiento mucho mejor que el enfoque de lista enlazada, desperdicia hasta la mitad de la memoria cuando se usan potencias de 2 como tamaños de bloque. Si este compromiso vale la pena depende en gran medida del tipo de aplicación. Para un núcleo de sistema operativo, donde el rendimiento es crítico, el enfoque de bloques de tamaño fijo parece ser la mejor opción.
+
+En cuanto a la implementación, hay varias cosas que podríamos mejorar en nuestra implementación actual:
+
+- En lugar de asignar bloques solo de forma perezosa utilizando el allocador de respaldo, podría ser mejor rellenar previamente las listas para mejorar el rendimiento de las asignaciones iniciales.
+- Para simplificar la implementación, solo permitimos tamaños de bloque que sean potencias de 2 para poder usarlos también como alineación del bloque. Almacenando (o calculando) la alineación de una forma diferente, también podríamos permitir tamaños de bloque arbitrarios. De esta manera, podríamos agregar más tamaños de bloque, por ejemplo, para tamaños de asignación comunes, con el fin de minimizar la memoria desperdiciada.
+- Actualmente solo creamos nuevos bloques, pero nunca los liberamos de nuevo. Esto provoca fragmentación y podría eventualmente resultar en un fallo de asignación para asignaciones grandes. Podría tener sentido imponer una longitud máxima de lista para cada tamaño de bloque. Cuando se alcanza la longitud máxima, las desasignaciones posteriores se liberan usando el allocador de respaldo en lugar de agregarse a la lista.
+- En lugar de recurrir a un allocador de lista enlazada, podríamos tener un allocador especial para asignaciones mayores de 4&nbsp;KiB. La idea es utilizar [paginación][paging], que opera sobre páginas de 4&nbsp;KiB, para mapear un bloque continuo de memoria virtual a marcos físicos no continuos. De esta manera, la fragmentación de la memoria no utilizada ya no es un problema para las asignaciones grandes.
+- Con un allocador de páginas de este tipo, podría tener sentido agregar tamaños de bloque de hasta 4&nbsp;KiB y descartar por completo el allocador de lista enlazada. Las principales ventajas de esto serían una fragmentación reducida y una previsibilidad de rendimiento mejorada, es decir, un mejor rendimiento en el peor caso.
+
+[paging]: @/edition-2/posts/08-paging-introduction/index.md
+
+Es importante señalar que las mejoras de implementación descritas anteriormente son solo sugerencias. Los allocadores utilizados en los núcleos de sistemas operativos suelen estar altamente optimizados para la carga de trabajo específica del núcleo, lo cual solo es posible mediante un extenso perfilado.
+
+### Variaciones
+
+También hay muchas variaciones del diseño de allocador de bloques de tamaño fijo. Dos ejemplos populares son el _allocador slab_ y el _allocador buddy_, que también se usan en núcleos populares como Linux. A continuación, damos una breve introducción a estos dos diseños.
+
+#### Allocador Slab
+
+La idea detrás de un [allocador slab] es usar tamaños de bloque que correspondan directamente a tipos seleccionados en el núcleo. De esta manera, las asignaciones de esos tipos se ajustan exactamente a un tamaño de bloque y no se desperdicia memoria. A veces, incluso podría ser posible preinicializar instancias de tipos en bloques no utilizados para mejorar aún más el rendimiento.
+
+[allocador slab]: https://en.wikipedia.org/wiki/Slab_allocation
+
+La asignación slab a menudo se combina con otros allocadores. Por ejemplo, puede usarse junto con un allocador de bloques de tamaño fijo para dividir aún más un bloque asignado con el fin de reducir el desperdicio de memoria. También se usa a menudo para implementar un [patrón de pool de objetos] sobre una única asignación grande.
+
+[patrón de pool de objetos]: https://en.wikipedia.org/wiki/Object_pool_pattern
+
+#### Allocador Buddy
+
+En lugar de usar una lista enlazada para gestionar los bloques liberados, el diseño de [allocador buddy] utiliza una estructura de datos de [árbol binario] junto con tamaños de bloque potencia de 2. Cuando se requiere un nuevo bloque de cierto tamaño, divide un bloque de mayor tamaño en dos mitades, creando así dos nodos hijos en el árbol. Cada vez que un bloque se libera de nuevo, se analiza su bloque vecino en el árbol. Si el vecino también está libre, los dos bloques se unen de nuevo para formar un bloque del doble de tamaño.
+
+La ventaja de este proceso de fusión es que se reduce la [fragmentación externa], de modo que los bloques pequeños liberados pueden reutilizarse para una asignación grande. Tampoco usa un allocador de respaldo, por lo que el rendimiento es más predecible. El mayor inconveniente es que solo son posibles tamaños de bloque potencia de 2, lo que podría resultar en una gran cantidad de memoria desperdiciada debido a la [fragmentación interna]. Por esta razón, los allocadores buddy a menudo se combinan con un allocador slab para dividir aún más un bloque asignado en múltiples bloques más pequeños.
+
+[allocador buddy]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
+[árbol binario]: https://en.wikipedia.org/wiki/Binary_tree
+[fragmentación externa]: https://en.wikipedia.org/wiki/Fragmentation_(computing)#External_fragmentation
+[fragmentación interna]: https://en.wikipedia.org/wiki/Fragmentation_(computing)#Internal_fragmentation
+
+
+## Resumen
+
+Este post dio una visión general de diferentes diseños de allocadores. Aprendimos cómo implementar un [allocador de bump] básico, que reparte memoria linealmente incrementando un único puntero `next`. Si bien la asignación por bump es muy rápida, solo puede reutilizar memoria después de que todas las asignaciones hayan sido liberadas. Por esta razón, rara vez se usa como allocador global.
+
+[allocador de bump]: @/edition-2/posts/11-allocator-designs/index.md#bump-allocator
+
+A continuación, creamos un [allocador de lista enlazada] que utiliza los propios bloques de memoria liberados para crear una lista enlazada, la llamada [lista libre]. Esta lista hace posible almacenar un número arbitrario de bloques liberados de diferentes tamaños. Si bien no se produce desperdicio de memoria, el enfoque sufre de bajo rendimiento porque una solicitud de asignación podría requerir un recorrido completo de la lista. Nuestra implementación también sufre de [fragmentación externa] porque no fusiona de nuevo los bloques liberados adyacentes.
+
+[allocador de lista enlazada]: @/edition-2/posts/11-allocator-designs/index.md#linked-list-allocator
+[lista libre]: https://en.wikipedia.org/wiki/Free_list
+
+Para solucionar los problemas de rendimiento del enfoque de lista enlazada, creamos un [allocador de bloques de tamaño fijo] que predefine un conjunto fijo de tamaños de bloque. Para cada tamaño de bloque, existe una [lista libre] separada, de modo que las asignaciones y desasignaciones solo necesitan insertar/extraer al frente de la lista y, por lo tanto, son muy rápidas. Dado que cada asignación se redondea al siguiente tamaño de bloque mayor, se desperdicia algo de memoria debido a la [fragmentación interna].
+
+[allocador de bloques de tamaño fijo]: @/edition-2/posts/11-allocator-designs/index.md#fixed-size-block-allocator
+
+Hay muchos más diseños de allocadores con diferentes compromisos. La [asignación slab] funciona bien para optimizar la asignación de estructuras comunes de tamaño fijo, pero no es aplicable en todas las situaciones. La [asignación buddy] usa un árbol binario para fusionar de nuevo los bloques liberados, pero desperdicia una gran cantidad de memoria porque solo admite tamaños de bloque potencia de 2. También es importante recordar que cada implementación de núcleo tiene una carga de trabajo única, por lo que no existe un diseño de allocador "mejor" que se ajuste a todos los casos.
+
+[asignación slab]: @/edition-2/posts/11-allocator-designs/index.md#slab-allocator
+[asignación buddy]: @/edition-2/posts/11-allocator-designs/index.md#buddy-allocator
+
+
+## ¿Qué sigue?
+
+Con este post, concluimos por ahora nuestra implementación de gestión de memoria. A continuación, comenzaremos a explorar la [_multitarea_], empezando por la multitarea cooperativa en forma de [_async/await_]. En posts posteriores, exploraremos luego los [_hilos_], el [_multiprocesamiento_] y los [_procesos_].
+
+[_multitarea_]: https://en.wikipedia.org/wiki/Computer_multitasking
+[_hilos_]: https://en.wikipedia.org/wiki/Thread_(computing)
+[_procesos_]: https://en.wikipedia.org/wiki/Process_(computing)
+[_multiprocesamiento_]: https://en.wikipedia.org/wiki/Multiprocessing
+[_async/await_]: https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html
