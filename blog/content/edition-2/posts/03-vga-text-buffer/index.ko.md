@@ -544,7 +544,7 @@ lazy_static! {
 ```toml
 # in Cargo.toml
 [dependencies]
-spin = "0.5.2"
+ spin = "0.10.0"
 ```
 
 이제 스핀 락을 이용해 전역 변수 `WRITER`에 안전하게 [내부 가변성 (interior mutability)][interior mutability] 을 구현할 수 있습니다:

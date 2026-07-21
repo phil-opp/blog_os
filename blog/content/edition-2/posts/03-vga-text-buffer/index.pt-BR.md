@@ -546,7 +546,7 @@ Para usar um spinning mutex, podemos adicionar a [crate spin] como uma dependên
 ```toml
 # em Cargo.toml
 [dependencies]
-spin = "0.5.2"
+ spin = "0.10.0"
 ```
 
 Então podemos usar o spinning mutex para adicionar [mutabilidade interior] segura ao nosso `WRITER` static:

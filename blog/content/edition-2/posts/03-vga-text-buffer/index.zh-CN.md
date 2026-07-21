@@ -501,7 +501,7 @@ lazy_static! {
 ```toml
 # in Cargo.toml
 [dependencies]
-spin = "0.5.2"
+ spin = "0.10.0"
 ```
 
 现在，我们能够使用自旋的互斥锁，为我们的 `WRITER` 类实现安全的[内部可变性](https://doc.rust-lang.org/book/ch15-05-interior-mutability.html)：

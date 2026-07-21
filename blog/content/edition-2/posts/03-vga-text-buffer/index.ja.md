@@ -559,7 +559,7 @@ lazy_static! {
 ```toml
 # in Cargo.toml
 [dependencies]
-spin = "0.5.2"
+ spin = "0.10.0"
 ```
 
 すると、スピンを使ったMutexを使うことができ、静的な`WRITER`に安全な[内部可変性][interior mutability]を追加できます。
