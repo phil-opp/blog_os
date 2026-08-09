@@ -568,7 +568,7 @@ lazy_static! {
 ```toml
 # in Cargo.toml
 [dependencies]
-spin = "0.5.2"
+ spin = "0.10.0"
 ```
 
 ثم يمكننا استخدام spinning mutex لإضافة [قابلية تعديل داخلية][interior mutability] آمنة إلى `WRITER` الثابت:
