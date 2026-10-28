@@ -180,7 +180,7 @@ test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
 
 在x86平台上，CPU和外围硬件通信通常有两种方式，**内存映射I/O**和**端口映射I/O**。之前，我们已经使用内存映射的方式，通过内存地址 `0xb8000` 访问了[VGA文本缓冲区]。该地址并没有映射到RAM，而是映射到了VGA设备的一部分内存上。
 
-[VGA text buffer]: @/edition-2/posts/03-vga-text-buffer/index.md
+[VGA文本缓冲区]: @/edition-2/posts/03-vga-text-buffer/index.zh-CN.md
 
 与内存映射不同，端口映射I/O使用独立的I/O总线来进行通信。每个外围设备都有一个或数个端口号。CPU采用了特殊的`in`和`out`指令来和端口通信，这些指令要求一个端口号和一个字节的数据作为参数（有些这种指令的变体也允许发送 `u16` 或是 `u32` 长度的数据）。
 
